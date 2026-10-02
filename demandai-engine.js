@@ -21,6 +21,7 @@ const CONFIG = {
   tierThresholds: { A: 35, B: 20 },
   // Micro-segments: a segment needs this many distinct accounts.
   minSegmentAccounts: 3,
+  brand: { maxSubjectWords: 6, competitors: [] },
   // The agreed action library per segment (proposed in the process flows; the client approves the final list).
   // The first option is the recommendation; the next is the runner-up unless the strongest signal says otherwise.
   segmentLibrary: {
@@ -664,6 +665,13 @@ function buildSegments(results, opts = {}) {
   const accounts = results.filter(r => r.people && r.signalCount > 0)
     .map(r => ({ r, ranks: segmentRanks(r) }))
     .filter(a => a.ranks.length && (!keep || a.r.people.some(p => keep.has(a.r.account.id + '|' + p.contact.row))));
+  // 5.9 Engage-once: an account already recommended in this pilot is set aside as a process rule, not a low score.
+  const engaged = opts.engaged || new Map();
+  const engagedOnce = [];
+  for (let i = accounts.length - 1; i >= 0; i--) {
+    const label = engaged.get(accounts[i].r.account.name.toLowerCase());
+    if (label) { engagedOnce.unshift({ result: accounts[i].r, account: accounts[i].r.account, label, prominent: accounts[i].ranks[0] }); accounts.splice(i, 1); }
+  }
   const assigned = new Map(); // account id -> { segment, rank }
   const formed = new Map();   // segment -> [account ids]
   const maxK = Math.max(0, ...accounts.map(a => a.ranks.length));
@@ -710,39 +718,86 @@ function buildSegments(results, opts = {}) {
       const signal = inSeg || p.signals[0];
       const exception = !segment ? `Segment too small: fewer than ${min} accounts share any of its signals`
         : r.confidence === 'low' ? 'Low confidence: no contact in the primary persona' : '';
+      const ago = signal.age !== undefined ? ` (${signal.age} days ago)` : '';
       recs.push({ key: r.account.id + '|' + p.contact.row, contact: p.contact, account: r.account, result: r, person: p,
         segment, prominent: prominent.segment, prominentSignal: prominent.signal, groupedOn: (as ? a.ranks[as.rank] : prominent).signal,
-        fallback, action, runnerUp, signal, exception });
+        fallback, action, runnerUp, signal, exception,
+        reason: `${signal.type}${ago}: ${lowerFirst(clean(signal.detail) || signal.type)}`,
+        status: r.account.existingCustomer ? 'Existing customer' : 'Net-new', persona: p.contact.persona || '' });
     }
   }
   const order = s => segments.findIndex(x => x.name === s);
   recs.sort((x, y) => (x.segment ? order(x.segment) : 99) - (y.segment ? order(y.segment) : 99) || (y.person.final || 0) - (x.person.final || 0));
   segments.forEach(sg => { sg.recs = recs.filter(r => r.segment === sg.name); });
-  return { segments, recs, exceptions: recs.filter(r => !r.segment), accountsConsidered: accounts.length };
+  return { segments, recs, exceptions: recs.filter(r => !r.segment), engagedOnce, accountsConsidered: accounts.length + engagedOnce.length };
 }
 
-/* ─── Channel and message for one recommendation ───
-   Copy follows published outreach benchmarks: a subject of four words or fewer that reads like an internal
-   email, an opener that names the prospect's own trigger, one point, under ~80 words, and an interest-based
-   question instead of a calendar ask. LinkedIn: a personalised connection note with no pitch, then a short
-   message after acceptance. No product claims: anything factual comes from the client's signal data. */
-const COPY = {
-  'Call to follow up on the inquiry':        { subject: 'your inquiry', value: 'The quickest route to a useful answer is a short call with the engineer who covers your site.', cta: 'Is now a good time for two minutes?' },
-  'Route the inquiry to the sales owner':    { task: true },
-  'Propose a migration-path discussion':     { subject: 'migration planning', value: 'Planning the migration early is what lets the cutover fit a planned shutdown.', cta: 'Worth comparing the options?' },
-  'Offer a site assessment':                 { subject: 'site assessment', value: 'A short site assessment would show what to address first, before that date.', cta: 'Worth a look?' },
-  'Offer a lifecycle service review':        { subject: 'lifecycle review', value: 'A lifecycle review would map what to plan for and when.', cta: 'Worth exploring?' },
-  'Offer a renewal review':                  { subject: 'service renewal', value: 'Before it renews, it may be worth checking the cover still fits how the site runs today.', cta: 'Worth a quick review?' },
-  'Route to the service owner':              { task: true },
-  'Share a comparable case study and offer a technical session': { subject: 'similar project', value: 'I can share how a comparable site approached the control-system decision at the same stage.', cta: 'Worth a look?' },
-  'Offer a reference-site visit':            { subject: 'reference site visit', value: 'Seeing a comparable site running is often the fastest way to weigh the options.', cta: 'Would that be useful?' },
-  'Offer an early design workshop':          { subject: 'design workshop', value: 'An early workshop can settle the control-system scope while the design is still open.', cta: 'Worth exploring?' },
-  'Introduce Client to the new leader':      { subject: 'your new role', value: 'Happy to share a short overview of how we work with sites like yours, whenever it suits.', cta: 'Worth a conversation once you have settled in?' },
-  'Share a peer case study from their sector': { subject: 'peer example', value: 'I can share how a peer in your sector set their automation priorities in a similar first few months.', cta: 'Would that be useful?' },
-  'Invite to a short briefing':              { subject: 'quick briefing', value: 'I would be glad to set up a short briefing for you and your team.', cta: 'Worth scheduling?' },
-  'Follow up on the topic they engaged with': { subject: 'following up', value: 'If it is useful, I can share how comparable sites have approached it.', cta: 'Worth a short conversation?' },
-  'Invite to a related session':             { subject: 'related session', value: 'Our next session on this goes deeper. Happy to send the invite.', cta: 'Interested?' },
+/* ─── 5.10–5.19: from the action to a checked first engagement ───
+   Rules only in the POC: the brief, proof, draft, checks and confidence are built from the client's own signal
+   data and the approved collateral below. AI drafting replaces the templates in production; the checks stay. */
+const PLAYBOOK = {
+  Inquiry:          { angle: 'Answer the question they asked while it is live', objection: 'We are only gathering information for now.',
+                      response: 'Understood. A short call now usually saves a round of back-and-forth later, and there is no commitment.',
+                      questions: ['What prompted the question now?', 'What does the timeline look like, and who else is involved?', 'What would a good answer look like for you?'] },
+  Modernisation:    { angle: 'Plan the migration before end of support forces the timing', objection: 'The current system still runs fine.',
+                      response: 'It does today. Planning early is what lets the cutover fit a planned shutdown instead of an unplanned one.',
+                      questions: ['When is your next planned shutdown?', 'What would you need to see to start planning the migration?', 'Who else would be part of that decision?'] },
+  'Service renewal':{ angle: 'Check the cover still fits how the site runs today', objection: 'We will just renew as is.',
+                      response: 'That is an option. A short review first makes sure you are not paying for cover you no longer use, or missing what you need.',
+                      questions: ['What has changed on site since the contract was signed?', 'Where did support work well, and where not?'] },
+  Project:          { angle: 'Settle the control scope while the design is still open', objection: 'It is too early to talk about control systems.',
+                      response: 'That is when the scope is cheapest to shape. Later it tends to be fixed by the design.',
+                      questions: ['Where is the project in front-end design?', 'When is the control-system decision due?', 'Who is leading the design?'] },
+  Leadership:       { angle: 'Be useful to a new leader setting priorities', objection: 'I am still settling in.',
+                      response: 'Of course. A short overview now can save time when priorities are set.',
+                      questions: ['What are your first priorities in the role?', 'Where does automation sit among them?'] },
+  Engagement:       { angle: 'Follow up on the topic they chose to engage with', objection: 'I was just browsing.',
+                      response: 'No problem. If it becomes relevant, I can share how comparable sites approached it.',
+                      questions: ['What made the topic relevant for you?', 'Is it something your site is looking at this year?'] },
 };
+// Approved collateral the drafts may cite (fictional, for the POC; the client's knowledge base replaces it).
+const COLLATERAL = [
+  { id: 'CS-01', type: 'Case study', year: 2025, title: 'Legacy control system migration in one planned shutdown', segments: ['Modernisation', 'Inquiry', 'Engagement'], expiry: '2027-06-30',
+    claim: 'A comparable refinery moved its legacy control system to a current platform within one planned shutdown.' },
+  { id: 'OP-02', type: 'One-pager', year: 2026, title: 'Site assessment overview', segments: ['Modernisation'], expiry: '2027-03-31',
+    claim: 'A site assessment takes two days on site and ends with a prioritised upgrade list.' },
+  { id: 'BR-03', type: 'Brochure', year: 2026, title: 'Lifecycle services overview', segments: ['Service renewal', 'Modernisation'], expiry: '2027-01-31',
+    claim: 'Lifecycle service plans can cover planned upgrades as well as support.' },
+  { id: 'CS-04', type: 'Case study', year: 2024, title: 'Gas plant expansion: control scope fixed at front-end design', segments: ['Project'], expiry: '2027-12-31',
+    claim: 'On a comparable gas plant expansion, settling the control scope at front-end design kept the project on schedule.' },
+  { id: 'WB-05', type: 'Webinar recording', year: 2026, title: 'Modernising legacy control systems', segments: ['Engagement'], expiry: '2027-09-30',
+    claim: 'The session recording walks through how comparable sites sequenced their migration.' },
+  { id: 'PS-06', type: 'Peer story', year: 2023, title: 'First 100 days: setting automation priorities', segments: ['Leadership'], expiry: '2026-06-30',
+    claim: 'A plant manager in a similar role set automation priorities within the first hundred days.' },
+];
+const BRAND = {
+  banned: ['guarantee', 'guaranteed', 'best-in-class', 'best in class', 'world-class', 'cheapest', 'risk-free', 'no-brainer', '100%'],
+  pricing: /(\$\s?\d|\bUSD\b|\bprice|\bpricing\b|\bdiscount|\bfree of charge\b)/i,
+  sensitive: /\b(incident|accident|explosion|fatalit|injur|emissions? breach|lawsuit)/i,
+  competitors: [],          // the client's brand pack fills this in Setup
+  maxWords: 120, maxSubjectWords: 6, maxNote: 200,
+};
+const cite = item => `[${item.type}, ${item.year}]`;
+
+const COPY = {
+  'Call to follow up on the inquiry':        { task: true, script: true },
+  'Route the inquiry to the sales owner':    { task: true },
+  'Propose a migration-path discussion':     { subject: 'migration planning', cta: 'Worth comparing the options?', alt: 'Would a short call to compare options help?' },
+  'Offer a site assessment':                 { subject: 'site assessment', cta: 'Worth a look?', alt: 'Would that be useful before the date?' },
+  'Offer a lifecycle service review':        { subject: 'lifecycle review', cta: 'Worth exploring?', alt: 'Would a short review help?' },
+  'Offer a renewal review':                  { task: true, script: true },
+  'Route to the service owner':              { task: true },
+  'Share a comparable case study and offer a technical session': { subject: 'similar project', cta: 'Worth a look?', alt: 'Would a short technical session help?' },
+  'Offer a reference-site visit':            { subject: 'reference site visit', cta: 'Would that be useful?', alt: 'Worth arranging?' },
+  'Offer an early design workshop':          { subject: 'design workshop', cta: 'Worth exploring?', alt: 'Would an early workshop help?' },
+  'Introduce Client to the new leader':      { subject: 'your new role', cta: 'Worth a conversation once you have settled in?', alt: 'Would a short intro be useful?' },
+  'Share a peer case study from their sector': { subject: 'peer example', cta: 'Would that be useful?', alt: 'Worth a look?' },
+  'Invite to a short briefing':              { subject: 'quick briefing', cta: 'Worth scheduling?', alt: 'Would a short briefing help?' },
+  'Follow up on the topic they engaged with': { subject: 'following up', cta: 'Worth a short conversation?', alt: 'Would it help to compare notes?' },
+  'Invite to a related session':             { subject: 'related session', cta: 'Interested?', alt: 'Shall I send the invite?' },
+};
+const GENERIC = { subject: 'quick question', cta: 'Worth a conversation?', alt: 'Would that be useful?' };
+
 function opener(sg, account) {
   const d = clean(sg.detail).replace(/\.$/, '');
   const low = d ? d[0].toLowerCase() + d.slice(1) : '';
@@ -762,29 +817,130 @@ function opener(sg, account) {
     default: return d ? `Noticed ${low}.` : '';
   }
 }
-function recommendChannel(rec, action) {
+const segmentOfAction = (action, rec) => Object.keys(CONFIG.segmentLibrary).find(k => CONFIG.segmentLibrary[k].includes(action)) || (rec && (rec.segment || rec.prominent)) || 'Engagement';
+// The evidence behind an action: the prospect's own signal in the action's segment, else the one they were grouped on.
+function evidenceFor(rec, action) {
+  const seg = segmentOfAction(action, rec);
+  const own = rec.person && rec.person.signals.find(sg => (CONFIG.signalTypes[sg.type] || {}).segment === seg);
+  return own || rec.signal;
+}
+function proofFor(action, rec, asOf) {
+  const seg = segmentOfAction(action, rec);
+  const fits = COLLATERAL.filter(c => c.segments.includes(seg));
+  const live = fits.filter(c => !asOf || c.expiry >= asOf).sort((a, b) => (b.segments[0] === seg) - (a.segments[0] === seg));
+  return { item: live[0] || null, expired: fits.filter(c => asOf && c.expiry < asOf) };
+}
+// 5.10 Channel within hard limits: email only if verified, LinkedIn only with a URL, and a consent basis for either.
+function allowedChannels(c) {
+  const out = [];
+  if (c.consentOk !== false && c.email && c.emailVerified) out.push('Email');
+  if (c.consentOk !== false && c.linkedin) out.push('LinkedIn');
+  out.push('Call');
+  return out;
+}
+function recommendChannel(rec, action, prefer) {
   const c = rec.contact, copy = COPY[action] || {};
-  if (copy.task) return { channel: 'Task', why: 'This action goes to a person on the account team, not to the prospect.' };
-  if (action === 'Call to follow up on the inquiry') return { channel: 'Call', why: 'Inquiries go to a call, per the routing rules.' };
-  if (c.email && c.emailVerified) return { channel: 'Email', why: 'Verified, sendable email.' };
-  if (c.linkedin) return { channel: 'LinkedIn', why: 'No verified email, but a LinkedIn URL: connection note, then a message.' };
+  if (copy.task) return { channel: 'Task', why: 'Inquiries, renewals and sensitive cases go to a person on the account team, not straight to the prospect.' };
+  const allowed = allowedChannels(c);
+  if (prefer && allowed.includes(prefer)) return { channel: prefer, why: `${prefer} chosen by the reviewer, within the limits.` };
+  if (c.consentOk === false) return { channel: 'Call', why: 'No recognised consent basis, so no email or LinkedIn: call only.' };
+  if (allowed[0] === 'Email') return { channel: 'Email', why: c.linkedin ? 'Verified email, so email first; LinkedIn is the fallback.' : 'Verified, sendable email.' };
+  if (allowed[0] === 'LinkedIn') return { channel: 'LinkedIn', why: 'No verified email, but a LinkedIn URL: connection note, then a message.' };
   return { channel: 'Call', why: 'No verified email and no LinkedIn URL: call is the only channel.' };
 }
-function draftFor(rec, action) {
+// 5.14 Call script: opener, discovery questions, objection handling, the ask.
+function callScript(rec, action, open) {
   const first = rec.contact.firstName || rec.contact.name.split(' ')[0];
-  const copy = COPY[action] || COPY['Follow up on the topic they engaged with'];
-  const ch = recommendChannel(rec, action);
-  // Speak to the evidence behind this action: the prospect's own signal in the action's segment, else the segment's.
-  const seg = Object.keys(CONFIG.segmentLibrary).find(k => CONFIG.segmentLibrary[k].includes(action));
-  const own = seg && rec.person && rec.person.signals.find(sg => (CONFIG.signalTypes[sg.type] || {}).segment === seg);
-  const open = opener(own || rec.signal, rec.account);
-  if (ch.channel === 'Task') return { channel: ch.channel, why: ch.why, task: `${action} for ${rec.contact.name} at ${rec.account.name}. Context: ${open}` };
-  if (ch.channel === 'Call') return { channel: ch.channel, why: ch.why, opener: `"Hi ${first}, it's [name] from Client. ${open} ${copy.cta}"` };
-  if (ch.channel === 'LinkedIn') return { channel: ch.channel, why: ch.why,
-    note: `Hi ${first}, ${open.charAt(0).toLowerCase() + open.slice(1)} Would be good to connect.`.slice(0, 200),
-    message: `Thanks for connecting, ${first}. ${copy.value} ${copy.cta}` };
-  const body = `Hi ${first},\n\n${open} ${copy.value}\n\n${copy.cta}\n\nBest,\nClient Team`;
-  return { channel: ch.channel, why: ch.why, subject: copy.subject, body, words: body.split(/\s+/).filter(Boolean).length };
+  const pb = PLAYBOOK[segmentOfAction(action, rec)] || PLAYBOOK.Engagement;
+  const copy = COPY[action] || GENERIC;
+  return { opener: `Hi ${first}, it's [name] from Client. ${open}`, questions: pb.questions, objection: pb.objection, response: pb.response,
+    ask: copy.cta || 'Would a follow-up conversation with the right specialist help?' };
+}
+// 5.11 The brief: who, why now, angle, proof, objection, ask and constraints.
+function briefFor(rec, action, opts = {}) {
+  const sg = evidenceFor(rec, action), pb = PLAYBOOK[segmentOfAction(action, rec)] || PLAYBOOK.Engagement;
+  const proof = proofFor(action, rec, opts.asOf);
+  const ch = recommendChannel(rec, action, opts.channel);
+  return {
+    who: `${rec.contact.name}, ${rec.contact.jobTitle || 'no title'} (${rec.contact.persona || 'persona unknown'}) at ${rec.account.name} · ${rec.account.existingCustomer ? 'existing customer' : 'net-new'}`,
+    whyNow: `${sg.type}: ${clean(sg.detail) || sg.type}${sg.date ? ` (${sg.date})` : ''}`,
+    angle: pb.angle, proof: proof.item, expired: proof.expired, objection: pb.objection,
+    ask: (COPY[action] || GENERIC).cta || 'A conversation with the right specialist',
+    constraints: ch.channel === 'Email' ? `Subject of ${CONFIG.brand.maxSubjectWords} words or fewer, under 80 words, one proof point, one ask, no pricing` :
+      ch.channel === 'LinkedIn' ? `Connection note under ${CONFIG.brand.maxNote} characters with no pitch; short message after acceptance` :
+      ch.channel === 'Call' ? 'Opener, two or three questions, the objection, one ask' : 'For a person on the account team',
+    channel: ch,
+  };
+}
+// 5.12–5.15 The draft. No approved proof for the case: a task for the owner instead of a draft.
+function draftFor(rec, action, opts = {}) {
+  const first = rec.contact.firstName || rec.contact.name.split(' ')[0];
+  const copy = COPY[action] || GENERIC;
+  const ch = recommendChannel(rec, action, opts.channel);
+  const open = opener(evidenceFor(rec, action), rec.account);
+  const variant = opts.variant || '';
+  if (ch.channel === 'Task') return { channel: 'Task', why: ch.why, task: `${action} for ${rec.contact.name} at ${rec.account.name}. Context: ${open}`,
+    script: copy.script ? callScript(rec, action, open) : null, proof: null };
+  const proof = proofFor(action, rec, opts.asOf).item;
+  if (!proof) return { channel: 'Task', why: 'No approved, unexpired proof for this case: routed to the owner to add proof, or call instead.', noProof: true,
+    task: `${action} for ${rec.contact.name} at ${rec.account.name}. Add approved proof, or call. Context: ${open}`, script: callScript(rec, action, open), proof: null };
+  const proofLine = `${proof.claim} ${cite(proof)}`;
+  const cta = variant === 'tone' || variant === 'alt' ? copy.alt || copy.cta : copy.cta;
+  if (ch.channel === 'Call') return { channel: 'Call', why: ch.why, script: callScript(rec, action, open), proof };
+  if (ch.channel === 'LinkedIn') {
+    const note = `Hi ${first}, ${open.charAt(0).toLowerCase() + open.slice(1)} Would be good to connect.`;
+    return { channel: 'LinkedIn', why: ch.why, note: note.length > BRAND.maxNote ? `Hi ${first}, would be good to connect.` : note,
+      message: variant === 'short' ? `Thanks for connecting, ${first}. ${cta}` : `Thanks for connecting, ${first}. ${proofLine} ${cta}`, proof };
+  }
+  const body = variant === 'short' ? `Hi ${first},\n\n${open} ${cta}\n\nBest,\nClient Team` : `Hi ${first},\n\n${open} ${proofLine}\n\n${cta}\n\nBest,\nClient Team`;
+  return { channel: 'Email', why: ch.why, subject: copy.subject, body, words: body.split(/\s+/).filter(Boolean).length, proof };
+}
+function draftText(d) {
+  if (d.channel === 'Email') return `${d.subject}\n${d.body}`;
+  if (d.channel === 'LinkedIn') return `${d.note}\n${d.message}`;
+  const s = d.script;
+  return [d.task, s && s.opener, s && s.questions.join(' '), s && s.response, s && s.ask].filter(Boolean).join('\n');
+}
+// 5.16 Brand and rule checks, 5.17 claim verification.
+function checkDraft(d) {
+  const text = draftText(d), low = text.toLowerCase(), flags = [];
+  for (const w of BRAND.banned) if (low.includes(w)) flags.push({ rule: 'Banned claim', detail: `"${w}"` });
+  for (const w of BRAND.competitors.concat(CONFIG.brand.competitors || [])) if (w && low.includes(w.toLowerCase())) flags.push({ rule: 'Competitor name', detail: `"${w}"` });
+  if (BRAND.pricing.test(text)) flags.push({ rule: 'Pricing or commercial terms', detail: 'Pricing is left to the account team' });
+  if (BRAND.sensitive.test(text)) flags.push({ rule: 'Sensitive term', detail: 'Needs compliance approval' });
+  if (d.channel === 'Email') {
+    const sw = (d.subject || '').split(/\s+/).filter(Boolean).length, bw = (d.body || '').split(/\s+/).filter(Boolean).length;
+    if (sw > CONFIG.brand.maxSubjectWords) flags.push({ rule: 'Length', detail: `Subject is ${sw} words (limit ${CONFIG.brand.maxSubjectWords})` });
+    if (bw > BRAND.maxWords) flags.push({ rule: 'Length', detail: `Body is ${bw} words (limit ${BRAND.maxWords})` });
+  }
+  if (d.channel === 'LinkedIn' && (d.note || '').length > BRAND.maxNote) flags.push({ rule: 'Length', detail: `Connection note is ${d.note.length} characters (limit ${BRAND.maxNote})` });
+  // Claims: anything citing a source, or that reads like a product claim. A claim is verified only when it is
+  // an approved item's claim, word for word, with that item's citation.
+  const sentences = text.split(/\n+/).flatMap(l => l.split(/(?<=[.?!]|\d{4}\])\s+(?!\[)/)).map(s => s.trim()).filter(Boolean);
+  const claimLike = /(\d+\s?%|\b(reduces?|reduced|improves?|improved|increases?|increased|cuts? (downtime|costs?)|savings|uptime|faster|proven|within one|guarantee\w*)\b)/i;
+  const claims = [];
+  for (const s of sentences) {
+    const m = s.match(/\[([^\]]+, \d{4})\]\s*$/);
+    if (!m && !claimLike.test(s)) continue;
+    const bare = s.replace(/\s*\[[^\]]+, \d{4}\]\s*$/, '');
+    const src = COLLATERAL.find(c => cite(c) === `[${m ? m[1] : ''}]` && c.claim === bare);
+    claims.push({ text: bare, source: src ? `${src.id} · ${src.title}` : '', verified: !!src });
+  }
+  const seen = new Set();
+  const uniq = claims.filter(c => !seen.has(c.text) && seen.add(c.text));
+  return { flags, claims: uniq, unsupported: uniq.filter(c => !c.verified) };
+}
+// 5.18 Confidence from grounding, open flags and signal strength.
+function confidenceFor(rec, d, chk, action) {
+  const w = ((action ? evidenceFor(rec, action) : rec.signal) || {}).weight || 0;
+  const strength = w >= 60 ? 'strong' : w >= 30 ? 'moderate' : 'weak';
+  const n = chk.claims.length, ok = n - chk.unsupported.length;
+  const grounding = n ? `${ok} of ${n} claim${n === 1 ? '' : 's'} verified` : 'no product claims';
+  const flags = chk.flags.length ? `${chk.flags.length} open flag${chk.flags.length === 1 ? '' : 's'}` : 'no open flags';
+  const level = chk.unsupported.length || chk.flags.length || rec.result.confidence === 'low' || strength === 'weak' ? 'Low'
+    : strength === 'strong' && rec.result.confidence === 'high' ? 'High' : 'Medium';
+  const extra = rec.result.confidence === 'low' ? ', no contact in the primary persona' : '';
+  return { level, reason: `${level}: ${grounding}, ${flags}, ${strength} signal${extra}` };
 }
 
 /* ─── Lists hand-off between Prospecting and Scoring (browser only) ─── */
@@ -824,6 +980,7 @@ return {
   CONFIG, CODES, LEAD_COLUMNS, LEAD_REQUIRED, SIGNAL_COLUMNS, SIGNAL_REQUIRED,
   parseCSV, toCSV, readTable, processLeads, classify, personaOf, fitFor, decayFactor,
   processSignals, scoreList, stack, tierFor, daysBetween, round1, buildSegments, segmentRanks, recommendChannel, draftFor,
+  briefFor, callScript, checkDraft, confidenceFor, allowedChannels, proofFor, COLLATERAL, PLAYBOOK,
   loadLists, saveList, getList, deleteList, loadScorings, saveScoring, getScoring, deleteScoring,
   loadSegmentations, saveSegmentation, getSegmentation, deleteSegmentation,
 };

@@ -218,9 +218,56 @@ test('drafts follow the outreach rules: short subject, short body, interest ques
   assert.equal(E.recommendChannel(farah, farah.action).channel, 'LinkedIn');
 });
 
-test('channel rules: route actions are tasks, inquiry follow-up is a call, no email or LinkedIn is a call', () => {
-  const rec = { contact: { name: 'Pat Lee', email: '', emailVerified: false, linkedin: '' } };
-  assert.equal(E.recommendChannel(rec, 'Route to the service owner').channel, 'Task');
-  assert.equal(E.recommendChannel(rec, 'Call to follow up on the inquiry').channel, 'Call');
-  assert.equal(E.recommendChannel(rec, 'Offer a renewal review').channel, 'Call');
+test('channel rules: inquiries and renewals route to a person, hard limits on email and LinkedIn, consent required', () => {
+  const rec = { contact: { name: 'Pat Lee', email: 'p@x.com', emailVerified: true, linkedin: 'https://linkedin.com/in/p', consentOk: true } };
+  assert.equal(E.recommendChannel(rec, 'Call to follow up on the inquiry').channel, 'Task');
+  assert.equal(E.recommendChannel(rec, 'Offer a renewal review').channel, 'Task');
+  assert.equal(E.recommendChannel(rec, 'Offer a site assessment').channel, 'Email');
+  assert.equal(E.recommendChannel({ contact: { ...rec.contact, emailVerified: false } }, 'Offer a site assessment').channel, 'LinkedIn');
+  assert.equal(E.recommendChannel({ contact: { ...rec.contact, consentOk: false } }, 'Offer a site assessment').channel, 'Call');
+  assert.equal(E.recommendChannel({ contact: { name: 'Pat Lee' } }, 'Offer a site assessment').channel, 'Call');
+});
+
+function sampleRecs(opts) {
+  const { sig, leads } = run();
+  return E.buildSegments(E.scoreList({ accounts: leads.accounts, contacts: leads.contacts }, sig), opts);
+}
+
+test('drafts cite one approved proof point and pass the brand and claim checks', () => {
+  const r = sampleRecs();
+  const rec = r.recs.find(x => x.contact.name === 'Aditi Rao');
+  const d = E.draftFor(rec, rec.action, { asOf: S.SAMPLE_AS_OF });
+  assert.equal(d.channel, 'Email');
+  assert.match(d.body, /\[Webinar recording, 2026\]/);
+  const chk = E.checkDraft(d);
+  assert.deepEqual([chk.flags.length, chk.claims.length, chk.unsupported.length], [0, 1, 0]);
+  assert.match(E.confidenceFor(rec, d, chk).reason, /1 of 1 claim verified, no open flags/);
+});
+
+test('no approved proof for the case: a task for the owner, not a draft', () => {
+  const r = sampleRecs();
+  const rec = r.recs[0];
+  // Leadership's only item expired on 2026-06-30
+  const d = E.draftFor(rec, 'Share a peer case study from their sector', { asOf: S.SAMPLE_AS_OF });
+  assert.equal(d.channel, 'Task');
+  assert.ok(d.noProof);
+  assert.ok(d.script.questions.length >= 2);
+});
+
+test('brand checks and claim verification catch an edited draft', () => {
+  const r = sampleRecs();
+  const rec = r.recs.find(x => x.contact.name === 'Aditi Rao');
+  const d = E.draftFor(rec, rec.action, { asOf: S.SAMPLE_AS_OF });
+  const edited = { ...d, body: d.body.replace('Worth a short conversation?', 'We guarantee 30% less downtime at a discount. Worth a short conversation?') };
+  const chk = E.checkDraft(edited);
+  assert.ok(chk.flags.some(f => f.rule === 'Banned claim'));
+  assert.ok(chk.flags.some(f => f.rule === 'Pricing or commercial terms'));
+  assert.equal(chk.unsupported.length, 1);
+  assert.equal(E.confidenceFor(rec, edited, chk).level, 'Low');
+});
+
+test('engage-once: an account already recommended in the pilot is set aside as a process rule', () => {
+  const r = sampleRecs({ engaged: new Map([['northwind refining', 'Earlier list']]) });
+  assert.ok(!r.recs.some(x => x.account.name === 'Northwind Refining'));
+  assert.deepEqual(r.engagedOnce.map(x => [x.account.name, x.label]), [['Northwind Refining', 'Earlier list']]);
 });
