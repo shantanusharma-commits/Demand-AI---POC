@@ -366,6 +366,39 @@ input,textarea,select{font:inherit;}
 /* Toast */
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--i1);color:#fff;font-size:12.5px;font-weight:500;padding:9px 18px;border-radius:999px;z-index:900;pointer-events:none;animation:fadeUp .2s var(--ease);}
 
+
+/* ─── Data tables and tags (Prospecting, Scoring) ─── */
+.dt-wrap{overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none;}
+.dt-wrap::-webkit-scrollbar{display:none;}
+.dt{width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed;font-size:12.5px;}
+.dt th{padding:11px 16px;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--i3);text-align:left;background:var(--s50);border-bottom:1px solid var(--border);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.dt td{padding:13px 16px;color:var(--i2);border-bottom:1px solid var(--s75);vertical-align:middle;line-height:1.45;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dt tr:last-child td{border-bottom:none;}
+.dt tbody tr{transition:background var(--fast);}
+.dt tbody tr:hover td{background:#FAFBFC;}
+.dt tbody tr.click{cursor:pointer;}
+.dt th.num,.dt td.num{text-align:right;}
+.dt td.num{font-family:var(--fm);font-variant-numeric:tabular-nums;}
+.dt td.wrap{white-space:normal;}
+.dt .dt-main{color:var(--i1);font-weight:600;overflow:hidden;text-overflow:ellipsis;}
+.dt .val{color:var(--i1);overflow:hidden;text-overflow:ellipsis;}
+.dt .sub{display:block;font-size:11px;color:var(--i3);margin-top:2px;overflow:hidden;text-overflow:ellipsis;}
+.dt .muted{color:var(--i4);}
+.dt .person{display:flex;align-items:center;gap:10px;min-width:0;}
+.dt .person > div:last-child{min-width:0;}
+.clamp2{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;white-space:normal;}
+.dt-empty{padding:28px;text-align:center;font-size:12.5px;color:var(--i3);}
+.tag{display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 10px;border-radius:999px;font-family:var(--fb);font-size:11px;font-weight:600;letter-spacing:0;text-transform:none;white-space:nowrap;background:var(--s75);color:var(--i2);vertical-align:middle;}
+.tag::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0;}
+.tag-green{background:#E8F5EE;color:#24704F;}
+.tag-amber{background:#FDF2E1;color:#A8620F;}
+.tag-red{background:#FBEAEA;color:#A83A3A;}
+.tag-blue{background:#E4F2FB;color:#00659A;}
+.tag-violet{background:#F0EAF8;color:#6A4290;}
+.tag-teal{background:#E3F4F2;color:#1B7369;}
+.tag-pink{background:#FBE9F1;color:#A1386A;}
+.tag-grey{background:#EEF1F4;color:#5B6774;}
+.tags{display:flex;flex-wrap:wrap;gap:6px;}
 </style>
 </head>
 <body>
@@ -514,7 +547,7 @@ function renderPick(){
           <div style="display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--s75);cursor:pointer" onclick="chooseList('${l.id}')">
             <div class="co-av" style="background:${avColor(l.name)}">${initials(l.name)}</div>
             <div style="flex:1;min-width:0">
-              <div style="font-size:13px;font-weight:600;color:var(--i1)">${esc(l.name)} ${l.sandbox?'<span class="sc sc-m" style="margin-left:4px">SANDBOX</span>':''}</div>
+              <div style="font-size:13px;font-weight:600;color:var(--i1)">${esc(l.name)} ${l.sandbox?'<span class="tag tag-amber" style="margin-left:6px;height:20px;font-size:10.5px">Sandbox</span>':''}</div>
               <div style="font-size:10.5px;color:var(--i3)">${esc(l.sourceFile)} · ${l.stats.accountsPass} accounts · ${l.stats.inFinalList} contacts in the final list${l.scoring?` · last scored with ${esc(l.scoring.fileName)}`:''}</div>
             </div>
             <span style="font-size:12px;color:var(--brand);font-weight:600">Choose →</span>
@@ -570,7 +603,7 @@ function renderSignals(){
       <div class="panel">
         <div class="panel-hdr"><span class="panel-ttl">Signal tags</span><span style="font-size:10.5px;color:var(--i3)">the signal_type column, from the template's list</span></div>
         <div class="panel-body">
-          <div style="display:flex;flex-wrap:wrap;gap:6px">${Object.keys(types).filter(k=>!types[k].knockout&&!types[k].reject).map(k=>`<span class="sc sc-m">${esc(k)}</span>`).join('')}</div>
+          <div class="tags">${Object.keys(types).filter(k=>!types[k].knockout&&!types[k].reject).map(tagChip).join('')}</div>
           <div style="font-size:11px;color:var(--i3);margin-top:10px">Installed system (current) excludes the account. Newsletter sign-ups aren't scored.</div>
         </div>
       </div>
@@ -642,17 +675,23 @@ function renderResults(){
 const pill = (cur,id,label) => `<div class="seg-pill ${cur===id?'active':''}" onclick="filt='${id}';renderResults()">${label}</div>`;
 function search(fn, ph){ return `<div class="sl-srch"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="color:var(--i3);flex-shrink:0"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><input type="text" placeholder="${ph}" value="${esc(q)}" oninput="q=this.value.toLowerCase();${fn}()"></div>`; }
 function tierPill(t){
-  const m = {A:['sc-h','TIER A'],B:['sc-m','TIER B'],C:['sc-l','TIER C'],'Watch list':['delta-flat','WATCH LIST'],'Below fit floor':['delta-flat','BELOW FLOOR'],Excluded:['sc-l','EXCLUDED']}[t];
-  return `<span class="sc ${m[0]}" style="white-space:nowrap;${m[0]==='delta-flat'?'background:var(--s75);color:var(--i2);padding:2px 8px;border-radius:999px;font-size:9.5px;font-weight:700':''}">${m[1]}</span>`;
+  const m = {A:['tag-green','Tier A'],B:['tag-amber','Tier B'],C:['tag-blue','Tier C'],'Watch list':['tag-grey','Watch list'],'Below fit floor':['tag-grey','Below floor'],Excluded:['tag-red','Excluded']}[t];
+  return `<span class="tag ${m[0]}">${m[1]}</span>`;
 }
+function table(cols, rows, empty){
+  return `<div class="dt-wrap"><table class="dt">
+    <colgroup>${cols.map(c=>`<col style="width:${c[1]}">`).join('')}</colgroup>
+    <thead><tr>${cols.map(c=>`<th class="${c[2]||''}">${c[0]}</th>`).join('')}</tr></thead>
+    <tbody>${rows || `<tr><td colspan="${cols.length}" class="dt-empty">${empty}</td></tr>`}</tbody>
+  </table></div>`;
+}
+const cell = (v, sub, cls='val') => `<span class="${cls}" title="${esc(v||'')}">${v?esc(v):'<span class="muted">—</span>'}</span>${sub?`<span class="sub" title="${esc(String(sub).replace(/<[^>]+>/g,''))}">${sub}</span>`:''}`;
 
-const COLS_R = 'minmax(170px,1.5fr) 100px 70px 56px 70px minmax(120px,.9fr) minmax(200px,2fr)';
 function rankedTab(){
   return `<div class="score-list">
     <div class="sl-toolbar">${search('drawRanked','Search accounts…')}<div class="sl-seg-filter">${pill(filt,'all','All')+pill(filt,'A','A')+pill(filt,'B','B')+pill(filt,'C','C')+pill(filt,'Watch list','Watch list')+pill(filt,'out','Not scored')}</div></div>
-    <div class="sl-head" style="grid-template-columns:${COLS_R}"><div class="sl-th">Account</div><div class="sl-th">Tier</div><div class="sl-th">Rank</div><div class="sl-th">Fit</div><div class="sl-th">Timing</div><div class="sl-th">Contact first</div><div class="sl-th">Why now</div></div>
     <div id="rows"></div></div>
-    <div style="font-size:11px;color:var(--i3);margin-top:10px">Rank = Fit ÷ 100 × Timing. Rank isn't capped at 100, so 144.9 is possible. A 0–100 scale is still to be agreed (checklist item 19).</div>`;
+    <div style="font-size:11px;color:var(--i3);margin-top:10px">Rank = Fit ÷ 100 × Timing. Rank isn't capped at 100, so 144.9 is possible. A 0–100 scale is still to be agreed (checklist item 19). Click an account for its reasoning.</div>`;
 }
 function drawRanked(){
   const el = document.getElementById('rows'); if(!el) return;
@@ -660,44 +699,45 @@ function drawRanked(){
   if(filt==='out') rs = rs.filter(r=>r.tier==='Below fit floor'||r.tier==='Excluded');
   else if(filt!=='all') rs = rs.filter(r=>r.tier===filt);
   if(q) rs = rs.filter(r=>r.account.name.toLowerCase().includes(q));
-  el.innerHTML = rs.length ? rs.map(r=>{
-    const lead = r.people && r.people[0];
-    return `<div class="sl-row" style="grid-template-columns:${COLS_R}" onclick="openAccount('${r.account.id}')">
-      <div class="co-cell"><div class="co-av" style="background:${avColor(r.account.name)}">${initials(r.account.name)}</div><div style="min-width:0"><div class="co-nm">${esc(r.account.name)}</div><div class="co-ind">${esc(r.account.vertical)} · ${esc(r.account.country)}</div></div></div>
-      <div>${tierPill(r.tier)}</div>
-      <div style="font-family:var(--fm);font-size:13px;font-weight:600;color:var(--i1)">${r.rank!==undefined?fmt1(r.rank):'—'}</div>
-      <div style="font-family:var(--fm);font-size:12px;color:var(--i2)">${r.fit!==undefined?fmt1(r.fit):'—'}</div>
-      <div style="font-family:var(--fm);font-size:12px;color:var(--i2)">${r.timing!==undefined?fmt1(r.timing):'—'}</div>
-      <div style="font-size:11.5px;color:var(--i2)">${lead && lead.score>0 ? esc(lead.contact.name)+'<div style="font-size:10.5px;color:var(--i3)">'+esc(lead.contact.jobTitle)+'</div>' : '—'}</div>
-      <div style="font-size:11.5px;color:${r.excluded||r.belowFloor?'var(--i3)':'var(--i2)'};line-height:1.4">${r.excluded?esc(r.excludedReason):r.belowFloor?`Fit ${fmt1(r.fit)} is below the floor of ${DemandAI.CONFIG.fitFloor}`:r.whyNow?`<div>${[...new Set(RUN.sig.signals.filter(s=>s.accountId===r.account.id&&s.status==='Qualified').sort((x,y)=>y.weight-x.weight).map(s=>s.type))].slice(0,3).map(tagChip).join('')}</div>${esc(r.whyNow)}`:'No live signal'}</div>
-    </div>`;}).join('') : `<div style="padding:24px;text-align:center;font-size:12px;color:var(--i3)">No accounts match.</div>`;
+  const num = v => v!==undefined ? fmt1(v) : '<span class="muted">—</span>';
+  el.innerHTML = table([['Account','21%'],['Tier','12%'],['Rank','7%','num'],['Fit','6%','num'],['Timing','8%','num'],['Contact first','16%'],['Why now','30%']],
+    rs.map(r=>{
+      const lead = r.people && r.people[0];
+      const tags = [...new Set(RUN.sig.signals.filter(s=>s.accountId===r.account.id&&s.status==='Qualified').sort((x,y)=>y.weight-x.weight).map(s=>s.type))].slice(0,2);
+      return `<tr class="click" onclick="openAccount('${r.account.id}')">
+        <td><div class="person"><div class="co-av" style="background:${avColor(r.account.name)}">${initials(r.account.name)}</div><div>${cell(r.account.name, esc(r.account.vertical+' · '+r.account.country), 'dt-main')}</div></div></td>
+        <td>${tierPill(r.tier)}</td>
+        <td class="num" style="color:var(--i1);font-weight:600">${num(r.rank)}</td>
+        <td class="num">${num(r.fit)}</td>
+        <td class="num">${num(r.timing)}</td>
+        <td>${lead && lead.score>0 ? cell(lead.contact.name, esc(lead.contact.jobTitle)) : '<span class="muted">—</span>'}</td>
+        <td class="wrap">${r.excluded?`<span style="color:var(--i3)">${esc(r.excludedReason)}</span>`:r.belowFloor?`<span style="color:var(--i3)">Fit ${fmt1(r.fit)} is below the floor of ${DemandAI.CONFIG.fitFloor}</span>`:r.whyNow?`<div class="tags" style="margin-bottom:5px">${tags.map(tagChip).join('')}</div><span class="clamp2" title="${esc(r.whyNow)}" style="font-size:12px;color:var(--i2)">${esc(r.whyNow)}</span>`:'<span style="color:var(--i3)">No live signal</span>'}</td>
+      </tr>`;}).join(''), 'No accounts match.');
 }
 
-const COLS_E = '78px minmax(140px,1.2fr) minmax(120px,1fr) minmax(150px,1.2fr) 86px 50px 130px minmax(160px,1.4fr)';
 function evidenceTab(){
   return `<div class="score-list">
     <div class="sl-toolbar">${search('drawEvidence','Search company, person or type…')}<div class="sl-seg-filter">${pill(filt,'all','All')+pill(filt,'Qualified','Qualified')+pill(filt,'Rejected','Rejected')+pill(filt,'Not used','Not used')+pill(filt,'Used for a knock-out','Knock-out')}</div></div>
-    <div class="sl-head" style="grid-template-columns:${COLS_E}"><div class="sl-th">Signal</div><div class="sl-th">Company</div><div class="sl-th">Person</div><div class="sl-th">Type</div><div class="sl-th">Event date</div><div class="sl-th">Age</div><div class="sl-th">Status</div><div class="sl-th">Weight or reason</div></div>
     <div id="rows"></div></div>
-    <div style="font-size:11px;color:var(--i3);margin-top:10px">Every row of the signal file, in file order. <span style="font-style:italic;font-family:Georgia,serif;font-weight:700">i</span> marks a row with an issue: hover for it and the fix. People not in the lead file are rejected (D4) and come back as suggested new contacts.</div>`;
+    <div style="font-size:11px;color:var(--i3);margin-top:10px">Every row of the signal file, in file order. People not in the lead file are rejected (D4) and come back as suggested new contacts. Hover a cell for its full text.</div>`;
 }
 function drawEvidence(){
   const el = document.getElementById('rows'); if(!el) return;
   let ss = RUN.sig.signals;
   if(filt!=='all') ss = ss.filter(s=>s.status===filt);
   if(q) ss = ss.filter(s=>(s.company+' '+s.personName+' '+s.personRef+' '+s.type).toLowerCase().includes(q));
-  const col = {Qualified:'var(--pos)',Rejected:'var(--neg)','Not used':'var(--i3)','Used for a knock-out':'var(--warn)'};
-  el.innerHTML = ss.length ? ss.map(s=>`
-    <div class="sl-row" style="grid-template-columns:${COLS_E};cursor:default;min-height:48px">
-      <div style="font-family:var(--fm);font-size:11px;color:var(--i2)">${s.id}${infoIcon(RUN.sig.issues.filter(i=>i.row===s.row))}<div style="color:var(--i3)">row ${s.row}</div></div>
-      <div style="font-size:12px;color:var(--i1)">${esc(s.company||'—')}</div>
-      <div style="font-size:11.5px;color:var(--i2);word-break:break-all">${esc(s.personName||s.personRef||'—')}${s.assigned&&s.assigned!=='Named in the file'?'<div style="font-size:10px;color:var(--warn)">auto-assigned</div>':''}</div>
-      <div>${tagChip(s.type)}</div>
-      <div style="font-family:var(--fm);font-size:11px;color:var(--i2)">${esc(s.date||'—')}</div>
-      <div style="font-family:var(--fm);font-size:11px;color:var(--i2)">${s.age!==undefined?s.age+'d':'—'}</div>
-      <div style="font-size:11.5px;font-weight:600;color:${col[s.status]}">${s.status}</div>
-      <div style="font-size:11.5px;color:var(--i2)">${s.weight!==undefined && s.status==='Qualified' ? `<b style="font-family:var(--fm)">${fmt1(s.weight)}</b> <span style="color:var(--i3)">= ${s.tier} × ${s.strength} × ${s.decay.toFixed(3)}</span>` : (s.status==='Rejected'?`<b>${s.code} ${DemandAI.CODES[s.code]}</b>: `:'')+esc(s.reason)}</div>
-    </div>`).join('') : `<div style="padding:24px;text-align:center;font-size:12px;color:var(--i3)">No signals match.</div>`;
+  const stTag = {Qualified:'<span class="tag tag-green">Qualified</span>',Rejected:'<span class="tag tag-red">Rejected</span>','Not used':'<span class="tag tag-grey">Not used</span>','Used for a knock-out':'<span class="tag tag-amber">Knock-out</span>'};
+  el.innerHTML = table([['Signal','8%'],['Company','13%'],['Person','13%'],['Tag','23%'],['Event date','10%'],['Age','6%','num'],['Status','10%'],['Weight or reason','17%']],
+    ss.map(s=>`<tr>
+      <td>${cell(s.id, 'Row '+s.row)}</td>
+      <td>${cell(s.company)}</td>
+      <td>${cell(s.personName||s.personRef, s.assigned&&s.assigned!=='Named in the file'?'<span style="color:var(--warn)">Auto-assigned</span>':'')}</td>
+      <td>${tagChip(s.type)}</td>
+      <td style="font-family:var(--fm);font-variant-numeric:tabular-nums">${s.date?esc(s.date):'<span class="muted">—</span>'}</td>
+      <td class="num">${s.age!==undefined?s.age+'d':'<span class="muted">—</span>'}</td>
+      <td>${stTag[s.status]}</td>
+      <td class="wrap">${s.status==='Qualified' ? `<span style="font-family:var(--fm);font-weight:600;color:var(--i1)">${fmt1(s.weight)}</span><span class="sub">${s.tier} × ${s.strength} × ${s.decay.toFixed(2)}</span>` : `<span class="clamp2" title="${esc(s.reason)}" style="font-size:12px">${s.status==='Rejected'?`<b style="color:var(--i1)">${s.code} ${DemandAI.CODES[s.code]}</b> · `:''}${esc(s.reason)}</span>`}</td>
+    </tr>`).join(''), 'No signals match.');
 }
 
 function downloadIssues(){
@@ -706,13 +746,8 @@ function downloadIssues(){
 }
 /* Issues travel with the signal row they belong to: an (i) on the row, hover for the fix */
 const SEV_COL = {stop:'var(--neg)',flag:'var(--warn)',info:'var(--i3)'};
-function infoIcon(is){
-  if(!is.length) return '';
-  const w = is.some(i=>i.severity==='stop')?'stop':is.some(i=>i.severity==='flag')?'flag':'info';
-  const tip = is.map(i=>`${i.field}: ${i.issue} → ${i.outcome}. Fix: ${i.fix}`).join('\n');
-  return ` <span title="${esc(tip)}" style="display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;border:1.5px solid ${SEV_COL[w]};color:${SEV_COL[w]};font-size:9.5px;font-weight:800;font-style:italic;font-family:Georgia,serif;cursor:help">i</span>`;
-}
-function tagChip(t){ return `<span class="sc sc-m" style="white-space:normal;line-height:1.35;margin:0 4px 3px 0;display:inline-block">${esc(t)}</span>`; }
+const SEG_TONE = {Inquiry:'tag-blue',Modernisation:'tag-violet','Service renewal':'tag-teal',Project:'tag-amber',Leadership:'tag-pink',Engagement:'tag-green'};
+function tagChip(t){ const c = DemandAI.CONFIG.signalTypes[t]; return `<span class="tag ${(c&&SEG_TONE[c.segment])||'tag-grey'}">${esc(t)}</span>`; }
 
 /* ═══════════════ ACCOUNT DRAWER: one account's reasoning, in panels ═══════════════ */
 function ago(d){ return d===0?'today':d<14?d+'d ago':d<60?Math.round(d/7)+'w ago':Math.round(d/30)+'mo ago'; }
@@ -735,7 +770,7 @@ function openAccount(id){
   if(r.whyNow){
     const tags = [...new Set(RUN.sig.signals.filter(s=>s.accountId===id&&s.status==='Qualified').sort((x,y)=>y.weight-x.weight).map(s=>s.type))];
     html += `<div class="panel" style="margin-bottom:12px"><div class="panel-hdr"><span class="panel-ttl">Why now</span></div><div class="panel-body">
-      <div style="margin-bottom:6px">${tags.map(tagChip).join('')}</div>
+      <div class="tags" style="margin-bottom:8px">${tags.map(tagChip).join('')}</div>
       <div style="font-size:12.5px;color:var(--i1);line-height:1.55">${esc(r.whyNow)}</div>
       <div style="font-size:10.5px;color:var(--i3);margin-top:6px">${esc(r.whyNowSources.join(' · '))}</div></div></div>`;
   }
@@ -769,7 +804,7 @@ function openAccount(id){
   if(unused.length){
     html += `<div class="panel"><div class="panel-hdr"><span class="panel-ttl">Not counted</span><span style="font-size:10.5px;color:var(--i3)">${unused.length}</span></div><div class="panel-body" style="padding:0">
       ${unused.map(s=>`<div style="padding:9px 14px;border-bottom:1px solid var(--border)">
-        <div>${tagChip(s.type)}<span style="font-size:11px;color:var(--i3)">${esc(s.personName||s.personRef||'')}</span></div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">${tagChip(s.type)}<span style="font-size:11px;color:var(--i3)">${esc(s.personName||s.personRef||'')}</span></div>
         <div style="font-size:11px;color:var(--i2)"><b>${s.status==='Rejected'?s.code+' '+DemandAI.CODES[s.code]:s.status}</b> · ${esc(s.reason)}</div>
       </div>`).join('')}
     </div></div>`;
