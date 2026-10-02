@@ -515,7 +515,15 @@ function initials(n){return String(n).split(' ').filter(Boolean).map(w=>w[0]).jo
 function avColor(id){const c=['#7D52A2','#0094DA','#FF8820','#2E7D5A','#B23F3F'];let h=0;for(const ch of String(id))h+=ch.charCodeAt(0);return c[h%c.length];}
 function closeDrawer(){ document.getElementById('detailDrawer').classList.remove('open'); }
 function esc(s){return String(s===undefined||s===null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
-function download(name, text){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'text/csv'}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},0);}
+function fallbackDownload(name, text){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'text/csv'}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},0);}
+// On claude.ai the page can't start a download itself: the viewer confirms a save. Opened as a plain file, it downloads directly.
+async function download(name, text){
+  let dl = null;
+  try{ dl = window.claude && window.claude.use ? await window.claude.use('downloads') : null; }catch(e){ dl = null; }
+  if(!dl){ fallbackDownload(name, text); return; }
+  try{ await dl.save({filename:name, data:text}); showToast(name+' saved'); }
+  catch(e){ if(e && e.code==='declined') return; showToast(e && e.code==='rate_limited' ? 'A save is already open' : "This view can't save files"); }
+}
 function todayIso(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 const fmt1 = n => n===undefined||n===null ? '—' : (Math.round(n*10)/10).toLocaleString('en-US',{minimumFractionDigits:n%1?1:0,maximumFractionDigits:1});
 const fmtDate = t => new Date(t).toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'});
@@ -657,7 +665,7 @@ function score(listId, fileName, sheet, grid, asOf, sandbox, saved){
   const sig = DemandAI.processSignals(grid, list, {file:fileName, sheet, asOf});
   const scored = DemandAI.scoreList(list, sig);
   RUN = {listId, list:L, fileName, sheet, grid, asOf, sandbox, sig, scored, prospects:null, savedId: saved?saved.id:null, name: saved?saved.name:null};
-  view='ranked'; filt='all'; q='';
+  view='ranked'; filt='all'; q=''; NSEL.clear();
   return true;
 }
 const SIG_STEPS = [
@@ -764,7 +772,7 @@ function renderResults(){
       <div class="topbar-r">
         <button class="btn btn-sec btn-sm" onclick="renderStart('new')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>Score a different list</button>
         <button class="btn btn-sec btn-sm" onclick="openSave()">${RUN.savedId?'Saved ✓':'Save'}</button>
-        <button class="btn btn-primary btn-sm" disabled style="opacity:.5;cursor:not-allowed" title="The hand-off to Micro-segments & NBA isn't wired yet">Send to NBA</button>
+        <button class="btn btn-primary btn-sm" onclick="sendToNBA()">Send ${NSEL.size?NSEL.size+' selected':'tier A and B'} to NBA →</button>
       </div>
     </div>
     <div class="ftabs">${ft('ranked','Ranked prospects',sc.length)}${ft('evidence','Signal evidence',sig.signals.length)}</div>
@@ -780,23 +788,86 @@ function renderResults(){
     </div>`;
   if(view==='ranked') drawRanked(); else drawEvidence();
 }
+const NSEL = new Set();
+const sendable = x => x.score !== undefined;
+function visibleProspects(){
+  let rs = prospects();
+  if(filt==='out') rs = rs.filter(x=>x.tier==='Below fit floor'||x.tier==='Excluded');
+  else if(filt!=='all') rs = rs.filter(x=>x.tier===filt);
+  if(q) rs = rs.filter(x=>(x.c.name+' '+x.r.account.name+' '+x.c.jobTitle).toLowerCase().includes(q));
+  return rs;
+}
+function toggleN(key,on){ if(on) NSEL.add(key); else NSEL.delete(key); updateNBar(); }
+function toggleNAll(on){ visibleProspects().filter(sendable).forEach(x=> on ? NSEL.add(x.key) : NSEL.delete(x.key)); drawRanked(); }
+function clearN(){ NSEL.clear(); drawRanked(); }
+function updateNBar(){
+  const bar = document.getElementById('nBar'); if(!bar) return;
+  bar.style.display = NSEL.size ? 'flex' : 'none';
+  if(NSEL.size) document.getElementById('nCount').textContent = `${NSEL.size} prospect${NSEL.size===1?'':'s'} selected`;
+  const all = document.getElementById('nAll');
+  if(all){ const v = visibleProspects().filter(sendable); all.checked = v.length>0 && v.every(x=>NSEL.has(x.key)); all.indeterminate = !all.checked && v.some(x=>NSEL.has(x.key)); }
+  const tb = document.querySelector('.topbar-r .btn-primary'); if(tb) tb.textContent = `Send ${NSEL.size?NSEL.size+' selected':'tier A and B'} to NBA →`;
+}
+
+/* Hand-off to Micro-segments & NBA: the action and channel follow the stage sheet's rules;
+   the draft is a template until AI drafting is connected. */
+const NBA_ABOUT = {'Inquiry or RFQ':'your recent inquiry','Installed system near end of support':'your control system reaching end of support',
+  'Service contract renewal':'your service contract coming up for renewal','Capital project':'the project you have under way','Leadership change':'your new role',
+  'Webinar attended':'the webinar you attended','Webinar registered':'the webinar you registered for','Content download':'the material you downloaded','Email clicked':'the material you opened'};
+const NBA_ACTION = {Inquiry:'Follow up on the inquiry', Modernisation:'Propose a migration or upgrade discussion', 'Service renewal':'Offer a renewal review',
+  Project:'Share a comparable case study and offer a technical session', Leadership:'Introduction to a new leader in a buying role', Engagement:'Follow up on the topic they engaged with'};
+function toNBA(x){
+  const c = x.c, top = x.p.signals[0], seg = (DemandAI.CONFIG.signalTypes[top.type]||{}).segment || 'Engagement';
+  const first = c.firstName || c.name.split(' ')[0];
+  const emailOk = c.email && c.emailVerified, liOk = !!c.linkedin;
+  const channel = seg==='Inquiry' || (!emailOk && !liOk) ? 'Call' : emailOk ? 'Email' : 'DM';
+  const why = x.p.whyNow.replace(/^./,m=>m.toUpperCase());
+  const about = NBA_ABOUT[top.type] || 'your recent activity';
+  const action = NBA_ACTION[seg];
+  return { id:'sc-'+String(x.key).replace(/[^a-z0-9]/gi,''), name:c.name, title:c.jobTitle, co:x.r.account.name, priority:Math.round(x.score),
+    action:seg, chosenAction:action, channel,
+    channelWhy: channel==='Call' ? (seg==='Inquiry' ? 'Inquiries go to a call task, per the routing rules.' : 'No verified email and no LinkedIn URL: call is the only channel.') : channel==='Email' ? 'Verified, sendable email.' : 'No verified email on file, but a LinkedIn URL exists: DM.',
+    routed:'review', confidence:x.r.confidence||'medium', team:null, isNew:true, fromScoring:true,
+    signal: why, signalSrc: `${top.source||'Signal file'} · scored ${fmt1(x.score)} (tier ${x.tier}) · draft from a template, AI drafting not connected`, format:'email',
+    emailSubj: `${x.r.account.name}: ${about.replace(/^your /,'')}`,
+    email: `Hi ${first},\n\nFollowing up on ${about}.\n\nWould a short conversation in the next couple of weeks be useful? We'd come prepared to ${action.charAt(0).toLowerCase()+action.slice(1)}.\n\nBest,\nClient Team`,
+    dmNote: `Hi ${first}, following up on ${about}. Happy to connect.`,
+    dmMessage: `Thanks for connecting. Would a short conversation be useful? We'd come prepared to ${action.charAt(0).toLowerCase()+action.slice(1)}.`,
+    callOpener: `"Hi ${first}, this is [name] from Client, following up on ${about}. Do you have two minutes?"` };
+}
+function sendToNBA(){
+  let pick = NSEL.size ? prospects().filter(x=>NSEL.has(x.key)) : prospects().filter(x=>x.tier==='A'||x.tier==='B');
+  pick = pick.filter(x=>x.p && x.p.signals.length);
+  if(!pick.length){ showToast('Select prospects with a live signal first'); return; }
+  const items = pick.map(toNBA);
+  let prev = []; try{ prev = JSON.parse(localStorage.getItem('demandai_nba_v1')||'[]'); }catch(e){}
+  const ids = new Set(items.map(i=>i.id));
+  try{ localStorage.setItem('demandai_nba_v1', JSON.stringify([...items, ...prev.filter(p=>!ids.has(p.id))])); }
+  catch(e){ showToast("This browser blocks storage, so the hand-off can't be made"); return; }
+  showToast(`${items.length} prospect${items.length===1?'':'s'} sent to NBA`);
+  setTimeout(()=>{ location.href = '12-nba.html?from=scoring&ids='+items.map(i=>i.id).join(','); }, 500);
+}
+
 function rankedTab(){
   return `<div class="score-list">
+    <div id="nBar" class="sl-toolbar" style="display:none;background:var(--brand-lt);align-items:center">
+      <span id="nCount" style="font-size:12.5px;font-weight:600;color:var(--brand-dk)"></span>
+      <button class="btn btn-ghost btn-sm" onclick="clearN()">Clear</button>
+      <button class="btn btn-primary btn-sm" style="margin-left:auto" onclick="sendToNBA()">Send selected to NBA →</button>
+    </div>
     <div class="sl-toolbar">${search('drawRanked','Search prospects or companies…')}<div class="sl-seg-filter">${pill(filt,'all','All')+pill(filt,'A','A')+pill(filt,'B','B')+pill(filt,'C','C')+pill(filt,'Watch list','Watch list')+pill(filt,'out','Not scored')}</div></div>
     <div id="rows"></div></div>
     <div style="font-size:11px;color:var(--i3);margin-top:10px">Each prospect is scored on their own signals: Score = company Fit × their Timing ÷ 100, all on 0–100. Click a prospect for the reasoning.</div>`;
 }
 function drawRanked(){
   const el = document.getElementById('rows'); if(!el) return;
-  let rs = prospects();
-  if(filt==='out') rs = rs.filter(x=>x.tier==='Below fit floor'||x.tier==='Excluded');
-  else if(filt!=='all') rs = rs.filter(x=>x.tier===filt);
-  if(q) rs = rs.filter(x=>(x.c.name+' '+x.r.account.name+' '+x.c.jobTitle).toLowerCase().includes(q));
+  const rs = visibleProspects();
   const num = v => v!==undefined ? fmt1(v) : '<span class="muted">—</span>';
-  el.innerHTML = table([['Prospect','19%'],['Company','16%'],['Tier','11%'],['Score','7%','num'],['Fit','6%','num'],['Timing','7%','num'],['Why now','34%']],
+  el.innerHTML = table([['<input type="checkbox" id="nAll" title="Select all" onclick="event.stopPropagation();toggleNAll(this.checked)" style="cursor:pointer;vertical-align:middle">','52px'],['Prospect','18%'],['Company','15%'],['Tier','11%'],['Score','7%','num'],['Fit','6%','num'],['Timing','7%','num'],['Why now','32%']],
     rs.map(x=>{
       const tags = x.p ? [...new Set(x.p.signals.map(s=>s.type))].slice(0,2) : [];
-      return `<tr class="click" onclick="openProspect('${x.key}')">
+      return `<tr class="click" onclick="openProspect('${x.key}')"${NSEL.has(x.key)?' style="background:var(--brand-lt)"':''}>
+        <td onclick="event.stopPropagation()">${sendable(x)?`<input type="checkbox" ${NSEL.has(x.key)?'checked':''} onclick="toggleN('${x.key}',this.checked);this.closest('tr').style.background=this.checked?'var(--brand-lt)':''" style="cursor:pointer;vertical-align:middle">`:'<span class="muted">—</span>'}</td>
         <td><div class="person"><div class="co-av" style="background:${avColor(x.c.name)}">${initials(x.c.name)}</div><div>${cell(x.c.name, esc(x.c.jobTitle||''), 'dt-main')}</div></div></td>
         <td>${cell(x.r.account.name, esc(x.r.account.vertical+' · '+x.r.account.country))}</td>
         <td>${tierPill(x.tier)}</td>
@@ -805,6 +876,7 @@ function drawRanked(){
         <td class="num">${num(x.timing)}</td>
         <td class="wrap">${x.r.excluded?`<span style="color:var(--i3)">${esc(x.r.excludedReason)}</span>`:x.r.belowFloor?`<span style="color:var(--i3)">Company fit ${fmt1(x.fit)} is below the floor of ${DemandAI.CONFIG.fitFloor}</span>`:x.p&&x.p.whyNow?`<div class="tags" style="margin-bottom:5px">${tags.map(tagChip).join('')}</div><span class="clamp2" title="${esc(x.p.whyNow)}" style="font-size:12px;color:var(--i2)">${esc(x.p.whyNow.replace(/^./,m=>m.toUpperCase()))}</span>`:'<span style="color:var(--i3)">No live signal for this person</span>'}</td>
       </tr>`;}).join(''), 'No prospects match.');
+  updateNBar();
 }
 function evidenceTab(){
   return `<div class="score-list">
