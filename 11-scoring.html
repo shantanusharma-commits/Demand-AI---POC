@@ -547,7 +547,7 @@ function renderPick(){
           <div style="display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--s75);cursor:pointer" onclick="chooseList('${l.id}')">
             <div class="co-av" style="background:${avColor(l.name)}">${initials(l.name)}</div>
             <div style="flex:1;min-width:0">
-              <div style="font-size:13px;font-weight:600;color:var(--i1)">${esc(l.name)} ${l.sandbox?'<span class="tag tag-amber" style="margin-left:6px;height:20px;font-size:10.5px">Sandbox</span>':''}</div>
+              <div style="font-size:13px;font-weight:600;color:var(--i1)">${esc(l.name)}</div>
               <div style="font-size:10.5px;color:var(--i3)">${esc(l.sourceFile)} · ${l.stats.accountsPass} accounts · ${l.stats.inFinalList} contacts in the final list${l.scoring?` · last scored with ${esc(l.scoring.fileName)}`:''}</div>
             </div>
             <span style="font-size:12px;color:var(--brand);font-weight:600">Choose →</span>
@@ -577,7 +577,7 @@ function renderSignals(){
   const types = DemandAI.CONFIG.signalTypes;
   document.getElementById('mainArea').innerHTML = `
     <div class="topbar">
-      <div class="topbar-l"><span class="tb-title">${esc(LIST.name)}</span>${LIST.sandbox?'<span class="tb-badge" style="background:var(--warn-lt);color:var(--warn)">Sandbox · sample data</span>':''}</div>
+      <div class="topbar-l"><span class="tb-title">${esc(LIST.name)}</span></div>
       <div class="topbar-r"><button class="btn btn-ghost btn-sm" onclick="renderPick()">Change list</button></div>
     </div>
     <div class="canvas"><div style="max-width:680px;margin:24px auto 0">
@@ -587,18 +587,17 @@ function renderSignals(){
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
         <label style="font-size:11.5px;font-weight:600;color:var(--i2)">Score as of</label>
         <input type="date" id="asOf" value="${LIST.sandbox?DemandAISample.SAMPLE_AS_OF:todayIso()}" style="padding:6px 8px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:12.5px">
-        <span style="font-size:11px;color:var(--i3)">Signal ages and decay are counted to this date${LIST.sandbox?' (the sample was exported on '+DemandAISample.SAMPLE_AS_OF+')':''}.</span>
+        <span style="font-size:11px;color:var(--i3)">Signal ages and decay are counted to this date.</span>
       </div>
-      ${LIST.sandbox ? `<div style="padding:10px 12px;background:var(--warn-lt);border-radius:var(--rmd);font-size:11.5px;color:var(--warn);margin-bottom:12px">This is a sandbox list built from sample data, so it only takes the sample signals. Customer signal files go with customer lists, so the two never mix.</div>` : `
+      ${LIST.sandbox ? '' : `
       <label id="dropZone" for="fileInput" style="display:block;border:1.5px dashed var(--bdk);border-radius:var(--rlg);padding:30px 24px;cursor:pointer;background:var(--surf);text-align:center;margin-bottom:12px">
         <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" style="display:none" onchange="onFile(this.files[0])">
         <div style="font-size:13px;font-weight:600;color:var(--i1)">Click to choose the signal file, or drop it here</div>
         <div style="font-size:11px;color:var(--i3);margin-top:4px">.xlsx or .csv · the signal template, filled in</div>
       </label>`}
       <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap">
-        ${LIST.sandbox?`<button class="btn btn-primary btn-sm" onclick="useSample()">Use the sample signals and score →</button>`:''}
+        ${LIST.sandbox?`<button class="btn btn-primary btn-sm" onclick="useSample()">Use sample signals and score →</button>`:''}
         <button class="btn btn-sec btn-sm" onclick="download('signal_template.csv', DemandAI.toCSV([DemandAI.SIGNAL_COLUMNS]))">Download signal template (.csv)</button>
-        ${LIST.sandbox?`<button class="btn btn-ghost btn-sm" onclick="download(DemandAISample.SIGNAL_FILE, DemandAI.toCSV(DemandAISample.SIGNALS))">Download the sample signals</button>`:''}
       </div>
       <div class="panel">
         <div class="panel-hdr"><span class="panel-ttl">Signal tags</span><span style="font-size:10.5px;color:var(--i3)">the signal_type column, from the template's list</span></div>
@@ -628,7 +627,7 @@ function useSample(){ runScore(DemandAISample.SIGNAL_FILE, 'Signal template', De
 
 /* ═══════════════ STEP 3 · SCORE ═══════════════ */
 function runScore(fileName, sheet, grid, asOf, sandbox, fresh){
-  if(sandbox !== !!LIST.sandbox){ showToast('Sample signals only go with a sandbox list'); return; }
+  if(sandbox !== !!LIST.sandbox){ showToast('Sample signals only go with a list built from sample data'); return; }
   // Structured clone: the list is reused for every re-score, and scoring marks signals as not used.
   const list = JSON.parse(JSON.stringify({accounts:LIST.accounts, contacts:LIST.contacts}));
   const sig = DemandAI.processSignals(grid, list, {file:fileName, sheet, asOf});
@@ -651,11 +650,10 @@ function renderResults(){
   document.getElementById('mainArea').innerHTML = `
     <div class="topbar">
       <div class="topbar-l"><span class="tb-title">${esc(LIST.name)}</span>
-        <span class="tb-badge badge-neutral">Signals: ${esc(RUN.fileName)} · as of ${RUN.asOf}</span>${RUN.sandbox?'<span class="tb-badge" style="background:var(--warn-lt);color:var(--warn)">Sandbox</span>':''}</div>
+        <span class="tb-badge badge-neutral">Signals: ${esc(RUN.fileName)} · as of ${RUN.asOf}</span></div>
       <div class="topbar-r">
         <button class="btn btn-ghost btn-sm" onclick="renderPick()">Change list</button>
         <button class="btn btn-sec btn-sm" onclick="renderSignals()">Change signals</button>
-        ${sig.issues.length?'<button class="btn btn-ghost btn-sm" onclick="downloadIssues()">Download issues (.csv)</button>':''}
         <button class="btn btn-primary btn-sm" disabled style="opacity:.5;cursor:not-allowed" title="The hand-off to Micro-segments & NBA isn't wired yet: the NBA screen still shows its sample queue">Send to NBA</button>
       </div>
     </div>
@@ -740,10 +738,6 @@ function drawEvidence(){
     </tr>`).join(''), 'No signals match.');
 }
 
-function downloadIssues(){
-  const rows = [['file','sheet','row','field','issue','what_happens','code','how_to_fix','severity'], ...RUN.sig.issues.map(i=>[i.file,i.sheet,i.row,i.field,i.issue,i.outcome,i.code,i.fix,i.severity])];
-  download(RUN.fileName.replace(/\.[^.]+$/,'')+'_issues.csv', DemandAI.toCSV(rows));
-}
 /* Issues travel with the signal row they belong to: an (i) on the row, hover for the fix */
 const SEV_COL = {stop:'var(--neg)',flag:'var(--warn)',info:'var(--i3)'};
 const SEG_TONE = {Inquiry:'tag-blue',Modernisation:'tag-violet','Service renewal':'tag-teal',Project:'tag-amber',Leadership:'tag-pink',Engagement:'tag-green'};

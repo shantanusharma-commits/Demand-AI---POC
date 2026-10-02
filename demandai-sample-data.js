@@ -70,5 +70,5 @@ const SIGNALS = [
   ['Kestrel Marine Services', 'ops@kestrelmarine.com', 'Capital project', '2026-09-01', 'New vessel maintenance yard', 'Account plan', ''],
 ];
 
-return { SAMPLE_AS_OF, LEADS, SIGNALS, LEAD_FILE: 'SAMPLE_lead_file.csv', SIGNAL_FILE: 'SAMPLE_signal_file.csv' };
+return { SAMPLE_AS_OF, LEADS, SIGNALS, LEAD_FILE: 'lead_file.csv', SIGNAL_FILE: 'signal_file.csv' };
 });
