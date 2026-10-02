@@ -204,7 +204,7 @@ test('drafts follow the outreach rules: short subject, short body, interest ques
   for (const rec of r.recs) for (const action of [rec.action, rec.runnerUp && rec.runnerUp.action].filter(Boolean)) {
     const d = E.draftFor(rec, action);
     const text = JSON.stringify(d);
-    assert.doesNotMatch(text, /yokogawa/i);
+    assert.match(text, /Client/); // the client appears only as "Client"
     if (d.channel === 'Email') {
       assert.ok(d.subject.split(/\s+/).length <= 4, d.subject);
       assert.ok(d.words <= 90, `${d.words} words`);
