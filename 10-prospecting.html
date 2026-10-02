@@ -458,294 +458,278 @@ input,textarea,select{font:inherit;}
 <script src="demandai-sample-data.js"></script>
 <script>
 function showToast(msg){document.querySelectorAll('.toast').forEach(t=>t.remove());const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2600);}
+function toggleDD(id){const el=document.getElementById(id);const was=el.classList.contains('open');document.querySelectorAll('.ddm.open').forEach(m=>m.classList.remove('open'));if(!was){el.classList.add('open');setTimeout(()=>{document.addEventListener('click',function c(e){if(!el.contains(e.target)){el.classList.remove('open');document.removeEventListener('click',c);}});},0);}}
+function closeDD(id){document.getElementById(id)?.classList.remove('open');}
 function initials(n){return n.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();}
-function avColor(id){const c=['#7D52A2','#0094DA','#FF8820','#2E7D5A','#B23F3F'];let h=0;for(const ch of String(id))h+=ch.charCodeAt(0);return c[h%c.length];}
+function avColor(id){const c=['#7D52A2','#0094DA','#FF8820','#2E7D5A','#B23F3F'];let h=0;for(const ch of id)h+=ch.charCodeAt(0);return c[h%c.length];}
 function closeDrawer(){ document.getElementById('detailDrawer').classList.remove('open'); }
+
+/* ═══════════════ UPLOADED ROWS: the lead file, run through demandai-engine.js ═══════════════ */
+let RUN = null;      // {fileName, sheet, sandbox, result}
+let RAW_ROWS = [];   // one per contact, in the shape this screen renders
 function esc(s){return String(s===undefined||s===null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
-function download(name, text){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'text/csv'}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},0);}
-
-/* ═══════════════ READ THE FILE: CSV or Excel, every sheet looked at ═══════════════ */
-function readFileToGrids(file){
-  return new Promise((resolve,reject)=>{
-    const isCsv = /\.csv$/i.test(file.name);
-    const isXlsx = /\.(xlsx|xls)$/i.test(file.name);
-    if(!isCsv && !isXlsx){ reject(new Error('Use a .csv or .xlsx file')); return; }
-    const reader = new FileReader();
-    reader.onerror = ()=>reject(new Error('Could not read the file'));
-    reader.onload = ev=>{
-      try{
-        if(isCsv){ resolve([{sheet:'(CSV)', grid:DemandAI.parseCSV(ev.target.result)}]); return; }
-        if(typeof XLSX==='undefined'){ reject(new Error('The Excel reader did not load. Save the sheet as CSV and upload that instead')); return; }
-        const wb = XLSX.read(new Uint8Array(ev.target.result),{type:'array',cellDates:true});
-        resolve(wb.SheetNames.map(n=>({sheet:n, grid:XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true,defval:''})})));
-      }catch(e){ reject(e); }
-    };
-    if(isCsv) reader.readAsText(file); else reader.readAsArrayBuffer(file);
-  });
-}
-// The lead template workbook has several sheets; use the one whose header row has company_name.
-function pickSheet(grids, anchor){
-  const has = g => g.grid.slice(0,10).some(r=>(r||[]).some(c=>String(c).trim().toLowerCase().replace(/\*/g,'').replace(/\s+/g,'_')===anchor));
-  return grids.find(g=>/lead template/i.test(g.sheet) && has(g)) || grids.find(has) || grids[0];
+function loadRun(fileName, sheet, grid, sandbox){
+  const result = DemandAI.processLeads(grid, {file:fileName, sheet});
+  RUN = {fileName, sheet, sandbox, result};
+  const accById = new Map(result.accounts.map(a=>[a.id,a]));
+  RAW_ROWS = result.contacts.map(c=>({ id:'r'+c.row, name:c.name, title:c.jobTitle, co:c.company, ind:c.industry,
+    region:c.country, email:c.emailRaw, li:c.linkedinRaw, c, acc:accById.get(c.accountId) }));
 }
 
-/* ═══════════════ STATE ═══════════════ */
-let RUN = null;        // {fileName, sheet, sandbox, result}
-let view = 'list';     // list | accounts | issues
-let filt = 'all', q = '', issueFilt = 'all';
+/* ═══════════════ derived checks ═══════════════ */
+function validationIssues(){
+  const is = RUN.result.issues;
+  return {
+    dupes: is.filter(i=>i.code==='D5'),
+    missing: is.filter(i=>i.issue==='No email and no LinkedIn URL'),
+    invalidEmail: is.filter(i=>i.field==='email' && /malformed/.test(i.issue)),
+    all: is,
+  };
+}
+const SUPPRESSED = { has: id => { const r = RAW_ROWS.find(x=>x.id===id); return !!(r && r.c.optOut); } };
+function knockout(r){ return r.acc && r.acc.excluded ? r.acc.excludedReason : null; }
+function classify(r){
+  const a = r.acc;
+  return { vertical: a.vertical, level: a.verticalLevel, accountType: (DemandAI.CONFIG.accountTypes[a.accountType]||{}).label || 'Other',
+    conf: a.confidence, low: a.confidence==='low', reason: a.classReason };
+}
+function consentBasis(r){
+  if(r.c.optOut) return null;
+  return r.c.contactable ? 'basis' : 'no-basis';
+}
 
-function renderStart(){
-  RUN = null;
-  const lists = DemandAI.loadLists();
+let stage = 'upload'; // upload -> validate -> universe
+let selectedId = null;
+
+function renderUpload(){
+  stage='upload';
   document.getElementById('mainArea').innerHTML = `
-    <div class="topbar"><div class="topbar-l"><span class="tb-title">Lead discovery and research</span><span class="tb-badge badge-neutral">Stages 1–5 · rules only</span></div></div>
-    <div class="canvas">
-      <div style="max-width:640px;margin:24px auto 0">
-        <div style="font-family:var(--fd);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--brand);margin-bottom:8px">Step 1 · Prospecting</div>
-        <div style="font-family:var(--fd);font-size:22px;font-weight:700;color:var(--i1);margin-bottom:6px">Upload the lead file</div>
-        <div style="font-size:13px;color:var(--i3);margin-bottom:18px;line-height:1.55">One row per contact, in the lead template's columns (any order). Every row is checked by fixed rules, not AI: validation, classification, knock-outs and suppression. Nothing is fixed silently. Every issue is listed with its file, sheet, row and how to fix it.</div>
-        <label id="dropZone" for="fileInput" style="display:block;border:1.5px dashed var(--bdk);border-radius:var(--rlg);padding:34px 24px;cursor:pointer;background:var(--surf);text-align:center">
-          <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" style="display:none" onchange="onFile(this.files[0])">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--i3)" stroke-width="1.5" stroke-linecap="round" style="margin-bottom:8px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          <div style="font-size:13px;font-weight:600;color:var(--i1)">Click to choose a file, or drop it here</div>
-          <div style="font-size:11px;color:var(--i3);margin-top:4px">.xlsx or .csv · the lead template, filled in</div>
-        </label>
-        <div style="display:flex;gap:8px;margin:12px 0 18px;flex-wrap:wrap">
-          <button class="btn btn-primary btn-sm" onclick="useSample()">Use the sample data (sandbox)</button>
-          <button class="btn btn-sec btn-sm" onclick="downloadTemplate()">Download lead template (.csv)</button>
-          <button class="btn btn-ghost btn-sm" onclick="download(DemandAISample.LEAD_FILE, DemandAI.toCSV(DemandAISample.LEADS))">Download the sample file</button>
+    <div class="canvas" style="display:flex;align-items:center;justify-content:center;min-height:100vh">
+      <div style="width:100%;max-width:600px;text-align:center">
+        <div style="font-family:var(--fd);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--brand);margin-bottom:10px">Step 1 · Prospecting</div>
+        <div style="font-family:var(--fd);font-size:24px;font-weight:700;color:var(--i1);margin-bottom:8px">Upload Client's target file</div>
+        <div style="font-size:13px;color:var(--i3);margin-bottom:24px;line-height:1.5">Account and contact list, CSV or Excel. No Apollo, no other provider — this is the target universe Client already gave us.</div>
+        <div id="dropZone" style="border:1.5px dashed var(--bdk);border-radius:var(--rlg);padding:40px 24px;cursor:pointer;background:var(--surf)" onclick="document.getElementById('fileInput').click()">
+          <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" style="display:none" onchange="handleUpload(this.files[0])">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--i3)" stroke-width="1.5" stroke-linecap="round" style="margin-bottom:10px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <div style="font-size:13px;font-weight:600;color:var(--i1)">Click to choose a file</div>
+          <div style="font-size:11px;color:var(--i3);margin-top:4px">or drag and drop — .csv or .xlsx</div>
         </div>
-        <div style="padding:12px 14px;background:var(--sec-lt);border-radius:var(--rmd);font-size:11.5px;color:var(--sec-dk);line-height:1.6;margin-bottom:22px">
-          <b>Required:</b> ${DemandAI.LEAD_REQUIRED.join(', ')}, plus an email or a LinkedIn URL.<br>
-          <b>Pilot region:</b> ${DemandAI.CONFIG.pilotCountries.join(', ')}. <b>Fit floor:</b> ${DemandAI.CONFIG.fitFloor} (applied in Scoring).<br>
-          This prototype reads the file in your browser. The production build runs it as a background job.
+        <div style="margin:14px 0">
+          <button class="btn btn-primary btn-sm" style="width:100%;justify-content:center" onclick="useSample()">Use sample data — see the flow</button>
         </div>
-        <div class="panel">
-          <div class="panel-hdr"><span class="panel-ttl">Saved lists</span><span style="font-size:10.5px;color:var(--i3)">${lists.length} saved · handed to Scoring</span></div>
-          <div class="panel-body" style="padding:0">${lists.length ? lists.map(l=>`
-            <div style="display:flex;align-items:center;gap:10px;padding:11px 16px;border-bottom:1px solid var(--s75)">
-              <div style="flex:1;min-width:0">
-                <div style="font-size:12.5px;font-weight:600;color:var(--i1)">${esc(l.name)} ${l.sandbox?'<span class="sc sc-m" style="margin-left:4px">SANDBOX</span>':''}</div>
-                <div style="font-size:10.5px;color:var(--i3)">${esc(l.sourceFile)} · ${l.stats.accountsPass} accounts pass · ${l.stats.inFinalList} contacts in the final list · saved ${new Date(l.createdAt).toLocaleString()}</div>
-              </div>
-              <a class="btn btn-sec btn-sm" style="text-decoration:none" href="11-scoring.html?list=${encodeURIComponent(l.id)}">Score →</a>
-              <button class="btn btn-ghost btn-sm" onclick="removeList('${l.id}')">Delete</button>
-            </div>`).join('') : `<div style="padding:14px 16px;font-size:12px;color:var(--i3)">No lists yet. Upload a lead file to build one.</div>`}
-          </div>
+        <div style="padding:12px 16px;background:var(--sec-lt);border-radius:var(--rmd);font-size:11.5px;color:var(--sec-dk);text-align:left;line-height:1.5">
+          Columns map to the lead template: one row per contact, with name, title, email, LinkedIn URL, company, domain, country, industry, size, account type, consent, opt-out and owner. Missing columns are flagged, not guessed. <a href="#" onclick="downloadTemplate();return false" style="color:var(--sec-dk);font-weight:600">Download the template</a>
         </div>
       </div>
     </div>`;
   const dz = document.getElementById('dropZone');
   dz.addEventListener('dragover', e=>{e.preventDefault(); dz.style.borderColor='var(--brand)';});
   dz.addEventListener('dragleave', ()=>{dz.style.borderColor='var(--bdk)';});
-  dz.addEventListener('drop', e=>{e.preventDefault(); dz.style.borderColor='var(--bdk)'; if(e.dataTransfer.files[0]) onFile(e.dataTransfer.files[0]);});
+  dz.addEventListener('drop', e=>{e.preventDefault(); dz.style.borderColor='var(--bdk)'; handleUpload(e.dataTransfer.files[0]);});
 }
-function removeList(id){ DemandAI.deleteList(id); showToast('List deleted'); renderStart(); }
+function download(name, text){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'text/csv'}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},0);}
 function downloadTemplate(){ download('lead_template.csv', DemandAI.toCSV([DemandAI.LEAD_COLUMNS])); }
-
-async function onFile(file){
+function readFileToGrid(file){
+  return new Promise((resolve,reject)=>{
+    const isCsv=/\.csv$/i.test(file.name), isXlsx=/\.(xlsx|xls)$/i.test(file.name);
+    if(!isCsv && !isXlsx){ reject(new Error('Use a .csv or .xlsx file')); return; }
+    const reader=new FileReader();
+    reader.onerror=()=>reject(new Error('Could not read the file'));
+    reader.onload=ev=>{
+      try{
+        if(isCsv){ resolve({sheet:'(CSV)', grid:DemandAI.parseCSV(ev.target.result)}); return; }
+        if(typeof XLSX==='undefined'){ reject(new Error('The Excel reader did not load. Save the sheet as CSV and upload that instead')); return; }
+        const wb=XLSX.read(new Uint8Array(ev.target.result),{type:'array',cellDates:true});
+        const grids=wb.SheetNames.map(n=>({sheet:n, grid:XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true,defval:''})}));
+        // The template workbook has several sheets: use the one whose header row has company_name.
+        const has=g=>g.grid.slice(0,10).some(r=>(r||[]).some(c=>String(c).trim().toLowerCase().replace(/\*/g,'')==='company_name'));
+        resolve(grids.find(g=>/lead template/i.test(g.sheet)&&has(g)) || grids.find(has) || grids[0]);
+      }catch(e){ reject(e); }
+    };
+    if(isCsv) reader.readAsText(file); else reader.readAsArrayBuffer(file);
+  });
+}
+async function handleUpload(file){
   if(!file) return;
   try{
-    const grids = await readFileToGrids(file);
-    const g = pickSheet(grids, 'company_name');
-    processFile(file.name, g.sheet, g.grid, false);
+    const g = await readFileToGrid(file);
+    loadRun(file.name, g.sheet, g.grid, false);
+    showToast(`${file.name} — ${RUN.result.stats.rowsRead} rows loaded`);
+    renderValidation();
   }catch(e){ showToast(e.message || 'Could not read that file'); }
 }
-function useSample(){ processFile(DemandAISample.LEAD_FILE, 'Lead template', DemandAISample.LEADS, true); }
-function processFile(fileName, sheet, grid, sandbox){
-  const result = DemandAI.processLeads(grid, {file:fileName, sheet});
-  RUN = {fileName, sheet, sandbox, result};
-  view = result.issues.some(i=>i.severity==='stop') ? 'issues' : 'list'; filt='all'; q=''; issueFilt='all';
-  showToast(`${fileName}: ${result.stats.rowsRead} rows read, ${result.issues.length} issue${result.issues.length===1?'':'s'}`);
-  renderRun();
+function useSample(){
+  loadRun(DemandAISample.LEAD_FILE, 'Lead template', DemandAISample.LEADS, true);
+  showToast(`${DemandAISample.LEAD_FILE} — ${RUN.result.stats.rowsRead} rows loaded`);
+  renderValidation();
 }
 
-/* ═══════════════ RESULTS ═══════════════ */
-function renderRun(){
-  const r = RUN.result, s = r.stats;
-  const tab = (id,label,n) => `<div class="ftab ${view===id?'active':''}" onclick="view='${id}';filt='all';q='';renderRun()">${label} <span class="ftab-cnt">${n}</span></div>`;
+function renderValidation(){
+  stage='validate';
+  const v = validationIssues();
   document.getElementById('mainArea').innerHTML = `
     <div class="topbar">
-      <div class="topbar-l"><span class="tb-title">${esc(RUN.fileName)}</span>
-        <span class="tb-badge badge-neutral">${esc(RUN.sheet)}</span>${RUN.sandbox?'<span class="tb-badge" style="background:var(--warn-lt);color:var(--warn)">Sandbox · sample data</span>':''}</div>
-      <div class="topbar-r">
-        <button class="btn btn-ghost btn-sm" onclick="renderStart()">Upload a different file</button>
-        <button class="btn btn-primary btn-sm" onclick="openSave()" ${s.accountsPass?'':'disabled style="opacity:.5;cursor:not-allowed"'}>Save list and go to Scoring →</button>
-      </div>
+      <div class="topbar-l"><span class="tb-title">Validation report</span><span class="tb-badge badge-neutral">${esc(RUN.fileName)}</span>${RUN.sandbox?'<span class="tb-badge" style="background:var(--warn-lt);color:var(--warn)">Sandbox · sample data</span>':''}</div>
+      <div class="topbar-r"><button class="btn btn-ghost btn-sm" onclick="renderUpload()">Upload a different file</button></div>
     </div>
-    <div class="ftabs">${tab('list','Final list',r.contacts.length)}${tab('accounts','Accounts',r.accounts.length)}${tab('issues','Issues',r.issues.length)}</div>
     <div class="canvas">
       <div class="stats">
-        <div class="stat"><div class="stat-lbl">Rows read</div><div class="stat-val sv1">${s.rowsRead}</div><div class="stat-sub">${s.notLoaded} not loaded · ${s.merged} merged duplicate${s.merged===1?'':'s'}</div></div>
-        <div class="stat"><div class="stat-lbl">Issues</div><div class="stat-val sv3">${s.issues}</div><div class="stat-sub">${s.issuesBySeverity.stop} stop · ${s.issuesBySeverity.flag} flagged · ${s.issuesBySeverity.info} info</div></div>
-        <div class="stat"><div class="stat-lbl">Accounts</div><div class="stat-val sv2">${s.accounts}</div><div class="stat-sub">${s.accountsPass} pass the knock-outs</div></div>
-        <div class="stat"><div class="stat-lbl">Excluded</div><div class="stat-val sv5">${s.accounts-s.accountsPass}</div><div class="stat-sub">knock-out rule, logged</div></div>
-        <div class="stat"><div class="stat-lbl">In the final list</div><div class="stat-val sv4">${s.inFinalList}</div><div class="stat-sub">of ${s.contacts} contacts</div></div>
+        <div class="stat"><div class="stat-lbl">Rows loaded</div><div class="stat-val sv1">${RUN.result.stats.rowsRead}</div><div class="stat-sub">raw universe</div></div>
+        <div class="stat"><div class="stat-lbl">Duplicates</div><div class="stat-val sv3">${v.dupes.length}</div><div class="stat-sub">same email or LinkedIn URL</div></div>
+        <div class="stat"><div class="stat-lbl">Missing fields</div><div class="stat-val sv2">${v.missing.length}</div><div class="stat-sub">no email and no LinkedIn URL</div></div>
+        <div class="stat"><div class="stat-lbl">Invalid emails</div><div class="stat-val sv4">${v.invalidEmail.length}</div><div class="stat-sub">malformed address</div></div>
       </div>
-      ${view==='list'?renderListTab():view==='accounts'?renderAccountsTab():renderIssuesTab()}
+      <div class="panel" style="margin-bottom:14px">
+        <div class="panel-hdr"><span class="panel-ttl">What we found — nothing fixed automatically</span></div>
+        <div class="panel-body" style="font-size:12.5px;color:var(--i2);line-height:1.8">
+          ${v.dupes.length?`<div>• <b>${v.dupes.length} duplicate${v.dupes.length>1?'s':''}</b> — same email or LinkedIn URL appearing twice (e.g. ${esc((v.dupes[0].issue.match(/\((.*)\)$/)||[,''])[1])}, row ${esc(v.dupes[0].row)}), merged</div>`:''}
+          ${v.missing.length?`<div>• <b>${v.missing.length} record${v.missing.length>1?'s':''} missing both email and LinkedIn URL</b> — kept on the account, not contactable</div>`:''}
+          ${v.invalidEmail.length?`<div>• <b>${v.invalidEmail.length} malformed email${v.invalidEmail.length>1?'s':''}</b> — flagged, not corrected</div>`:''}
+          ${v.all.length-v.dupes.length-v.missing.length-v.invalidEmail.length>0?`<div>• <b>${v.all.length-v.dupes.length-v.missing.length-v.invalidEmail.length} other finding${v.all.length-v.dupes.length-v.missing.length-v.invalidEmail.length>1?'s':''}</b> — opt-outs, unverified emails, missing or malformed fields</div>`:''}
+          ${!v.all.length?'<div>• No issues found.</div>':''}
+          <div style="margin-top:8px;font-size:11.5px;color:var(--i3);font-style:italic">We report, we don't fix. Client can correct and re-upload, or proceed as-is — nothing is silently removed.</div>
+        </div>
+      </div>
+      ${v.all.length?`<div class="panel" style="margin-bottom:14px">
+        <div class="panel-hdr"><span class="panel-ttl">Every issue, by row</span><button class="btn btn-ghost btn-sm" onclick="downloadIssues()">Download (.csv)</button></div>
+        <div class="panel-body" style="padding:0;overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:11.5px;color:var(--i2)">
+            <tr style="background:var(--s50);color:var(--i3);text-align:left"><th style="padding:7px 12px">Row</th><th>Field</th><th>Issue</th><th>What happens</th><th>Code</th><th style="padding-right:12px">How to fix</th></tr>
+            ${v.all.map(i=>`<tr style="border-top:1px solid var(--s75);vertical-align:top"><td style="padding:6px 12px;font-family:var(--fm)">${esc(i.row)}</td><td style="font-family:var(--fm);padding:6px 8px 6px 0">${esc(i.field)}</td><td style="padding:6px 8px 6px 0;color:var(--i1)">${esc(i.issue)}</td><td style="padding:6px 8px 6px 0">${esc(i.outcome)}</td><td style="font-family:var(--fm)">${esc(i.code)}</td><td style="padding:6px 12px 6px 0">${esc(i.fix)}</td></tr>`).join('')}
+          </table>
+        </div>
+      </div>`:''}
+      <button class="btn btn-primary" onclick="renderUniverse()">Continue — classify and scope this universe</button>
     </div>`;
-  if(view==='list') drawListRows(); else if(view==='accounts') drawAccRows(); else drawIssueRows();
 }
 
-function toolbar(pills, onSearch, placeholder){
-  return `<div class="sl-toolbar">
-    ${onSearch?`<div class="sl-srch"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="color:var(--i3);flex-shrink:0"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><input type="text" placeholder="${placeholder}" value="${esc(q)}" oninput="q=this.value.toLowerCase();${onSearch}()"></div>`:''}
-    <div class="sl-seg-filter">${pills}</div></div>`;
-}
-const pill = (cur,id,label,set) => `<div class="seg-pill ${cur===id?'active':''}" onclick="${set}='${id}';renderRun()">${label}</div>`;
-
-function statusPill(st){
-  if(st==='In the final list') return '<span class="sc sc-h">IN THE LIST</span>';
-  if(st.startsWith('In the list')) return '<span class="sc sc-m">NOT CONTACTABLE</span>';
-  return '<span class="sc sc-l">NOT IN THE LIST</span>';
-}
-const COLS_LIST = 'minmax(170px,1.6fr) minmax(150px,1.3fr) 90px 120px minmax(130px,1fr) 130px';
-function renderListTab(){
-  return `<div class="score-list">
-    ${toolbar(pill(filt,'all','All','filt')+pill(filt,'in','In the final list','filt')+pill(filt,'nc','Not contactable','filt')+pill(filt,'out','Not in the list','filt'),'drawListRows','Search name, company or title…')}
-    <div class="sl-head" style="grid-template-columns:${COLS_LIST}"><div class="sl-th">Contact</div><div class="sl-th">Job title</div><div class="sl-th">Persona</div><div class="sl-th">Reachable by</div><div class="sl-th">Owner</div><div class="sl-th">Status</div></div>
-    <div id="rows"></div></div>
-    <div style="font-size:11px;color:var(--i3);margin-top:10px">One row per contact: what Lead discovery hands to Scoring, and what each rep sees as their account list.</div>`;
-}
-function drawListRows(){
-  const el = document.getElementById('rows'); if(!el) return;
-  let cs = RUN.result.contacts;
-  if(filt==='in') cs = cs.filter(c=>c.status==='In the final list');
-  if(filt==='nc') cs = cs.filter(c=>c.status.startsWith('In the list'));
-  if(filt==='out') cs = cs.filter(c=>c.status.startsWith('Not in'));
-  if(q) cs = cs.filter(c=>(c.name+' '+c.company+' '+c.jobTitle).toLowerCase().includes(q));
-  el.innerHTML = cs.length ? cs.map(c=>`
-    <div class="sl-row" style="grid-template-columns:${COLS_LIST}" onclick="openContact(${c.row})">
-      <div class="co-cell"><div class="co-av" style="background:${avColor(c.company)}">${initials(c.name)}</div><div style="min-width:0"><div class="co-nm">${esc(c.name)}</div><div class="co-ind">${esc(c.company)} · row ${c.row}</div></div></div>
-      <div style="font-size:12px;color:var(--i2)">${esc(c.jobTitle||'—')}</div>
-      <div style="font-size:11.5px;color:${c.persona==='Primary'?'var(--pos)':'var(--i2)'};font-weight:${c.persona==='Primary'?600:400}">${c.persona}</div>
-      <div style="font-size:11.5px;color:${c.reachableBy==='none'?'var(--neg)':'var(--i2)'}">${c.reachableBy}</div>
-      <div style="font-size:11px;color:var(--i3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.owner||'—')}</div>
-      <div title="${esc(c.status)}">${statusPill(c.status)}</div>
-    </div>`).join('') : `<div style="padding:24px;text-align:center;font-size:12px;color:var(--i3)">No contacts match.</div>`;
-}
-
-const COLS_ACC = 'minmax(170px,1.6fr) 150px 130px 100px 80px minmax(160px,1.4fr)';
-function renderAccountsTab(){
-  return `<div class="score-list">
-    ${toolbar(pill(filt,'all','All','filt')+pill(filt,'pass','Pass','filt')+pill(filt,'excluded','Excluded','filt')+pill(filt,'review','Needs review','filt'),'drawAccRows','Search accounts…')}
-    <div class="sl-head" style="grid-template-columns:${COLS_ACC}"><div class="sl-th">Account</div><div class="sl-th">Vertical</div><div class="sl-th">Account type</div><div class="sl-th">Confidence</div><div class="sl-th">Contacts</div><div class="sl-th">Knock-outs</div></div>
-    <div id="rows"></div></div>`;
-}
-function drawAccRows(){
-  const el = document.getElementById('rows'); if(!el) return;
-  let as = RUN.result.accounts;
-  if(filt==='pass') as = as.filter(a=>!a.excluded);
-  if(filt==='excluded') as = as.filter(a=>a.excluded);
-  if(filt==='review') as = as.filter(a=>a.needsReview);
-  if(q) as = as.filter(a=>a.name.toLowerCase().includes(q));
-  const conf = {high:'sc-h',medium:'sc-m',low:'sc-l'};
-  el.innerHTML = as.length ? as.map(a=>`
-    <div class="sl-row" style="grid-template-columns:${COLS_ACC}" onclick="openAccount('${a.id}')">
-      <div class="co-cell"><div class="co-av" style="background:${avColor(a.name)}">${initials(a.name)}</div><div style="min-width:0"><div class="co-nm">${esc(a.name)}</div><div class="co-ind">${esc([a.city,a.country].filter(Boolean).join(', '))}</div></div></div>
-      <div style="font-size:12px;color:var(--i2)">${esc(a.vertical)} <span style="color:var(--i3)">· ${a.verticalLevel}</span></div>
-      <div style="font-size:12px;color:var(--i2)">${esc((DemandAI.CONFIG.accountTypes[a.accountType]||{}).label||'Other')}</div>
-      <div><span class="sc ${conf[a.confidence]}">${a.confidence.toUpperCase()}</span></div>
-      <div style="font-size:12px;color:var(--i2)">${a.contactIds.length}</div>
-      <div style="font-size:11.5px;color:${a.excluded?'var(--neg)':'var(--pos)'}">${a.excluded?'Excluded: '+esc(a.excludedReason):'Pass'}</div>
-    </div>`).join('') : `<div style="padding:24px;text-align:center;font-size:12px;color:var(--i3)">No accounts match.</div>`;
+function renderUniverse(){
+  stage='universe';
+  const navCount = document.getElementById('navProspectCount');
+  document.getElementById('mainArea').innerHTML = `
+    <div class="topbar">
+      <div class="topbar-l"><span class="tb-title" id="listTitle">Target universe</span><span class="tb-badge badge-live"><span class="badge-dot"></span>${esc(RUN.fileName)}</span>${RUN.sandbox?'<span class="tb-badge" style="background:var(--warn-lt);color:var(--warn)">Sandbox</span>':''}</div>
+      <div class="topbar-r">
+        <button class="btn btn-sec btn-sm" onclick="renderUpload()">Upload new file</button>
+        <button class="btn btn-primary btn-sm" onclick="sendAllToScoring()">Send universe to Scoring</button>
+      </div>
+    </div>
+    <div class="ftabs"><div class="ftab active">Accounts <span class="ftab-cnt" id="tabCnt">—</span></div></div>
+    <div class="canvas">
+      <div class="stats">
+        <div class="stat"><div class="stat-lbl">In scope</div><div class="stat-val sv1" id="statScope">—</div><div class="stat-sub">passed knock-outs</div></div>
+        <div class="stat"><div class="stat-lbl">Excluded</div><div class="stat-val sv3" id="statExcluded">—</div><div class="stat-sub">knock-out rule</div></div>
+        <div class="stat"><div class="stat-lbl">Suppressed</div><div class="stat-val sv2" id="statSuppressed">—</div><div class="stat-sub">do-not-contact</div></div>
+        <div class="stat"><div class="stat-lbl">Contactable</div><div class="stat-val sv4" id="statContactable">—</div><div class="stat-sub">has a consent basis</div></div>
+        <div class="stat"><div class="stat-lbl">Low-confidence</div><div class="stat-val sv5" id="statLowConf">—</div><div class="stat-sub">no match in the mapping table</div></div>
+      </div>
+      <div class="score-list">
+        <div class="sl-toolbar">
+          <div class="sl-srch"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="color:var(--i3);flex-shrink:0"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><input type="text" placeholder="Search name or company…" oninput="filterUniverse(this.value)"></div>
+          <div class="sl-seg-filter">
+            <div class="seg-pill active" onclick="filterUSeg(this,'all')">All</div>
+            <div class="seg-pill" onclick="filterUSeg(this,'scope')">In scope</div>
+            <div class="seg-pill" onclick="filterUSeg(this,'excluded')">Excluded</div>
+            <div class="seg-pill" onclick="filterUSeg(this,'suppressed')">Suppressed</div>
+            <div class="seg-pill" onclick="filterUSeg(this,'lowconf')">Low-confidence</div>
+          </div>
+        </div>
+        <div class="sl-head" style="grid-template-columns:minmax(160px,2.2fr) 120px 130px 110px 1fr;">
+          <div class="sl-th">Contact</div>
+          <div class="sl-th">Vertical</div>
+          <div class="sl-th">Status</div>
+          <div class="sl-th">Consent</div>
+          <div class="sl-th">Notes</div>
+        </div>
+        <div id="uListBody"></div>
+      </div>
+    </div>`;
+  renderUList();
 }
 
-const COLS_ISS = '110px 60px 130px minmax(180px,1.5fr) minmax(150px,1.2fr) 50px minmax(150px,1.2fr)';
-function renderIssuesTab(){
-  return `<div class="score-list">
-    <div class="sl-toolbar"><div class="sl-seg-filter">${pill(issueFilt,'all','All','issueFilt')+pill(issueFilt,'stop','Stops','issueFilt')+pill(issueFilt,'flag','Flagged','issueFilt')+pill(issueFilt,'info','Info','issueFilt')}</div>
-      <button class="btn btn-sec btn-sm" style="margin-left:auto" onclick="downloadIssues()">Download issues (.csv)</button></div>
-    <div class="sl-head" style="grid-template-columns:${COLS_ISS}"><div class="sl-th">Sheet</div><div class="sl-th">Row</div><div class="sl-th">Field</div><div class="sl-th">Issue</div><div class="sl-th">What happens</div><div class="sl-th">Code</div><div class="sl-th">How to fix</div></div>
-    <div id="rows"></div></div>
-    <div style="font-size:11px;color:var(--i3);margin-top:10px">Every row is checked in one pass, so this is the full list for ${esc(RUN.fileName)}. Codes: ${Object.entries(DemandAI.CODES).map(([k,v])=>k+' '+v).join(' · ')}.</div>`;
+let uSeg='all', uSearch='';
+function filterUSeg(el,seg){document.querySelectorAll('.seg-pill').forEach(p=>p.classList.remove('active'));el.classList.add('active');uSeg=seg;renderUList();}
+function filterUniverse(q){uSearch=q.toLowerCase();renderUList();}
+function uFiltered(){
+  let list = RAW_ROWS;
+  if(uSeg==='scope') list = list.filter(r=>!knockout(r) && !SUPPRESSED.has(r.id));
+  if(uSeg==='excluded') list = list.filter(r=>knockout(r));
+  if(uSeg==='suppressed') list = list.filter(r=>SUPPRESSED.has(r.id));
+  if(uSeg==='lowconf') list = list.filter(r=>classify(r).low);
+  if(uSearch) list = list.filter(r=>r.name.toLowerCase().includes(uSearch)||r.co.toLowerCase().includes(uSearch));
+  return list;
 }
-function drawIssueRows(){
-  const el = document.getElementById('rows'); if(!el) return;
-  const is = RUN.result.issues.filter(i=>issueFilt==='all'||i.severity===issueFilt);
-  const col = {stop:'var(--neg)',flag:'var(--warn)',info:'var(--i3)'};
-  el.innerHTML = is.length ? is.map(i=>`
-    <div class="sl-row" style="grid-template-columns:${COLS_ISS};cursor:default;min-height:44px">
-      <div style="font-size:11px;color:var(--i3)">${esc(i.sheet)}</div>
-      <div style="font-family:var(--fm);font-size:11.5px;color:var(--i1)">${esc(i.row)}</div>
-      <div style="font-family:var(--fm);font-size:11px;color:var(--i2)">${esc(i.field)}</div>
-      <div style="font-size:12px;color:var(--i1);border-left:2.5px solid ${col[i.severity]};padding-left:8px">${esc(i.issue)}</div>
-      <div style="font-size:11.5px;color:var(--i2)">${esc(i.outcome)}</div>
-      <div style="font-family:var(--fm);font-size:11px;color:var(--i2)">${esc(i.code)}</div>
-      <div style="font-size:11.5px;color:var(--i2)">${esc(i.fix)}</div>
-    </div>`).join('') : `<div style="padding:24px;text-align:center;font-size:12px;color:var(--pos)">No issues in this view.</div>`;
+function renderUList(){
+  const list = uFiltered();
+  document.getElementById('uListBody').innerHTML = list.length ? list.map(r=>{
+    const ko = knockout(r); const supp = SUPPRESSED.has(r.id); const cls = classify(r); const consent = consentBasis(r);
+    const statusPill = ko ? `<span class="sc sc-l">Excluded</span>` : supp ? `<span class="sc sc-l">Suppressed</span>` : `<span class="sc sc-h">In scope</span>`;
+    return `
+    <div class="sl-row" style="grid-template-columns:minmax(160px,2.2fr) 120px 130px 110px 1fr;" onclick="openUDetail('${r.id}')">
+      <div class="co-cell"><div class="co-av" style="background:${avColor(r.id)}">${initials(r.name)}</div><div><div class="co-nm">${esc(r.name)}${cls.low?' <span style=\"font-size:8.5px;font-weight:800;color:var(--warn);background:var(--warn-lt);padding:1px 6px;border-radius:999px\">LOW CONF</span>':''}</div><div class="co-ind">${esc(r.co)}</div></div></div>
+      <div style="font-size:11.5px;color:var(--i2)">${esc(cls.vertical)}</div>
+      <div>${statusPill}</div>
+      <div style="font-size:11px;color:var(--i3)">${consent==='basis'?esc(r.c.consent):consent==='no-basis'?'Not contactable':'—'}</div>
+      <div style="font-size:11px;color:var(--i3)">${ko || (supp?'On suppression list':'')}</div>
+    </div>`;
+  }).join('') : `<div style="padding:40px;text-align:center;color:var(--i3);font-size:12.5px">No accounts match.</div>`;
+  document.getElementById('tabCnt').textContent = list.length;
+  const clean = RAW_ROWS;
+  document.getElementById('statScope').textContent = clean.filter(r=>!knockout(r)&&!SUPPRESSED.has(r.id)).length;
+  document.getElementById('statExcluded').textContent = clean.filter(r=>knockout(r)).length;
+  document.getElementById('statSuppressed').textContent = clean.filter(r=>SUPPRESSED.has(r.id)).length;
+  document.getElementById('statContactable').textContent = clean.filter(r=>consentBasis(r)==='basis').length;
+  document.getElementById('statLowConf').textContent = clean.filter(r=>classify(r).low).length;
+}
+function openUDetail(id){
+  const r = RAW_ROWS.find(x=>x.id===id);
+  const ko = knockout(r); const supp = SUPPRESSED.has(r.id); const cls = classify(r); const consent = consentBasis(r);
+  document.getElementById('detTitle').textContent = r.name;
+  document.getElementById('detSub').textContent = r.title+' · '+r.co;
+  document.getElementById('detBody').innerHTML = `
+    ${ko ? `<div class="panel" style="margin-bottom:12px"><div class="panel-body" style="font-size:12px;color:var(--neg);background:var(--neg-lt)"><b>Excluded — knock-out.</b> ${ko}.</div></div>` : ''}
+    ${supp ? `<div class="panel" style="margin-bottom:12px"><div class="panel-body" style="font-size:12px;color:var(--neg);background:var(--neg-lt)"><b>On Client's suppression list.</b> Do-not-contact — never sent.</div></div>` : ''}
+    <div class="panel" style="margin-bottom:12px">
+      <div class="panel-hdr"><span class="panel-ttl">Classification</span></div>
+      <div class="panel-body">
+        <div class="dim-row"><span class="dim-lbl">Confidence</span><span style="font-size:12px;font-weight:600;color:${cls.low?'var(--warn)':'var(--pos)'};margin-left:auto">${cls.conf}</span></div>
+        <div style="font-size:11.5px;color:var(--i3);margin-top:6px">Vertical: <b style="color:var(--i1)">${esc(cls.vertical)}</b> (${cls.level}) · Account type: <b style="color:var(--i1)">${esc(cls.accountType)}</b></div>
+        <div style="font-size:11px;color:var(--i3);margin-top:6px">${esc(cls.reason)}</div>
+      </div>
+    </div>
+    <div class="panel" style="margin-bottom:12px">
+      <div class="panel-hdr"><span class="panel-ttl">Consent</span></div>
+      <div class="panel-body" style="font-size:12px;color:var(--i2);line-height:1.6">
+        ${consent==='basis' ? `Basis recorded: ${esc(r.c.consent)}. Reachable by ${r.c.reachableBy}.` : consent==='no-basis' ? `<b>Not contactable</b> (${esc(r.c.status.replace(/^.*\(|\)$/g,''))}). Kept on the account.` : 'Not applicable — suppressed.'}
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-hdr"><span class="panel-ttl">Contact</span></div>
+      <div class="panel-body">
+        <div class="dim-row" style="border:none;padding:4px 0"><span style="font-size:11.5px;color:var(--i3)">Email</span><span style="font-size:11.5px;color:var(--i1);margin-left:auto">${esc(r.email)||'— not provided'}</span></div>
+        <div class="dim-row" style="border:none;padding:4px 0"><span style="font-size:11.5px;color:var(--i3)">LinkedIn</span><span style="font-size:11.5px;color:var(--i1);margin-left:auto;word-break:break-all;text-align:right">${esc(r.li)||'— not provided'}</span></div>
+        <div class="dim-row" style="border:none;padding:4px 0"><span style="font-size:11.5px;color:var(--i3)">Region</span><span style="font-size:11.5px;color:var(--i1);margin-left:auto">${esc([r.c.city,r.region].filter(Boolean).join(', '))}</span></div>
+      </div>
+    </div>
+    ${(!ko && !supp) ? `<div style="margin-top:14px"><button onclick="sendAllToScoring()" class="btn btn-primary btn-sm" style="width:100%;justify-content:center">Send universe to Scoring</button></div>` : ''}
+  `;
+  document.getElementById('detailDrawer').classList.add('open');
 }
 function downloadIssues(){
-  const rows = [['file','sheet','row','field','issue','what_happens','code','how_to_fix','severity'],
-    ...RUN.result.issues.map(i=>[i.file,i.sheet,i.row,i.field,i.issue,i.outcome,i.code,i.fix,i.severity])];
+  const rows=[['file','sheet','row','field','issue','what_happens','code','how_to_fix','severity'], ...RUN.result.issues.map(i=>[i.file,i.sheet,i.row,i.field,i.issue,i.outcome,i.code,i.fix,i.severity])];
   download(RUN.fileName.replace(/\.[^.]+$/,'')+'_issues.csv', DemandAI.toCSV(rows));
 }
-
-/* ═══════════════ DRAWERS ═══════════════ */
-function kv(k,v){return `<div style="display:flex;gap:10px;padding:5px 0;border-bottom:1px solid var(--s75);font-size:11.5px"><span style="color:var(--i3);width:118px;flex-shrink:0">${k}</span><span style="color:var(--i1);min-width:0;word-break:break-word">${v}</span></div>`;}
-function section(t){return `<div style="font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--i3);margin:16px 0 6px">${t}</div>`;}
-function openContact(row){
-  const c = RUN.result.contacts.find(x=>x.row===row);
-  const iss = RUN.result.issues.filter(i=>i.row===row);
-  document.getElementById('detTitle').textContent = c.name;
-  document.getElementById('detSub').textContent = c.jobTitle+' · '+c.company;
-  document.getElementById('detBody').innerHTML = `
-    <div style="padding:10px 12px;border-radius:var(--rsm);background:${c.status==='In the final list'?'var(--pos-lt)':c.status.startsWith('In the list')?'var(--warn-lt)':'var(--neg-lt)'};font-size:12px;color:var(--i1)">${esc(c.status)}</div>
-    ${section('Contact')}
-    ${kv('Persona',c.persona)}${kv('Reachable by',c.reachableBy)}
-    ${kv('Email',c.emailRaw?esc(c.emailRaw)+(c.email?(c.emailVerified?' · verified':' · not verified'):' · malformed'):'—')}
-    ${kv('LinkedIn',c.linkedinRaw?esc(c.linkedinRaw):'—')}
-    ${kv('Consent basis',esc(c.consent||'—'))}${kv('Opt-out',c.optOut?'Y':c.optOutUnknown?'not given':'N')}
-    ${kv('Location',esc([c.city,c.country].filter(Boolean).join(', ')||'—'))}${kv('Owner rep',esc(c.owner||'—'))}${kv('Source row',c.row)}
-    ${section('Issues on this row')}
-    ${iss.length?iss.map(i=>`<div style="font-size:11.5px;padding:6px 0;border-bottom:1px solid var(--s75)"><b>${esc(i.field)}</b>: ${esc(i.issue)}<div style="color:var(--i3)">${esc(i.outcome)} · ${esc(i.code)}</div></div>`).join(''):'<div style="font-size:11.5px;color:var(--i3)">None</div>'}`;
-  document.getElementById('detailDrawer').classList.add('open');
-}
-function openAccount(id){
-  const a = RUN.result.accounts.find(x=>x.id===id);
-  const cs = RUN.result.contacts.filter(c=>c.accountId===id);
-  document.getElementById('detTitle').textContent = a.name;
-  document.getElementById('detSub').textContent = [a.domain,a.country].filter(Boolean).join(' · ');
-  document.getElementById('detBody').innerHTML = `
-    ${section('Classification (stage 3)')}
-    ${kv('Vertical',esc(a.vertical)+' · '+a.verticalLevel)}${kv('Confidence',a.confidence)}${kv('Reason',esc(a.classReason))}
-    ${kv('Account type',esc((DemandAI.CONFIG.accountTypes[a.accountType]||{}).label||'Other'))}
-    ${kv('Industry as held',esc(a.industry||'—'))}${kv('Site',esc([a.siteName,a.siteProcess].filter(Boolean).join(' · ')||'—'))}
-    ${section('Knock-outs (stage 4), in order')}
-    ${a.checks.map(k=>`<div style="display:flex;gap:8px;padding:6px 0;border-bottom:1px solid var(--s75);font-size:11.5px"><span style="width:16px;color:${k.pass===false?'var(--neg)':k.pass?'var(--pos)':'var(--i3)'}">${k.pass===false?'✕':k.pass?'✓':'…'}</span><span style="flex:1"><b>${k.rule}</b><div style="color:var(--i3)">${esc(k.why)}</div></span></div>`).join('')}
-    ${section('Contacts')}
-    ${cs.map(c=>`<div style="font-size:11.5px;padding:6px 0;border-bottom:1px solid var(--s75);cursor:pointer" onclick="openContact(${c.row})"><b>${esc(c.name)}</b> · ${esc(c.jobTitle)} · ${c.persona}<div style="color:var(--i3)">${esc(c.status)}</div></div>`).join('')}`;
-  document.getElementById('detailDrawer').classList.add('open');
-}
-
-/* ═══════════════ SAVE AND HAND OFF ═══════════════ */
-function openSave(){
-  const base = RUN.fileName.replace(/\.[^.]+$/,'');
-  let ov = document.getElementById('saveOverlay');
-  if(!ov){ ov=document.createElement('div'); ov.id='saveOverlay'; ov.style.cssText='position:fixed;inset:0;background:rgba(20,26,33,.45);z-index:600;display:flex;align-items:center;justify-content:center;padding:16px'; ov.onclick=e=>{if(e.target===ov) ov.style.display='none';}; document.body.appendChild(ov); }
-  const stops = RUN.result.stats.issuesBySeverity.stop;
-  ov.innerHTML = `<div style="background:var(--surf);border-radius:var(--rlg);box-shadow:var(--sh-lg);width:420px;max-width:100%;padding:20px">
-    <div style="font-family:var(--fd);font-size:14px;font-weight:700;color:var(--i1);margin-bottom:4px">Save the screened list</div>
-    <div style="font-size:11.5px;color:var(--i3);margin-bottom:14px;line-height:1.5">${RUN.result.stats.accountsPass} accounts that pass the knock-outs, with their contacts, go to Scoring. Excluded accounts travel with it, marked excluded, so their signals are reported as not used.${stops?` <b style="color:var(--neg)">${stops} row${stops>1?'s':''} weren't loaded</b>: see Issues.`:''}</div>
-    <label style="font-size:11px;font-weight:600;color:var(--i2)">List name</label>
-    <input id="listName" value="${esc(base)} · ${new Date().toISOString().slice(0,10)}" style="width:100%;margin:5px 0 16px;padding:8px 10px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:13px">
-    <div style="display:flex;gap:8px;justify-content:flex-end">
-      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('saveOverlay').style.display='none'">Cancel</button>
-      <button class="btn btn-primary btn-sm" onclick="saveAndGo()">Save and go to Scoring →</button>
-    </div></div>`;
-  ov.style.display='flex';
-}
-function saveAndGo(){
-  const name = document.getElementById('listName').value.trim() || RUN.fileName;
+function sendAllToScoring(){
   const r = RUN.result;
-  const list = { id:'list-'+Date.now().toString(36), name, createdAt:Date.now(), sourceFile:RUN.fileName, sheet:RUN.sheet,
-    sandbox:RUN.sandbox, stats:r.stats, accounts:r.accounts, contacts:r.contacts };
-  const stored = DemandAI.saveList(list);
-  if(!stored){ showToast("This browser blocks storage, so the list can't be handed to Scoring. Allow site data and try again"); return; }
-  location.href = '11-scoring.html?list='+encodeURIComponent(list.id);
+  const list = { id:'list-'+Date.now().toString(36), name:RUN.fileName.replace(/\.[^.]+$/,'')+' · '+new Date().toISOString().slice(0,10),
+    createdAt:Date.now(), sourceFile:RUN.fileName, sheet:RUN.sheet, sandbox:RUN.sandbox, stats:r.stats, accounts:r.accounts, contacts:r.contacts };
+  if(!DemandAI.saveList(list)){ showToast("This browser blocks storage, so the list can't be handed to Scoring"); return; }
+  showToast(r.stats.accountsPass+' accounts sent to Scoring');
+  setTimeout(()=>{ location.href = '11-scoring.html?list='+encodeURIComponent(list.id); }, 600);
 }
 
-renderStart();
+renderUpload();
 
 const PAGE_ID = '10-prospecting.html';
 

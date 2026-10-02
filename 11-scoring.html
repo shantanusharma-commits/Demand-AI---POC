@@ -438,7 +438,90 @@ input,textarea,select{font:inherit;}
 </nav>
 
 <!-- ════ MAIN ════ -->
-<main class="main" id="mainArea"></main>
+<main class="main">
+  <div class="topbar">
+    <div class="topbar-l">
+      <span class="tb-title" id="tbTitle">Account Scoring</span>
+      <span class="tb-badge badge-live"><span class="badge-dot"></span>Live · Fit × Timing</span>
+    </div>
+    <div class="topbar-r">
+      <div class="dd">
+        <button class="btn btn-sec btn-sm" onclick="toggleDD('sourceDD')">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          Score more
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="ddm" id="sourceDD" style="right:0;left:auto">
+          <div class="ddi" onclick="openPicker();closeDD('sourceDD')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>From a Prospecting list
+          </div>
+          <div class="ddi" onclick="openSignals();closeDD('sourceDD')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Upload new signals
+          </div>
+          <div class="dd-sep"></div>
+          <div class="ddi" onclick="switchSource('dormant');closeDD('sourceDD')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Dormant opportunities
+          </div>
+        </div>
+      </div>
+      <button class="btn btn-ghost btn-sm" id="issuesBtn" style="display:none" onclick="openIssues()">Signal issues</button>
+      <button class="btn btn-primary btn-sm" onclick="sendAllToNBA()">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        Send all to NBA
+      </button>
+    </div>
+  </div>
+
+  <div class="ftabs">
+    <div class="ftab active">Score List <span class="ftab-cnt" id="tabCnt">—</span></div>
+  </div>
+
+  <div class="canvas" id="canvas">
+
+    <div class="stats">
+      <div class="stat"><div class="stat-lbl">Accounts scored</div><div class="stat-val sv1" id="statScored">—</div><div class="stat-sub">this run</div></div>
+      <div class="stat"><div class="stat-lbl">Hot tier</div><div class="stat-val sv2" id="statHot">—</div><div class="stat-sub">rank ≥ 70</div></div>
+      <div class="stat"><div class="stat-lbl">Trusted patterns</div><div class="stat-val sv3" id="statTrusted">—</div><div class="stat-sub">cache-proven</div></div>
+      <div class="stat"><div class="stat-lbl">Flagged for NBA</div><div class="stat-val sv4" id="statNba">—</div><div class="stat-sub">hot + warm</div></div>
+      <div class="stat" title="Good fit, but no live signal right now. Re-checked on every run — not dropped, just not urgent yet."><div class="stat-lbl">Watch list</div><div class="stat-val sv5" id="statConf">—</div><div class="stat-sub">good fit, no live signal</div></div>
+    </div>
+
+    <div class="score-list">
+      <div class="sl-toolbar" id="bulkBar" style="display:none;background:var(--brand-lt);">
+        <div style="display:flex;align-items:center;gap:10px;flex:1">
+          <span style="font-size:12.5px;font-weight:600;color:var(--brand-dk)"><span id="bulkCount">0</span> selected</span>
+
+          <button class="btn btn-primary btn-sm" onclick="bulkSendToNBA()">Send selected to NBA</button>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="clearSelection()">Clear</button>
+      </div>
+      <div class="sl-toolbar" id="normalBar">
+        <div class="sl-srch">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="color:var(--i3);flex-shrink:0"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <input type="text" placeholder="Search accounts…" oninput="filterList(this.value)">
+        </div>
+        <div class="sl-seg-filter">
+          <div class="seg-pill active" onclick="filterSeg(this,'all')">All</div>
+          <div class="seg-pill" onclick="filterSeg(this,'hot')">Hot</div>
+          <div class="seg-pill" onclick="filterSeg(this,'warm')">Warm</div>
+          <div class="seg-pill" onclick="filterSeg(this,'cool')">Cool</div>
+          <div class="seg-pill" onclick="filterSeg(this,'excluded')">Excluded</div>
+        </div>
+      </div>
+      <div class="sl-head" style="grid-template-columns:28px minmax(160px,2.5fr) 90px 110px 130px 1fr 32px;">
+        <div class="sl-th"><input type="checkbox" id="selectAllBox" onclick="toggleSelectAll(this)" style="cursor:pointer"></div>
+        <div class="sl-th">Account</div>
+        <div class="sl-th">Tier</div>
+        <div class="sl-th">Rank</div>
+        <div class="sl-th">Cache</div>
+        <div class="sl-th">Top signal</div>
+        <div class="sl-th"></div>
+      </div>
+      <div id="scoreListBody"></div>
+    </div>
+
+  </div><!-- /canvas -->
+</main>
 
 <!-- Detail drawer -->
 <div class="detail-drawer" id="detailDrawer">
@@ -460,325 +543,334 @@ input,textarea,select{font:inherit;}
 </div>
 </div><!-- /shell -->
 
+<!-- Source picker modal -->
+<div id="sourceOverlay" style="position:fixed;inset:0;background:rgba(20,26,33,.4);z-index:500;display:none;align-items:center;justify-content:center;" onclick="if(event.target===this)closeSourceModal()">
+  <div style="background:var(--surf);border-radius:var(--rlg);box-shadow:var(--sh-lg);width:520px;max-width:90vw;max-height:80vh;overflow-y:auto;">
+    <div id="sourceModalBody"></div>
+  </div>
+</div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="demandai-engine.js"></script>
 <script src="demandai-sample-data.js"></script>
 <script>
 function showToast(msg){document.querySelectorAll('.toast').forEach(t=>t.remove());const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2600);}
-function initials(n){return n.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();}
-function avColor(id){const c=['#7D52A2','#0094DA','#FF8820','#2E7D5A','#B23F3F'];let h=0;for(const ch of String(id))h+=ch.charCodeAt(0);return c[h%c.length];}
-function closeDrawer(){ document.getElementById('detailDrawer').classList.remove('open'); }
+function toggleDD(id){const el=document.getElementById(id);const was=el.classList.contains('open');document.querySelectorAll('.ddm.open').forEach(m=>m.classList.remove('open'));if(!was){el.classList.add('open');setTimeout(()=>{document.addEventListener('click',function c(e){if(!el.contains(e.target)){el.classList.remove('open');document.removeEventListener('click',c);}});},0);}}
+function closeDD(id){document.getElementById(id)?.classList.remove('open');}
+
+/* ═══════════════ DATA: a Prospecting list + its signal file, scored by demandai-engine.js ═══════════════ */
+let LIST = null, RUN = null;   // RUN = {fileName, sheet, grid, asOf, sandbox, sig}
+let SCORED = [];
 function esc(s){return String(s===undefined||s===null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+// Tiers A/B/C from the stage sheet (70 / 40), shown with this screen's Hot / Warm / Cool labels.
+function tierOfRank(r){const t=DemandAI.CONFIG.tierThresholds;return r>=t.A?'hot':r>=t.B?'warm':'cool';}
+const TIER_LBL={hot:'HOT',warm:'WARM',cool:'COOL'};
+function cacheProven(c){return (c.s+1)/(c.a+2)>=0.6 && c.a>=10;}
+function priorityScore(r){return Math.round(r*10)/10;}
+const TIER_NO = {100:1, 60:2, 30:3};
+
+function buildScored(){
+  const list = JSON.parse(JSON.stringify({accounts:LIST.accounts, contacts:LIST.contacts}));
+  const sig = DemandAI.processSignals(RUN.grid, list, {file:RUN.fileName, sheet:RUN.sheet, asOf:RUN.asOf});
+  const results = DemandAI.scoreList(list, sig);
+  RUN.sig = sig;
+  SCORED = results.map(r=>{
+    const a = r.account;
+    const lead = (r.people && r.people[0] && r.people[0].contact) || r.contacts.find(c=>!c.optOut) || r.contacts[0] || {name:a.name, jobTitle:'—'};
+    const own = sig.signals.filter(s=>s.accountId===a.id);
+    const used = own.filter(s=>s.status==='Qualified').sort((x,y)=>y.weight-x.weight);
+    return {
+      id:a.id, name:lead.name, title:lead.jobTitle, co:a.name, fit:r.fit, cache:{s:0,a:0},
+      rank: r.rank || 0, timingTotal: r.timing || 0,
+      disqualified: r.excluded || !!r.belowFloor,
+      disqualifiedReason: r.excluded ? r.excludedReason : r.belowFloor ? `Fit ${r.fit} is below the floor of ${DemandAI.CONFIG.fitFloor}` : '',
+      competitorAward:false,
+      weighted: used.map(s=>({ tag:s.type, nm:s.detail||s.type, tier:TIER_NO[s.tier]||'·', src:[s.personName, s.source].filter(Boolean).join(' · '),
+        age:s.age, auto: s.assigned && s.assigned!=='Named in the file' })),
+      discardedQualify: own.filter(s=>s.status!=='Qualified').map(s=>({ nm:`${s.type} — ${s.detail||''}`.replace(/ — $/,''),
+        failedTest: s.status==='Rejected' ? `${s.code} ${DemandAI.CODES[s.code]}` : s.status, reason: s.reason })),
+      whyNow: r.whyNow || '',
+    };
+  });
+}
+
+let selectedId=null, activeSeg='all', searchQ='';
+function initials(n){return n.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();}
+function avColor(id){const c=['#7D52A2','#0094DA','#FF8820','#2E7D5A','#B23F3F'];let h=0;for(const ch of id)h+=ch.charCodeAt(0);return c[h%c.length];}
+
+function filteredList(){
+  let list=SCORED;
+  if(activeSeg==='excluded') list=list.filter(a=>a.disqualified);
+  else if(activeSeg!=='all') list=list.filter(a=>tierOfRank(a.rank)===activeSeg);
+  if(searchQ) list=list.filter(a=>a.name.toLowerCase().includes(searchQ)||a.co.toLowerCase().includes(searchQ));
+  return list;
+}
+function filterList(q){searchQ=q.toLowerCase();renderList();}
+function filterSeg(el,seg){document.querySelectorAll('.seg-pill').forEach(p=>p.classList.remove('active'));el.classList.add('active');activeSeg=seg;renderList();}
+
+let selectedIds = new Set();
+function renderList(){
+  const list=filteredList();
+  document.getElementById('scoreListBody').innerHTML = list.map(a=>{
+    const tier=tierOfRank(a.rank); const pScore=priorityScore(a.rank); const proven=cacheProven(a.cache);
+    const top=a.weighted[0];
+    return `
+    <div class="sl-row ${a.id===selectedId?'selected':''} ${a.disqualified?'style="opacity:.5"':''}" style="grid-template-columns:28px minmax(160px,2.5fr) 90px 110px 130px 1fr 32px;">
+      <div onclick="event.stopPropagation()"><input type="checkbox" ${selectedIds.has(a.id)?'checked':''} onchange="toggleRowSelect('${a.id}',this)" style="cursor:pointer"></div>
+      <div class="co-cell" onclick="selectRow('${a.id}')" style="cursor:pointer">
+        <div class="co-av" style="background:${avColor(a.id)}">${initials(a.name)}</div>
+        <div><div class="co-nm">${esc(a.name)}</div><div class="co-ind">${esc(a.co)}</div></div>
+      </div>
+      <div onclick="selectRow('${a.id}')" style="cursor:pointer">${a.disqualified ? '<span class="sc sc-l">EXCLUDED</span>' : `<span class="sc ${tier==='hot'?'sc-h':tier==='warm'?'sc-m':'sc-l'}">${TIER_LBL[tier]}</span>`}</div>
+      <div onclick="selectRow('${a.id}')" class="comp-bar" style="cursor:pointer"><div class="comp-track"><div class="comp-fill" style="width:${Math.min(100,pScore)}%;background:${pScore>=75?'var(--pos)':pScore>=50?'var(--warn)':'var(--s300)'}"></div></div><div class="comp-val">${pScore}</div></div>
+      <div onclick="selectRow('${a.id}')" style="font-size:11px;color:var(--i3);cursor:pointer">${proven?'Trusted pattern':'New pattern'}</div>
+      <div onclick="selectRow('${a.id}')" style="font-size:11.5px;color:var(--i2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer">${a.disqualified ? esc(a.disqualifiedReason) : (top?esc(top.tag):'No live signal')}${a.competitorAward?' · Timing ×0.5':''}</div>
+      <div class="dd" onclick="event.stopPropagation()">
+        <button class="btn btn-ghost btn-sm" style="padding:0;width:28px;justify-content:center" onclick="toggleDD('rowmenu-${a.id}')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+        </button>
+        <div class="ddm" id="rowmenu-${a.id}" style="right:0;left:auto">
+          <div class="ddi" onclick="selectRow('${a.id}');closeDD('rowmenu-${a.id}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/></svg>View breakdown</div>
+          <a class="ddi" href="12-nba.html?from=scoring&ids=${a.id}" style="text-decoration:none;color:inherit;${a.disqualified?'opacity:.4;pointer-events:none':''}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>Send to NBA</a>
+          <div class="dd-sep"></div>
+          <div class="ddi" onclick="showToast('Manual override opened in the drawer');selectRow('${a.id}');closeDD('rowmenu-${a.id}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>Override tier</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('tabCnt').textContent = list.length;
+  const selAllBox = document.getElementById('selectAllBox');
+  if(selAllBox) selAllBox.checked = list.length>0 && list.every(a=>selectedIds.has(a.id));
+}
+
+function toggleRowSelect(id, el){ if(el.checked) selectedIds.add(id); else selectedIds.delete(id); updateBulkBar(); }
+function toggleSelectAll(el){
+  const list = filteredList();
+  if(el.checked) list.forEach(a=>selectedIds.add(a.id));
+  else list.forEach(a=>selectedIds.delete(a.id));
+  renderList(); updateBulkBar();
+}
+function clearSelection(){ selectedIds.clear(); renderList(); updateBulkBar(); }
+function updateBulkBar(){
+  const n = selectedIds.size;
+  document.getElementById('bulkBar').style.display = n>0 ? 'flex' : 'none';
+  document.getElementById('normalBar').style.display = n>0 ? 'none' : 'flex';
+  document.getElementById('bulkCount').textContent = n;
+}
+function bulkSendToNBA(){
+  const ids = Array.from(selectedIds).filter(id=>{ const a=SCORED.find(x=>x.id===id); return a && !a.disqualified; });
+  if(!ids.length){ showToast('Nothing sendable in the current selection'); return; }
+  location.href = '12-nba.html?from=scoring&ids=' + ids.join(',');
+}
+
+function updateStats(){
+  const hot=SCORED.filter(a=>tierOfRank(a.rank)==='hot'&&!a.disqualified).length;
+  const trusted=SCORED.filter(a=>cacheProven(a.cache)).length;
+  const nba=SCORED.filter(a=>tierOfRank(a.rank)!=='cool'&&!a.disqualified).length;
+  const watchList=SCORED.filter(a=>!a.disqualified && a.timingTotal===0).length;
+  document.getElementById('statScored').textContent=SCORED.filter(a=>!a.disqualified).length;
+  document.getElementById('statHot').textContent=hot;
+  document.getElementById('statTrusted').textContent=trusted;
+  document.getElementById('statNba').textContent=nba;
+  const confEl = document.getElementById('statConf');
+  if(confEl) confEl.textContent=watchList;
+}
+
+function selectRow(id){
+  selectedId=id; renderList();
+  const a=SCORED.find(x=>x.id===id);
+  const tier=tierOfRank(a.rank); const pScore=priorityScore(a.rank); const proven=cacheProven(a.cache);
+  document.getElementById('detTitle').textContent=a.name;
+  document.getElementById('detSub').textContent=a.title+' · '+a.co;
+  const sigsHtml=a.weighted.map(s=>`
+    <div class="sig-row">
+      <div class="sig-ic" style="background:var(--s100);color:var(--i2)">${s.tier}</div>
+      <div style="flex:1"><div class="sig-lbl"><span class="sc sc-m" style="margin-right:6px">${esc(s.tag)}</span>${esc(s.nm)}</div><div class="sig-meta">${esc(s.src)} · ${s.age<14?s.age+'d ago':Math.round(s.age/7)+'w ago'}${s.auto?' · auto-assigned':''}</div></div>
+    </div>`).join('');
+  const discardedHtml = (a.discardedQualify||[]).map(dq=>`
+    <div class="sig-row" style="opacity:.6">
+      <div class="sig-ic" style="background:var(--danger-50);color:var(--neg)">✕</div>
+      <div style="flex:1"><div class="sig-lbl">${esc(dq.nm)}</div><div class="sig-meta"><b>${esc(dq.failedTest)}</b> — ${esc(dq.reason)}</div></div>
+    </div>`).join('');
+  document.getElementById('detBody').innerHTML = `
+    ${a.disqualified ? `<div class="panel" style="margin-bottom:12px"><div class="panel-body" style="font-size:12px;color:var(--neg);background:var(--neg-lt)"><b>Excluded, rank 0.</b> ${esc(a.disqualifiedReason)}</div></div>` : ''}
+    ${a.competitorAward ? `<div class="panel" style="margin-bottom:12px"><div class="panel-body" style="font-size:12px;color:var(--warn);background:var(--warn-lt)"><b>Competitor contract at this site, last 12 months.</b> Timing halved (×0.5) — the signal still counts, just not at full weight.</div></div>` : ''}
+    <div class="panel" style="margin-bottom:12px">
+      <div class="panel-hdr"><span class="panel-ttl">Priority</span><span class="sc ${tier==='hot'?'sc-h':tier==='warm'?'sc-m':'sc-l'}">${a.disqualified?'EXCLUDED':TIER_LBL[tier]}</span></div>
+      <div class="panel-body">
+        <div class="dim-row"><span class="dim-lbl">Rank</span><div class="dim-track"><div class="dim-fill" style="width:${Math.min(100,pScore)}%;background:var(--brand)"></div></div><span class="dim-val">${pScore}</span></div>
+        <div class="dim-row"><span class="dim-lbl">Fit</span><div class="dim-track"><div class="dim-fill" style="width:${a.fit}%;background:var(--sec)"></div></div><span class="dim-val">${a.fit}</span></div>
+      </div>
+    </div>
+    <div class="panel" style="margin-bottom:12px">
+      <div class="panel-hdr"><span class="panel-ttl">Why now (${a.weighted.length} qualified)</span></div>
+      <div class="panel-body">${a.whyNow?`<div style="font-size:12px;color:var(--i1);line-height:1.5;margin-bottom:8px">${esc(a.whyNow)}</div>`:''}${sigsHtml || '<div style="font-size:12px;color:var(--i3)">No live signal — on the watch list.</div>'}${discardedHtml}</div>
+    </div>
+    <div class="panel">
+      <div class="panel-hdr"><span class="panel-ttl">Trust</span></div>
+      <div class="panel-body" style="font-size:12px;color:var(--i2);line-height:1.6">
+        ${proven ? `Worked reliably before (${a.cache.s} of the last ${a.cache.a} times) — trusted, can be sent automatically.` : `Newer situation, not tried enough yet (${a.cache.a} similar attempt${a.cache.a===1?'':'s'}) — worth a look before it goes out.`}
+      </div>
+    </div>
+    <div style="margin-top:14px">${a.disqualified ? `<button class="btn btn-primary btn-sm" style="width:100%;justify-content:center" disabled>Send to NBA</button>` : `<a href="12-nba.html?from=scoring&ids=${a.id}" class="btn btn-primary btn-sm" style="width:100%;justify-content:center;text-decoration:none">Send to NBA</a>`}</div>
+  `;
+  document.getElementById('detailDrawer').classList.add('open');
+}
+function closeDrawer(){ document.getElementById('detailDrawer').classList.remove('open'); }
+function closeSourceModal(){ document.getElementById('sourceOverlay').style.display = 'none'; }
+function openModal(html){ document.getElementById('sourceModalBody').innerHTML = html; document.getElementById('sourceOverlay').style.display = 'flex'; }
+function sendAllToNBA(){
+  const eligible = filteredList().filter(a=>!a.disqualified && tierOfRank(a.rank)!=='cool');
+  if(!eligible.length){ showToast('Nothing in the current view is above Cool tier'); return; }
+  location.href = '12-nba.html?from=scoring&ids=' + eligible.map(a=>a.id).join(',');
+}
 function download(name, text){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'text/csv'}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},0);}
 function todayIso(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
-const fmt1 = n => n===undefined||n===null ? '—' : (Math.round(n*10)/10).toLocaleString('en-US',{minimumFractionDigits:n%1?1:0,maximumFractionDigits:1});
 
-function readFileToGrids(file){
+/* ── Step 1: choose a screened list from Prospecting ── */
+function openPicker(){
+  const lists = DemandAI.loadLists();
+  openModal(`
+    <div style="padding:20px">
+      <div style="font-family:var(--fd);font-size:15px;font-weight:700;color:var(--i1);margin-bottom:4px">Choose a list to score</div>
+      <div style="font-size:12px;color:var(--i3);margin-bottom:14px">Screened lists sent from Prospecting.</div>
+      ${lists.length ? lists.map(l=>`
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--s75);cursor:pointer" onclick="chooseList('${l.id}')">
+          <div class="co-av" style="background:${avColor(l.id)}">${initials(l.name)}</div>
+          <div style="flex:1;min-width:0"><div style="font-size:12.5px;font-weight:600;color:var(--i1)">${esc(l.name)}${l.sandbox?' <span class="sc sc-m">SANDBOX</span>':''}</div>
+          <div style="font-size:10.5px;color:var(--i3)">${l.stats.accountsPass} accounts · ${l.stats.inFinalList} contacts in the final list</div></div>
+          <span style="font-size:12px;color:var(--brand);font-weight:600">Choose →</span>
+        </div>`).join('') : `<div style="padding:14px 0;font-size:12px;color:var(--i2)">No lists yet. <a href="10-prospecting.html" style="color:var(--brand);font-weight:600">Build one in Prospecting →</a></div>`}
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px">
+        <button class="btn btn-ghost btn-sm" onclick="closeSourceModal()">Cancel</button>
+      </div>
+    </div>`);
+}
+function chooseList(id){
+  LIST = DemandAI.getList(id);
+  if(!LIST){ showToast("That list isn't saved in this browser"); openPicker(); return; }
+  history.replaceState(null,'','?list='+encodeURIComponent(id));
+  openSignals();
+}
+
+/* ── Step 2: the signals for the prospects on that list ── */
+function openSignals(){
+  if(!LIST){ openPicker(); return; }
+  const types = Object.keys(DemandAI.CONFIG.signalTypes).filter(k=>!DemandAI.CONFIG.signalTypes[k].knockout && !DemandAI.CONFIG.signalTypes[k].reject);
+  const prev = LIST.scoring;
+  openModal(`
+    <div style="padding:20px">
+      <div style="font-family:var(--fd);font-size:15px;font-weight:700;color:var(--i1);margin-bottom:4px">Add the signals for these prospects</div>
+      <div style="font-size:12px;color:var(--i3);margin-bottom:14px">${esc(LIST.name)} · ${LIST.stats.accountsPass} accounts · ${LIST.stats.inFinalList} contacts. One row per signal, naming the person by their email or LinkedIn URL.</div>
+      ${LIST.sandbox ? `<div style="padding:10px 12px;background:var(--warn-lt);border-radius:var(--rmd);font-size:11.5px;color:var(--warn);margin-bottom:12px">Sandbox list built from sample data: it takes the sample signals only, so sample and customer data never mix.</div>
+        <button class="btn btn-primary btn-sm" style="width:100%;justify-content:center" onclick="useSampleSignals()">Use the sample signals</button>` : `
+      <div id="sigDrop" style="border:1.5px dashed var(--bdk);border-radius:var(--rmd);padding:22px;text-align:center;cursor:pointer" onclick="document.getElementById('sigFile').click()">
+        <input type="file" id="sigFile" accept=".csv,.xlsx,.xls" style="display:none" onchange="handleSignalFile(this.files[0])">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--i3)" stroke-width="1.6" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <div style="font-size:12px;color:var(--i1);font-weight:600;margin-top:8px">Click to choose the signal file, or drop it here</div>
+        <div style="font-size:11px;color:var(--i3);margin-top:3px">.xlsx or .csv · <a href="#" onclick="event.stopPropagation();download('signal_template.csv', DemandAI.toCSV([DemandAI.SIGNAL_COLUMNS]));return false" style="color:var(--brand)">download the template</a></div>
+      </div>`}
+      ${prev && !prev.sandbox===!LIST.sandbox ? `<button class="btn btn-sec btn-sm" style="width:100%;justify-content:center;margin-top:8px" onclick="reuseSignals()">Re-use the last signals (${esc(prev.fileName)})</button>` : ''}
+      <div style="display:flex;align-items:center;gap:8px;margin-top:14px">
+        <span style="font-size:11.5px;color:var(--i2)">Signals counted as of</span>
+        <input type="date" id="asOf" value="${LIST.sandbox?DemandAISample.SAMPLE_AS_OF:todayIso()}" style="padding:4px 8px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:12px">
+      </div>
+      <div style="font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--i3);margin:16px 0 8px">Signal tags</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">${types.map(t=>`<span class="sc sc-m">${esc(t)}</span>`).join('')}</div>
+      <div style="font-size:11px;color:var(--i3);margin-top:8px">Installed system (current) excludes the account. Newsletter sign-ups aren't scored.</div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px">
+        <button class="btn btn-ghost btn-sm" onclick="closeSourceModal()">Cancel</button>
+      </div>
+    </div>`);
+  const dz = document.getElementById('sigDrop');
+  if(dz){
+    dz.addEventListener('dragover', e=>{e.preventDefault(); dz.style.borderColor='var(--brand)';});
+    dz.addEventListener('dragleave', ()=>{dz.style.borderColor='var(--bdk)';});
+    dz.addEventListener('drop', e=>{e.preventDefault(); dz.style.borderColor='var(--bdk)'; handleSignalFile(e.dataTransfer.files[0]);});
+  }
+}
+function asOfValue(){ const v=(document.getElementById('asOf')||{}).value; return /^\d{4}-\d{2}-\d{2}$/.test(v||'') ? v : todayIso(); }
+function readFileToGrid(file){
   return new Promise((resolve,reject)=>{
-    const isCsv = /\.csv$/i.test(file.name), isXlsx = /\.(xlsx|xls)$/i.test(file.name);
+    const isCsv=/\.csv$/i.test(file.name), isXlsx=/\.(xlsx|xls)$/i.test(file.name);
     if(!isCsv && !isXlsx){ reject(new Error('Use a .csv or .xlsx file')); return; }
-    const reader = new FileReader();
-    reader.onerror = ()=>reject(new Error('Could not read the file'));
-    reader.onload = ev=>{
+    const reader=new FileReader();
+    reader.onerror=()=>reject(new Error('Could not read the file'));
+    reader.onload=ev=>{
       try{
-        if(isCsv){ resolve([{sheet:'(CSV)', grid:DemandAI.parseCSV(ev.target.result)}]); return; }
+        if(isCsv){ resolve({sheet:'(CSV)', grid:DemandAI.parseCSV(ev.target.result)}); return; }
         if(typeof XLSX==='undefined'){ reject(new Error('The Excel reader did not load. Save the sheet as CSV and upload that instead')); return; }
-        const wb = XLSX.read(new Uint8Array(ev.target.result),{type:'array',cellDates:true});
-        resolve(wb.SheetNames.map(n=>({sheet:n, grid:XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true,defval:''})})));
+        const wb=XLSX.read(new Uint8Array(ev.target.result),{type:'array',cellDates:true});
+        const grids=wb.SheetNames.map(n=>({sheet:n, grid:XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true,defval:''})}));
+        const has=g=>g.grid.slice(0,10).some(r=>(r||[]).some(c=>String(c).trim().toLowerCase().replace(/\*/g,'')==='signal_type'));
+        resolve(grids.find(g=>/signal template/i.test(g.sheet)&&has(g)) || grids.find(has) || grids[0]);
       }catch(e){ reject(e); }
     };
     if(isCsv) reader.readAsText(file); else reader.readAsArrayBuffer(file);
   });
 }
-function pickSheet(grids, anchor){
-  const has = g => g.grid.slice(0,10).some(r=>(r||[]).some(c=>String(c).trim().toLowerCase().replace(/\*/g,'').replace(/\s+/g,'_')===anchor));
-  return grids.find(g=>/signal template/i.test(g.sheet) && has(g)) || grids.find(has) || grids[0];
-}
-
-/* ═══════════════ STATE ═══════════════ */
-let LIST = null, RUN = null;  // RUN = {fileName, sheet, asOf, sandbox, sig, scored}
-let view = 'ranked', filt = 'all', q = '';
-
-/* ═══════════════ STEP 1 · CHOOSE THE LIST ═══════════════ */
-function renderPick(){
-  LIST = null; RUN = null; closeDrawer();
-  const lists = DemandAI.loadLists();
-  document.getElementById('mainArea').innerHTML = `
-    <div class="topbar"><div class="topbar-l"><span class="tb-title">Account Scoring</span><span class="tb-badge badge-neutral">Fit × Timing · rules only</span></div></div>
-    <div class="canvas"><div style="max-width:680px;margin:24px auto 0">
-      ${steps(1)}
-      <div style="font-family:var(--fd);font-size:22px;font-weight:700;color:var(--i1);margin-bottom:6px">Choose a screened list</div>
-      <div style="font-size:13px;color:var(--i3);margin-bottom:18px;line-height:1.55">Lists come from Prospecting: validated, classified and through the knock-outs. Pick one, then give it the signals for its prospects.</div>
-      <div class="panel"><div class="panel-body" style="padding:0">
-        ${lists.length ? lists.map(l=>`
-          <div style="display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--s75);cursor:pointer" onclick="chooseList('${l.id}')">
-            <div class="co-av" style="background:${avColor(l.name)}">${initials(l.name)}</div>
-            <div style="flex:1;min-width:0">
-              <div style="font-size:13px;font-weight:600;color:var(--i1)">${esc(l.name)} ${l.sandbox?'<span class="sc sc-m" style="margin-left:4px">SANDBOX</span>':''}</div>
-              <div style="font-size:10.5px;color:var(--i3)">${esc(l.sourceFile)} · ${l.stats.accountsPass} accounts · ${l.stats.inFinalList} contacts in the final list${l.scoring?` · last scored with ${esc(l.scoring.fileName)}`:''}</div>
-            </div>
-            <span style="font-size:12px;color:var(--brand);font-weight:600">Choose →</span>
-          </div>`).join('') : `
-          <div style="padding:22px 16px;text-align:center">
-            <div style="font-size:12.5px;color:var(--i2);margin-bottom:10px">No screened lists yet.</div>
-            <a href="10-prospecting.html" class="btn btn-primary btn-sm" style="text-decoration:none">Build one in Prospecting →</a>
-          </div>`}
-      </div></div>
-    </div></div>`;
-}
-function steps(n){
-  const s = ['Choose the list','Add the signals','Score'];
-  return `<div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">${s.map((t,i)=>`<span style="font-size:10.5px;font-weight:700;letter-spacing:.04em;padding:4px 10px;border-radius:999px;background:${i+1===n?'var(--brand)':i+1<n?'var(--brand-lt)':'var(--s75)'};color:${i+1===n?'#fff':i+1<n?'var(--brand-dk)':'var(--i3)'}">${i+1} · ${t}</span>`).join('')}</div>`;
-}
-function chooseList(id){
-  LIST = DemandAI.getList(id);
-  if(!LIST){ showToast("That list isn't saved in this browser"); renderPick(); return; }
-  history.replaceState(null,'','?list='+encodeURIComponent(id));
-  if(LIST.scoring) runScore(LIST.scoring.fileName, LIST.scoring.sheet, LIST.scoring.grid, LIST.scoring.asOf, LIST.scoring.sandbox, false);
-  else renderSignals();
-}
-
-/* ═══════════════ STEP 2 · SIGNALS FOR THE PROSPECTS ═══════════════ */
-function renderSignals(){
-  RUN = null; closeDrawer();
-  const types = DemandAI.CONFIG.signalTypes;
-  document.getElementById('mainArea').innerHTML = `
-    <div class="topbar">
-      <div class="topbar-l"><span class="tb-title">${esc(LIST.name)}</span>${LIST.sandbox?'<span class="tb-badge" style="background:var(--warn-lt);color:var(--warn)">Sandbox · sample data</span>':''}</div>
-      <div class="topbar-r"><button class="btn btn-ghost btn-sm" onclick="renderPick()">Change list</button></div>
-    </div>
-    <div class="canvas"><div style="max-width:680px;margin:24px auto 0">
-      ${steps(2)}
-      <div style="font-family:var(--fd);font-size:22px;font-weight:700;color:var(--i1);margin-bottom:6px">Add the signals for these prospects</div>
-      <div style="font-size:13px;color:var(--i3);margin-bottom:16px;line-height:1.55">The signal file: one row per event, each naming the person it concerns by the email or LinkedIn URL used in the lead file. Every row is matched to an account and a person, then qualified with a weight or rejected with a reason code.</div>
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
-        <label style="font-size:11.5px;font-weight:600;color:var(--i2)">Score as of</label>
-        <input type="date" id="asOf" value="${LIST.sandbox?DemandAISample.SAMPLE_AS_OF:todayIso()}" style="padding:6px 8px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:12.5px">
-        <span style="font-size:11px;color:var(--i3)">Signal ages and decay are counted to this date${LIST.sandbox?' (the sample was exported on '+DemandAISample.SAMPLE_AS_OF+')':''}.</span>
-      </div>
-      ${LIST.sandbox ? `<div style="padding:10px 12px;background:var(--warn-lt);border-radius:var(--rmd);font-size:11.5px;color:var(--warn);margin-bottom:12px">This is a sandbox list built from sample data, so it only takes the sample signals. Customer signal files go with customer lists, so the two never mix.</div>` : `
-      <label id="dropZone" for="fileInput" style="display:block;border:1.5px dashed var(--bdk);border-radius:var(--rlg);padding:30px 24px;cursor:pointer;background:var(--surf);text-align:center;margin-bottom:12px">
-        <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" style="display:none" onchange="onFile(this.files[0])">
-        <div style="font-size:13px;font-weight:600;color:var(--i1)">Click to choose the signal file, or drop it here</div>
-        <div style="font-size:11px;color:var(--i3);margin-top:4px">.xlsx or .csv · the signal template, filled in</div>
-      </label>`}
-      <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap">
-        ${LIST.sandbox?`<button class="btn btn-primary btn-sm" onclick="useSample()">Use the sample signals and score →</button>`:''}
-        <button class="btn btn-sec btn-sm" onclick="download('signal_template.csv', DemandAI.toCSV([DemandAI.SIGNAL_COLUMNS]))">Download signal template (.csv)</button>
-        ${LIST.sandbox?`<button class="btn btn-ghost btn-sm" onclick="download(DemandAISample.SIGNAL_FILE, DemandAI.toCSV(DemandAISample.SIGNALS))">Download the sample signals</button>`:''}
-      </div>
-      <div class="panel">
-        <div class="panel-hdr"><span class="panel-ttl">Signal types and how each is weighted</span><span style="font-size:10.5px;color:var(--i3)">${esc(DemandAI.CONFIG.version)}</span></div>
-        <div class="panel-body" style="padding:0;overflow-x:auto">
-          <table style="width:100%;border-collapse:collapse;font-size:11.5px">
-            <tr style="background:var(--s50);color:var(--i3);text-align:left"><th style="padding:7px 12px">Signal type</th><th>Code</th><th>Tier</th><th>Strength</th><th>Full for</th><th>Zero at</th><th style="padding-right:12px">Segment</th></tr>
-            ${Object.entries(types).map(([k,t])=>`<tr style="border-top:1px solid var(--s75)"><td style="padding:6px 12px;color:var(--i1)">${k}</td>${t.knockout?'<td colspan="6" style="color:var(--neg)">Knock-out: the account is excluded</td>':t.reject?`<td colspan="6" style="color:var(--i3)">Rejected (${t.reject}): doesn't predict buying</td>`:`<td>${t.code}</td><td>${t.tier}</td><td>${t.strength}</td><td>${t.full} days</td><td>${t.zero} days</td><td style="padding-right:12px">${t.segment}</td>`}</tr>`).join('')}
-          </table>
-        </div>
-      </div>
-    </div></div>`;
-  const dz = document.getElementById('dropZone');
-  if(dz){
-    dz.addEventListener('dragover', e=>{e.preventDefault(); dz.style.borderColor='var(--brand)';});
-    dz.addEventListener('dragleave', ()=>{dz.style.borderColor='var(--bdk)';});
-    dz.addEventListener('drop', e=>{e.preventDefault(); dz.style.borderColor='var(--bdk)'; if(e.dataTransfer.files[0]) onFile(e.dataTransfer.files[0]);});
-  }
-}
-function asOfValue(){ const v = (document.getElementById('asOf')||{}).value; return /^\d{4}-\d{2}-\d{2}$/.test(v||'') ? v : todayIso(); }
-async function onFile(file){
+async function handleSignalFile(file){
   if(!file) return;
-  try{
-    const grids = await readFileToGrids(file);
-    const g = pickSheet(grids, 'signal_type');
-    runScore(file.name, g.sheet, g.grid, asOfValue(), false, true);
-  }catch(e){ showToast(e.message || 'Could not read that file'); }
+  try{ const g = await readFileToGrid(file); score(file.name, g.sheet, g.grid, asOfValue(), false); }
+  catch(e){ showToast(e.message || 'Could not read that file'); }
 }
-function useSample(){ runScore(DemandAISample.SIGNAL_FILE, 'Signal template', DemandAISample.SIGNALS, asOfValue(), true, true); }
+function useSampleSignals(){ score(DemandAISample.SIGNAL_FILE, 'Signal template', DemandAISample.SIGNALS, asOfValue(), true); }
+function reuseSignals(){ const p=LIST.scoring; score(p.fileName, p.sheet, p.grid, asOfValue(), p.sandbox); }
 
-/* ═══════════════ STEP 3 · SCORE ═══════════════ */
-function runScore(fileName, sheet, grid, asOf, sandbox, fresh){
+/* ── Step 3: score, into the list below ── */
+function score(fileName, sheet, grid, asOf, sandbox){
   if(sandbox !== !!LIST.sandbox){ showToast('Sample signals only go with a sandbox list'); return; }
-  // Structured clone: the list is reused for every re-score, and scoring marks signals as not used.
-  const list = JSON.parse(JSON.stringify({accounts:LIST.accounts, contacts:LIST.contacts}));
-  const sig = DemandAI.processSignals(grid, list, {file:fileName, sheet, asOf});
-  const scored = DemandAI.scoreList(list, sig);
-  RUN = {fileName, sheet, asOf, sandbox, sig, scored};
-  if(fresh){
-    LIST.scoring = {fileName, sheet, grid, asOf, sandbox};
-    DemandAI.saveList(LIST);
-    const n = sig.signals.filter(s=>s.status==='Qualified').length;
-    showToast(`${sig.rowsRead} signal rows read: ${n} qualified, ${sig.signals.filter(s=>s.status==='Rejected').length} rejected`);
-  }
-  view = sig.issues.some(i=>i.severity==='stop') ? 'issues' : 'ranked'; filt='all'; q='';
-  renderResults();
+  RUN = {fileName, sheet, grid, asOf, sandbox};
+  buildScored();
+  LIST.scoring = {fileName, sheet, grid, asOf, sandbox};
+  DemandAI.saveList(LIST);
+  SCORED.sort((x,y)=>(x.disqualified-y.disqualified) || (y.rank-x.rank) || ((y.fit||0)-(x.fit||0)));
+  selectedId=null; activeSeg='all'; searchQ=''; selectedIds.clear();
+  document.getElementById('tbTitle').textContent = LIST.name;
+  const q = RUN.sig.signals.filter(s=>s.status==='Qualified').length, rj = RUN.sig.signals.filter(s=>s.status==='Rejected').length;
+  const btn = document.getElementById('issuesBtn');
+  btn.style.display = RUN.sig.issues.length ? '' : 'none';
+  btn.textContent = `Signal issues (${RUN.sig.issues.length})`;
+  renderList(); updateStats(); updateBulkBar(); closeDrawer(); closeSourceModal();
+  showToast(`${SCORED.filter(a=>!a.disqualified).length} accounts scored · ${q} signals qualified, ${rj} rejected`);
 }
 
-function renderResults(){
-  const sc = RUN.scored, sig = RUN.sig;
-  const count = t => sc.filter(r=>r.tier===t).length;
-  const tab = (id,label,n) => `<div class="ftab ${view===id?'active':''}" onclick="view='${id}';filt='all';q='';renderResults()">${label}${n!==undefined?` <span class="ftab-cnt">${n}</span>`:''}</div>`;
-  document.getElementById('mainArea').innerHTML = `
-    <div class="topbar">
-      <div class="topbar-l"><span class="tb-title">${esc(LIST.name)}</span>
-        <span class="tb-badge badge-neutral">Signals: ${esc(RUN.fileName)} · as of ${RUN.asOf}</span>${RUN.sandbox?'<span class="tb-badge" style="background:var(--warn-lt);color:var(--warn)">Sandbox</span>':''}</div>
-      <div class="topbar-r">
-        <button class="btn btn-ghost btn-sm" onclick="renderPick()">Change list</button>
-        <button class="btn btn-sec btn-sm" onclick="renderSignals()">Change signals</button>
-        <button class="btn btn-primary btn-sm" disabled style="opacity:.5;cursor:not-allowed" title="The hand-off to Micro-segments & NBA isn't wired yet: the NBA screen still shows its sample queue">Send to NBA</button>
-      </div>
-    </div>
-    <div class="ftabs">${tab('ranked','Ranked accounts',sc.length)}${tab('evidence','Signal evidence',sig.signals.length)}${tab('issues','Issues',sig.issues.length)}${tab('suggested','Suggested contacts',sig.suggested.length)}${tab('how','How the score works')}</div>
-    <div class="canvas">
-      <div class="stats">
-        <div class="stat"><div class="stat-lbl">Tier A</div><div class="stat-val" style="color:var(--pos)">${count('A')}</div><div class="stat-sub">rank ${DemandAI.CONFIG.tierThresholds.A} and above</div></div>
-        <div class="stat"><div class="stat-lbl">Tier B</div><div class="stat-val" style="color:var(--warn)">${count('B')}</div><div class="stat-sub">rank ${DemandAI.CONFIG.tierThresholds.B}–${DemandAI.CONFIG.tierThresholds.A-1}</div></div>
-        <div class="stat"><div class="stat-lbl">Tier C</div><div class="stat-val sv1">${count('C')}</div><div class="stat-sub">below ${DemandAI.CONFIG.tierThresholds.B}</div></div>
-        <div class="stat"><div class="stat-lbl">Watch list</div><div class="stat-val sv5">${count('Watch list')}</div><div class="stat-sub">good fit, no live signal</div></div>
-        <div class="stat"><div class="stat-lbl">Not scored</div><div class="stat-val sv3">${count('Below fit floor')+count('Excluded')}</div><div class="stat-sub">${count('Below fit floor')} below fit floor · ${count('Excluded')} excluded</div></div>
-      </div>
-      ${view==='ranked'?rankedTab():view==='evidence'?evidenceTab():view==='issues'?issuesTab():view==='suggested'?suggestedTab():howTab()}
-    </div>`;
-  if(view==='ranked') drawRanked(); else if(view==='evidence') drawEvidence();
-}
-const pill = (cur,id,label) => `<div class="seg-pill ${cur===id?'active':''}" onclick="filt='${id}';renderResults()">${label}</div>`;
-function search(fn, ph){ return `<div class="sl-srch"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="color:var(--i3);flex-shrink:0"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><input type="text" placeholder="${ph}" value="${esc(q)}" oninput="q=this.value.toLowerCase();${fn}()"></div>`; }
-function tierPill(t){
-  const m = {A:['sc-h','TIER A'],B:['sc-m','TIER B'],C:['sc-l','TIER C'],'Watch list':['delta-flat','WATCH LIST'],'Below fit floor':['delta-flat','BELOW FLOOR'],Excluded:['sc-l','EXCLUDED']}[t];
-  return `<span class="sc ${m[0]}" style="white-space:nowrap;${m[0]==='delta-flat'?'background:var(--s75);color:var(--i2);padding:2px 8px;border-radius:999px;font-size:9.5px;font-weight:700':''}">${m[1]}</span>`;
-}
-
-const COLS_R = 'minmax(170px,1.5fr) 100px 70px 56px 70px minmax(120px,.9fr) minmax(200px,2fr)';
-function rankedTab(){
-  return `<div class="score-list">
-    <div class="sl-toolbar">${search('drawRanked','Search accounts…')}<div class="sl-seg-filter">${pill(filt,'all','All')+pill(filt,'A','A')+pill(filt,'B','B')+pill(filt,'C','C')+pill(filt,'Watch list','Watch list')+pill(filt,'out','Not scored')}</div></div>
-    <div class="sl-head" style="grid-template-columns:${COLS_R}"><div class="sl-th">Account</div><div class="sl-th">Tier</div><div class="sl-th">Rank</div><div class="sl-th">Fit</div><div class="sl-th">Timing</div><div class="sl-th">Contact first</div><div class="sl-th">Why now</div></div>
-    <div id="rows"></div></div>
-    <div style="font-size:11px;color:var(--i3);margin-top:10px">Rank = Fit ÷ 100 × Timing. Rank isn't capped at 100, so 144.9 is possible. A 0–100 scale is still to be agreed (checklist item 19).</div>`;
-}
-function drawRanked(){
-  const el = document.getElementById('rows'); if(!el) return;
-  let rs = RUN.scored;
-  if(filt==='out') rs = rs.filter(r=>r.tier==='Below fit floor'||r.tier==='Excluded');
-  else if(filt!=='all') rs = rs.filter(r=>r.tier===filt);
-  if(q) rs = rs.filter(r=>r.account.name.toLowerCase().includes(q));
-  el.innerHTML = rs.length ? rs.map(r=>{
-    const lead = r.people && r.people[0];
-    return `<div class="sl-row" style="grid-template-columns:${COLS_R}" onclick="openAccount('${r.account.id}')">
-      <div class="co-cell"><div class="co-av" style="background:${avColor(r.account.name)}">${initials(r.account.name)}</div><div style="min-width:0"><div class="co-nm">${esc(r.account.name)}</div><div class="co-ind">${esc(r.account.vertical)} · ${esc(r.account.country)}</div></div></div>
-      <div>${tierPill(r.tier)}</div>
-      <div style="font-family:var(--fm);font-size:13px;font-weight:600;color:var(--i1)">${r.rank!==undefined?fmt1(r.rank):'—'}</div>
-      <div style="font-family:var(--fm);font-size:12px;color:var(--i2)">${r.fit!==undefined?fmt1(r.fit):'—'}</div>
-      <div style="font-family:var(--fm);font-size:12px;color:var(--i2)">${r.timing!==undefined?fmt1(r.timing):'—'}</div>
-      <div style="font-size:11.5px;color:var(--i2)">${lead && lead.score>0 ? esc(lead.contact.name)+'<div style="font-size:10.5px;color:var(--i3)">'+esc(lead.contact.jobTitle)+'</div>' : '—'}</div>
-      <div style="font-size:11.5px;color:${r.excluded||r.belowFloor?'var(--i3)':'var(--i2)'};line-height:1.4">${r.excluded?esc(r.excludedReason):r.belowFloor?`Fit ${fmt1(r.fit)} is below the floor of ${DemandAI.CONFIG.fitFloor}`:r.whyNow?esc(r.whyNow):'No live signal'}</div>
-    </div>`;}).join('') : `<div style="padding:24px;text-align:center;font-size:12px;color:var(--i3)">No accounts match.</div>`;
-}
-
-const COLS_E = '62px minmax(140px,1.2fr) minmax(120px,1fr) minmax(150px,1.2fr) 86px 50px 130px minmax(160px,1.4fr)';
-function evidenceTab(){
-  return `<div class="score-list">
-    <div class="sl-toolbar">${search('drawEvidence','Search company, person or type…')}<div class="sl-seg-filter">${pill(filt,'all','All')+pill(filt,'Qualified','Qualified')+pill(filt,'Rejected','Rejected')+pill(filt,'Not used','Not used')+pill(filt,'Used for a knock-out','Knock-out')}</div></div>
-    <div class="sl-head" style="grid-template-columns:${COLS_E}"><div class="sl-th">Signal</div><div class="sl-th">Company</div><div class="sl-th">Person</div><div class="sl-th">Type</div><div class="sl-th">Event date</div><div class="sl-th">Age</div><div class="sl-th">Status</div><div class="sl-th">Weight or reason</div></div>
-    <div id="rows"></div></div>
-    <div style="font-size:11px;color:var(--i3);margin-top:10px">Every row of the signal file, in file order. Weight = tier × strength × decay, where decay is 1 until the full-weight window ends, then falls in a straight line to 0.</div>`;
-}
-function drawEvidence(){
-  const el = document.getElementById('rows'); if(!el) return;
-  let ss = RUN.sig.signals;
-  if(filt!=='all') ss = ss.filter(s=>s.status===filt);
-  if(q) ss = ss.filter(s=>(s.company+' '+s.personName+' '+s.personRef+' '+s.type).toLowerCase().includes(q));
-  const col = {Qualified:'var(--pos)',Rejected:'var(--neg)','Not used':'var(--i3)','Used for a knock-out':'var(--warn)'};
-  el.innerHTML = ss.length ? ss.map(s=>`
-    <div class="sl-row" style="grid-template-columns:${COLS_E};cursor:default;min-height:48px">
-      <div style="font-family:var(--fm);font-size:11px;color:var(--i2)">${s.id}<div style="color:var(--i3)">row ${s.row}</div></div>
-      <div style="font-size:12px;color:var(--i1)">${esc(s.company||'—')}</div>
-      <div style="font-size:11.5px;color:var(--i2)">${esc(s.personName||s.personRef||'—')}${s.assigned&&s.assigned!=='Named in the file'?'<div style="font-size:10px;color:var(--warn)">auto-assigned</div>':''}</div>
-      <div style="font-size:11.5px;color:var(--i2)">${esc(s.type)}${s.code&&s.status==='Qualified'?` <span style="color:var(--i3)">· ${s.code}</span>`:''}</div>
-      <div style="font-family:var(--fm);font-size:11px;color:var(--i2)">${esc(s.date||'—')}</div>
-      <div style="font-family:var(--fm);font-size:11px;color:var(--i2)">${s.age!==undefined?s.age+'d':'—'}</div>
-      <div style="font-size:11.5px;font-weight:600;color:${col[s.status]}">${s.status}</div>
-      <div style="font-size:11.5px;color:var(--i2)">${s.weight!==undefined && s.status==='Qualified' ? `<b style="font-family:var(--fm)">${fmt1(s.weight)}</b> <span style="color:var(--i3)">= ${s.tier} × ${s.strength} × ${s.decay.toFixed(3)}</span>` : (s.status==='Rejected'?`<b>${s.code} ${DemandAI.CODES[s.code]}</b>: `:'')+esc(s.reason)}</div>
-    </div>`).join('') : `<div style="padding:24px;text-align:center;font-size:12px;color:var(--i3)">No signals match.</div>`;
-}
-
-function issuesTab(){
+/* Every signal row that was rejected or needs a look, with how to fix it */
+function openIssues(){
   const is = RUN.sig.issues;
-  const C = '110px 60px 150px minmax(180px,1.6fr) minmax(140px,1.1fr) 50px minmax(150px,1.2fr)';
-  const color = {stop:'var(--neg)',flag:'var(--warn)',info:'var(--i3)'};
-  return `<div class="score-list">
-    <div class="sl-toolbar"><span style="font-size:12px;color:var(--i2)">Every row checked in one pass: ${is.length} issue${is.length===1?'':'s'} in ${esc(RUN.fileName)}</span><button class="btn btn-sec btn-sm" style="margin-left:auto" onclick="downloadIssues()">Download issues (.csv)</button></div>
-    <div class="sl-head" style="grid-template-columns:${C}"><div class="sl-th">Sheet</div><div class="sl-th">Row</div><div class="sl-th">Field</div><div class="sl-th">Issue</div><div class="sl-th">What happens</div><div class="sl-th">Code</div><div class="sl-th">How to fix</div></div>
-    ${is.length ? is.map(i=>`<div class="sl-row" style="grid-template-columns:${C};cursor:default;min-height:44px">
-      <div style="font-size:11px;color:var(--i3)">${esc(i.sheet)}</div><div style="font-family:var(--fm);font-size:11.5px">${esc(i.row)}</div>
-      <div style="font-family:var(--fm);font-size:11px;color:var(--i2)">${esc(i.field)}</div>
-      <div style="font-size:12px;color:var(--i1);border-left:2.5px solid ${color[i.severity]};padding-left:8px">${esc(i.issue)}</div>
-      <div style="font-size:11.5px;color:var(--i2)">${esc(i.outcome)}</div><div style="font-family:var(--fm);font-size:11px">${esc(i.code)}</div>
-      <div style="font-size:11.5px;color:var(--i2)">${esc(i.fix)}</div></div>`).join('') : `<div style="padding:24px;text-align:center;font-size:12px;color:var(--pos)">No issues.</div>`}
-  </div>`;
+  openModal(`
+    <div style="padding:20px">
+      <div style="font-family:var(--fd);font-size:15px;font-weight:700;color:var(--i1);margin-bottom:4px">Signal issues</div>
+      <div style="font-size:12px;color:var(--i3);margin-bottom:12px">${esc(RUN.fileName)} · every row checked in one pass</div>
+      ${is.map(i=>`<div style="padding:8px 0;border-bottom:1px solid var(--s75);font-size:12px"><b style="font-family:var(--fm)">Row ${esc(i.row)}</b> · ${esc(i.field)} · <span style="font-family:var(--fm)">${esc(i.code)}</span><div style="color:var(--i1)">${esc(i.issue)}</div><div style="color:var(--i3)">${esc(i.outcome)} · Fix: ${esc(i.fix)}</div></div>`).join('')}
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px">
+        <button class="btn btn-sec btn-sm" onclick="downloadIssues()">Download (.csv)</button>
+        <button class="btn btn-ghost btn-sm" onclick="closeSourceModal()">Close</button>
+      </div>
+    </div>`);
 }
 function downloadIssues(){
-  const rows = [['file','sheet','row','field','issue','what_happens','code','how_to_fix','severity'], ...RUN.sig.issues.map(i=>[i.file,i.sheet,i.row,i.field,i.issue,i.outcome,i.code,i.fix,i.severity])];
+  const rows=[['file','sheet','row','field','issue','what_happens','code','how_to_fix','severity'], ...RUN.sig.issues.map(i=>[i.file,i.sheet,i.row,i.field,i.issue,i.outcome,i.code,i.fix,i.severity])];
   download(RUN.fileName.replace(/\.[^.]+$/,'')+'_issues.csv', DemandAI.toCSV(rows));
 }
-function suggestedTab(){
-  const ss = RUN.sig.suggested;
-  return `<div class="panel"><div class="panel-hdr"><span class="panel-ttl">People with signals who aren't in the lead file</span></div><div class="panel-body" style="padding:0">
-    ${ss.length ? ss.map(s=>`<div style="display:flex;gap:10px;padding:10px 16px;border-bottom:1px solid var(--s75);font-size:12px"><span style="flex:1"><b>${esc(s.person)}</b> · ${esc(s.company)}<div style="font-size:10.5px;color:var(--i3)">${esc(s.signal)} · signal file row ${s.row}</div></span><span style="font-size:11px;color:var(--i3)">Add to the lead file and re-upload</span></div>`).join('') : `<div style="padding:16px;font-size:12px;color:var(--i3)">None. Every named person was found in the lead file.</div>`}
-  </div></div>
-  <div style="font-size:11px;color:var(--i3);margin-top:10px">Their signals are rejected (D4) rather than guessed onto someone else. Nothing is added to the list on a signal's authority.</div>`;
-}
-function howTab(){
-  const C = DemandAI.CONFIG;
-  return `<div class="panel" style="margin-bottom:14px"><div class="panel-hdr"><span class="panel-ttl">The mechanism, in order</span><span style="font-size:10.5px;color:var(--i3)">${esc(C.version)}</span></div><div class="panel-body" style="font-size:12.5px;color:var(--i2);line-height:1.75">
-    <b>1. Fit (0–100), from the lead file.</b> Each rubric criterion gets a level; points = level × weight ÷ 100: ${C.rubric.map(r=>`${r.label.toLowerCase()} ${r.weight}`).join(', ')}. Fit is the sum. Below ${C.fitFloor}, the account is dropped and its signals are marked not used.<br>
-    <b>2. Signal weight, per event.</b> Tier weight × strength × decay. Decay is 1 for the type's full-weight window, then falls in a straight line to 0 at its zero day. Past that it's rejected as stale (D2).<br>
-    <b>3. Person signal score.</b> Each person's own signals, strongest first, stacked: S1 + ½·S2 + ¼·S3 + … One strong signal outweighs any number of weak ones.<br>
-    <b>4. Account timing.</b> Everyone at the account, stacked the same way.<br>
-    <b>5. Rank = Fit ÷ 100 × Timing.</b> Tier A at ${C.tierThresholds.A}+, B ${C.tierThresholds.B}–${C.tierThresholds.A-1}, C below ${C.tierThresholds.B}. No live signal: watch list.<br>
-    <b>6. Contact order.</b> Highest person signal score first, then the primary persona.<br>
-    <b>7. Why now.</b> The top two signals, naming the person and using only their evidence, with source and date.<br>
-    <b>8. Confidence.</b> High with two or more signals and a primary-persona contact; low with no primary-persona contact.
-  </div></div>
-  <div class="panel"><div class="panel-hdr"><span class="panel-ttl">What is AI and what isn't</span></div><div class="panel-body" style="font-size:12.5px;color:var(--i2);line-height:1.75">
-    Everything on this screen is computed by fixed rules in <code>demandai-engine.js</code>. No AI model is called. The spec gives AI three jobs here, and none is connected yet:<br>
-    • <b>Classification</b> when the industry has no match in the mapping table. For now the account is held as "other" for review.<br>
-    • <b>Entity matching and strength on free-text signals</b>. Template rows name the person and the type, so matching is exact and strength comes from the type table.<br>
-    • <b>Wording the why-now line</b>. For now it's filled from a template using the signal's own detail.
-  </div></div>`;
+
+/* ── Dormant opportunities need scoring history ── */
+function switchSource(name){
+  openModal(`
+    <div style="padding:20px">
+      <div style="font-family:var(--fd);font-size:15px;font-weight:700;color:var(--i1);margin-bottom:4px">Dormant opportunities</div>
+      <div style="font-size:12px;color:var(--i3);margin-bottom:14px">Scored before, gone quiet 30+ days. None yet: accounts appear here once they've been scored and their signals have gone quiet.</div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px"><button class="btn btn-ghost btn-sm" onclick="closeSourceModal()">Close</button></div>
+    </div>`);
 }
 
-/* ═══════════════ ACCOUNT DRAWER: the full reasoning ═══════════════ */
-function kv(k,v){return `<div style="display:flex;gap:10px;padding:5px 0;border-bottom:1px solid var(--s75);font-size:11.5px"><span style="color:var(--i3);width:110px;flex-shrink:0">${k}</span><span style="color:var(--i1);min-width:0">${v}</span></div>`;}
-function section(t){return `<div style="font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--i3);margin:16px 0 6px">${t}</div>`;}
-function openAccount(id){
-  const r = RUN.scored.find(x=>x.account.id===id), a = r.account;
-  const unused = RUN.sig.signals.filter(s=>s.accountId===id && s.status!=='Qualified');
-  document.getElementById('detTitle').textContent = a.name;
-  document.getElementById('detSub').textContent = `${a.vertical} · ${a.country} · owner ${a.owner||'—'}`;
-  let html = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">${tierPill(r.tier)}${r.confidence?`<span style="font-size:11px;color:var(--i3)">Confidence: <b style="color:var(--i1)">${r.confidence}</b> · ${esc(r.confidenceWhy)}</span>`:''}</div>`;
-  if(r.excluded) html += `<div style="padding:10px 12px;background:var(--neg-lt);border-radius:var(--rsm);font-size:12px;margin-top:8px">Excluded: ${esc(r.excludedReason)}. Not scored.</div>`;
-  else {
-    if(r.rank!==undefined) html += `<div style="padding:10px 12px;background:var(--s50);border-radius:var(--rsm);font-family:var(--fm);font-size:12px;color:var(--i1);margin-top:8px">Rank = ${fmt1(r.fit)} ÷ 100 × ${fmt1(r.timing)} = <b>${fmt1(r.rank)}</b></div>`;
-    if(r.belowFloor) html += `<div style="padding:10px 12px;background:var(--warn-lt);border-radius:var(--rsm);font-size:12px;margin-top:8px">Fit ${fmt1(r.fit)} is below the floor of ${DemandAI.CONFIG.fitFloor}: dropped before timing.</div>`;
-    if(r.whyNow) html += section('Why now') + `<div style="font-size:12px;color:var(--i1);line-height:1.5">${esc(r.whyNow)}</div><div style="font-size:10.5px;color:var(--i3);margin-top:3px">Sources: ${esc(r.whyNowSources.join(' · '))}. Filled from a template; the AI wording step isn't connected.</div>`;
-    html += section(`Fit ${fmt1(r.fit)} · stage 6`) + r.breakdown.map(b=>`<div style="padding:6px 0;border-bottom:1px solid var(--s75);font-size:11.5px"><div style="display:flex;gap:8px"><span style="flex:1;color:var(--i1)">${b.label} <span style="color:var(--i3)">· ${esc(b.levelLabel)}</span></span><span style="font-family:var(--fm);color:var(--i1)">${fmt1(b.points)}</span></div><div style="color:var(--i3)">${b.level} × ${b.weight} ÷ 100 · ${esc(b.why)}</div></div>`).join('');
-    if(r.people){
-      html += section(`People, in contact order · timing ${fmt1(r.timing)}`);
-      html += r.people.map((p,i)=>`<div style="padding:8px 0;border-bottom:1px solid var(--s75)">
-        <div style="display:flex;gap:8px;font-size:12px"><span style="color:var(--i3);width:14px">${i+1}</span><span style="flex:1"><b>${esc(p.contact.name)}</b> · ${esc(p.contact.jobTitle)} <span style="color:var(--i3)">· ${p.contact.persona} · ${p.contact.reachableBy}</span></span><span style="font-family:var(--fm);font-weight:600">${fmt1(p.score)}</span></div>
-        ${p.signals.map(s=>`<div style="font-size:11px;color:var(--i2);margin:3px 0 0 22px">${esc(s.type)} · ${s.date} · ${s.age}d · <span style="font-family:var(--fm)">${s.tier} × ${s.strength} × ${s.decay.toFixed(3)} = ${fmt1(s.weight)}</span>${s.assigned&&s.assigned!=='Named in the file'?' · <span style="color:var(--warn)">auto-assigned</span>':''}<div style="color:var(--i3)">${esc(s.detail)} (${esc(s.source||'no source')})</div></div>`).join('') || '<div style="font-size:11px;color:var(--i3);margin:3px 0 0 22px">No signals</div>'}
-      </div>`).join('');
-    }
-  }
-  if(unused.length) html += section('Signals not counted') + unused.map(s=>`<div style="font-size:11px;padding:5px 0;border-bottom:1px solid var(--s75)"><b>${s.id}</b> ${esc(s.type)} · ${esc(s.personName||s.personRef||'—')}<div style="color:var(--i3)">${s.status}${s.code&&s.status==='Rejected'?' · '+s.code+' '+DemandAI.CODES[s.code]:''}: ${esc(s.reason)}</div></div>`).join('');
-  document.getElementById('detBody').innerHTML = html;
-  document.getElementById('detailDrawer').classList.add('open');
-}
+renderList();
+updateStats();
+document.getElementById('scoreListBody').innerHTML = `<div style="padding:40px;text-align:center;font-size:12.5px;color:var(--i3)">Choose a list from Prospecting, then add the signals for its prospects.<div style="margin-top:12px"><button class="btn btn-primary btn-sm" onclick="openPicker()">Choose a list</button></div></div>`;
 
-/* ═══════════════ BOOT ═══════════════ */
 (function boot(){
   const id = new URLSearchParams(location.search).get('list');
-  if(id && DemandAI.getList(id)) chooseList(id); else renderPick();
+  if(id && DemandAI.getList(id)) chooseList(id); else openPicker();
 })();
 
 const PAGE_ID = '11-scoring.html';
