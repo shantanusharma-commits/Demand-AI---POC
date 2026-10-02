@@ -1,0 +1,8 @@
+{
+  "name": "demand-ai-poc",
+  "private": true,
+  "description": "DemandAI clickable prototype; the lead and scoring rules live in demandai-engine.js",
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  }
+}

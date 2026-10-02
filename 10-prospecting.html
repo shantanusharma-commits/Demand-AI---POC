@@ -366,6 +366,60 @@ input,textarea,select{font:inherit;}
 /* Toast */
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--i1);color:#fff;font-size:12.5px;font-weight:500;padding:9px 18px;border-radius:999px;z-index:900;pointer-events:none;animation:fadeUp .2s var(--ease);}
 
+
+/* ─── Data tables and tags (Prospecting, Scoring) ─── */
+.dt-wrap{overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none;}
+.dt-wrap::-webkit-scrollbar{display:none;}
+.dt{width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed;font-size:12.5px;}
+.dt th{padding:11px 16px;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--i3);text-align:left;background:var(--s50);border-bottom:1px solid var(--border);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.dt td{padding:13px 16px;color:var(--i2);border-bottom:1px solid var(--s75);vertical-align:middle;line-height:1.45;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dt tr:last-child td{border-bottom:none;}
+.dt tbody tr{transition:background var(--fast);}
+.dt tbody tr:hover td{background:#FAFBFC;}
+.dt tbody tr.click{cursor:pointer;}
+.dt th.num,.dt td.num{text-align:right;}
+.dt td.num{font-family:var(--fm);font-variant-numeric:tabular-nums;}
+.dt td.wrap{white-space:normal;}
+.dt .dt-main{color:var(--i1);font-weight:600;overflow:hidden;text-overflow:ellipsis;}
+.dt .val{color:var(--i1);overflow:hidden;text-overflow:ellipsis;}
+.dt .sub{display:block;font-size:11px;color:var(--i3);margin-top:2px;overflow:hidden;text-overflow:ellipsis;}
+.dt .muted{color:var(--i4);}
+.dt .person{display:flex;align-items:center;gap:10px;min-width:0;}
+.dt .person > div:last-child{min-width:0;}
+.clamp2{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;white-space:normal;}
+.dt-empty{padding:28px;text-align:center;font-size:12.5px;color:var(--i3);}
+.tag{display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 10px;border-radius:999px;font-family:var(--fb);font-size:11px;font-weight:600;letter-spacing:0;text-transform:none;white-space:nowrap;background:var(--s75);color:var(--i2);vertical-align:middle;}
+.tag::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0;}
+.tag-green{background:#E8F5EE;color:#24704F;}
+.tag-amber{background:#FDF2E1;color:#A8620F;}
+.tag-red{background:#FBEAEA;color:#A83A3A;}
+.tag-blue{background:#E4F2FB;color:#00659A;}
+.tag-violet{background:#F0EAF8;color:#6A4290;}
+.tag-teal{background:#E3F4F2;color:#1B7369;}
+.tag-pink{background:#FBE9F1;color:#A1386A;}
+.tag-grey{background:#EEF1F4;color:#5B6774;}
+.tags{display:flex;flex-wrap:wrap;gap:6px;}
+
+/* ─── Checks pop-up ─── */
+@keyframes ckspin{to{transform:rotate(360deg);}}
+@keyframes ckpop{from{transform:scale(.6);opacity:0;}to{transform:scale(1);opacity:1;}}
+.ck{width:22px;height:22px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;}
+.ck-wait{border:2px solid var(--s100);}
+.ck-run{border:2.5px solid var(--brand-lt);border-top-color:var(--brand);animation:ckspin .7s linear infinite;}
+.ck-ok{background:var(--pos);color:#fff;animation:ckpop .2s var(--ease);}
+.ck-warn{background:var(--warn);color:#fff;animation:ckpop .2s var(--ease);}
+.ck-stop{background:var(--neg);color:#fff;animation:ckpop .2s var(--ease);}
+.ck-info{background:var(--s300);color:#fff;animation:ckpop .2s var(--ease);}
+.ck-row{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--s75);transition:opacity var(--base);}
+.ck-row.pending{opacity:.45;}
+
+/* ─── Checkboxes: grey when empty, brand colour when ticked ─── */
+.dt input[type=checkbox]{-webkit-appearance:none;appearance:none;width:16px;height:16px;margin:0;border-radius:4px;border:1.5px solid var(--s200);background:var(--s75);cursor:pointer;vertical-align:middle;display:inline-grid;place-content:center;transition:background var(--fast),border-color var(--fast);}
+.dt input[type=checkbox]:hover{border-color:var(--s300);}
+.dt input[type=checkbox]:checked,.dt input[type=checkbox]:indeterminate{background:var(--brand);border-color:var(--brand);}
+.dt input[type=checkbox]:checked::after{content:'';width:9px;height:5px;border:2px solid #fff;border-top:0;border-right:0;transform:translateY(-1px) rotate(-45deg);}
+.dt input[type=checkbox]:indeterminate::after{content:'';width:8px;height:2px;background:#fff;border-radius:1px;}
+.dt input[type=checkbox]:focus-visible{outline:2px solid var(--brand-mid);outline-offset:2px;}
 </style>
 </head>
 <body>
@@ -453,235 +507,449 @@ input,textarea,select{font:inherit;}
 </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="demandai-engine.js"></script>
+<script src="demandai-sample-data.js"></script>
 <script>
 function showToast(msg){document.querySelectorAll('.toast').forEach(t=>t.remove());const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2600);}
-function toggleDD(id){const el=document.getElementById(id);const was=el.classList.contains('open');document.querySelectorAll('.ddm.open').forEach(m=>m.classList.remove('open'));if(!was){el.classList.add('open');setTimeout(()=>{document.addEventListener('click',function c(e){if(!el.contains(e.target)){el.classList.remove('open');document.removeEventListener('click',c);}});},0);}}
-function closeDD(id){document.getElementById(id)?.classList.remove('open');}
 function initials(n){return n.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();}
-function avColor(id){const c=['#7D52A2','#0094DA','#FF8820','#2E7D5A','#B23F3F'];let h=0;for(const ch of id)h+=ch.charCodeAt(0);return c[h%c.length];}
+function avColor(id){const c=['#7D52A2','#0094DA','#FF8820','#2E7D5A','#B23F3F'];let h=0;for(const ch of String(id))h+=ch.charCodeAt(0);return c[h%c.length];}
 function closeDrawer(){ document.getElementById('detailDrawer').classList.remove('open'); }
+function esc(s){return String(s===undefined||s===null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function fallbackDownload(name, text){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'text/csv'}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},0);}
+// On claude.ai the page can't start a download itself: the viewer confirms a save. Opened as a plain file, it downloads directly.
+async function download(name, text){
+  let dl = null;
+  try{ dl = window.claude && window.claude.use ? await window.claude.use('downloads') : null; }catch(e){ dl = null; }
+  if(!dl){ fallbackDownload(name, text); return; }
+  try{ await dl.save({filename:name, data:text}); showToast(name+' saved'); }
+  catch(e){ if(e && e.code==='declined') return; showToast(e && e.code==='rate_limited' ? 'A save is already open' : "This view can't save files"); }
+}
 
-/* ═══════════════ RAW UPLOADED ROWS (what Client's file looks like) ═══════════════ */
-const RAW_ROWS = [
-  {id:'a1', name:'Karen Whitfield', title:'VP Operations', co:'Meridian Chemical Corp', ind:'Chemicals', region:'North America', fte:'3,200', email:'karen.whitfield@meridianchem.com', li:'linkedin.com/in/kwhitfield'},
-  {id:'a2', name:'Anders Solberg', title:'Director of Digital Transformation', co:'Nordkyst Refining', ind:'Oil & Gas', region:'EMEA', fte:'2,100', email:'anders.solberg@nordkystrefining.no', li:'linkedin.com/in/asolberg'},
-  {id:'a3', name:'Priya Ramaswamy', title:'Chief Digital Officer', co:'Ferro Dynamics Ltd', ind:'Industrial Mfg', region:'APAC', fte:'4,800', email:'priya.ramaswamy@ferrodynamics.com', li:'linkedin.com/in/pramaswamy'},
-  {id:'a4', name:'Mark Delacroix', title:'Plant Manager', co:'Cascade Power Systems', ind:'Power Generation', region:'North America', fte:'1,400', email:'', li:''},
-  {id:'a5', name:'Isabelle Perrot', title:'VP Manufacturing', co:'Solvex Industrial', ind:'Chemicals', region:'EMEA', fte:'2,600', email:'isabelle.perrot@solvex-ind.fr', li:'linkedin.com/in/iperrot'},
-  {id:'a6', name:'Thomas Okafor', title:'Head of Process Safety', co:'Altair Petrochemicals', ind:'Oil & Gas', region:'EMEA', fte:'5,100', email:'thomas.okafor@altairpetro.com', li:'linkedin.com/in/tokafor'},
-  {id:'a7', name:'Rebecca Lindqvist', title:'Director of Automation', co:'Ridgeline Utilities', ind:'Power Generation', region:'EMEA', fte:'1,900', email:'rebecca.lindqvist@ridgelineutil.se', li:''},
-  {id:'a8', name:'Daniel Voss', title:'VP Operations', co:'Continental Polymer Works', ind:'Chemicals', region:'EMEA', fte:'3,700', email:'daniel.voss@contpolymer.de', li:'linkedin.com/in/dvoss'},
-  {id:'a9', name:'Grace Adeyemi', title:'Plant Manager', co:'Vantage Oil & Gas', ind:'Oil & Gas', region:'EMEA', fte:'2,300', email:'grace.adeyemi@vantageog', li:''},
-  {id:'a10', name:'Julien Marchand', title:'Director of Operations', co:'Hearth Steel Group', ind:'Industrial Mfg', region:'EMEA', fte:'6,200', email:'julien.marchand@hearthsteel.fr', li:'linkedin.com/in/jmarchand'},
-  {id:'a11', name:'Nadia Kowalski', title:'VP Engineering', co:'Meadowbrook Power', ind:'Power Generation', region:'EMEA', fte:'2,050', email:'nadia.kowalski@meadowbrookpower.pl', li:''},
-  {id:'a12', name:'Robert Achebe', title:'Chief Operating Officer', co:'Trident Refining', ind:'Oil & Gas', region:'Sanctioned Country', fte:'4,400', email:'robert.achebe@tridentrefining.com', li:'linkedin.com/in/rachebe'},
-  {id:'a13', name:'Karen Whitfield', title:'VP Operations', co:'Meridian Chemical Corp', ind:'Chemicals', region:'North America', fte:'3,200', email:'karen.whitfield@meridianchem.com', li:'linkedin.com/in/kwhitfield'},
-  {id:'a14', name:'Samuel Brandt', title:'VP Operations', co:'Summit Chemical Solutions', ind:'Chemicals', region:'North America', fte:'1,750', email:'samuel.brandt@summitchemsol.com', li:'linkedin.com/in/sbrandt'},
+/* ═══════════════ READ THE FILE: CSV or Excel, every sheet looked at ═══════════════ */
+function readFileToGrids(file){
+  return new Promise((resolve,reject)=>{
+    const isCsv = /\.csv$/i.test(file.name);
+    const isXlsx = /\.(xlsx|xls)$/i.test(file.name);
+    if(!isCsv && !isXlsx){ reject(new Error('Use a .csv or .xlsx file')); return; }
+    const reader = new FileReader();
+    reader.onerror = ()=>reject(new Error('Could not read the file'));
+    reader.onload = ev=>{
+      try{
+        if(isCsv){ resolve([{sheet:'(CSV)', grid:DemandAI.parseCSV(ev.target.result)}]); return; }
+        if(typeof XLSX==='undefined'){ reject(new Error('The Excel reader did not load. Save the sheet as CSV and upload that instead')); return; }
+        const wb = XLSX.read(new Uint8Array(ev.target.result),{type:'array',cellDates:true});
+        resolve(wb.SheetNames.map(n=>({sheet:n, grid:XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true,defval:''})})));
+      }catch(e){ reject(e); }
+    };
+    if(isCsv) reader.readAsText(file); else reader.readAsArrayBuffer(file);
+  });
+}
+// The lead template workbook has several sheets; use the one whose header row has company_name.
+function pickSheet(grids, anchor){
+  const has = g => g.grid.slice(0,10).some(r=>(r||[]).some(c=>String(c).trim().toLowerCase().replace(/\*/g,'').replace(/\s+/g,'_')===anchor));
+  return grids.find(g=>/lead template/i.test(g.sheet) && has(g)) || grids.find(has) || grids[0];
+}
+
+/* ═══════════════ STATE ═══════════════ */
+let RUN = null;        // {fileName, sheet, sandbox, result}
+let view = 'list';     // list | accounts | issues
+let filt = 'all', q = '';
+
+let startTab = 'upload';
+function renderStart(tab){
+  RUN = null; closeDrawer();
+  if(tab) startTab = tab;
+  const lists = DemandAI.loadLists();
+  const t = (id,label,n) => `<div class="ftab ${startTab===id?'active':''}" onclick="renderStart('${id}')">${label}${n!==undefined?` <span class="ftab-cnt">${n}</span>`:''}</div>`;
+  document.getElementById('mainArea').innerHTML = `
+    <div class="topbar"><div class="topbar-l"><span class="tb-title">Lead discovery and research</span><span class="tb-badge badge-neutral">Stages 1–5 · rules only</span></div></div>
+    <div class="ftabs">${t('upload','Upload')}${t('saved','Saved lists',lists.length)}</div>
+    <div class="canvas">${startTab==='upload' ? `
+      <div style="max-width:640px;margin:24px auto 0">
+        <div style="font-family:var(--fd);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--brand);margin-bottom:8px">Step 1 · Prospecting</div>
+        <div style="font-family:var(--fd);font-size:22px;font-weight:700;color:var(--i1);margin-bottom:6px">Upload the lead file</div>
+        <div style="font-size:13px;color:var(--i3);margin-bottom:18px;line-height:1.55">One row per contact, in the lead template's columns (any order). Every row is checked by fixed rules, not AI: validation, classification, knock-outs and suppression. Nothing is fixed silently.</div>
+        <label id="dropZone" for="fileInput" style="display:block;border:1.5px dashed var(--bdk);border-radius:var(--rlg);padding:34px 24px;cursor:pointer;background:var(--surf);text-align:center">
+          <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" style="display:none" onchange="onFile(this.files[0])">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--i3)" stroke-width="1.5" stroke-linecap="round" style="margin-bottom:8px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <div style="font-size:13px;font-weight:600;color:var(--i1)">Click to choose a file, or drop it here</div>
+          <div style="font-size:11px;color:var(--i3);margin-top:4px">.xlsx or .csv · the lead template, filled in</div>
+        </label>
+        <div style="display:flex;gap:8px;margin:12px 0 18px;flex-wrap:wrap">
+          <button class="btn btn-primary btn-sm" onclick="useSample()">Use sample data</button>
+          <button class="btn btn-sec btn-sm" onclick="downloadTemplate()">Download lead template (.csv)</button>
+        </div>
+        <div style="padding:12px 14px;background:var(--sec-lt);border-radius:var(--rmd);font-size:11.5px;color:var(--sec-dk);line-height:1.6">
+          <b>Required:</b> ${DemandAI.LEAD_REQUIRED.join(', ')}, plus an email or a LinkedIn URL.<br>
+          <b>Pilot region:</b> ${DemandAI.CONFIG.pilotCountries.join(', ')}.<br>
+          This prototype reads the file in your browser. The production build runs it as a background job.
+        </div>
+      </div>` : `
+      <div class="score-list">${table([['List',300],['Source file',220],['Accounts',120,'num'],['In the list',130,'num'],['Saved',190],['',190]],
+        lists.map(l=>`<tr>
+          <td><div class="person"><div class="co-av" style="background:${avColor(l.id)}">${initials(l.name)}</div><div style="flex:1">${renamingId===l.id
+            ? `<div style="display:flex;gap:6px;align-items:center"><input id="renameInput" value="${esc(l.name)}" style="flex:1;min-width:0;padding:6px 9px;border:1px solid var(--brand-mid);border-radius:var(--rsm);font-size:12.5px" onkeydown="if(event.key==='Enter')finishRename('${l.id}');if(event.key==='Escape'){renamingId=null;renderStart('saved')}"><button class="btn btn-primary btn-sm" onclick="finishRename('${l.id}')">Save</button></div>`
+            : `<div style="display:flex;align-items:center;gap:6px;min-width:0"><span class="dt-main" title="${esc(l.name)}">${esc(l.name)}</span><button title="Rename" onclick="startRename('${l.id}')" style="flex-shrink:0;color:var(--i3);display:flex;padding:2px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button></div><span class="sub">${l.scoring?'Scored':'Not scored yet'}</span>`}</div></div></td>
+          <td>${cell(l.sourceFile)}</td>
+          <td class="num">${l.stats.accountsPass}<span class="sub">of ${l.stats.accounts}</span></td>
+          <td class="num">${l.stats.inFinalList}<span class="sub">contacts</span></td>
+          <td>${cell(new Date(l.createdAt).toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'}), new Date(l.createdAt).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}))}</td>
+          <td style="text-align:right"><a class="btn btn-sec btn-sm" style="text-decoration:none" href="11-scoring.html?list=${encodeURIComponent(l.id)}">Score →</a> <button class="btn btn-ghost btn-sm" onclick="removeList('${l.id}')">Delete</button></td>
+        </tr>`).join(''), `No saved lists yet. <a href="#" onclick="renderStart('upload');return false" style="color:var(--brand);font-weight:600">Upload a lead file</a> to build one.`)}
+      </div>`}
+    </div>`;
+  const dz = document.getElementById('dropZone');
+  if(!dz) return;
+  dz.addEventListener('dragover', e=>{e.preventDefault(); dz.style.borderColor='var(--brand)';});
+  dz.addEventListener('dragleave', ()=>{dz.style.borderColor='var(--bdk)';});
+  dz.addEventListener('drop', e=>{e.preventDefault(); dz.style.borderColor='var(--bdk)'; if(e.dataTransfer.files[0]) onFile(e.dataTransfer.files[0]);});
+}
+function removeList(id){ DemandAI.deleteList(id); showToast('List deleted'); renderStart('saved'); }
+function downloadTemplate(){ download('lead_template.csv', DemandAI.toCSV([DemandAI.LEAD_COLUMNS])); }
+
+async function onFile(file){
+  if(!file) return;
+  try{
+    const grids = await readFileToGrids(file);
+    const g = pickSheet(grids, 'company_name');
+    processFile(file.name, g.sheet, g.grid, false);
+  }catch(e){ showToast(e.message || 'Could not read that file'); }
+}
+function useSample(){ processFile(DemandAISample.LEAD_FILE, 'Lead template', DemandAISample.LEADS, true); }
+function processFile(fileName, sheet, grid, sandbox){
+  const result = DemandAI.processLeads(grid, {file:fileName, sheet});
+  RUN = {fileName, sheet, sandbox, result};
+  view = 'list'; filt='all'; q='';
+  RUN.savedId = null; SEL.clear();
+  openChecks();
+}
+
+/* ═══════════════ VALIDATION: the checks run on the file, and what each found ═══════════════ */
+const CHECKS = [
+  ['columns',     'Columns match the template',        'Required columns present, nothing unexpected'],
+  ['required',    'Required fields filled in',          'Name, title, company, domain, country, industry, size, owner'],
+  ['emailFormat', 'Email format',                       'Every email is a well-formed address'],
+  ['verified',    'Email verified',                     'Only verified emails are used as a channel'],
+  ['liFormat',    'LinkedIn URL format',                'Every LinkedIn URL points to a profile'],
+  ['channel',     'Email or LinkedIn on every contact', 'Each contact can be reached one way or another'],
+  ['dupes',       'Duplicates',                         'The same email or LinkedIn URL appearing twice'],
+  ['formats',     'Values and formats',                 'Y/N fields, numbers, account type, consistent company details'],
+  ['consent',     'Consent basis',                      'Legitimate interest, existing customer or opted in'],
+  ['optout',      'Opt-outs',                           'Opted-out contacts are suppressed, never contacted'],
 ];
-
-/* ═══════════════ derived checks ═══════════════ */
-function validationIssues(){
-  const seen = {}; const dupes = new Set();
-  RAW_ROWS.forEach(r=>{ const k=r.email||r.name+r.co; if(seen[k]) dupes.add(r.id); seen[k]=true; });
-  const missing = RAW_ROWS.filter(r=>!r.email && !r.li);
-  const invalidEmail = RAW_ROWS.filter(r=>r.email && !r.email.includes('.'));
-  return {dupes, missing, invalidEmail};
+function checkOf(i){
+  if(/Required column|isn't in the template|header row|format hints/.test(i.issue)) return 'columns';
+  if(i.code==='D5') return 'dupes';
+  if(i.field==='email' && /malformed/.test(i.issue)) return 'emailFormat';
+  if(i.field==='email_verified') return 'verified';
+  if(i.field==='linkedin_url' && /profile URL/.test(i.issue)) return 'liFormat';
+  if(i.issue==='No email and no LinkedIn URL' || i.issue==='No email' || i.issue==='No LinkedIn URL') return 'channel';
+  if(i.field==='consent_basis') return 'consent';
+  if(i.field==='opt_out' && i.issue==='Opted out') return 'optout';
+  if(/isn't Y or N|commas|isn't a number|isn't on the list|isn't in the form|Differs from row|is blank$/.test(i.issue)) return 'formats';
+  return 'required';
 }
-const SUPPRESSED = new Set(['a9']); // Grace Adeyemi — on Client's do-not-contact list
-function knockout(r){
-  if(r.region==='Sanctioned Country') return 'Sanctioned country';
-  if(r.id==='a10') return 'Pilot product already installed at this site';
-  return null;
+const STEPS = [...CHECKS,
+  ['classify',  'Classification',             'Industry and site mapped to vertical and account type'],
+  ['knockouts', 'Knock-outs and suppression', 'Pilot region, managed separately, contacts left after opt-outs'],
+];
+function stepResult(k, by){
+  const r = RUN.result;
+  if(k==='classify'){ const n = r.accounts.filter(a=>a.needsReview).length; return {n, sev:n?'info':'', label:n?`${n} need review`:`${r.accounts.length} accounts`}; }
+  if(k==='knockouts'){ const n = r.accounts.filter(a=>a.excluded).length; return {n, sev:n?'info':'', label:n?`${n} excluded`:'All pass'}; }
+  const is = by[k]||[]; const n = is.length;
+  const sev = is.some(i=>i.severity==='stop')?'stop':is.some(i=>i.severity==='flag')?'warn':n?'info':'';
+  const rows = [...new Set(is.map(i=>i.row))];
+  return {n, sev, label:n?`${n} found`:'Passed', rows: n ? (rows.length===1&&rows[0]==='—'?'Whole file':'Row'+(rows.length>1?'s ':' ')+rows.slice(0,5).join(', ')+(rows.length>5?'…':'')) : ''};
 }
-function classify(r){
-  // LLM vertical + account type assignment, with a confidence
-  const conf = r.id==='a11' ? 62 : r.id==='a7' ? 68 : 91;
-  return {vertical:r.ind, accountType: r.title.includes('Chief')||r.title.includes('VP')?'Owner-operator':'EPC / Integrator', conf};
+function overlay(id){
+  let ov = document.getElementById(id);
+  if(!ov){ ov=document.createElement('div'); ov.id=id; ov.style.cssText='position:fixed;inset:0;background:rgba(20,26,33,.45);z-index:600;display:flex;align-items:center;justify-content:center;padding:16px'; document.body.appendChild(ov); }
+  ov.style.display='flex'; return ov;
 }
-function consentBasis(r){
-  if(SUPPRESSED.has(r.id)) return null;
-  if(!r.email) return 'no-basis';
-  return 'legitimate-interest';
-}
-
-let stage = 'upload'; // upload -> validate -> universe
-let selectedId = null;
-
-function renderUpload(){
-  stage='upload';
-  document.getElementById('mainArea').innerHTML = `
-    <div class="canvas" style="display:flex;align-items:center;justify-content:center;min-height:100vh">
-      <div style="width:100%;max-width:600px;text-align:center">
-        <div style="font-family:var(--fd);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--brand);margin-bottom:10px">Step 1 · Prospecting</div>
-        <div style="font-family:var(--fd);font-size:24px;font-weight:700;color:var(--i1);margin-bottom:8px">Upload Client's target file</div>
-        <div style="font-size:13px;color:var(--i3);margin-bottom:24px;line-height:1.5">Account and contact list, CSV or Excel. No Apollo, no other provider — this is the target universe Client already gave us.</div>
-        <div style="border:1.5px dashed var(--bdk);border-radius:var(--rlg);padding:40px 24px;cursor:pointer;background:var(--surf)" onclick="document.getElementById('fileInput').click()">
-          <input type="file" id="fileInput" accept=".csv,.xlsx" style="display:none" onchange="handleUpload()">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--i3)" stroke-width="1.5" stroke-linecap="round" style="margin-bottom:10px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          <div style="font-size:13px;font-weight:600;color:var(--i1)">Click to choose a file</div>
-          <div style="font-size:11px;color:var(--i3);margin-top:4px">or drag and drop — .csv or .xlsx</div>
-        </div>
-        <div style="margin:14px 0">
-          <button class="btn btn-primary btn-sm" style="width:100%;justify-content:center" onclick="handleUpload()">Use sample data — see the flow</button>
-        </div>
-        <div style="padding:12px 16px;background:var(--sec-lt);border-radius:var(--rmd);font-size:11.5px;color:var(--sec-dk);text-align:left;line-height:1.5">
-          Columns map to our template: name, title, company, industry, region, employee count, email, LinkedIn URL. Missing columns are flagged, not guessed.
-        </div>
-      </div>
-    </div>`;
-}
-function handleUpload(){
-  showToast('Client_target_universe.csv — 14 rows loaded');
-  renderValidation();
-}
-
-function renderValidation(){
-  stage='validate';
-  const v = validationIssues();
-  document.getElementById('mainArea').innerHTML = `
-    <div class="topbar">
-      <div class="topbar-l"><span class="tb-title">Validation report</span><span class="tb-badge badge-neutral">Client_target_universe.csv</span></div>
-      <div class="topbar-r"><button class="btn btn-ghost btn-sm" onclick="renderUpload()">Upload a different file</button></div>
+function openChecks(){
+  const r = RUN.result;
+  const by = {}; r.issues.forEach(i=>{ (by[checkOf(i)] = by[checkOf(i)] || []).push(i); });
+  const ov = overlay('checksOverlay');
+  ov.onclick = null;
+  ov.innerHTML = `<div style="background:var(--surf);border-radius:var(--rlg);box-shadow:var(--sh-lg);width:520px;max-width:100%;max-height:90vh;display:flex;flex-direction:column">
+    <div style="padding:20px 22px 12px">
+      <div style="font-family:var(--fd);font-size:15px;font-weight:700;color:var(--i1)">Checking ${esc(RUN.fileName)}</div>
+      <div style="font-size:12px;color:var(--i3);margin-top:3px">${r.stats.rowsRead} rows · fixed rules, nothing fixed automatically</div>
+      <div style="height:4px;background:var(--s75);border-radius:2px;margin-top:12px;overflow:hidden"><div id="ckBar" style="height:100%;width:0;background:var(--brand);transition:width .3s var(--ease)"></div></div>
     </div>
-    <div class="canvas">
-      <div class="stats">
-        <div class="stat"><div class="stat-lbl">Rows loaded</div><div class="stat-val sv1">${RAW_ROWS.length}</div><div class="stat-sub">raw universe</div></div>
-        <div class="stat"><div class="stat-lbl">Duplicates</div><div class="stat-val sv3">${v.dupes.size}</div><div class="stat-sub">same email or name+company</div></div>
-        <div class="stat"><div class="stat-lbl">Missing fields</div><div class="stat-val sv2">${v.missing.length}</div><div class="stat-sub">no email and no LinkedIn URL</div></div>
-        <div class="stat"><div class="stat-lbl">Invalid emails</div><div class="stat-val sv4">${v.invalidEmail.length}</div><div class="stat-sub">malformed address</div></div>
-      </div>
-      <div class="panel" style="margin-bottom:14px">
-        <div class="panel-hdr"><span class="panel-ttl">What we found — nothing fixed automatically</span></div>
-        <div class="panel-body" style="font-size:12.5px;color:var(--i2);line-height:1.8">
-          ${v.dupes.size?`<div>• <b>${v.dupes.size} duplicate${v.dupes.size>1?'s':''}</b> — same email or name+company appearing twice (e.g. Karen Whitfield, Meridian Chemical Corp)</div>`:''}
-          ${v.missing.length?`<div>• <b>${v.missing.length} record${v.missing.length>1?'s':''} missing both email and LinkedIn URL</b> — kept on the account, not contactable</div>`:''}
-          ${v.invalidEmail.length?`<div>• <b>${v.invalidEmail.length} malformed email${v.invalidEmail.length>1?'s':''}</b> — flagged, not corrected</div>`:''}
-          <div style="margin-top:8px;font-size:11.5px;color:var(--i3);font-style:italic">We report, we don't fix. Client can correct and re-upload, or proceed as-is — nothing is silently removed.</div>
-        </div>
-      </div>
-      <button class="btn btn-primary" onclick="renderUniverse()">Continue — classify and scope this universe</button>
-    </div>`;
+    <div style="padding:0 22px;overflow-y:auto">
+      ${STEPS.map(([k,name,what],i)=>`<div class="ck-row pending" id="ck-${i}">
+        <div class="ck ck-wait" id="ckc-${i}"></div>
+        <div style="flex:1;min-width:0"><div style="font-size:12.5px;font-weight:600;color:var(--i1)">${name}</div><div style="font-size:11px;color:var(--i3)">${what}</div></div>
+        <div id="ckr-${i}" style="text-align:right;flex-shrink:0"></div>
+      </div>`).join('')}
+    </div>
+    <div id="ckFoot" style="padding:14px 22px 18px;display:flex;align-items:center;gap:8px;border-top:1px solid var(--border);margin-top:4px">
+      <span style="flex:1;font-size:12px;color:var(--i3)">Running checks…</span>
+    </div>
+  </div>`;
+  let i = 0;
+  const tick = () => {
+    if(i>0){
+      const res = stepResult(STEPS[i-1][0], by), c = document.getElementById('ckc-'+(i-1));
+      c.className = 'ck ' + (res.sev==='stop'?'ck-stop':res.sev==='warn'?'ck-warn':res.sev==='info'?'ck-info':'ck-ok');
+      c.textContent = res.sev ? '!' : '✓';
+      const tone = res.sev==='stop'?'tag-red':res.sev==='warn'?'tag-amber':res.sev==='info'?'tag-grey':'tag-green';
+      document.getElementById('ckr-'+(i-1)).innerHTML = `<span class="tag ${tone}">${res.label}</span>${res.rows?`<div style="font-size:10.5px;color:var(--i3);margin-top:3px">${res.rows}</div>`:''}`;
+    }
+    document.getElementById('ckBar').style.width = (i/STEPS.length*100)+'%';
+    if(i<STEPS.length){
+      const row = document.getElementById('ck-'+i); row.classList.remove('pending');
+      document.getElementById('ckc-'+i).className = 'ck ck-run';
+      row.scrollIntoView({block:'nearest'});
+      i++; setTimeout(tick, 380);
+    } else {
+      const s = r.stats;
+      document.getElementById('ckFoot').innerHTML = `
+        <span style="flex:1;font-size:12px;color:var(--i2)"><b>${s.issues}</b> issue${s.issues===1?'':'s'} · <b>${s.accountsPass}</b> of ${s.accounts} accounts pass · <b>${s.inFinalList}</b> contacts in the list</span>
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('checksOverlay').style.display='none';renderStart('upload')">Upload a different file</button>
+        <button class="btn btn-primary btn-sm" onclick="document.getElementById('checksOverlay').style.display='none';renderRun()">View the list →</button>`;
+    }
+  };
+  tick();
 }
 
-function renderUniverse(){
-  stage='universe';
-  const navCount = document.getElementById('navProspectCount');
+/* ═══════════════ RESULTS ═══════════════ */
+function renderRun(){
+  const r = RUN.result, s = r.stats;
+  const tab = (id,label,n) => `<div class="ftab ${view===id?'active':''}" onclick="view='${id}';filt='all';q='';renderRun()">${label} <span class="ftab-cnt">${n}</span></div>`;
   document.getElementById('mainArea').innerHTML = `
     <div class="topbar">
-      <div class="topbar-l"><span class="tb-title" id="listTitle">Target universe</span><span class="tb-badge badge-live"><span class="badge-dot"></span>Client_target_universe.csv</span></div>
+      <div class="topbar-l"><span class="tb-title">${esc(RUN.fileName)}</span>
+        <span class="tb-badge badge-neutral">${esc(RUN.sheet)}</span></div>
       <div class="topbar-r">
-        <button class="btn btn-sec btn-sm" onclick="renderUpload()">Upload new file</button>
-        <button class="btn btn-primary btn-sm" onclick="sendAllToScoring()">Send universe to Scoring</button>
+        <button class="btn btn-sec btn-sm" onclick="renderStart('upload')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>Upload a different file</button>
+        <button class="btn btn-sec btn-sm" onclick="openSave(false)" ${s.accountsPass?'':'disabled style="opacity:.5;cursor:not-allowed"'}>${RUN.savedId?'Saved ✓':'Save list'}</button>
+        <button id="goScoring" class="btn btn-primary btn-sm" onclick="openSave(true, SEL.size>0)" ${s.accountsPass?'':'disabled style="opacity:.5;cursor:not-allowed"'}>${SEL.size?`Send ${SEL.size} selected to Scoring →`:'Save and go to Scoring →'}</button>
       </div>
     </div>
-    <div class="ftabs"><div class="ftab active">Accounts <span class="ftab-cnt" id="tabCnt">—</span></div></div>
+    <div class="ftabs">${tab('list','Final list',r.contacts.length)}${tab('accounts','Accounts',r.accounts.length)}</div>
     <div class="canvas">
       <div class="stats">
-        <div class="stat"><div class="stat-lbl">In scope</div><div class="stat-val sv1" id="statScope">—</div><div class="stat-sub">passed knock-outs</div></div>
-        <div class="stat"><div class="stat-lbl">Excluded</div><div class="stat-val sv3" id="statExcluded">—</div><div class="stat-sub">knock-out rule</div></div>
-        <div class="stat"><div class="stat-lbl">Suppressed</div><div class="stat-val sv2" id="statSuppressed">—</div><div class="stat-sub">do-not-contact</div></div>
-        <div class="stat"><div class="stat-lbl">Contactable</div><div class="stat-val sv4" id="statContactable">—</div><div class="stat-sub">has a consent basis</div></div>
-        <div class="stat"><div class="stat-lbl">Low-confidence</div><div class="stat-val sv5" id="statLowConf">—</div><div class="stat-sub">classification &lt; 70%</div></div>
+        <div class="stat"><div class="stat-lbl">Rows read</div><div class="stat-val sv1">${s.rowsRead}</div><div class="stat-sub">${s.notLoaded} not loaded · ${s.merged} merged duplicate${s.merged===1?'':'s'}</div></div>
+        <div class="stat"><div class="stat-lbl">Issues</div><div class="stat-val sv3">${s.issues}</div><div class="stat-sub">${s.issuesBySeverity.stop} stop · ${s.issuesBySeverity.flag} flagged · ${s.issuesBySeverity.info} info</div></div>
+        <div class="stat"><div class="stat-lbl">Accounts</div><div class="stat-val sv2">${s.accounts}</div><div class="stat-sub">${s.accountsPass} pass the knock-outs</div></div>
+        <div class="stat"><div class="stat-lbl">Excluded</div><div class="stat-val sv5">${s.accounts-s.accountsPass}</div><div class="stat-sub">knock-out rule, logged</div></div>
+        <div class="stat"><div class="stat-lbl">In the final list</div><div class="stat-val sv4">${s.inFinalList}</div><div class="stat-sub">of ${s.contacts} contacts</div></div>
       </div>
-      <div class="score-list">
-        <div class="sl-toolbar">
-          <div class="sl-srch"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="color:var(--i3);flex-shrink:0"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><input type="text" placeholder="Search name or company…" oninput="filterUniverse(this.value)"></div>
-          <div class="sl-seg-filter">
-            <div class="seg-pill active" onclick="filterUSeg(this,'all')">All</div>
-            <div class="seg-pill" onclick="filterUSeg(this,'scope')">In scope</div>
-            <div class="seg-pill" onclick="filterUSeg(this,'excluded')">Excluded</div>
-            <div class="seg-pill" onclick="filterUSeg(this,'suppressed')">Suppressed</div>
-            <div class="seg-pill" onclick="filterUSeg(this,'lowconf')">Low-confidence</div>
-          </div>
-        </div>
-        <div class="sl-head" style="grid-template-columns:minmax(160px,2.2fr) 120px 130px 110px 1fr;">
-          <div class="sl-th">Contact</div>
-          <div class="sl-th">Vertical</div>
-          <div class="sl-th">Status</div>
-          <div class="sl-th">Consent</div>
-          <div class="sl-th">Notes</div>
-        </div>
-        <div id="uListBody"></div>
-      </div>
+      ${view==='list'?renderListTab():renderAccountsTab()}
     </div>`;
-  renderUList();
+  if(view==='list') drawListRows(); else drawAccRows();
 }
 
-let uSeg='all', uSearch='';
-function filterUSeg(el,seg){document.querySelectorAll('.seg-pill').forEach(p=>p.classList.remove('active'));el.classList.add('active');uSeg=seg;renderUList();}
-function filterUniverse(q){uSearch=q.toLowerCase();renderUList();}
-function uFiltered(){
-  let list = RAW_ROWS.filter(r=>!validationIssues().dupes.has(r.id));
-  if(uSeg==='scope') list = list.filter(r=>!knockout(r) && !SUPPRESSED.has(r.id));
-  if(uSeg==='excluded') list = list.filter(r=>knockout(r));
-  if(uSeg==='suppressed') list = list.filter(r=>SUPPRESSED.has(r.id));
-  if(uSeg==='lowconf') list = list.filter(r=>classify(r).conf<70);
-  if(uSearch) list = list.filter(r=>r.name.toLowerCase().includes(uSearch)||r.co.toLowerCase().includes(uSearch));
-  return list;
+function toolbar(pills, onSearch, placeholder){
+  return `<div class="sl-toolbar">
+    ${onSearch?`<div class="sl-srch"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="color:var(--i3);flex-shrink:0"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><input type="text" placeholder="${placeholder}" value="${esc(q)}" oninput="q=this.value.toLowerCase();${onSearch}()"></div>`:''}
+    <div class="sl-seg-filter">${pills}</div></div>`;
 }
-function renderUList(){
-  const list = uFiltered();
-  document.getElementById('uListBody').innerHTML = list.length ? list.map(r=>{
-    const ko = knockout(r); const supp = SUPPRESSED.has(r.id); const cls = classify(r); const consent = consentBasis(r);
-    const statusPill = ko ? `<span class="sc sc-l">Excluded</span>` : supp ? `<span class="sc sc-l">Suppressed</span>` : `<span class="sc sc-h">In scope</span>`;
-    return `
-    <div class="sl-row" style="grid-template-columns:minmax(160px,2.2fr) 120px 130px 110px 1fr;" onclick="openUDetail('${r.id}')">
-      <div class="co-cell"><div class="co-av" style="background:${avColor(r.id)}">${initials(r.name)}</div><div><div class="co-nm">${r.name}${cls.conf<70?' <span style=\"font-size:8.5px;font-weight:800;color:var(--warn);background:var(--warn-lt);padding:1px 6px;border-radius:999px\">LOW CONF</span>':''}</div><div class="co-ind">${r.co}</div></div></div>
-      <div style="font-size:11.5px;color:var(--i2)">${cls.vertical}</div>
-      <div>${statusPill}</div>
-      <div style="font-size:11px;color:var(--i3)">${consent==='legitimate-interest'?'Legitimate interest':consent==='no-basis'?'No basis':'—'}</div>
-      <div style="font-size:11px;color:var(--i3)">${ko || (supp?'On suppression list':'')}</div>
-    </div>`;
-  }).join('') : `<div style="padding:40px;text-align:center;color:var(--i3);font-size:12.5px">No accounts match.</div>`;
-  document.getElementById('tabCnt').textContent = list.length;
-  const clean = RAW_ROWS.filter(r=>!validationIssues().dupes.has(r.id));
-  document.getElementById('statScope').textContent = clean.filter(r=>!knockout(r)&&!SUPPRESSED.has(r.id)).length;
-  document.getElementById('statExcluded').textContent = clean.filter(r=>knockout(r)).length;
-  document.getElementById('statSuppressed').textContent = clean.filter(r=>SUPPRESSED.has(r.id)).length;
-  document.getElementById('statContactable').textContent = clean.filter(r=>consentBasis(r)==='legitimate-interest').length;
-  document.getElementById('statLowConf').textContent = clean.filter(r=>classify(r).conf<70).length;
+const pill = (cur,id,label,set) => `<div class="seg-pill ${cur===id?'active':''}" onclick="${set}='${id}';renderRun()">${label}</div>`;
+
+/* ═══════════════ TABLES: every field in the row, fixed column widths ═══════════════ */
+function table(cols, rows, empty){
+  const w = cols.reduce((n,c)=>n+c[1],0);
+  return `<div class="dt-wrap"><table class="dt" style="min-width:${w}px">
+    <colgroup>${cols.map(c=>`<col style="width:${c[1]}px">`).join('')}</colgroup>
+    <thead><tr>${cols.map(c=>`<th class="${c[2]||''}">${c[0]}</th>`).join('')}</tr></thead>
+    <tbody>${rows || `<tr><td colspan="${cols.length}" class="dt-empty">${empty}</td></tr>`}</tbody>
+  </table></div>`;
 }
-function openUDetail(id){
-  const r = RAW_ROWS.find(x=>x.id===id);
-  const ko = knockout(r); const supp = SUPPRESSED.has(r.id); const cls = classify(r); const consent = consentBasis(r);
-  document.getElementById('detTitle').textContent = r.name;
-  document.getElementById('detSub').textContent = r.title+' · '+r.co;
-  document.getElementById('detBody').innerHTML = `
-    ${ko ? `<div class="panel" style="margin-bottom:12px"><div class="panel-body" style="font-size:12px;color:var(--neg);background:var(--neg-lt)"><b>Excluded — knock-out.</b> ${ko}.</div></div>` : ''}
-    ${supp ? `<div class="panel" style="margin-bottom:12px"><div class="panel-body" style="font-size:12px;color:var(--neg);background:var(--neg-lt)"><b>On Client's suppression list.</b> Do-not-contact — never sent.</div></div>` : ''}
-    <div class="panel" style="margin-bottom:12px">
-      <div class="panel-hdr"><span class="panel-ttl">Classification</span></div>
-      <div class="panel-body">
-        <div class="dim-row"><span class="dim-lbl">Confidence</span><div class="dim-track"><div class="dim-fill" style="width:${cls.conf}%;background:${cls.conf>=70?'var(--pos)':'var(--warn)'}"></div></div><span class="dim-val">${cls.conf}</span></div>
-        <div style="font-size:11.5px;color:var(--i3);margin-top:6px">Vertical: <b style="color:var(--i1)">${cls.vertical}</b> · Account type: <b style="color:var(--i1)">${cls.accountType}</b></div>
-        ${cls.conf<70?'<div style="font-size:10.5px;color:var(--warn);margin-top:6px;font-style:italic">Below 70% — flagged for a quick look, not auto-scoped.</div>':''}
-      </div>
-    </div>
-    <div class="panel" style="margin-bottom:12px">
-      <div class="panel-hdr"><span class="panel-ttl">Consent</span></div>
-      <div class="panel-body" style="font-size:12px;color:var(--i2);line-height:1.6">
-        ${consent==='legitimate-interest' ? 'Basis recorded: legitimate interest, from Client\u2019s country rules.' : consent==='no-basis' ? '<b>No basis recorded.</b> Kept on the account, not contactable until one is confirmed.' : 'Not applicable — suppressed.'}
-      </div>
-    </div>
-    <div class="panel">
-      <div class="panel-hdr"><span class="panel-ttl">Contact</span></div>
-      <div class="panel-body">
-        <div class="dim-row" style="border:none;padding:4px 0"><span style="font-size:11.5px;color:var(--i3)">Email</span><span style="font-size:11.5px;color:var(--i1);margin-left:auto">${r.email||'— not provided'}</span></div>
-        <div class="dim-row" style="border:none;padding:4px 0"><span style="font-size:11.5px;color:var(--i3)">LinkedIn</span><span style="font-size:11.5px;color:var(--i1);margin-left:auto">${r.li||'— not provided'}</span></div>
-        <div class="dim-row" style="border:none;padding:4px 0"><span style="font-size:11.5px;color:var(--i3)">Region</span><span style="font-size:11.5px;color:var(--i1);margin-left:auto">${r.region}</span></div>
-      </div>
-    </div>
-    ${(!ko && !supp) ? `<div style="margin-top:14px"><a href="11-scoring.html?ids=${r.id}&autorun=1" class="btn btn-primary btn-sm" style="width:100%;justify-content:center;text-decoration:none">Send to Scoring</a></div>` : ''}
-  `;
-  document.getElementById('detailDrawer').classList.add('open');
+const dash = v => v ? esc(v) : '<span class="muted">—</span>';
+const cell = (v, sub, cls='val') => `<span class="${cls}" title="${esc(v||'')}">${dash(v)}</span>${sub?`<span class="sub" title="${esc(String(sub).replace(/<[^>]+>/g,''))}">${sub}</span>`:''}`;
+function statusTag(st){
+  if(st==='In the final list') return '<span class="tag tag-green">In the list</span>';
+  if(st.startsWith('In the list')) return '<span class="tag tag-amber">Not contactable</span>';
+  return '<span class="tag tag-red">Not in the list</span>';
 }
-function sendAllToScoring(){
-  const eligible = RAW_ROWS.filter(r=>!knockout(r) && !SUPPRESSED.has(r.id) && !validationIssues().dupes.has(r.id));
-  showToast(eligible.length+' accounts sent to Scoring');
-  setTimeout(()=>{ location.href = '11-scoring.html?ids='+eligible.map(r=>r.id).join(',')+'&autorun=1'; }, 600);
+function personaTag(p){ return p==='Primary' ? '<span class="tag tag-violet">Primary</span>' : p==='Secondary' ? '<span class="tag tag-grey">Secondary</span>' : '<span class="muted">None</span>'; }
+function issueCell(is){
+  if(!is.length) return '<span class="muted">—</span>';
+  const dot = {stop:'var(--neg)',flag:'var(--warn)',info:'var(--s300)'};
+  const first = is[0];
+  return `<div style="display:flex;gap:8px;align-items:flex-start" title="${esc(is.map(i=>`${i.issue}: ${i.outcome}. Fix: ${i.fix}`).join('\n'))}">
+    <span style="width:7px;height:7px;border-radius:50%;background:${dot[first.severity]};flex-shrink:0;margin-top:6px"></span>
+    <div style="min-width:0"><span class="clamp2" style="color:var(--i1);font-size:12px">${esc(first.issue)}</span>
+    <span class="sub">${esc(first.outcome)}${is.length>1?` · +${is.length-1} more`:''}</span></div></div>`;
+}
+const SEL = new Set();
+const selectable = c => c.status.startsWith('In the');
+function visibleContacts(){
+  let cs = RUN.result.contacts;
+  if(filt==='in') cs = cs.filter(c=>c.status==='In the final list');
+  if(filt==='nc') cs = cs.filter(c=>c.status.startsWith('In the list'));
+  if(filt==='out') cs = cs.filter(c=>c.status.startsWith('Not in'));
+  if(q) cs = cs.filter(c=>(c.name+' '+c.company+' '+c.jobTitle).toLowerCase().includes(q));
+  return cs;
+}
+function toggleSel(row, on){ if(on) SEL.add(row); else SEL.delete(row); updateSelBar(); }
+function toggleAll(on){ visibleContacts().filter(selectable).forEach(c=> on ? SEL.add(c.row) : SEL.delete(c.row)); drawListRows(); }
+function clearSel(){ SEL.clear(); drawListRows(); }
+function updateSelBar(){
+  const bar = document.getElementById('selBar'); if(!bar) return;
+  const n = SEL.size;
+  bar.style.display = n ? 'flex' : 'none';
+  if(n) bar.querySelector('#selCount').textContent = `${n} prospect${n===1?'':'s'} selected`;
+  const all = document.getElementById('selAll');
+  if(all){ const v = visibleContacts().filter(selectable); all.checked = v.length>0 && v.every(c=>SEL.has(c.row)); all.indeterminate = !all.checked && v.some(c=>SEL.has(c.row)); }
+  const go = document.getElementById('goScoring'); if(go) go.textContent = n ? `Send ${n} selected to Scoring →` : 'Save and go to Scoring →';
+}
+function renderListTab(){
+  return `${unattachedNotice()}<div class="score-list">
+    <div id="selBar" class="sl-toolbar" style="display:none;background:var(--brand-lt);align-items:center">
+      <span id="selCount" style="font-size:12.5px;font-weight:600;color:var(--brand-dk)"></span>
+      <button class="btn btn-ghost btn-sm" onclick="clearSel()">Clear</button>
+    </div>
+    ${toolbar(pill(filt,'all','All','filt')+pill(filt,'in','In the final list','filt')+pill(filt,'nc','Not contactable','filt')+pill(filt,'out','Not in the list','filt'),'drawListRows','Search name, company or title…')}
+    <div id="rows"></div></div>
+    <div style="font-size:11px;color:var(--i3);margin-top:10px">One row per contact: what Lead discovery hands to Scoring. Scroll sideways for more columns; hover a cell for its full text.</div>`;
+}
+function drawListRows(){
+  const el = document.getElementById('rows'); if(!el) return;
+  let cs;
+  cs = visibleContacts();
+  const accById = new Map(RUN.result.accounts.map(a=>[a.id,a]));
+  const cols = [['<input type="checkbox" id="selAll" title="Select all" onclick="toggleAll(this.checked)" style="cursor:pointer;vertical-align:middle">',58],['Contact',220],['Account',190],['Job title',210],['Persona',140],['Email',270],['LinkedIn',250],['Location',190],['Industry',180],['Employees',120,'num'],['Reachable by',170],['Consent',170],['Owner',220],['Status',230],['Issues',290]];
+  el.innerHTML = table(cols, cs.map(c=>{
+    const a = accById.get(c.accountId), reason = (c.status.match(/\((.*)\)$/)||[])[1];
+    const emailSub = c.emailRaw ? (c.email ? (c.emailVerified ? '<span style="color:var(--pos)">Verified</span>' : '<span style="color:var(--warn)">Not verified</span>') : '<span style="color:var(--neg)">Malformed</span>') : '';
+    return `<tr${SEL.has(c.row)?' style="background:var(--brand-lt)"':''}>
+      <td>${selectable(c)?`<input type="checkbox" ${SEL.has(c.row)?'checked':''} onclick="toggleSel(${c.row},this.checked);this.closest('tr').style.background=this.checked?'var(--brand-lt)':''" style="cursor:pointer;vertical-align:middle">`:'<span class="muted" title="Not in the list">—</span>'}</td>
+      <td><div class="person"><div class="co-av" style="background:${avColor(c.company)}">${initials(c.name)}</div><div>${cell(c.name,'Row '+c.row, 'dt-main')}</div></div></td>
+      <td>${cell(c.company)}</td>
+      <td>${cell(c.jobTitle)}</td>
+      <td>${personaTag(c.persona)}</td>
+      <td>${cell(c.emailRaw, emailSub)}</td>
+      <td>${cell(c.linkedinRaw && c.linkedinRaw.replace(/^https?:\/\/(www\.)?/,''))}</td>
+      <td>${cell([c.city,c.country].filter(Boolean).join(', '))}</td>
+      <td>${cell(a&&a.industry)}</td>
+      <td class="num">${a&&a.employees!=null?a.employees.toLocaleString('en-US'):'<span class="muted">—</span>'}</td>
+      <td>${c.reachableBy==='none'?'<span style="color:var(--neg)">No channel</span>':cell(c.reachableBy.replace(/^./,m=>m.toUpperCase()))}</td>
+      <td>${c.optOut?'<span style="color:var(--neg)">Opted out</span>':cell(c.consent)}</td>
+      <td>${cell(c.owner)}</td>
+      <td>${statusTag(c.status)}${reason?`<span class="sub" title="${esc(reason)}">${esc(reason.replace(/^./,m=>m.toUpperCase()))}</span>`:''}</td>
+      <td class="wrap">${issueCell(issuesFor(c.row))}</td>
+    </tr>`;}).join(''), 'No contacts match.');
+  updateSelBar();
 }
 
-renderUpload();
+function renderAccountsTab(){
+  return `<div class="score-list">
+    ${toolbar(pill(filt,'all','All','filt')+pill(filt,'pass','Pass','filt')+pill(filt,'excluded','Excluded','filt')+pill(filt,'review','Needs review','filt'),'drawAccRows','Search accounts…')}
+    <div id="rows"></div></div>
+    <div style="font-size:11px;color:var(--i3);margin-top:10px">One row per account. The installed-base knock-out runs in Scoring, from the signal file. Scroll sideways for more columns; hover a cell for its full text.</div>`;
+}
+function drawAccRows(){
+  const el = document.getElementById('rows'); if(!el) return;
+  let as = RUN.result.accounts;
+  if(filt==='pass') as = as.filter(a=>!a.excluded);
+  if(filt==='excluded') as = as.filter(a=>a.excluded);
+  if(filt==='review') as = as.filter(a=>a.needsReview);
+  if(q) as = as.filter(a=>a.name.toLowerCase().includes(q));
+  const confTag = {high:'<span class="tag tag-green">High</span>',medium:'<span class="tag tag-amber">Medium</span>',low:'<span class="tag tag-red">Low</span>'};
+  const money = n => n==null ? '' : n>=1e9 ? 'USD '+(n/1e9).toFixed(1).replace(/\.0$/,'')+'bn' : 'USD '+Math.round(n/1e6)+'m';
+  const cols = [['Account',240],['Location',190],['Industry (as held)',180],['Vertical',160],['Confidence',130],['Classification',300],['Account type',170],['Size',170],['Customer',120],['Site',240],['Contacts',230],['Owner',220],['Knock-outs',260]];
+  el.innerHTML = table(cols, as.map(a=>{
+    const cs = RUN.result.contacts.filter(c=>c.accountId===a.id);
+    const prim = cs.filter(c=>c.persona==='Primary').length;
+    const site = a.siteProcess ? [a.siteName,a.siteProcess].filter(Boolean).join(' · ') : '';
+    return `<tr>
+      <td><div class="person"><div class="co-av" style="background:${avColor(a.name)}">${initials(a.name)}</div><div>${cell(a.name, esc(a.domain||''), 'dt-main')}</div></div></td>
+      <td>${cell([a.city,a.country].filter(Boolean).join(', '))}</td>
+      <td>${cell(a.industry)}</td>
+      <td>${cell(a.vertical, a.verticalLevel.replace(/^./,m=>m.toUpperCase()))}</td>
+      <td>${confTag[a.confidence]}</td>
+      <td class="wrap"><span class="clamp2" title="${esc(a.classReason)}" style="font-size:12px">${esc(a.classReason)}</span></td>
+      <td>${cell((DemandAI.CONFIG.accountTypes[a.accountType]||{}).label||'Other')}</td>
+      <td>${cell(a.revenue!=null?money(a.revenue):(a.employees!=null?a.employees.toLocaleString('en-US')+' employees':''), a.revenue!=null&&a.employees!=null?a.employees.toLocaleString('en-US')+' employees':'')}</td>
+      <td>${a.existingCustomer?'<span class="tag tag-blue">Existing</span>':'<span class="muted">No</span>'}</td>
+      <td>${cell(site, a.siteCapacity?esc(Number(a.siteCapacity).toLocaleString('en-US')+' '+a.capacityUnit):'')}</td>
+      <td>${cell(cs.length+' contact'+(cs.length===1?'':'s'), esc(prim?prim+' primary persona':'No primary persona'))}</td>
+      <td>${cell(a.owner)}</td>
+      <td>${a.excluded?`<span class="tag tag-red">Excluded</span><span class="sub" title="${esc(a.excludedReason)}">${esc(a.excludedReason)}</span>`:`<span class="tag tag-green">Pass</span><span class="sub">Region · managed · contacts</span>`}</td>
+    </tr>`;}).join(''), 'No accounts match.');
+}
+
+/* ═══════════════ ISSUES, attached to the contact row they belong to ═══════════════ */
+function issuesFor(row){
+  // A merged duplicate's issue sits on the repeated row; show it on the row it was merged into.
+  return RUN.result.issues.filter(i=>i.row===row || (i.code==='D5' && i.outcome==='Merged into row '+row));
+}
+function unattachedIssues(){
+  const rows = new Set(RUN.result.contacts.map(c=>c.row));
+  return RUN.result.issues.filter(i=>!rows.has(i.row) && !(i.code==='D5' && rows.has(+String(i.outcome).replace('Merged into row ',''))));
+}
+const SEV_COL = {stop:'var(--neg)',flag:'var(--warn)',info:'var(--i3)'};
+function worst(is){ return is.some(i=>i.severity==='stop')?'stop':is.some(i=>i.severity==='flag')?'flag':'info'; }
+function unattachedNotice(){
+  const un = unattachedIssues();
+  if(!un.length) return '';
+  return `<div class="panel" style="margin-bottom:12px;border-color:var(--warn)"><div class="panel-body" style="font-size:12px;color:var(--i2);line-height:1.7">
+    <b>${un.length} issue${un.length>1?'s':''} not on any contact in the list</b> (rows not loaded, or about the whole file):
+    ${un.map(i=>`<div><b>${i.row==='—'?'File':'Row '+esc(i.row)}</b> · ${esc(i.field)}: ${esc(i.issue)}. <span style="color:var(--i3)">${esc(i.outcome)}. Fix: ${esc(i.fix)}</span></div>`).join('')}
+  </div></div>`;
+}
+
+/* ═══════════════ DRAWERS ═══════════════ */
+/* ═══════════════ SAVE AND HAND OFF ═══════════════ */
+function selectionList(){
+  const r = RUN.result;
+  if(!RUN.selOnly) return {stats:r.stats, accounts:r.accounts, contacts:r.contacts};
+  const contacts = r.contacts.filter(c=>SEL.has(c.row));
+  const ids = new Set(contacts.map(c=>c.accountId));
+  const accounts = r.accounts.filter(a=>ids.has(a.id));
+  return {contacts, accounts, stats:Object.assign({}, r.stats, {contacts:contacts.length, accounts:accounts.length,
+    accountsPass:accounts.filter(a=>!a.excluded).length, inFinalList:contacts.filter(c=>c.status==='In the final list').length})};
+}
+function openSave(go, selOnly){
+  RUN.selOnly = !!selOnly;
+  const saved = !selOnly && RUN.savedId && DemandAI.getList(RUN.savedId);
+  const base = saved ? saved.name : RUN.fileName.replace(/\.[^.]+$/,'')+(selOnly?` · ${SEL.size} selected`:'')+' · '+new Date().toISOString().slice(0,10);
+  const L = selectionList();
+  const ov = overlay('saveOverlay');
+  ov.onclick = e=>{ if(e.target===ov) ov.style.display='none'; };
+  ov.innerHTML = `<div style="background:var(--surf);border-radius:var(--rlg);box-shadow:var(--sh-lg);width:440px;max-width:100%;padding:20px 22px">
+    <div style="font-family:var(--fd);font-size:15px;font-weight:700;color:var(--i1);margin-bottom:4px">${saved?'Update the saved list':'Save the screened list'}</div>
+    <div style="font-size:12px;color:var(--i3);margin-bottom:14px;line-height:1.5">${selOnly?`The ${L.contacts.length} selected prospects, at ${L.stats.accountsPass} account${L.stats.accountsPass===1?'':'s'}.`:`${L.stats.accountsPass} accounts that pass the knock-outs, with ${L.stats.inFinalList} contacts in the list.`} It appears under Saved lists and in Scoring.</div>
+    <label style="font-size:11px;font-weight:600;color:var(--i2)">List name</label>
+    <input id="listName" value="${esc(base)}" style="width:100%;margin:5px 0 18px;padding:9px 11px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:13px" onkeydown="if(event.key==='Enter')saveList(${go})">
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('saveOverlay').style.display='none'">Cancel</button>
+      <button class="btn ${go?'btn-sec':'btn-primary'} btn-sm" onclick="saveList(false)">Save</button>
+      <button class="btn ${go?'btn-primary':'btn-sec'} btn-sm" onclick="saveList(true)">Save and go to Scoring →</button>
+    </div></div>`;
+  setTimeout(()=>{ const el=document.getElementById('listName'); el.focus(); el.select(); }, 30);
+}
+function saveList(go){
+  const name = document.getElementById('listName').value.trim() || RUN.fileName;
+  const r = selectionList();
+  const prev = !RUN.selOnly && RUN.savedId && DemandAI.getList(RUN.savedId);
+  const list = prev ? Object.assign(prev, {name}) : { id:'list-'+Date.now().toString(36), name, createdAt:Date.now(), sourceFile:RUN.fileName, sheet:RUN.sheet,
+    sandbox:RUN.sandbox, stats:r.stats, accounts:r.accounts, contacts:r.contacts };
+  if(!DemandAI.saveList(list)){ showToast("This browser blocks storage, so the list can't be saved. Allow site data and try again"); return; }
+  if(!RUN.selOnly) RUN.savedId = list.id;
+  document.getElementById('saveOverlay').style.display='none';
+  if(go){ location.href = '11-scoring.html?list='+encodeURIComponent(list.id); return; }
+  showToast(`Saved as "${name}"`);
+  renderRun();
+}
+
+/* ═══════════════ RENAME A SAVED LIST ═══════════════ */
+let renamingId = null;
+function startRename(id){ renamingId = id; renderStart('saved'); const el=document.getElementById('renameInput'); if(el){ el.focus(); el.select(); } }
+function finishRename(id){
+  const el = document.getElementById('renameInput'); const name = el ? el.value.trim() : '';
+  const l = DemandAI.getList(id);
+  if(l && name && name!==l.name){ l.name = name; DemandAI.saveList(l); showToast('List renamed'); }
+  renamingId = null; renderStart('saved');
+}
+
+renderStart();
 
 const PAGE_ID = '10-prospecting.html';
 

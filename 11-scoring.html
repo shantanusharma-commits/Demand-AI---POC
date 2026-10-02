@@ -366,6 +366,60 @@ input,textarea,select{font:inherit;}
 /* Toast */
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--i1);color:#fff;font-size:12.5px;font-weight:500;padding:9px 18px;border-radius:999px;z-index:900;pointer-events:none;animation:fadeUp .2s var(--ease);}
 
+
+/* ─── Data tables and tags (Prospecting, Scoring) ─── */
+.dt-wrap{overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none;}
+.dt-wrap::-webkit-scrollbar{display:none;}
+.dt{width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed;font-size:12.5px;}
+.dt th{padding:11px 16px;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--i3);text-align:left;background:var(--s50);border-bottom:1px solid var(--border);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.dt td{padding:13px 16px;color:var(--i2);border-bottom:1px solid var(--s75);vertical-align:middle;line-height:1.45;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dt tr:last-child td{border-bottom:none;}
+.dt tbody tr{transition:background var(--fast);}
+.dt tbody tr:hover td{background:#FAFBFC;}
+.dt tbody tr.click{cursor:pointer;}
+.dt th.num,.dt td.num{text-align:right;}
+.dt td.num{font-family:var(--fm);font-variant-numeric:tabular-nums;}
+.dt td.wrap{white-space:normal;}
+.dt .dt-main{color:var(--i1);font-weight:600;overflow:hidden;text-overflow:ellipsis;}
+.dt .val{color:var(--i1);overflow:hidden;text-overflow:ellipsis;}
+.dt .sub{display:block;font-size:11px;color:var(--i3);margin-top:2px;overflow:hidden;text-overflow:ellipsis;}
+.dt .muted{color:var(--i4);}
+.dt .person{display:flex;align-items:center;gap:10px;min-width:0;}
+.dt .person > div:last-child{min-width:0;}
+.clamp2{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;white-space:normal;}
+.dt-empty{padding:28px;text-align:center;font-size:12.5px;color:var(--i3);}
+.tag{display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 10px;border-radius:999px;font-family:var(--fb);font-size:11px;font-weight:600;letter-spacing:0;text-transform:none;white-space:nowrap;background:var(--s75);color:var(--i2);vertical-align:middle;}
+.tag::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0;}
+.tag-green{background:#E8F5EE;color:#24704F;}
+.tag-amber{background:#FDF2E1;color:#A8620F;}
+.tag-red{background:#FBEAEA;color:#A83A3A;}
+.tag-blue{background:#E4F2FB;color:#00659A;}
+.tag-violet{background:#F0EAF8;color:#6A4290;}
+.tag-teal{background:#E3F4F2;color:#1B7369;}
+.tag-pink{background:#FBE9F1;color:#A1386A;}
+.tag-grey{background:#EEF1F4;color:#5B6774;}
+.tags{display:flex;flex-wrap:wrap;gap:6px;}
+
+/* ─── Checks pop-up ─── */
+@keyframes ckspin{to{transform:rotate(360deg);}}
+@keyframes ckpop{from{transform:scale(.6);opacity:0;}to{transform:scale(1);opacity:1;}}
+.ck{width:22px;height:22px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;}
+.ck-wait{border:2px solid var(--s100);}
+.ck-run{border:2.5px solid var(--brand-lt);border-top-color:var(--brand);animation:ckspin .7s linear infinite;}
+.ck-ok{background:var(--pos);color:#fff;animation:ckpop .2s var(--ease);}
+.ck-warn{background:var(--warn);color:#fff;animation:ckpop .2s var(--ease);}
+.ck-stop{background:var(--neg);color:#fff;animation:ckpop .2s var(--ease);}
+.ck-info{background:var(--s300);color:#fff;animation:ckpop .2s var(--ease);}
+.ck-row{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--s75);transition:opacity var(--base);}
+.ck-row.pending{opacity:.45;}
+
+/* ─── Checkboxes: grey when empty, brand colour when ticked ─── */
+.dt input[type=checkbox]{-webkit-appearance:none;appearance:none;width:16px;height:16px;margin:0;border-radius:4px;border:1.5px solid var(--s200);background:var(--s75);cursor:pointer;vertical-align:middle;display:inline-grid;place-content:center;transition:background var(--fast),border-color var(--fast);}
+.dt input[type=checkbox]:hover{border-color:var(--s300);}
+.dt input[type=checkbox]:checked,.dt input[type=checkbox]:indeterminate{background:var(--brand);border-color:var(--brand);}
+.dt input[type=checkbox]:checked::after{content:'';width:9px;height:5px;border:2px solid #fff;border-top:0;border-right:0;transform:translateY(-1px) rotate(-45deg);}
+.dt input[type=checkbox]:indeterminate::after{content:'';width:8px;height:2px;background:#fff;border-radius:1px;}
+.dt input[type=checkbox]:focus-visible{outline:2px solid var(--brand-mid);outline-offset:2px;}
 </style>
 </head>
 <body>
@@ -438,89 +492,7 @@ input,textarea,select{font:inherit;}
 </nav>
 
 <!-- ════ MAIN ════ -->
-<main class="main">
-  <div class="topbar">
-    <div class="topbar-l">
-      <span class="tb-title" id="tbTitle">Account Scoring</span>
-      <span class="tb-badge badge-live"><span class="badge-dot"></span>Live · Fit × Timing</span>
-    </div>
-    <div class="topbar-r">
-      <div class="dd">
-        <button class="btn btn-sec btn-sm" onclick="toggleDD('sourceDD')">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-          Score more
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
-        </button>
-        <div class="ddm" id="sourceDD">
-          <a class="ddi" href="10-prospecting.html" style="text-decoration:none;color:inherit">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>From a Prospecting list
-          </a>
-          <div class="ddi" onclick="switchSource('csv');closeDD('sourceDD')">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Upload CSV
-          </div>
-          <div class="dd-sep"></div>
-          <div class="ddi" onclick="switchSource('dormant');closeDD('sourceDD')">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Dormant opportunities
-          </div>
-        </div>
-      </div>
-      <button class="btn btn-primary btn-sm" onclick="sendAllToNBA()">
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-        Send all to NBA
-      </button>
-    </div>
-  </div>
-
-  <div class="ftabs">
-    <div class="ftab active">Score List <span class="ftab-cnt" id="tabCnt">—</span></div>
-  </div>
-
-  <div class="canvas" id="canvas">
-
-    <div class="stats">
-      <div class="stat"><div class="stat-lbl">Accounts scored</div><div class="stat-val sv1" id="statScored">—</div><div class="stat-sub">this run</div></div>
-      <div class="stat"><div class="stat-lbl">Hot tier</div><div class="stat-val sv2" id="statHot">—</div><div class="stat-sub">rank ≥ 5,000</div></div>
-      <div class="stat"><div class="stat-lbl">Trusted patterns</div><div class="stat-val sv3" id="statTrusted">—</div><div class="stat-sub">cache-proven</div></div>
-      <div class="stat"><div class="stat-lbl">Flagged for NBA</div><div class="stat-val sv4" id="statNba">—</div><div class="stat-sub">hot + warm</div></div>
-      <div class="stat" title="Good fit, but no live signal right now. Re-checked on every run — not dropped, just not urgent yet."><div class="stat-lbl">Watch list</div><div class="stat-val sv5" id="statConf">—</div><div class="stat-sub">good fit, no live signal</div></div>
-    </div>
-
-    <div class="score-list">
-      <div class="sl-toolbar" id="bulkBar" style="display:none;background:var(--brand-lt);">
-        <div style="display:flex;align-items:center;gap:10px;flex:1">
-          <span style="font-size:12.5px;font-weight:600;color:var(--brand-dk)"><span id="bulkCount">0</span> selected</span>
-
-          <button class="btn btn-primary btn-sm" onclick="bulkSendToNBA()">Send selected to NBA</button>
-        </div>
-        <button class="btn btn-ghost btn-sm" onclick="clearSelection()">Clear</button>
-      </div>
-      <div class="sl-toolbar" id="normalBar">
-        <div class="sl-srch">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="color:var(--i3);flex-shrink:0"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-          <input type="text" placeholder="Search accounts…" oninput="filterList(this.value)">
-        </div>
-        <div class="sl-seg-filter">
-          <div class="seg-pill active" onclick="filterSeg(this,'all')">All</div>
-          <div class="seg-pill" onclick="filterSeg(this,'hot')">Hot</div>
-          <div class="seg-pill" onclick="filterSeg(this,'warm')">Warm</div>
-          <div class="seg-pill" onclick="filterSeg(this,'cool')">Cool</div>
-          <div class="seg-pill" onclick="filterSeg(this,'excluded')">Excluded</div>
-        </div>
-      </div>
-      <div class="sl-head" style="grid-template-columns:28px minmax(160px,2.5fr) 90px 110px 130px 1fr 32px;">
-        <div class="sl-th"><input type="checkbox" id="selectAllBox" onclick="toggleSelectAll(this)" style="cursor:pointer"></div>
-        <div class="sl-th">Account</div>
-        <div class="sl-th">Tier</div>
-        <div class="sl-th">Likelihood</div>
-        <div class="sl-th">Cache</div>
-        <div class="sl-th">Top signal</div>
-        <div class="sl-th"></div>
-      </div>
-      <div id="scoreListBody"></div>
-    </div>
-
-  </div><!-- /canvas -->
-</main>
+<main class="main" id="mainArea"></main>
 
 <!-- Detail drawer -->
 <div class="detail-drawer" id="detailDrawer">
@@ -542,346 +514,535 @@ input,textarea,select{font:inherit;}
 </div>
 </div><!-- /shell -->
 
-<!-- Source picker modal -->
-<div id="sourceOverlay" style="position:fixed;inset:0;background:rgba(20,26,33,.4);z-index:500;display:none;align-items:center;justify-content:center;" onclick="if(event.target===this)closeSourceModal()">
-  <div style="background:var(--surf);border-radius:var(--rlg);box-shadow:var(--sh-lg);width:520px;max-width:90vw;max-height:80vh;overflow-y:auto;">
-    <div id="sourceModalBody"></div>
-  </div>
-</div>
-
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="demandai-engine.js"></script>
+<script src="demandai-sample-data.js"></script>
 <script>
 function showToast(msg){document.querySelectorAll('.toast').forEach(t=>t.remove());const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2600);}
-function toggleDD(id){const el=document.getElementById(id);const was=el.classList.contains('open');document.querySelectorAll('.ddm.open').forEach(m=>m.classList.remove('open'));if(!was){el.classList.add('open');setTimeout(()=>{document.addEventListener('click',function c(e){if(!el.contains(e.target)){el.classList.remove('open');document.removeEventListener('click',c);}});},0);}}
-function closeDD(id){document.getElementById(id)?.classList.remove('open');}
-
-/* ═══════════════ DATA — same math as before, unchanged ═══════════════ */
-const NAMES = {
-  l1:['Karen Whitfield','VP Operations','Meridian Chemical Corp'],
-  l2:['Anders Solberg','Director of Digital Transformation','Nordkyst Refining'],
-  l3:['Priya Ramaswamy','Chief Digital Officer','Ferro Dynamics Ltd'],
-  l4:['Mark Delacroix','Plant Manager','Cascade Power Systems'],
-  l5:['Isabelle Perrot','VP Manufacturing','Solvex Industrial'],
-  l6:['Thomas Okafor','Head of Process Safety','Altair Petrochemicals'],
-  l7:['Rebecca Lindqvist','Director of Automation','Ridgeline Utilities'],
-  l8:['Daniel Voss','VP Operations','Continental Polymer Works'],
-  l9:['Grace Adeyemi','Plant Manager','Vantage Oil & Gas'],
-  l10:['Julien Marchand','Director of Operations','Hearth Steel Group'],
-  l11:['Nadia Kowalski','VP Engineering','Meadowbrook Power'],
-  l12:['Robert Achebe','Chief Operating Officer','Trident Refining'],
-  l13:['Elena Popescu','Director of Digital Transformation','Ironclad Manufacturing'],
-  l14:['Samuel Brandt','VP Operations','Summit Chemical Solutions'],
-};
-const SCORE_DATA = {
-  l1: {fit:91, cache:{s:11,a:15}, signals:[
-        {tag:'Positive reply', nm:'Replied positively to an open outreach thread', tier:1, src:'Campaign tool', conf:98, age:0, mode:'push'},
-        {tag:'Competitive surge', nm:'Competitive landscape surge — G2 comparison spike for process control platforms', tier:2, src:'G2 + Verid', conf:82, age:6, mode:'pull'},
-        {tag:'Contract renewal', nm:'Renewal-based acquisition trigger — incumbent contract renews in 34 days', tier:1, src:'HG Insights Contracts', conf:91, age:2, mode:'pull'},
-        {tag:'Tech-stack change', nm:'Tech-stack change — new SCADA integration vendor detected', tier:2, src:'BuiltWith / PredictLeads', conf:65, age:14, mode:'pull'},
-      ]},
-  l2: {fit:85, cache:{s:4,a:9}, signals:[
-        {tag:'Contract renewal', nm:'Renewal-based acquisition trigger — SAP contract renews in 41 days', tier:1, src:'HG Insights Contracts', conf:88, age:3, mode:'pull'},
-        {tag:'New hire', nm:'New hire — VP Operations started 9 days ago', tier:1, src:'LinkedIn Sales Navigator', conf:84, age:9, mode:'pull'},
-      ]},
-  l3: {fit:90, cache:{s:2,a:6}, signals:[
-        {tag:'Funding round', nm:'Funding announcement — Series C closed 3 weeks ago', tier:1, src:'Crunchbase', conf:95, age:21, mode:'pull'},
-        {tag:'Lookalike match', nm:'Lookalike match — structurally resembles 2 closed-won accounts', tier:2, src:'Ocean.io Lookalikes', conf:78, age:9, mode:'pull'},
-      ]},
-  l4: {fit:61, cache:{s:1,a:3}, disqualified:true, disqualifiedReason:'Closure announced — plant slated for decommissioning. Rank 0, excluded, reason logged.', signals:[{tag:'Hiring spike', nm:'Hiring spike — 3 process engineering roles posted in 2 weeks', tier:2, src:'PredictLeads', conf:68, age:11, mode:'pull'}]},
-  l5: {fit:88, cache:{s:7,a:11}, signals:[{tag:'Contract renewal', nm:'Competitor contract-renewal tracking — renews in 58 days', tier:1, src:'HG Insights Contracts', conf:79, age:4, mode:'pull'}]},
-  l6: {fit:79, cache:{s:3,a:8}, competitorAward:true, signals:[{tag:'Customer-health decline', nm:'Competitor customer-health decline — usage-intensity drop on incumbent DCS', tier:3, src:'HG Insights AI Maturity', conf:74, age:18, mode:'pull'}]},
-  l7: {fit:64, cache:{s:0,a:2}, signals:[{tag:'Compliance deadline', nm:'Compliance deadline approaching — grid-reliability audit window opens in 70 days', tier:3, src:'Public regulatory calendars', conf:61, age:5, mode:'pull'}]},
-  l8: {fit:97, cache:{s:14,a:18}, signals:[
-        {tag:'Contract renewal', nm:'Renewal-based acquisition trigger — SAP contract renews in 41 days', tier:1, src:'HG Insights Contracts', conf:93, age:2, mode:'pull'},
-        {tag:'Customer-health decline', nm:'Closed-lost intel — incumbent flagged in a competitor customer-health decline', tier:3, src:'HG Insights AI Maturity', conf:77, age:15, mode:'pull'},
-      ]},
-  l9: {fit:71, cache:{s:5,a:12}, signals:[{tag:'Lookalike match', nm:'Lookalike match — structurally resembles 2 closed-won accounts', tier:2, src:'Ocean.io Lookalikes', conf:82, age:8, mode:'pull'}]},
-  l10:{fit:83, cache:{s:6,a:10}, signals:[{tag:'Tech-stack change', nm:'Tech-stack change — new SCADA integration vendor detected', tier:2, src:'BuiltWith / PredictLeads', conf:70, age:13, mode:'pull'}]},
-  l11:{fit:76, cache:{s:1,a:4}, signals:[{tag:'Tool-gap statement', nm:'Public statement of tool gap — conference panel', tier:3, src:'Common Room', conf:58, age:22, mode:'pull'}], discardedQualify:[{nm:'Casual conference-panel remark, no follow-up mentioned', failedTest:'Time-bound', reason:'No decay window applies to an offhand remark — it doesn\u2019t have a window in which it stops being true.'}]},
-  l12:{fit:92, cache:{s:9,a:13}, signals:[
-        {tag:'Champion job change', nm:'Champion job change — former economic buyer moved here from a closed-won account', tier:1, src:'LinkedIn job-change alerts', conf:89, age:6, mode:'pull'},
-        {tag:'Lookalike match', nm:'Lookalike match — structurally resembles 3 closed-won accounts', tier:2, src:'Ocean.io Lookalikes', conf:80, age:11, mode:'pull'},
-      ]},
-  l13:{fit:83, cache:{s:2,a:5}, signals:[{tag:'New hire', nm:'New hire — VP Operations started 12 days ago', tier:1, src:'LinkedIn Sales Navigator', conf:81, age:12}]},
-  l14:{fit:80, cache:{s:6,a:9}, signals:[{tag:'Growth signal', nm:'Buying-motivation match — growth-tagged, expansion announcement', tier:2, src:'G2 + case studies', conf:66, age:9}]},
-};
-const TIER_CFG = {1:{w:100,full:3,half:2}, 2:{w:60,full:10,half:15}, 3:{w:30,full:75,half:40}};
-function decayedWeight(tier,age){const c=TIER_CFG[tier];if(age<=c.full)return c.w;return Math.round(c.w*Math.pow(0.5,(age-c.full)/c.half)*10)/10;}
-function computeTiming(signals){if(!signals.length)return{total:0,weighted:[]};const w=signals.map(s=>({...s,w:decayedWeight(s.tier,s.age)})).sort((a,b)=>b.w-a.w);let t=0;w.forEach((s,i)=>t+=s.w*Math.pow(0.5,i));return{total:Math.round(t*10)/10,weighted:w};}
-function tierOfRank(r){return r>=5000?'hot':r>=1500?'warm':'cool';}
-const TIER_LBL={hot:'HOT',warm:'WARM',cool:'COOL'};
-function cacheProven(c){return (c.s+1)/(c.a+2)>=0.6 && c.a>=10;}
-function priorityScore(r){return Math.max(1,Math.min(100,Math.round(r/120)));}
-
-let SCORED = Object.keys(SCORE_DATA).map(id=>{
-  const d=SCORE_DATA[id]; const [name,title,co]=NAMES[id];
-  const timing=computeTiming(d.signals);
-  let modTiming = timing.total;
-  if(d.competitorAward) modTiming = modTiming * 0.5; // C1j modifier: competitor contract at the site in the last 12 months
-  const rank = d.disqualified ? 0 : Math.round(d.fit*modTiming);
-  return {id,name,title,co,fit:d.fit,cache:d.cache,weighted:timing.weighted,timingTotal:modTiming,rank,disqualified:!!d.disqualified,disqualifiedReason:d.disqualifiedReason,competitorAward:!!d.competitorAward,discardedQualify:d.discardedQualify||[]};
-}).sort((a,b)=>b.rank-a.rank);
-
-let selectedId=null, activeSeg='all', searchQ='';
-function initials(n){return n.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();}
-function avColor(id){const c=['#7D52A2','#0094DA','#FF8820','#2E7D5A','#B23F3F'];let h=0;for(const ch of id)h+=ch.charCodeAt(0);return c[h%c.length];}
-
-function filteredList(){
-  let list=SCORED;
-  if(activeSeg==='excluded') list=list.filter(a=>a.disqualified);
-  else if(activeSeg!=='all') list=list.filter(a=>tierOfRank(a.rank)===activeSeg);
-  if(searchQ) list=list.filter(a=>a.name.toLowerCase().includes(searchQ)||a.co.toLowerCase().includes(searchQ));
-  return list;
-}
-function filterList(q){searchQ=q.toLowerCase();renderList();}
-function filterSeg(el,seg){document.querySelectorAll('.seg-pill').forEach(p=>p.classList.remove('active'));el.classList.add('active');activeSeg=seg;renderList();}
-
-let selectedIds = new Set();
-function renderList(){
-  const list=filteredList();
-  document.getElementById('scoreListBody').innerHTML = list.map(a=>{
-    const tier=tierOfRank(a.rank); const pScore=priorityScore(a.rank); const proven=cacheProven(a.cache);
-    const top=a.weighted[0];
-    return `
-    <div class="sl-row ${a.id===selectedId?'selected':''} ${a.disqualified?'style="opacity:.5"':''}" style="grid-template-columns:28px minmax(160px,2.5fr) 90px 110px 130px 1fr 32px;">
-      <div onclick="event.stopPropagation()"><input type="checkbox" ${selectedIds.has(a.id)?'checked':''} onchange="toggleRowSelect('${a.id}',this)" style="cursor:pointer"></div>
-      <div class="co-cell" onclick="selectRow('${a.id}')" style="cursor:pointer">
-        <div class="co-av" style="background:${avColor(a.id)}">${initials(a.name)}</div>
-        <div><div class="co-nm">${a.name}</div><div class="co-ind">${a.co}</div></div>
-      </div>
-      <div onclick="selectRow('${a.id}')" style="cursor:pointer">${a.disqualified ? '<span class="sc sc-l">EXCLUDED</span>' : `<span class="sc ${tier==='hot'?'sc-h':tier==='warm'?'sc-m':'sc-l'}">${TIER_LBL[tier]}</span>`}</div>
-      <div onclick="selectRow('${a.id}')" class="comp-bar" style="cursor:pointer"><div class="comp-track"><div class="comp-fill" style="width:${pScore}%;background:${pScore>=75?'var(--pos)':pScore>=50?'var(--warn)':'var(--s300)'}"></div></div><div class="comp-val">${pScore}</div></div>
-      <div onclick="selectRow('${a.id}')" style="font-size:11px;color:var(--i3);cursor:pointer">${proven?'Trusted pattern':'New pattern'}</div>
-      <div onclick="selectRow('${a.id}')" style="font-size:11.5px;color:var(--i2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer">${a.disqualified ? a.disqualifiedReason : (top?top.tag:'Fit only')}${a.competitorAward?' · Timing ×0.5':''}</div>
-      <div class="dd" onclick="event.stopPropagation()">
-        <button class="btn btn-ghost btn-sm" style="padding:0;width:28px;justify-content:center" onclick="toggleDD('rowmenu-${a.id}')">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
-        </button>
-        <div class="ddm" id="rowmenu-${a.id}" style="right:0;left:auto">
-          <div class="ddi" onclick="selectRow('${a.id}');closeDD('rowmenu-${a.id}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/></svg>View breakdown</div>
-          <a class="ddi" href="12-nba.html?from=scoring&ids=${a.id}" style="text-decoration:none;color:inherit;${a.disqualified?'opacity:.4;pointer-events:none':''}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>Send to NBA</a>
-          <div class="dd-sep"></div>
-          <div class="ddi" onclick="showToast('Manual override opened in the drawer');selectRow('${a.id}');closeDD('rowmenu-${a.id}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>Override tier</div>
-        </div>
-      </div>
-    </div>`;
-  }).join('');
-  document.getElementById('tabCnt').textContent = list.length;
-  const selAllBox = document.getElementById('selectAllBox');
-  if(selAllBox) selAllBox.checked = list.length>0 && list.every(a=>selectedIds.has(a.id));
-}
-
-function toggleRowSelect(id, el){ if(el.checked) selectedIds.add(id); else selectedIds.delete(id); updateBulkBar(); }
-function toggleSelectAll(el){
-  const list = filteredList();
-  if(el.checked) list.forEach(a=>selectedIds.add(a.id));
-  else list.forEach(a=>selectedIds.delete(a.id));
-  renderList(); updateBulkBar();
-}
-function clearSelection(){ selectedIds.clear(); renderList(); updateBulkBar(); }
-function updateBulkBar(){
-  const n = selectedIds.size;
-  document.getElementById('bulkBar').style.display = n>0 ? 'flex' : 'none';
-  document.getElementById('normalBar').style.display = n>0 ? 'none' : 'flex';
-  document.getElementById('bulkCount').textContent = n;
-}
-function bulkSendToNBA(){
-  const ids = Array.from(selectedIds).filter(id=>{ const a=SCORED.find(x=>x.id===id); return a && !a.disqualified; });
-  if(!ids.length){ showToast('Nothing sendable in the current selection'); return; }
-  location.href = '12-nba.html?from=scoring&ids=' + ids.join(',');
-}
-
-function updateStats(){
-  const hot=SCORED.filter(a=>tierOfRank(a.rank)==='hot'&&!a.disqualified).length;
-  const trusted=SCORED.filter(a=>cacheProven(a.cache)).length;
-  const nba=SCORED.filter(a=>tierOfRank(a.rank)!=='cool'&&!a.disqualified).length;
-  const watchList=SCORED.filter(a=>!a.disqualified && a.timingTotal===0).length;
-  document.getElementById('statScored').textContent=SCORED.length;
-  document.getElementById('statHot').textContent=hot;
-  document.getElementById('statTrusted').textContent=trusted;
-  document.getElementById('statNba').textContent=nba;
-  const confEl = document.getElementById('statConf');
-  if(confEl) confEl.textContent=watchList;
-}
-
-function selectRow(id){
-  selectedId=id; renderList();
-  const a=SCORED.find(x=>x.id===id);
-  const tier=tierOfRank(a.rank); const pScore=priorityScore(a.rank); const proven=cacheProven(a.cache);
-  document.getElementById('detTitle').textContent=a.name;
-  document.getElementById('detSub').textContent=a.title+' · '+a.co;
-  const sigsHtml=a.weighted.map(s=>`
-    <div class="sig-row">
-      <div class="sig-ic" style="background:${s.mode==='push'?'var(--sec-lt)':'var(--s100)'};color:${s.mode==='push'?'var(--sec-dk)':'var(--i2)'}">${s.tier}</div>
-      <div style="flex:1"><div class="sig-lbl">${s.nm}</div><div class="sig-meta">${s.src} · confidence ${s.conf}% · ${s.age<14?s.age+'d ago':Math.round(s.age/7)+'w ago'} · ${s.mode==='push'?'Pushed, matched to this account':'Pulled, asked for'}</div></div>
-    </div>`).join('');
-  const discardedHtml = (a.discardedQualify||[]).map(dq=>`
-    <div class="sig-row" style="opacity:.6">
-      <div class="sig-ic" style="background:var(--danger-50);color:var(--neg)">✕</div>
-      <div style="flex:1"><div class="sig-lbl">${dq.nm}</div><div class="sig-meta">Failed: <b>${dq.failedTest}</b> — ${dq.reason}</div></div>
-    </div>`).join('');
-  document.getElementById('detBody').innerHTML = `
-    ${a.disqualified ? `<div class="panel" style="margin-bottom:12px"><div class="panel-body" style="font-size:12px;color:var(--neg);background:var(--neg-lt)"><b>Excluded, rank 0.</b> ${a.disqualifiedReason}</div></div>` : ''}
-    ${a.competitorAward ? `<div class="panel" style="margin-bottom:12px"><div class="panel-body" style="font-size:12px;color:var(--warn);background:var(--warn-lt)"><b>Competitor contract at this site, last 12 months.</b> Timing halved (×0.5) — the signal still counts, just not at full weight.</div></div>` : ''}
-    <div class="panel" style="margin-bottom:12px">
-      <div class="panel-hdr"><span class="panel-ttl">Priority</span><span class="sc ${tier==='hot'?'sc-h':tier==='warm'?'sc-m':'sc-l'}">${a.disqualified?'EXCLUDED':TIER_LBL[tier]}</span></div>
-      <div class="panel-body">
-        <div class="dim-row"><span class="dim-lbl">Likelihood</span><div class="dim-track"><div class="dim-fill" style="width:${pScore}%;background:var(--brand)"></div></div><span class="dim-val">${pScore}</span></div>
-        <div class="dim-row"><span class="dim-lbl">Fit</span><div class="dim-track"><div class="dim-fill" style="width:${a.fit}%;background:var(--sec)"></div></div><span class="dim-val">${a.fit}</span></div>
-      </div>
-    </div>
-    <div class="panel" style="margin-bottom:12px">
-      <div class="panel-hdr"><span class="panel-ttl">Why now (${a.weighted.length} qualified)</span></div>
-      <div class="panel-body">${sigsHtml || '<div style="font-size:12px;color:var(--i3)">No time-sensitive signal — ranked on fit alone.</div>'}${discardedHtml}</div>
-    </div>
-    <div class="panel">
-      <div class="panel-hdr"><span class="panel-ttl">Trust</span></div>
-      <div class="panel-body" style="font-size:12px;color:var(--i2);line-height:1.6">
-        ${proven ? `Worked reliably before (${a.cache.s} of the last ${a.cache.a} times) — trusted, can be sent automatically.` : `Newer situation, not tried enough yet (${a.cache.a} similar attempt${a.cache.a===1?'':'s'}) — worth a look before it goes out.`}
-      </div>
-    </div>
-    <div style="margin-top:14px">${a.disqualified ? `<button class="btn btn-primary btn-sm" style="width:100%;justify-content:center" disabled>Send to NBA</button>` : `<a href="12-nba.html?from=scoring&ids=${a.id}" class="btn btn-primary btn-sm" style="width:100%;justify-content:center;text-decoration:none">Send to NBA</a>`}</div>
-  `;
-  document.getElementById('detailDrawer').classList.add('open');
-}
+function initials(n){return String(n).split(' ').filter(Boolean).map(w=>w[0]).join('').slice(0,2).toUpperCase();}
+function avColor(id){const c=['#7D52A2','#0094DA','#FF8820','#2E7D5A','#B23F3F'];let h=0;for(const ch of String(id))h+=ch.charCodeAt(0);return c[h%c.length];}
 function closeDrawer(){ document.getElementById('detailDrawer').classList.remove('open'); }
-function switchSource(name){
-  document.getElementById('sourceOverlay').style.display = 'flex';
-  if(name==='csv') renderCsvModal();
-  else if(name==='dormant') renderDormantModal();
+function esc(s){return String(s===undefined||s===null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function fallbackDownload(name, text){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'text/csv'}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},0);}
+// On claude.ai the page can't start a download itself: the viewer confirms a save. Opened as a plain file, it downloads directly.
+async function download(name, text){
+  let dl = null;
+  try{ dl = window.claude && window.claude.use ? await window.claude.use('downloads') : null; }catch(e){ dl = null; }
+  if(!dl){ fallbackDownload(name, text); return; }
+  try{ await dl.save({filename:name, data:text}); showToast(name+' saved'); }
+  catch(e){ if(e && e.code==='declined') return; showToast(e && e.code==='rate_limited' ? 'A save is already open' : "This view can't save files"); }
 }
-function closeSourceModal(){ document.getElementById('sourceOverlay').style.display = 'none'; }
-function sendAllToNBA(){
-  const eligible = filteredList().filter(a=>!a.disqualified && tierOfRank(a.rank)!=='cool');
-  if(!eligible.length){ showToast('Nothing in the current view is above Cool tier'); return; }
-  location.href = '12-nba.html?from=scoring&ids=' + eligible.map(a=>a.id).join(',');
+function todayIso(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+const fmt1 = n => n===undefined||n===null ? '—' : (Math.round(n*10)/10).toLocaleString('en-US',{minimumFractionDigits:n%1?1:0,maximumFractionDigits:1});
+const fmtDate = t => new Date(t).toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'});
+
+function readFileToGrids(file){
+  return new Promise((resolve,reject)=>{
+    const isCsv = /\.csv$/i.test(file.name), isXlsx = /\.(xlsx|xls)$/i.test(file.name);
+    if(!isCsv && !isXlsx){ reject(new Error('Use a .csv or .xlsx file')); return; }
+    const reader = new FileReader();
+    reader.onerror = ()=>reject(new Error('Could not read the file'));
+    reader.onload = ev=>{
+      try{
+        if(isCsv){ resolve([{sheet:'(CSV)', grid:DemandAI.parseCSV(ev.target.result)}]); return; }
+        if(typeof XLSX==='undefined'){ reject(new Error('The Excel reader did not load. Save the sheet as CSV and upload that instead')); return; }
+        const wb = XLSX.read(new Uint8Array(ev.target.result),{type:'array',cellDates:true});
+        resolve(wb.SheetNames.map(n=>({sheet:n, grid:XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true,defval:''})})));
+      }catch(e){ reject(e); }
+    };
+    if(isCsv) reader.readAsText(file); else reader.readAsArrayBuffer(file);
+  });
+}
+function pickSheet(grids){
+  const has = g => g.grid.slice(0,10).some(r=>(r||[]).some(c=>String(c).trim().toLowerCase().replace(/\*/g,'').replace(/\s+/g,'_')==='signal_type'));
+  return grids.find(g=>/signal template/i.test(g.sheet) && has(g)) || grids.find(has) || grids[0];
 }
 
-function fitFromTitle(title){
-  const t=(title||'').toLowerCase();
-  if(t.includes('chief')||t.includes('vp')||t.includes('president')) return 78;
-  if(t.includes('director')||t.includes('head')) return 70;
-  if(t.includes('manager')) return 60;
-  return 65;
+/* ═══════════════ SHARED PIECES: tables, tags, pop-ups ═══════════════ */
+function table(cols, rows, empty){
+  return `<div class="dt-wrap"><table class="dt">
+    <colgroup>${cols.map(c=>`<col style="width:${c[1]}">`).join('')}</colgroup>
+    <thead><tr>${cols.map(c=>`<th class="${c[2]||''}">${c[0]}</th>`).join('')}</tr></thead>
+    <tbody>${rows || `<tr><td colspan="${cols.length}" class="dt-empty">${empty}</td></tr>`}</tbody>
+  </table></div>`;
 }
-let customCounter=0;
-function registerCustomAccount(name, title, co, cache){
-  customCounter++;
-  const id='custom'+customCounter;
-  NAMES[id]=[name, title||'—', co||'—'];
-  SCORE_DATA[id]={fit:fitFromTitle(title), cache:cache||{s:0,a:0}, signals:[]};
-  return id;
+const cell = (v, sub, cls='val') => `<span class="${cls}" title="${esc(v||'')}">${v?esc(v):'<span class="muted">—</span>'}</span>${sub?`<span class="sub" title="${esc(String(sub).replace(/<[^>]+>/g,''))}">${sub}</span>`:''}`;
+const SEG_TONE = {Inquiry:'tag-blue',Modernisation:'tag-violet','Service renewal':'tag-teal',Project:'tag-amber',Leadership:'tag-pink',Engagement:'tag-green'};
+function tagChip(t){ const c = DemandAI.CONFIG.signalTypes[t]; return `<span class="tag ${(c&&SEG_TONE[c.segment])||'tag-grey'}">${esc(t)}</span>`; }
+function tierPill(t){
+  const m = {A:['tag-green','Tier A'],B:['tag-amber','Tier B'],C:['tag-blue','Tier C'],'Watch list':['tag-grey','Watch list'],'Below fit floor':['tag-grey','Below floor'],Excluded:['tag-red','Excluded']}[t];
+  return `<span class="tag ${m[0]}">${m[1]}</span>`;
 }
-function rescoreFromIds(ids, label){
-  SCORED = ids.map(id=>{
-    const d=SCORE_DATA[id]; const [name,title,co]=NAMES[id];
-    const timing=computeTiming(d.signals);
-    let modTiming = timing.total;
-    if(d.competitorAward) modTiming = modTiming * 0.5;
-    const rank = d.disqualified ? 0 : Math.round(d.fit*modTiming);
-    return {id,name,title,co,fit:d.fit,cache:d.cache,weighted:timing.weighted,timingTotal:modTiming,rank,disqualified:!!d.disqualified,disqualifiedReason:d.disqualifiedReason,competitorAward:!!d.competitorAward,discardedQualify:d.discardedQualify||[]};
-  }).sort((a,b)=>b.rank-a.rank);
-  selectedId=null; activeSeg='all'; searchQ='';
-  document.getElementById('tbTitle').textContent = label;
-  renderList(); updateStats(); closeDrawer(); closeSourceModal();
-  showToast(ids.length+' account'+(ids.length>1?'s':'')+' scored from '+label);
+function overlay(id){
+  let ov = document.getElementById(id);
+  if(!ov){ ov=document.createElement('div'); ov.id=id; ov.style.cssText='position:fixed;inset:0;background:rgba(20,26,33,.45);z-index:600;display:flex;align-items:center;justify-content:center;padding:16px'; document.body.appendChild(ov); }
+  ov.style.display='flex'; return ov;
 }
+const hide = id => { const el=document.getElementById(id); if(el) el.style.display='none'; };
+function search(fn, ph){ return `<div class="sl-srch"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="color:var(--i3);flex-shrink:0"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><input type="text" placeholder="${ph}" value="${esc(q)}" oninput="q=this.value.toLowerCase();${fn}()"></div>`; }
+const pill = (cur,id,label) => `<div class="seg-pill ${cur===id?'active':''}" onclick="filt='${id}';renderResults()">${label}</div>`;
 
-/* ── CSV ── */
-let pendingCsvRows = [];
-function parseCsv(text){
-  const lines = text.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
-  if(!lines.length) return [];
-  let start = lines[0].toLowerCase().includes('name') ? 1 : 0;
-  const rows=[];
-  for(let i=start;i<lines.length;i++){
-    const cols=lines[i].split(',').map(c=>c.trim());
-    if(!cols[0]) continue;
-    rows.push({name:cols[0], title:cols[1]||'', co:cols[2]||''});
-  }
-  return rows;
-}
-function renderCsvModal(){
-  document.getElementById('sourceModalBody').innerHTML = `
-    <div style="padding:20px">
-      <div style="font-family:var(--fd);font-size:15px;font-weight:700;color:var(--i1);margin-bottom:4px">Upload a CSV</div>
-      <div style="font-size:12px;color:var(--i3);margin-bottom:14px">name, title, company columns</div>
-      <div style="border:1.5px dashed var(--bdk);border-radius:var(--rmd);padding:22px;text-align:center;cursor:pointer" onclick="document.getElementById('csvFile').click()">
-        <input type="file" id="csvFile" accept=".csv" style="display:none" onchange="handleCsvUpload(event)">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--i3)" stroke-width="1.6" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-        <div style="font-size:12px;color:var(--i1);font-weight:600;margin-top:8px">Click to choose a CSV file</div>
-      </div>
-      <div id="csvPreview" style="margin-top:12px"></div>
-      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px">
-        <button class="btn btn-ghost btn-sm" onclick="closeSourceModal()">Cancel</button>
-      </div>
+/* ═══════════════ STATE ═══════════════ */
+let srcMode = 'saved';
+let tab = 'new', selListId = null, RUN = null, view = 'ranked', filt = 'all', q = '', renamingId = null;
+
+/* ═══════════════ START: New scoring | Scored lists ═══════════════ */
+function renderStart(t){
+  RUN = null; closeDrawer();
+  if(t) tab = t;
+  const lists = DemandAI.loadLists(), runs = DemandAI.loadScorings();
+  if(selListId && !lists.find(l=>l.id===selListId)) selListId = null;
+  if(!selListId && lists.length) selListId = lists[0].id;
+  const L = lists.find(l=>l.id===selListId);
+  const ft = (id,label,n) => `<div class="ftab ${tab===id?'active':''}" onclick="renderStart('${id}')">${label}${n!==undefined?` <span class="ftab-cnt">${n}</span>`:''}</div>`;
+  const types = Object.keys(DemandAI.CONFIG.signalTypes).filter(k=>!DemandAI.CONFIG.signalTypes[k].knockout && !DemandAI.CONFIG.signalTypes[k].reject);
+  document.getElementById('mainArea').innerHTML = `
+    <div class="topbar"><div class="topbar-l"><span class="tb-title">Account Scoring</span><span class="tb-badge badge-neutral">Fit × Timing · rules only</span></div></div>
+    <div class="ftabs">${ft('new','New scoring')}${ft('saved','Scored lists',runs.length)}</div>
+    <div class="canvas">${tab==='new' ? `
+      <div style="max-width:640px;margin:24px auto 0">
+        <div style="font-family:var(--fd);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--brand);margin-bottom:8px">Step 2 · Scoring</div>
+        <div style="font-family:var(--fd);font-size:22px;font-weight:700;color:var(--i1);margin-bottom:6px">Score a prospect list</div>
+        <div style="font-size:13px;color:var(--i3);margin-bottom:20px;line-height:1.55">There's no data integration in the POC: the client sends the signals as a file. Pick the prospect list, upload the signals for those prospects, and every row is checked and scored by fixed rules.</div>
+
+        <div class="panel" style="margin-bottom:12px">
+          <div class="panel-hdr"><span class="panel-ttl">1 · Prospect list</span><a href="10-prospecting.html" style="font-size:11px;color:var(--brand);font-weight:600;text-decoration:none">Build a list in Prospecting →</a></div>
+          <div class="panel-body">
+            <div style="display:inline-flex;background:var(--s75);border-radius:999px;padding:3px;margin-bottom:12px">
+              ${[['saved','Choose a saved list'],['upload','Upload a prospect file']].map(([m,l])=>`<button onclick="srcMode='${m}';renderStart('new')" style="padding:6px 14px;border-radius:999px;font-size:12px;font-weight:600;${srcMode===m?'background:var(--surf);color:var(--i1);box-shadow:var(--sh)':'color:var(--i3)'}">${l}</button>`).join('')}
+            </div>
+            ${srcMode==='upload' ? `
+            <label id="leadDrop" for="leadInput" style="display:block;border:1.5px dashed var(--bdk);border-radius:var(--rmd);padding:22px 20px;cursor:pointer;background:var(--s50);text-align:center">
+              <input type="file" id="leadInput" accept=".csv,.xlsx,.xls" style="display:none" onchange="onLeadFile(this.files[0])">
+              <div style="font-size:13px;font-weight:600;color:var(--i1)">Click to choose the prospect file, or drop it here</div>
+              <div style="font-size:11px;color:var(--i3);margin-top:4px">.xlsx or .csv · the lead template, one row per contact · checked like in Prospecting, then saved as a list</div>
+            </label>
+            <div style="margin-top:10px"><button class="btn btn-sec btn-sm" onclick="download('lead_template.csv', DemandAI.toCSV([DemandAI.LEAD_COLUMNS]))">Download lead template (.csv)</button></div>`
+            : lists.length ? `
+            <select onchange="selListId=this.value;renderStart('new')" style="width:100%;padding:9px 11px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:13px;background:var(--surf);color:var(--i1)">
+              ${lists.map(l=>`<option value="${l.id}" ${l.id===selListId?'selected':''}>${esc(l.name)}</option>`).join('')}
+            </select>
+            <div style="display:flex;gap:18px;margin-top:10px;font-size:12px;color:var(--i2)">
+              <span><b style="color:var(--i1)">${L.stats.accountsPass}</b> accounts</span><span><b style="color:var(--i1)">${L.stats.inFinalList}</b> contacts in the list</span><span style="color:var(--i3)">from ${esc(L.sourceFile)} · saved ${fmtDate(L.createdAt)}</span>
+            </div>` : `<div style="font-size:12.5px;color:var(--i2)">No prospect lists yet. <a href="#" onclick="srcMode='upload';renderStart('new');return false" style="color:var(--brand);font-weight:600">Upload a prospect file</a> here, or build one in Prospecting.</div>`}
+          </div>
+        </div>
+
+        <div class="panel" style="${L?'':'opacity:.5;pointer-events:none'}">
+          <div class="panel-hdr"><span class="panel-ttl">2 · Signals for these prospects</span>
+            <span style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--i3)">Score as of <input type="date" id="asOf" value="${L&&L.sandbox?DemandAISample.SAMPLE_AS_OF:todayIso()}" style="padding:3px 6px;border:1px solid var(--bdk);border-radius:6px;font-size:11.5px"></span></div>
+          <div class="panel-body">
+            <label id="dropZone" for="fileInput" style="display:block;border:1.5px dashed var(--bdk);border-radius:var(--rmd);padding:26px 20px;cursor:pointer;background:var(--s50);text-align:center">
+              <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" style="display:none" onchange="onFile(this.files[0])">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--i3)" stroke-width="1.5" stroke-linecap="round" style="margin-bottom:6px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              <div style="font-size:13px;font-weight:600;color:var(--i1)">Click to choose the signal file, or drop it here</div>
+              <div style="font-size:11px;color:var(--i3);margin-top:4px">.xlsx or .csv · one row per signal, naming the person by email or LinkedIn URL</div>
+            </label>
+            <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+              ${L&&L.sandbox?'<button class="btn btn-primary btn-sm" onclick="useSample()">Use sample signals</button>':''}
+              <button class="btn btn-sec btn-sm" onclick="download('signal_template.csv', DemandAI.toCSV([DemandAI.SIGNAL_COLUMNS]))">Download signal template (.csv)</button>
+            </div>
+            <div style="font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--i3);margin:16px 0 8px">Signal tags the file can use</div>
+            <div class="tags">${types.map(tagChip).join('')}</div>
+          </div>
+        </div>
+      </div>` : `
+      <div class="score-list">${table([['Name','26%'],['Prospect list','18%'],['Signal file','14%'],['Scored','8%','num'],['Tier A','7%','num'],['Saved','11%'],['','16%']],
+        runs.map(r=>`<tr>
+          <td><div class="person"><div class="co-av" style="background:${avColor(r.id)}">${initials(r.name)}</div><div style="flex:1;min-width:0">${renamingId===r.id
+            ? `<div style="display:flex;gap:6px;align-items:center"><input id="renameInput" value="${esc(r.name)}" style="flex:1;min-width:0;padding:6px 9px;border:1px solid var(--brand-mid);border-radius:var(--rsm);font-size:12.5px" onkeydown="if(event.key==='Enter')finishRename('${r.id}');if(event.key==='Escape'){renamingId=null;renderStart('saved')}"><button class="btn btn-primary btn-sm" onclick="finishRename('${r.id}')">Save</button></div>`
+            : `<div style="display:flex;align-items:center;gap:6px;min-width:0"><span class="dt-main" title="${esc(r.name)}">${esc(r.name)}</span><button title="Rename" onclick="startRename('${r.id}')" style="flex-shrink:0;color:var(--i3);display:flex;padding:2px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button></div><span class="sub">As of ${esc(r.asOf)}</span>`}</div></div></td>
+          <td>${cell((DemandAI.getList(r.listId)||{}).name || r.listName, DemandAI.getList(r.listId)?'':'<span style="color:var(--neg)">List deleted</span>')}</td>
+          <td>${cell(r.fileName)}</td>
+          <td class="num">${r.stats.scored}<span class="sub">prospects</span></td>
+          <td class="num">${r.stats.A}</td>
+          <td>${cell(fmtDate(r.createdAt), new Date(r.createdAt).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}))}</td>
+          <td style="text-align:right"><button class="btn btn-sec btn-sm" onclick="openRun('${r.id}')">Open</button> <button class="btn btn-ghost btn-sm" onclick="removeRun('${r.id}')">Delete</button></td>
+        </tr>`).join(''), `No scored lists yet. <a href="#" onclick="renderStart('new');return false" style="color:var(--brand);font-weight:600">Score a prospect list</a> and save it.`)}
+      </div>`}
     </div>`;
+  const lz = document.getElementById('leadDrop');
+  if(lz){
+    lz.addEventListener('dragover', e=>{e.preventDefault(); lz.style.borderColor='var(--brand)';});
+    lz.addEventListener('dragleave', ()=>{lz.style.borderColor='var(--bdk)';});
+    lz.addEventListener('drop', e=>{e.preventDefault(); lz.style.borderColor='var(--bdk)'; if(e.dataTransfer.files[0]) onLeadFile(e.dataTransfer.files[0]);});
+  }
+  const dz = document.getElementById('dropZone');
+  if(dz){
+    dz.addEventListener('dragover', e=>{e.preventDefault(); dz.style.borderColor='var(--brand)';});
+    dz.addEventListener('dragleave', ()=>{dz.style.borderColor='var(--bdk)';});
+    dz.addEventListener('drop', e=>{e.preventDefault(); dz.style.borderColor='var(--bdk)'; if(e.dataTransfer.files[0]) onFile(e.dataTransfer.files[0]);});
+  }
 }
-function handleCsvUpload(e){
-  const file=e.target.files[0]; if(!file) return;
-  const reader=new FileReader();
-  reader.onload=ev=>{ pendingCsvRows=parseCsv(ev.target.result); renderCsvPreview(file.name); };
-  reader.onerror=()=>showToast('Could not read that file — try a plain .csv export');
-  reader.readAsText(file);
+async function onLeadFile(file){
+  if(!file) return;
+  try{
+    const grids = await readFileToGrids(file);
+    const has = g => g.grid.slice(0,10).some(r=>(r||[]).some(c=>String(c).trim().toLowerCase().replace(/\*/g,'')==='company_name'));
+    const g = grids.find(x=>/lead template/i.test(x.sheet)&&has(x)) || grids.find(has) || grids[0];
+    const r = DemandAI.processLeads(g.grid, {file:file.name, sheet:g.sheet});
+    if(!r.stats.accountsPass){ showToast(`${file.name}: no accounts pass the checks. Open it in Prospecting to see why`); return; }
+    const list = { id:'list-'+Date.now().toString(36), name:file.name.replace(/\.[^.]+$/,'')+' · '+todayIso(), createdAt:Date.now(), sourceFile:file.name, sheet:g.sheet,
+      sandbox:false, stats:r.stats, accounts:r.accounts, contacts:r.contacts };
+    if(!DemandAI.saveList(list)){ showToast("This browser blocks storage, so the list can't be saved"); return; }
+    selListId = list.id; srcMode = 'saved';
+    renderStart('new');
+    showToast(`${r.stats.rowsRead} rows checked · ${r.stats.accountsPass} accounts and ${r.stats.inFinalList} contacts in the list · ${r.stats.issues} issue${r.stats.issues===1?'':'s'}. Saved as a list`);
+  }catch(e){ showToast(e.message || 'Could not read that file'); }
 }
-function renderCsvPreview(filename){
-  if(!pendingCsvRows.length){ document.getElementById('csvPreview').innerHTML='<div style="font-size:12px;color:var(--i3)">No rows found.</div>'; return; }
-  document.getElementById('csvPreview').innerHTML = `
-    <div style="font-size:11.5px;color:var(--i3);margin-bottom:8px">${pendingCsvRows.length} row${pendingCsvRows.length>1?'s':''} parsed from ${filename}</div>
-    ${pendingCsvRows.slice(0,6).map(r=>`<div style="padding:8px 0;border-bottom:1px solid var(--s75);font-size:12px;color:var(--i1)">${r.name} <span style="color:var(--i3)">— ${r.title||'—'}, ${r.co||'—'}</span></div>`).join('')}
-    <button class="btn btn-primary btn-sm" style="width:100%;justify-content:center;margin-top:10px" onclick="useCsvRows('${filename}')">Score these ${pendingCsvRows.length} accounts</button>`;
+function asOfValue(){ const v=(document.getElementById('asOf')||{}).value; return /^\d{4}-\d{2}-\d{2}$/.test(v||'') ? v : todayIso(); }
+async function onFile(file){
+  if(!file) return;
+  try{ const g = pickSheet(await readFileToGrids(file)); score(selListId, file.name, g.sheet, g.grid, asOfValue(), false, null); }
+  catch(e){ showToast(e.message || 'Could not read that file'); }
 }
-function useCsvRows(filename){
-  const ids = pendingCsvRows.map(r=>registerCustomAccount(r.name, r.title, r.co));
-  rescoreFromIds(ids, 'Uploaded CSV — '+filename);
-}
+function useSample(){ score(selListId, DemandAISample.SIGNAL_FILE, 'Signal template', DemandAISample.SIGNALS, asOfValue(), true, null); }
 
-/* ── Dormant ── */
-const DORMANT_MOCK = [
-  {id:'l4', lastActive:'34 days ago', prevTier:'Warm', prevWhy:'A hiring-spike signal that has since fully decayed'},
+/* ═══════════════ SCORE: run the rules, show the checks running ═══════════════ */
+function score(listId, fileName, sheet, grid, asOf, sandbox, saved){
+  const L = DemandAI.getList(listId);
+  if(!L){ showToast("That prospect list isn't saved any more"); renderStart('new'); return false; }
+  if(sandbox !== !!L.sandbox){ showToast('Sample signals only go with a list built from sample data'); return false; }
+  const list = JSON.parse(JSON.stringify({accounts:L.accounts, contacts:L.contacts}));
+  const sig = DemandAI.processSignals(grid, list, {file:fileName, sheet, asOf});
+  const scored = DemandAI.scoreList(list, sig);
+  RUN = {listId, list:L, fileName, sheet, grid, asOf, sandbox, sig, scored, prospects:null, savedId: saved?saved.id:null, name: saved?saved.name:null};
+  view='ranked'; filt='all'; q=''; NSEL.clear();
+  return true;
+}
+const SIG_STEPS = [
+  ['columns', 'Columns match the template',   'company_name, contact, signal_type, event_date, detail'],
+  ['company', 'Company is on the list',        'Every row names an account from the prospect list'],
+  ['person',  'Person is in the lead file',    'Matched by email or LinkedIn URL; blank goes to the primary persona'],
+  ['date',    'Event date present and valid',  'YYYY-MM-DD, not after the scoring date'],
+  ['type',    'Signal type is a known tag',    'From the template list; newsletter sign-ups are not scored'],
+  ['dupes',   'Duplicates',                    'The same event recorded twice'],
+  ['window',  'Within its time window',        'Older than the tag counts for: stale'],
+  ['knockout','Installed base',                'Pilot product already installed excludes the account'],
+  ['fit',     'Fit',                           `Rubric score; below ${DemandAI.CONFIG.fitFloor} the account is dropped`],
+  ['score',   'Timing and score',              'Each prospect\'s signals weighted and stacked; score 0–100 and tier'],
 ];
-let dormantSelected = new Set(DORMANT_MOCK.map((_,i)=>i));
-function renderDormantModal(){
-  dormantSelected = new Set(DORMANT_MOCK.map((_,i)=>i));
-  document.getElementById('sourceModalBody').innerHTML = `
-    <div style="padding:20px">
-      <div style="font-family:var(--fd);font-size:15px;font-weight:700;color:var(--i1);margin-bottom:4px">Dormant opportunities</div>
-      <div style="font-size:12px;color:var(--i3);margin-bottom:14px">Scored before, gone quiet 30+ days. Worth a fresh look, not a re-run from scratch.</div>
-      <div id="dormantRows"></div>
-      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px">
-        <button class="btn btn-ghost btn-sm" onclick="closeSourceModal()">Cancel</button>
-        <button class="btn btn-primary btn-sm" id="dormantGoBtn" onclick="useDormantRows()">Re-score</button>
-      </div>
-    </div>`;
-  renderDormantRows();
-}
-function renderDormantRows(){
-  document.getElementById('dormantRows').innerHTML = DORMANT_MOCK.map((r,i)=>{
-    const [nm,title,co]=NAMES[r.id];
-    return `
-    <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--s75);cursor:pointer" onclick="toggleDormantRow(${i})">
-      <div style="width:16px;height:16px;border-radius:5px;border:1.5px solid var(--bdk);background:${dormantSelected.has(i)?'var(--brand)':'var(--surf)'};border-color:${dormantSelected.has(i)?'var(--brand)':'var(--bdk)'};display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;flex-shrink:0">${dormantSelected.has(i)?'✓':''}</div>
-      <div><div style="font-size:12.5px;font-weight:600;color:var(--i1)">${nm} · ${title}</div><div style="font-size:10.5px;color:var(--i3)">${co} — was ${r.prevTier}, last active ${r.lastActive}</div></div>
-    </div>`;
-  }).join('');
-  document.getElementById('dormantGoBtn').textContent = 'Re-score '+dormantSelected.size;
-}
-function toggleDormantRow(i){ if(dormantSelected.has(i)) dormantSelected.delete(i); else dormantSelected.add(i); renderDormantRows(); }
-function useDormantRows(){
-  const ids = DORMANT_MOCK.filter((_,i)=>dormantSelected.has(i)).map(r=>r.id);
-  rescoreFromIds(ids, 'Dormant opportunities — re-scored');
-}
-
-
-renderList();
-updateStats();
-
-(function boot(){
-  const params=new URLSearchParams(location.search);
-  const idsParam=params.get('ids');
-  if(idsParam){
-    const idList=idsParam.split(',').filter(id=>NAMES[id]);
-    if(idList.length){ showToast(idList.length+' account'+(idList.length>1?'s':'')+' scored from Prospecting'); }
+function stepResult(k){
+  const sig = RUN.sig, sc = RUN.scored, is = sig.issues;
+  const rowsLabel = rows => { rows=[...new Set(rows)]; return rows.length ? (rows.length===1&&rows[0]==='—'?'Whole file':'Row'+(rows.length>1?'s ':' ')+rows.slice(0,5).join(', ')+(rows.length>5?'…':'')) : ''; };
+  const rej = test => sig.signals.filter(s=>s.status==='Rejected' && test(s));
+  const out = (list, sev, label) => list.length ? {sev, label: label||`${list.length} found`, rows: rowsLabel(list.map(x=>x.row))} : {sev:'', label:'Passed'};
+  switch(k){
+    case 'columns': return out(is.filter(i=>/Required column|isn't in the template|header row|format hints/.test(i.issue)), 'warn');
+    case 'company': return out(rej(s=>s.code==='D4' && !/^Person/.test(s.reason) || (s.code==='D3' && /company/i.test(s.reason))), 'warn', null);
+    case 'person': {
+      const r = rej(s=>s.code==='D4' && /^Person/.test(s.reason)), auto = sig.signals.filter(s=>s.assigned && s.assigned!=='Named in the file');
+      if(r.length) return {sev:'warn', label:`${r.length} not found`, rows: rowsLabel(r.map(x=>x.row))+(auto.length?` · ${auto.length} auto-assigned`:'')};
+      return auto.length ? {sev:'info', label:`${auto.length} auto-assigned`, rows: rowsLabel(auto.map(x=>x.row))} : {sev:'', label:'Passed'};
+    }
+    case 'date': return out(rej(s=>s.code==='D3' && /date/i.test(s.reason)), 'warn');
+    case 'type': return out(rej(s=>s.code==='D1' || (s.code==='D3' && /signal type/i.test(s.reason))), 'warn');
+    case 'dupes': return out(rej(s=>s.code==='D5'), 'warn');
+    case 'window': return out(rej(s=>s.code==='D2'), 'info', null);
+    case 'knockout': { const k2 = sig.signals.filter(s=>s.status==='Used for a knock-out'); return k2.length ? {sev:'info', label:`${k2.length} excluded`, rows: rowsLabel(k2.map(x=>x.row))} : {sev:'', label:'None installed'}; }
+    case 'fit': { const n = sc.filter(r=>r.belowFloor).length; return n ? {sev:'info', label:`${n} below the floor`} : {sev:'', label:'All above the floor'}; }
+    case 'score': { RUN.prospects = null; const ps = prospects(), n = ps.filter(x=>x.score!==undefined).length, a = ps.filter(x=>x.tier==='A').length; return {sev:'', label:`${n} prospects scored · ${a} in tier A`}; }
   }
+}
+function runChecks(){
+  const ov = overlay('checksOverlay'); ov.onclick = null;
+  const sig = RUN.sig;
+  ov.innerHTML = `<div style="background:var(--surf);border-radius:var(--rlg);box-shadow:var(--sh-lg);width:540px;max-width:100%;max-height:90vh;display:flex;flex-direction:column">
+    <div style="padding:20px 22px 12px">
+      <div style="font-family:var(--fd);font-size:15px;font-weight:700;color:var(--i1)">Scoring ${esc(RUN.list.name)}</div>
+      <div style="font-size:12px;color:var(--i3);margin-top:3px">${sig.rowsRead} signal rows from ${esc(RUN.fileName)} · as of ${RUN.asOf} · fixed rules</div>
+      <div style="height:4px;background:var(--s75);border-radius:2px;margin-top:12px;overflow:hidden"><div id="ckBar" style="height:100%;width:0;background:var(--brand);transition:width .3s var(--ease)"></div></div>
+    </div>
+    <div style="padding:0 22px;overflow-y:auto">
+      ${SIG_STEPS.map(([k,name,what],i)=>`<div class="ck-row pending" id="ck-${i}">
+        <div class="ck ck-wait" id="ckc-${i}"></div>
+        <div style="flex:1;min-width:0"><div style="font-size:12.5px;font-weight:600;color:var(--i1)">${name}</div><div style="font-size:11px;color:var(--i3)">${what}</div></div>
+        <div id="ckr-${i}" style="text-align:right;flex-shrink:0"></div>
+      </div>`).join('')}
+    </div>
+    <div id="ckFoot" style="padding:14px 22px 18px;display:flex;align-items:center;gap:8px;border-top:1px solid var(--border);margin-top:4px"><span style="flex:1;font-size:12px;color:var(--i3)">Running checks…</span></div>
+  </div>`;
+  let i = 0;
+  const tick = () => {
+    if(i>0){
+      const res = stepResult(SIG_STEPS[i-1][0]), c = document.getElementById('ckc-'+(i-1));
+      c.className = 'ck ' + (res.sev==='stop'?'ck-stop':res.sev==='warn'?'ck-warn':res.sev==='info'?'ck-info':'ck-ok');
+      c.textContent = res.sev ? '!' : '✓';
+      const tone = res.sev==='stop'?'tag-red':res.sev==='warn'?'tag-amber':res.sev==='info'?'tag-grey':'tag-green';
+      document.getElementById('ckr-'+(i-1)).innerHTML = `<span class="tag ${tone}">${res.label}</span>${res.rows?`<div style="font-size:10.5px;color:var(--i3);margin-top:3px">${res.rows}</div>`:''}`;
+    }
+    document.getElementById('ckBar').style.width = (i/SIG_STEPS.length*100)+'%';
+    if(i<SIG_STEPS.length){
+      const row = document.getElementById('ck-'+i); row.classList.remove('pending');
+      document.getElementById('ckc-'+i).className = 'ck ck-run';
+      row.scrollIntoView({block:'nearest'});
+      i++; setTimeout(tick, 380);
+    } else {
+      const qn = sig.signals.filter(s=>s.status==='Qualified').length, rj = sig.signals.filter(s=>s.status==='Rejected').length;
+      document.getElementById('ckFoot').innerHTML = `
+        <span style="flex:1;font-size:12px;color:var(--i2)"><b>${qn}</b> signals qualified · <b>${rj}</b> rejected · <b>${prospects().filter(x=>x.tier==='A').length}</b> prospects in tier A</span>
+        <button class="btn btn-ghost btn-sm" onclick="hide('checksOverlay');RUN=null;renderStart('new')">Use a different file</button>
+        <button class="btn btn-primary btn-sm" onclick="hide('checksOverlay');renderResults()">View the scores →</button>`;
+    }
+  };
+  tick();
+}
+const _score = score;
+score = function(...a){ if(_score(...a)) runChecks(); };
+
+/* ═══════════════ RESULTS: one row per prospect ═══════════════ */
+const TIER_ORDER = {A:0,B:1,C:2,'Watch list':3,'Below fit floor':4,Excluded:5};
+function prospects(){
+  if(RUN.prospects) return RUN.prospects;
+  const out = [];
+  for(const r of RUN.scored){
+    if(r.people) r.people.forEach(p=>{ const live = p.signals.length>0; out.push({key:r.account.id+'|'+p.contact.row, c:p.contact, r, p, tier:p.tier, score:live?p.final:undefined, fit:r.fit, timing:live?p.timing:undefined}); });
+    else r.contacts.filter(c=>!c.optOut).forEach(c=>out.push({key:r.account.id+'|'+c.row, c, r, p:null, tier:r.tier, fit:r.fit}));
+  }
+  out.sort((x,y)=>TIER_ORDER[x.tier]-TIER_ORDER[y.tier] || (y.score||0)-(x.score||0) || (y.fit||0)-(x.fit||0));
+  return RUN.prospects = out;
+}
+function renderResults(){
+  const sc = prospects(), sig = RUN.sig;
+  const count = t => sc.filter(r=>r.tier===t).length;
+  const ft = (id,label,n) => `<div class="ftab ${view===id?'active':''}" onclick="view='${id}';filt='all';q='';renderResults()">${label} <span class="ftab-cnt">${n}</span></div>`;
+  const T = DemandAI.CONFIG.tierThresholds;
+  document.getElementById('mainArea').innerHTML = `
+    <div class="topbar">
+      <div class="topbar-l"><span class="tb-title">${esc(RUN.name || RUN.list.name)}</span>
+        <span class="tb-badge badge-neutral">${esc(RUN.fileName)} · as of ${RUN.asOf}</span></div>
+      <div class="topbar-r">
+        <button class="btn btn-sec btn-sm" onclick="renderStart('new')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>Score a different list</button>
+        <button class="btn btn-sec btn-sm" onclick="openSave()">${RUN.savedId?'Saved ✓':'Save'}</button>
+        <button class="btn btn-primary btn-sm" onclick="sendToNBA()">Send ${NSEL.size?NSEL.size+' selected':'tier A and B'} to NBA →</button>
+      </div>
+    </div>
+    <div class="ftabs">${ft('ranked','Ranked prospects',sc.length)}${ft('evidence','Signal evidence',sig.signals.length)}</div>
+    <div class="canvas">
+      <div class="stats">
+        <div class="stat"><div class="stat-lbl">Tier A</div><div class="stat-val" style="color:var(--pos)">${count('A')}</div><div class="stat-sub">score ${T.A} and above</div></div>
+        <div class="stat"><div class="stat-lbl">Tier B</div><div class="stat-val" style="color:var(--warn)">${count('B')}</div><div class="stat-sub">score ${T.B}–${T.A-1}</div></div>
+        <div class="stat"><div class="stat-lbl">Tier C</div><div class="stat-val sv1">${count('C')}</div><div class="stat-sub">below ${T.B}</div></div>
+        <div class="stat"><div class="stat-lbl">Watch list</div><div class="stat-val sv5">${count('Watch list')}</div><div class="stat-sub">good fit, no live signal</div></div>
+        <div class="stat"><div class="stat-lbl">Not scored</div><div class="stat-val sv3">${count('Below fit floor')+count('Excluded')}</div><div class="stat-sub">${count('Below fit floor')} below fit floor · ${count('Excluded')} excluded</div></div>
+      </div>
+      ${view==='ranked'?rankedTab():evidenceTab()}
+    </div>`;
+  if(view==='ranked') drawRanked(); else drawEvidence();
+}
+const NSEL = new Set();
+const sendable = x => x.score !== undefined;
+function visibleProspects(){
+  let rs = prospects();
+  if(filt==='out') rs = rs.filter(x=>x.tier==='Below fit floor'||x.tier==='Excluded');
+  else if(filt!=='all') rs = rs.filter(x=>x.tier===filt);
+  if(q) rs = rs.filter(x=>(x.c.name+' '+x.r.account.name+' '+x.c.jobTitle).toLowerCase().includes(q));
+  return rs;
+}
+function toggleN(key,on){ if(on) NSEL.add(key); else NSEL.delete(key); updateNBar(); }
+function toggleNAll(on){ visibleProspects().filter(sendable).forEach(x=> on ? NSEL.add(x.key) : NSEL.delete(x.key)); drawRanked(); }
+function clearN(){ NSEL.clear(); drawRanked(); }
+function updateNBar(){
+  const bar = document.getElementById('nBar'); if(!bar) return;
+  bar.style.display = NSEL.size ? 'flex' : 'none';
+  if(NSEL.size) document.getElementById('nCount').textContent = `${NSEL.size} prospect${NSEL.size===1?'':'s'} selected`;
+  const all = document.getElementById('nAll');
+  if(all){ const v = visibleProspects().filter(sendable); all.checked = v.length>0 && v.every(x=>NSEL.has(x.key)); all.indeterminate = !all.checked && v.some(x=>NSEL.has(x.key)); }
+  const tb = document.querySelector('.topbar-r .btn-primary'); if(tb) tb.textContent = `Send ${NSEL.size?NSEL.size+' selected':'tier A and B'} to NBA →`;
+}
+
+/* Hand-off to Micro-segments & NBA: the action and channel follow the stage sheet's rules;
+   the draft is a template until AI drafting is connected. */
+const NBA_ABOUT = {'Inquiry or RFQ':'your recent inquiry','Installed system near end of support':'your control system reaching end of support',
+  'Service contract renewal':'your service contract coming up for renewal','Capital project':'the project you have under way','Leadership change':'your new role',
+  'Webinar attended':'the webinar you attended','Webinar registered':'the webinar you registered for','Content download':'the material you downloaded','Email clicked':'the material you opened'};
+const NBA_ACTION = {Inquiry:'Follow up on the inquiry', Modernisation:'Propose a migration or upgrade discussion', 'Service renewal':'Offer a renewal review',
+  Project:'Share a comparable case study and offer a technical session', Leadership:'Introduction to a new leader in a buying role', Engagement:'Follow up on the topic they engaged with'};
+function toNBA(x){
+  const c = x.c, top = x.p.signals[0], seg = (DemandAI.CONFIG.signalTypes[top.type]||{}).segment || 'Engagement';
+  const first = c.firstName || c.name.split(' ')[0];
+  const emailOk = c.email && c.emailVerified, liOk = !!c.linkedin;
+  const channel = seg==='Inquiry' || (!emailOk && !liOk) ? 'Call' : emailOk ? 'Email' : 'DM';
+  const why = x.p.whyNow.replace(/^./,m=>m.toUpperCase());
+  const about = NBA_ABOUT[top.type] || 'your recent activity';
+  const action = NBA_ACTION[seg];
+  return { id:'sc-'+String(x.key).replace(/[^a-z0-9]/gi,''), name:c.name, title:c.jobTitle, co:x.r.account.name, priority:Math.round(x.score),
+    action:seg, chosenAction:action, channel,
+    channelWhy: channel==='Call' ? (seg==='Inquiry' ? 'Inquiries go to a call task, per the routing rules.' : 'No verified email and no LinkedIn URL: call is the only channel.') : channel==='Email' ? 'Verified, sendable email.' : 'No verified email on file, but a LinkedIn URL exists: DM.',
+    routed:'review', confidence:x.r.confidence||'medium', team:null, isNew:true, fromScoring:true,
+    signal: why, signalSrc: `${top.source||'Signal file'} · scored ${fmt1(x.score)} (tier ${x.tier}) · draft from a template, AI drafting not connected`, format:'email',
+    emailSubj: `${x.r.account.name}: ${about.replace(/^your /,'')}`,
+    email: `Hi ${first},\n\nFollowing up on ${about}.\n\nWould a short conversation in the next couple of weeks be useful? We'd come prepared to ${action.charAt(0).toLowerCase()+action.slice(1)}.\n\nBest,\nClient Team`,
+    dmNote: `Hi ${first}, following up on ${about}. Happy to connect.`,
+    dmMessage: `Thanks for connecting. Would a short conversation be useful? We'd come prepared to ${action.charAt(0).toLowerCase()+action.slice(1)}.`,
+    callOpener: `"Hi ${first}, this is [name] from Client, following up on ${about}. Do you have two minutes?"` };
+}
+function sendToNBA(){
+  let pick = NSEL.size ? prospects().filter(x=>NSEL.has(x.key)) : prospects().filter(x=>x.tier==='A'||x.tier==='B');
+  pick = pick.filter(x=>x.p && x.p.signals.length);
+  if(!pick.length){ showToast('Select prospects with a live signal first'); return; }
+  const items = pick.map(toNBA);
+  let prev = []; try{ prev = JSON.parse(localStorage.getItem('demandai_nba_v1')||'[]'); }catch(e){}
+  const ids = new Set(items.map(i=>i.id));
+  try{ localStorage.setItem('demandai_nba_v1', JSON.stringify([...items, ...prev.filter(p=>!ids.has(p.id))])); }
+  catch(e){ showToast("This browser blocks storage, so the hand-off can't be made"); return; }
+  showToast(`${items.length} prospect${items.length===1?'':'s'} sent to NBA`);
+  setTimeout(()=>{ location.href = '12-nba.html?from=scoring&ids='+items.map(i=>i.id).join(','); }, 500);
+}
+
+function rankedTab(){
+  return `<div class="score-list">
+    <div id="nBar" class="sl-toolbar" style="display:none;background:var(--brand-lt);align-items:center">
+      <span id="nCount" style="font-size:12.5px;font-weight:600;color:var(--brand-dk)"></span>
+      <button class="btn btn-ghost btn-sm" onclick="clearN()">Clear</button>
+    </div>
+    <div class="sl-toolbar">${search('drawRanked','Search prospects or companies…')}<div class="sl-seg-filter">${pill(filt,'all','All')+pill(filt,'A','A')+pill(filt,'B','B')+pill(filt,'C','C')+pill(filt,'Watch list','Watch list')+pill(filt,'out','Not scored')}</div></div>
+    <div id="rows"></div></div>
+    <div style="font-size:11px;color:var(--i3);margin-top:10px">Each prospect is scored on their own signals: Score = company Fit × their Timing ÷ 100, all on 0–100. Click a prospect for the reasoning.</div>`;
+}
+function drawRanked(){
+  const el = document.getElementById('rows'); if(!el) return;
+  const rs = visibleProspects();
+  const num = v => v!==undefined ? fmt1(v) : '<span class="muted">—</span>';
+  el.innerHTML = table([['<input type="checkbox" id="nAll" title="Select all" onclick="event.stopPropagation();toggleNAll(this.checked)" style="cursor:pointer;vertical-align:middle">','52px'],['Prospect','18%'],['Company','15%'],['Tier','11%'],['Score','7%','num'],['Fit','6%','num'],['Timing','7%','num'],['Why now','32%']],
+    rs.map(x=>{
+      const tags = x.p ? [...new Set(x.p.signals.map(s=>s.type))].slice(0,2) : [];
+      return `<tr class="click" onclick="openProspect('${x.key}')"${NSEL.has(x.key)?' style="background:var(--brand-lt)"':''}>
+        <td onclick="event.stopPropagation()">${sendable(x)?`<input type="checkbox" ${NSEL.has(x.key)?'checked':''} onclick="toggleN('${x.key}',this.checked);this.closest('tr').style.background=this.checked?'var(--brand-lt)':''" style="cursor:pointer;vertical-align:middle">`:'<span class="muted">—</span>'}</td>
+        <td><div class="person"><div class="co-av" style="background:${avColor(x.c.name)}">${initials(x.c.name)}</div><div>${cell(x.c.name, esc(x.c.jobTitle||''), 'dt-main')}</div></div></td>
+        <td>${cell(x.r.account.name, esc(x.r.account.vertical+' · '+x.r.account.country))}</td>
+        <td>${tierPill(x.tier)}</td>
+        <td class="num" style="color:var(--i1);font-weight:600">${num(x.score)}</td>
+        <td class="num">${num(x.fit)}</td>
+        <td class="num">${num(x.timing)}</td>
+        <td class="wrap">${x.r.excluded?`<span style="color:var(--i3)">${esc(x.r.excludedReason)}</span>`:x.r.belowFloor?`<span style="color:var(--i3)">Company fit ${fmt1(x.fit)} is below the floor of ${DemandAI.CONFIG.fitFloor}</span>`:x.p&&x.p.whyNow?`<div class="tags" style="margin-bottom:5px">${tags.map(tagChip).join('')}</div><span class="clamp2" title="${esc(x.p.whyNow)}" style="font-size:12px;color:var(--i2)">${esc(x.p.whyNow.replace(/^./,m=>m.toUpperCase()))}</span>`:'<span style="color:var(--i3)">No live signal for this person</span>'}</td>
+      </tr>`;}).join(''), 'No prospects match.');
+  updateNBar();
+}
+function evidenceTab(){
+  return `<div class="score-list">
+    <div class="sl-toolbar">${search('drawEvidence','Search company, person or tag…')}<div class="sl-seg-filter">${pill(filt,'all','All')+pill(filt,'Qualified','Qualified')+pill(filt,'Rejected','Rejected')+pill(filt,'Not used','Not used')+pill(filt,'Used for a knock-out','Knock-out')}</div></div>
+    <div id="rows"></div></div>
+    <div style="font-size:11px;color:var(--i3);margin-top:10px">Every row of the signal file, in file order. People not in the lead file are rejected (D4) and come back as suggested new contacts.</div>`;
+}
+function drawEvidence(){
+  const el = document.getElementById('rows'); if(!el) return;
+  let ss = RUN.sig.signals;
+  if(filt!=='all') ss = ss.filter(s=>s.status===filt);
+  if(q) ss = ss.filter(s=>(s.company+' '+s.personName+' '+s.personRef+' '+s.type).toLowerCase().includes(q));
+  const stTag = {Qualified:'<span class="tag tag-green">Qualified</span>',Rejected:'<span class="tag tag-red">Rejected</span>','Not used':'<span class="tag tag-grey">Not used</span>','Used for a knock-out':'<span class="tag tag-amber">Knock-out</span>'};
+  el.innerHTML = table([['Signal','8%'],['Company','13%'],['Person','13%'],['Tag','23%'],['Event date','10%'],['Age','6%','num'],['Status','10%'],['Weight or reason','17%']],
+    ss.map(s=>`<tr>
+      <td>${cell(s.id, 'Row '+s.row)}</td>
+      <td>${cell(s.company)}</td>
+      <td>${cell(s.personName||s.personRef, s.assigned&&s.assigned!=='Named in the file'?'<span style="color:var(--warn)">Auto-assigned</span>':'')}</td>
+      <td>${tagChip(s.type)}</td>
+      <td style="font-family:var(--fm);font-variant-numeric:tabular-nums">${s.date?esc(s.date):'<span class="muted">—</span>'}</td>
+      <td class="num">${s.age!==undefined?s.age+'d':'<span class="muted">—</span>'}</td>
+      <td>${stTag[s.status]}</td>
+      <td class="wrap">${s.status==='Qualified' ? `<span style="font-family:var(--fm);font-weight:600;color:var(--i1)">${fmt1(s.weight)}</span><span class="sub">${s.tier} × ${s.strength} × ${s.decay.toFixed(2)}</span>` : `<span class="clamp2" title="${esc(s.reason)}" style="font-size:12px">${s.status==='Rejected'?`<b style="color:var(--i1)">${s.code} ${DemandAI.CODES[s.code]}</b> · `:''}${esc(s.reason)}</span>`}</td>
+    </tr>`).join(''), 'No signals match.');
+}
+
+/* ═══════════════ SAVE, OPEN, RENAME SCORED LISTS ═══════════════ */
+function openSave(){
+  const ov = overlay('saveOverlay'); ov.onclick = e=>{ if(e.target===ov) hide('saveOverlay'); };
+  const name = RUN.name || `${RUN.list.name} · scored ${RUN.asOf}`;
+  ov.innerHTML = `<div style="background:var(--surf);border-radius:var(--rlg);box-shadow:var(--sh-lg);width:440px;max-width:100%;padding:20px 22px">
+    <div style="font-family:var(--fd);font-size:15px;font-weight:700;color:var(--i1);margin-bottom:4px">${RUN.savedId?'Update the scored list':'Save the scored list'}</div>
+    <div style="font-size:12px;color:var(--i3);margin-bottom:14px;line-height:1.5">${esc(RUN.list.name)} with the signals from ${esc(RUN.fileName)}, as of ${RUN.asOf}. It appears under Scored lists.</div>
+    <label style="font-size:11px;font-weight:600;color:var(--i2)">Name</label>
+    <input id="runName" value="${esc(name)}" style="width:100%;margin:5px 0 18px;padding:9px 11px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:13px" onkeydown="if(event.key==='Enter')saveRun()">
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-ghost btn-sm" onclick="hide('saveOverlay')">Cancel</button>
+      <button class="btn btn-primary btn-sm" onclick="saveRun()">Save</button>
+    </div></div>`;
+  setTimeout(()=>{ const el=document.getElementById('runName'); el.focus(); el.select(); }, 30);
+}
+function saveRun(){
+  const name = document.getElementById('runName').value.trim() || RUN.list.name;
+  const sc = RUN.scored;
+  const prev = RUN.savedId && DemandAI.getScoring(RUN.savedId);
+  const run = prev ? Object.assign(prev, {name}) : { id:'run-'+Date.now().toString(36), name, listId:RUN.listId, listName:RUN.list.name,
+    fileName:RUN.fileName, sheet:RUN.sheet, grid:RUN.grid, asOf:RUN.asOf, sandbox:RUN.sandbox, createdAt:Date.now(),
+    stats:{ scored: prospects().filter(x=>x.score!==undefined).length, A: prospects().filter(x=>x.tier==='A').length } };
+  if(!DemandAI.saveScoring(run)){ showToast("This browser blocks storage, so it can't be saved"); return; }
+  RUN.savedId = run.id; RUN.name = name;
+  hide('saveOverlay'); showToast(`Saved as "${name}"`); renderResults();
+}
+function openRun(id){
+  const r = DemandAI.getScoring(id);
+  if(!r) return;
+  const ok = _score(r.listId, r.fileName, r.sheet, r.grid, r.asOf, r.sandbox, r);
+  if(ok) renderResults();
+}
+function removeRun(id){ DemandAI.deleteScoring(id); showToast('Scored list deleted'); renderStart('saved'); }
+function startRename(id){ renamingId = id; renderStart('saved'); const el=document.getElementById('renameInput'); if(el){ el.focus(); el.select(); } }
+function finishRename(id){
+  const el = document.getElementById('renameInput'); const name = el ? el.value.trim() : '';
+  const r = DemandAI.getScoring(id);
+  if(r && name && name!==r.name){ r.name = name; DemandAI.saveScoring(r); showToast('Renamed'); }
+  renamingId = null; renderStart('saved');
+}
+
+/* ═══════════════ ACCOUNT DRAWER ═══════════════ */
+function ago(d){ return d===0?'today':d<14?d+'d ago':d<60?Math.round(d/7)+'w ago':Math.round(d/30)+'mo ago'; }
+function miniStat(label, val, sub){ return `<div style="flex:1;padding:10px 12px;border-right:1px solid var(--border)"><div style="font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--i3)">${label}</div><div style="font-family:var(--fd);font-size:20px;font-weight:700;color:var(--i1);margin-top:2px">${val}</div>${sub?`<div style="font-size:10px;color:var(--i3)">${sub}</div>`:''}</div>`; }
+function openProspect(key){
+  const x = prospects().find(p=>p.key===key); if(!x) return;
+  const c = x.c, r = x.r, a = r.account;
+  const unused = RUN.sig.signals.filter(s=>s.accountId===a.id && s.contactRow===c.row && s.status!=='Qualified');
+  document.getElementById('detTitle').textContent = c.name;
+  document.getElementById('detSub').textContent = [c.jobTitle, a.name].filter(Boolean).join(' · ');
+  let html = `<div class="panel" style="margin-bottom:12px">
+    <div class="panel-hdr"><span class="panel-ttl">Priority</span>${tierPill(x.tier)}</div>
+    ${r.excluded ? `<div class="panel-body" style="font-size:12px;color:var(--neg);background:var(--neg-lt)"><b>Not scored.</b> ${esc(r.excludedReason)}.</div>`
+      : r.belowFloor ? `<div class="panel-body" style="font-size:12px;color:var(--warn);background:var(--warn-lt)"><b>Not scored.</b> ${esc(a.name)}'s fit of ${fmt1(r.fit)} is below the floor of ${DemandAI.CONFIG.fitFloor}.</div>`
+      : `<div style="display:flex">${miniStat('Score',x.score!==undefined?fmt1(x.score):'—','of 100')}${miniStat('Fit',fmt1(x.fit),'company')}${miniStat('Timing',x.timing!==undefined?fmt1(x.timing):'—',x.p.signals.length+' signal'+(x.p.signals.length===1?'':'s'))}</div>`}
+  </div>`;
+  if(x.p && x.p.whyNow){
+    html += `<div class="panel" style="margin-bottom:12px"><div class="panel-hdr"><span class="panel-ttl">Why now</span></div><div class="panel-body">
+      <div class="tags" style="margin-bottom:8px">${[...new Set(x.p.signals.map(s=>s.type))].map(tagChip).join('')}</div>
+      <div style="font-size:12.5px;color:var(--i1);line-height:1.55">${esc(x.p.whyNow.replace(/^./,m=>m.toUpperCase()))}</div></div></div>`;
+  }
+  if(x.p && x.p.signals.length){
+    html += `<div class="panel" style="margin-bottom:12px"><div class="panel-hdr"><span class="panel-ttl">Signals</span><span style="font-size:10.5px;color:var(--i3)">${x.p.signals.length}</span></div><div class="panel-body" style="display:flex;flex-direction:column;gap:8px">
+      ${x.p.signals.map(s=>`<div style="padding:9px 11px;background:var(--s50);border-radius:var(--rsm)">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><div style="flex:1">${tagChip(s.type)}</div><span style="font-family:var(--fm);font-size:11.5px;font-weight:600;color:var(--i1)">${fmt1(s.weight)}</span></div>
+        <div style="font-size:12px;color:var(--i1);line-height:1.45">${esc(s.detail||s.type)}</div>
+        <div style="font-size:10.5px;color:var(--i3);margin-top:2px">${esc(s.source||'No source')} · ${s.date} · ${ago(s.age)}${s.assigned&&s.assigned!=='Named in the file'?' · <span style="color:var(--warn)">auto-assigned</span>':''}</div>
+      </div>`).join('')}
+    </div></div>`;
+  }
+  const kv = (k,v) => `<div style="display:flex;gap:10px;padding:6px 0;border-bottom:1px solid var(--s75);font-size:12px"><span style="color:var(--i3);width:96px;flex-shrink:0">${k}</span><span style="color:var(--i1);min-width:0;overflow:hidden;text-overflow:ellipsis" title="${esc(String(v).replace(/<[^>]+>/g,''))}">${v}</span></div>`;
+  html += `<div class="panel" style="margin-bottom:12px"><div class="panel-hdr"><span class="panel-ttl">Contact</span></div><div class="panel-body" style="padding-top:4px;padding-bottom:4px">
+    ${kv('Persona', c.persona)}${kv('Reachable by', c.reachableBy==='none'?'No channel':c.reachableBy)}
+    ${kv('Email', c.emailRaw?esc(c.emailRaw)+(c.email&&c.emailVerified?'':' <span style="color:var(--warn)">(not used)</span>'):'—')}
+    ${kv('LinkedIn', c.linkedinRaw?esc(c.linkedinRaw.replace(/^https?:\/\/(www\.)?/,'')):'—')}
+    ${kv('Location', esc([c.city,c.country].filter(Boolean).join(', ')||'—'))}${kv('Owner', esc(c.owner||'—'))}
+  </div></div>`;
+  if(r.breakdown){
+    html += `<div class="panel" style="margin-bottom:12px"><div class="panel-hdr"><span class="panel-ttl">Company fit · ${esc(a.name)}</span><span style="font-family:var(--fm);font-size:12px;font-weight:600;color:var(--i1)">${fmt1(r.fit)} / 100</span></div><div class="panel-body">
+      ${r.breakdown.map(b=>`<div style="padding:6px 0">
+        <div style="display:flex;align-items:baseline;gap:8px;font-size:11.5px"><span style="flex:1;color:var(--i1)">${b.label} <span style="color:var(--i3)">· ${esc(b.levelLabel)}</span></span><span style="font-family:var(--fm);color:var(--i1)">${fmt1(b.points)}<span style="color:var(--i3)">/${b.weight}</span></span></div>
+        <div class="dim-track" style="margin-top:4px"><div class="dim-fill" style="width:${b.level}%;background:var(--sec)"></div></div>
+      </div>`).join('')}
+    </div></div>`;
+  }
+  if(unused.length){
+    html += `<div class="panel"><div class="panel-hdr"><span class="panel-ttl">Not counted</span><span style="font-size:10.5px;color:var(--i3)">${unused.length}</span></div><div class="panel-body" style="padding:0">
+      ${unused.map(s=>`<div style="padding:9px 14px;border-bottom:1px solid var(--border)"><div style="margin-bottom:4px">${tagChip(s.type)}</div><div style="font-size:11px;color:var(--i2)"><b>${s.status==='Rejected'?s.code+' '+DemandAI.CODES[s.code]:s.status}</b> · ${esc(s.reason)}</div></div>`).join('')}
+    </div></div>`;
+  }
+  document.getElementById('detBody').innerHTML = html;
+  const dr = document.getElementById('detailDrawer'); dr.style.width = '440px'; dr.classList.add('open');
+}
+
+/* ═══════════════ BOOT ═══════════════ */
+(function boot(){
+  const id = new URLSearchParams(location.search).get('list');
+  if(id && DemandAI.getList(id)) selListId = id;
+  renderStart('new');
 })();
 
 const PAGE_ID = '11-scoring.html';

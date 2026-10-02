@@ -931,6 +931,11 @@ function saveMessage(id){
 }
 function closeDrawer(){ document.getElementById('detailDrawer').classList.remove('open'); }
 
+/* Prospects sent from Scoring join the queue (hand-off kept in this browser for the POC) */
+(function loadFromScoring(){
+  let items = []; try{ items = JSON.parse(localStorage.getItem('demandai_nba_v1')||'[]'); }catch(e){}
+  items.slice().reverse().forEach(it=>{ if(!NBA_QUEUE.some(l=>l.id===it.id)) NBA_QUEUE.unshift(it); if(!NEW_SEGMENTS.includes(it.action) && !['Modernisation','Project','Leadership','Regulation','Engagement'].includes(it.action)) NEW_SEGMENTS.push(it.action); });
+})();
 showSegments();
 updateStats();
 
