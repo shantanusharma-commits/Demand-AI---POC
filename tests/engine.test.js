@@ -99,6 +99,8 @@ test('scores are normalised to 0–100 and tiers are unchanged by it', () => {
   assert.equal(nw.timing, 79.6);          // 159.2 of a possible 200
   assert.equal(nw.score, 72.4);           // 91 × 79.6 ÷ 100 = rank ÷ 2
   assert.deepEqual(nw.people.map(p => p.score), [72.9, 35.4]);
+  // Per prospect: account fit × their own timing
+  assert.deepEqual(nw.people.map(p => [p.contact.name, p.final, p.tier]), [['Aditi Rao', 66.3, 'A'], ['Wei Lim', 32.2, 'B']]);
   for (const r of scored.filter(r => r.score !== undefined)) {
     assert.ok(r.score >= 0 && r.score <= 100 && r.timing <= 100);
     assert.equal(r.tier, r.rank >= 70 ? 'A' : r.rank >= 40 ? 'B' : 'C');

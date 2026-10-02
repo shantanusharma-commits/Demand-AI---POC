@@ -605,7 +605,7 @@ function processFile(fileName, sheet, grid, sandbox){
   const result = DemandAI.processLeads(grid, {file:fileName, sheet});
   RUN = {fileName, sheet, sandbox, result};
   view = 'list'; filt='all'; q='';
-  RUN.savedId = null;
+  RUN.savedId = null; SEL.clear();
   openChecks();
 }
 
@@ -709,7 +709,7 @@ function renderRun(){
       <div class="topbar-l"><span class="tb-title">${esc(RUN.fileName)}</span>
         <span class="tb-badge badge-neutral">${esc(RUN.sheet)}</span></div>
       <div class="topbar-r">
-        <button class="btn btn-ghost btn-sm" onclick="renderStart('upload')">Upload a different file</button>
+        <button class="btn btn-sec btn-sm" onclick="renderStart('upload')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>Upload a different file</button>
         <button class="btn btn-sec btn-sm" onclick="openSave(false)" ${s.accountsPass?'':'disabled style="opacity:.5;cursor:not-allowed"'}>${RUN.savedId?'Saved ✓':'Save list'}</button>
         <button class="btn btn-primary btn-sm" onclick="openSave(true)" ${s.accountsPass?'':'disabled style="opacity:.5;cursor:not-allowed"'}>Save and go to Scoring →</button>
       </div>
@@ -761,25 +761,49 @@ function issueCell(is){
     <div style="min-width:0"><span class="clamp2" style="color:var(--i1);font-size:12px">${esc(first.issue)}</span>
     <span class="sub">${esc(first.outcome)}${is.length>1?` · +${is.length-1} more`:''}</span></div></div>`;
 }
+const SEL = new Set();
+const selectable = c => c.status.startsWith('In the');
+function visibleContacts(){
+  let cs = RUN.result.contacts;
+  if(filt==='in') cs = cs.filter(c=>c.status==='In the final list');
+  if(filt==='nc') cs = cs.filter(c=>c.status.startsWith('In the list'));
+  if(filt==='out') cs = cs.filter(c=>c.status.startsWith('Not in'));
+  if(q) cs = cs.filter(c=>(c.name+' '+c.company+' '+c.jobTitle).toLowerCase().includes(q));
+  return cs;
+}
+function toggleSel(row, on){ if(on) SEL.add(row); else SEL.delete(row); updateSelBar(); }
+function toggleAll(on){ visibleContacts().filter(selectable).forEach(c=> on ? SEL.add(c.row) : SEL.delete(c.row)); drawListRows(); }
+function clearSel(){ SEL.clear(); drawListRows(); }
+function updateSelBar(){
+  const bar = document.getElementById('selBar'); if(!bar) return;
+  const n = SEL.size;
+  bar.style.display = n ? 'flex' : 'none';
+  if(n) bar.querySelector('#selCount').textContent = `${n} prospect${n===1?'':'s'} selected`;
+  const all = document.getElementById('selAll');
+  if(all){ const v = visibleContacts().filter(selectable); all.checked = v.length>0 && v.every(c=>SEL.has(c.row)); all.indeterminate = !all.checked && v.some(c=>SEL.has(c.row)); }
+}
 function renderListTab(){
   return `${unattachedNotice()}<div class="score-list">
+    <div id="selBar" class="sl-toolbar" style="display:none;background:var(--brand-lt);align-items:center">
+      <span id="selCount" style="font-size:12.5px;font-weight:600;color:var(--brand-dk)"></span>
+      <button class="btn btn-ghost btn-sm" onclick="clearSel()">Clear</button>
+      <button class="btn btn-primary btn-sm" style="margin-left:auto" onclick="openSave(true, true)">Send selected to Scoring →</button>
+    </div>
     ${toolbar(pill(filt,'all','All','filt')+pill(filt,'in','In the final list','filt')+pill(filt,'nc','Not contactable','filt')+pill(filt,'out','Not in the list','filt'),'drawListRows','Search name, company or title…')}
     <div id="rows"></div></div>
     <div style="font-size:11px;color:var(--i3);margin-top:10px">One row per contact: what Lead discovery hands to Scoring. Scroll sideways for more columns; hover a cell for its full text.</div>`;
 }
 function drawListRows(){
   const el = document.getElementById('rows'); if(!el) return;
-  let cs = RUN.result.contacts;
-  if(filt==='in') cs = cs.filter(c=>c.status==='In the final list');
-  if(filt==='nc') cs = cs.filter(c=>c.status.startsWith('In the list'));
-  if(filt==='out') cs = cs.filter(c=>c.status.startsWith('Not in'));
-  if(q) cs = cs.filter(c=>(c.name+' '+c.company+' '+c.jobTitle).toLowerCase().includes(q));
+  let cs;
+  cs = visibleContacts();
   const accById = new Map(RUN.result.accounts.map(a=>[a.id,a]));
-  const cols = [['Contact',220],['Account',190],['Job title',210],['Persona',140],['Email',270],['LinkedIn',250],['Location',190],['Industry',180],['Employees',120,'num'],['Reachable by',170],['Consent',170],['Owner',220],['Status',230],['Issues',290]];
+  const cols = [['<input type="checkbox" id="selAll" title="Select all" onclick="toggleAll(this.checked)" style="cursor:pointer;vertical-align:middle">',58],['Contact',220],['Account',190],['Job title',210],['Persona',140],['Email',270],['LinkedIn',250],['Location',190],['Industry',180],['Employees',120,'num'],['Reachable by',170],['Consent',170],['Owner',220],['Status',230],['Issues',290]];
   el.innerHTML = table(cols, cs.map(c=>{
     const a = accById.get(c.accountId), reason = (c.status.match(/\((.*)\)$/)||[])[1];
     const emailSub = c.emailRaw ? (c.email ? (c.emailVerified ? '<span style="color:var(--pos)">Verified</span>' : '<span style="color:var(--warn)">Not verified</span>') : '<span style="color:var(--neg)">Malformed</span>') : '';
-    return `<tr>
+    return `<tr${SEL.has(c.row)?' style="background:var(--brand-lt)"':''}>
+      <td>${selectable(c)?`<input type="checkbox" ${SEL.has(c.row)?'checked':''} onclick="toggleSel(${c.row},this.checked);this.closest('tr').style.background=this.checked?'var(--brand-lt)':''" style="cursor:pointer;vertical-align:middle">`:'<span class="muted" title="Not in the list">—</span>'}</td>
       <td><div class="person"><div class="co-av" style="background:${avColor(c.company)}">${initials(c.name)}</div><div>${cell(c.name,'Row '+c.row, 'dt-main')}</div></div></td>
       <td>${cell(c.company)}</td>
       <td>${cell(c.jobTitle)}</td>
@@ -795,6 +819,7 @@ function drawListRows(){
       <td>${statusTag(c.status)}${reason?`<span class="sub" title="${esc(reason)}">${esc(reason.replace(/^./,m=>m.toUpperCase()))}</span>`:''}</td>
       <td class="wrap">${issueCell(issuesFor(c.row))}</td>
     </tr>`;}).join(''), 'No contacts match.');
+  updateSelBar();
 }
 
 function renderAccountsTab(){
@@ -856,14 +881,25 @@ function unattachedNotice(){
 
 /* ═══════════════ DRAWERS ═══════════════ */
 /* ═══════════════ SAVE AND HAND OFF ═══════════════ */
-function openSave(go){
-  const saved = RUN.savedId && DemandAI.getList(RUN.savedId);
-  const base = saved ? saved.name : RUN.fileName.replace(/\.[^.]+$/,'')+' · '+new Date().toISOString().slice(0,10);
+function selectionList(){
+  const r = RUN.result;
+  if(!RUN.selOnly) return {stats:r.stats, accounts:r.accounts, contacts:r.contacts};
+  const contacts = r.contacts.filter(c=>SEL.has(c.row));
+  const ids = new Set(contacts.map(c=>c.accountId));
+  const accounts = r.accounts.filter(a=>ids.has(a.id));
+  return {contacts, accounts, stats:Object.assign({}, r.stats, {contacts:contacts.length, accounts:accounts.length,
+    accountsPass:accounts.filter(a=>!a.excluded).length, inFinalList:contacts.filter(c=>c.status==='In the final list').length})};
+}
+function openSave(go, selOnly){
+  RUN.selOnly = !!selOnly;
+  const saved = !selOnly && RUN.savedId && DemandAI.getList(RUN.savedId);
+  const base = saved ? saved.name : RUN.fileName.replace(/\.[^.]+$/,'')+(selOnly?` · ${SEL.size} selected`:'')+' · '+new Date().toISOString().slice(0,10);
+  const L = selectionList();
   const ov = overlay('saveOverlay');
   ov.onclick = e=>{ if(e.target===ov) ov.style.display='none'; };
   ov.innerHTML = `<div style="background:var(--surf);border-radius:var(--rlg);box-shadow:var(--sh-lg);width:440px;max-width:100%;padding:20px 22px">
     <div style="font-family:var(--fd);font-size:15px;font-weight:700;color:var(--i1);margin-bottom:4px">${saved?'Update the saved list':'Save the screened list'}</div>
-    <div style="font-size:12px;color:var(--i3);margin-bottom:14px;line-height:1.5">${RUN.result.stats.accountsPass} accounts that pass the knock-outs, with ${RUN.result.stats.inFinalList} contacts in the list. It appears under Saved lists and in Scoring.</div>
+    <div style="font-size:12px;color:var(--i3);margin-bottom:14px;line-height:1.5">${selOnly?`The ${L.contacts.length} selected prospects, at ${L.stats.accountsPass} account${L.stats.accountsPass===1?'':'s'}.`:`${L.stats.accountsPass} accounts that pass the knock-outs, with ${L.stats.inFinalList} contacts in the list.`} It appears under Saved lists and in Scoring.</div>
     <label style="font-size:11px;font-weight:600;color:var(--i2)">List name</label>
     <input id="listName" value="${esc(base)}" style="width:100%;margin:5px 0 18px;padding:9px 11px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:13px" onkeydown="if(event.key==='Enter')saveList(${go})">
     <div style="display:flex;gap:8px;justify-content:flex-end">
@@ -875,12 +911,12 @@ function openSave(go){
 }
 function saveList(go){
   const name = document.getElementById('listName').value.trim() || RUN.fileName;
-  const r = RUN.result;
-  const prev = RUN.savedId && DemandAI.getList(RUN.savedId);
+  const r = selectionList();
+  const prev = !RUN.selOnly && RUN.savedId && DemandAI.getList(RUN.savedId);
   const list = prev ? Object.assign(prev, {name}) : { id:'list-'+Date.now().toString(36), name, createdAt:Date.now(), sourceFile:RUN.fileName, sheet:RUN.sheet,
     sandbox:RUN.sandbox, stats:r.stats, accounts:r.accounts, contacts:r.contacts };
   if(!DemandAI.saveList(list)){ showToast("This browser blocks storage, so the list can't be saved. Allow site data and try again"); return; }
-  RUN.savedId = list.id;
+  if(!RUN.selOnly) RUN.savedId = list.id;
   document.getElementById('saveOverlay').style.display='none';
   if(go){ location.href = '11-scoring.html?list='+encodeURIComponent(list.id); return; }
   showToast(`Saved as "${name}"`);

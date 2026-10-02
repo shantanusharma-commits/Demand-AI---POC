@@ -626,7 +626,7 @@ function renderStart(t){
             : `<div style="display:flex;align-items:center;gap:6px;min-width:0"><span class="dt-main" title="${esc(r.name)}">${esc(r.name)}</span><button title="Rename" onclick="startRename('${r.id}')" style="flex-shrink:0;color:var(--i3);display:flex;padding:2px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button></div><span class="sub">As of ${esc(r.asOf)}</span>`}</div></div></td>
           <td>${cell((DemandAI.getList(r.listId)||{}).name || r.listName, DemandAI.getList(r.listId)?'':'<span style="color:var(--neg)">List deleted</span>')}</td>
           <td>${cell(r.fileName)}</td>
-          <td class="num">${r.stats.scored}<span class="sub">accounts</span></td>
+          <td class="num">${r.stats.scored}<span class="sub">prospects</span></td>
           <td class="num">${r.stats.A}</td>
           <td>${cell(fmtDate(r.createdAt), new Date(r.createdAt).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}))}</td>
           <td style="text-align:right"><button class="btn btn-sec btn-sm" onclick="openRun('${r.id}')">Open</button> <button class="btn btn-ghost btn-sm" onclick="removeRun('${r.id}')">Delete</button></td>
@@ -656,7 +656,7 @@ function score(listId, fileName, sheet, grid, asOf, sandbox, saved){
   const list = JSON.parse(JSON.stringify({accounts:L.accounts, contacts:L.contacts}));
   const sig = DemandAI.processSignals(grid, list, {file:fileName, sheet, asOf});
   const scored = DemandAI.scoreList(list, sig);
-  RUN = {listId, list:L, fileName, sheet, grid, asOf, sandbox, sig, scored, savedId: saved?saved.id:null, name: saved?saved.name:null};
+  RUN = {listId, list:L, fileName, sheet, grid, asOf, sandbox, sig, scored, prospects:null, savedId: saved?saved.id:null, name: saved?saved.name:null};
   view='ranked'; filt='all'; q='';
   return true;
 }
@@ -670,7 +670,7 @@ const SIG_STEPS = [
   ['window',  'Within its time window',        'Older than the tag counts for: stale'],
   ['knockout','Installed base',                'Pilot product already installed excludes the account'],
   ['fit',     'Fit',                           `Rubric score; below ${DemandAI.CONFIG.fitFloor} the account is dropped`],
-  ['score',   'Timing and score',              'Signals weighted and stacked; score 0–100 and tier'],
+  ['score',   'Timing and score',              'Each prospect\'s signals weighted and stacked; score 0–100 and tier'],
 ];
 function stepResult(k){
   const sig = RUN.sig, sc = RUN.scored, is = sig.issues;
@@ -691,7 +691,7 @@ function stepResult(k){
     case 'window': return out(rej(s=>s.code==='D2'), 'info', null);
     case 'knockout': { const k2 = sig.signals.filter(s=>s.status==='Used for a knock-out'); return k2.length ? {sev:'info', label:`${k2.length} excluded`, rows: rowsLabel(k2.map(x=>x.row))} : {sev:'', label:'None installed'}; }
     case 'fit': { const n = sc.filter(r=>r.belowFloor).length; return n ? {sev:'info', label:`${n} below the floor`} : {sev:'', label:'All above the floor'}; }
-    case 'score': { const n = sc.filter(r=>r.score!==undefined).length, a = sc.filter(r=>r.tier==='A').length; return {sev:'', label:`${n} scored · ${a} in tier A`}; }
+    case 'score': { RUN.prospects = null; const ps = prospects(), n = ps.filter(x=>x.score!==undefined).length, a = ps.filter(x=>x.tier==='A').length; return {sev:'', label:`${n} prospects scored · ${a} in tier A`}; }
   }
 }
 function runChecks(){
@@ -730,7 +730,7 @@ function runChecks(){
     } else {
       const qn = sig.signals.filter(s=>s.status==='Qualified').length, rj = sig.signals.filter(s=>s.status==='Rejected').length;
       document.getElementById('ckFoot').innerHTML = `
-        <span style="flex:1;font-size:12px;color:var(--i2)"><b>${qn}</b> signals qualified · <b>${rj}</b> rejected · <b>${RUN.scored.filter(r=>r.tier==='A').length}</b> accounts in tier A</span>
+        <span style="flex:1;font-size:12px;color:var(--i2)"><b>${qn}</b> signals qualified · <b>${rj}</b> rejected · <b>${prospects().filter(x=>x.tier==='A').length}</b> prospects in tier A</span>
         <button class="btn btn-ghost btn-sm" onclick="hide('checksOverlay');RUN=null;renderStart('new')">Use a different file</button>
         <button class="btn btn-primary btn-sm" onclick="hide('checksOverlay');renderResults()">View the scores →</button>`;
     }
@@ -740,9 +740,20 @@ function runChecks(){
 const _score = score;
 score = function(...a){ if(_score(...a)) runChecks(); };
 
-/* ═══════════════ RESULTS ═══════════════ */
+/* ═══════════════ RESULTS: one row per prospect ═══════════════ */
+const TIER_ORDER = {A:0,B:1,C:2,'Watch list':3,'Below fit floor':4,Excluded:5};
+function prospects(){
+  if(RUN.prospects) return RUN.prospects;
+  const out = [];
+  for(const r of RUN.scored){
+    if(r.people) r.people.forEach(p=>{ const live = p.signals.length>0; out.push({key:r.account.id+'|'+p.contact.row, c:p.contact, r, p, tier:p.tier, score:live?p.final:undefined, fit:r.fit, timing:live?p.timing:undefined}); });
+    else r.contacts.filter(c=>!c.optOut).forEach(c=>out.push({key:r.account.id+'|'+c.row, c, r, p:null, tier:r.tier, fit:r.fit}));
+  }
+  out.sort((x,y)=>TIER_ORDER[x.tier]-TIER_ORDER[y.tier] || (y.score||0)-(x.score||0) || (y.fit||0)-(x.fit||0));
+  return RUN.prospects = out;
+}
 function renderResults(){
-  const sc = RUN.scored, sig = RUN.sig;
+  const sc = prospects(), sig = RUN.sig;
   const count = t => sc.filter(r=>r.tier===t).length;
   const ft = (id,label,n) => `<div class="ftab ${view===id?'active':''}" onclick="view='${id}';filt='all';q='';renderResults()">${label} <span class="ftab-cnt">${n}</span></div>`;
   const T = DemandAI.CONFIG.tierThresholds;
@@ -751,12 +762,12 @@ function renderResults(){
       <div class="topbar-l"><span class="tb-title">${esc(RUN.name || RUN.list.name)}</span>
         <span class="tb-badge badge-neutral">${esc(RUN.fileName)} · as of ${RUN.asOf}</span></div>
       <div class="topbar-r">
-        <button class="btn btn-ghost btn-sm" onclick="renderStart('new')">Score another list</button>
+        <button class="btn btn-sec btn-sm" onclick="renderStart('new')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>Score a different list</button>
         <button class="btn btn-sec btn-sm" onclick="openSave()">${RUN.savedId?'Saved ✓':'Save'}</button>
         <button class="btn btn-primary btn-sm" disabled style="opacity:.5;cursor:not-allowed" title="The hand-off to Micro-segments & NBA isn't wired yet">Send to NBA</button>
       </div>
     </div>
-    <div class="ftabs">${ft('ranked','Ranked accounts',sc.length)}${ft('evidence','Signal evidence',sig.signals.length)}</div>
+    <div class="ftabs">${ft('ranked','Ranked prospects',sc.length)}${ft('evidence','Signal evidence',sig.signals.length)}</div>
     <div class="canvas">
       <div class="stats">
         <div class="stat"><div class="stat-lbl">Tier A</div><div class="stat-val" style="color:var(--pos)">${count('A')}</div><div class="stat-sub">score ${T.A} and above</div></div>
@@ -771,30 +782,29 @@ function renderResults(){
 }
 function rankedTab(){
   return `<div class="score-list">
-    <div class="sl-toolbar">${search('drawRanked','Search accounts…')}<div class="sl-seg-filter">${pill(filt,'all','All')+pill(filt,'A','A')+pill(filt,'B','B')+pill(filt,'C','C')+pill(filt,'Watch list','Watch list')+pill(filt,'out','Not scored')}</div></div>
+    <div class="sl-toolbar">${search('drawRanked','Search prospects or companies…')}<div class="sl-seg-filter">${pill(filt,'all','All')+pill(filt,'A','A')+pill(filt,'B','B')+pill(filt,'C','C')+pill(filt,'Watch list','Watch list')+pill(filt,'out','Not scored')}</div></div>
     <div id="rows"></div></div>
-    <div style="font-size:11px;color:var(--i3);margin-top:10px">Score = Fit × Timing ÷ 100, all on 0–100. Click an account for its reasoning.</div>`;
+    <div style="font-size:11px;color:var(--i3);margin-top:10px">Each prospect is scored on their own signals: Score = company Fit × their Timing ÷ 100, all on 0–100. Click a prospect for the reasoning.</div>`;
 }
 function drawRanked(){
   const el = document.getElementById('rows'); if(!el) return;
-  let rs = RUN.scored;
-  if(filt==='out') rs = rs.filter(r=>r.tier==='Below fit floor'||r.tier==='Excluded');
-  else if(filt!=='all') rs = rs.filter(r=>r.tier===filt);
-  if(q) rs = rs.filter(r=>r.account.name.toLowerCase().includes(q));
+  let rs = prospects();
+  if(filt==='out') rs = rs.filter(x=>x.tier==='Below fit floor'||x.tier==='Excluded');
+  else if(filt!=='all') rs = rs.filter(x=>x.tier===filt);
+  if(q) rs = rs.filter(x=>(x.c.name+' '+x.r.account.name+' '+x.c.jobTitle).toLowerCase().includes(q));
   const num = v => v!==undefined ? fmt1(v) : '<span class="muted">—</span>';
-  el.innerHTML = table([['Account','21%'],['Tier','12%'],['Score','7%','num'],['Fit','6%','num'],['Timing','8%','num'],['Contact first','16%'],['Why now','30%']],
-    rs.map(r=>{
-      const lead = r.people && r.people[0];
-      const tags = [...new Set(RUN.sig.signals.filter(s=>s.accountId===r.account.id&&s.status==='Qualified').sort((x,y)=>y.weight-x.weight).map(s=>s.type))].slice(0,2);
-      return `<tr class="click" onclick="openAccount('${r.account.id}')">
-        <td><div class="person"><div class="co-av" style="background:${avColor(r.account.name)}">${initials(r.account.name)}</div><div>${cell(r.account.name, esc(r.account.vertical+' · '+r.account.country), 'dt-main')}</div></div></td>
-        <td>${tierPill(r.tier)}</td>
-        <td class="num" style="color:var(--i1);font-weight:600">${num(r.score)}</td>
-        <td class="num">${num(r.fit)}</td>
-        <td class="num">${num(r.timing)}</td>
-        <td>${lead && lead.score>0 ? cell(lead.contact.name, esc(lead.contact.jobTitle)) : '<span class="muted">—</span>'}</td>
-        <td class="wrap">${r.excluded?`<span style="color:var(--i3)">${esc(r.excludedReason)}</span>`:r.belowFloor?`<span style="color:var(--i3)">Fit ${fmt1(r.fit)} is below the floor of ${DemandAI.CONFIG.fitFloor}</span>`:r.whyNow?`<div class="tags" style="margin-bottom:5px">${tags.map(tagChip).join('')}</div><span class="clamp2" title="${esc(r.whyNow)}" style="font-size:12px;color:var(--i2)">${esc(r.whyNow)}</span>`:'<span style="color:var(--i3)">No live signal</span>'}</td>
-      </tr>`;}).join(''), 'No accounts match.');
+  el.innerHTML = table([['Prospect','19%'],['Company','16%'],['Tier','11%'],['Score','7%','num'],['Fit','6%','num'],['Timing','7%','num'],['Why now','34%']],
+    rs.map(x=>{
+      const tags = x.p ? [...new Set(x.p.signals.map(s=>s.type))].slice(0,2) : [];
+      return `<tr class="click" onclick="openProspect('${x.key}')">
+        <td><div class="person"><div class="co-av" style="background:${avColor(x.c.name)}">${initials(x.c.name)}</div><div>${cell(x.c.name, esc(x.c.jobTitle||''), 'dt-main')}</div></div></td>
+        <td>${cell(x.r.account.name, esc(x.r.account.vertical+' · '+x.r.account.country))}</td>
+        <td>${tierPill(x.tier)}</td>
+        <td class="num" style="color:var(--i1);font-weight:600">${num(x.score)}</td>
+        <td class="num">${num(x.fit)}</td>
+        <td class="num">${num(x.timing)}</td>
+        <td class="wrap">${x.r.excluded?`<span style="color:var(--i3)">${esc(x.r.excludedReason)}</span>`:x.r.belowFloor?`<span style="color:var(--i3)">Company fit ${fmt1(x.fit)} is below the floor of ${DemandAI.CONFIG.fitFloor}</span>`:x.p&&x.p.whyNow?`<div class="tags" style="margin-bottom:5px">${tags.map(tagChip).join('')}</div><span class="clamp2" title="${esc(x.p.whyNow)}" style="font-size:12px;color:var(--i2)">${esc(x.p.whyNow.replace(/^./,m=>m.toUpperCase()))}</span>`:'<span style="color:var(--i3)">No live signal for this person</span>'}</td>
+      </tr>`;}).join(''), 'No prospects match.');
 }
 function evidenceTab(){
   return `<div class="score-list">
@@ -842,7 +852,7 @@ function saveRun(){
   const prev = RUN.savedId && DemandAI.getScoring(RUN.savedId);
   const run = prev ? Object.assign(prev, {name}) : { id:'run-'+Date.now().toString(36), name, listId:RUN.listId, listName:RUN.list.name,
     fileName:RUN.fileName, sheet:RUN.sheet, grid:RUN.grid, asOf:RUN.asOf, sandbox:RUN.sandbox, createdAt:Date.now(),
-    stats:{ scored: sc.filter(r=>r.score!==undefined).length, A: sc.filter(r=>r.tier==='A').length } };
+    stats:{ scored: prospects().filter(x=>x.score!==undefined).length, A: prospects().filter(x=>x.tier==='A').length } };
   if(!DemandAI.saveScoring(run)){ showToast("This browser blocks storage, so it can't be saved"); return; }
   RUN.savedId = run.id; RUN.name = name;
   hide('saveOverlay'); showToast(`Saved as "${name}"`); renderResults();
@@ -865,67 +875,55 @@ function finishRename(id){
 /* ═══════════════ ACCOUNT DRAWER ═══════════════ */
 function ago(d){ return d===0?'today':d<14?d+'d ago':d<60?Math.round(d/7)+'w ago':Math.round(d/30)+'mo ago'; }
 function miniStat(label, val, sub){ return `<div style="flex:1;padding:10px 12px;border-right:1px solid var(--border)"><div style="font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--i3)">${label}</div><div style="font-family:var(--fd);font-size:20px;font-weight:700;color:var(--i1);margin-top:2px">${val}</div>${sub?`<div style="font-size:10px;color:var(--i3)">${sub}</div>`:''}</div>`; }
-function openAccount(id){
-  const r = RUN.scored.find(x=>x.account.id===id), a = r.account;
-  const unused = RUN.sig.signals.filter(s=>s.accountId===id && s.status!=='Qualified');
-  document.getElementById('detTitle').textContent = a.name;
-  document.getElementById('detSub').textContent = [a.vertical, [a.city,a.country].filter(Boolean).join(', '), a.owner].filter(Boolean).join(' · ');
-  let html = '';
-  // Summary
-  html += `<div class="panel" style="margin-bottom:12px">
-    <div class="panel-hdr"><span class="panel-ttl">Priority</span>${tierPill(r.tier)}</div>
-    ${r.excluded ? `<div class="panel-body" style="font-size:12px;color:var(--neg);background:var(--neg-lt)"><b>Excluded, not scored.</b> ${esc(r.excludedReason)}</div>`
-      : r.belowFloor ? `<div class="panel-body" style="font-size:12px;color:var(--warn);background:var(--warn-lt)"><b>Below the fit floor.</b> Fit ${fmt1(r.fit)} is under ${DemandAI.CONFIG.fitFloor}, so its signals aren't counted.</div>`
-      : `<div style="display:flex">${miniStat('Score',fmt1(r.score),'of 100')}${miniStat('Fit',fmt1(r.fit),'of 100')}${miniStat('Timing',fmt1(r.timing),r.signalCount+' signal'+(r.signalCount===1?'':'s'))}</div>
-         <div style="padding:9px 14px;border-top:1px solid var(--border);font-size:11.5px;color:var(--i2)">Confidence <b style="color:${r.confidence==='high'?'var(--pos)':r.confidence==='low'?'var(--neg)':'var(--warn)'}">${r.confidence}</b> · ${esc(r.confidenceWhy)}</div>`}
+function openProspect(key){
+  const x = prospects().find(p=>p.key===key); if(!x) return;
+  const c = x.c, r = x.r, a = r.account;
+  const unused = RUN.sig.signals.filter(s=>s.accountId===a.id && s.contactRow===c.row && s.status!=='Qualified');
+  document.getElementById('detTitle').textContent = c.name;
+  document.getElementById('detSub').textContent = [c.jobTitle, a.name].filter(Boolean).join(' · ');
+  let html = `<div class="panel" style="margin-bottom:12px">
+    <div class="panel-hdr"><span class="panel-ttl">Priority</span>${tierPill(x.tier)}</div>
+    ${r.excluded ? `<div class="panel-body" style="font-size:12px;color:var(--neg);background:var(--neg-lt)"><b>Not scored.</b> ${esc(r.excludedReason)}.</div>`
+      : r.belowFloor ? `<div class="panel-body" style="font-size:12px;color:var(--warn);background:var(--warn-lt)"><b>Not scored.</b> ${esc(a.name)}'s fit of ${fmt1(r.fit)} is below the floor of ${DemandAI.CONFIG.fitFloor}.</div>`
+      : `<div style="display:flex">${miniStat('Score',x.score!==undefined?fmt1(x.score):'—','of 100')}${miniStat('Fit',fmt1(x.fit),'company')}${miniStat('Timing',x.timing!==undefined?fmt1(x.timing):'—',x.p.signals.length+' signal'+(x.p.signals.length===1?'':'s'))}</div>`}
   </div>`;
-  // Why now
-  if(r.whyNow){
-    const tags = [...new Set(RUN.sig.signals.filter(s=>s.accountId===id&&s.status==='Qualified').sort((x,y)=>y.weight-x.weight).map(s=>s.type))];
+  if(x.p && x.p.whyNow){
     html += `<div class="panel" style="margin-bottom:12px"><div class="panel-hdr"><span class="panel-ttl">Why now</span></div><div class="panel-body">
-      <div class="tags" style="margin-bottom:8px">${tags.map(tagChip).join('')}</div>
-      <div style="font-size:12.5px;color:var(--i1);line-height:1.55">${esc(r.whyNow)}</div>
-      <div style="font-size:10.5px;color:var(--i3);margin-top:6px">${esc(r.whyNowSources.join(' · '))}</div></div></div>`;
+      <div class="tags" style="margin-bottom:8px">${[...new Set(x.p.signals.map(s=>s.type))].map(tagChip).join('')}</div>
+      <div style="font-size:12.5px;color:var(--i1);line-height:1.55">${esc(x.p.whyNow.replace(/^./,m=>m.toUpperCase()))}</div></div></div>`;
   }
-  // People, in contact order, each with their signals
-  if(r.people){
-    html += `<div class="panel" style="margin-bottom:12px"><div class="panel-hdr"><span class="panel-ttl">Who to contact, in order</span></div><div class="panel-body" style="padding:0">
-      ${r.people.map((p,i)=>`<div style="padding:12px 14px;border-bottom:1px solid var(--border)">
-        <div style="display:flex;align-items:center;gap:10px">
-          <div class="co-av" style="background:${avColor(p.contact.name)}">${initials(p.contact.name)}</div>
-          <div style="flex:1;min-width:0"><div style="font-size:12.5px;font-weight:600;color:var(--i1)">${i+1}. ${esc(p.contact.name)}</div><div style="font-size:11px;color:var(--i3)">${esc(p.contact.jobTitle)} · ${p.contact.persona} persona · ${p.contact.reachableBy}</div></div>
-          <div style="text-align:right"><div style="font-family:var(--fd);font-size:15px;font-weight:700;color:var(--i1)">${fmt1(p.score)}</div><div style="font-size:9.5px;color:var(--i3)">signal score</div></div>
-        </div>
-        ${p.signals.map(s=>`<div style="margin:8px 0 0 38px;padding:8px 10px;background:var(--s50);border-radius:var(--rsm)">
-          <div style="display:flex;align-items:flex-start;gap:6px"><div style="flex:1">${tagChip(s.type)}</div><span style="font-family:var(--fm);font-size:11.5px;font-weight:600;color:var(--i1)">${fmt1(s.weight)}</span></div>
-          <div style="font-size:11.5px;color:var(--i1);line-height:1.45">${esc(s.detail||s.type)}</div>
-          <div style="font-size:10.5px;color:var(--i3);margin-top:2px">${esc(s.source||'No source')} · ${s.date} · ${ago(s.age)}${s.assigned&&s.assigned!=='Named in the file'?' · <span style="color:var(--warn)">auto-assigned</span>':''}</div>
-        </div>`).join('') || '<div style="margin:6px 0 0 38px;font-size:11px;color:var(--i3)">No signals</div>'}
+  if(x.p && x.p.signals.length){
+    html += `<div class="panel" style="margin-bottom:12px"><div class="panel-hdr"><span class="panel-ttl">Signals</span><span style="font-size:10.5px;color:var(--i3)">${x.p.signals.length}</span></div><div class="panel-body" style="display:flex;flex-direction:column;gap:8px">
+      ${x.p.signals.map(s=>`<div style="padding:9px 11px;background:var(--s50);border-radius:var(--rsm)">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><div style="flex:1">${tagChip(s.type)}</div><span style="font-family:var(--fm);font-size:11.5px;font-weight:600;color:var(--i1)">${fmt1(s.weight)}</span></div>
+        <div style="font-size:12px;color:var(--i1);line-height:1.45">${esc(s.detail||s.type)}</div>
+        <div style="font-size:10.5px;color:var(--i3);margin-top:2px">${esc(s.source||'No source')} · ${s.date} · ${ago(s.age)}${s.assigned&&s.assigned!=='Named in the file'?' · <span style="color:var(--warn)">auto-assigned</span>':''}</div>
       </div>`).join('')}
     </div></div>`;
   }
-  // Fit, by criterion
+  const kv = (k,v) => `<div style="display:flex;gap:10px;padding:6px 0;border-bottom:1px solid var(--s75);font-size:12px"><span style="color:var(--i3);width:96px;flex-shrink:0">${k}</span><span style="color:var(--i1);min-width:0;overflow:hidden;text-overflow:ellipsis" title="${esc(String(v).replace(/<[^>]+>/g,''))}">${v}</span></div>`;
+  html += `<div class="panel" style="margin-bottom:12px"><div class="panel-hdr"><span class="panel-ttl">Contact</span></div><div class="panel-body" style="padding-top:4px;padding-bottom:4px">
+    ${kv('Persona', c.persona)}${kv('Reachable by', c.reachableBy==='none'?'No channel':c.reachableBy)}
+    ${kv('Email', c.emailRaw?esc(c.emailRaw)+(c.email&&c.emailVerified?'':' <span style="color:var(--warn)">(not used)</span>'):'—')}
+    ${kv('LinkedIn', c.linkedinRaw?esc(c.linkedinRaw.replace(/^https?:\/\/(www\.)?/,'')):'—')}
+    ${kv('Location', esc([c.city,c.country].filter(Boolean).join(', ')||'—'))}${kv('Owner', esc(c.owner||'—'))}
+  </div></div>`;
   if(r.breakdown){
-    html += `<div class="panel" style="margin-bottom:12px"><div class="panel-hdr"><span class="panel-ttl">Fit</span><span style="font-family:var(--fm);font-size:12px;font-weight:600;color:var(--i1)">${fmt1(r.fit)} / 100</span></div><div class="panel-body">
+    html += `<div class="panel" style="margin-bottom:12px"><div class="panel-hdr"><span class="panel-ttl">Company fit · ${esc(a.name)}</span><span style="font-family:var(--fm);font-size:12px;font-weight:600;color:var(--i1)">${fmt1(r.fit)} / 100</span></div><div class="panel-body">
       ${r.breakdown.map(b=>`<div style="padding:6px 0">
         <div style="display:flex;align-items:baseline;gap:8px;font-size:11.5px"><span style="flex:1;color:var(--i1)">${b.label} <span style="color:var(--i3)">· ${esc(b.levelLabel)}</span></span><span style="font-family:var(--fm);color:var(--i1)">${fmt1(b.points)}<span style="color:var(--i3)">/${b.weight}</span></span></div>
         <div class="dim-track" style="margin-top:4px"><div class="dim-fill" style="width:${b.level}%;background:var(--sec)"></div></div>
       </div>`).join('')}
     </div></div>`;
   }
-  // What didn't count
   if(unused.length){
     html += `<div class="panel"><div class="panel-hdr"><span class="panel-ttl">Not counted</span><span style="font-size:10.5px;color:var(--i3)">${unused.length}</span></div><div class="panel-body" style="padding:0">
-      ${unused.map(s=>`<div style="padding:9px 14px;border-bottom:1px solid var(--border)">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">${tagChip(s.type)}<span style="font-size:11px;color:var(--i3)">${esc(s.personName||s.personRef||'')}</span></div>
-        <div style="font-size:11px;color:var(--i2)"><b>${s.status==='Rejected'?s.code+' '+DemandAI.CODES[s.code]:s.status}</b> · ${esc(s.reason)}</div>
-      </div>`).join('')}
+      ${unused.map(s=>`<div style="padding:9px 14px;border-bottom:1px solid var(--border)"><div style="margin-bottom:4px">${tagChip(s.type)}</div><div style="font-size:11px;color:var(--i2)"><b>${s.status==='Rejected'?s.code+' '+DemandAI.CODES[s.code]:s.status}</b> · ${esc(s.reason)}</div></div>`).join('')}
     </div></div>`;
   }
   document.getElementById('detBody').innerHTML = html;
   const dr = document.getElementById('detailDrawer'); dr.style.width = '440px'; dr.classList.add('open');
 }
-
 
 /* ═══════════════ BOOT ═══════════════ */
 (function boot(){

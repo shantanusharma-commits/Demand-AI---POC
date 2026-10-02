@@ -608,6 +608,13 @@ function scoreList(list, signalResult) {
     res.score = round1(res.fit * (rawTiming / CONFIG.timingMax * 100) / 100);
     res.signalCount = own.length;
     res.tier = tierFor(res.score, own.length > 0);
+    // Each prospect scored on their own evidence: account fit × their timing, with their own why-now.
+    res.people.forEach(p => {
+      p.timing = p.score;
+      p.final = round1(res.fit * p.timing / 100);
+      p.tier = tierFor(p.final, p.signals.length > 0);
+      p.whyNow = p.signals.slice(0, 2).map((s, i) => `${i ? 'also ' : ''}${lowerFirst(s.detail || s.type)}`).join('; ');
+    });
     const hasPrimary = cs.some(c => !c.optOut && c.persona === 'Primary');
     res.confidence = !hasPrimary ? 'low' : own.length >= 2 ? 'high' : 'medium';
     res.confidenceWhy = !hasPrimary ? 'No contact in the primary persona' : own.length >= 2 ? `${own.length} qualified signals and a primary-persona contact` : 'Only one qualified signal';
