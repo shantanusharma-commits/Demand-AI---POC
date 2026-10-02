@@ -138,3 +138,90 @@ test('missing required columns are reported once, not per row', () => {
   assert.equal(r.issues.filter(i => /Required column "country"/.test(i.issue)).length, 1);
   assert.equal(r.issues.filter(i => i.field === 'country' && i.row === 2).length, 0);
 });
+
+// ─── Stage 9: micro-segments ───
+// A small synthetic set so each rule can be checked on its own.
+function fake(id, sigs, opts = {}) {
+  const contact = { row: 2, name: `Person ${id}`, firstName: 'Pat', email: opts.email === undefined ? `p@${id}.com` : opts.email,
+    emailVerified: opts.email !== '', linkedin: opts.linkedin || '' };
+  const signals = sigs.map(([type, weight]) => ({ type, weight, detail: '' }));
+  return { account: { id, name: `Account ${id}` }, signalCount: signals.length, confidence: 'high',
+    people: [{ contact, signals, final: 50 }] };
+}
+
+test('micro-segments: three distinct accounts on the strongest signal form a segment', () => {
+  const r = E.buildSegments([fake('a', [['Inquiry or RFQ', 100]]), fake('b', [['Inquiry or RFQ', 90]]), fake('c', [['Inquiry or RFQ', 80]])]);
+  assert.deepEqual(r.segments.map(s => [s.name, s.accountIds.length]), [['Inquiry', 3]]);
+  assert.equal(r.exceptions.length, 0);
+  assert.ok(r.recs.every(x => !x.fallback));
+});
+
+test('micro-segments: fewer than three accounts on a signal → grouped on the next signal, runner-up is the strongest signal offering', () => {
+  const r = E.buildSegments([
+    fake('a', [['Inquiry or RFQ', 100], ['Webinar attended', 40]]),
+    fake('b', [['Webinar attended', 60]]),
+    fake('c', [['Content download', 50]]),
+  ]);
+  assert.deepEqual(r.segments.map(s => [s.name, s.accountIds.sort()]), [['Engagement', ['a', 'b', 'c']]]);
+  const a = r.recs.find(x => x.account.id === 'a');
+  assert.equal(a.prominent, 'Inquiry');
+  assert.equal(a.fallback, true);
+  assert.equal(a.groupedOn.type, 'Webinar attended');
+  assert.equal(a.runnerUp.action, E.CONFIG.segmentLibrary.Inquiry[0]);
+  assert.ok(a.runnerUp.fromStrongest);
+  assert.match(a.runnerUp.reason, /strongest signal is Inquiry or RFQ \(Inquiry\), but fewer than 3 accounts share it/);
+});
+
+test('micro-segments: no account is in two segments, and leftovers are exceptions', () => {
+  const r = E.buildSegments([
+    fake('a', [['Inquiry or RFQ', 100], ['Capital project', 70]]),
+    fake('b', [['Inquiry or RFQ', 95], ['Capital project', 70]]),
+    fake('c', [['Inquiry or RFQ', 90]]),
+    fake('d', [['Capital project', 80]]),
+    fake('e', [['Leadership change', 30]]),
+  ]);
+  const ids = r.segments.flatMap(s => s.accountIds);
+  assert.equal(new Set(ids).size, ids.length);
+  assert.deepEqual(r.segments.map(s => s.name), ['Inquiry']);
+  assert.deepEqual(r.exceptions.map(x => x.account.id), ['d', 'e']);
+  assert.match(r.exceptions[0].exception, /Segment too small/);
+});
+
+test('micro-segments on the sample: every scored account placed once, all prospects get an action', () => {
+  const { sig, leads } = run();
+  const scored = E.scoreList({ accounts: leads.accounts, contacts: leads.contacts }, sig);
+  const r = E.buildSegments(scored);
+  const ids = r.segments.flatMap(s => s.accountIds);
+  assert.equal(new Set(ids).size, ids.length);
+  assert.equal(ids.length + new Set(r.exceptions.map(x => x.account.id)).size, r.accountsConsidered);
+  assert.ok(r.segments.every(s => s.accountIds.length >= 3));
+  assert.ok(r.recs.every(x => x.action && x.signal));
+});
+
+test('drafts follow the outreach rules: short subject, short body, interest question, LinkedIn note under 200', () => {
+  const { sig, leads } = run();
+  const r = E.buildSegments(E.scoreList({ accounts: leads.accounts, contacts: leads.contacts }, sig));
+  for (const rec of r.recs) for (const action of [rec.action, rec.runnerUp && rec.runnerUp.action].filter(Boolean)) {
+    const d = E.draftFor(rec, action);
+    const text = JSON.stringify(d);
+    assert.doesNotMatch(text, /yokogawa/i);
+    if (d.channel === 'Email') {
+      assert.ok(d.subject.split(/\s+/).length <= 4, d.subject);
+      assert.ok(d.words <= 90, `${d.words} words`);
+      assert.match(d.body, /\?\n/);
+    }
+    if (d.channel === 'LinkedIn') {
+      assert.ok(d.note.length <= 200);
+      assert.doesNotMatch(d.note, /\?$/);
+    }
+  }
+  const farah = r.recs.find(x => x.contact.name === 'Farah Aziz');
+  assert.equal(E.recommendChannel(farah, farah.action).channel, 'LinkedIn');
+});
+
+test('channel rules: route actions are tasks, inquiry follow-up is a call, no email or LinkedIn is a call', () => {
+  const rec = { contact: { name: 'Pat Lee', email: '', emailVerified: false, linkedin: '' } };
+  assert.equal(E.recommendChannel(rec, 'Route to the service owner').channel, 'Task');
+  assert.equal(E.recommendChannel(rec, 'Call to follow up on the inquiry').channel, 'Call');
+  assert.equal(E.recommendChannel(rec, 'Offer a renewal review').channel, 'Call');
+});

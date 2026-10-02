@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Next Best Action — DemandAI</title>
+<title>Micro-segments &amp; NBA — DemandAI</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -178,7 +178,7 @@ input,textarea,select{font:inherit;}
 .co-ind{font-size:10.5px;color:var(--i3);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 
 /* Score badges */
-.sc{display:inline-flex;align-items:center;justify-content:center;min-width:34px;height:20px;padding:0 5px;border-radius:4px;font-family:var(--fm);font-size:11px;font-weight:700;white-space:nowrap;}
+.sc{display:inline-flex;align-items:center;justify-content:center;min-width:34px;height:20px;padding:0 5px;border-radius:4px;font-family:var(--fm);font-size:11px;font-weight:700;}
 .sc-h{background:var(--pos-lt);color:var(--pos);}
 .sc-m{background:var(--warn-lt);color:var(--warn);}
 .sc-l{background:var(--neg-lt);color:var(--neg);}
@@ -366,6 +366,60 @@ input,textarea,select{font:inherit;}
 /* Toast */
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--i1);color:#fff;font-size:12.5px;font-weight:500;padding:9px 18px;border-radius:999px;z-index:900;pointer-events:none;animation:fadeUp .2s var(--ease);}
 
+
+/* ─── Data tables and tags (Prospecting, Scoring) ─── */
+.dt-wrap{overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none;}
+.dt-wrap::-webkit-scrollbar{display:none;}
+.dt{width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed;font-size:12.5px;}
+.dt th{padding:11px 16px;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--i3);text-align:left;background:var(--s50);border-bottom:1px solid var(--border);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.dt td{padding:13px 16px;color:var(--i2);border-bottom:1px solid var(--s75);vertical-align:middle;line-height:1.45;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dt tr:last-child td{border-bottom:none;}
+.dt tbody tr{transition:background var(--fast);}
+.dt tbody tr:hover td{background:#FAFBFC;}
+.dt tbody tr.click{cursor:pointer;}
+.dt th.num,.dt td.num{text-align:right;}
+.dt td.num{font-family:var(--fm);font-variant-numeric:tabular-nums;}
+.dt td.wrap{white-space:normal;}
+.dt .dt-main{color:var(--i1);font-weight:600;overflow:hidden;text-overflow:ellipsis;}
+.dt .val{color:var(--i1);overflow:hidden;text-overflow:ellipsis;}
+.dt .sub{display:block;font-size:11px;color:var(--i3);margin-top:2px;overflow:hidden;text-overflow:ellipsis;}
+.dt .muted{color:var(--i4);}
+.dt .person{display:flex;align-items:center;gap:10px;min-width:0;}
+.dt .person > div:last-child{min-width:0;}
+.clamp2{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;white-space:normal;}
+.dt-empty{padding:28px;text-align:center;font-size:12.5px;color:var(--i3);}
+.tag{display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 10px;border-radius:999px;font-family:var(--fb);font-size:11px;font-weight:600;letter-spacing:0;text-transform:none;white-space:nowrap;background:var(--s75);color:var(--i2);vertical-align:middle;}
+.tag::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0;}
+.tag-green{background:#E8F5EE;color:#24704F;}
+.tag-amber{background:#FDF2E1;color:#A8620F;}
+.tag-red{background:#FBEAEA;color:#A83A3A;}
+.tag-blue{background:#E4F2FB;color:#00659A;}
+.tag-violet{background:#F0EAF8;color:#6A4290;}
+.tag-teal{background:#E3F4F2;color:#1B7369;}
+.tag-pink{background:#FBE9F1;color:#A1386A;}
+.tag-grey{background:#EEF1F4;color:#5B6774;}
+.tags{display:flex;flex-wrap:wrap;gap:6px;}
+
+/* ─── Checks pop-up ─── */
+@keyframes ckspin{to{transform:rotate(360deg);}}
+@keyframes ckpop{from{transform:scale(.6);opacity:0;}to{transform:scale(1);opacity:1;}}
+.ck{width:22px;height:22px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;}
+.ck-wait{border:2px solid var(--s100);}
+.ck-run{border:2.5px solid var(--brand-lt);border-top-color:var(--brand);animation:ckspin .7s linear infinite;}
+.ck-ok{background:var(--pos);color:#fff;animation:ckpop .2s var(--ease);}
+.ck-warn{background:var(--warn);color:#fff;animation:ckpop .2s var(--ease);}
+.ck-stop{background:var(--neg);color:#fff;animation:ckpop .2s var(--ease);}
+.ck-info{background:var(--s300);color:#fff;animation:ckpop .2s var(--ease);}
+.ck-row{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--s75);transition:opacity var(--base);}
+.ck-row.pending{opacity:.45;}
+
+/* ─── Checkboxes: grey when empty, brand colour when ticked ─── */
+.dt input[type=checkbox]{-webkit-appearance:none;appearance:none;width:16px;height:16px;margin:0;border-radius:4px;border:1.5px solid var(--s200);background:var(--s75);cursor:pointer;vertical-align:middle;display:inline-grid;place-content:center;transition:background var(--fast),border-color var(--fast);}
+.dt input[type=checkbox]:hover{border-color:var(--s300);}
+.dt input[type=checkbox]:checked,.dt input[type=checkbox]:indeterminate{background:var(--brand);border-color:var(--brand);}
+.dt input[type=checkbox]:checked::after{content:'';width:9px;height:5px;border:2px solid #fff;border-top:0;border-right:0;transform:translateY(-1px) rotate(-45deg);}
+.dt input[type=checkbox]:indeterminate::after{content:'';width:8px;height:2px;background:#fff;border-radius:1px;}
+.dt input[type=checkbox]:focus-visible{outline:2px solid var(--brand-mid);outline-offset:2px;}
 </style>
 </head>
 <body>
@@ -438,70 +492,13 @@ input,textarea,select{font:inherit;}
 </nav>
 
 <!-- ════ MAIN ════ -->
-<main class="main">
-  <div class="topbar">
-    <div class="topbar-l">
-      <span class="tb-title">Next Best Action</span>
-      <span class="tb-badge badge-live"><span class="badge-dot"></span>Live · routing engine</span>
-    </div>
-    <div class="topbar-r">
-    </div>
-  </div>
-
-  <div class="ftabs">
-    <div class="ftab active">All accounts <span class="ftab-cnt" id="tabCnt">—</span></div>
-  </div>
-
-  <div class="canvas" id="canvas">
-
-    <div class="stats">
-      <div class="stat"><div class="stat-lbl">Leads to review</div><div class="stat-val sv1" id="statTotal">—</div><div class="stat-sub">total in queue</div></div>
-      <div class="stat"><div class="stat-lbl">Auto-routed</div><div class="stat-val sv4" id="statAuto">—</div><div class="stat-sub">proven pattern</div></div>
-      <div class="stat"><div class="stat-lbl">Needs review</div><div class="stat-val sv3" id="statReview">—</div><div class="stat-sub">first attempt</div></div>
-      <div class="stat"><div class="stat-lbl">Runner-up available</div><div class="stat-val sv2" id="statHold">—</div><div class="stat-sub">an alternative action exists</div></div>
-      <div class="stat" style="cursor:pointer" onclick="jumpToMeetingsBooked()" title="Click to open"><div class="stat-lbl">🎉 Meetings booked</div><div class="stat-val" style="color:var(--pos)" id="statMeetings">—</div><div class="stat-sub">prep script ready — click</div></div>
-    </div>
-
-    <div id="segmentGrid"></div>
-
-    <div class="score-list" id="accountListWrap" style="display:none">
-      <div class="sl-toolbar" id="bulkBar" style="display:none;background:var(--brand-lt);">
-        <div style="display:flex;align-items:center;gap:10px;flex:1">
-          <span style="font-size:12.5px;font-weight:600;color:var(--brand-dk)"><span id="bulkCount">0</span> selected</span>
-
-          <button class="btn btn-primary btn-sm" onclick="bulkSend()">Send selected</button>
-        </div>
-        <button class="btn btn-ghost btn-sm" onclick="clearSelection()">Clear</button>
-      </div>
-      <div class="sl-toolbar" id="normalBar">
-        <div class="crumb-link" onclick="showSegments()" style="cursor:pointer;display:flex;align-items:center;gap:5px;font-size:12px;color:var(--i3);margin-right:10px">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
-          All segments
-        </div>
-        <div class="sl-srch">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="color:var(--i3);flex-shrink:0"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-          <input type="text" placeholder="Search accounts…" oninput="filterList(this.value)">
-        </div>
-      </div>
-      <div class="sl-head" style="grid-template-columns:28px minmax(160px,2.5fr) 130px 110px 1fr 32px;">
-        <div class="sl-th"><input type="checkbox" id="selectAllBox" onclick="toggleSelectAll(this)" style="cursor:pointer"></div>
-        <div class="sl-th">Account</div>
-        <div class="sl-th">Segment</div>
-        <div class="sl-th">Routing</div>
-        <div class="sl-th">Signal</div>
-        <div class="sl-th"></div>
-      </div>
-      <div id="scoreListBody"></div>
-    </div>
-
-  </div><!-- /canvas -->
-</main>
+<main class="main" id="mainArea"></main>
 
 <!-- Detail drawer -->
-<div class="detail-drawer" id="detailDrawer" style="width:420px">
+<div class="detail-drawer" id="detailDrawer">
   <div class="drawer-hdr">
     <div>
-      <div class="drawer-title" id="detTitle">Account detail</div>
+      <div class="drawer-title" id="detTitle">Recommendation</div>
       <div class="drawer-sub" id="detSub">—</div>
     </div>
     <div class="drawer-close" onclick="closeDrawer()">
@@ -510,460 +507,566 @@ input,textarea,select{font:inherit;}
   </div>
   <div class="drawer-body" id="detBody">
     <div class="detail-empty" style="padding:40px 0">
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--i4)" stroke-width="1.5" stroke-linecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-      <div style="font-size:11.5px;color:var(--i4);line-height:1.5;text-align:center">Click any row<br>to see the drafted message</div>
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--i4)" stroke-width="1.5" stroke-linecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      <div style="font-size:11.5px;color:var(--i4);line-height:1.5;text-align:center">Click any row<br>to see the breakdown</div>
     </div>
   </div>
 </div>
 </div><!-- /shell -->
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="demandai-engine.js"></script>
+<script src="demandai-sample-data.js"></script>
 <script>
 function showToast(msg){document.querySelectorAll('.toast').forEach(t=>t.remove());const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2600);}
-function toggleDD(id){const el=document.getElementById(id);if(!el)return;const was=el.classList.contains('open');document.querySelectorAll('.ddm.open').forEach(m=>m.classList.remove('open'));if(!was){el.classList.add('open');setTimeout(()=>{document.addEventListener('click',function c(e){if(!el.contains(e.target)){el.classList.remove('open');document.removeEventListener('click',c);}});},0);}}
-function closeDD(id){document.getElementById(id)?.classList.remove('open');}
-
-const NBA_QUEUE = [
-  {id:'l8', name:'Daniel Voss', title:'VP Operations', co:'Continental Polymer Works', priority:93, action:'Modernisation', chosenAction:'Propose a migration or upgrade discussion', channel:'Email', channelWhy:'Verified, sendable email — no warm-path or LinkedIn needed to pick the channel.', routed:'auto', confidence:'high', team:'NA Chemicals — Enterprise',
-   signal:'Their SAP contract renews in 41 days, and a competitor\u2019s usage numbers on the incumbent system are already trending down.', signalSrc:'HG Insights Contracts', format:'email',
-   runnerUp:{action:'Offer a site assessment', reason:'Also fits the renewal signal, but the migration case study is a stronger match to a usage-decline pattern specifically.', chosenReason:'Strongest match to a renewal-window trigger with a usage-decline signal on the incumbent.'},
-   emailSubj:'Congrats on the expansion — a question about your renewal timeline',
-   email:`Hi Daniel,\n\nSaw Continental Polymer's capacity expansion announcement — congratulations on the growth.\n\nSeparately, I noticed your current process control contract is up for renewal in the next couple of months. A few of our chemicals-sector customers have used a renewal cycle like this to pressure-test whether their existing DCS setup still fits a larger footprint.\n\nWorth a 20-minute conversation before that renewal date locks you in for another term?\n\nBest,\nClient Team`,
-   meetingBooked:true, sentDaysAgo:5, outcome:'meeting-booked', outcomeReportedBy:'Pavan Kumar',
-   meetingPrep:{opener:'Thanks for making time, Daniel — I know the renewal window is tight, so I\u2019ll keep this focused.',
-     questions:['What\u2019s actually driving the capacity expansion — new lines, new sites, or both?','Where has the current DCS setup felt like it\u2019s straining as you\u2019ve scaled?','Who else needs to be in the room before a renewal decision locks in?'],
-     objection:'"We just don\u2019t have bandwidth to evaluate anything before the renewal date." \u2192 A comparison doesn\u2019t require switching — it just means the renewal isn\u2019t a blind commitment. We can scope the comparison to fit whatever time you actually have.',
-     ask:'Propose a technical session with their automation team within two weeks, before the renewal date locks in.'}},
-  {id:'l4', name:'Mark Delacroix', title:'Plant Manager', co:'Cascade Power Systems', priority:41, action:'Modernisation', chosenAction:'Follow up on an inquiry or RFQ', channel:'Call', channelWhy:'No verified email, no LinkedIn URL — phone number on file is the only viable channel.', routed:'review', confidence:'low', team:null,
-   signal:'Hiring surge — 3 process engineering roles posted in the last two weeks, often a precursor to a capacity or modernisation project.', signalSrc:'PredictLeads', format:'call',
-   callOpener:`"Hi Mark, this is [name] from Client — I saw Cascade's been hiring process engineers and wanted to ask, is that tied to a capacity project? I'll keep this to two minutes."`,
-   runnerUp:{action:'Invite to a product demo', reason:'Reasonable given the hiring signal alone, but a cold call fits a phone-only contact better than an email-based demo invite.', chosenReason:'Only viable channel (no email or LinkedIn), so the action had to be one deliverable by call.'}},
-  {id:'l1', name:'Karen Whitfield', title:'VP Operations', co:'Meridian Chemical Corp', priority:88, action:'Project', chosenAction:'Share a relevant case study or reference project', channel:'Email', channelWhy:'Verified, sendable email — default for a Project-segment first touch.', routed:'auto', confidence:'high', team:'NA Chemicals — Enterprise', isNew:true, sentDaysAgo:3,
-   signal:'Their team has been actively comparing process control platforms this month, and their current contract renews in 34 days.', signalSrc:'G2 Buyer Intent', format:'email',
-   emailSubj:'Noticed your team evaluating process control options',
-   email:`Hi Karen,\n\nYour team's research activity around process control platforms caught our attention this week.\n\nIf you're early in that evaluation, happy to share how a few similarly-sized chemicals operators approached the same decision.\n\nOpen to a short call this week or next?\n\nBest,\nClient Team`},
-  {id:'l12', name:'Robert Achebe', title:'Chief Operating Officer', co:'Trident Refining', priority:84, action:'Leadership', chosenAction:'Introduction to a new leader in a buying role', channel:'DM', channelWhy:'Warm-path exists (a colleague worked with him previously) — DM first, per the Leadership segment\u2019s default, then email.', routed:'auto', confidence:'high', team:'EMEA Oil & Gas — Enterprise', caughtByWatch:true, sentDaysAgo:9,
-   signal:'Robert just moved into this role from an account you\u2019ve already closed — he\u2019s used your platform before and knows what it does.', signalSrc:'LinkedIn job-change alerts', format:'video',
-   emailSubj:'Congratulations on the move to Trident, Robert',
-   email:`Hi Robert,\n\nCongratulations on stepping into the COO role at Trident Refining.\n\nWe worked together a few years back when you were leading operations at Vantage Process Group. Given you're settling into a new environment, happy to share what a similar transition looked like for a peer of yours.\n\nBest,\nClient Team`,
-   dmNote:'Congratulations on the move to Trident \u2014 we worked together a while back at Vantage Process Group.',
-   dmMessage:`Hi Robert, congratulations again on the COO role. Given you're settling in, happy to share what a similar platform transition looked like for a peer of yours at another refinery \u2014 no pressure, just useful context.`},
-  {id:'l7', name:'Rebecca Lindqvist', title:'Director of Automation', co:'Ridgeline Utilities', priority:58, action:'Regulation', chosenAction:'Invite to a webinar or event', channel:'Email', channelWhy:'Regulation segment defaults to email — compliance content reads better as a document, not a DM.', routed:'review', confidence:'medium', team:null,
-   signal:'Their grid-reliability audit window opens in 70 days — worth getting ahead of before it becomes urgent.', signalSrc:'Public regulatory calendars', format:'onepager',
-   emailSubj:'A compliance date worth getting ahead of',
-   email:`Hi Rebecca,\n\nRidgeline's grid-reliability audit window opens in about ten weeks. I've put together a short one-pager laying out the actual dates and what typically needs to be true by each of them.\n\nBest,\nClient Team`},
-  {id:'l3', name:'Priya Ramaswamy', title:'Chief Digital Officer', co:'Ferro Dynamics Ltd', priority:53, action:'Project', chosenAction:'Consideration message on the use case', channel:'DM', channelWhy:'No verified email on file, but a LinkedIn URL exists — LinkedIn-only case, so DM.', routed:'review', confidence:'low', team:null,
-   signal:'Ferro Dynamics closed a Series C three weeks ago — funding rounds like this often kick off a fresh evaluation of the operational stack.', signalSrc:'Crunchbase', format:'email',
-   emailSubj:'Congratulations on the Series C',
-   email:`Hi Priya,\n\nCongratulations on the Series C. Growth rounds like this often trigger a rethink of the digital backbone underneath manufacturing operations.\n\nBest,\nClient Team`,
-   dmNote:'Congratulations on the Series C for Ferro Dynamics \u2014 exciting stage.',
-   dmMessage:`Hi Priya, congratulations again on the raise. Growth rounds like this often trigger a rethink of the digital backbone underneath manufacturing ops \u2014 happy to share how a couple of similarly-staged operators approached sequencing that.`},
-  {id:'l6', name:'Thomas Okafor', title:'Head of Process Safety', co:'Altair Petrochemicals', priority:49, action:'Modernisation', chosenAction:'Offer a site assessment or health check', channel:'Email', channelWhy:'Verified, sendable email.', routed:'review', confidence:'medium', team:null, selfCorrected:true,
-   signal:'Their incumbent DCS platform is showing a usage-decline pattern — often an early sign of reliability issues before they hit the plant floor.', signalSrc:'HG Insights AI Maturity', format:'email',
-   emailSubj:'A pattern we\u2019re seeing on your incumbent platform',
-   email:`Hi Thomas,\n\nWe're seeing a usage-decline pattern on the DCS platform Altair currently runs. Given your process-safety mandate, that's usually worth a proactive look.\n\nBest,\nClient Team`},
-  {id:'l5', name:'Isabelle Perrot', title:'VP Manufacturing', co:'Solvex Industrial', priority:66, action:'Modernisation', chosenAction:'Offer a site assessment or health check', channel:'Email', channelWhy:'Verified, sendable email.', routed:'review', confidence:'medium',
-   signal:'Their contract with a competitor renews in 58 days — a real window to make the case.', signalSrc:'HG Insights Contracts', format:'email',
-   emailSubj:'A cost question ahead of your renewal window',
-   email:`Hi Isabelle,\n\nYour current contract looks to be up for renewal in the next couple of months. Worth a quick look at where operating cost typically shows up beyond the licence line.\n\nBest,\nClient Team`},
-  {id:'exp1', name:'Lena Fischer', title:'VP Digital', co:'NorthGate Energy Solutions', priority:71, action:'Modernisation', chosenAction:'Cross-sell to an existing customer site', channel:'Email', channelWhy:'Verified, sendable email — existing account, own install-base lifecycle trigger.', routed:'review', confidence:'medium', team:null, existingCustomer:true, isNew:true,
-   signal:'Usage data shows they\u2019re nearing capacity on their current module — a cross-sell opportunity on an existing account, not a renewal risk.', signalSrc:'Internal CRM — usage data', format:'email',
-   emailSubj:'A capacity question on your current deployment',
-   email:`Hi Lena,\n\nYour usage data has been climbing steadily — approaching the ceiling on what your current module handles.\n\nBest,\nClient Team`},
-  {id:'in1', name:'Marcus Webb', title:'Head of IT', co:'Solenne Manufacturing', priority:44, action:'Engagement', chosenAction:'Follow up on an inquiry or RFQ', channel:'Email', channelWhy:'Verified, sendable email — Phase 3 segment, used early since Teams-inbound capture already exists.', routed:'review', confidence:'low', team:null, originatedFrom:'teams', isNew:true,
-   signal:'They asked a question about DCS integration timelines in your Teams channel — captured automatically, not sourced outbound.', signalSrc:'Microsoft Teams — inbound capture', format:'email',
-   emailSubj:'Following up on your integration-timeline question',
-   email:`Hi Marcus,\n\nFollowing up on your question about DCS integration timelines. For a deployment your size, a typical integration runs 8–12 weeks end to end.\n\nBest,\nClient Team`},
-];
-const NEW_SEGMENTS = ['Engagement'];
-const ROUTE_LBL={auto:'AUTO-ROUTED',review:'NEEDS REVIEW',onhold:'ON HOLD'};
-const ROUTE_CLS={auto:'sc-h',review:'sc-m',onhold:'delta-flat'};
-const CONF_LBL={high:'High confidence',medium:'Medium confidence',low:'Low confidence'};
-const CONF_CLS={high:'sc-h',medium:'sc-m',low:'sc-l'};
-
-
-
-let drillSeg=null, searchQ='', selectedId=null;
-function initials(n){return n.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();}
-function avColor(id){const c=['#7D52A2','#0094DA','#FF8820','#2E7D5A','#B23F3F'];let h=0;for(const ch of id)h+=ch.charCodeAt(0);return c[h%c.length];}
-
-function segmentList(){
-  const map={};
-  NBA_QUEUE.forEach(l=>{(map[l.action]=map[l.action]||[]).push(l);});
-  return Object.entries(map).map(([name,accts])=>({name,accounts:accts,isNew:NEW_SEGMENTS.includes(name)}))
-    .sort((a,b)=>b.accounts.length-a.accounts.length);
-}
-
-function showSegments(){
-  drillSeg=null; selectedId=null; searchQ=''; if(typeof selectedIds!=='undefined') selectedIds.clear();
-  document.getElementById('segmentGrid').style.display='grid';
-  document.getElementById('accountListWrap').style.display='none';
-  renderSegmentGrid();
-  renderEmptyDrawer();
-}
-function renderSegmentGrid(){
-  const segs=segmentList();
-  document.getElementById('segmentGrid').style.display='grid';
-  document.getElementById('segmentGrid').style.cssText='display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:0';
-  document.getElementById('segmentGrid').innerHTML = segs.map(s=>{
-    const autoN=s.accounts.filter(a=>a.routed==='auto').length;
-    const holdN=s.accounts.filter(a=>a.routed==='onhold').length;
-    const meetN=s.accounts.filter(a=>a.meetingBooked).length;
-    return `
-    <div class="panel" style="cursor:pointer;transition:box-shadow .12s" onclick="openSegment('${s.name}')" onmouseover="this.style.boxShadow='var(--sh)'" onmouseout="this.style.boxShadow='none'">
-      <div class="panel-body">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-          <span style="font-family:var(--fd);font-size:14px;font-weight:700;color:var(--i1)">${s.name}</span>
-          ${s.isNew?'<span style="width:6px;height:6px;border-radius:50%;background:var(--brand);flex-shrink:0" title="New segment"></span>':''}
-        </div>
-        <div style="font-family:var(--fd);font-size:26px;font-weight:700;color:var(--i1);letter-spacing:-.02em;margin-bottom:6px">${s.accounts.length}</div>
-        <div style="font-size:11px;color:var(--i3)">${autoN} auto-routed${holdN?` · ${holdN} on hold`:''}</div>
-        ${meetN?`<div style="margin-top:8px;font-size:10.5px;color:var(--pos);font-weight:600">🎉 ${meetN} meeting${meetN>1?'s':''} booked</div>`:''}
-      </div>
-    </div>`;
-  }).join('');
-}
-function openSegment(name){
-  drillSeg=name; selectedId=null; searchQ=''; if(typeof selectedIds!=='undefined') selectedIds.clear();
-  document.getElementById('segmentGrid').style.display='none';
-  document.getElementById('accountListWrap').style.display='block';
-  document.querySelector('#accountListWrap .crumb-link').innerHTML = `
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
-    All segments <span style="color:var(--i1);font-weight:600;margin-left:4px">/ ${name}</span>`;
-  renderList();
-  renderEmptyDrawer();
-}
-function filterList(q){searchQ=q.toLowerCase();renderList();}
-function filteredList(){
-  let list=NBA_QUEUE.filter(l=>l.action===drillSeg);
-  if(searchQ) list=list.filter(l=>l.name.toLowerCase().includes(searchQ)||l.co.toLowerCase().includes(searchQ));
-  return list;
-}
-function renderEmptyDrawer(){
-  document.getElementById('detTitle').textContent='Select an account';
-  document.getElementById('detSub').textContent='—';
-  document.getElementById('detBody').innerHTML = `<div class="detail-empty" style="padding:40px 0"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--i4)" stroke-width="1.5" stroke-linecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg><div style="font-size:11.5px;color:var(--i4);line-height:1.5;text-align:center">Click any row<br>to see the drafted message</div></div>`;
-  document.getElementById('detailDrawer').classList.remove('open');
-}
-
-let selectedIds = new Set();
-function renderList(){
-  const list=filteredList();
-  document.getElementById('scoreListBody').innerHTML = list.length ? list.map(l=>`
-    <div class="sl-row ${l.id===selectedId?'selected':''}" style="grid-template-columns:28px minmax(160px,2.5fr) 130px 110px 1fr 32px;">
-      <div onclick="event.stopPropagation()"><input type="checkbox" ${selectedIds.has(l.id)?'checked':''} onchange="toggleRowSelect('${l.id}',this)" style="cursor:pointer"></div>
-      <div class="co-cell" onclick="selectRow('${l.id}')" style="cursor:pointer"><div class="co-av" style="background:${avColor(l.id)}">${initials(l.name)}</div><div><div class="co-nm">${l.name}${l.isNew?' <span style="font-size:8.5px;font-weight:800;color:var(--brand-dk);background:var(--brand-lt);padding:1px 6px;border-radius:999px">NEW</span>':''}${l.meetingBooked?' <span style="font-size:8.5px;font-weight:800;color:var(--pos);background:var(--pos-lt);padding:1px 6px;border-radius:999px">🎉 MEETING BOOKED</span>':''}${l.channel==='Call'?' <span style="font-size:8.5px;font-weight:700;color:var(--i3);background:var(--s75);padding:1px 6px;border-radius:999px">☎ CALL</span>':''}${(l.sentDaysAgo && !l.outcome)?` <span style="font-size:8.5px;font-weight:800;color:${l.sentDaysAgo>=7?'var(--neg)':'var(--warn)'};background:${l.sentDaysAgo>=7?'var(--neg-lt)':'var(--warn-lt)'};padding:1px 6px;border-radius:999px">⏱ ${l.sentDaysAgo}D, NO OUTCOME</span>`:''}</div><div class="co-ind">${l.co}</div></div></div>
-      <div onclick="selectRow('${l.id}')" style="font-size:11px;color:var(--i2);cursor:pointer">${l.action}</div>
-      <div onclick="selectRow('${l.id}')" style="cursor:pointer"><span class="sc ${ROUTE_CLS[l.routed]}">${ROUTE_LBL[l.routed]}</span></div>
-      <div onclick="selectRow('${l.id}')" style="font-size:11px;color:var(--i3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer">${l.signal}</div>
-      <div class="dd" onclick="event.stopPropagation()">
-        <button class="btn btn-ghost btn-sm" style="padding:0;width:28px;justify-content:center" onclick="toggleDD('rowmenu-${l.id}')">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
-        </button>
-        <div class="ddm" id="rowmenu-${l.id}" style="right:0;left:auto">
-          <div class="ddi" onclick="selectRow('${l.id}');closeDD('rowmenu-${l.id}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/></svg>View ${l.channel==='Call'?'call opener':l.channel==='DM'?'DM':'message'}</div>
-          <div class="ddi" onclick="navigator.clipboard&&navigator.clipboard.writeText(${l.channel==='Call'?JSON.stringify(l.callOpener||''):l.channel==='DM'?JSON.stringify((l.dmNote||'')+'\\n\\n'+(l.dmMessage||'')):JSON.stringify((l.emailSubj||'')+'\\n\\n'+(l.email||''))});showToast('Copied to clipboard');closeDD('rowmenu-${l.id}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copy ${l.channel==='Call'?'opener':l.channel==='DM'?'DM':'email'}</div>
-          <div class="dd-sep"></div>
-          <div class="ddi" onclick="showToast('Marked as seen — logged to the outcome record');closeDD('rowmenu-${l.id}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Mark as seen</div>
-        </div>
-      </div>
-    </div>`).join('') : `<div style="padding:40px;text-align:center;color:var(--i3);font-size:12.5px">No accounts match.</div>`;
-  document.getElementById('tabCnt').textContent = list.length;
-  const selAllBox = document.getElementById('selectAllBox');
-  if(selAllBox) selAllBox.checked = list.length>0 && list.every(l=>selectedIds.has(l.id));
-}
-
-function toggleRowSelect(id, el){ if(el.checked) selectedIds.add(id); else selectedIds.delete(id); updateBulkBar(); }
-function toggleSelectAll(el){
-  const list = filteredList();
-  if(el.checked) list.forEach(l=>selectedIds.add(l.id));
-  else list.forEach(l=>selectedIds.delete(l.id));
-  renderList(); updateBulkBar();
-}
-function clearSelection(){ selectedIds.clear(); renderList(); updateBulkBar(); }
-function updateBulkBar(){
-  const n = selectedIds.size;
-  document.getElementById('bulkBar').style.display = n>0 ? 'flex' : 'none';
-  document.getElementById('normalBar').style.display = n>0 ? 'none' : 'flex';
-  document.getElementById('bulkCount').textContent = n;
-}
-function bulkSend(){
-  const ids = Array.from(selectedIds).filter(id=>{ const l=NBA_QUEUE.find(x=>x.id===id); return l && l.routed!=='onhold'; });
-  if(!ids.length){ showToast('Everything selected is on hold — nothing sendable'); return; }
-  showToast(ids.length+' message'+(ids.length>1?'s':'')+' sent');
-  clearSelection();
-}
-function updateStats(){
-  document.getElementById('statTotal').textContent = NBA_QUEUE.length;
-  document.getElementById('statAuto').textContent = NBA_QUEUE.filter(l=>l.routed==='auto').length;
-  document.getElementById('statReview').textContent = NBA_QUEUE.filter(l=>l.routed==='review').length;
-  document.getElementById('statHold').textContent = NBA_QUEUE.filter(l=>l.runnerUp).length;
-  document.getElementById('statMeetings').textContent = NBA_QUEUE.filter(l=>l.meetingBooked).length;
-}
-function revealRunnerUp(id){
-  const l = NBA_QUEUE.find(x=>x.id===id);
-  if(!l.runnerUp) return;
-  document.getElementById('actionPanelBody').innerHTML = `
-    <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--s75);opacity:.5">
-      <span style="font-size:14px;flex-shrink:0">✓</span>
-      <div><div style="font-size:12px;font-weight:700;color:var(--i1);text-decoration:line-through">${l.chosenAction}</div><div style="font-size:11px;color:var(--i3);margin-top:2px">Originally chosen</div></div>
-    </div>
-    <div style="display:flex;align-items:flex-start;gap:8px">
-      <span style="font-size:14px;flex-shrink:0;color:var(--brand)">→</span>
-      <div><div style="font-size:12px;font-weight:600;color:var(--i1)">${l.runnerUp.action} — runner-up</div><div style="font-size:11px;color:var(--i3);margin-top:2px">${l.runnerUp.reason}</div></div>
-    </div>
-    <div style="margin-top:10px"><button class="btn btn-primary btn-sm" onclick="swapToRunnerUp('${id}')">Swap to this action</button></div>
-  `;
-}
-function swapToRunnerUp(id){
-  const l = NBA_QUEUE.find(x=>x.id===id);
-  if(!l.runnerUp) return;
-  const oldAction = l.chosenAction;
-  const newAction = l.runnerUp.action;
-  showToast('Swapped to "'+newAction+'" — logged as a manual swap');
-  l.chosenAction = newAction;
-  l.runnerUp = null;
-  selectRow(id);
-}
-function jumpToMeetingsBooked(){
-  const booked = NBA_QUEUE.find(l=>l.meetingBooked);
-  if(!booked){ showToast('No meetings booked yet — mark one from an account\u2019s drawer'); return; }
-  openSegment(booked.action);
-  setTimeout(()=>selectRow(booked.id), 100);
-}
-
-function selectRow(id){
-  selectedId=id; renderList();
-  const l=NBA_QUEUE.find(x=>x.id===id);
-  document.getElementById('detTitle').textContent=l.name;
-  document.getElementById('detSub').textContent=l.title+' · '+l.co;
-  const badges=[];
-  if(l.caughtByWatch) badges.push('<span class="delta delta-flat">Caught live, not batched</span>');
-  if(l.selfCorrected) badges.push('<span class="delta delta-flat">Auto-adjusted from what didn\u2019t work</span>');
-  if(l.existingCustomer) badges.push('<span class="delta delta-flat">Existing customer — expansion</span>');
-  if(l.originatedFrom==='teams') badges.push('<span class="delta delta-flat">Inbound via Teams</span>');
-  document.getElementById('detBody').innerHTML = `
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
-      <span class="sc ${ROUTE_CLS[l.routed]}">${ROUTE_LBL[l.routed]}</span>
-      <span class="sc ${CONF_CLS[l.confidence]}">${CONF_LBL[l.confidence]}</span>
-    </div>
-    ${badges.length?`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">${badges.join('')}</div>`:''}
-    <div class="panel" style="margin-bottom:12px">
-      <div class="panel-hdr"><span class="panel-ttl">Why this account</span></div>
-      <div class="panel-body" style="font-size:12px;color:var(--i2);line-height:1.6">${l.signal}<div style="margin-top:8px;font-size:10.5px;color:var(--i4)">Source: ${l.signalSrc} · Segment: ${l.action}</div></div>
-    </div>
-    <div class="panel" style="margin-bottom:12px" id="actionPanel">
-      <div class="panel-hdr"><span class="panel-ttl">Next best action</span></div>
-      <div class="panel-body" id="actionPanelBody">
-        <div style="display:flex;align-items:flex-start;gap:8px">
-          <span style="font-size:14px;flex-shrink:0">✓</span>
-          <div><div style="font-size:12px;font-weight:700;color:var(--i1)">${l.chosenAction}</div><div style="font-size:11px;color:var(--i3);margin-top:2px">${l.runnerUp ? l.runnerUp.chosenReason : 'From the agreed action set for this segment.'}</div></div>
-        </div>
-        ${l.runnerUp ? `<div style="margin-top:10px"><button class="btn btn-ghost btn-sm" onclick="revealRunnerUp('${l.id}')">Not the right action?</button></div>` : ''}
-      </div>
-    </div>
-    <div class="panel" style="margin-bottom:12px">
-      <div class="panel-hdr"><span class="panel-ttl">Channel: ${l.channel}</span></div>
-      <div class="panel-body" style="font-size:12px;color:var(--i2);line-height:1.6">${l.channelWhy}</div>
-    </div>
-    ${renderChannelPanel(l)}
-    ${renderMeetingSection(l)}
-  `;
-  document.getElementById('detailDrawer').classList.add('open');
-}
-
-function renderChannelPanel(l){
-  if(l.channel==='Call'){
-    return `
-    <div class="panel" id="msgPanel">
-      <div class="panel-hdr"><span class="panel-ttl">Cold-call opener</span></div>
-      <div class="panel-body" id="msgView">
-        <div style="font-size:11px;color:var(--i3);margin-bottom:8px;font-style:italic">Short, on purpose — you don\u2019t know yet if they\u2019ll pick up. Discovery questions and objection-handling come later, once a meeting is actually booked.</div>
-        <div style="font-size:12px;color:var(--i2);line-height:1.7;white-space:pre-line">${l.callOpener}</div>
-      </div>
-    </div>
-    <div style="display:flex;gap:8px;margin-top:14px">
-      <button class="btn btn-sec btn-sm" style="flex:1;justify-content:center" onclick="navigator.clipboard&&navigator.clipboard.writeText(${JSON.stringify(l.callOpener)});showToast('Copied to clipboard')">Copy</button>
-      <button class="btn btn-primary btn-sm" style="flex:1;justify-content:center" ${l.routed==='onhold'?'disabled':''} onclick="markOutcome('${l.id}','called')">Mark as called</button>
-    </div>`;
-  }
-  if(l.channel==='DM'){
-    return `
-    <div class="panel" id="msgPanel">
-      <div class="panel-hdr">
-        <span class="panel-ttl">LinkedIn DM</span>
-        <button class="btn btn-ghost btn-sm" style="padding:0 6px;gap:4px" onclick="editMessage('${l.id}')">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-          Edit
-        </button>
-      </div>
-      <div class="panel-body" id="msgView">
-        <div style="font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--i3);margin-bottom:4px">Connection note</div>
-        <div style="font-size:12px;color:var(--i2);line-height:1.6;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--s75)">${l.dmNote}</div>
-        <div style="font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--i3);margin-bottom:4px">Message, after acceptance</div>
-        <div style="font-size:12px;color:var(--i2);line-height:1.7">${l.dmMessage}</div>
-      </div>
-    </div>
-    <div style="display:flex;gap:8px;margin-top:14px" id="msgActions">
-      <button class="btn btn-sec btn-sm" style="flex:1;justify-content:center" onclick="navigator.clipboard&&navigator.clipboard.writeText(${JSON.stringify(l.dmNote+'\n\n'+l.dmMessage)});showToast('Copied to clipboard')">Copy</button>
-      <button class="btn btn-primary btn-sm" style="flex:1;justify-content:center" ${l.routed==='onhold'?'disabled':''} onclick="markOutcome('${l.id}','sent')">Mark as sent</button>
-    </div>`;
-  }
-  // Email (default)
-  return `
-    <div class="panel" id="msgPanel">
-      <div class="panel-hdr">
-        <span class="panel-ttl">Email</span>
-        <button class="btn btn-ghost btn-sm" style="padding:0 6px;gap:4px" onclick="editMessage('${l.id}')">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-          Edit
-        </button>
-      </div>
-      <div class="panel-body" id="msgView">
-        <div style="font-size:12.5px;font-weight:700;color:var(--i1);margin-bottom:6px">${l.emailSubj}</div>
-        <div style="font-size:12px;color:var(--i2);line-height:1.7;white-space:pre-line;max-height:220px;overflow-y:auto">${l.email}</div>
-      </div>
-    </div>
-    <div style="display:flex;gap:8px;margin-top:14px" id="msgActions">
-      <button class="btn btn-sec btn-sm" style="flex:1;justify-content:center" onclick="navigator.clipboard&&navigator.clipboard.writeText('${l.emailSubj}\\n\\n'+${JSON.stringify(l.email)});showToast('Copied to clipboard')">Copy</button>
-      <button class="btn btn-primary btn-sm" style="flex:1;justify-content:center" ${l.routed==='onhold'?'disabled':''} onclick="markOutcome('${l.id}','sent')">Mark as sent</button>
-    </div>`;
-}
-
-function markOutcome(id, outcome){
-  showToast(outcome==='called' ? 'Marked as called — logged to the outcome record' : 'Marked as sent — logged to the outcome record');
-}
-
-const OUTCOME_OPTIONS = [
-  {v:'no-response', label:'No response yet'},
-  {v:'replied', label:'Replied — no meeting yet'},
-  {v:'meeting-booked', label:'Meeting booked'},
-  {v:'not-interested', label:'Not interested'},
-];
-function renderMeetingSection(l){
-  if(l.meetingBooked && l.meetingPrep){
-    const mp = l.meetingPrep;
-    return `
-    <div class="panel" style="margin-top:12px;border-color:var(--pos)">
-      <div class="panel-hdr"><span class="panel-ttl">🎉 Meeting booked — prep script</span><button class="btn btn-ghost btn-sm" onclick="reportOutcome('${l.id}')">Change outcome</button></div>
-      <div class="panel-body" style="font-size:12px;color:var(--i2);line-height:1.7">
-        <div style="margin-bottom:10px"><b style="color:var(--i1)">Opener:</b> ${mp.opener}</div>
-        <div style="margin-bottom:10px"><b style="color:var(--i1)">Discovery questions:</b>
-          <ul style="margin:6px 0 0;padding-left:18px">${mp.questions.map(q=>`<li style="margin-bottom:4px">${q}</li>`).join('')}</ul>
-        </div>
-        <div style="margin-bottom:10px"><b style="color:var(--i1)">Objection to pre-empt:</b> ${mp.objection}</div>
-        <div><b style="color:var(--i1)">The ask:</b> ${mp.ask}</div>
-        <div style="margin-top:10px;font-size:10.5px;color:var(--i4);font-style:italic">Generated because ${l.outcomeReportedBy||'you'} reported this outcome as "Meeting booked" — there's no live tracking in this pilot, so nothing is inferred automatically.</div>
-      </div>
-    </div>`;
-  }
-  const currentLabel = l.outcome ? OUTCOME_OPTIONS.find(o=>o.v===l.outcome)?.label : null;
-  return `
-    <div class="panel" style="margin-top:12px">
-      <div class="panel-hdr"><span class="panel-ttl">Outcome</span></div>
-      <div class="panel-body">
-        ${currentLabel ? `<div style="font-size:12px;color:var(--i2);margin-bottom:10px">Currently reported: <b style="color:var(--i1)">${currentLabel}</b></div>` : `<div style="font-size:11.5px;color:var(--i3);margin-bottom:10px;line-height:1.5">No CRM or calendar integration in this pilot — the system can't observe what happened after this was sent. Report it when you know.</div>`}
-        <button id="reportOutcomeBtn" class="btn btn-sec btn-sm" style="width:100%;justify-content:center" onclick="reportOutcome('${l.id}')">${currentLabel ? 'Update outcome' : 'Report outcome'}</button>
-      </div>
-    </div>`;
-}
-function reportOutcome(id){
-  const l = NBA_QUEUE.find(x=>x.id===id);
-  const target = event.target.closest('.panel');
-  target.querySelector('.panel-body').innerHTML = `
-    <div style="font-size:11.5px;color:var(--i3);margin-bottom:10px">What actually happened with ${l.name}? This is reported by whoever's working the account — nothing here is tracked live.</div>
-    <div style="display:flex;flex-direction:column;gap:6px">
-      ${OUTCOME_OPTIONS.map(o=>`<button class="btn ${l.outcome===o.v?'btn-primary':'btn-sec'} btn-sm" style="justify-content:flex-start" onclick="confirmOutcome('${id}','${o.v}')">${o.label}</button>`).join('')}
-    </div>
-  `;
-}
-function confirmOutcome(id, outcome){
-  const l = NBA_QUEUE.find(x=>x.id===id);
-  l.outcome = outcome;
-  l.outcomeReportedBy = 'Pavan Kumar';
-  if(outcome==='meeting-booked'){
-    l.meetingBooked = true;
-    l.meetingPrep = {
-      opener: `Thanks for making the time — I\u2019ll keep this focused given your schedule.`,
-      questions: ['What\u2019s prompting the timing on this now?','Who else would need to be involved in a decision?','What would make this an easy yes vs. a hard no?'],
-      objection: `"We're not ready to move on anything yet." \u2192 This conversation isn't a commitment — it's context-gathering so that when you are ready, it's not a cold start.`,
-      ask: 'Agree a concrete next step before the call ends — a technical session, a proposal, or a specific follow-up date.'
-    };
-    showToast('Outcome reported: Meeting booked — prep script generated, logged to B1');
-  } else {
-    l.meetingBooked = false;
-    l.meetingPrep = null;
-    showToast('Outcome reported: '+OUTCOME_OPTIONS.find(o=>o.v===outcome).label+' — logged to B1');
-  }
-  selectRow(id);
-}
-
-function editMessage(id){
-  const l = NBA_QUEUE.find(x=>x.id===id);
-  const isDM = l.channel==='DM';
-  document.getElementById('msgView').innerHTML = isDM ? `
-    <div style="font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--i3);margin-bottom:4px">Connection note</div>
-    <textarea id="editDmNote" style="width:100%;min-height:60px;border:1px solid var(--bdk);border-radius:var(--rsm);padding:8px 10px;font-size:12px;color:var(--i1);margin-bottom:10px;font-family:var(--fb);resize:vertical;outline:none">${l.dmNote}</textarea>
-    <div style="font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--i3);margin-bottom:4px">Message</div>
-    <textarea id="editDmMsg" style="width:100%;min-height:100px;border:1px solid var(--bdk);border-radius:var(--rsm);padding:8px 10px;font-size:12px;color:var(--i1);font-family:var(--fb);resize:vertical;outline:none">${l.dmMessage}</textarea>
-    <div style="font-size:10.5px;color:var(--warn);margin-top:6px;line-height:1.5">Editing means this won\u2019t count toward the segment\u2019s pattern registration.</div>
-  ` : `
-    <input id="editSubj" value="${l.emailSubj.replace(/"/g,'&quot;')}" style="width:100%;border:1px solid var(--bdk);border-radius:var(--rsm);padding:8px 10px;font-size:12.5px;font-weight:700;color:var(--i1);margin-bottom:8px;font-family:var(--fb);outline:none" onfocus="this.style.borderColor='var(--brand-mid)'" onblur="this.style.borderColor='var(--bdk)'">
-    <textarea id="editBody" style="width:100%;min-height:180px;border:1px solid var(--bdk);border-radius:var(--rsm);padding:10px;font-size:12px;color:var(--i2);line-height:1.7;font-family:var(--fb);resize:vertical;outline:none" onfocus="this.style.borderColor='var(--brand-mid)'" onblur="this.style.borderColor='var(--bdk)'">${l.email}</textarea>
-    <div style="font-size:10.5px;color:var(--warn);margin-top:6px;line-height:1.5">Editing means this won\u2019t count toward the segment\u2019s pattern registration (B2 needs 5 approvals <i>without</i> edits) — still usable, just doesn\u2019t help the cache learn.</div>
-  `;
-  document.getElementById('msgActions').innerHTML = `
-    <button class="btn btn-ghost btn-sm" style="flex:1;justify-content:center" onclick="selectRow('${id}')">Cancel</button>
-    <button class="btn btn-primary btn-sm" style="flex:1;justify-content:center" onclick="saveMessage('${id}')">Save changes</button>
-  `;
-}
-function saveMessage(id){
-  const l = NBA_QUEUE.find(x=>x.id===id);
-  if(l.channel==='DM'){
-    l.dmNote = document.getElementById('editDmNote').value;
-    l.dmMessage = document.getElementById('editDmMsg').value;
-  } else {
-    l.emailSubj = document.getElementById('editSubj').value;
-    l.email = document.getElementById('editBody').value;
-  }
-  l.wasEdited = true;
-  showToast('Draft updated');
-  selectRow(id);
-}
+function initials(n){return String(n).split(' ').filter(Boolean).map(w=>w[0]).join('').slice(0,2).toUpperCase();}
+function avColor(id){const c=['#7D52A2','#0094DA','#FF8820','#2E7D5A','#B23F3F'];let h=0;for(const ch of String(id))h+=ch.charCodeAt(0);return c[h%c.length];}
 function closeDrawer(){ document.getElementById('detailDrawer').classList.remove('open'); }
+function esc(s){return String(s===undefined||s===null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function fallbackDownload(name, text){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'text/csv'}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},0);}
+// On claude.ai the page can't start a download itself: the viewer confirms a save. Opened as a plain file, it downloads directly.
+async function download(name, text){
+  let dl = null;
+  try{ dl = window.claude && window.claude.use ? await window.claude.use('downloads') : null; }catch(e){ dl = null; }
+  if(!dl){ fallbackDownload(name, text); return; }
+  try{ await dl.save({filename:name, data:text}); showToast(name+' saved'); }
+  catch(e){ if(e && e.code==='declined') return; showToast(e && e.code==='rate_limited' ? 'A save is already open' : "This view can't save files"); }
+}
+function todayIso(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+const fmt1 = n => n===undefined||n===null ? '—' : (Math.round(n*10)/10).toLocaleString('en-US',{minimumFractionDigits:n%1?1:0,maximumFractionDigits:1});
+const fmtDate = t => new Date(t).toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'});
 
-/* Prospects sent from Scoring join the queue (hand-off kept in this browser for the POC) */
-(function loadFromScoring(){
-  let items = []; try{ items = JSON.parse(localStorage.getItem('demandai_nba_v1')||'[]'); }catch(e){}
-  items.slice().reverse().forEach(it=>{ if(!NBA_QUEUE.some(l=>l.id===it.id)) NBA_QUEUE.unshift(it); if(!NEW_SEGMENTS.includes(it.action) && !['Modernisation','Project','Leadership','Regulation','Engagement'].includes(it.action)) NEW_SEGMENTS.push(it.action); });
-})();
-showSegments();
-updateStats();
+function readFileToGrids(file){
+  return new Promise((resolve,reject)=>{
+    const isCsv = /\.csv$/i.test(file.name), isXlsx = /\.(xlsx|xls)$/i.test(file.name);
+    if(!isCsv && !isXlsx){ reject(new Error('Use a .csv or .xlsx file')); return; }
+    const reader = new FileReader();
+    reader.onerror = ()=>reject(new Error('Could not read the file'));
+    reader.onload = ev=>{
+      try{
+        if(isCsv){ resolve([{sheet:'(CSV)', grid:DemandAI.parseCSV(ev.target.result)}]); return; }
+        if(typeof XLSX==='undefined'){ reject(new Error('The Excel reader did not load. Save the sheet as CSV and upload that instead')); return; }
+        const wb = XLSX.read(new Uint8Array(ev.target.result),{type:'array',cellDates:true});
+        resolve(wb.SheetNames.map(n=>({sheet:n, grid:XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true,defval:''})})));
+      }catch(e){ reject(e); }
+    };
+    if(isCsv) reader.readAsText(file); else reader.readAsArrayBuffer(file);
+  });
+}
+function pickSheet(grids){
+  const has = g => g.grid.slice(0,10).some(r=>(r||[]).some(c=>String(c).trim().toLowerCase().replace(/\*/g,'').replace(/\s+/g,'_')==='signal_type'));
+  return grids.find(g=>/signal template/i.test(g.sheet) && has(g)) || grids.find(has) || grids[0];
+}
 
-(function boot(){
-  const params=new URLSearchParams(location.search);
-  if(params.get('from')==='scoring'){
-    const ids=(params.get('ids')||'').split(',').filter(Boolean);
-    const matched=NBA_QUEUE.filter(l=>ids.includes(l.id));
-    if(matched.length){
-      showToast(matched.length+' account'+(matched.length>1?'s':'')+' sent from Scoring');
-      openSegment(matched[0].action);
-      setTimeout(()=>selectRow(matched[0].id),150);
-    }
+/* ═══════════════ SHARED PIECES: tables, tags, pop-ups ═══════════════ */
+function table(cols, rows, empty){
+  return `<div class="dt-wrap"><table class="dt">
+    <colgroup>${cols.map(c=>`<col style="width:${c[1]}">`).join('')}</colgroup>
+    <thead><tr>${cols.map(c=>`<th class="${c[2]||''}">${c[0]}</th>`).join('')}</tr></thead>
+    <tbody>${rows || `<tr><td colspan="${cols.length}" class="dt-empty">${empty}</td></tr>`}</tbody>
+  </table></div>`;
+}
+const cell = (v, sub, cls='val') => `<span class="${cls}" title="${esc(v||'')}">${v?esc(v):'<span class="muted">—</span>'}</span>${sub?`<span class="sub" title="${esc(String(sub).replace(/<[^>]+>/g,''))}">${sub}</span>`:''}`;
+const SEG_TONE = {Inquiry:'tag-blue',Modernisation:'tag-violet','Service renewal':'tag-teal',Project:'tag-amber',Leadership:'tag-pink',Engagement:'tag-green'};
+function tagChip(t){ const c = DemandAI.CONFIG.signalTypes[t]; return `<span class="tag ${(c&&SEG_TONE[c.segment])||'tag-grey'}">${esc(t)}</span>`; }
+function tierPill(t){
+  const m = {A:['tag-green','Tier A'],B:['tag-amber','Tier B'],C:['tag-blue','Tier C'],'Watch list':['tag-grey','Watch list'],'Below fit floor':['tag-grey','Below floor'],Excluded:['tag-red','Excluded']}[t];
+  return `<span class="tag ${m[0]}">${m[1]}</span>`;
+}
+function overlay(id){
+  let ov = document.getElementById(id);
+  if(!ov){ ov=document.createElement('div'); ov.id=id; ov.style.cssText='position:fixed;inset:0;background:rgba(20,26,33,.45);z-index:600;display:flex;align-items:center;justify-content:center;padding:16px'; document.body.appendChild(ov); }
+  ov.style.display='flex'; return ov;
+}
+const hide = id => { const el=document.getElementById(id); if(el) el.style.display='none'; };
+function search(fn, ph){ return `<div class="sl-srch"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="color:var(--i3);flex-shrink:0"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><input type="text" placeholder="${ph}" value="${esc(q)}" oninput="q=this.value.toLowerCase();${fn}()"></div>`; }
+const pill = (cur,id,label) => `<div class="seg-pill ${cur===id?'active':''}" onclick="filt='${id}';renderResults()">${label}</div>`;
+
+/* ═══════════════ STATE ═══════════════ */
+const HANDOFF_KEY = 'demandai_nba_handoff_v1';
+let tab = 'new', srcId = null, RUN = null, view = 'segments', filt = 'all', segFilt = null, q = '', renamingId = null, openKey = null;
+const SEL = new Set();
+const segTag = s => s ? `<span class="tag ${SEG_TONE[s]||'tag-grey'}">${esc(s)}</span>` : '<span class="tag tag-grey">Exception</span>';
+function me(){ const r = getRole(); return { who: ROLE_PERSON[r] || r, role: r }; }
+function handoff(){ try{ return JSON.parse(localStorage.getItem(HANDOFF_KEY)||'null'); }catch(e){ return null; } }
+
+/* ═══════════════ START: New segmentation | Segmented lists ═══════════════ */
+function renderStart(t){
+  RUN = null; closeDrawer(); SEL.clear();
+  if(t) tab = t;
+  const runs = DemandAI.loadScorings(), segs = DemandAI.loadSegmentations(), h = handoff();
+  if(srcId && srcId!=='handoff' && !runs.find(r=>r.id===srcId)) srcId = null;
+  if(!srcId) srcId = h ? 'handoff' : runs[0] ? runs[0].id : null;
+  const R = srcId==='handoff' ? h : runs.find(r=>r.id===srcId);
+  const ft = (id,label,n) => `<div class="ftab ${tab===id?'active':''}" onclick="renderStart('${id}')">${label}${n!==undefined?` <span class="ftab-cnt">${n}</span>`:''}</div>`;
+  document.getElementById('mainArea').innerHTML = `
+    <div class="topbar"><div class="topbar-l"><span class="tb-title">Micro-segments &amp; NBA</span><span class="tb-badge badge-neutral">Rules only · you approve every action</span></div></div>
+    <div class="ftabs">${ft('new','New segmentation')}${ft('saved','Segmented lists',segs.length)}</div>
+    <div class="canvas">${tab==='new' ? `
+      <div style="max-width:640px;margin:24px auto 0">
+        <div style="font-family:var(--fd);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--brand);margin-bottom:8px">Step 3 · Micro-segments &amp; NBA</div>
+        <div style="font-family:var(--fd);font-size:22px;font-weight:700;color:var(--i1);margin-bottom:6px">Group scored prospects and pick the next action</div>
+        <div style="font-size:13px;color:var(--i3);margin-bottom:20px;line-height:1.55">Accounts are grouped by the signals they share. Each prospect gets a recommended action, a runner-up and a draft message. Nothing goes out until you approve it, and every decision is logged.</div>
+        <div class="panel">
+          <div class="panel-hdr"><span class="panel-ttl">Scored prospects</span><a href="11-scoring.html" style="font-size:11px;color:var(--brand);font-weight:600;text-decoration:none">Score a list in Scoring →</a></div>
+          <div class="panel-body">
+            ${(h||runs.length) ? `
+            <select onchange="srcId=this.value;renderStart('new')" style="width:100%;padding:9px 11px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:13px;background:var(--surf);color:var(--i1)">
+              ${h?`<option value="handoff" ${srcId==='handoff'?'selected':''}>Sent from Scoring: ${esc(h.name)} (${h.keys.length} prospects)</option>`:''}
+              ${runs.map(r=>`<option value="${r.id}" ${r.id===srcId?'selected':''}>${esc(r.name)}</option>`).join('')}
+            </select>
+            <div style="display:flex;gap:18px;margin-top:10px;font-size:12px;color:var(--i2);flex-wrap:wrap">
+              ${srcId==='handoff' ? `<span><b style="color:var(--i1)">${h.keys.length}</b> prospects selected in Scoring</span>` : `<span><b style="color:var(--i1)">${R.stats.scored}</b> prospects scored · tier A and B are segmented</span>`}
+              <span style="color:var(--i3)">signals from ${esc(R.fileName)} · as of ${esc(R.asOf)}</span>
+            </div>
+            <div style="margin-top:14px"><button class="btn btn-primary btn-sm" onclick="buildFrom('${srcId}')">Build micro-segments →</button></div>`
+            : `<div style="font-size:12.5px;color:var(--i2);line-height:1.6">No scored lists yet. Score a list in <a href="11-scoring.html" style="color:var(--brand);font-weight:600">Scoring</a> and send it here, or try it on the sample data.</div>
+            <div style="margin-top:12px"><button class="btn btn-sec btn-sm" onclick="buildFrom('sample')">Try it on the sample data</button></div>`}
+          </div>
+        </div>
+      </div>` : `
+      <div class="score-list">${table([['Name','26%'],['Scored list','18%'],['Segments','9%','num'],['Prospects','9%','num'],['Approved','9%','num'],['Saved','12%'],['','17%']],
+        segs.map(r=>`<tr>
+          <td><div class="person"><div class="co-av" style="background:${avColor(r.id)}">${initials(r.name)}</div><div style="flex:1;min-width:0">${renamingId===r.id
+            ? `<div style="display:flex;gap:6px;align-items:center"><input id="renameInput" value="${esc(r.name)}" style="flex:1;min-width:0;padding:6px 9px;border:1px solid var(--brand-mid);border-radius:var(--rsm);font-size:12.5px" onkeydown="if(event.key==='Enter')finishRename('${r.id}');if(event.key==='Escape'){renamingId=null;renderStart('saved')}"><button class="btn btn-primary btn-sm" onclick="finishRename('${r.id}')">Save</button></div>`
+            : `<div style="display:flex;align-items:center;gap:6px;min-width:0"><span class="dt-main" title="${esc(r.name)}">${esc(r.name)}</span><button title="Rename" onclick="startRename('${r.id}')" style="flex-shrink:0;color:var(--i3);display:flex;padding:2px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button></div><span class="sub">As of ${esc(r.src.asOf)}</span>`}</div></div></td>
+          <td>${cell(r.src.listName, r.src.sample?'Sample data':'')}</td>
+          <td class="num">${r.stats.segments}</td>
+          <td class="num">${r.stats.prospects}</td>
+          <td class="num">${Object.values(r.decisions||{}).filter(d=>d.status==='Approved'||d.status==='Sent').length}</td>
+          <td>${cell(fmtDate(r.createdAt), new Date(r.createdAt).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}))}</td>
+          <td style="text-align:right"><button class="btn btn-sec btn-sm" onclick="openRun('${r.id}')">Open</button> <button class="btn btn-ghost btn-sm" onclick="removeRun('${r.id}')">Delete</button></td>
+        </tr>`).join(''), `No segmented lists yet. <a href="#" onclick="renderStart('new');return false" style="color:var(--brand);font-weight:600">Build micro-segments</a> from a scored list.`)}
+      </div>`}
+    </div>`;
+}
+
+/* ═══════════════ BUILD: re-score with the engine, then segment ═══════════════ */
+function sourceFor(id){
+  if(id==='sample') return { sample:true, name:'Sample prospects', listName:'Sample prospects', fileName:DemandAISample.SIGNAL_FILE, sheet:'Signal template', grid:DemandAISample.SIGNALS, asOf:DemandAISample.SAMPLE_AS_OF, sandbox:true, keys:null };
+  if(id==='handoff') return handoff();
+  const r = DemandAI.getScoring(id);
+  return r && { name:r.name, listId:r.listId, listName:r.listName, fileName:r.fileName, sheet:r.sheet, grid:r.grid, asOf:r.asOf, sandbox:r.sandbox, keys:null };
+}
+function compute(src){
+  let list;
+  if(src.sample){ const r = DemandAI.processLeads(DemandAISample.LEADS, {file:DemandAISample.LEAD_FILE, sheet:'Lead template'}); list = {accounts:r.accounts, contacts:r.contacts}; }
+  else { const L = DemandAI.getList(src.listId); if(!L) return null; list = JSON.parse(JSON.stringify({accounts:L.accounts, contacts:L.contacts})); }
+  const sig = DemandAI.processSignals(src.grid, list, {file:src.fileName, sheet:src.sheet, asOf:src.asOf});
+  const scored = DemandAI.scoreList(list, sig);
+  // Default hand-off: every prospect in tier A or B with a live signal
+  const keys = src.keys || scored.flatMap(r=>(r.people||[]).filter(p=>p.signals.length && (p.tier==='A'||p.tier==='B')).map(p=>r.account.id+'|'+p.contact.row));
+  return { sig, scored, keys, seg: DemandAI.buildSegments(scored, {keys}) };
+}
+function buildFrom(id){
+  const src = sourceFor(id);
+  if(!src){ showToast("That scored list isn't saved any more"); renderStart('new'); return; }
+  const c = compute(src);
+  if(!c){ showToast("The prospect list behind it isn't saved any more"); return; }
+  if(!c.seg.recs.length){ showToast('No prospects with a live signal to segment'); return; }
+  const saved = { id:'seg-'+Date.now().toString(36), name:`${src.listName||src.name} · segmented ${todayIso()}`, createdAt:Date.now(),
+    src:{...src, keys:c.keys}, decisions:{}, log:[], stats:{ segments:c.seg.segments.length, prospects:c.seg.recs.length } };
+  RUN = { saved, ...c };
+  if(id==='handoff'){ try{ localStorage.removeItem(HANDOFF_KEY); }catch(e){} }
+  view='segments'; filt='all'; segFilt=null; q=''; SEL.clear();
+  runChecks();
+}
+function openRun(id){
+  const saved = DemandAI.getSegmentation(id); if(!saved) return;
+  const c = compute(saved.src);
+  if(!c){ showToast("The prospect list behind it isn't saved any more"); return; }
+  RUN = { saved, ...c }; view='segments'; filt='all'; segFilt=null; q=''; SEL.clear();
+  renderResults();
+}
+function persist(){ if(RUN && !DemandAI.saveSegmentation(RUN.saved)) showToast("This browser blocks storage, so decisions can't be kept"); }
+
+/* ═══════════════ CHECKS POP-UP ═══════════════ */
+const SEG_STEPS = [
+  ['read',     'Read the scored prospects',        'Tier A and B, or the ones selected in Scoring'],
+  ['group',    'Group by the strongest signal',    'Each account goes to the segment of its strongest signal'],
+  ['min',      `At least ${DemandAI.CONFIG.minSegmentAccounts} accounts per segment`, 'Distinct accounts; no account in two segments'],
+  ['fallback', 'Fall back to the next signal',     `Accounts whose strongest signal has fewer than ${DemandAI.CONFIG.minSegmentAccounts} accounts`],
+  ['except',   'Segment too small',                'Accounts that fit no segment become exceptions'],
+  ['action',   'Pick the action',                  'First action in the segment library'],
+  ['runner',   'Runner-up',                        'The offering for the strongest signal, when it was grouped on another'],
+  ['channel',  'Channel',                          'Verified email, else LinkedIn, else call; inquiries go to a call'],
+  ['draft',    'Draft the messages',               'Short subject, under 80 words, one question; LinkedIn note with no pitch'],
+  ['approve',  'Ready for your approval',          'Nothing goes out until it is approved'],
+];
+function stepResult(k){
+  const s = RUN.seg, recs = s.recs, accs = new Set(recs.map(r=>r.account.id));
+  const byAcc = [...new Map(recs.map(r=>[r.account.id,r])).values()];
+  switch(k){
+    case 'read': return {sev:'', label:`${recs.length} prospects · ${accs.size} accounts`};
+    case 'group': { const n = new Set(byAcc.map(r=>r.prominent)).size; return {sev:'', label:`${n} strongest-signal group${n===1?'':'s'}`}; }
+    case 'min': return s.segments.length ? {sev:'', label:`${s.segments.length} segment${s.segments.length===1?'':'s'} formed`} : {sev:'warn', label:'None formed'};
+    case 'fallback': { const n = byAcc.filter(r=>r.fallback).length; return n ? {sev:'info', label:`${n} account${n===1?'':'s'} on the next signal`} : {sev:'', label:'Not needed'}; }
+    case 'except': { const n = new Set(s.exceptions.map(r=>r.account.id)).size; return n ? {sev:'warn', label:`${n} account${n===1?'':'s'} left over`} : {sev:'', label:'None'}; }
+    case 'action': return {sev:'', label:`${recs.length} actions`};
+    case 'runner': { const n = byAcc.filter(r=>r.runnerUp&&r.runnerUp.fromStrongest).length; return {sev:n?'info':'', label: n?`${n} from the strongest signal`:'From the library'}; }
+    case 'channel': { const c = {}; recs.forEach(r=>{ const ch = DemandAI.recommendChannel(r, r.action).channel; c[ch]=(c[ch]||0)+1; }); return {sev:'', label:Object.entries(c).map(([k,v])=>`${v} ${k}`).join(' · ')}; }
+    case 'draft': { const bad = recs.filter(r=>{ const d = DemandAI.draftFor(r, r.action); return d.channel==='Email' ? (d.subject.split(/\s+/).length>4 || d.words>90) : d.channel==='LinkedIn' ? d.note.length>200 : false; }); return bad.length ? {sev:'warn', label:`${bad.length} over the limits`} : {sev:'', label:'All within the copy rules'}; }
+    case 'approve': return {sev:'', label:`${recs.length} waiting`};
   }
-  const openId = params.get('openAccount');
-  if(openId){
-    const l = NBA_QUEUE.find(x=>x.id===openId);
-    if(l){
-      openSegment(l.action);
-      setTimeout(()=>{
-        selectRow(l.id);
-        if(l.sentDaysAgo && !l.outcome){ setTimeout(()=>document.getElementById('reportOutcomeBtn')?.click(), 200); }
-      },150);
+}
+function runChecks(){
+  const ov = overlay('checksOverlay'); ov.onclick = null;
+  ov.innerHTML = `<div style="background:var(--surf);border-radius:var(--rlg);box-shadow:var(--sh-lg);width:540px;max-width:100%;max-height:90vh;display:flex;flex-direction:column">
+    <div style="padding:20px 22px 12px">
+      <div style="font-family:var(--fd);font-size:15px;font-weight:700;color:var(--i1)">Building micro-segments</div>
+      <div style="font-size:12px;color:var(--i3);margin-top:3px">${esc(RUN.saved.src.listName||RUN.saved.src.name)} · signals from ${esc(RUN.saved.src.fileName)} · as of ${esc(RUN.saved.src.asOf)} · fixed rules</div>
+      <div style="height:4px;background:var(--s75);border-radius:2px;margin-top:12px;overflow:hidden"><div id="ckBar" style="height:100%;width:0;background:var(--brand);transition:width .3s var(--ease)"></div></div>
+    </div>
+    <div style="padding:0 22px;overflow-y:auto">
+      ${SEG_STEPS.map(([k,name,what],i)=>`<div class="ck-row pending" id="ck-${i}">
+        <div class="ck ck-wait" id="ckc-${i}"></div>
+        <div style="flex:1;min-width:0"><div style="font-size:12.5px;font-weight:600;color:var(--i1)">${name}</div><div style="font-size:11px;color:var(--i3)">${what}</div></div>
+        <div id="ckr-${i}" style="text-align:right;flex-shrink:0"></div>
+      </div>`).join('')}
+    </div>
+    <div id="ckFoot" style="padding:14px 22px 18px;display:flex;align-items:center;gap:8px;border-top:1px solid var(--border);margin-top:4px"><span style="flex:1;font-size:12px;color:var(--i3)">Running checks…</span></div>
+  </div>`;
+  let i = 0;
+  const tick = () => {
+    if(i>0){
+      const res = stepResult(SEG_STEPS[i-1][0]), c = document.getElementById('ckc-'+(i-1));
+      c.className = 'ck ' + (res.sev==='warn'?'ck-warn':res.sev==='info'?'ck-info':'ck-ok');
+      c.textContent = res.sev ? '!' : '✓';
+      const tone = res.sev==='warn'?'tag-amber':res.sev==='info'?'tag-grey':'tag-green';
+      document.getElementById('ckr-'+(i-1)).innerHTML = `<span class="tag ${tone}">${res.label}</span>`;
     }
-  }
-})();
+    document.getElementById('ckBar').style.width = (i/SEG_STEPS.length*100)+'%';
+    if(i<SEG_STEPS.length){
+      const row = document.getElementById('ck-'+i); row.classList.remove('pending');
+      document.getElementById('ckc-'+i).className = 'ck ck-run';
+      row.scrollIntoView({block:'nearest'});
+      i++; setTimeout(tick, 380);
+    } else {
+      persist();
+      const s = RUN.seg;
+      document.getElementById('ckFoot').innerHTML = `
+        <span style="flex:1;font-size:12px;color:var(--i2)"><b>${s.segments.length}</b> segment${s.segments.length===1?'':'s'} · <b>${s.recs.length}</b> actions to approve · <b>${s.exceptions.length}</b> exception${s.exceptions.length===1?'':'s'}</span>
+        <button class="btn btn-ghost btn-sm" onclick="hide('checksOverlay');renderStart('new')">Back</button>
+        <button class="btn btn-primary btn-sm" onclick="hide('checksOverlay');renderResults()">View the segments →</button>`;
+    }
+  };
+  tick();
+}
 
+/* ═══════════════ DECISIONS ═══════════════ */
+function dec(key){ return RUN.saved.decisions[key] || {status:'Waiting', useRunner:false}; }
+function setDec(key, patch){ RUN.saved.decisions[key] = Object.assign(dec(key), patch); }
+function recOf(key){ return RUN.seg.recs.find(r=>r.key===key); }
+function chosenAction(r){ const d = dec(r.key); return d.useRunner && r.runnerUp ? r.runnerUp.action : r.action; }
+function draftOf(r){ const d = dec(r.key); return d.draft || DemandAI.draftFor(r, chosenAction(r)); }
+function logIt(r, decision, note){
+  const m = me(), d = draftOf(r);
+  RUN.saved.log.unshift({ at:Date.now(), who:m.who, role:m.role, key:r.key, prospect:r.contact.name, company:r.account.name,
+    segment:r.segment||'Exception', decision, action:chosenAction(r), channel:d.channel, note:note||'' });
+}
+function approve(key, quiet){
+  const r = recOf(key); if(!r) return;
+  const d = dec(key); if(d.status!=='Waiting') return;
+  setDec(key, {status:'Approved', by:me().who, at:Date.now()});
+  logIt(r, d.edited ? 'Approved with edits' : d.useRunner ? 'Approved the runner-up' : 'Approved', d.edited ? 'Draft edited before approval' : '');
+  if(!quiet){ persist(); showToast(`Approved: ${chosenAction(r)} for ${r.contact.name}`); refresh(); }
+}
+function undo(key){
+  const r = recOf(key); setDec(key, {status:'Waiting', by:null, at:null, reason:null});
+  logIt(r, 'Decision undone'); persist(); refresh();
+}
+function swapAction(key){
+  const r = recOf(key); if(!r || !r.runnerUp) return;
+  const d = dec(key);
+  setDec(key, {useRunner:!d.useRunner, draft:null, edited:false});
+  logIt(r, d.useRunner ? 'Back to the recommended action' : 'Switched to the runner-up', d.edited ? 'Edited draft replaced' : '');
+  persist(); refresh();
+}
+function rejectOpen(key){
+  document.getElementById('decArea').innerHTML = `<div style="font-size:11px;font-weight:600;color:var(--i2);margin-bottom:6px">Why reject it?</div>
+    <div class="tags" style="margin-bottom:8px">${['Wrong timing','Wrong person','Wrong action','Already in contact','Other'].map(x=>`<label class="tag tag-grey" style="cursor:pointer"><input type="radio" name="rjr" value="${x}" style="margin:0 4px 0 0;accent-color:var(--brand)">${x}</label>`).join('')}</div>
+    <input id="rjNote" placeholder="Note (optional)" style="width:100%;padding:8px 10px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:12px;margin-bottom:10px">
+    <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn btn-ghost btn-sm" onclick="openRec('${key}')">Cancel</button><button class="btn btn-primary btn-sm" onclick="reject('${key}')">Reject</button></div>`;
+}
+function reject(key){
+  const pick = document.querySelector('input[name=rjr]:checked');
+  if(!pick){ showToast('Pick a reason'); return; }
+  const note = [pick.value, document.getElementById('rjNote').value.trim()].filter(Boolean).join(': ');
+  const r = recOf(key); setDec(key, {status:'Rejected', by:me().who, at:Date.now(), reason:note});
+  logIt(r, 'Rejected', note); persist(); showToast(`Rejected for ${r.contact.name}`); refresh();
+}
+function markSent(key){
+  const r = recOf(key); setDec(key, {status:'Sent', sentAt:Date.now()});
+  logIt(r, 'Marked as sent'); persist(); refresh();
+}
+function outcome(key, o){
+  const r = recOf(key); setDec(key, {outcome:o});
+  logIt(r, 'Outcome: '+o); persist(); showToast(`Outcome logged: ${o}`); refresh();
+}
+function saveDraft(key){
+  const r = recOf(key), d = Object.assign({}, draftOf(r)), v = id => (document.getElementById(id)||{}).value;
+  if(d.channel==='Email'){ d.subject = v('dSubj'); d.body = v('dBody'); d.words = d.body.split(/\s+/).filter(Boolean).length; }
+  else if(d.channel==='LinkedIn'){ d.note = v('dNote').slice(0,200); d.message = v('dMsg'); }
+  else if(d.channel==='Call') d.opener = v('dOpen'); else d.task = v('dTask');
+  setDec(key, {draft:d, edited:true}); logIt(r, 'Draft edited'); persist(); showToast('Draft saved'); refresh();
+}
+function resetDraft(key){ const r = recOf(key); setDec(key, {draft:null, edited:false}); logIt(r, 'Draft reset to the template'); persist(); refresh(); }
+function refresh(){ renderResults(); if(openKey) openRec(openKey); }
+
+/* ═══════════════ RESULTS ═══════════════ */
+const STATUS_TAG = {Waiting:'<span class="tag tag-amber">Waiting</span>', Approved:'<span class="tag tag-green">Approved</span>', Rejected:'<span class="tag tag-red">Rejected</span>', Sent:'<span class="tag tag-blue">Sent</span>'};
+function renderResults(){
+  const s = RUN.seg, recs = s.recs, st = k => recs.filter(r=>dec(r.key).status===k).length;
+  const ft = (id,label,n) => `<div class="ftab ${view===id?'active':''}" onclick="view='${id}';filt='all';${id==='recs'?'':'segFilt=null;'}q='';renderResults()">${label} <span class="ftab-cnt">${n}</span></div>`;
+  const waiting = st('Waiting');
+  document.getElementById('mainArea').innerHTML = `
+    <div class="topbar">
+      <div class="topbar-l"><span class="tb-title">${esc(RUN.saved.name)}</span>
+        <span class="tb-badge badge-neutral">${esc(RUN.saved.src.fileName)} · as of ${esc(RUN.saved.src.asOf)}</span></div>
+      <div class="topbar-r">
+        <button class="btn btn-sec btn-sm" onclick="renderStart('new')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>Segment a different list</button>
+        <button class="btn btn-sec btn-sm" onclick="exportApproved()">Export approved (.csv)</button>
+        <button class="btn btn-primary btn-sm" id="approveBtn" onclick="bulkApprove()">${approveLabel()}</button>
+      </div>
+    </div>
+    <div class="ftabs">${ft('segments','Micro-segments',s.segments.length+(s.exceptions.length?1:0))}${ft('recs','Recommendations',recs.length)}${ft('log','Decision log',RUN.saved.log.length)}</div>
+    <div class="canvas">
+      <div class="stats">
+        <div class="stat"><div class="stat-lbl">Micro-segments</div><div class="stat-val sv1">${s.segments.length}</div><div class="stat-sub">${DemandAI.CONFIG.minSegmentAccounts}+ accounts each</div></div>
+        <div class="stat"><div class="stat-lbl">Prospects</div><div class="stat-val sv5">${recs.length}</div><div class="stat-sub">${s.accountsConsidered} accounts</div></div>
+        <div class="stat"><div class="stat-lbl">Waiting</div><div class="stat-val sv3">${waiting}</div><div class="stat-sub">need your approval</div></div>
+        <div class="stat"><div class="stat-lbl">Approved</div><div class="stat-val sv4">${st('Approved')+st('Sent')}</div><div class="stat-sub">${st('Sent')} sent · ${st('Rejected')} rejected</div></div>
+        <div class="stat"><div class="stat-lbl">Exceptions</div><div class="stat-val sv2">${s.exceptions.length}</div><div class="stat-sub">segment too small</div></div>
+      </div>
+      ${view==='segments'?segmentsTab():view==='recs'?recsTab():logTab()}
+    </div>`;
+  if(view==='recs') drawRecs(); else if(view==='log') drawLog();
+}
+function approveLabel(){
+  const w = RUN.seg.recs.filter(r=>dec(r.key).status==='Waiting').length;
+  const sel = [...SEL].filter(k=>dec(k).status==='Waiting').length;
+  return SEL.size ? `Approve ${sel} selected` : `Approve all waiting (${w})`;
+}
+function segmentsTab(){
+  const s = RUN.seg;
+  const row = (name, recs, ids) => {
+    const byAcc = [...new Map(recs.map(r=>[r.account.id,r])).values()];
+    const on = [...new Set(byAcc.map(r=>r.groupedOn.type))];
+    const fb = byAcc.filter(r=>r.fallback).length;
+    const ok = recs.filter(r=>['Approved','Sent'].includes(dec(r.key).status)).length;
+    return `<tr class="click" onclick="segFilt=${name?`'${name}'`:"'__x'"};view='recs';filt='all';q='';renderResults()">
+      <td>${segTag(name)}<span class="sub">${name?(fb?`${fb} of ${byAcc.length} on their next signal`:'All on their strongest signal'):'Fewer than '+DemandAI.CONFIG.minSegmentAccounts+' accounts share a signal'}</span></td>
+      <td class="wrap"><div class="tags">${on.map(tagChip).join('')}</div></td>
+      <td class="wrap"><span class="clamp2" style="font-size:12px;color:var(--i1)" title="${esc(byAcc.map(r=>r.account.name).join(', '))}">${esc(byAcc.map(r=>r.account.name).join(', '))}</span><span class="sub">${byAcc.length} account${byAcc.length===1?'':'s'}</span></td>
+      <td class="num">${recs.length}</td>
+      <td class="wrap">${name?`<span class="clamp2" style="font-size:12px;color:var(--i1)">${esc(DemandAI.CONFIG.segmentLibrary[name][0])}</span>`:'<span style="font-size:12px;color:var(--i3)">From each account\'s strongest signal</span>'}</td>
+      <td class="num">${ok}<span class="sub">of ${recs.length}</span></td>
+      <td style="text-align:right"><button class="btn btn-sec btn-sm">Open →</button></td>
+    </tr>`;
+  };
+  return `<div class="score-list">${table([['Micro-segment','17%'],['Grouped on','19%'],['Accounts','20%'],['Prospects','9%','num'],['Recommended action','17%'],['Approved','9%','num'],['','9%']],
+    s.segments.map(g=>row(g.name, g.recs)).join('') + (s.exceptions.length ? row(null, s.exceptions) : ''), 'No segments.')}</div>
+    <div style="font-size:11px;color:var(--i3);margin-top:10px;line-height:1.6">A micro-segment needs at least ${DemandAI.CONFIG.minSegmentAccounts} different accounts sharing a signal, and no account is in two segments. Each account goes with its strongest signal; if fewer than ${DemandAI.CONFIG.minSegmentAccounts} accounts share it, it is grouped on its next signal, and the offering for the strongest signal becomes its runner-up. Open a segment to see its prospects.</div>`;
+}
+function visibleRecs(){
+  let rs = RUN.seg.recs;
+  if(segFilt) rs = rs.filter(r=>segFilt==='__x' ? !r.segment : r.segment===segFilt);
+  if(filt!=='all') rs = rs.filter(r=>dec(r.key).status===filt);
+  if(q) rs = rs.filter(r=>(r.contact.name+' '+r.account.name+' '+(r.contact.jobTitle||'')+' '+chosenAction(r)).toLowerCase().includes(q));
+  return rs;
+}
+function recsTab(){
+  const pills = ['all','Waiting','Approved','Sent','Rejected'].map(k=>`<div class="seg-pill ${filt===k?'active':''}" onclick="filt='${k}';renderResults()">${k==='all'?'All':k}</div>`).join('');
+  const segs = RUN.seg.segments.map(g=>g.name).concat(RUN.seg.exceptions.length?['__x']:[]);
+  return `<div class="score-list">
+    <div id="nBar" class="sl-toolbar" style="display:none;background:var(--brand-lt);align-items:center">
+      <span id="nCount" style="font-size:12.5px;font-weight:600;color:var(--brand-dk)"></span>
+      <button class="btn btn-ghost btn-sm" onclick="clearSel()">Clear</button>
+    </div>
+    <div class="sl-toolbar">${search('drawRecs','Search prospects, companies or actions…')}
+      <select onchange="segFilt=this.value||null;drawRecs()" style="padding:6px 9px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:12px;background:var(--surf);color:var(--i1)">
+        <option value="">All segments</option>${segs.map(n=>`<option value="${n}" ${segFilt===n?'selected':''}>${n==='__x'?'Exceptions':esc(n)}</option>`).join('')}
+      </select>
+      <div class="sl-seg-filter">${pills}</div></div>
+    <div id="rows"></div></div>
+    <div style="font-size:11px;color:var(--i3);margin-top:10px">Click a prospect to see why they are in the segment, switch to the runner-up, edit the draft, and approve or reject. Every decision is logged.</div>`;
+}
+function toggleSel(key,on){ if(on) SEL.add(key); else SEL.delete(key); updateBar(); }
+function toggleAll(on){ visibleRecs().forEach(r=> on ? SEL.add(r.key) : SEL.delete(r.key)); drawRecs(); }
+function clearSel(){ SEL.clear(); drawRecs(); }
+function updateBar(){
+  const bar = document.getElementById('nBar'); if(bar){ bar.style.display = SEL.size ? 'flex' : 'none'; if(SEL.size) document.getElementById('nCount').textContent = `${SEL.size} prospect${SEL.size===1?'':'s'} selected`; }
+  const all = document.getElementById('nAll');
+  if(all){ const v = visibleRecs(); all.checked = v.length>0 && v.every(r=>SEL.has(r.key)); all.indeterminate = !all.checked && v.some(r=>SEL.has(r.key)); }
+  const b = document.getElementById('approveBtn'); if(b) b.textContent = approveLabel();
+}
+function drawRecs(){
+  const el = document.getElementById('rows'); if(!el) return;
+  const rs = visibleRecs();
+  el.innerHTML = table([['<input type="checkbox" id="nAll" title="Select all" onclick="event.stopPropagation();toggleAll(this.checked)" style="cursor:pointer;vertical-align:middle">','52px'],['Prospect','16%'],['Company','14%'],['Score','7%','num'],['Segment','13%'],['Recommended action','21%'],['Runner-up','19%'],['Status','10%']],
+    rs.map(r=>{
+      const d = dec(r.key), ch = draftOf(r).channel, ru = d.useRunner;
+      return `<tr class="click" onclick="openRec('${r.key}')"${SEL.has(r.key)?' style="background:var(--brand-lt)"':''}>
+        <td onclick="event.stopPropagation()"><input type="checkbox" ${SEL.has(r.key)?'checked':''} onclick="toggleSel('${r.key}',this.checked);this.closest('tr').style.background=this.checked?'var(--brand-lt)':''" style="cursor:pointer;vertical-align:middle"></td>
+        <td><div class="person"><div class="co-av" style="background:${avColor(r.contact.name)}">${initials(r.contact.name)}</div><div>${cell(r.contact.name, esc(r.contact.jobTitle||''), 'dt-main')}</div></div></td>
+        <td>${cell(r.account.name, esc(r.account.vertical+' · '+r.account.country))}</td>
+        <td class="num" style="color:var(--i1);font-weight:600">${fmt1(r.person.final)}<span class="sub">Tier ${esc(r.person.tier)}</span></td>
+        <td>${segTag(r.segment)}<span class="sub">${r.segment ? (r.fallback ? 'On its next signal' : 'On its strongest signal') : 'Segment too small'}</span></td>
+        <td class="wrap"><span class="clamp2" style="font-size:12px;color:var(--i1)${ru?';text-decoration:line-through;color:var(--i3)':''}" title="${esc(r.action)}">${esc(r.action)}</span><span class="sub">${ru?'Replaced by the runner-up':esc(ch)}</span></td>
+        <td class="wrap">${r.runnerUp?`<span class="clamp2" style="font-size:12px;color:${ru?'var(--i1);font-weight:600':'var(--i2)'}" title="${esc(r.runnerUp.action)}">${esc(r.runnerUp.action)}</span><span class="sub">${ru?'Chosen · '+esc(ch):r.runnerUp.fromStrongest?'From the strongest signal':'Next in the library'}</span>`:'<span class="muted">—</span>'}</td>
+        <td>${STATUS_TAG[d.status]}${d.outcome?`<span class="sub">${esc(d.outcome)}</span>`:r.exception?`<span class="sub" style="color:var(--warn)" title="${esc(r.exception)}">${r.segment?'Low confidence':'Exception'}</span>`:''}</td>
+      </tr>`;}).join(''), 'No prospects match.');
+  updateBar();
+}
+function logTab(){
+  return `<div class="score-list">
+    <div class="sl-toolbar">${search('drawLog','Search the log…')}<button class="btn btn-sec btn-sm" onclick="exportLog()" style="margin-left:auto">Download log (.csv)</button></div>
+    <div id="rows"></div></div>
+    <div style="font-size:11px;color:var(--i3);margin-top:10px">Every approval, rejection, switch, edit and outcome, with who did it and when. Kept with the segmented list.</div>`;
+}
+function drawLog(){
+  const el = document.getElementById('rows'); if(!el) return;
+  let ls = RUN.saved.log;
+  if(q) ls = ls.filter(l=>(l.who+' '+l.prospect+' '+l.company+' '+l.decision+' '+l.action+' '+l.note).toLowerCase().includes(q));
+  const tone = d => /^Approved/.test(d)?'tag-green':d==='Rejected'?'tag-red':/^Outcome/.test(d)?'tag-violet':d==='Marked as sent'?'tag-blue':'tag-grey';
+  el.innerHTML = table([['When','12%'],['Who','13%'],['Prospect','16%'],['Decision','20%'],['Action','23%'],['Note','16%']],
+    ls.map(l=>`<tr class="click" onclick="openRec('${l.key}')">
+      <td>${cell(fmtDate(l.at), new Date(l.at).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}))}</td>
+      <td>${cell(l.who, esc(l.role))}</td>
+      <td>${cell(l.prospect, esc(l.company))}</td>
+      <td><span class="tag ${tone(l.decision)}">${esc(l.decision)}</span></td>
+      <td class="wrap"><span class="clamp2" style="font-size:12px;color:var(--i1)">${esc(l.action)}</span><span class="sub">${esc(l.channel)} · ${esc(l.segment)}</span></td>
+      <td class="wrap"><span class="clamp2" style="font-size:12px;color:var(--i2)">${l.note?esc(l.note):'<span class="muted">—</span>'}</span></td>
+    </tr>`).join(''), 'No decisions yet. Open a prospect under Recommendations to approve or reject the action.');
+}
+function bulkApprove(){
+  const keys = SEL.size ? [...SEL] : RUN.seg.recs.map(r=>r.key);
+  const todo = keys.filter(k=>dec(k).status==='Waiting');
+  if(!todo.length){ showToast('Nothing waiting for approval'); return; }
+  const ov = overlay('confirmOverlay'); ov.onclick = e=>{ if(e.target===ov) hide('confirmOverlay'); };
+  ov.innerHTML = `<div style="background:var(--surf);border-radius:var(--rlg);box-shadow:var(--sh-lg);width:440px;max-width:100%;padding:20px 22px">
+    <div style="font-family:var(--fd);font-size:15px;font-weight:700;color:var(--i1);margin-bottom:6px">Approve ${todo.length} action${todo.length===1?'':'s'}?</div>
+    <div style="font-size:12px;color:var(--i3);margin-bottom:16px;line-height:1.55">Each prospect's current action and draft are approved as they are, and logged under your name (${esc(me().who)}).</div>
+    <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn btn-ghost btn-sm" onclick="hide('confirmOverlay')">Cancel</button>
+      <button class="btn btn-primary btn-sm" onclick="hide('confirmOverlay');doBulk()">Approve ${todo.length}</button></div></div>`;
+  window.doBulk = () => { todo.forEach(k=>approve(k,true)); persist(); SEL.clear(); showToast(`${todo.length} approved and logged`); refresh(); };
+}
+function exportApproved(){
+  const rs = RUN.seg.recs.filter(r=>['Approved','Sent'].includes(dec(r.key).status));
+  if(!rs.length){ showToast('Nothing approved yet'); return; }
+  const rows = [['prospect','job_title','company','email','linkedin_url','segment','action','channel','subject','message','linkedin_note','approved_by','approved_at','status']];
+  rs.forEach(r=>{ const d = dec(r.key), x = draftOf(r);
+    rows.push([r.contact.name, r.contact.jobTitle||'', r.account.name, r.contact.email||'', r.contact.linkedin||'', r.segment||'Exception', chosenAction(r), x.channel,
+      x.subject||'', x.body||x.message||x.opener||x.task||'', x.note||'', d.by||'', d.at?new Date(d.at).toISOString():'', d.status]); });
+  download('approved_actions.csv', DemandAI.toCSV(rows));
+}
+function exportLog(){
+  const rows = [['when','who','role','prospect','company','segment','decision','action','channel','note']];
+  RUN.saved.log.forEach(l=>rows.push([new Date(l.at).toISOString(), l.who, l.role, l.prospect, l.company, l.segment, l.decision, l.action, l.channel, l.note]));
+  download('decision_log.csv', DemandAI.toCSV(rows));
+}
+
+/* ═══════════════ RECOMMENDATION DRAWER ═══════════════ */
+const WHY_COPY = {
+  Email: [
+    'Subject of four words or fewer, lower case, reading like an internal note: short subjects get the most opens.',
+    'First line names their own trigger, not us. One point, one question, under 80 words.',
+    'Ends on an interest question ("Worth exploring?") rather than asking for a calendar slot.',
+  ],
+  LinkedIn: [
+    'Connection note is personal and has no pitch: personalised notes are accepted far more often than blank or generic ones.',
+    'The offer waits for the message after they accept, and stays short with one question.',
+  ],
+  Call: ['Opens on their own trigger, then one short question to check timing.'],
+  Task: ['Goes to a person on the account team, not to the prospect.'],
+};
+const SOURCES = [['Hunter','https://hunter.io/blog/cold-email-word-count'],['Prospeo','https://prospeo.io/s/sales-email-format'],['Woodpecker','https://woodpecker.co/?p=14447'],
+  ['La Growth Machine','https://lagrowthmachine.com/should-i-add-a-note-to-my-linkedin-connection-request/'],['Overloop','https://overloop.com/blog/linkedin-outreach-benchmarks']];
+const field = (id, v, rows, ro) => rows ? `<textarea id="${id}" rows="${rows}" ${ro?'readonly':''} style="width:100%;border:1px solid var(--bdk);border-radius:var(--rsm);padding:8px 10px;font-size:12px;color:var(--i1);line-height:1.6;font-family:var(--fb);resize:vertical;outline:none;${ro?'background:var(--s50)':''}">${esc(v)}</textarea>`
+  : `<input id="${id}" value="${esc(v)}" ${ro?'readonly':''} style="width:100%;border:1px solid var(--bdk);border-radius:var(--rsm);padding:8px 10px;font-size:12.5px;font-weight:600;color:var(--i1);outline:none;${ro?'background:var(--s50)':''}">`;
+const lbl = (t, extra) => `<div style="display:flex;justify-content:space-between;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--i3);margin:10px 0 5px"><span>${t}</span>${extra?`<span style="letter-spacing:0;text-transform:none;font-weight:500">${extra}</span>`:''}</div>`;
+function openRec(key){
+  const r = recOf(key); if(!r) return;
+  openKey = key;
+  const d = dec(key), x = draftOf(r), locked = d.status!=='Waiting', min = DemandAI.CONFIG.minSegmentAccounts;
+  const segRecs = r.segment ? RUN.seg.segments.find(g=>g.name===r.segment).recs : [];
+  const segAccs = [...new Set(segRecs.map(y=>y.account.name))];
+  document.getElementById('detTitle').textContent = r.contact.name;
+  document.getElementById('detSub').textContent = [r.contact.jobTitle, r.account.name].filter(Boolean).join(' · ');
+  let html = `<div class="panel" style="margin-bottom:12px">
+    <div class="panel-hdr"><span class="panel-ttl">Why this segment</span>${segTag(r.segment)}</div>
+    <div class="panel-body" style="font-size:12.5px;color:var(--i1);line-height:1.6">
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:6px"><span style="color:var(--i3);font-size:11.5px">Strongest signal</span>${tagChip(r.prominentSignal.type)}<span style="font-family:var(--fm);font-size:11px;color:var(--i3)">${fmt1(r.prominentSignal.weight)}</span></div>
+      ${r.segment && r.fallback ? `<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px"><span style="color:var(--i3);font-size:11.5px">Grouped on</span>${tagChip(r.groupedOn.type)}<span style="font-family:var(--fm);font-size:11px;color:var(--i3)">${fmt1(r.groupedOn.weight)}</span></div>
+        <div>Fewer than ${min} accounts share its strongest signal (${esc(r.prominent)}), so ${esc(r.account.name)} is grouped on its next signal with ${segAccs.length-1} other account${segAccs.length===2?'':'s'}.</div>`
+      : r.segment ? `<div>${esc(r.account.name)} is grouped on its strongest signal with ${segAccs.length-1} other account${segAccs.length===2?'':'s'}.</div>`
+      : `<div>${esc(r.exception)}. It keeps the action for its strongest signal and needs a closer look before approval.</div>`}
+      ${r.segment ? `<div style="font-size:11px;color:var(--i3);margin-top:6px">${esc(segAccs.join(' · '))}</div>` : ''}
+      ${r.segment && r.exception ? `<div style="margin-top:8px;padding:7px 10px;background:var(--warn-lt);color:var(--warn);border-radius:var(--rsm);font-size:11.5px">${esc(r.exception)}</div>` : ''}
+    </div></div>`;
+  const card = (title, action, sub, chosen, btn) => `<div style="padding:10px 12px;border:1px solid ${chosen?'var(--brand-mid)':'var(--border)'};background:${chosen?'var(--brand-lt)':'var(--surf)'};border-radius:var(--rsm);margin-bottom:8px">
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><span style="flex:1;font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:${chosen?'var(--brand-dk)':'var(--i3)'}">${title}${chosen?' · chosen':''}</span>${btn||''}</div>
+    <div style="font-size:12.5px;font-weight:600;color:var(--i1)">${esc(action)}</div>
+    <div style="font-size:11px;color:var(--i2);margin-top:3px;line-height:1.5">${sub}</div></div>`;
+  const swapBtn = !locked && r.runnerUp ? `<button class="btn btn-sec btn-sm" onclick="swapAction('${key}')">${d.useRunner?'Use recommended':'Use runner-up'}</button>` : '';
+  html += `<div class="panel" style="margin-bottom:12px"><div class="panel-hdr"><span class="panel-ttl">Next best action</span></div><div class="panel-body">
+    ${card('Recommended', r.action, `First action in the ${esc(r.segment||r.prominent)} library.`, !d.useRunner, d.useRunner?swapBtn:'')}
+    ${r.runnerUp ? card('Runner-up', r.runnerUp.action, esc(r.runnerUp.reason.replace(/\.?$/,'.')), d.useRunner, d.useRunner?'':swapBtn) : ''}
+    <div style="display:flex;gap:8px;align-items:baseline;font-size:12px;margin-top:4px"><span style="color:var(--i3)">Channel</span><b style="color:var(--i1)">${esc(x.channel)}</b><span style="color:var(--i3);font-size:11px">${esc(x.why)}</span></div>
+  </div></div>`;
+  let draft = '';
+  if(x.channel==='Email') draft = lbl('Subject', `${x.subject.split(/\s+/).filter(Boolean).length} words`)+field('dSubj',x.subject,0,locked)+lbl('Body', `${x.words} words`)+field('dBody',x.body,9,locked);
+  else if(x.channel==='LinkedIn') draft = lbl('Connection note', `${x.note.length}/200`)+field('dNote',x.note,3,locked)+lbl('Message after they accept')+field('dMsg',x.message,4,locked);
+  else if(x.channel==='Call') draft = lbl('Call opener')+field('dOpen',x.opener,3,locked);
+  else draft = lbl('Task')+field('dTask',x.task,3,locked);
+  html += `<div class="panel" style="margin-bottom:12px"><div class="panel-hdr"><span class="panel-ttl">Draft · ${esc(x.channel)}</span>${d.edited?'<span class="tag tag-violet">Edited</span>':''}</div><div class="panel-body" style="padding-top:2px">
+    ${draft}
+    ${!locked?`<div style="display:flex;gap:8px;margin-top:10px"><button class="btn btn-sec btn-sm" onclick="saveDraft('${key}')">Save edits</button>${d.edited?`<button class="btn btn-ghost btn-sm" onclick="resetDraft('${key}')">Reset to template</button>`:''}</div>`:''}
+    <div style="margin-top:12px;padding:10px 12px;background:var(--s50);border-radius:var(--rsm)">
+      <div style="font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--i3);margin-bottom:5px">Why this copy</div>
+      ${(WHY_COPY[x.channel]||[]).map(t=>`<div style="font-size:11.5px;color:var(--i2);line-height:1.5;margin-bottom:3px">· ${t}</div>`).join('')}
+      ${x.channel==='Email'||x.channel==='LinkedIn'?`<div style="font-size:10.5px;color:var(--i3);margin-top:5px">Benchmarks: ${SOURCES.map(([n,u])=>`<a href="${u}" target="_blank" rel="noopener" style="color:var(--brand)">${n}</a>`).join(' · ')}</div>`:''}
+      <div style="font-size:10.5px;color:var(--i3);margin-top:3px">Drafted from rules and the prospect's own signal; AI drafting isn't connected in the POC.</div>
+    </div>
+  </div></div>`;
+  const by = d.by ? `${esc(d.by)} · ${fmtDate(d.at)} ${new Date(d.at).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'})}` : '';
+  html += `<div class="panel" style="margin-bottom:12px"><div class="panel-hdr"><span class="panel-ttl">Approval</span>${STATUS_TAG[d.status]}</div><div class="panel-body" id="decArea">
+    ${d.status==='Waiting' ? `<div style="font-size:11.5px;color:var(--i3);margin-bottom:10px">Approving logs this action and draft under your name (${esc(me().who)}).</div>
+      <div style="display:flex;gap:8px"><button class="btn btn-primary btn-sm" style="flex:1;justify-content:center" onclick="approve('${key}')">Approve</button><button class="btn btn-sec btn-sm" style="flex:1;justify-content:center" onclick="rejectOpen('${key}')">Reject</button></div>`
+    : d.status==='Rejected' ? `<div style="font-size:12px;color:var(--i1);margin-bottom:10px">Rejected by ${by}${d.reason?`<div style="color:var(--i2);margin-top:3px">${esc(d.reason)}</div>`:''}</div><button class="btn btn-sec btn-sm" onclick="undo('${key}')">Undo</button>`
+    : d.status==='Approved' ? `<div style="font-size:12px;color:var(--i1);margin-bottom:10px">Approved by ${by}</div><div style="display:flex;gap:8px"><button class="btn btn-primary btn-sm" onclick="markSent('${key}')">Mark as sent</button><button class="btn btn-ghost btn-sm" onclick="undo('${key}')">Undo approval</button></div>`
+    : `<div style="font-size:12px;color:var(--i1);margin-bottom:8px">Approved by ${by} · sent ${fmtDate(d.sentAt)}</div>
+      <div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--i3);margin-bottom:6px">Outcome</div>
+      <div class="tags">${['Replied','Meeting booked','No response','Bounced','Not interested'].map(o=>`<button class="tag ${d.outcome===o?'tag-violet':'tag-grey'}" style="cursor:pointer" onclick="outcome('${key}','${o}')">${o}</button>`).join('')}</div>`}
+  </div></div>`;
+  const hist = RUN.saved.log.filter(l=>l.key===key);
+  if(hist.length) html += `<div class="panel"><div class="panel-hdr"><span class="panel-ttl">History</span><span style="font-size:10.5px;color:var(--i3)">${hist.length}</span></div><div class="panel-body" style="padding:0">
+    ${hist.map(l=>`<div style="padding:8px 14px;border-bottom:1px solid var(--border);font-size:11.5px"><b style="color:var(--i1)">${esc(l.decision)}</b> <span style="color:var(--i3)">· ${esc(l.who)} · ${fmtDate(l.at)} ${new Date(l.at).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'})}</span>${l.note?`<div style="color:var(--i2);margin-top:2px">${esc(l.note)}</div>`:''}</div>`).join('')}
+  </div></div>`;
+  document.getElementById('detBody').innerHTML = html;
+  const dr = document.getElementById('detailDrawer'); dr.style.width = '480px'; dr.classList.add('open');
+}
+const _closeDrawer = closeDrawer;
+closeDrawer = function(){ openKey = null; _closeDrawer(); };
+
+/* ═══════════════ SAVED LISTS ═══════════════ */
+function removeRun(id){ DemandAI.deleteSegmentation(id); showToast('Segmented list deleted'); renderStart('saved'); }
+function startRename(id){ renamingId = id; renderStart('saved'); const el=document.getElementById('renameInput'); if(el){ el.focus(); el.select(); } }
+function finishRename(id){
+  const el = document.getElementById('renameInput'); const name = el ? el.value.trim() : '';
+  const r = DemandAI.getSegmentation(id);
+  if(r && name && name!==r.name){ r.name = name; DemandAI.saveSegmentation(r); showToast('Renamed'); }
+  renamingId = null; renderStart('saved');
+}
+
+/* ═══════════════ BOOT ═══════════════ */
 const PAGE_ID = '12-nba.html';
+setTimeout(()=>{
+  const p = new URLSearchParams(location.search);
+  if(p.get('from')==='scoring' && handoff()) buildFrom('handoff');
+  else if(p.get('run') && DemandAI.getSegmentation(p.get('run'))) openRun(p.get('run'));
+  else renderStart('new');
+}, 0);
 
 /* ═══════════════ ROLE ENGINE — shared across every screen ═══════════════ */
 const ALL_ROLES = ['Admin','Sales manager','Sales rep','Viewer','Platform admin'];

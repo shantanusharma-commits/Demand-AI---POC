@@ -19,6 +19,18 @@ const CONFIG = {
   // Tiers on the 0–100 score. Score = rank ÷ 2, so these are the stage sheet's 70 / 40 on the rank:
   // every account lands in the same tier as before. To recalibrate with the client.
   tierThresholds: { A: 35, B: 20 },
+  // Micro-segments: a segment needs this many distinct accounts.
+  minSegmentAccounts: 3,
+  // The agreed action library per segment (proposed in the process flows; the client approves the final list).
+  // The first option is the recommendation; the next is the runner-up unless the strongest signal says otherwise.
+  segmentLibrary: {
+    'Inquiry':         ['Call to follow up on the inquiry', 'Route the inquiry to the sales owner'],
+    'Modernisation':   ['Propose a migration-path discussion', 'Offer a site assessment', 'Offer a lifecycle service review'],
+    'Service renewal': ['Offer a renewal review', 'Route to the service owner'],
+    'Project':         ['Share a comparable case study and offer a technical session', 'Offer a reference-site visit', 'Offer an early design workshop'],
+    'Leadership':      ['Introduce Client to the new leader', 'Share a peer case study from their sector', 'Invite to a short briefing'],
+    'Engagement':      ['Follow up on the topic they engaged with', 'Invite to a related session'],
+  },
   // Stacked timing can't exceed twice the strongest tier weight (100 + 50 + 25 + … < 200).
   timingMax: 200,
   verticalMap: [
@@ -632,6 +644,149 @@ function scoreList(list, signalResult) {
 
 function lowerFirst(s) { return s && /^[A-Z][a-z]/.test(s) && !/^[A-Z][a-z]+ [A-Z]/.test(s) ? s[0].toLowerCase() + s.slice(1) : s; }
 
+
+/* ─── Stage 9: micro-segments and next best action ───
+   Each account goes to the segment of its strongest signal. A segment forms only with at least
+   CONFIG.minSegmentAccounts distinct accounts; an account whose strongest signal doesn't reach that falls
+   back to its next signal. No account appears in two segments. Accounts left over are exceptions. */
+function segmentRanks(r) {
+  const best = new Map();
+  for (const p of r.people || []) for (const sg of p.signals) {
+    const seg = (CONFIG.signalTypes[sg.type] || {}).segment;
+    if (seg && (!best.has(seg) || sg.weight > best.get(seg).weight)) best.set(seg, sg);
+  }
+  return [...best.entries()].sort((a, b) => b[1].weight - a[1].weight).map(([segment, signal]) => ({ segment, signal }));
+}
+
+function buildSegments(results, opts = {}) {
+  const min = opts.min || CONFIG.minSegmentAccounts;
+  const keep = opts.keys ? new Set(opts.keys) : null;
+  const accounts = results.filter(r => r.people && r.signalCount > 0)
+    .map(r => ({ r, ranks: segmentRanks(r) }))
+    .filter(a => a.ranks.length && (!keep || a.r.people.some(p => keep.has(a.r.account.id + '|' + p.contact.row))));
+  const assigned = new Map(); // account id -> { segment, rank }
+  const formed = new Map();   // segment -> [account ids]
+  const maxK = Math.max(0, ...accounts.map(a => a.ranks.length));
+  for (let k = 1; k <= maxK; k++) {
+    for (;;) {
+      const open = accounts.filter(a => !assigned.has(a.r.account.id));
+      const support = new Map();
+      for (const a of open) a.ranks.slice(0, k).forEach((x, i) => {
+        if (!support.has(x.segment)) support.set(x.segment, []);
+        support.get(x.segment).push({ a, i });
+      });
+      // A segment qualifies with enough accounts counting those already in it; most support first, then total weight.
+      const qualifying = [...support.entries()]
+        .map(([segment, list]) => ({ segment, list, n: list.length + (formed.get(segment) || []).length,
+          w: list.reduce((t, x) => t + x.a.ranks[x.i].signal.weight, 0) }))
+        .filter(q => q.n >= min)
+        .sort((x, y) => y.n - x.n || y.w - x.w);
+      if (!qualifying.length) break;
+      const q = qualifying[0];
+      if (!formed.has(q.segment)) formed.set(q.segment, []);
+      for (const { a, i } of q.list) { assigned.set(a.r.account.id, { segment: q.segment, rank: i }); formed.get(q.segment).push(a.r.account.id); }
+    }
+  }
+  const segments = [...formed.entries()].map(([name, ids]) => ({ name, accountIds: ids }));
+  const recs = [];
+  for (const a of accounts) {
+    const r = a.r, as = assigned.get(r.account.id), prominent = a.ranks[0];
+    const segment = as ? as.segment : null;
+    const lib = CONFIG.segmentLibrary[segment || prominent.segment] || ['Follow up'];
+    const fallback = !!as && as.rank > 0;
+    let action = lib[0], runnerUp;
+    if (!segment) {
+      runnerUp = lib[1] ? { action: lib[1], reason: 'Second option for its strongest signal' } : null;
+    } else if (fallback) {
+      runnerUp = { action: CONFIG.segmentLibrary[prominent.segment][0], fromStrongest: true,
+        reason: `Its strongest signal is ${prominent.signal.type} (${prominent.segment}), but fewer than ${min} accounts share it, so it is grouped under ${segment} on its next signal. This is the offering for that strongest signal.` };
+    } else {
+      runnerUp = lib[1] ? { action: lib[1], reason: `Second option in the ${segment} library` } : null;
+    }
+    const people = r.people.filter(p => p.signals.length && (!keep || keep.has(r.account.id + '|' + p.contact.row)));
+    for (const p of people) {
+      // The message speaks to this person's own evidence: their strongest signal in the segment, else their strongest.
+      const inSeg = p.signals.find(sg => (CONFIG.signalTypes[sg.type] || {}).segment === (segment || prominent.segment));
+      const signal = inSeg || p.signals[0];
+      const exception = !segment ? `Segment too small: fewer than ${min} accounts share any of its signals`
+        : r.confidence === 'low' ? 'Low confidence: no contact in the primary persona' : '';
+      recs.push({ key: r.account.id + '|' + p.contact.row, contact: p.contact, account: r.account, result: r, person: p,
+        segment, prominent: prominent.segment, prominentSignal: prominent.signal, groupedOn: (as ? a.ranks[as.rank] : prominent).signal,
+        fallback, action, runnerUp, signal, exception });
+    }
+  }
+  const order = s => segments.findIndex(x => x.name === s);
+  recs.sort((x, y) => (x.segment ? order(x.segment) : 99) - (y.segment ? order(y.segment) : 99) || (y.person.final || 0) - (x.person.final || 0));
+  segments.forEach(sg => { sg.recs = recs.filter(r => r.segment === sg.name); });
+  return { segments, recs, exceptions: recs.filter(r => !r.segment), accountsConsidered: accounts.length };
+}
+
+/* ─── Channel and message for one recommendation ───
+   Copy follows published outreach benchmarks: a subject of four words or fewer that reads like an internal
+   email, an opener that names the prospect's own trigger, one point, under ~80 words, and an interest-based
+   question instead of a calendar ask. LinkedIn: a personalised connection note with no pitch, then a short
+   message after acceptance. No product claims: anything factual comes from the client's signal data. */
+const COPY = {
+  'Call to follow up on the inquiry':        { subject: 'your inquiry', value: 'The quickest route to a useful answer is a short call with the engineer who covers your site.', cta: 'Is now a good time for two minutes?' },
+  'Route the inquiry to the sales owner':    { task: true },
+  'Propose a migration-path discussion':     { subject: 'migration planning', value: 'Planning the migration early is what lets the cutover fit a planned shutdown.', cta: 'Worth comparing the options?' },
+  'Offer a site assessment':                 { subject: 'site assessment', value: 'A short site assessment would show what to address first, before that date.', cta: 'Worth a look?' },
+  'Offer a lifecycle service review':        { subject: 'lifecycle review', value: 'A lifecycle review would map what to plan for and when.', cta: 'Worth exploring?' },
+  'Offer a renewal review':                  { subject: 'service renewal', value: 'Before it renews, it may be worth checking the cover still fits how the site runs today.', cta: 'Worth a quick review?' },
+  'Route to the service owner':              { task: true },
+  'Share a comparable case study and offer a technical session': { subject: 'similar project', value: 'I can share how a comparable site approached the control-system decision at the same stage.', cta: 'Worth a look?' },
+  'Offer a reference-site visit':            { subject: 'reference site visit', value: 'Seeing a comparable site running is often the fastest way to weigh the options.', cta: 'Would that be useful?' },
+  'Offer an early design workshop':          { subject: 'design workshop', value: 'An early workshop can settle the control-system scope while the design is still open.', cta: 'Worth exploring?' },
+  'Introduce Client to the new leader':      { subject: 'your new role', value: 'Happy to share a short overview of how we work with sites like yours, whenever it suits.', cta: 'Worth a conversation once you have settled in?' },
+  'Share a peer case study from their sector': { subject: 'peer example', value: 'I can share how a peer in your sector set their automation priorities in a similar first few months.', cta: 'Would that be useful?' },
+  'Invite to a short briefing':              { subject: 'quick briefing', value: 'I would be glad to set up a short briefing for you and your team.', cta: 'Worth scheduling?' },
+  'Follow up on the topic they engaged with': { subject: 'following up', value: 'If it is useful, I can share how comparable sites have approached it.', cta: 'Worth a short conversation?' },
+  'Invite to a related session':             { subject: 'related session', value: 'Our next session on this goes deeper. Happy to send the invite.', cta: 'Interested?' },
+};
+function opener(sg, account) {
+  const d = clean(sg.detail).replace(/\.$/, '');
+  const low = d ? d[0].toLowerCase() + d.slice(1) : '';
+  switch (sg.type) {
+    case 'Inquiry or RFQ': {
+      const about = low.replace(/^asked (about|for) /, '');
+      return !d ? 'Thanks for your question.' : about !== low ? `Thanks for your question about ${about}.` : `Thanks for your question: ${low}.`;
+    }
+    case 'Installed system near end of support': return d ? `I understand ${low}.` : `I understand a control system at ${account.name} is nearing end of support.`;
+    case 'Service contract renewal': return d ? `I see the ${low.replace(/^the /, '')}.` : 'I see your service contract is coming up for renewal.';
+    case 'Capital project': return d ? `Noticed the update on your project: ${low}.` : 'Noticed the update on your project.';
+    case 'Leadership change': return 'Congratulations on the new role.';
+    case 'Webinar attended': return d ? `Thanks for joining our session on ${low}.` : 'Thanks for joining our session.';
+    case 'Webinar registered': return d ? `Saw you registered for our session on ${low}.` : 'Saw you registered for our session.';
+    case 'Content download': return d ? `Saw you downloaded the ${low.replace(/^the /, '')}.` : 'Saw you downloaded one of our guides.';
+    case 'Email clicked': return d ? `Saw you opened ${low.replace(/^clicked /, '')}.` : 'Saw you opened our last note.';
+    default: return d ? `Noticed ${low}.` : '';
+  }
+}
+function recommendChannel(rec, action) {
+  const c = rec.contact, copy = COPY[action] || {};
+  if (copy.task) return { channel: 'Task', why: 'This action goes to a person on the account team, not to the prospect.' };
+  if (action === 'Call to follow up on the inquiry') return { channel: 'Call', why: 'Inquiries go to a call, per the routing rules.' };
+  if (c.email && c.emailVerified) return { channel: 'Email', why: 'Verified, sendable email.' };
+  if (c.linkedin) return { channel: 'LinkedIn', why: 'No verified email, but a LinkedIn URL: connection note, then a message.' };
+  return { channel: 'Call', why: 'No verified email and no LinkedIn URL: call is the only channel.' };
+}
+function draftFor(rec, action) {
+  const first = rec.contact.firstName || rec.contact.name.split(' ')[0];
+  const copy = COPY[action] || COPY['Follow up on the topic they engaged with'];
+  const ch = recommendChannel(rec, action);
+  // Speak to the evidence behind this action: the prospect's own signal in the action's segment, else the segment's.
+  const seg = Object.keys(CONFIG.segmentLibrary).find(k => CONFIG.segmentLibrary[k].includes(action));
+  const own = seg && rec.person && rec.person.signals.find(sg => (CONFIG.signalTypes[sg.type] || {}).segment === seg);
+  const open = opener(own || rec.signal, rec.account);
+  if (ch.channel === 'Task') return { channel: ch.channel, why: ch.why, task: `${action} for ${rec.contact.name} at ${rec.account.name}. Context: ${open}` };
+  if (ch.channel === 'Call') return { channel: ch.channel, why: ch.why, opener: `"Hi ${first}, it's [name] from Client. ${open} ${copy.cta}"` };
+  if (ch.channel === 'LinkedIn') return { channel: ch.channel, why: ch.why,
+    note: `Hi ${first}, ${open.charAt(0).toLowerCase() + open.slice(1)} Would be good to connect.`.slice(0, 200),
+    message: `Thanks for connecting, ${first}. ${copy.value} ${copy.cta}` };
+  const body = `Hi ${first},\n\n${open} ${copy.value}\n\n${copy.cta}\n\nBest,\nClient Team`;
+  return { channel: ch.channel, why: ch.why, subject: copy.subject, body, words: body.split(/\s+/).filter(Boolean).length };
+}
+
 /* ─── Lists hand-off between Prospecting and Scoring (browser only) ─── */
 const LIST_KEY = 'demandai_lists_v1';
 let memoryLists = null;
@@ -658,10 +813,18 @@ function saveScoring(run) { const all = loadScorings().filter(r => r.id !== run.
 function getScoring(id) { return loadScorings().find(r => r.id === id) || null; }
 function deleteScoring(id) { return saveScorings(loadScorings().filter(r => r.id !== id)); }
 
+const SEGMENTATION_KEY = 'demandai_nba_runs_v1';
+function loadSegmentations() { try { return JSON.parse(localStorage.getItem(SEGMENTATION_KEY) || '[]'); } catch (e) { return []; } }
+function saveSegmentations(all) { try { localStorage.setItem(SEGMENTATION_KEY, JSON.stringify(all)); return true; } catch (e) { return false; } }
+function saveSegmentation(run) { const all = loadSegmentations().filter(r => r.id !== run.id); all.unshift(run); return saveSegmentations(all); }
+function getSegmentation(id) { return loadSegmentations().find(r => r.id === id) || null; }
+function deleteSegmentation(id) { return saveSegmentations(loadSegmentations().filter(r => r.id !== id)); }
+
 return {
   CONFIG, CODES, LEAD_COLUMNS, LEAD_REQUIRED, SIGNAL_COLUMNS, SIGNAL_REQUIRED,
   parseCSV, toCSV, readTable, processLeads, classify, personaOf, fitFor, decayFactor,
-  processSignals, scoreList, stack, tierFor, daysBetween, round1,
+  processSignals, scoreList, stack, tierFor, daysBetween, round1, buildSegments, segmentRanks, recommendChannel, draftFor,
   loadLists, saveList, getList, deleteList, loadScorings, saveScoring, getScoring, deleteScoring,
+  loadSegmentations, saveSegmentation, getSegmentation, deleteSegmentation,
 };
 });

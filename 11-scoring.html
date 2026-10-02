@@ -851,43 +851,18 @@ function updateNBar(){
   const tb = document.querySelector('.topbar-r .btn-primary'); if(tb) tb.textContent = `Send ${NSEL.size?NSEL.size+' selected':'tier A and B'} to NBA →`;
 }
 
-/* Hand-off to Micro-segments & NBA: the action and channel follow the stage sheet's rules;
-   the draft is a template until AI drafting is connected. */
-const NBA_ABOUT = {'Inquiry or RFQ':'your recent inquiry','Installed system near end of support':'your control system reaching end of support',
-  'Service contract renewal':'your service contract coming up for renewal','Capital project':'the project you have under way','Leadership change':'your new role',
-  'Webinar attended':'the webinar you attended','Webinar registered':'the webinar you registered for','Content download':'the material you downloaded','Email clicked':'the material you opened'};
-const NBA_ACTION = {Inquiry:'Follow up on the inquiry', Modernisation:'Propose a migration or upgrade discussion', 'Service renewal':'Offer a renewal review',
-  Project:'Share a comparable case study and offer a technical session', Leadership:'Introduction to a new leader in a buying role', Engagement:'Follow up on the topic they engaged with'};
-function toNBA(x){
-  const c = x.c, top = x.p.signals[0], seg = (DemandAI.CONFIG.signalTypes[top.type]||{}).segment || 'Engagement';
-  const first = c.firstName || c.name.split(' ')[0];
-  const emailOk = c.email && c.emailVerified, liOk = !!c.linkedin;
-  const channel = seg==='Inquiry' || (!emailOk && !liOk) ? 'Call' : emailOk ? 'Email' : 'DM';
-  const why = x.p.whyNow.replace(/^./,m=>m.toUpperCase());
-  const about = NBA_ABOUT[top.type] || 'your recent activity';
-  const action = NBA_ACTION[seg];
-  return { id:'sc-'+String(x.key).replace(/[^a-z0-9]/gi,''), name:c.name, title:c.jobTitle, co:x.r.account.name, priority:Math.round(x.score),
-    action:seg, chosenAction:action, channel,
-    channelWhy: channel==='Call' ? (seg==='Inquiry' ? 'Inquiries go to a call task, per the routing rules.' : 'No verified email and no LinkedIn URL: call is the only channel.') : channel==='Email' ? 'Verified, sendable email.' : 'No verified email on file, but a LinkedIn URL exists: DM.',
-    routed:'review', confidence:x.r.confidence||'medium', team:null, isNew:true, fromScoring:true,
-    signal: why, signalSrc: `${top.source||'Signal file'} · scored ${fmt1(x.score)} (tier ${x.tier}) · draft from a template, AI drafting not connected`, format:'email',
-    emailSubj: `${x.r.account.name}: ${about.replace(/^your /,'')}`,
-    email: `Hi ${first},\n\nFollowing up on ${about}.\n\nWould a short conversation in the next couple of weeks be useful? We'd come prepared to ${action.charAt(0).toLowerCase()+action.slice(1)}.\n\nBest,\nClient Team`,
-    dmNote: `Hi ${first}, following up on ${about}. Happy to connect.`,
-    dmMessage: `Thanks for connecting. Would a short conversation be useful? We'd come prepared to ${action.charAt(0).toLowerCase()+action.slice(1)}.`,
-    callOpener: `"Hi ${first}, this is [name] from Client, following up on ${about}. Do you have two minutes?"` };
-}
+/* Hand-off to Micro-segments & NBA: the scoring context and the chosen prospects. NBA re-scores with the same
+   rules, groups the accounts into micro-segments and drafts the actions for approval. */
 function sendToNBA(){
   let pick = NSEL.size ? prospects().filter(x=>NSEL.has(x.key)) : prospects().filter(x=>x.tier==='A'||x.tier==='B');
   pick = pick.filter(x=>x.p && x.p.signals.length);
   if(!pick.length){ showToast('Select prospects with a live signal first'); return; }
-  const items = pick.map(toNBA);
-  let prev = []; try{ prev = JSON.parse(localStorage.getItem('demandai_nba_v1')||'[]'); }catch(e){}
-  const ids = new Set(items.map(i=>i.id));
-  try{ localStorage.setItem('demandai_nba_v1', JSON.stringify([...items, ...prev.filter(p=>!ids.has(p.id))])); }
+  const h = { name: RUN.name || RUN.list.name, listId:RUN.listId, listName:RUN.list.name, fileName:RUN.fileName, sheet:RUN.sheet, grid:RUN.grid,
+    asOf:RUN.asOf, sandbox:RUN.sandbox, keys: pick.map(x=>x.key), sentAt: Date.now() };
+  try{ localStorage.setItem('demandai_nba_handoff_v1', JSON.stringify(h)); }
   catch(e){ showToast("This browser blocks storage, so the hand-off can't be made"); return; }
-  showToast(`${items.length} prospect${items.length===1?'':'s'} sent to NBA`);
-  setTimeout(()=>{ location.href = '12-nba.html?from=scoring&ids='+items.map(i=>i.id).join(','); }, 500);
+  showToast(`${pick.length} prospect${pick.length===1?'':'s'} sent to Micro-segments & NBA`);
+  setTimeout(()=>{ location.href = '12-nba.html?from=scoring'; }, 500);
 }
 
 function rankedTab(){
