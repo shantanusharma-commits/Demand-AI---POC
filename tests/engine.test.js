@@ -78,19 +78,31 @@ test('stage 7: 21 events, 13 qualified, 6 rejected with the right codes, 2 not u
   assert.deepEqual(sig.suggested.map(s => s.person), ['k.tan@northwindrefining.com']);
 });
 
-test('stage 8: person scores, account timing, rank and tier', () => {
+test('stage 8: person scores, account timing, rank and tier (raw values match the stage sheet)', () => {
   const { acc } = run();
   const nw = acc('Northwind Refining');
-  assert.deepEqual(nw.people.map(p => [p.contact.name, p.score]), [['Aditi Rao', 145.7], ['Wei Lim', 70.8]]);
-  assert.equal(nw.timing, 159.2);
+  assert.deepEqual(nw.people.map(p => [p.contact.name, p.raw]), [['Aditi Rao', 145.7], ['Wei Lim', 70.8]]);
+  assert.equal(nw.timingRaw, 159.2);
   assert.equal(nw.rank, 144.9);
   assert.equal(nw.tier, 'A');
   assert.match(nw.whyNow, /^Aditi Rao: asked about migrating a legacy control system during the 2027 turnaround; also Aditi Rao: new crude unit/);
   const mp = acc('Meridian Petrochem');
-  assert.deepEqual(mp.people.map(p => [p.contact.name, p.score]), [['Hassan Idris', 100], ['Farah Aziz', 89.4]]);
+  assert.deepEqual(mp.people.map(p => [p.contact.name, p.raw]), [['Hassan Idris', 100], ['Farah Aziz', 89.4]]);
   assert.equal(mp.rank, 95.5);
   assert.equal(mp.tier, 'A');
   assert.equal(mp.confidence, 'low'); // no primary-persona contact
+});
+
+test('scores are normalised to 0–100 and tiers are unchanged by it', () => {
+  const { scored, acc } = run();
+  const nw = acc('Northwind Refining');
+  assert.equal(nw.timing, 79.6);          // 159.2 of a possible 200
+  assert.equal(nw.score, 72.4);           // 91 × 79.6 ÷ 100 = rank ÷ 2
+  assert.deepEqual(nw.people.map(p => p.score), [72.9, 35.4]);
+  for (const r of scored.filter(r => r.score !== undefined)) {
+    assert.ok(r.score >= 0 && r.score <= 100 && r.timing <= 100);
+    assert.equal(r.tier, r.rank >= 70 ? 'A' : r.rank >= 40 ? 'B' : 'C');
+  }
 });
 
 test('decay is full until F, then a straight line to zero at D', () => {

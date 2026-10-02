@@ -399,6 +399,19 @@ input,textarea,select{font:inherit;}
 .tag-pink{background:#FBE9F1;color:#A1386A;}
 .tag-grey{background:#EEF1F4;color:#5B6774;}
 .tags{display:flex;flex-wrap:wrap;gap:6px;}
+
+/* ─── Checks pop-up ─── */
+@keyframes ckspin{to{transform:rotate(360deg);}}
+@keyframes ckpop{from{transform:scale(.6);opacity:0;}to{transform:scale(1);opacity:1;}}
+.ck{width:22px;height:22px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;}
+.ck-wait{border:2px solid var(--s100);}
+.ck-run{border:2.5px solid var(--brand-lt);border-top-color:var(--brand);animation:ckspin .7s linear infinite;}
+.ck-ok{background:var(--pos);color:#fff;animation:ckpop .2s var(--ease);}
+.ck-warn{background:var(--warn);color:#fff;animation:ckpop .2s var(--ease);}
+.ck-stop{background:var(--neg);color:#fff;animation:ckpop .2s var(--ease);}
+.ck-info{background:var(--s300);color:#fff;animation:ckpop .2s var(--ease);}
+.ck-row{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--s75);transition:opacity var(--base);}
+.ck-row.pending{opacity:.45;}
 </style>
 </head>
 <body>
@@ -498,13 +511,14 @@ input,textarea,select{font:inherit;}
 <script src="demandai-sample-data.js"></script>
 <script>
 function showToast(msg){document.querySelectorAll('.toast').forEach(t=>t.remove());const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2600);}
-function initials(n){return n.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();}
+function initials(n){return String(n).split(' ').filter(Boolean).map(w=>w[0]).join('').slice(0,2).toUpperCase();}
 function avColor(id){const c=['#7D52A2','#0094DA','#FF8820','#2E7D5A','#B23F3F'];let h=0;for(const ch of String(id))h+=ch.charCodeAt(0);return c[h%c.length];}
 function closeDrawer(){ document.getElementById('detailDrawer').classList.remove('open'); }
 function esc(s){return String(s===undefined||s===null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function download(name, text){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'text/csv'}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},0);}
 function todayIso(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 const fmt1 = n => n===undefined||n===null ? '—' : (Math.round(n*10)/10).toLocaleString('en-US',{minimumFractionDigits:n%1?1:0,maximumFractionDigits:1});
+const fmtDate = t => new Date(t).toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'});
 
 function readFileToGrids(file){
   return new Promise((resolve,reject)=>{
@@ -523,159 +537,12 @@ function readFileToGrids(file){
     if(isCsv) reader.readAsText(file); else reader.readAsArrayBuffer(file);
   });
 }
-function pickSheet(grids, anchor){
-  const has = g => g.grid.slice(0,10).some(r=>(r||[]).some(c=>String(c).trim().toLowerCase().replace(/\*/g,'').replace(/\s+/g,'_')===anchor));
+function pickSheet(grids){
+  const has = g => g.grid.slice(0,10).some(r=>(r||[]).some(c=>String(c).trim().toLowerCase().replace(/\*/g,'').replace(/\s+/g,'_')==='signal_type'));
   return grids.find(g=>/signal template/i.test(g.sheet) && has(g)) || grids.find(has) || grids[0];
 }
 
-/* ═══════════════ STATE ═══════════════ */
-let LIST = null, RUN = null;  // RUN = {fileName, sheet, asOf, sandbox, sig, scored}
-let view = 'ranked', filt = 'all', q = '';
-
-/* ═══════════════ STEP 1 · CHOOSE THE LIST ═══════════════ */
-function renderPick(){
-  LIST = null; RUN = null; closeDrawer();
-  const lists = DemandAI.loadLists();
-  document.getElementById('mainArea').innerHTML = `
-    <div class="topbar"><div class="topbar-l"><span class="tb-title">Account Scoring</span><span class="tb-badge badge-neutral">Fit × Timing · rules only</span></div></div>
-    <div class="canvas"><div style="max-width:680px;margin:24px auto 0">
-      ${steps(1)}
-      <div style="font-family:var(--fd);font-size:22px;font-weight:700;color:var(--i1);margin-bottom:6px">Choose a screened list</div>
-      <div style="font-size:13px;color:var(--i3);margin-bottom:18px;line-height:1.55">Lists come from Prospecting: validated, classified and through the knock-outs. Pick one, then give it the signals for its prospects.</div>
-      <div class="panel"><div class="panel-body" style="padding:0">
-        ${lists.length ? lists.map(l=>`
-          <div style="display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--s75);cursor:pointer" onclick="chooseList('${l.id}')">
-            <div class="co-av" style="background:${avColor(l.name)}">${initials(l.name)}</div>
-            <div style="flex:1;min-width:0">
-              <div style="font-size:13px;font-weight:600;color:var(--i1)">${esc(l.name)}</div>
-              <div style="font-size:10.5px;color:var(--i3)">${esc(l.sourceFile)} · ${l.stats.accountsPass} accounts · ${l.stats.inFinalList} contacts in the final list${l.scoring?` · last scored with ${esc(l.scoring.fileName)}`:''}</div>
-            </div>
-            <span style="font-size:12px;color:var(--brand);font-weight:600">Choose →</span>
-          </div>`).join('') : `
-          <div style="padding:22px 16px;text-align:center">
-            <div style="font-size:12.5px;color:var(--i2);margin-bottom:10px">No screened lists yet.</div>
-            <a href="10-prospecting.html" class="btn btn-primary btn-sm" style="text-decoration:none">Build one in Prospecting →</a>
-          </div>`}
-      </div></div>
-    </div></div>`;
-}
-function steps(n){
-  const s = ['Choose the list','Add the signals','Score'];
-  return `<div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">${s.map((t,i)=>`<span style="font-size:10.5px;font-weight:700;letter-spacing:.04em;padding:4px 10px;border-radius:999px;background:${i+1===n?'var(--brand)':i+1<n?'var(--brand-lt)':'var(--s75)'};color:${i+1===n?'#fff':i+1<n?'var(--brand-dk)':'var(--i3)'}">${i+1} · ${t}</span>`).join('')}</div>`;
-}
-function chooseList(id){
-  LIST = DemandAI.getList(id);
-  if(!LIST){ showToast("That list isn't saved in this browser"); renderPick(); return; }
-  history.replaceState(null,'','?list='+encodeURIComponent(id));
-  if(LIST.scoring) runScore(LIST.scoring.fileName, LIST.scoring.sheet, LIST.scoring.grid, LIST.scoring.asOf, LIST.scoring.sandbox, false);
-  else renderSignals();
-}
-
-/* ═══════════════ STEP 2 · SIGNALS FOR THE PROSPECTS ═══════════════ */
-function renderSignals(){
-  RUN = null; closeDrawer();
-  const types = DemandAI.CONFIG.signalTypes;
-  document.getElementById('mainArea').innerHTML = `
-    <div class="topbar">
-      <div class="topbar-l"><span class="tb-title">${esc(LIST.name)}</span></div>
-      <div class="topbar-r"><button class="btn btn-ghost btn-sm" onclick="renderPick()">Change list</button></div>
-    </div>
-    <div class="canvas"><div style="max-width:680px;margin:24px auto 0">
-      ${steps(2)}
-      <div style="font-family:var(--fd);font-size:22px;font-weight:700;color:var(--i1);margin-bottom:6px">Add the signals for these prospects</div>
-      <div style="font-size:13px;color:var(--i3);margin-bottom:16px;line-height:1.55">The signal file: one row per event, each naming the person it concerns by the email or LinkedIn URL used in the lead file. Every row is matched to an account and a person, then qualified with a weight or rejected with a reason code.</div>
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
-        <label style="font-size:11.5px;font-weight:600;color:var(--i2)">Score as of</label>
-        <input type="date" id="asOf" value="${LIST.sandbox?DemandAISample.SAMPLE_AS_OF:todayIso()}" style="padding:6px 8px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:12.5px">
-        <span style="font-size:11px;color:var(--i3)">Signal ages and decay are counted to this date.</span>
-      </div>
-      ${LIST.sandbox ? '' : `
-      <label id="dropZone" for="fileInput" style="display:block;border:1.5px dashed var(--bdk);border-radius:var(--rlg);padding:30px 24px;cursor:pointer;background:var(--surf);text-align:center;margin-bottom:12px">
-        <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" style="display:none" onchange="onFile(this.files[0])">
-        <div style="font-size:13px;font-weight:600;color:var(--i1)">Click to choose the signal file, or drop it here</div>
-        <div style="font-size:11px;color:var(--i3);margin-top:4px">.xlsx or .csv · the signal template, filled in</div>
-      </label>`}
-      <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap">
-        ${LIST.sandbox?`<button class="btn btn-primary btn-sm" onclick="useSample()">Use sample signals and score →</button>`:''}
-        <button class="btn btn-sec btn-sm" onclick="download('signal_template.csv', DemandAI.toCSV([DemandAI.SIGNAL_COLUMNS]))">Download signal template (.csv)</button>
-      </div>
-      <div class="panel">
-        <div class="panel-hdr"><span class="panel-ttl">Signal tags</span><span style="font-size:10.5px;color:var(--i3)">the signal_type column, from the template's list</span></div>
-        <div class="panel-body">
-          <div class="tags">${Object.keys(types).filter(k=>!types[k].knockout&&!types[k].reject).map(tagChip).join('')}</div>
-          <div style="font-size:11px;color:var(--i3);margin-top:10px">Installed system (current) excludes the account. Newsletter sign-ups aren't scored.</div>
-        </div>
-      </div>
-    </div></div>`;
-  const dz = document.getElementById('dropZone');
-  if(dz){
-    dz.addEventListener('dragover', e=>{e.preventDefault(); dz.style.borderColor='var(--brand)';});
-    dz.addEventListener('dragleave', ()=>{dz.style.borderColor='var(--bdk)';});
-    dz.addEventListener('drop', e=>{e.preventDefault(); dz.style.borderColor='var(--bdk)'; if(e.dataTransfer.files[0]) onFile(e.dataTransfer.files[0]);});
-  }
-}
-function asOfValue(){ const v = (document.getElementById('asOf')||{}).value; return /^\d{4}-\d{2}-\d{2}$/.test(v||'') ? v : todayIso(); }
-async function onFile(file){
-  if(!file) return;
-  try{
-    const grids = await readFileToGrids(file);
-    const g = pickSheet(grids, 'signal_type');
-    runScore(file.name, g.sheet, g.grid, asOfValue(), false, true);
-  }catch(e){ showToast(e.message || 'Could not read that file'); }
-}
-function useSample(){ runScore(DemandAISample.SIGNAL_FILE, 'Signal template', DemandAISample.SIGNALS, asOfValue(), true, true); }
-
-/* ═══════════════ STEP 3 · SCORE ═══════════════ */
-function runScore(fileName, sheet, grid, asOf, sandbox, fresh){
-  if(sandbox !== !!LIST.sandbox){ showToast('Sample signals only go with a list built from sample data'); return; }
-  // Structured clone: the list is reused for every re-score, and scoring marks signals as not used.
-  const list = JSON.parse(JSON.stringify({accounts:LIST.accounts, contacts:LIST.contacts}));
-  const sig = DemandAI.processSignals(grid, list, {file:fileName, sheet, asOf});
-  const scored = DemandAI.scoreList(list, sig);
-  RUN = {fileName, sheet, asOf, sandbox, sig, scored};
-  if(fresh){
-    LIST.scoring = {fileName, sheet, grid, asOf, sandbox};
-    DemandAI.saveList(LIST);
-    const n = sig.signals.filter(s=>s.status==='Qualified').length;
-    showToast(`${sig.rowsRead} signal rows read: ${n} qualified, ${sig.signals.filter(s=>s.status==='Rejected').length} rejected`);
-  }
-  view = 'ranked'; filt='all'; q='';
-  renderResults();
-}
-
-function renderResults(){
-  const sc = RUN.scored, sig = RUN.sig;
-  const count = t => sc.filter(r=>r.tier===t).length;
-  const tab = (id,label,n) => `<div class="ftab ${view===id?'active':''}" onclick="view='${id}';filt='all';q='';renderResults()">${label}${n!==undefined?` <span class="ftab-cnt">${n}</span>`:''}</div>`;
-  document.getElementById('mainArea').innerHTML = `
-    <div class="topbar">
-      <div class="topbar-l"><span class="tb-title">${esc(LIST.name)}</span>
-        <span class="tb-badge badge-neutral">Signals: ${esc(RUN.fileName)} · as of ${RUN.asOf}</span></div>
-      <div class="topbar-r">
-        <button class="btn btn-ghost btn-sm" onclick="renderPick()">Change list</button>
-        <button class="btn btn-sec btn-sm" onclick="renderSignals()">Change signals</button>
-        <button class="btn btn-primary btn-sm" disabled style="opacity:.5;cursor:not-allowed" title="The hand-off to Micro-segments & NBA isn't wired yet: the NBA screen still shows its sample queue">Send to NBA</button>
-      </div>
-    </div>
-    <div class="ftabs">${tab('ranked','Ranked accounts',sc.length)}${tab('evidence','Signal evidence',sig.signals.length)}</div>
-    <div class="canvas">
-      <div class="stats">
-        <div class="stat"><div class="stat-lbl">Tier A</div><div class="stat-val" style="color:var(--pos)">${count('A')}</div><div class="stat-sub">rank ${DemandAI.CONFIG.tierThresholds.A} and above</div></div>
-        <div class="stat"><div class="stat-lbl">Tier B</div><div class="stat-val" style="color:var(--warn)">${count('B')}</div><div class="stat-sub">rank ${DemandAI.CONFIG.tierThresholds.B}–${DemandAI.CONFIG.tierThresholds.A-1}</div></div>
-        <div class="stat"><div class="stat-lbl">Tier C</div><div class="stat-val sv1">${count('C')}</div><div class="stat-sub">below ${DemandAI.CONFIG.tierThresholds.B}</div></div>
-        <div class="stat"><div class="stat-lbl">Watch list</div><div class="stat-val sv5">${count('Watch list')}</div><div class="stat-sub">good fit, no live signal</div></div>
-        <div class="stat"><div class="stat-lbl">Not scored</div><div class="stat-val sv3">${count('Below fit floor')+count('Excluded')}</div><div class="stat-sub">${count('Below fit floor')} below fit floor · ${count('Excluded')} excluded</div></div>
-      </div>
-      ${view==='ranked'?rankedTab():evidenceTab()}
-    </div>`;
-  if(view==='ranked') drawRanked(); else drawEvidence();
-}
-const pill = (cur,id,label) => `<div class="seg-pill ${cur===id?'active':''}" onclick="filt='${id}';renderResults()">${label}</div>`;
-function search(fn, ph){ return `<div class="sl-srch"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="color:var(--i3);flex-shrink:0"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><input type="text" placeholder="${ph}" value="${esc(q)}" oninput="q=this.value.toLowerCase();${fn}()"></div>`; }
-function tierPill(t){
-  const m = {A:['tag-green','Tier A'],B:['tag-amber','Tier B'],C:['tag-blue','Tier C'],'Watch list':['tag-grey','Watch list'],'Below fit floor':['tag-grey','Below floor'],Excluded:['tag-red','Excluded']}[t];
-  return `<span class="tag ${m[0]}">${m[1]}</span>`;
-}
+/* ═══════════════ SHARED PIECES: tables, tags, pop-ups ═══════════════ */
 function table(cols, rows, empty){
   return `<div class="dt-wrap"><table class="dt">
     <colgroup>${cols.map(c=>`<col style="width:${c[1]}">`).join('')}</colgroup>
@@ -684,12 +551,229 @@ function table(cols, rows, empty){
   </table></div>`;
 }
 const cell = (v, sub, cls='val') => `<span class="${cls}" title="${esc(v||'')}">${v?esc(v):'<span class="muted">—</span>'}</span>${sub?`<span class="sub" title="${esc(String(sub).replace(/<[^>]+>/g,''))}">${sub}</span>`:''}`;
+const SEG_TONE = {Inquiry:'tag-blue',Modernisation:'tag-violet','Service renewal':'tag-teal',Project:'tag-amber',Leadership:'tag-pink',Engagement:'tag-green'};
+function tagChip(t){ const c = DemandAI.CONFIG.signalTypes[t]; return `<span class="tag ${(c&&SEG_TONE[c.segment])||'tag-grey'}">${esc(t)}</span>`; }
+function tierPill(t){
+  const m = {A:['tag-green','Tier A'],B:['tag-amber','Tier B'],C:['tag-blue','Tier C'],'Watch list':['tag-grey','Watch list'],'Below fit floor':['tag-grey','Below floor'],Excluded:['tag-red','Excluded']}[t];
+  return `<span class="tag ${m[0]}">${m[1]}</span>`;
+}
+function overlay(id){
+  let ov = document.getElementById(id);
+  if(!ov){ ov=document.createElement('div'); ov.id=id; ov.style.cssText='position:fixed;inset:0;background:rgba(20,26,33,.45);z-index:600;display:flex;align-items:center;justify-content:center;padding:16px'; document.body.appendChild(ov); }
+  ov.style.display='flex'; return ov;
+}
+const hide = id => { const el=document.getElementById(id); if(el) el.style.display='none'; };
+function search(fn, ph){ return `<div class="sl-srch"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="color:var(--i3);flex-shrink:0"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><input type="text" placeholder="${ph}" value="${esc(q)}" oninput="q=this.value.toLowerCase();${fn}()"></div>`; }
+const pill = (cur,id,label) => `<div class="seg-pill ${cur===id?'active':''}" onclick="filt='${id}';renderResults()">${label}</div>`;
 
+/* ═══════════════ STATE ═══════════════ */
+let tab = 'new', selListId = null, RUN = null, view = 'ranked', filt = 'all', q = '', renamingId = null;
+
+/* ═══════════════ START: New scoring | Scored lists ═══════════════ */
+function renderStart(t){
+  RUN = null; closeDrawer();
+  if(t) tab = t;
+  const lists = DemandAI.loadLists(), runs = DemandAI.loadScorings();
+  if(selListId && !lists.find(l=>l.id===selListId)) selListId = null;
+  if(!selListId && lists.length) selListId = lists[0].id;
+  const L = lists.find(l=>l.id===selListId);
+  const ft = (id,label,n) => `<div class="ftab ${tab===id?'active':''}" onclick="renderStart('${id}')">${label}${n!==undefined?` <span class="ftab-cnt">${n}</span>`:''}</div>`;
+  const types = Object.keys(DemandAI.CONFIG.signalTypes).filter(k=>!DemandAI.CONFIG.signalTypes[k].knockout && !DemandAI.CONFIG.signalTypes[k].reject);
+  document.getElementById('mainArea').innerHTML = `
+    <div class="topbar"><div class="topbar-l"><span class="tb-title">Account Scoring</span><span class="tb-badge badge-neutral">Fit × Timing · rules only</span></div></div>
+    <div class="ftabs">${ft('new','New scoring')}${ft('saved','Scored lists',runs.length)}</div>
+    <div class="canvas">${tab==='new' ? `
+      <div style="max-width:640px;margin:24px auto 0">
+        <div style="font-family:var(--fd);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--brand);margin-bottom:8px">Step 2 · Scoring</div>
+        <div style="font-family:var(--fd);font-size:22px;font-weight:700;color:var(--i1);margin-bottom:6px">Score a prospect list</div>
+        <div style="font-size:13px;color:var(--i3);margin-bottom:20px;line-height:1.55">There's no data integration in the POC: the client sends the signals as a file. Pick the prospect list, upload the signals for those prospects, and every row is checked and scored by fixed rules.</div>
+
+        <div class="panel" style="margin-bottom:12px">
+          <div class="panel-hdr"><span class="panel-ttl">1 · Prospect list</span><a href="10-prospecting.html" style="font-size:11px;color:var(--brand);font-weight:600;text-decoration:none">Build a list in Prospecting →</a></div>
+          <div class="panel-body">${lists.length ? `
+            <select onchange="selListId=this.value;renderStart('new')" style="width:100%;padding:9px 11px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:13px;background:var(--surf);color:var(--i1)">
+              ${lists.map(l=>`<option value="${l.id}" ${l.id===selListId?'selected':''}>${esc(l.name)}</option>`).join('')}
+            </select>
+            <div style="display:flex;gap:18px;margin-top:10px;font-size:12px;color:var(--i2)">
+              <span><b style="color:var(--i1)">${L.stats.accountsPass}</b> accounts</span><span><b style="color:var(--i1)">${L.stats.inFinalList}</b> contacts in the list</span><span style="color:var(--i3)">from ${esc(L.sourceFile)} · saved ${fmtDate(L.createdAt)}</span>
+            </div>` : `<div style="font-size:12.5px;color:var(--i2)">No prospect lists yet. Upload the client's lead file in Prospecting and save the list first.</div>`}
+          </div>
+        </div>
+
+        <div class="panel" style="${L?'':'opacity:.5;pointer-events:none'}">
+          <div class="panel-hdr"><span class="panel-ttl">2 · Signals for these prospects</span>
+            <span style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--i3)">Score as of <input type="date" id="asOf" value="${L&&L.sandbox?DemandAISample.SAMPLE_AS_OF:todayIso()}" style="padding:3px 6px;border:1px solid var(--bdk);border-radius:6px;font-size:11.5px"></span></div>
+          <div class="panel-body">
+            <label id="dropZone" for="fileInput" style="display:block;border:1.5px dashed var(--bdk);border-radius:var(--rmd);padding:26px 20px;cursor:pointer;background:var(--s50);text-align:center">
+              <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" style="display:none" onchange="onFile(this.files[0])">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--i3)" stroke-width="1.5" stroke-linecap="round" style="margin-bottom:6px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              <div style="font-size:13px;font-weight:600;color:var(--i1)">Click to choose the signal file, or drop it here</div>
+              <div style="font-size:11px;color:var(--i3);margin-top:4px">.xlsx or .csv · one row per signal, naming the person by email or LinkedIn URL</div>
+            </label>
+            <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+              ${L&&L.sandbox?'<button class="btn btn-primary btn-sm" onclick="useSample()">Use sample signals</button>':''}
+              <button class="btn btn-sec btn-sm" onclick="download('signal_template.csv', DemandAI.toCSV([DemandAI.SIGNAL_COLUMNS]))">Download signal template (.csv)</button>
+            </div>
+            <div style="font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--i3);margin:16px 0 8px">Signal tags the file can use</div>
+            <div class="tags">${types.map(tagChip).join('')}</div>
+          </div>
+        </div>
+      </div>` : `
+      <div class="score-list">${table([['Name','26%'],['Prospect list','18%'],['Signal file','14%'],['Scored','8%','num'],['Tier A','7%','num'],['Saved','11%'],['','16%']],
+        runs.map(r=>`<tr>
+          <td><div class="person"><div class="co-av" style="background:${avColor(r.id)}">${initials(r.name)}</div><div style="flex:1;min-width:0">${renamingId===r.id
+            ? `<div style="display:flex;gap:6px;align-items:center"><input id="renameInput" value="${esc(r.name)}" style="flex:1;min-width:0;padding:6px 9px;border:1px solid var(--brand-mid);border-radius:var(--rsm);font-size:12.5px" onkeydown="if(event.key==='Enter')finishRename('${r.id}');if(event.key==='Escape'){renamingId=null;renderStart('saved')}"><button class="btn btn-primary btn-sm" onclick="finishRename('${r.id}')">Save</button></div>`
+            : `<div style="display:flex;align-items:center;gap:6px;min-width:0"><span class="dt-main" title="${esc(r.name)}">${esc(r.name)}</span><button title="Rename" onclick="startRename('${r.id}')" style="flex-shrink:0;color:var(--i3);display:flex;padding:2px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button></div><span class="sub">As of ${esc(r.asOf)}</span>`}</div></div></td>
+          <td>${cell((DemandAI.getList(r.listId)||{}).name || r.listName, DemandAI.getList(r.listId)?'':'<span style="color:var(--neg)">List deleted</span>')}</td>
+          <td>${cell(r.fileName)}</td>
+          <td class="num">${r.stats.scored}<span class="sub">accounts</span></td>
+          <td class="num">${r.stats.A}</td>
+          <td>${cell(fmtDate(r.createdAt), new Date(r.createdAt).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}))}</td>
+          <td style="text-align:right"><button class="btn btn-sec btn-sm" onclick="openRun('${r.id}')">Open</button> <button class="btn btn-ghost btn-sm" onclick="removeRun('${r.id}')">Delete</button></td>
+        </tr>`).join(''), `No scored lists yet. <a href="#" onclick="renderStart('new');return false" style="color:var(--brand);font-weight:600">Score a prospect list</a> and save it.`)}
+      </div>`}
+    </div>`;
+  const dz = document.getElementById('dropZone');
+  if(dz){
+    dz.addEventListener('dragover', e=>{e.preventDefault(); dz.style.borderColor='var(--brand)';});
+    dz.addEventListener('dragleave', ()=>{dz.style.borderColor='var(--bdk)';});
+    dz.addEventListener('drop', e=>{e.preventDefault(); dz.style.borderColor='var(--bdk)'; if(e.dataTransfer.files[0]) onFile(e.dataTransfer.files[0]);});
+  }
+}
+function asOfValue(){ const v=(document.getElementById('asOf')||{}).value; return /^\d{4}-\d{2}-\d{2}$/.test(v||'') ? v : todayIso(); }
+async function onFile(file){
+  if(!file) return;
+  try{ const g = pickSheet(await readFileToGrids(file)); score(selListId, file.name, g.sheet, g.grid, asOfValue(), false, null); }
+  catch(e){ showToast(e.message || 'Could not read that file'); }
+}
+function useSample(){ score(selListId, DemandAISample.SIGNAL_FILE, 'Signal template', DemandAISample.SIGNALS, asOfValue(), true, null); }
+
+/* ═══════════════ SCORE: run the rules, show the checks running ═══════════════ */
+function score(listId, fileName, sheet, grid, asOf, sandbox, saved){
+  const L = DemandAI.getList(listId);
+  if(!L){ showToast("That prospect list isn't saved any more"); renderStart('new'); return false; }
+  if(sandbox !== !!L.sandbox){ showToast('Sample signals only go with a list built from sample data'); return false; }
+  const list = JSON.parse(JSON.stringify({accounts:L.accounts, contacts:L.contacts}));
+  const sig = DemandAI.processSignals(grid, list, {file:fileName, sheet, asOf});
+  const scored = DemandAI.scoreList(list, sig);
+  RUN = {listId, list:L, fileName, sheet, grid, asOf, sandbox, sig, scored, savedId: saved?saved.id:null, name: saved?saved.name:null};
+  view='ranked'; filt='all'; q='';
+  return true;
+}
+const SIG_STEPS = [
+  ['columns', 'Columns match the template',   'company_name, contact, signal_type, event_date, detail'],
+  ['company', 'Company is on the list',        'Every row names an account from the prospect list'],
+  ['person',  'Person is in the lead file',    'Matched by email or LinkedIn URL; blank goes to the primary persona'],
+  ['date',    'Event date present and valid',  'YYYY-MM-DD, not after the scoring date'],
+  ['type',    'Signal type is a known tag',    'From the template list; newsletter sign-ups are not scored'],
+  ['dupes',   'Duplicates',                    'The same event recorded twice'],
+  ['window',  'Within its time window',        'Older than the tag counts for: stale'],
+  ['knockout','Installed base',                'Pilot product already installed excludes the account'],
+  ['fit',     'Fit',                           `Rubric score; below ${DemandAI.CONFIG.fitFloor} the account is dropped`],
+  ['score',   'Timing and score',              'Signals weighted and stacked; score 0–100 and tier'],
+];
+function stepResult(k){
+  const sig = RUN.sig, sc = RUN.scored, is = sig.issues;
+  const rowsLabel = rows => { rows=[...new Set(rows)]; return rows.length ? (rows.length===1&&rows[0]==='—'?'Whole file':'Row'+(rows.length>1?'s ':' ')+rows.slice(0,5).join(', ')+(rows.length>5?'…':'')) : ''; };
+  const rej = test => sig.signals.filter(s=>s.status==='Rejected' && test(s));
+  const out = (list, sev, label) => list.length ? {sev, label: label||`${list.length} found`, rows: rowsLabel(list.map(x=>x.row))} : {sev:'', label:'Passed'};
+  switch(k){
+    case 'columns': return out(is.filter(i=>/Required column|isn't in the template|header row|format hints/.test(i.issue)), 'warn');
+    case 'company': return out(rej(s=>s.code==='D4' && !/^Person/.test(s.reason) || (s.code==='D3' && /company/i.test(s.reason))), 'warn', null);
+    case 'person': {
+      const r = rej(s=>s.code==='D4' && /^Person/.test(s.reason)), auto = sig.signals.filter(s=>s.assigned && s.assigned!=='Named in the file');
+      if(r.length) return {sev:'warn', label:`${r.length} not found`, rows: rowsLabel(r.map(x=>x.row))+(auto.length?` · ${auto.length} auto-assigned`:'')};
+      return auto.length ? {sev:'info', label:`${auto.length} auto-assigned`, rows: rowsLabel(auto.map(x=>x.row))} : {sev:'', label:'Passed'};
+    }
+    case 'date': return out(rej(s=>s.code==='D3' && /date/i.test(s.reason)), 'warn');
+    case 'type': return out(rej(s=>s.code==='D1' || (s.code==='D3' && /signal type/i.test(s.reason))), 'warn');
+    case 'dupes': return out(rej(s=>s.code==='D5'), 'warn');
+    case 'window': return out(rej(s=>s.code==='D2'), 'info', null);
+    case 'knockout': { const k2 = sig.signals.filter(s=>s.status==='Used for a knock-out'); return k2.length ? {sev:'info', label:`${k2.length} excluded`, rows: rowsLabel(k2.map(x=>x.row))} : {sev:'', label:'None installed'}; }
+    case 'fit': { const n = sc.filter(r=>r.belowFloor).length; return n ? {sev:'info', label:`${n} below the floor`} : {sev:'', label:'All above the floor'}; }
+    case 'score': { const n = sc.filter(r=>r.score!==undefined).length, a = sc.filter(r=>r.tier==='A').length; return {sev:'', label:`${n} scored · ${a} in tier A`}; }
+  }
+}
+function runChecks(){
+  const ov = overlay('checksOverlay'); ov.onclick = null;
+  const sig = RUN.sig;
+  ov.innerHTML = `<div style="background:var(--surf);border-radius:var(--rlg);box-shadow:var(--sh-lg);width:540px;max-width:100%;max-height:90vh;display:flex;flex-direction:column">
+    <div style="padding:20px 22px 12px">
+      <div style="font-family:var(--fd);font-size:15px;font-weight:700;color:var(--i1)">Scoring ${esc(RUN.list.name)}</div>
+      <div style="font-size:12px;color:var(--i3);margin-top:3px">${sig.rowsRead} signal rows from ${esc(RUN.fileName)} · as of ${RUN.asOf} · fixed rules</div>
+      <div style="height:4px;background:var(--s75);border-radius:2px;margin-top:12px;overflow:hidden"><div id="ckBar" style="height:100%;width:0;background:var(--brand);transition:width .3s var(--ease)"></div></div>
+    </div>
+    <div style="padding:0 22px;overflow-y:auto">
+      ${SIG_STEPS.map(([k,name,what],i)=>`<div class="ck-row pending" id="ck-${i}">
+        <div class="ck ck-wait" id="ckc-${i}"></div>
+        <div style="flex:1;min-width:0"><div style="font-size:12.5px;font-weight:600;color:var(--i1)">${name}</div><div style="font-size:11px;color:var(--i3)">${what}</div></div>
+        <div id="ckr-${i}" style="text-align:right;flex-shrink:0"></div>
+      </div>`).join('')}
+    </div>
+    <div id="ckFoot" style="padding:14px 22px 18px;display:flex;align-items:center;gap:8px;border-top:1px solid var(--border);margin-top:4px"><span style="flex:1;font-size:12px;color:var(--i3)">Running checks…</span></div>
+  </div>`;
+  let i = 0;
+  const tick = () => {
+    if(i>0){
+      const res = stepResult(SIG_STEPS[i-1][0]), c = document.getElementById('ckc-'+(i-1));
+      c.className = 'ck ' + (res.sev==='stop'?'ck-stop':res.sev==='warn'?'ck-warn':res.sev==='info'?'ck-info':'ck-ok');
+      c.textContent = res.sev ? '!' : '✓';
+      const tone = res.sev==='stop'?'tag-red':res.sev==='warn'?'tag-amber':res.sev==='info'?'tag-grey':'tag-green';
+      document.getElementById('ckr-'+(i-1)).innerHTML = `<span class="tag ${tone}">${res.label}</span>${res.rows?`<div style="font-size:10.5px;color:var(--i3);margin-top:3px">${res.rows}</div>`:''}`;
+    }
+    document.getElementById('ckBar').style.width = (i/SIG_STEPS.length*100)+'%';
+    if(i<SIG_STEPS.length){
+      const row = document.getElementById('ck-'+i); row.classList.remove('pending');
+      document.getElementById('ckc-'+i).className = 'ck ck-run';
+      row.scrollIntoView({block:'nearest'});
+      i++; setTimeout(tick, 380);
+    } else {
+      const qn = sig.signals.filter(s=>s.status==='Qualified').length, rj = sig.signals.filter(s=>s.status==='Rejected').length;
+      document.getElementById('ckFoot').innerHTML = `
+        <span style="flex:1;font-size:12px;color:var(--i2)"><b>${qn}</b> signals qualified · <b>${rj}</b> rejected · <b>${RUN.scored.filter(r=>r.tier==='A').length}</b> accounts in tier A</span>
+        <button class="btn btn-ghost btn-sm" onclick="hide('checksOverlay');RUN=null;renderStart('new')">Use a different file</button>
+        <button class="btn btn-primary btn-sm" onclick="hide('checksOverlay');renderResults()">View the scores →</button>`;
+    }
+  };
+  tick();
+}
+const _score = score;
+score = function(...a){ if(_score(...a)) runChecks(); };
+
+/* ═══════════════ RESULTS ═══════════════ */
+function renderResults(){
+  const sc = RUN.scored, sig = RUN.sig;
+  const count = t => sc.filter(r=>r.tier===t).length;
+  const ft = (id,label,n) => `<div class="ftab ${view===id?'active':''}" onclick="view='${id}';filt='all';q='';renderResults()">${label} <span class="ftab-cnt">${n}</span></div>`;
+  const T = DemandAI.CONFIG.tierThresholds;
+  document.getElementById('mainArea').innerHTML = `
+    <div class="topbar">
+      <div class="topbar-l"><span class="tb-title">${esc(RUN.name || RUN.list.name)}</span>
+        <span class="tb-badge badge-neutral">${esc(RUN.fileName)} · as of ${RUN.asOf}</span></div>
+      <div class="topbar-r">
+        <button class="btn btn-ghost btn-sm" onclick="renderStart('new')">Score another list</button>
+        <button class="btn btn-sec btn-sm" onclick="openSave()">${RUN.savedId?'Saved ✓':'Save'}</button>
+        <button class="btn btn-primary btn-sm" disabled style="opacity:.5;cursor:not-allowed" title="The hand-off to Micro-segments & NBA isn't wired yet">Send to NBA</button>
+      </div>
+    </div>
+    <div class="ftabs">${ft('ranked','Ranked accounts',sc.length)}${ft('evidence','Signal evidence',sig.signals.length)}</div>
+    <div class="canvas">
+      <div class="stats">
+        <div class="stat"><div class="stat-lbl">Tier A</div><div class="stat-val" style="color:var(--pos)">${count('A')}</div><div class="stat-sub">score ${T.A} and above</div></div>
+        <div class="stat"><div class="stat-lbl">Tier B</div><div class="stat-val" style="color:var(--warn)">${count('B')}</div><div class="stat-sub">score ${T.B}–${T.A-1}</div></div>
+        <div class="stat"><div class="stat-lbl">Tier C</div><div class="stat-val sv1">${count('C')}</div><div class="stat-sub">below ${T.B}</div></div>
+        <div class="stat"><div class="stat-lbl">Watch list</div><div class="stat-val sv5">${count('Watch list')}</div><div class="stat-sub">good fit, no live signal</div></div>
+        <div class="stat"><div class="stat-lbl">Not scored</div><div class="stat-val sv3">${count('Below fit floor')+count('Excluded')}</div><div class="stat-sub">${count('Below fit floor')} below fit floor · ${count('Excluded')} excluded</div></div>
+      </div>
+      ${view==='ranked'?rankedTab():evidenceTab()}
+    </div>`;
+  if(view==='ranked') drawRanked(); else drawEvidence();
+}
 function rankedTab(){
   return `<div class="score-list">
     <div class="sl-toolbar">${search('drawRanked','Search accounts…')}<div class="sl-seg-filter">${pill(filt,'all','All')+pill(filt,'A','A')+pill(filt,'B','B')+pill(filt,'C','C')+pill(filt,'Watch list','Watch list')+pill(filt,'out','Not scored')}</div></div>
     <div id="rows"></div></div>
-    <div style="font-size:11px;color:var(--i3);margin-top:10px">Rank = Fit ÷ 100 × Timing. Rank isn't capped at 100, so 144.9 is possible. A 0–100 scale is still to be agreed (checklist item 19). Click an account for its reasoning.</div>`;
+    <div style="font-size:11px;color:var(--i3);margin-top:10px">Score = Fit × Timing ÷ 100, all on 0–100. Click an account for its reasoning.</div>`;
 }
 function drawRanked(){
   const el = document.getElementById('rows'); if(!el) return;
@@ -698,26 +782,25 @@ function drawRanked(){
   else if(filt!=='all') rs = rs.filter(r=>r.tier===filt);
   if(q) rs = rs.filter(r=>r.account.name.toLowerCase().includes(q));
   const num = v => v!==undefined ? fmt1(v) : '<span class="muted">—</span>';
-  el.innerHTML = table([['Account','21%'],['Tier','12%'],['Rank','7%','num'],['Fit','6%','num'],['Timing','8%','num'],['Contact first','16%'],['Why now','30%']],
+  el.innerHTML = table([['Account','21%'],['Tier','12%'],['Score','7%','num'],['Fit','6%','num'],['Timing','8%','num'],['Contact first','16%'],['Why now','30%']],
     rs.map(r=>{
       const lead = r.people && r.people[0];
       const tags = [...new Set(RUN.sig.signals.filter(s=>s.accountId===r.account.id&&s.status==='Qualified').sort((x,y)=>y.weight-x.weight).map(s=>s.type))].slice(0,2);
       return `<tr class="click" onclick="openAccount('${r.account.id}')">
         <td><div class="person"><div class="co-av" style="background:${avColor(r.account.name)}">${initials(r.account.name)}</div><div>${cell(r.account.name, esc(r.account.vertical+' · '+r.account.country), 'dt-main')}</div></div></td>
         <td>${tierPill(r.tier)}</td>
-        <td class="num" style="color:var(--i1);font-weight:600">${num(r.rank)}</td>
+        <td class="num" style="color:var(--i1);font-weight:600">${num(r.score)}</td>
         <td class="num">${num(r.fit)}</td>
         <td class="num">${num(r.timing)}</td>
         <td>${lead && lead.score>0 ? cell(lead.contact.name, esc(lead.contact.jobTitle)) : '<span class="muted">—</span>'}</td>
         <td class="wrap">${r.excluded?`<span style="color:var(--i3)">${esc(r.excludedReason)}</span>`:r.belowFloor?`<span style="color:var(--i3)">Fit ${fmt1(r.fit)} is below the floor of ${DemandAI.CONFIG.fitFloor}</span>`:r.whyNow?`<div class="tags" style="margin-bottom:5px">${tags.map(tagChip).join('')}</div><span class="clamp2" title="${esc(r.whyNow)}" style="font-size:12px;color:var(--i2)">${esc(r.whyNow)}</span>`:'<span style="color:var(--i3)">No live signal</span>'}</td>
       </tr>`;}).join(''), 'No accounts match.');
 }
-
 function evidenceTab(){
   return `<div class="score-list">
-    <div class="sl-toolbar">${search('drawEvidence','Search company, person or type…')}<div class="sl-seg-filter">${pill(filt,'all','All')+pill(filt,'Qualified','Qualified')+pill(filt,'Rejected','Rejected')+pill(filt,'Not used','Not used')+pill(filt,'Used for a knock-out','Knock-out')}</div></div>
+    <div class="sl-toolbar">${search('drawEvidence','Search company, person or tag…')}<div class="sl-seg-filter">${pill(filt,'all','All')+pill(filt,'Qualified','Qualified')+pill(filt,'Rejected','Rejected')+pill(filt,'Not used','Not used')+pill(filt,'Used for a knock-out','Knock-out')}</div></div>
     <div id="rows"></div></div>
-    <div style="font-size:11px;color:var(--i3);margin-top:10px">Every row of the signal file, in file order. People not in the lead file are rejected (D4) and come back as suggested new contacts. Hover a cell for its full text.</div>`;
+    <div style="font-size:11px;color:var(--i3);margin-top:10px">Every row of the signal file, in file order. People not in the lead file are rejected (D4) and come back as suggested new contacts.</div>`;
 }
 function drawEvidence(){
   const el = document.getElementById('rows'); if(!el) return;
@@ -738,12 +821,48 @@ function drawEvidence(){
     </tr>`).join(''), 'No signals match.');
 }
 
-/* Issues travel with the signal row they belong to: an (i) on the row, hover for the fix */
-const SEV_COL = {stop:'var(--neg)',flag:'var(--warn)',info:'var(--i3)'};
-const SEG_TONE = {Inquiry:'tag-blue',Modernisation:'tag-violet','Service renewal':'tag-teal',Project:'tag-amber',Leadership:'tag-pink',Engagement:'tag-green'};
-function tagChip(t){ const c = DemandAI.CONFIG.signalTypes[t]; return `<span class="tag ${(c&&SEG_TONE[c.segment])||'tag-grey'}">${esc(t)}</span>`; }
+/* ═══════════════ SAVE, OPEN, RENAME SCORED LISTS ═══════════════ */
+function openSave(){
+  const ov = overlay('saveOverlay'); ov.onclick = e=>{ if(e.target===ov) hide('saveOverlay'); };
+  const name = RUN.name || `${RUN.list.name} · scored ${RUN.asOf}`;
+  ov.innerHTML = `<div style="background:var(--surf);border-radius:var(--rlg);box-shadow:var(--sh-lg);width:440px;max-width:100%;padding:20px 22px">
+    <div style="font-family:var(--fd);font-size:15px;font-weight:700;color:var(--i1);margin-bottom:4px">${RUN.savedId?'Update the scored list':'Save the scored list'}</div>
+    <div style="font-size:12px;color:var(--i3);margin-bottom:14px;line-height:1.5">${esc(RUN.list.name)} with the signals from ${esc(RUN.fileName)}, as of ${RUN.asOf}. It appears under Scored lists.</div>
+    <label style="font-size:11px;font-weight:600;color:var(--i2)">Name</label>
+    <input id="runName" value="${esc(name)}" style="width:100%;margin:5px 0 18px;padding:9px 11px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:13px" onkeydown="if(event.key==='Enter')saveRun()">
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-ghost btn-sm" onclick="hide('saveOverlay')">Cancel</button>
+      <button class="btn btn-primary btn-sm" onclick="saveRun()">Save</button>
+    </div></div>`;
+  setTimeout(()=>{ const el=document.getElementById('runName'); el.focus(); el.select(); }, 30);
+}
+function saveRun(){
+  const name = document.getElementById('runName').value.trim() || RUN.list.name;
+  const sc = RUN.scored;
+  const prev = RUN.savedId && DemandAI.getScoring(RUN.savedId);
+  const run = prev ? Object.assign(prev, {name}) : { id:'run-'+Date.now().toString(36), name, listId:RUN.listId, listName:RUN.list.name,
+    fileName:RUN.fileName, sheet:RUN.sheet, grid:RUN.grid, asOf:RUN.asOf, sandbox:RUN.sandbox, createdAt:Date.now(),
+    stats:{ scored: sc.filter(r=>r.score!==undefined).length, A: sc.filter(r=>r.tier==='A').length } };
+  if(!DemandAI.saveScoring(run)){ showToast("This browser blocks storage, so it can't be saved"); return; }
+  RUN.savedId = run.id; RUN.name = name;
+  hide('saveOverlay'); showToast(`Saved as "${name}"`); renderResults();
+}
+function openRun(id){
+  const r = DemandAI.getScoring(id);
+  if(!r) return;
+  const ok = _score(r.listId, r.fileName, r.sheet, r.grid, r.asOf, r.sandbox, r);
+  if(ok) renderResults();
+}
+function removeRun(id){ DemandAI.deleteScoring(id); showToast('Scored list deleted'); renderStart('saved'); }
+function startRename(id){ renamingId = id; renderStart('saved'); const el=document.getElementById('renameInput'); if(el){ el.focus(); el.select(); } }
+function finishRename(id){
+  const el = document.getElementById('renameInput'); const name = el ? el.value.trim() : '';
+  const r = DemandAI.getScoring(id);
+  if(r && name && name!==r.name){ r.name = name; DemandAI.saveScoring(r); showToast('Renamed'); }
+  renamingId = null; renderStart('saved');
+}
 
-/* ═══════════════ ACCOUNT DRAWER: one account's reasoning, in panels ═══════════════ */
+/* ═══════════════ ACCOUNT DRAWER ═══════════════ */
 function ago(d){ return d===0?'today':d<14?d+'d ago':d<60?Math.round(d/7)+'w ago':Math.round(d/30)+'mo ago'; }
 function miniStat(label, val, sub){ return `<div style="flex:1;padding:10px 12px;border-right:1px solid var(--border)"><div style="font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--i3)">${label}</div><div style="font-family:var(--fd);font-size:20px;font-weight:700;color:var(--i1);margin-top:2px">${val}</div>${sub?`<div style="font-size:10px;color:var(--i3)">${sub}</div>`:''}</div>`; }
 function openAccount(id){
@@ -757,7 +876,7 @@ function openAccount(id){
     <div class="panel-hdr"><span class="panel-ttl">Priority</span>${tierPill(r.tier)}</div>
     ${r.excluded ? `<div class="panel-body" style="font-size:12px;color:var(--neg);background:var(--neg-lt)"><b>Excluded, not scored.</b> ${esc(r.excludedReason)}</div>`
       : r.belowFloor ? `<div class="panel-body" style="font-size:12px;color:var(--warn);background:var(--warn-lt)"><b>Below the fit floor.</b> Fit ${fmt1(r.fit)} is under ${DemandAI.CONFIG.fitFloor}, so its signals aren't counted.</div>`
-      : `<div style="display:flex">${miniStat('Rank',fmt1(r.rank))}${miniStat('Fit',fmt1(r.fit),'of 100')}${miniStat('Timing',fmt1(r.timing),r.signalCount+' signal'+(r.signalCount===1?'':'s'))}</div>
+      : `<div style="display:flex">${miniStat('Score',fmt1(r.score),'of 100')}${miniStat('Fit',fmt1(r.fit),'of 100')}${miniStat('Timing',fmt1(r.timing),r.signalCount+' signal'+(r.signalCount===1?'':'s'))}</div>
          <div style="padding:9px 14px;border-top:1px solid var(--border);font-size:11.5px;color:var(--i2)">Confidence <b style="color:${r.confidence==='high'?'var(--pos)':r.confidence==='low'?'var(--neg)':'var(--warn)'}">${r.confidence}</b> · ${esc(r.confidenceWhy)}</div>`}
   </div>`;
   // Why now
@@ -807,10 +926,12 @@ function openAccount(id){
   const dr = document.getElementById('detailDrawer'); dr.style.width = '440px'; dr.classList.add('open');
 }
 
+
 /* ═══════════════ BOOT ═══════════════ */
 (function boot(){
   const id = new URLSearchParams(location.search).get('list');
-  if(id && DemandAI.getList(id)) chooseList(id); else renderPick();
+  if(id && DemandAI.getList(id)) selListId = id;
+  renderStart('new');
 })();
 
 const PAGE_ID = '11-scoring.html';

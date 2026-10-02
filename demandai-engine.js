@@ -16,7 +16,11 @@ const CONFIG = {
   version: 'Config v1 · starting values',
   pilotCountries: ['Singapore', 'Malaysia', 'Thailand', 'Philippines', 'Indonesia', 'Vietnam'],
   fitFloor: 50,
-  tierThresholds: { A: 70, B: 40 },
+  // Tiers on the 0–100 score. Score = rank ÷ 2, so these are the stage sheet's 70 / 40 on the rank:
+  // every account lands in the same tier as before. To recalibrate with the client.
+  tierThresholds: { A: 35, B: 20 },
+  // Stacked timing can't exceed twice the strongest tier weight (100 + 50 + 25 + … < 200).
+  timingMax: 200,
   verticalMap: [
     { pattern: /refin/i, vertical: 'Refining', level: 'core' },
     { pattern: /petrochem/i, vertical: 'Petrochemicals', level: 'adjacent' },
@@ -592,12 +596,18 @@ function scoreList(list, signalResult) {
     // Person signal score, then account timing over everyone's signals
     res.people = cs.filter(c => !c.optOut).map(c => {
       const sigs = own.filter(s => s.contactRow === c.row).sort((x, y) => y.weight - x.weight);
-      return { contact: c, signals: sigs, score: round1(stack(sigs.map(s => s.weight))) };
-    }).sort((x, y) => y.score - x.score || (x.contact.persona === 'Primary' ? -1 : 0) - (y.contact.persona === 'Primary' ? -1 : 0));
-    res.timing = round1(stack(own.map(s => s.weight)));
-    res.rank = round1(res.fit / 100 * stack(own.map(s => s.weight)));
+      const raw = stack(sigs.map(s => s.weight));
+      return { contact: c, signals: sigs, raw: round1(raw), score: round1(raw / CONFIG.timingMax * 100) };
+    }).sort((x, y) => y.raw - x.raw || (x.contact.persona === 'Primary' ? -1 : 0) - (y.contact.persona === 'Primary' ? -1 : 0));
+    // Everything on 0–100: timing as a share of its maximum, score = fit × timing ÷ 100.
+    // The stage sheet's rank (fit ÷ 100 × raw timing, which reaches 200) is kept for traceability.
+    const rawTiming = stack(own.map(s => s.weight));
+    res.timingRaw = round1(rawTiming);
+    res.rank = round1(res.fit / 100 * rawTiming);
+    res.timing = round1(rawTiming / CONFIG.timingMax * 100);
+    res.score = round1(res.fit * (rawTiming / CONFIG.timingMax * 100) / 100);
     res.signalCount = own.length;
-    res.tier = tierFor(res.rank, own.length > 0);
+    res.tier = tierFor(res.score, own.length > 0);
     const hasPrimary = cs.some(c => !c.optOut && c.persona === 'Primary');
     res.confidence = !hasPrimary ? 'low' : own.length >= 2 ? 'high' : 'medium';
     res.confidenceWhy = !hasPrimary ? 'No contact in the primary persona' : own.length >= 2 ? `${own.length} qualified signals and a primary-persona contact` : 'Only one qualified signal';
@@ -609,7 +619,7 @@ function scoreList(list, signalResult) {
     results.push(res);
   }
   const order = { A: 0, B: 1, C: 2, 'Watch list': 3, 'Below fit floor': 4, Excluded: 5 };
-  results.sort((x, y) => order[x.tier] - order[y.tier] || (y.rank || 0) - (x.rank || 0) || (y.fit || 0) - (x.fit || 0));
+  results.sort((x, y) => order[x.tier] - order[y.tier] || (y.score || 0) - (x.score || 0) || (y.fit || 0) - (x.fit || 0));
   return results;
 }
 
@@ -634,10 +644,17 @@ function saveList(list) {
 function getList(id) { return loadLists().find(l => l.id === id) || null; }
 function deleteList(id) { return saveLists(loadLists().filter(l => l.id !== id)); }
 
+const SCORING_KEY = 'demandai_scorings_v1';
+function loadScorings() { try { return JSON.parse(localStorage.getItem(SCORING_KEY) || '[]'); } catch (e) { return []; } }
+function saveScorings(all) { try { localStorage.setItem(SCORING_KEY, JSON.stringify(all)); return true; } catch (e) { return false; } }
+function saveScoring(run) { const all = loadScorings().filter(r => r.id !== run.id); all.unshift(run); return saveScorings(all); }
+function getScoring(id) { return loadScorings().find(r => r.id === id) || null; }
+function deleteScoring(id) { return saveScorings(loadScorings().filter(r => r.id !== id)); }
+
 return {
   CONFIG, CODES, LEAD_COLUMNS, LEAD_REQUIRED, SIGNAL_COLUMNS, SIGNAL_REQUIRED,
   parseCSV, toCSV, readTable, processLeads, classify, personaOf, fitFor, decayFactor,
   processSignals, scoreList, stack, tierFor, daysBetween, round1,
-  loadLists, saveList, getList, deleteList,
+  loadLists, saveList, getList, deleteList, loadScorings, saveScoring, getScoring, deleteScoring,
 };
 });
