@@ -399,6 +399,19 @@ input,textarea,select{font:inherit;}
 .tag-pink{background:#FBE9F1;color:#A1386A;}
 .tag-grey{background:#EEF1F4;color:#5B6774;}
 .tags{display:flex;flex-wrap:wrap;gap:6px;}
+
+/* ─── Checks pop-up ─── */
+@keyframes ckspin{to{transform:rotate(360deg);}}
+@keyframes ckpop{from{transform:scale(.6);opacity:0;}to{transform:scale(1);opacity:1;}}
+.ck{width:22px;height:22px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;}
+.ck-wait{border:2px solid var(--s100);}
+.ck-run{border:2.5px solid var(--brand-lt);border-top-color:var(--brand);animation:ckspin .7s linear infinite;}
+.ck-ok{background:var(--pos);color:#fff;animation:ckpop .2s var(--ease);}
+.ck-warn{background:var(--warn);color:#fff;animation:ckpop .2s var(--ease);}
+.ck-stop{background:var(--neg);color:#fff;animation:ckpop .2s var(--ease);}
+.ck-info{background:var(--s300);color:#fff;animation:ckpop .2s var(--ease);}
+.ck-row{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--s75);transition:opacity var(--base);}
+.ck-row.pending{opacity:.45;}
 </style>
 </head>
 <body>
@@ -559,7 +572,9 @@ function renderStart(tab){
       </div>` : `
       <div class="score-list">${table([['List',300],['Source file',220],['Accounts',120,'num'],['In the list',130,'num'],['Saved',190],['',190]],
         lists.map(l=>`<tr>
-          <td><div class="person"><div class="co-av" style="background:${avColor(l.id)}">${initials(l.name)}</div><div>${cell(l.name, l.scoring?'Scored':'Not scored yet', 'dt-main')}</div></div></td>
+          <td><div class="person"><div class="co-av" style="background:${avColor(l.id)}">${initials(l.name)}</div><div style="flex:1">${renamingId===l.id
+            ? `<div style="display:flex;gap:6px;align-items:center"><input id="renameInput" value="${esc(l.name)}" style="flex:1;min-width:0;padding:6px 9px;border:1px solid var(--brand-mid);border-radius:var(--rsm);font-size:12.5px" onkeydown="if(event.key==='Enter')finishRename('${l.id}');if(event.key==='Escape'){renamingId=null;renderStart('saved')}"><button class="btn btn-primary btn-sm" onclick="finishRename('${l.id}')">Save</button></div>`
+            : `<div style="display:flex;align-items:center;gap:6px;min-width:0"><span class="dt-main" title="${esc(l.name)}">${esc(l.name)}</span><button title="Rename" onclick="startRename('${l.id}')" style="flex-shrink:0;color:var(--i3);display:flex;padding:2px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button></div><span class="sub">${l.scoring?'Scored':'Not scored yet'}</span>`}</div></div></td>
           <td>${cell(l.sourceFile)}</td>
           <td class="num">${l.stats.accountsPass}<span class="sub">of ${l.stats.accounts}</span></td>
           <td class="num">${l.stats.inFinalList}<span class="sub">contacts</span></td>
@@ -590,8 +605,8 @@ function processFile(fileName, sheet, grid, sandbox){
   const result = DemandAI.processLeads(grid, {file:fileName, sheet});
   RUN = {fileName, sheet, sandbox, result};
   view = 'list'; filt='all'; q='';
-  showToast(`${fileName}: ${result.stats.rowsRead} rows read`);
-  renderChecks();
+  RUN.savedId = null;
+  openChecks();
 }
 
 /* ═══════════════ VALIDATION: the checks run on the file, and what each found ═══════════════ */
@@ -619,44 +634,70 @@ function checkOf(i){
   if(/isn't Y or N|commas|isn't a number|isn't on the list|isn't in the form|Differs from row|is blank$/.test(i.issue)) return 'formats';
   return 'required';
 }
-function renderChecks(){
-  const r = RUN.result, s = r.stats;
+const STEPS = [...CHECKS,
+  ['classify',  'Classification',             'Industry and site mapped to vertical and account type'],
+  ['knockouts', 'Knock-outs and suppression', 'Pilot region, managed separately, contacts left after opt-outs'],
+];
+function stepResult(k, by){
+  const r = RUN.result;
+  if(k==='classify'){ const n = r.accounts.filter(a=>a.needsReview).length; return {n, sev:n?'info':'', label:n?`${n} need review`:`${r.accounts.length} accounts`}; }
+  if(k==='knockouts'){ const n = r.accounts.filter(a=>a.excluded).length; return {n, sev:n?'info':'', label:n?`${n} excluded`:'All pass'}; }
+  const is = by[k]||[]; const n = is.length;
+  const sev = is.some(i=>i.severity==='stop')?'stop':is.some(i=>i.severity==='flag')?'warn':n?'info':'';
+  const rows = [...new Set(is.map(i=>i.row))];
+  return {n, sev, label:n?`${n} found`:'Passed', rows: n ? (rows.length===1&&rows[0]==='—'?'Whole file':'Row'+(rows.length>1?'s ':' ')+rows.slice(0,5).join(', ')+(rows.length>5?'…':'')) : ''};
+}
+function overlay(id){
+  let ov = document.getElementById(id);
+  if(!ov){ ov=document.createElement('div'); ov.id=id; ov.style.cssText='position:fixed;inset:0;background:rgba(20,26,33,.45);z-index:600;display:flex;align-items:center;justify-content:center;padding:16px'; document.body.appendChild(ov); }
+  ov.style.display='flex'; return ov;
+}
+function openChecks(){
+  const r = RUN.result;
   const by = {}; r.issues.forEach(i=>{ (by[checkOf(i)] = by[checkOf(i)] || []).push(i); });
-  const count = k => (by[k]||[]).length;
-  const rowsOf = k => [...new Set((by[k]||[]).map(i=>i.row))];
-  document.getElementById('mainArea').innerHTML = `
-    <div class="topbar">
-      <div class="topbar-l"><span class="tb-title">Validation report</span><span class="tb-badge badge-neutral">${esc(RUN.fileName)}</span></div>
-      <div class="topbar-r">
-        <button class="btn btn-ghost btn-sm" onclick="renderStart('upload')">Upload a different file</button>
-        <button class="btn btn-primary btn-sm" onclick="renderRun()">Continue — classify and scope this list →</button>
-      </div>
+  const ov = overlay('checksOverlay');
+  ov.onclick = null;
+  ov.innerHTML = `<div style="background:var(--surf);border-radius:var(--rlg);box-shadow:var(--sh-lg);width:520px;max-width:100%;max-height:90vh;display:flex;flex-direction:column">
+    <div style="padding:20px 22px 12px">
+      <div style="font-family:var(--fd);font-size:15px;font-weight:700;color:var(--i1)">Checking ${esc(RUN.fileName)}</div>
+      <div style="font-size:12px;color:var(--i3);margin-top:3px">${r.stats.rowsRead} rows · fixed rules, nothing fixed automatically</div>
+      <div style="height:4px;background:var(--s75);border-radius:2px;margin-top:12px;overflow:hidden"><div id="ckBar" style="height:100%;width:0;background:var(--brand);transition:width .3s var(--ease)"></div></div>
     </div>
-    <div class="canvas">
-      <div class="stats">
-        <div class="stat"><div class="stat-lbl">Rows loaded</div><div class="stat-val sv1">${s.rowsRead}</div><div class="stat-sub">${s.notLoaded} not loaded</div></div>
-        <div class="stat"><div class="stat-lbl">Duplicates</div><div class="stat-val sv3">${count('dupes')}</div><div class="stat-sub">same email or LinkedIn URL</div></div>
-        <div class="stat"><div class="stat-lbl">Missing a channel</div><div class="stat-val sv2">${(by.channel||[]).filter(i=>i.issue==='No email and no LinkedIn URL').length}</div><div class="stat-sub">no email and no LinkedIn URL</div></div>
-        <div class="stat"><div class="stat-lbl">Invalid emails</div><div class="stat-val sv4">${count('emailFormat')}</div><div class="stat-sub">malformed address</div></div>
-        <div class="stat"><div class="stat-lbl">Opted out</div><div class="stat-val sv5">${count('optout')}</div><div class="stat-sub">suppressed</div></div>
-      </div>
-      <div class="panel" style="margin-bottom:14px">
-        <div class="panel-hdr"><span class="panel-ttl">Checks run on this file — nothing fixed automatically</span><span style="font-size:10.5px;color:var(--i3)">${CHECKS.length} checks · fixed rules, no AI</span></div>
-        <div class="panel-body" style="padding:0">
-          ${CHECKS.map(([k,name,what])=>{
-            const n = count(k), rows = rowsOf(k);
-            const sev = (by[k]||[]).some(i=>i.severity==='stop') ? 'red' : (by[k]||[]).some(i=>i.severity==='flag') ? 'amber' : 'grey';
-            return `<div style="display:flex;align-items:center;gap:14px;padding:12px 16px;border-bottom:1px solid var(--s75)">
-              <span style="width:22px;height:22px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;background:${n?(sev==='red'?'var(--neg-lt)':sev==='amber'?'var(--warn-lt)':'var(--s75)'):'var(--pos-lt)'};color:${n?(sev==='red'?'var(--neg)':sev==='amber'?'var(--warn)':'var(--i2)'):'var(--pos)'}">${n?'!':'✓'}</span>
-              <div style="flex:1;min-width:0"><div style="font-size:12.5px;font-weight:600;color:var(--i1)">${name}</div><div style="font-size:11px;color:var(--i3)">${what}</div></div>
-              <div style="text-align:right;flex-shrink:0;max-width:45%">${n
-                ? `<span class="tag ${sev==='red'?'tag-red':sev==='amber'?'tag-amber':'tag-grey'}">${n} found</span><div style="font-size:10.5px;color:var(--i3);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc((by[k]||[]).map(i=>'Row '+i.row+': '+i.issue).join('\n'))}">${rows.length===1&&rows[0]==='—'?'Whole file':'Row'+(rows.length>1?'s ':' ')+rows.slice(0,6).join(', ')+(rows.length>6?'…':'')}</div>`
-                : '<span class="tag tag-green">Passed</span>'}</div>
-            </div>`;}).join('')}
-        </div>
-      </div>
-      <div style="font-size:11.5px;color:var(--i3)">Next: classification and the knock-outs (region, managed separately, contacts left after suppression). The installed-base check runs in Scoring, from the signal file.</div>
-    </div>`;
+    <div style="padding:0 22px;overflow-y:auto">
+      ${STEPS.map(([k,name,what],i)=>`<div class="ck-row pending" id="ck-${i}">
+        <div class="ck ck-wait" id="ckc-${i}"></div>
+        <div style="flex:1;min-width:0"><div style="font-size:12.5px;font-weight:600;color:var(--i1)">${name}</div><div style="font-size:11px;color:var(--i3)">${what}</div></div>
+        <div id="ckr-${i}" style="text-align:right;flex-shrink:0"></div>
+      </div>`).join('')}
+    </div>
+    <div id="ckFoot" style="padding:14px 22px 18px;display:flex;align-items:center;gap:8px;border-top:1px solid var(--border);margin-top:4px">
+      <span style="flex:1;font-size:12px;color:var(--i3)">Running checks…</span>
+    </div>
+  </div>`;
+  let i = 0;
+  const tick = () => {
+    if(i>0){
+      const res = stepResult(STEPS[i-1][0], by), c = document.getElementById('ckc-'+(i-1));
+      c.className = 'ck ' + (res.sev==='stop'?'ck-stop':res.sev==='warn'?'ck-warn':res.sev==='info'?'ck-info':'ck-ok');
+      c.textContent = res.sev ? '!' : '✓';
+      const tone = res.sev==='stop'?'tag-red':res.sev==='warn'?'tag-amber':res.sev==='info'?'tag-grey':'tag-green';
+      document.getElementById('ckr-'+(i-1)).innerHTML = `<span class="tag ${tone}">${res.label}</span>${res.rows?`<div style="font-size:10.5px;color:var(--i3);margin-top:3px">${res.rows}</div>`:''}`;
+    }
+    document.getElementById('ckBar').style.width = (i/STEPS.length*100)+'%';
+    if(i<STEPS.length){
+      const row = document.getElementById('ck-'+i); row.classList.remove('pending');
+      document.getElementById('ckc-'+i).className = 'ck ck-run';
+      row.scrollIntoView({block:'nearest'});
+      i++; setTimeout(tick, 380);
+    } else {
+      const s = r.stats;
+      document.getElementById('ckFoot').innerHTML = `
+        <span style="flex:1;font-size:12px;color:var(--i2)"><b>${s.issues}</b> issue${s.issues===1?'':'s'} · <b>${s.accountsPass}</b> of ${s.accounts} accounts pass · <b>${s.inFinalList}</b> contacts in the list</span>
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('checksOverlay').style.display='none';renderStart('upload')">Upload a different file</button>
+        <button class="btn btn-primary btn-sm" onclick="document.getElementById('checksOverlay').style.display='none';renderRun()">View the list →</button>`;
+    }
+  };
+  tick();
 }
 
 /* ═══════════════ RESULTS ═══════════════ */
@@ -669,7 +710,8 @@ function renderRun(){
         <span class="tb-badge badge-neutral">${esc(RUN.sheet)}</span></div>
       <div class="topbar-r">
         <button class="btn btn-ghost btn-sm" onclick="renderStart('upload')">Upload a different file</button>
-        <button class="btn btn-primary btn-sm" onclick="openSave()" ${s.accountsPass?'':'disabled style="opacity:.5;cursor:not-allowed"'}>Save list and go to Scoring →</button>
+        <button class="btn btn-sec btn-sm" onclick="openSave(false)" ${s.accountsPass?'':'disabled style="opacity:.5;cursor:not-allowed"'}>${RUN.savedId?'Saved ✓':'Save list'}</button>
+        <button class="btn btn-primary btn-sm" onclick="openSave(true)" ${s.accountsPass?'':'disabled style="opacity:.5;cursor:not-allowed"'}>Save and go to Scoring →</button>
       </div>
     </div>
     <div class="ftabs">${tab('list','Final list',r.contacts.length)}${tab('accounts','Accounts',r.accounts.length)}</div>
@@ -814,30 +856,45 @@ function unattachedNotice(){
 
 /* ═══════════════ DRAWERS ═══════════════ */
 /* ═══════════════ SAVE AND HAND OFF ═══════════════ */
-function openSave(){
-  const base = RUN.fileName.replace(/\.[^.]+$/,'');
-  let ov = document.getElementById('saveOverlay');
-  if(!ov){ ov=document.createElement('div'); ov.id='saveOverlay'; ov.style.cssText='position:fixed;inset:0;background:rgba(20,26,33,.45);z-index:600;display:flex;align-items:center;justify-content:center;padding:16px'; ov.onclick=e=>{if(e.target===ov) ov.style.display='none';}; document.body.appendChild(ov); }
-  const stops = RUN.result.stats.issuesBySeverity.stop;
-  ov.innerHTML = `<div style="background:var(--surf);border-radius:var(--rlg);box-shadow:var(--sh-lg);width:420px;max-width:100%;padding:20px">
-    <div style="font-family:var(--fd);font-size:14px;font-weight:700;color:var(--i1);margin-bottom:4px">Save the screened list</div>
-    <div style="font-size:11.5px;color:var(--i3);margin-bottom:14px;line-height:1.5">${RUN.result.stats.accountsPass} accounts that pass the knock-outs, with their contacts, go to Scoring. Excluded accounts travel with it, marked excluded, so their signals are reported as not used.${stops?` <b style="color:var(--neg)">${stops} row${stops>1?'s':''} weren't loaded</b>: see Issues.`:''}</div>
+function openSave(go){
+  const saved = RUN.savedId && DemandAI.getList(RUN.savedId);
+  const base = saved ? saved.name : RUN.fileName.replace(/\.[^.]+$/,'')+' · '+new Date().toISOString().slice(0,10);
+  const ov = overlay('saveOverlay');
+  ov.onclick = e=>{ if(e.target===ov) ov.style.display='none'; };
+  ov.innerHTML = `<div style="background:var(--surf);border-radius:var(--rlg);box-shadow:var(--sh-lg);width:440px;max-width:100%;padding:20px 22px">
+    <div style="font-family:var(--fd);font-size:15px;font-weight:700;color:var(--i1);margin-bottom:4px">${saved?'Update the saved list':'Save the screened list'}</div>
+    <div style="font-size:12px;color:var(--i3);margin-bottom:14px;line-height:1.5">${RUN.result.stats.accountsPass} accounts that pass the knock-outs, with ${RUN.result.stats.inFinalList} contacts in the list. It appears under Saved lists and in Scoring.</div>
     <label style="font-size:11px;font-weight:600;color:var(--i2)">List name</label>
-    <input id="listName" value="${esc(base)} · ${new Date().toISOString().slice(0,10)}" style="width:100%;margin:5px 0 16px;padding:8px 10px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:13px">
+    <input id="listName" value="${esc(base)}" style="width:100%;margin:5px 0 18px;padding:9px 11px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:13px" onkeydown="if(event.key==='Enter')saveList(${go})">
     <div style="display:flex;gap:8px;justify-content:flex-end">
       <button class="btn btn-ghost btn-sm" onclick="document.getElementById('saveOverlay').style.display='none'">Cancel</button>
-      <button class="btn btn-primary btn-sm" onclick="saveAndGo()">Save and go to Scoring →</button>
+      <button class="btn ${go?'btn-sec':'btn-primary'} btn-sm" onclick="saveList(false)">Save</button>
+      <button class="btn ${go?'btn-primary':'btn-sec'} btn-sm" onclick="saveList(true)">Save and go to Scoring →</button>
     </div></div>`;
-  ov.style.display='flex';
+  setTimeout(()=>{ const el=document.getElementById('listName'); el.focus(); el.select(); }, 30);
 }
-function saveAndGo(){
+function saveList(go){
   const name = document.getElementById('listName').value.trim() || RUN.fileName;
   const r = RUN.result;
-  const list = { id:'list-'+Date.now().toString(36), name, createdAt:Date.now(), sourceFile:RUN.fileName, sheet:RUN.sheet,
+  const prev = RUN.savedId && DemandAI.getList(RUN.savedId);
+  const list = prev ? Object.assign(prev, {name}) : { id:'list-'+Date.now().toString(36), name, createdAt:Date.now(), sourceFile:RUN.fileName, sheet:RUN.sheet,
     sandbox:RUN.sandbox, stats:r.stats, accounts:r.accounts, contacts:r.contacts };
-  const stored = DemandAI.saveList(list);
-  if(!stored){ showToast("This browser blocks storage, so the list can't be handed to Scoring. Allow site data and try again"); return; }
-  location.href = '11-scoring.html?list='+encodeURIComponent(list.id);
+  if(!DemandAI.saveList(list)){ showToast("This browser blocks storage, so the list can't be saved. Allow site data and try again"); return; }
+  RUN.savedId = list.id;
+  document.getElementById('saveOverlay').style.display='none';
+  if(go){ location.href = '11-scoring.html?list='+encodeURIComponent(list.id); return; }
+  showToast(`Saved as "${name}"`);
+  renderRun();
+}
+
+/* ═══════════════ RENAME A SAVED LIST ═══════════════ */
+let renamingId = null;
+function startRename(id){ renamingId = id; renderStart('saved'); const el=document.getElementById('renameInput'); if(el){ el.focus(); el.select(); } }
+function finishRename(id){
+  const el = document.getElementById('renameInput'); const name = el ? el.value.trim() : '';
+  const l = DemandAI.getList(id);
+  if(l && name && name!==l.name){ l.name = name; DemandAI.saveList(l); showToast('List renamed'); }
+  renamingId = null; renderStart('saved');
 }
 
 renderStart();
