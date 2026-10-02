@@ -494,16 +494,20 @@ let RUN = null;        // {fileName, sheet, sandbox, result}
 let view = 'list';     // list | accounts | issues
 let filt = 'all', q = '';
 
-function renderStart(){
-  RUN = null;
+let startTab = 'upload';
+function renderStart(tab){
+  RUN = null; closeDrawer();
+  if(tab) startTab = tab;
   const lists = DemandAI.loadLists();
+  const t = (id,label,n) => `<div class="ftab ${startTab===id?'active':''}" onclick="renderStart('${id}')">${label}${n!==undefined?` <span class="ftab-cnt">${n}</span>`:''}</div>`;
   document.getElementById('mainArea').innerHTML = `
     <div class="topbar"><div class="topbar-l"><span class="tb-title">Lead discovery and research</span><span class="tb-badge badge-neutral">Stages 1–5 · rules only</span></div></div>
-    <div class="canvas">
+    <div class="ftabs">${t('upload','Upload')}${t('saved','Saved lists',lists.length)}</div>
+    <div class="canvas">${startTab==='upload' ? `
       <div style="max-width:640px;margin:24px auto 0">
         <div style="font-family:var(--fd);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--brand);margin-bottom:8px">Step 1 · Prospecting</div>
         <div style="font-family:var(--fd);font-size:22px;font-weight:700;color:var(--i1);margin-bottom:6px">Upload the lead file</div>
-        <div style="font-size:13px;color:var(--i3);margin-bottom:18px;line-height:1.55">One row per contact, in the lead template's columns (any order). Every row is checked by fixed rules, not AI: validation, classification, knock-outs and suppression. Nothing is fixed silently. Every issue is listed with its file, sheet, row and how to fix it.</div>
+        <div style="font-size:13px;color:var(--i3);margin-bottom:18px;line-height:1.55">One row per contact, in the lead template's columns (any order). Every row is checked by fixed rules, not AI: validation, classification, knock-outs and suppression. Nothing is fixed silently.</div>
         <label id="dropZone" for="fileInput" style="display:block;border:1.5px dashed var(--bdk);border-radius:var(--rlg);padding:34px 24px;cursor:pointer;background:var(--surf);text-align:center">
           <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" style="display:none" onchange="onFile(this.files[0])">
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--i3)" stroke-width="1.5" stroke-linecap="round" style="margin-bottom:8px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
@@ -515,32 +519,32 @@ function renderStart(){
           <button class="btn btn-sec btn-sm" onclick="downloadTemplate()">Download lead template (.csv)</button>
           <button class="btn btn-ghost btn-sm" onclick="download(DemandAISample.LEAD_FILE, DemandAI.toCSV(DemandAISample.LEADS))">Download the sample file</button>
         </div>
-        <div style="padding:12px 14px;background:var(--sec-lt);border-radius:var(--rmd);font-size:11.5px;color:var(--sec-dk);line-height:1.6;margin-bottom:22px">
+        <div style="padding:12px 14px;background:var(--sec-lt);border-radius:var(--rmd);font-size:11.5px;color:var(--sec-dk);line-height:1.6">
           <b>Required:</b> ${DemandAI.LEAD_REQUIRED.join(', ')}, plus an email or a LinkedIn URL.<br>
-          <b>Pilot region:</b> ${DemandAI.CONFIG.pilotCountries.join(', ')}. <b>Fit floor:</b> ${DemandAI.CONFIG.fitFloor} (applied in Scoring).<br>
+          <b>Pilot region:</b> ${DemandAI.CONFIG.pilotCountries.join(', ')}.<br>
           This prototype reads the file in your browser. The production build runs it as a background job.
         </div>
-        <div class="panel">
-          <div class="panel-hdr"><span class="panel-ttl">Saved lists</span><span style="font-size:10.5px;color:var(--i3)">${lists.length} saved · handed to Scoring</span></div>
-          <div class="panel-body" style="padding:0">${lists.length ? lists.map(l=>`
-            <div style="display:flex;align-items:center;gap:10px;padding:11px 16px;border-bottom:1px solid var(--s75)">
-              <div style="flex:1;min-width:0">
-                <div style="font-size:12.5px;font-weight:600;color:var(--i1)">${esc(l.name)} ${l.sandbox?'<span class="sc sc-m" style="margin-left:4px">SANDBOX</span>':''}</div>
-                <div style="font-size:10.5px;color:var(--i3)">${esc(l.sourceFile)} · ${l.stats.accountsPass} accounts pass · ${l.stats.inFinalList} contacts in the final list · saved ${new Date(l.createdAt).toLocaleString()}</div>
-              </div>
-              <a class="btn btn-sec btn-sm" style="text-decoration:none" href="11-scoring.html?list=${encodeURIComponent(l.id)}">Score →</a>
-              <button class="btn btn-ghost btn-sm" onclick="removeList('${l.id}')">Delete</button>
-            </div>`).join('') : `<div style="padding:14px 16px;font-size:12px;color:var(--i3)">No lists yet. Upload a lead file to build one.</div>`}
-          </div>
-        </div>
-      </div>
+      </div>` : `
+      <div class="score-list">
+        <div class="sl-head" style="grid-template-columns:minmax(220px,2fr) minmax(160px,1.2fr) 100px 110px 150px 170px"><div class="sl-th">List</div><div class="sl-th">Source file</div><div class="sl-th">Accounts</div><div class="sl-th">In the list</div><div class="sl-th">Saved</div><div class="sl-th"></div></div>
+        ${lists.length ? lists.map(l=>`
+          <div class="sl-row" style="grid-template-columns:minmax(220px,2fr) minmax(160px,1.2fr) 100px 110px 150px 170px;cursor:default">
+            <div class="co-cell"><div class="co-av" style="background:${avColor(l.id)}">${initials(l.name)}</div><div style="min-width:0"><div class="co-nm">${esc(l.name)}</div><div class="co-ind">${l.sandbox?'Sandbox · sample data':'Customer data'}${l.scoring?' · scored':''}</div></div></div>
+            <div style="font-size:12px;color:var(--i2);word-break:break-all">${esc(l.sourceFile)}</div>
+            <div style="font-size:12px;color:var(--i1)">${l.stats.accountsPass} <span style="color:var(--i3)">of ${l.stats.accounts}</span></div>
+            <div style="font-size:12px;color:var(--i1)">${l.stats.inFinalList} <span style="color:var(--i3)">contacts</span></div>
+            <div style="font-size:11.5px;color:var(--i3)">${new Date(l.createdAt).toLocaleString()}</div>
+            <div style="display:flex;gap:6px;justify-content:flex-end"><a class="btn btn-sec btn-sm" style="text-decoration:none" href="11-scoring.html?list=${encodeURIComponent(l.id)}">Score →</a><button class="btn btn-ghost btn-sm" onclick="removeList('${l.id}')">Delete</button></div>
+          </div>`).join('') : `<div style="padding:28px;text-align:center;font-size:12.5px;color:var(--i3)">No saved lists yet. <a href="#" onclick="renderStart('upload');return false" style="color:var(--brand);font-weight:600">Upload a lead file</a> to build one.</div>`}
+      </div>`}
     </div>`;
   const dz = document.getElementById('dropZone');
+  if(!dz) return;
   dz.addEventListener('dragover', e=>{e.preventDefault(); dz.style.borderColor='var(--brand)';});
   dz.addEventListener('dragleave', ()=>{dz.style.borderColor='var(--bdk)';});
   dz.addEventListener('drop', e=>{e.preventDefault(); dz.style.borderColor='var(--bdk)'; if(e.dataTransfer.files[0]) onFile(e.dataTransfer.files[0]);});
 }
-function removeList(id){ DemandAI.deleteList(id); showToast('List deleted'); renderStart(); }
+function removeList(id){ DemandAI.deleteList(id); showToast('List deleted'); renderStart('saved'); }
 function downloadTemplate(){ download('lead_template.csv', DemandAI.toCSV([DemandAI.LEAD_COLUMNS])); }
 
 async function onFile(file){
@@ -569,7 +573,7 @@ function renderRun(){
       <div class="topbar-l"><span class="tb-title">${esc(RUN.fileName)}</span>
         <span class="tb-badge badge-neutral">${esc(RUN.sheet)}</span>${RUN.sandbox?'<span class="tb-badge" style="background:var(--warn-lt);color:var(--warn)">Sandbox · sample data</span>':''}</div>
       <div class="topbar-r">
-        <button class="btn btn-ghost btn-sm" onclick="renderStart()">Upload a different file</button>
+        <button class="btn btn-ghost btn-sm" onclick="renderStart('upload')">Upload a different file</button>
         ${r.issues.length?'<button class="btn btn-ghost btn-sm" onclick="downloadIssues()">Download issues (.csv)</button>':''}
         <button class="btn btn-primary btn-sm" onclick="openSave()" ${s.accountsPass?'':'disabled style="opacity:.5;cursor:not-allowed"'}>Save list and go to Scoring →</button>
       </div>
@@ -600,13 +604,25 @@ function statusPill(st){
   if(st.startsWith('In the list')) return '<span class="sc sc-m">NOT CONTACTABLE</span>';
   return '<span class="sc sc-l">NOT IN THE LIST</span>';
 }
-const COLS_LIST = 'minmax(170px,1.6fr) minmax(150px,1.3fr) 90px 120px minmax(130px,1fr) 130px';
+/* Wide tables: every field in the row, scroll sideways on small screens */
+const TH = 'padding:9px 12px;font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--i3);text-align:left;white-space:nowrap;background:var(--s50);border-bottom:1px solid var(--border);position:sticky;top:0';
+const TD = 'padding:10px 12px;font-size:12px;color:var(--i2);border-bottom:1px solid var(--border);vertical-align:top';
+function table(head, rows, empty){
+  return `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:1400px">
+    <tr>${head.map(h=>`<th style="${TH}">${h}</th>`).join('')}</tr>
+    ${rows || `<tr><td colspan="${head.length}" style="${TD};text-align:center;color:var(--i3);padding:24px">${empty}</td></tr>`}
+  </table></div>`;
+}
+const dash = v => v ? esc(v) : '<span style="color:var(--i4)">—</span>';
+function issueText(is){
+  if(!is.length) return '<span style="color:var(--i4)">—</span>';
+  return is.map(i=>`<div style="margin-bottom:4px;border-left:2.5px solid ${SEV_COL[i.severity]};padding-left:7px"><span style="color:var(--i1)">${esc(i.issue)}</span><div style="font-size:10.5px;color:var(--i3)">${esc(i.outcome)}. Fix: ${esc(i.fix)}</div></div>`).join('');
+}
 function renderListTab(){
   return `${unattachedNotice()}<div class="score-list">
     ${toolbar(pill(filt,'all','All','filt')+pill(filt,'in','In the final list','filt')+pill(filt,'nc','Not contactable','filt')+pill(filt,'out','Not in the list','filt'),'drawListRows','Search name, company or title…')}
-    <div class="sl-head" style="grid-template-columns:${COLS_LIST}"><div class="sl-th">Contact</div><div class="sl-th">Job title</div><div class="sl-th">Persona</div><div class="sl-th">Reachable by</div><div class="sl-th">Owner</div><div class="sl-th">Status</div></div>
     <div id="rows"></div></div>
-    <div style="font-size:11px;color:var(--i3);margin-top:10px">One row per contact: what Lead discovery hands to Scoring. <span style="font-style:italic;font-family:Georgia,serif;font-weight:700">i</span> marks a row with an issue: hover for it, or open the row for the fix.</div>`;
+    <div style="font-size:11px;color:var(--i3);margin-top:10px">One row per contact: what Lead discovery hands to Scoring. Scroll sideways for every column.</div>`;
 }
 function drawListRows(){
   const el = document.getElementById('rows'); if(!el) return;
@@ -615,23 +631,32 @@ function drawListRows(){
   if(filt==='nc') cs = cs.filter(c=>c.status.startsWith('In the list'));
   if(filt==='out') cs = cs.filter(c=>c.status.startsWith('Not in'));
   if(q) cs = cs.filter(c=>(c.name+' '+c.company+' '+c.jobTitle).toLowerCase().includes(q));
-  el.innerHTML = cs.length ? cs.map(c=>`
-    <div class="sl-row" style="grid-template-columns:${COLS_LIST}" onclick="openContact(${c.row})">
-      <div class="co-cell"><div class="co-av" style="background:${avColor(c.company)}">${initials(c.name)}</div><div style="min-width:0"><div class="co-nm">${esc(c.name)}${infoIcon(issuesFor(c.row))}</div><div class="co-ind">${esc(c.company)} · row ${c.row}</div></div></div>
-      <div style="font-size:12px;color:var(--i2)">${esc(c.jobTitle||'—')}</div>
-      <div style="font-size:11.5px;color:${c.persona==='Primary'?'var(--pos)':'var(--i2)'};font-weight:${c.persona==='Primary'?600:400}">${c.persona}</div>
-      <div style="font-size:11.5px;color:${c.reachableBy==='none'?'var(--neg)':'var(--i2)'}">${c.reachableBy}</div>
-      <div style="font-size:11px;color:var(--i3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.owner||'—')}</div>
-      <div title="${esc(c.status)}">${statusPill(c.status)}</div>
-    </div>`).join('') : `<div style="padding:24px;text-align:center;font-size:12px;color:var(--i3)">No contacts match.</div>`;
+  const accById = new Map(RUN.result.accounts.map(a=>[a.id,a]));
+  el.innerHTML = table(['Contact','Account','Job title','Persona','Email','LinkedIn','Location','Industry','Size (employees)','Reachable by','Consent','Owner','Status','Issues'],
+    cs.map(c=>{ const a = accById.get(c.accountId); const st = c.status; const reason = (st.match(/\((.*)\)$/)||[])[1];
+      return `<tr>
+      <td style="${TD};min-width:170px"><div class="co-cell"><div class="co-av" style="background:${avColor(c.company)}">${initials(c.name)}</div><div><div class="co-nm">${esc(c.name)}${infoIcon(issuesFor(c.row))}</div><div class="co-ind">row ${c.row}</div></div></div></td>
+      <td style="${TD};color:var(--i1);min-width:140px">${esc(c.company)}</td>
+      <td style="${TD};min-width:150px">${dash(c.jobTitle)}</td>
+      <td style="${TD};color:${c.persona==='Primary'?'var(--pos)':'var(--i2)'};font-weight:${c.persona==='Primary'?600:400}">${c.persona}</td>
+      <td style="${TD};white-space:nowrap">${c.emailRaw?esc(c.emailRaw)+`<div style="font-size:10.5px;color:${c.email&&c.emailVerified?'var(--pos)':'var(--warn)'}">${c.email?(c.emailVerified?'verified':'not verified'):'malformed'}</div>`:dash('')}</td>
+      <td style="${TD};white-space:nowrap">${c.linkedinRaw?esc(c.linkedinRaw.replace(/^https?:\/\/(www\.)?/,'')):dash('')}</td>
+      <td style="${TD};white-space:nowrap">${dash([c.city,c.country].filter(Boolean).join(', '))}</td>
+      <td style="${TD};min-width:120px">${dash(a&&a.industry)}</td>
+      <td style="${TD};font-family:var(--fm)">${a&&a.employees!=null?a.employees.toLocaleString('en-US'):dash('')}</td>
+      <td style="${TD};white-space:nowrap;color:${c.reachableBy==='none'?'var(--neg)':'var(--i2)'}">${c.reachableBy}</td>
+      <td style="${TD};white-space:nowrap">${c.optOut?'<span style="color:var(--neg)">Opted out</span>':dash(c.consent)}</td>
+      <td style="${TD};word-break:break-all;min-width:150px">${dash(c.owner)}</td>
+      <td style="${TD};min-width:150px">${statusPill(st)}${reason?`<div style="font-size:10.5px;color:var(--i3);margin-top:3px">${esc(reason)}</div>`:''}</td>
+      <td style="${TD};min-width:230px">${issueText(issuesFor(c.row))}</td>
+    </tr>`;}).join(''), 'No contacts match.');
 }
 
-const COLS_ACC = 'minmax(170px,1.6fr) 150px 130px 100px 80px minmax(160px,1.4fr)';
 function renderAccountsTab(){
   return `<div class="score-list">
     ${toolbar(pill(filt,'all','All','filt')+pill(filt,'pass','Pass','filt')+pill(filt,'excluded','Excluded','filt')+pill(filt,'review','Needs review','filt'),'drawAccRows','Search accounts…')}
-    <div class="sl-head" style="grid-template-columns:${COLS_ACC}"><div class="sl-th">Account</div><div class="sl-th">Vertical</div><div class="sl-th">Account type</div><div class="sl-th">Confidence</div><div class="sl-th">Contacts</div><div class="sl-th">Knock-outs</div></div>
-    <div id="rows"></div></div>`;
+    <div id="rows"></div></div>
+    <div style="font-size:11px;color:var(--i3);margin-top:10px">One row per account. Knock-outs run in order; the installed-base check runs in Scoring, from the signal file. Scroll sideways for every column.</div>`;
 }
 function drawAccRows(){
   const el = document.getElementById('rows'); if(!el) return;
@@ -641,15 +666,24 @@ function drawAccRows(){
   if(filt==='review') as = as.filter(a=>a.needsReview);
   if(q) as = as.filter(a=>a.name.toLowerCase().includes(q));
   const conf = {high:'sc-h',medium:'sc-m',low:'sc-l'};
-  el.innerHTML = as.length ? as.map(a=>`
-    <div class="sl-row" style="grid-template-columns:${COLS_ACC}" onclick="openAccount('${a.id}')">
-      <div class="co-cell"><div class="co-av" style="background:${avColor(a.name)}">${initials(a.name)}</div><div style="min-width:0"><div class="co-nm">${esc(a.name)}</div><div class="co-ind">${esc([a.city,a.country].filter(Boolean).join(', '))}</div></div></div>
-      <div style="font-size:12px;color:var(--i2)">${esc(a.vertical)} <span style="color:var(--i3)">· ${a.verticalLevel}</span></div>
-      <div style="font-size:12px;color:var(--i2)">${esc((DemandAI.CONFIG.accountTypes[a.accountType]||{}).label||'Other')}</div>
-      <div><span class="sc ${conf[a.confidence]}">${a.confidence.toUpperCase()}</span></div>
-      <div style="font-size:12px;color:var(--i2)">${a.contactIds.length}</div>
-      <div style="font-size:11.5px;color:${a.excluded?'var(--neg)':'var(--pos)'}">${a.excluded?'Excluded: '+esc(a.excludedReason):'Pass'}</div>
-    </div>`).join('') : `<div style="padding:24px;text-align:center;font-size:12px;color:var(--i3)">No accounts match.</div>`;
+  const money = n => n==null ? '' : n>=1e9 ? 'USD '+(n/1e9).toFixed(1).replace(/\.0$/,'')+'bn' : 'USD '+Math.round(n/1e6)+'m';
+  el.innerHTML = table(['Account','Location','Industry (as held)','Vertical','Confidence','Classification reason','Account type','Size','Existing customer','Site','Contacts','Owner','Knock-outs'],
+    as.map(a=>{ const cs = RUN.result.contacts.filter(c=>c.accountId===a.id);
+      return `<tr>
+      <td style="${TD};min-width:170px"><div class="co-cell"><div class="co-av" style="background:${avColor(a.name)}">${initials(a.name)}</div><div><div class="co-nm">${esc(a.name)}</div><div class="co-ind">${dash(a.domain)}</div></div></div></td>
+      <td style="${TD};white-space:nowrap">${dash([a.city,a.country].filter(Boolean).join(', '))}</td>
+      <td style="${TD};min-width:120px">${dash(a.industry)}</td>
+      <td style="${TD};white-space:nowrap;color:var(--i1)">${esc(a.vertical)}<div style="font-size:10.5px;color:var(--i3)">${a.verticalLevel}</div></td>
+      <td style="${TD}"><span class="sc ${conf[a.confidence]}">${a.confidence.toUpperCase()}</span></td>
+      <td style="${TD};min-width:220px;font-size:11.5px">${esc(a.classReason)}</td>
+      <td style="${TD};white-space:nowrap">${esc((DemandAI.CONFIG.accountTypes[a.accountType]||{}).label||'Other')}</td>
+      <td style="${TD};white-space:nowrap">${a.revenue!=null?money(a.revenue):''}${a.revenue!=null&&a.employees!=null?'<br>':''}${a.employees!=null?a.employees.toLocaleString('en-US')+' employees':''}${a.revenue==null&&a.employees==null?dash(''):''}</td>
+      <td style="${TD}">${a.existingCustomer?'Yes':'No'}</td>
+      <td style="${TD};min-width:160px">${a.siteProcess?esc([a.siteName,a.siteProcess].filter(Boolean).join(' · '))+(a.siteCapacity?`<div style="font-size:10.5px;color:var(--i3)">${Number(a.siteCapacity).toLocaleString('en-US')} ${esc(a.capacityUnit)}</div>`:''):dash('')}</td>
+      <td style="${TD};min-width:190px">${cs.map(c=>`<div>${esc(c.name)} <span style="color:var(--i3)">· ${c.persona}${c.optOut?' · opted out':''}</span></div>`).join('')}</td>
+      <td style="${TD};word-break:break-all;min-width:150px">${dash(a.owner)}</td>
+      <td style="${TD};min-width:230px">${a.checks.map(k=>`<div style="font-size:11.5px;margin-bottom:2px"><span style="display:inline-block;width:14px;color:${k.pass===false?'var(--neg)':k.pass?'var(--pos)':'var(--i3)'}">${k.pass===false?'✕':k.pass?'✓':'…'}</span>${esc(k.pass===false?k.why:k.rule)}</div>`).join('')}</td>
+    </tr>`;}).join(''), 'No accounts match.');
 }
 
 /* ═══════════════ ISSUES, attached to the contact row they belong to ═══════════════ */
@@ -683,42 +717,6 @@ function downloadIssues(){
 }
 
 /* ═══════════════ DRAWERS ═══════════════ */
-function kv(k,v){return `<div style="display:flex;gap:10px;padding:5px 0;border-bottom:1px solid var(--s75);font-size:11.5px"><span style="color:var(--i3);width:118px;flex-shrink:0">${k}</span><span style="color:var(--i1);min-width:0;word-break:break-word">${v}</span></div>`;}
-function section(t){return `<div style="font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--i3);margin:16px 0 6px">${t}</div>`;}
-function openContact(row){
-  const c = RUN.result.contacts.find(x=>x.row===row);
-  const iss = issuesFor(row);
-  document.getElementById('detTitle').textContent = c.name;
-  document.getElementById('detSub').textContent = c.jobTitle+' · '+c.company;
-  document.getElementById('detBody').innerHTML = `
-    <div style="padding:10px 12px;border-radius:var(--rsm);background:${c.status==='In the final list'?'var(--pos-lt)':c.status.startsWith('In the list')?'var(--warn-lt)':'var(--neg-lt)'};font-size:12px;color:var(--i1)">${esc(c.status)}</div>
-    ${section('Contact')}
-    ${kv('Persona',c.persona)}${kv('Reachable by',c.reachableBy)}
-    ${kv('Email',c.emailRaw?esc(c.emailRaw)+(c.email?(c.emailVerified?' · verified':' · not verified'):' · malformed'):'—')}
-    ${kv('LinkedIn',c.linkedinRaw?esc(c.linkedinRaw):'—')}
-    ${kv('Consent basis',esc(c.consent||'—'))}${kv('Opt-out',c.optOut?'Y':c.optOutUnknown?'not given':'N')}
-    ${kv('Location',esc([c.city,c.country].filter(Boolean).join(', ')||'—'))}${kv('Owner rep',esc(c.owner||'—'))}${kv('Source row',c.row)}
-    ${section('Issues on this row')}
-    ${iss.length?iss.map(i=>`<div style="font-size:11.5px;padding:6px 0;border-bottom:1px solid var(--s75)"><b>${esc(i.field)}</b>: ${esc(i.issue)}<div style="color:var(--i3)">${esc(i.outcome)} · ${esc(i.code)}</div><div style="color:var(--i2)">Fix: ${esc(i.fix)}</div></div>`).join(''):'<div style="font-size:11.5px;color:var(--i3)">None</div>'}`;
-  document.getElementById('detailDrawer').classList.add('open');
-}
-function openAccount(id){
-  const a = RUN.result.accounts.find(x=>x.id===id);
-  const cs = RUN.result.contacts.filter(c=>c.accountId===id);
-  document.getElementById('detTitle').textContent = a.name;
-  document.getElementById('detSub').textContent = [a.domain,a.country].filter(Boolean).join(' · ');
-  document.getElementById('detBody').innerHTML = `
-    ${section('Classification (stage 3)')}
-    ${kv('Vertical',esc(a.vertical)+' · '+a.verticalLevel)}${kv('Confidence',a.confidence)}${kv('Reason',esc(a.classReason))}
-    ${kv('Account type',esc((DemandAI.CONFIG.accountTypes[a.accountType]||{}).label||'Other'))}
-    ${kv('Industry as held',esc(a.industry||'—'))}${kv('Site',esc([a.siteName,a.siteProcess].filter(Boolean).join(' · ')||'—'))}
-    ${section('Knock-outs (stage 4), in order')}
-    ${a.checks.map(k=>`<div style="display:flex;gap:8px;padding:6px 0;border-bottom:1px solid var(--s75);font-size:11.5px"><span style="width:16px;color:${k.pass===false?'var(--neg)':k.pass?'var(--pos)':'var(--i3)'}">${k.pass===false?'✕':k.pass?'✓':'…'}</span><span style="flex:1"><b>${k.rule}</b><div style="color:var(--i3)">${esc(k.why)}</div></span></div>`).join('')}
-    ${section('Contacts')}
-    ${cs.map(c=>`<div style="font-size:11.5px;padding:6px 0;border-bottom:1px solid var(--s75);cursor:pointer" onclick="openContact(${c.row})"><b>${esc(c.name)}</b> · ${esc(c.jobTitle)} · ${c.persona}<div style="color:var(--i3)">${esc(c.status)}</div></div>`).join('')}`;
-  document.getElementById('detailDrawer').classList.add('open');
-}
-
 /* ═══════════════ SAVE AND HAND OFF ═══════════════ */
 function openSave(){
   const base = RUN.fileName.replace(/\.[^.]+$/,'');
