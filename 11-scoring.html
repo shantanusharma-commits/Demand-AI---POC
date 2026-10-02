@@ -412,6 +412,14 @@ input,textarea,select{font:inherit;}
 .ck-info{background:var(--s300);color:#fff;animation:ckpop .2s var(--ease);}
 .ck-row{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--s75);transition:opacity var(--base);}
 .ck-row.pending{opacity:.45;}
+
+/* ─── Checkboxes: grey when empty, brand colour when ticked ─── */
+.dt input[type=checkbox]{-webkit-appearance:none;appearance:none;width:16px;height:16px;margin:0;border-radius:4px;border:1.5px solid var(--s200);background:var(--s75);cursor:pointer;vertical-align:middle;display:inline-grid;place-content:center;transition:background var(--fast),border-color var(--fast);}
+.dt input[type=checkbox]:hover{border-color:var(--s300);}
+.dt input[type=checkbox]:checked,.dt input[type=checkbox]:indeterminate{background:var(--brand);border-color:var(--brand);}
+.dt input[type=checkbox]:checked::after{content:'';width:9px;height:5px;border:2px solid #fff;border-top:0;border-right:0;transform:translateY(-1px) rotate(-45deg);}
+.dt input[type=checkbox]:indeterminate::after{content:'';width:8px;height:2px;background:#fff;border-radius:1px;}
+.dt input[type=checkbox]:focus-visible{outline:2px solid var(--brand-mid);outline-offset:2px;}
 </style>
 </head>
 <body>
@@ -853,7 +861,6 @@ function rankedTab(){
     <div id="nBar" class="sl-toolbar" style="display:none;background:var(--brand-lt);align-items:center">
       <span id="nCount" style="font-size:12.5px;font-weight:600;color:var(--brand-dk)"></span>
       <button class="btn btn-ghost btn-sm" onclick="clearN()">Clear</button>
-      <button class="btn btn-primary btn-sm" style="margin-left:auto" onclick="sendToNBA()">Send selected to NBA →</button>
     </div>
     <div class="sl-toolbar">${search('drawRanked','Search prospects or companies…')}<div class="sl-seg-filter">${pill(filt,'all','All')+pill(filt,'A','A')+pill(filt,'B','B')+pill(filt,'C','C')+pill(filt,'Watch list','Watch list')+pill(filt,'out','Not scored')}</div></div>
     <div id="rows"></div></div>

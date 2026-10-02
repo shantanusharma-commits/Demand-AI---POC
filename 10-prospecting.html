@@ -412,6 +412,14 @@ input,textarea,select{font:inherit;}
 .ck-info{background:var(--s300);color:#fff;animation:ckpop .2s var(--ease);}
 .ck-row{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--s75);transition:opacity var(--base);}
 .ck-row.pending{opacity:.45;}
+
+/* ─── Checkboxes: grey when empty, brand colour when ticked ─── */
+.dt input[type=checkbox]{-webkit-appearance:none;appearance:none;width:16px;height:16px;margin:0;border-radius:4px;border:1.5px solid var(--s200);background:var(--s75);cursor:pointer;vertical-align:middle;display:inline-grid;place-content:center;transition:background var(--fast),border-color var(--fast);}
+.dt input[type=checkbox]:hover{border-color:var(--s300);}
+.dt input[type=checkbox]:checked,.dt input[type=checkbox]:indeterminate{background:var(--brand);border-color:var(--brand);}
+.dt input[type=checkbox]:checked::after{content:'';width:9px;height:5px;border:2px solid #fff;border-top:0;border-right:0;transform:translateY(-1px) rotate(-45deg);}
+.dt input[type=checkbox]:indeterminate::after{content:'';width:8px;height:2px;background:#fff;border-radius:1px;}
+.dt input[type=checkbox]:focus-visible{outline:2px solid var(--brand-mid);outline-offset:2px;}
 </style>
 </head>
 <body>
@@ -719,7 +727,7 @@ function renderRun(){
       <div class="topbar-r">
         <button class="btn btn-sec btn-sm" onclick="renderStart('upload')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>Upload a different file</button>
         <button class="btn btn-sec btn-sm" onclick="openSave(false)" ${s.accountsPass?'':'disabled style="opacity:.5;cursor:not-allowed"'}>${RUN.savedId?'Saved ✓':'Save list'}</button>
-        <button class="btn btn-primary btn-sm" onclick="openSave(true)" ${s.accountsPass?'':'disabled style="opacity:.5;cursor:not-allowed"'}>Save and go to Scoring →</button>
+        <button id="goScoring" class="btn btn-primary btn-sm" onclick="openSave(true, SEL.size>0)" ${s.accountsPass?'':'disabled style="opacity:.5;cursor:not-allowed"'}>${SEL.size?`Send ${SEL.size} selected to Scoring →`:'Save and go to Scoring →'}</button>
       </div>
     </div>
     <div class="ftabs">${tab('list','Final list',r.contacts.length)}${tab('accounts','Accounts',r.accounts.length)}</div>
@@ -789,13 +797,13 @@ function updateSelBar(){
   if(n) bar.querySelector('#selCount').textContent = `${n} prospect${n===1?'':'s'} selected`;
   const all = document.getElementById('selAll');
   if(all){ const v = visibleContacts().filter(selectable); all.checked = v.length>0 && v.every(c=>SEL.has(c.row)); all.indeterminate = !all.checked && v.some(c=>SEL.has(c.row)); }
+  const go = document.getElementById('goScoring'); if(go) go.textContent = n ? `Send ${n} selected to Scoring →` : 'Save and go to Scoring →';
 }
 function renderListTab(){
   return `${unattachedNotice()}<div class="score-list">
     <div id="selBar" class="sl-toolbar" style="display:none;background:var(--brand-lt);align-items:center">
       <span id="selCount" style="font-size:12.5px;font-weight:600;color:var(--brand-dk)"></span>
       <button class="btn btn-ghost btn-sm" onclick="clearSel()">Clear</button>
-      <button class="btn btn-primary btn-sm" style="margin-left:auto" onclick="openSave(true, true)">Send selected to Scoring →</button>
     </div>
     ${toolbar(pill(filt,'all','All','filt')+pill(filt,'in','In the final list','filt')+pill(filt,'nc','Not contactable','filt')+pill(filt,'out','Not in the list','filt'),'drawListRows','Search name, company or title…')}
     <div id="rows"></div></div>
