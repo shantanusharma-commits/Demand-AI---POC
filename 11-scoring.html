@@ -583,6 +583,7 @@ function search(fn, ph){ return `<div class="sl-srch"><svg width="12" height="12
 const pill = (cur,id,label) => `<div class="seg-pill ${cur===id?'active':''}" onclick="filt='${id}';renderResults()">${label}</div>`;
 
 /* ═══════════════ STATE ═══════════════ */
+let srcMode = 'saved';
 let tab = 'new', selListId = null, RUN = null, view = 'ranked', filt = 'all', q = '', renamingId = null;
 
 /* ═══════════════ START: New scoring | Scored lists ═══════════════ */
@@ -606,13 +607,24 @@ function renderStart(t){
 
         <div class="panel" style="margin-bottom:12px">
           <div class="panel-hdr"><span class="panel-ttl">1 · Prospect list</span><a href="10-prospecting.html" style="font-size:11px;color:var(--brand);font-weight:600;text-decoration:none">Build a list in Prospecting →</a></div>
-          <div class="panel-body">${lists.length ? `
+          <div class="panel-body">
+            <div style="display:inline-flex;background:var(--s75);border-radius:999px;padding:3px;margin-bottom:12px">
+              ${[['saved','Choose a saved list'],['upload','Upload a prospect file']].map(([m,l])=>`<button onclick="srcMode='${m}';renderStart('new')" style="padding:6px 14px;border-radius:999px;font-size:12px;font-weight:600;${srcMode===m?'background:var(--surf);color:var(--i1);box-shadow:var(--sh)':'color:var(--i3)'}">${l}</button>`).join('')}
+            </div>
+            ${srcMode==='upload' ? `
+            <label id="leadDrop" for="leadInput" style="display:block;border:1.5px dashed var(--bdk);border-radius:var(--rmd);padding:22px 20px;cursor:pointer;background:var(--s50);text-align:center">
+              <input type="file" id="leadInput" accept=".csv,.xlsx,.xls" style="display:none" onchange="onLeadFile(this.files[0])">
+              <div style="font-size:13px;font-weight:600;color:var(--i1)">Click to choose the prospect file, or drop it here</div>
+              <div style="font-size:11px;color:var(--i3);margin-top:4px">.xlsx or .csv · the lead template, one row per contact · checked like in Prospecting, then saved as a list</div>
+            </label>
+            <div style="margin-top:10px"><button class="btn btn-sec btn-sm" onclick="download('lead_template.csv', DemandAI.toCSV([DemandAI.LEAD_COLUMNS]))">Download lead template (.csv)</button></div>`
+            : lists.length ? `
             <select onchange="selListId=this.value;renderStart('new')" style="width:100%;padding:9px 11px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:13px;background:var(--surf);color:var(--i1)">
               ${lists.map(l=>`<option value="${l.id}" ${l.id===selListId?'selected':''}>${esc(l.name)}</option>`).join('')}
             </select>
             <div style="display:flex;gap:18px;margin-top:10px;font-size:12px;color:var(--i2)">
               <span><b style="color:var(--i1)">${L.stats.accountsPass}</b> accounts</span><span><b style="color:var(--i1)">${L.stats.inFinalList}</b> contacts in the list</span><span style="color:var(--i3)">from ${esc(L.sourceFile)} · saved ${fmtDate(L.createdAt)}</span>
-            </div>` : `<div style="font-size:12.5px;color:var(--i2)">No prospect lists yet. Upload the client's lead file in Prospecting and save the list first.</div>`}
+            </div>` : `<div style="font-size:12.5px;color:var(--i2)">No prospect lists yet. <a href="#" onclick="srcMode='upload';renderStart('new');return false" style="color:var(--brand);font-weight:600">Upload a prospect file</a> here, or build one in Prospecting.</div>`}
           </div>
         </div>
 
@@ -649,12 +661,34 @@ function renderStart(t){
         </tr>`).join(''), `No scored lists yet. <a href="#" onclick="renderStart('new');return false" style="color:var(--brand);font-weight:600">Score a prospect list</a> and save it.`)}
       </div>`}
     </div>`;
+  const lz = document.getElementById('leadDrop');
+  if(lz){
+    lz.addEventListener('dragover', e=>{e.preventDefault(); lz.style.borderColor='var(--brand)';});
+    lz.addEventListener('dragleave', ()=>{lz.style.borderColor='var(--bdk)';});
+    lz.addEventListener('drop', e=>{e.preventDefault(); lz.style.borderColor='var(--bdk)'; if(e.dataTransfer.files[0]) onLeadFile(e.dataTransfer.files[0]);});
+  }
   const dz = document.getElementById('dropZone');
   if(dz){
     dz.addEventListener('dragover', e=>{e.preventDefault(); dz.style.borderColor='var(--brand)';});
     dz.addEventListener('dragleave', ()=>{dz.style.borderColor='var(--bdk)';});
     dz.addEventListener('drop', e=>{e.preventDefault(); dz.style.borderColor='var(--bdk)'; if(e.dataTransfer.files[0]) onFile(e.dataTransfer.files[0]);});
   }
+}
+async function onLeadFile(file){
+  if(!file) return;
+  try{
+    const grids = await readFileToGrids(file);
+    const has = g => g.grid.slice(0,10).some(r=>(r||[]).some(c=>String(c).trim().toLowerCase().replace(/\*/g,'')==='company_name'));
+    const g = grids.find(x=>/lead template/i.test(x.sheet)&&has(x)) || grids.find(has) || grids[0];
+    const r = DemandAI.processLeads(g.grid, {file:file.name, sheet:g.sheet});
+    if(!r.stats.accountsPass){ showToast(`${file.name}: no accounts pass the checks. Open it in Prospecting to see why`); return; }
+    const list = { id:'list-'+Date.now().toString(36), name:file.name.replace(/\.[^.]+$/,'')+' · '+todayIso(), createdAt:Date.now(), sourceFile:file.name, sheet:g.sheet,
+      sandbox:false, stats:r.stats, accounts:r.accounts, contacts:r.contacts };
+    if(!DemandAI.saveList(list)){ showToast("This browser blocks storage, so the list can't be saved"); return; }
+    selListId = list.id; srcMode = 'saved';
+    renderStart('new');
+    showToast(`${r.stats.rowsRead} rows checked · ${r.stats.accountsPass} accounts and ${r.stats.inFinalList} contacts in the list · ${r.stats.issues} issue${r.stats.issues===1?'':'s'}. Saved as a list`);
+  }catch(e){ showToast(e.message || 'Could not read that file'); }
 }
 function asOfValue(){ const v=(document.getElementById('asOf')||{}).value; return /^\d{4}-\d{2}-\d{2}$/.test(v||'') ? v : todayIso(); }
 async function onFile(file){
