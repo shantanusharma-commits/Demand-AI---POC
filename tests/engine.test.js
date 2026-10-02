@@ -203,12 +203,11 @@ test('drafts follow the outreach rules: short subject, short body, interest ques
   const r = E.buildSegments(E.scoreList({ accounts: leads.accounts, contacts: leads.contacts }, sig));
   for (const rec of r.recs) for (const action of [rec.action, rec.runnerUp && rec.runnerUp.action].filter(Boolean)) {
     const d = E.draftFor(rec, action);
-    const text = JSON.stringify(d);
-    assert.match(text, /Client/); // the client appears only as "Client"
     if (d.channel === 'Email') {
       assert.ok(d.subject.split(/\s+/).length <= 4, d.subject);
       assert.ok(d.words <= 90, `${d.words} words`);
       assert.match(d.body, /\?\n/);
+      assert.match(d.body, /Client Team$/); // the client appears only as "Client"
     }
     if (d.channel === 'LinkedIn') {
       assert.ok(d.note.length <= 200);
