@@ -1045,12 +1045,24 @@ function saveSegmentation(run) { const all = loadSegmentations().filter(r => r.i
 function getSegmentation(id) { return loadSegmentations().find(r => r.id === id) || null; }
 function deleteSegmentation(id) { return saveSegmentations(loadSegmentations().filter(r => r.id !== id)); }
 
+// The number waiting in For Review, shown as a badge on the For Review link in the sidebar.
+function reviewBadge() {
+  const n = loadSegmentations().reduce((t, r) => t + ((r.stats || {}).waiting ?? (r.stats || {}).prospects ?? 0), 0);
+  if (typeof document === 'undefined') return n;
+  document.querySelectorAll('a[href="14-review.html"]').forEach(a => {
+    let b = a.querySelector('.nav-count');
+    if (!n) { if (b) b.remove(); return; }
+    if (!b) { b = document.createElement('span'); b.className = 'nav-count'; b.style.cssText = 'margin-left:auto;min-width:18px;height:18px;padding:0 6px;border-radius:9px;background:#FF8820;color:#fff;font-size:10px;font-weight:700;display:inline-flex;align-items:center;justify-content:center'; a.appendChild(b); }
+    b.textContent = n;
+  });
+  return n;
+}
 return {
   CONFIG, CODES, LEAD_COLUMNS, LEAD_REQUIRED, SIGNAL_COLUMNS, SIGNAL_REQUIRED,
   parseCSV, toCSV, readTable, processLeads, classify, personaOf, fitFor, decayFactor,
   processSignals, scoreList, stack, tierFor, daysBetween, round1, buildSegments, segmentRanks, recommendChannel, draftFor, processScoredProspects, SEGMENT_COLUMNS,
   briefFor, callScript, checkDraft, confidenceFor, allowedChannels, proofFor, COLLATERAL, PLAYBOOK,
   loadLists, saveList, getList, deleteList, loadScorings, saveScoring, getScoring, deleteScoring,
-  loadSegmentations, saveSegmentation, getSegmentation, deleteSegmentation,
+  loadSegmentations, saveSegmentation, getSegmentation, deleteSegmentation, reviewBadge,
 };
 });
