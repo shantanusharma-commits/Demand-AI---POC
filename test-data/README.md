@@ -30,3 +30,7 @@ python3 test-data/generate_lead_dataset.py <Lead_Research_Template.xlsx> test-da
 ```
 
 It needs `openpyxl`. The first argument is the empty template workbook, which isn't stored in the repo.
+
+## Test cases for the Prospecting page
+
+`Prospecting_Test_Cases.xlsx` holds 122 test cases for `10-prospecting.html`: 32 unit, 33 component, 27 smoke and 30 user acceptance. Each case records the function it targets, the test data (rows from the dataset's answer key), the steps, the expected result, how to automate it, and the result of a first run on 3 Oct 2026. The Overview sheet totals the results and lists what the run showed. Rebuild it with `python3 test-data/build_prospecting_test_cases.py test-data/Prospecting_Test_Cases.xlsx`.
