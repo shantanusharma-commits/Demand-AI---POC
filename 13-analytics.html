@@ -469,9 +469,9 @@ function renderMain(){
       
     </div>
     <div class="ftabs">
-      ${[['gates','Success gates'],['funnel','Work-done funnel'],['evidence','Supporting evidence'],['weekly','Weekly summary'],['readout','Pilot readout'],['log','Decision log'],['validation','Validation']].map(([k,l])=>`<div class="ftab ${activeTab===k?'active':''}" onclick="switchTab('${k}')">${l}</div>`).join('')}
+      ${[['gates','Success gates'],['funnel','Work-done funnel'],['evidence','Supporting evidence'],['weekly','Weekly summary'],['readout','Pilot readout'],['log','Decision log'],['loop','Learning loop'],['validation','Validation']].map(([k,l])=>`<div class="ftab ${activeTab===k?'active':''}" onclick="switchTab('${k}')">${l}</div>`).join('')}
     </div>
-    <div class="canvas">${({gates:renderGates, funnel:renderFunnel, evidence:renderEvidence, weekly:renderWeekly, readout:renderReadout, log:renderLog, validation:renderValidation})[activeTab]()}</div>
+    <div class="canvas">${({gates:renderGates, funnel:renderFunnel, evidence:renderEvidence, weekly:renderWeekly, readout:renderReadout, log:renderLog, loop:renderLoop, validation:renderValidation})[activeTab]()}</div>
   `;
 }
 
@@ -757,7 +757,9 @@ function renderValidation(){
       + arow('First pass only', 'An alternative accepted after a rejection is reported as "within one alternative"')
       + arow('Checked before counting', 'Decisions under 5 seconds or in a run of identical decisions')
       + arow('Proceed criteria: deal-size threshold', edit?inp('cfgDeal', T.dealSize.threshold/1000, 'k USD'):`${T.dealSize.threshold/1000}k USD`)
-      + (edit ? `<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px"><span style="flex:1;font-size:11px;color:var(--i3);align-self:center">Agreed at kickoff. Saved in this browser; every screen uses them.</span><button class="btn btn-primary btn-sm" onclick="saveValidation()">Save the settings</button></div>` : '<div style="font-size:11px;color:var(--i3);margin-top:10px">Set by the sales manager or admin.</div>'))}
+      + (edit ? `<div style="margin-top:12px;padding:9px 12px;background:var(--warn-lt);color:var(--warn);border-radius:var(--rsm);font-size:11.5px">Agree these at kickoff. Changing them during measurement moves the goalposts, so each change makes a new configuration version and is dated. The scoring weights can't be changed in the POC.</div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px"><span style="flex:1;font-size:11px;color:var(--i3);align-self:center">Saved in this browser; every screen uses them.</span><button class="btn btn-primary btn-sm" onclick="saveValidation()">Save the settings</button></div>` : '<div style="font-size:11px;color:var(--i3);margin-top:10px">Set by the sales manager or admin.</div>'))}
+    ${apanel('Configuration versions', `<span style="font-size:11px;color:var(--i2)">Now: ${esc(DemandAI.configVersion())}</span>`, [{v:1, at:null, by:'', changes:['Starting values']}].concat(DemandAI.configOverrides()._history||[]).reverse().map(h=>arow(`v${h.v} · ${esc(h.changes.join('; '))}`, h.at?`${fmtDate(h.at)}${h.by?' · '+esc(h.by):''}`:'Kickoff')).join(''))}
     ${rd.length ? apanel('Data sufficiency · the readiness gate before measurement', `<span style="${pillCss(verdict[1], verdict[2])}">${verdict[0]}</span>`,
       rd.map(x=>`<div style="display:grid;grid-template-columns:150px 150px 1fr 22px;gap:12px;padding:8px 0;border-bottom:1px solid var(--s75);font-size:12px;align-items:baseline">
         <b style="color:var(--i1)">${x.k}</b><span style="color:var(--i1)">${esc(x.show)}</span><span style="color:var(--i3)">${esc(x.need)}${!x.ok&&x.fix?`<span style="display:block;color:var(--warn);margin-top:2px">To close: ${esc(x.fix)}</span>`:''}</span>
@@ -768,7 +770,7 @@ function saveValidation(){
   const v = id => { const el = document.getElementById(id); return el ? Number(el.value) : NaN; };
   const o = { g1BaselineMinutes:v('cfgBase'), g1Threshold:v('cfgG1'), g2Threshold:v('cfgG2'), minDecisions:v('cfgMin'), spotCheckShare:v('cfgSpot')/100, dealThreshold:v('cfgDeal')*1000 };
   Object.keys(o).forEach(k=>{ if(!isFinite(o[k]) || o[k] < 0) delete o[k]; });
-  if(!DemandAI.saveConfig(o)){ showToast("This browser blocks storage, so the settings can't be kept"); return; }
+  if(!DemandAI.saveConfig(o, me().who)){ showToast("This browser blocks storage, so the settings can't be kept"); return; }
   A_RUNS = null; showToast('Settings saved'); renderMain();
 }
 
@@ -847,7 +849,7 @@ function readoutText(runs, owner){
   const tags = {}; logs.filter(l=>l.accepted).forEach(l=>(l.tags||[]).forEach(t=>{ tags[t]=(tags[t]||0)+1; }));
   const bd = betterData(runs, owner), V = rs.validators || {};
   return [
-    `# Pilot readout`, ``, `Generated ${new Date().toLocaleString()} from ${runs.length} segmented list${runs.length===1?'':'s'}${owner?` · ${repName(owner)}`:''}.`, ``,
+    `# Pilot readout`, ``, `Generated ${new Date().toLocaleString()} from ${runs.length} segmented list${runs.length===1?'':'s'}${owner?` · ${repName(owner)}`:''}. ${DemandAI.configVersion()}; lists built under ${[...new Set(runs.map(r=>(r.saved.configVersion||'Config v1').split(' · ')[0]))].join(', ')}.`, ``,
     `## The two success gates`,
     `- G1 reduced human effort: ${m.saved===null?'not enough data':Math.round(m.saved)+'% less'} (${m.minutes===null?'—':(Math.round(m.minutes*10)/10)+' min'} per usable first action against a ${m.base} min baseline; threshold ${T.g1Threshold}% less): ${said(g1s)}`,
     `- G2 recommendation acceptance: ${pct(m.weighted)} on first pass, weighted across both paths (threshold ${T.g2Threshold}%): ${said(g2s)}`,
@@ -892,6 +894,74 @@ function renderReadout(){
         ${radio('sponsor', ['Go to production','Extend the pilot','Stop'], rs.sponsor&&rs.sponsor.decision)}
         <input id="sponsorNote" value="${esc(rs.sponsor?rs.sponsor.note:'')}" placeholder="Reasons and conditions" style="width:100%;margin-top:10px;padding:7px 10px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:12px">
         <div style="display:flex;justify-content:flex-end;margin-top:10px">${canDecide?`<button class="btn btn-primary btn-sm" onclick="sponsorDecide()">Record the decision</button>`:'<span style="font-size:11px;color:var(--i3)">Recorded by the sponsor (admin or sales manager in the demo).</span>'}</div>`))}`;
+}
+
+
+/* ═══════════════ LEARNING LOOP: the POC records; production learns ═══════════════ */
+function outcomeRecords(runs, owner){
+  const out = [];
+  runs.forEach(run=>{ const keep = RUN; RUN = run; run.seg.recs.forEach(r=>{ if(!owner || ownerOf(r)===owner) out.push(outcomeRecord(r)); }); RUN = keep; });
+  return out;
+}
+function downloadOutcomes(){
+  const rs = outcomeRecords(analyticsRuns(), ownerNow());
+  const cols = [['list','list'],['account','account'],['vertical','vertical'],['status','status'],['tier','tier'],['micro_segment','segment'],['grouped_on','groupedOn'],['signals','signals'],['action','action'],['recommended','recommended'],['runner_up','runnerUp'],
+    ['contact','contact'],['contact_title','contactTitle'],['channel','channel'],['draft','draft'],['path','path'],['exceptions','exceptions'],['decision','decision'],['reason_code','reasonCode'],['reason','reason'],['cause','cause'],['tags','tags'],
+    ['alternative_needed','alternativeNeeded'],['alternative_accepted','alternativeAccepted'],['outcome','outcome'],['final_status','finalStatus'],['owner','owner'],['config_version','config']];
+  const rows = [cols.map(c=>c[0])].concat(rs.map(o=>cols.map(([,k])=>{ const v = o[k]; return Array.isArray(v) ? v.join('; ') : v===null ? '' : typeof v==='boolean' ? (v?'yes':'no') : v; })));
+  saveText('outcome_log.csv', DemandAI.toCSV(rows));
+}
+function renderLoop(){
+  const runs = analyticsRuns(); if(!runs.length) return noData();
+  const rs = outcomeRecords(runs, ownerNow());
+  const judged = rs.filter(o=>/^Accepted|^Edited|^Rejected/.test(o.decision));
+  const ok = o => /^Accepted|^Edited/.test(o.decision), won = o => ['Replied','Meeting booked'].includes(o.outcome);
+  const group = (keyFn) => { const m = new Map(); rs.forEach(o=>{ const k = keyFn(o); if(!m.has(k)) m.set(k, []); m.get(k).push(o); }); return [...m.entries()]; };
+  const stat = list => { const j = list.filter(o=>judged.includes(o)); return { n:list.length, j:j.length, a:j.filter(ok).length, w:list.filter(won).length, rate: j.length ? j.filter(ok).length/j.length*100 : null }; };
+  const MIN = 3;
+  // 8.2 Preferred actions: an action that keeps being accepted in a segment, and keeps leading to replies or meetings
+  const actions = group(o=>o.segment+' · '+o.action).map(([k,l])=>({ k, ...stat(l) })).sort((a,b)=>b.n-a.n);
+  // 8.3 Self-correction: a segment that keeps getting rejected, with its reasons
+  const segs = group(o=>o.segment).map(([k,l])=>{ const s = stat(l), rr = {}; l.filter(o=>o.decision==='Rejected').forEach(o=>{ rr[o.reason]=(rr[o.reason]||0)+1; }); return { k, ...s, top:Object.entries(rr).sort((a,b)=>b[1]-a[1])[0] }; });
+  // 8.4 Weights: which signals and fit criteria sat behind accepted and rejected recommendations
+  const sigRows = [...new Set(rs.flatMap(o=>o.signals))].map(t=>({ k:t, ...stat(rs.filter(o=>o.signals.includes(t))) })).sort((a,b)=>(b.rate??-1)-(a.rate??-1));
+  const fitRows = [...group(o=>o.status), ...group(o=>'Tier '+o.tier), ...group(o=>o.vertical)].map(([k,l])=>({ k, ...stat(l) }));
+  const allRate = judged.length ? judged.filter(ok).length/judged.length*100 : null;
+  const table = (head, rows) => `<table style="width:100%;border-collapse:collapse;font-size:12px"><tr style="color:var(--i3);font-size:10px;text-transform:uppercase;letter-spacing:.06em">${head.map((h,i)=>`<td style="padding:6px 0;${i?'text-align:right':''}">${h}</td>`).join('')}</tr>${rows.join('')||`<tr><td colspan="${head.length}" style="padding:10px 0;color:var(--i3)">Nothing yet.</td></tr>`}</table>`;
+  const tr = cells => `<tr style="border-top:1px solid var(--s75)">${cells.map((c,i)=>`<td style="padding:8px 0;${i?'text-align:right':''}">${c}</td>`).join('')}</tr>`;
+  const flag = (t, tone) => `<span style="${pillCss(tone==='g'?'var(--pos-lt)':tone==='w'?'var(--warn-lt)':'var(--s100)', tone==='g'?'var(--pos)':tone==='w'?'var(--warn)':'var(--i3)')}">${t}</span>`;
+  const complete = rs.filter(o=>o.signals.length && o.action && o.contact && o.channel && o.draft && o.config).length;
+  return `${repFilter(`<button class="btn btn-primary btn-sm" style="margin-left:auto" onclick="downloadOutcomes()">Download the outcome log (.csv)</button>`)}
+    <div style="display:flex;gap:14px;align-items:flex-start;padding:14px 16px;background:var(--brand-lt);border-radius:var(--rmd);margin-bottom:16px">
+      <div style="flex:1;font-size:12.5px;color:var(--i1);line-height:1.6"><b>In the POC the loop records; in production it learns.</b> Every recommendation keeps a full record below. Nothing here changes the scoring or the actions during the pilot: the only immediate change is the one alternative after a rejection, for that account alone. The panels show the evidence production starts from, as proposals only.</div>
+      <div style="text-align:right;flex-shrink:0;font-size:11px;color:var(--i2)">${esc(DemandAI.configVersion())}<div style="color:var(--i3)">${complete} of ${rs.length} records complete</div></div>
+    </div>
+    ${apanel('8.1 Outcome log · one record per recommendation', `<span style="font-size:10.5px;color:var(--i3)">${rs.length} records</span>`, `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11.5px;min-width:980px">
+      <tr style="color:var(--i3);font-size:10px;text-transform:uppercase;letter-spacing:.06em">${['Account · micro-segment','Signals behind it','Action · contact · channel','Decision','Alternative','Outcome','Config'].map(h=>`<td style="padding:6px 8px 6px 0">${h}</td>`).join('')}</tr>
+      ${rs.map(o=>`<tr style="border-top:1px solid var(--s75);vertical-align:top">
+        <td style="padding:8px 8px 8px 0"><b style="color:var(--i1)">${esc(o.account)}</b><div style="color:var(--i3)">${esc(o.segment)} · tier ${esc(o.tier)}</div></td>
+        <td style="padding:8px 8px 8px 0;color:var(--i2)">${esc(o.signals.join(', '))}</td>
+        <td style="padding:8px 8px 8px 0;color:var(--i1)">${esc(o.action)}<div style="color:var(--i3)">${esc(o.contact)} · ${esc(o.channel)}</div></td>
+        <td style="padding:8px 8px 8px 0;color:var(--i1)">${esc(o.decision)}${o.reasonCode?`<div style="color:var(--i3)">${esc(o.reasonCode)} ${esc(o.reason)}</div>`:''}${o.tags?`<div style="color:var(--i3)">${esc(o.tags)}</div>`:''}</td>
+        <td style="padding:8px 8px 8px 0;color:var(--i2)">${o.alternativeNeeded ? (o.alternativeAccepted===null ? 'Needed, not decided' : o.alternativeAccepted ? 'Needed, accepted' : 'Needed, rejected') : '—'}</td>
+        <td style="padding:8px 8px 8px 0;color:var(--i2)">${esc(o.outcome||'—')}</td>
+        <td style="padding:8px 0;color:var(--i3);font-size:10.5px">${esc(o.config.replace(' · scoring weights fixed',''))}</td></tr>`).join('')}
+    </table></div>`)}
+    ${apanel('Which actions worked in which segments', `<span style="font-size:10.5px;color:var(--i3)">production: preferred actions (8.2)</span>`, table(['Micro-segment · action','Recommended','Judged','Accepted','Replies or meetings',''],
+      actions.map(x=>tr([esc(x.k), x.n, x.j, x.rate===null?'—':pct0(x.rate), x.w, x.j>=MIN && x.rate>=70 && x.w ? flag('Preferred-action candidate','g') : x.j<MIN ? flag(`Needs ${MIN}+ judged`) : ''])))
+      + '<div style="font-size:11px;color:var(--i3);margin-top:8px">In production, an action that keeps being accepted in a segment and keeps leading to replies or meetings becomes the preferred action there, and is weighed first for the next similar account.</div>')}
+    ${apanel('Segments that keep getting rejected', `<span style="font-size:10.5px;color:var(--i3)">production: self-correction (8.3)</span>`, table(['Micro-segment','Judged','Accepted','Most common rejection',''],
+      segs.map(x=>tr([esc(x.k), x.j, x.rate===null?'—':pct0(x.rate), x.top?`${esc(x.top[0])} (${x.top[1]})`:'—', x.j>=MIN && x.rate!==null && x.rate<50 ? flag('Would be paused for review','w') : ''])))
+      + '<div style="font-size:11px;color:var(--i3);margin-top:8px">In production, a segment that keeps being rejected is paused and sent for review with its reasons: "wrong contact" points at the persona order, "wrong action" at the action set.</div>')}
+    ${two(apanel('Which signals sat behind accepted recommendations', `<span style="font-size:10.5px;color:var(--i3)">production: weights (8.4)</span>`, table(['Signal','Judged','Accepted'],
+        sigRows.map(x=>tr([esc(x.k)+(x.j>=MIN && allRate!==null && x.rate!==null && Math.abs(x.rate-allRate)>=20 ? ` ${flag(x.rate>allRate?'Review: weight up?':'Review: weight down?', x.rate>allRate?'g':'w')}`:''), x.j, x.rate===null?'—':pct0(x.rate)]))) + `<div style="font-size:11px;color:var(--i3);margin-top:8px">Compared with ${allRate===null?'—':pct0(allRate)} overall.</div>`),
+      apanel('Which fit criteria sat behind them', '', table(['Group','Judged','Accepted'], fitRows.map(x=>tr([esc(x.k), x.j, x.rate===null?'—':pct0(x.rate)])))
+        + '<div style="font-size:11px;color:var(--i3);margin-top:8px">"Wrong fit" and "signal too weak" rejections point straight at the scoring.</div>'))}
+    ${apanel('POC versus production', '', `<table style="width:100%;border-collapse:collapse;font-size:12px">
+      ${[['Step','In the POC','In production'],['Outcome log','Every decision, reason, tag and outcome recorded, with the configuration version','The same, plus outcomes read automatically from the client’s tools'],
+         ['Rejection handling','One alternative per account, immediately','The same'],['Preferred actions','Evidence only (above)','Accepted actions weighed first in each segment'],
+         ['Self-correction','Evidence only (above)','Struggling segments paused and reviewed'],['Weight recalibration','Weights stay fixed, so the baseline holds','Weights tuned from evidence, with the sales manager’s sign-off; a new configuration version, the old one kept, accounts re-scored']]
+        .map((r,i)=>`<tr style="${i?'border-top:1px solid var(--s75)':'color:var(--i3);font-size:10px;text-transform:uppercase;letter-spacing:.06em'}">${r.map((c,j)=>`<td style="padding:8px 10px 8px 0;${i&&!j?'font-weight:600;color:var(--i1)':i?'color:var(--i2)':''}">${c}</td>`).join('')}</tr>`).join('')}</table>`)}`;
 }
 
 function repFilter(extra){

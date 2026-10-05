@@ -700,7 +700,7 @@ function buildFrom(id){
   if(!c.seg.recs.length && !c.seg.engagedOnce.length){ showToast('No prospects with a live signal to group'); return; }
   const accountNames = {}; c.scored.forEach(r=>{ accountNames[r.account.id] = r.account.name; });
   const saved = { id:runId, name:`${src.listName||src.name} · ${todayIso()}`, createdAt:Date.now(),
-    src:{...src, keys:c.keys}, accountNames, decisions:{}, log:[], stats:{ segments:c.seg.segments.length, prospects:c.seg.recs.length, waiting:c.seg.recs.length } };
+    src:{...src, keys:c.keys}, accountNames, decisions:{}, log:[], configVersion: DemandAI.configVersion(), stats:{ segments:c.seg.segments.length, prospects:c.seg.recs.length, waiting:c.seg.recs.length } };
   RUN = { saved, ...c };
   routeRun();
   view='grid'; segFilt=null; vertFilt=null; q='';

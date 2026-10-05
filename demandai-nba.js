@@ -181,7 +181,7 @@ function weeklySpotCheck(runs){
 }
 function sysLog(r, decision, note){
   RUN.saved.log.unshift({ at:Date.now(), who:'System', role:'System', key:r.key, prospect:liveRec(r).contact.name, company:r.account.name,
-    segment:r.segment||'No micro-segment', decision, action:chosenAction(r), channel:draftOf(r).channel, note, kind:'system' });
+    segment:r.segment||'No micro-segment', decision, action:chosenAction(r), channel:draftOf(r).channel, note, kind:'system', config:RUN.saved.configVersion||'' });
 }
 function versions(r){ const d = dec(r.key); return d.versions || [{v:1, at:RUN.saved.createdAt, by:'System', why:'Generated from the action', draft:generated(r)}]; }
 // 5.19 Every version kept: record the draft before and after each change.
@@ -210,7 +210,7 @@ function logIt(r, decision, extra={}){
     segment:r.segment||'No micro-segment', decision, reason:extra.reason||'', tags:extra.tags||[], action:extra.action||chosenAction(r), channel:extra.channel||x.channel,
     note:extra.note||'', version:extra.version||(d.versions||[1]).length, secs, position:pos, openedAt: extra.decisive ? openedAt : null,
     decisive:!!extra.decisive, kind:extra.kind||'', firstPass:extra.firstPass, accepted:extra.accepted, linkedTo:extra.linkedTo||'', flag, checked:false,
-    cause:extra.cause||'', compliance:!!extra.compliance, intervention:!!extra.intervention, owner:ownerOf(r), rating:extra.rating||'' });
+    cause:extra.cause||'', compliance:!!extra.compliance, intervention:!!extra.intervention, owner:ownerOf(r), rating:extra.rating||'', config:RUN.saved.configVersion||'' });
 }
 // Every list's log, newest first (pages with several lists override this through ALL_RUNS).
 function allLogs(){ const runs = typeof ALL_RUNS==='function' ? ALL_RUNS() : [RUN]; return runs.flatMap(x=>x.saved.log).sort((a,b)=>b.at-a.at); }
@@ -545,5 +545,24 @@ function measure(runs, owner){
     edits: { none: decisive.filter(l=>l.accepted && l.rating==='none').length, minor: decisive.filter(l=>l.rating==='minor').length, major: decisive.filter(l=>l.rating==='major').length },
     outcomes: items.reduce((o,x)=>{ if(x.d.outcome) o[x.d.outcome]=(o[x.d.outcome]||0)+1; return o; }, {}),
     released, minutes, base, saved: minutes!==null ? (1 - minutes/base)*100 : null,
+  };
+}
+
+/* ═══════════════ 8.1 THE OUTCOME LOG: one full record per recommendation ═══════════════ */
+// What was recommended, what the person decided, whether an alternative was needed and accepted, what happened
+// next, and the configuration version that produced it. The loop records in the POC; production learns from it.
+function outcomeRecord(r){
+  const d = dec(r.key), lr = liveRec(r), x = draftOf(r), log = RUN.saved.log.filter(l=>l.key===r.key).slice().reverse();
+  const decisive = log.filter(l=>l.decisive), first = decisive.find(l=>l.firstPass) || decisive[0], alt = decisive.find(l=>l.kind==='alternative');
+  const sigs = [...new Set(r.result.people.flatMap(p=>p.signals.map(s=>s.type)))];
+  return {
+    list: RUN.saved.name, account: r.account.name, vertical: r.account.vertical, status: r.account.existingCustomer ? 'Existing customer' : 'Net-new', tier: r.person.tier,
+    segment: r.segment || 'No micro-segment', groupedOn: r.groupedOn ? r.groupedOn.type : '', signals: sigs,
+    action: chosenAction(r), recommended: r.action, runnerUp: r.runnerUp ? r.runnerUp.action : '', contact: lr.contact.name, contactTitle: lr.contact.jobTitle || '', channel: x.channel,
+    draft: DemandAIDraftText(x), path: d.passed ? 'Proceeded on its own' : 'Exception queue', exceptions: (d.reasons||[]).join(' · '),
+    decision: first ? (first.accepted ? (first.rating==='minor' ? 'Edited (minor)' : first.rating==='major' ? 'Edited (major)' : 'Accepted') : 'Rejected') : d.passed ? (d.spot==='accepted' ? 'Accepted (spot-check)' : 'Not judged (proceeded)') : 'Not decided yet',
+    reasonCode: first && !first.accepted ? (REJECT.find(z=>z[1]===first.reason)||[''])[0] : '', reason: first && !first.accepted ? first.reason : '', cause: first && first.cause || '',
+    tags: first ? (first.tags||[]).join('; ') : '', alternativeNeeded: !!d.alternativeUsed, alternativeAccepted: alt ? !!alt.accepted : null,
+    outcome: d.outcome || '', finalStatus: d.status, owner: repName(ownerOf(r)), config: RUN.saved.configVersion || 'Config v1 · starting values · scoring weights fixed',
   };
 }

@@ -95,7 +95,18 @@ function applyConfig(o) {
   TUNABLE.forEach(k => { if (typeof o[k] === 'number' && isFinite(o[k])) CONFIG[k] = o[k]; });
   if (typeof o.dealThreshold === 'number' && isFinite(o.dealThreshold)) CONFIG.dealSize.threshold = o.dealThreshold;
 }
-function saveConfig(o) { const all = Object.assign(configOverrides(), o); try { localStorage.setItem(CONFIG_KEY, JSON.stringify(all)); } catch (e) { return false; } applyConfig(all); return true; }
+// Every saved change makes a new configuration version; the old ones are kept. Scoring weights are not tunable in
+// the POC, so the baseline holds: only the gate settings and proceed criteria can change, and each change is dated.
+function saveConfig(o, by) {
+  const prev = configOverrides(), all = Object.assign({}, prev, o);
+  const changed = Object.keys(o).filter(k => prev[k] !== o[k] && !(prev[k] === undefined && (k === 'dealThreshold' ? CONFIG.dealSize.threshold : CONFIG[k]) === o[k]));
+  if (!changed.length) return true;
+  all._v = (prev._v || 1) + 1;
+  all._history = (prev._history || []).concat([{ v: all._v, at: Date.now(), by: by || '', changes: changed.map(k => `${k} ${prev[k] ?? (k === 'dealThreshold' ? CONFIG.dealSize.threshold : CONFIG[k])} → ${o[k]}`) }]);
+  try { localStorage.setItem(CONFIG_KEY, JSON.stringify(all)); } catch (e) { return false; }
+  applyConfig(all); return true;
+}
+function configVersion() { const v = configOverrides()._v || 1; return `Config v${v}${v === 1 ? ' · starting values' : ''} · scoring weights fixed`; }
 
 const CODES = {
   D1: 'Wrong fit',
@@ -1104,7 +1115,7 @@ function reviewBadge() {
 if (typeof localStorage !== 'undefined') applyConfig(configOverrides());
 
 return {
-  CONFIG, CODES, saveConfig, configOverrides, LEAD_COLUMNS, LEAD_REQUIRED, SIGNAL_COLUMNS, SIGNAL_REQUIRED,
+  CONFIG, CODES, saveConfig, configOverrides, configVersion, LEAD_COLUMNS, LEAD_REQUIRED, SIGNAL_COLUMNS, SIGNAL_REQUIRED,
   parseCSV, toCSV, readTable, processLeads, classify, personaOf, fitFor, decayFactor,
   processSignals, scoreList, stack, tierFor, daysBetween, round1, buildSegments, segmentRanks, recommendChannel, draftFor, processScoredProspects, SEGMENT_COLUMNS, estimateDealSize,
   briefFor, callScript, checkDraft, confidenceFor, allowedChannels, proofFor, COLLATERAL, PLAYBOOK,

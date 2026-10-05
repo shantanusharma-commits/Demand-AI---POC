@@ -367,3 +367,7 @@ test('scenarios: each exception rule is triggered by its account, and only there
   assert.ok(rec('Bluewater').contact.linkedin && rec('Bluewater').contact.emailVerified); // a next channel to fall back to
   assert.equal(rec('Aurora').result.people.length, 2); // a next contact to fall back to
 });
+
+test('the configuration version says the scoring weights are fixed in the POC', () => {
+  assert.equal(E.configVersion(), 'Config v1 · starting values · scoring weights fixed');
+});
