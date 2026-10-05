@@ -599,7 +599,8 @@ function sources(){
   const out = [];
   if(h) out.push({id:'handoff', label:`Sent from Scoring: ${h.name} (${h.keys.length} prospect${h.keys.length===1?'':'s'})`});
   runs.forEach(r=>out.push({id:r.id, label:`Scored list: ${r.name}`}));
-  out.push({id:'sample', label:'Sample data'});
+  out.push({id:'scenarios', label:'Sample: every NBA test scenario (12 accounts)'});
+  out.push({id:'sample', label:'Sample data (Scoring sample)'});
   out.push({id:'upload', label:'Upload a CSV…'});
   return out;
 }
@@ -633,6 +634,7 @@ function renderStart(t){
             <div style="font-size:11px;color:var(--i3);margin-top:3px">One row per signal: the prospect, their company and the signal</div>
           </label>
           <a href="#" onclick="download('microsegment_template.csv', DemandAI.toCSV([DemandAI.SEGMENT_COLUMNS]));return false" style="font-size:11.5px;color:var(--brand);font-weight:600;text-decoration:none">Download the template</a>`) : ''}
+        ${srcId==='scenarios' ? `<div style="display:flex;gap:14px;margin-bottom:6px"><a href="#" onclick="openGuide();return false" style="font-size:11.5px;color:var(--brand);font-weight:600;text-decoration:none">What each account tests →</a><a href="#" onclick="download(DemandAISample.NBA_SCENARIO_FILE, DemandAI.toCSV(DemandAISample.nbaScenarioGrid(todayIso())));return false" style="font-size:11.5px;color:var(--brand);font-weight:600;text-decoration:none">Download the scenario file (.csv)</a></div>` : ''}
         <div style="display:flex;align-items:center;gap:12px;margin-top:16px">
           <span style="flex:1;font-size:12.5px;color:var(--i2)">${count}</span>
           <button class="btn btn-primary" ${ready?'':'disabled style="opacity:.5;pointer-events:none"'} onclick="buildFrom('${srcId}')">Build micro-segments →</button>
@@ -643,7 +645,7 @@ function renderStart(t){
           <td><div class="person"><div class="co-av" style="background:${avColor(r.id)}">${initials(r.name)}</div><div style="flex:1;min-width:0">${renamingId===r.id
             ? `<div style="display:flex;gap:6px;align-items:center"><input id="renameInput" value="${esc(r.name)}" style="flex:1;min-width:0;padding:6px 9px;border:1px solid var(--brand-mid);border-radius:var(--rsm);font-size:12.5px" onkeydown="if(event.key==='Enter')finishRename('${r.id}');if(event.key==='Escape'){renamingId=null;renderStart('saved')}"><button class="btn btn-primary btn-sm" onclick="finishRename('${r.id}')">Save</button></div>`
             : `<div style="display:flex;align-items:center;gap:6px;min-width:0"><span class="dt-main" title="${esc(r.name)}">${esc(r.name)}</span><button title="Rename" onclick="startRename('${r.id}')" style="flex-shrink:0;color:var(--i3);display:flex;padding:2px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button></div>`}</div></div></td>
-          <td>${cell(r.src.listName, r.src.sample?'Sample data':r.src.csv?'Uploaded CSV':'Scored list')}</td>
+          <td>${cell(r.src.listName, r.src.scenarios?'Test scenarios':r.src.sample?'Sample data':r.src.csv?'Uploaded CSV':'Scored list')}</td>
           <td class="num">${r.stats.segments}</td>
           <td class="num">${r.stats.prospects}</td>
           <td class="num">${r.stats.waiting ?? r.stats.prospects}</td>
@@ -670,6 +672,22 @@ async function onSegFile(file){
     UPLOAD = { csv:true, name:file.name.replace(/\.[^.]+$/,''), listName:file.name.replace(/\.[^.]+$/,''), fileName:file.name, sheet:g.sheet, grid:g.grid, asOf, keys:null };
     renderStart('new');
   }catch(e){ showToast(e.message || 'Could not read that file'); }
+}
+
+/* The test-scenario guide: what each account in the scenario set shows, what to expect and how to test it. */
+function openGuide(){
+  const ov = overlay('guideOverlay'); ov.onclick = e=>{ if(e.target===ov) hide('guideOverlay'); };
+  ov.innerHTML = `<div style="background:var(--surf);border-radius:var(--rlg);box-shadow:var(--sh-lg);width:980px;max-width:100%;max-height:88vh;display:flex;flex-direction:column">
+    <div style="padding:18px 22px 10px;display:flex;align-items:flex-start;gap:12px">
+      <div style="flex:1"><div style="font-family:var(--fd);font-size:15px;font-weight:700;color:var(--i1)">NBA test scenarios</div>
+      <div style="font-size:12px;color:var(--i3);margin-top:3px">Twelve fictional accounts, each built to trigger specific rules, plus six rows with data errors. Rep A is Sofia Ahlgren (the Sales rep role); Rep B is Marco Lindqvist. Switch roles from the sidebar.</div></div>
+      <button class="btn btn-sec btn-sm" onclick="download('nba_test_scenarios_guide.csv', DemandAI.toCSV([['account','scenario','expected','how_to_test']].concat(DemandAISample.NBA_SCENARIO_GUIDE)))">Download the guide (.csv)</button>
+      <button class="btn btn-ghost btn-sm" onclick="hide('guideOverlay')">Close</button>
+    </div>
+    <div style="padding:0 22px 18px;overflow-y:auto">${table([['Account','16%'],['What it tests','32%'],['Expected','24%'],['How to test','28%']],
+      DemandAISample.NBA_SCENARIO_GUIDE.map(g=>`<tr><td class="wrap"><b style="font-size:12px;color:var(--i1)">${esc(g[0])}</b></td><td class="wrap" style="font-size:12px;color:var(--i2)">${esc(g[1])}</td><td class="wrap" style="font-size:12px;color:var(--i1)">${esc(g[2])}</td><td class="wrap" style="font-size:12px;color:var(--i2)">${esc(g[3])}</td></tr>`).join('')
+      + `<tr><td class="wrap"><b style="font-size:12px;color:var(--i1)">Rows not used</b></td><td class="wrap" style="font-size:12px;color:var(--i2)">An unknown signal type, a duplicate row, a stale email click, a newsletter sign-up, a date that isn't a date, and a score that isn't a number</td><td class="wrap" style="font-size:12px;color:var(--i1)">Five rows not used; the score is worked out from the signals</td><td class="wrap" style="font-size:12px;color:var(--i2)">The start screen shows "5 rows not used"</td></tr>`, '')}</div>
+  </div>`;
 }
 
 /* ═══════════════ BUILD ═══════════════ */

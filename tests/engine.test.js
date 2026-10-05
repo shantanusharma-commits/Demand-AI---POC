@@ -319,3 +319,51 @@ test('a draft that fails a brand or rule check is regenerated once without the s
   const again = E.draftFor(ap, ap.action, { asOf: S.SAMPLE_AS_OF, variant: 'clean' });
   assert.equal(E.checkDraft(again).flags.length, 0);
 });
+
+/* ─── The NBA test-scenario set: every account does what its scenario says ─── */
+function scenarios() {
+  const asOf = '2026-10-05';
+  const file = E.processScoredProspects(S.nbaScenarioGrid(asOf), { asOf });
+  const seg = E.buildSegments(file.results);
+  const rec = n => seg.recs.find(x => x.account.name.startsWith(n));
+  const draft = (n, extra = {}) => { const r = rec(n); return E.draftFor(r, r.action, { asOf, ...extra }); };
+  return { asOf, file, seg, rec, draft };
+}
+
+test('scenarios: data errors are caught, one recommendation per account', () => {
+  const { file, seg } = scenarios();
+  assert.deepEqual(file.stats, { rowsRead: 20, rejected: 5, prospects: 13, accounts: 12 });
+  assert.deepEqual(file.issues.filter(i => i.outcome === 'Signal not used').map(i => i.code).sort(), ['D1', 'D2', 'D3', 'D3', 'D5']);
+  assert.equal(seg.recs.length, 12);
+});
+
+test('scenarios: three micro-segments, a fallback and two accounts with no micro-segment', () => {
+  const { seg, rec } = scenarios();
+  const names = g => g.recs.map(x => x.account.name.split(' ')[0]).sort();
+  assert.deepEqual(Object.fromEntries(seg.segments.map(g => [g.name, names(g)])), {
+    Modernisation: ['Aurora', 'Bluewater', 'Cedar'], Inquiry: ['Harbor', 'Ironwood', 'Juniper'], Engagement: ['Delta', 'Eastgate', 'Fernhill', 'Granite'] });
+  assert.deepEqual(seg.exceptions.map(x => x.account.name.split(' ')[0]).sort(), ['Kingfisher', 'Lantern']);
+  const delta = rec('Delta');
+  assert.ok(delta.fallback);
+  assert.equal(delta.runnerUp.action, 'Offer a renewal review');
+  assert.equal(rec('Aurora').contact.name, 'Niran Wattana');
+});
+
+test('scenarios: channels, tasks and proof', () => {
+  const { draft } = scenarios();
+  assert.deepEqual(['Aurora', 'Eastgate', 'Cedar', 'Lantern', 'Harbor', 'Juniper'].map(n => draft(n).channel), ['Email', 'LinkedIn', 'Call', 'Call', 'Task', 'Task']);
+  assert.ok(draft('Kingfisher').noProof);
+});
+
+test('scenarios: each exception rule is triggered by its account, and only there', () => {
+  const { rec, draft, seg } = scenarios();
+  const sensitive = n => E.checkDraft(draft(n)).flags.some(f => f.rule === 'Sensitive term');
+  const brand = n => E.checkDraft(draft(n)).flags.filter(f => f.rule !== 'Sensitive term').length > 0;
+  assert.deepEqual(seg.recs.filter(r => r.result.confidence === 'low').map(r => r.account.name), ['Cedar Petrochemicals']);
+  assert.deepEqual(seg.recs.filter(r => E.estimateDealSize(r.account).below).map(r => r.account.name), ['Granite Gas Processing']);
+  assert.deepEqual(seg.recs.filter(r => sensitive(r.account.name)).map(r => r.account.name), ['Ironwood Refining']);
+  assert.deepEqual(seg.recs.filter(r => brand(r.account.name)).map(r => r.account.name), ['Fernhill Refining']);
+  assert.equal(E.checkDraft(draft('Fernhill', { variant: 'clean' })).flags.length, 0); // regenerated once, then passes
+  assert.ok(rec('Bluewater').contact.linkedin && rec('Bluewater').contact.emailVerified); // a next channel to fall back to
+  assert.equal(rec('Aurora').result.people.length, 2); // a next contact to fall back to
+});

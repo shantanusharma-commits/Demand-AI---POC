@@ -673,7 +673,8 @@ function estimateDealSize(account) {
    For lists scored outside the platform. The score column is optional: without it, a prospect's score is
    their timing alone (signals weighted and stacked as in Scoring), since there's no fit rubric to apply. */
 const SEGMENT_COLUMNS = ['first_name', 'last_name', 'job_title', 'email', 'email_verified', 'linkedin_url', 'company_name',
-  'industry', 'country', 'existing_customer', 'consent_basis', 'score', 'signal_type', 'event_date', 'detail', 'source', 'owner_email'];
+  'industry', 'country', 'existing_customer', 'consent_basis', 'score', 'signal_type', 'event_date', 'detail', 'source', 'owner_email',
+  'annual_revenue_usd', 'employee_count', 'account_type'];
 const SEGMENT_REQUIRED = ['first_name', 'company_name', 'signal_type', 'event_date'];
 function processScoredProspects(grid, { file = 'prospect file', sheet = 'Sheet1', asOf } = {}) {
   const table = readTable(grid, { file, sheet, columns: SEGMENT_COLUMNS, required: SEGMENT_REQUIRED, anchor: 'signal_type' });
@@ -696,7 +697,8 @@ function processScoredProspects(grid, { file = 'prospect file', sheet = 'Sheet1'
     if (!accounts.has(accKey)) {
       const cls = classify(clean(r.industry), '');
       accounts.set(accKey, { id: 'acc-' + (accounts.size + 1), key: accKey, name: company, vertical: cls.vertical, verticalLevel: cls.level,
-        country: clean(r.country), existingCustomer: yesNo(r.existing_customer) === 'Y' });
+        country: clean(r.country), existingCustomer: yesNo(r.existing_customer) === 'Y',
+        revenue: clean(r.annual_revenue_usd), employees: clean(r.employee_count), accountType: clean(r.account_type) });
     }
     const acc = accounts.get(accKey);
     const email = EMAIL_RE.test(clean(r.email)) ? normEmail(r.email) : '', li = LINKEDIN_RE.test(clean(r.linkedin_url)) ? clean(r.linkedin_url) : '';
@@ -840,7 +842,7 @@ const PLAYBOOK = {
                       response: 'That is an option. A short review first makes sure you are not paying for cover you no longer use, or missing what you need.',
                       questions: ['What has changed on site since the contract was signed?', 'Where did support work well, and where not?'] },
   Project:          { angle: 'Settle the control scope while the design is still open', objection: 'It is too early to talk about control systems.',
-                      response: 'That is when the scope is cheapest to shape. Later it tends to be fixed by the design.',
+                      response: 'That is when the scope is easiest to shape. Later it tends to be fixed by the design.',
                       questions: ['Where is the project in front-end design?', 'When is the control-system decision due?', 'Who is leading the design?'] },
   Leadership:       { angle: 'Be useful to a new leader setting priorities', objection: 'I am still settling in.',
                       response: 'Of course. A short overview now can save time when priorities are set.',

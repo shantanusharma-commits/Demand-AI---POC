@@ -70,5 +70,93 @@ const SIGNALS = [
   ['Kestrel Marine Services', 'ops@kestrelmarine.com', 'Capital project', '2026-09-01', 'New vessel maintenance yard', 'Account plan', ''],
 ];
 
-return { SAMPLE_AS_OF, LEADS, SIGNALS, LEAD_FILE: 'lead_file.csv', SIGNAL_FILE: 'signal_file.csv' };
+/* ─── Micro-segments & NBA: one test scenario set ───
+   Twelve fictional accounts, each built to trigger specific rules, in the micro-segment CSV format (one row per
+   signal). Dates are days before the "as of" date, so the set works on any day. */
+const NBA_COLUMNS = ['first_name', 'last_name', 'job_title', 'email', 'email_verified', 'linkedin_url', 'company_name', 'industry',
+  'country', 'existing_customer', 'consent_basis', 'score', 'signal_type', 'event_date', 'detail', 'source', 'owner_email',
+  'annual_revenue_usd', 'employee_count', 'account_type'];
+const RA = 'rep.a@client-sample.com', RB = 'rep.b@client-sample.com';
+const co = (name, industry, country, existing, revenue, employees, owner) => ({ name, industry, country, existing, revenue, employees, owner });
+const AURORA = co('Aurora Refining', 'Refining', 'Thailand', 'Y', '2100000000', '4200', RA);
+const BLUEWATER = co('Bluewater Refinery', 'Refining', 'Philippines', 'N', '900000000', '2300', RB);
+const CEDAR = co('Cedar Petrochemicals', 'Petrochemicals', 'Malaysia', 'Y', '1200000000', '2600', RA);
+const DELTA = co('Delta Coast Refining', 'Refining', 'Vietnam', 'Y', '650000000', '1500', RB);
+const EASTGATE = co('Eastgate Refinery', 'Refining', 'Indonesia', 'N', '1500000000', '3000', RA);
+const FERNHILL = co('Fernhill Refining', 'Refining', 'Singapore', 'N', '2800000000', '5100', RA);
+const GRANITE = co('Granite Gas Processing', 'Gas processing', 'Malaysia', 'N', '120000000', '400', RB);
+const HARBOR = co('Harbor Point Refinery', 'Refining', 'Thailand', 'N', '1100000000', '2500', RA);
+const IRONWOOD = co('Ironwood Refining', 'Refining', 'Philippines', 'Y', '1300000000', '2700', RA);
+const JUNIPER = co('Juniper Petrochem', 'Petrochemicals', 'Indonesia', 'Y', '1700000000', '3300', RB);
+const KINGFISHER = co('Kingfisher Refining', 'Refining', 'Vietnam', 'N', '800000000', '1900', RA);
+const LANTERN = co('Lantern Petrochemicals', 'Petrochemicals', 'Thailand', 'N', '1400000000', '2900', RB);
+// person: [first, last, title, email, verified, linkedin, consent, score]
+const sig = (c, p, type, ago, detail, source) => ({ c, p, type, ago, detail, source });
+const P = {
+  auroraHead:   ['Niran', 'Wattana', 'Head of Instrumentation', 'niran.w@aurora-refining.example', 'Y', '', 'Existing customer', '78'],
+  auroraPlant:  ['Ploy', 'Siri', 'Plant Manager', 'ploy.s@aurora-refining.example', 'Y', '', 'Existing customer', ''],
+  bluewater:    ['Carlo', 'Reyes', 'I&C Manager', 'carlo.reyes@bluewater.example', 'Y', 'https://www.linkedin.com/in/carlo-reyes-sample', 'Legitimate interest', '64'],
+  cedar:        ['Mei', 'Tan', 'Procurement Lead', '', '', '', 'Existing customer', ''],
+  delta:        ['Bao', 'Tran', 'Head of Automation', 'bao.tran@deltacoast.example', 'Y', '', 'Existing customer', '55'],
+  eastgate:     ['Dian', 'Putri', 'I&C Manager', 'dian.putri@eastgate.example', 'N', 'https://www.linkedin.com/in/dian-putri-sample', 'Legitimate interest', ''],
+  fernhill:     ['Wei', 'Chen', 'Control Systems Lead', 'wei.chen@fernhill.example', 'Y', '', 'Legitimate interest', '71'],
+  granite:      ['Hafiz', 'Rahman', 'Control Systems Lead', 'hafiz.r@granitegas.example', 'Y', '', 'Legitimate interest', 'high'],
+  harbor:       ['Somsak', 'Chai', 'Head of Instrumentation', 'somsak.c@harborpoint.example', 'Y', '', 'Legitimate interest', '82'],
+  ironwood:     ['Ana', 'Cruz', 'Automation Manager', 'ana.cruz@ironwood.example', 'Y', '', 'Existing customer', '80'],
+  juniper:      ['Budi', 'Hartono', 'DCS Engineer', '', '', '', 'Existing customer', '67'],
+  kingfisher:   ['Linh', 'Pham', 'Head of Instrumentation', 'linh.pham@kingfisher.example', 'Y', '', 'Legitimate interest', ''],
+  lantern:      ['Kanya', 'Boon', 'Automation Manager', 'kanya.b@lantern.example', 'Y', '', '', '58'],
+};
+const NBA_SIGNALS = [
+  sig(AURORA, P.auroraHead, 'Installed system near end of support', 10, 'Control system X R4 at the Map Ta Phut site reaches end of support next year', 'Installed base'),
+  sig(AURORA, P.auroraPlant, 'Webinar attended', 12, 'Modernising legacy control systems', 'Event platform export'),
+  sig(AURORA, P.auroraHead, 'Trade show visit', 8, 'Visited the stand', 'Events team'),
+  sig(BLUEWATER, P.bluewater, 'Installed system near end of support', 15, 'Control system X R5 reaches end of support in 2027', 'Installed base'),
+  sig(BLUEWATER, P.bluewater, 'Installed system near end of support', 15, 'Control system X R5 reaches end of support in 2027', 'Installed base'),
+  sig(CEDAR, P.cedar, 'Installed system near end of support', 20, 'Control system X R3 at the Johor plant reaches end of support', 'Installed base'),
+  sig(DELTA, P.delta, 'Service contract renewal', 5, 'Lifecycle service contract ends in three months', 'Service records'),
+  sig(DELTA, P.delta, 'Content download', 60, 'Case study: refinery migration in one shutdown', 'Marketing automation'),
+  sig(EASTGATE, P.eastgate, 'Webinar attended', 10, 'Alarm management for refineries', 'Event platform export'),
+  sig(EASTGATE, P.eastgate, 'Email clicked', 90, 'Clicked "Spring newsletter"', 'Campaign tool export'),
+  sig(FERNHILL, P.fernhill, 'Content download', 10, 'Pricing guide for control system upgrades', 'Marketing automation'),
+  sig(FERNHILL, P.fernhill, 'Newsletter sign-up', 9, 'Subscribed to the automation newsletter', 'Marketing automation'),
+  sig(GRANITE, P.granite, 'Webinar attended', 8, 'Gas plant control modernisation', 'Event platform export'),
+  sig(HARBOR, P.harbor, 'Inquiry or RFQ', 4, 'Asked about upgrading the crude unit controls during the next shutdown', 'CRM leads'),
+  sig(HARBOR, P.harbor, 'Webinar attended', 30, 'Modernising legacy control systems', 'Event platform export'),
+  sig(HARBOR, P.harbor, 'Capital project', 'not a date', 'Hydrotreater revamp', 'Account plan'),
+  sig(IRONWOOD, P.ironwood, 'Inquiry or RFQ', 3, 'Asked about control options after the compressor incident in August', 'CRM leads'),
+  sig(JUNIPER, P.juniper, 'Inquiry or RFQ', 6, 'Asked for a technical call on batch control', 'CRM leads'),
+  sig(KINGFISHER, P.kingfisher, 'Leadership change', 10, 'A new plant director took over in September', 'Customer meeting notes'),
+  sig(LANTERN, P.lantern, 'Capital project', 20, 'New aromatics unit at front-end design', 'Account plan'),
+];
+function isoMinus(asOf, days){ const d = new Date(asOf + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() - days); return d.toISOString().slice(0, 10); }
+function nbaScenarioGrid(asOf){
+  return [NBA_COLUMNS].concat(NBA_SIGNALS.map(x => {
+    const [first, last, title, email, verified, linkedin, consent, score] = x.p;
+    return [first, last, title, email, verified, linkedin, x.c.name, x.c.industry, x.c.country, x.c.existing, consent, score,
+      x.type, typeof x.ago === 'number' ? isoMinus(asOf, x.ago) : x.ago, x.detail, x.source, x.c.owner, x.c.revenue, x.c.employees, 'Owner-operator'];
+  }));
+}
+// What each account shows, what to expect, and how to test it. Owners: Rep A is Sofia Ahlgren (the Sales rep role), Rep B is Marco Lindqvist.
+const NBA_SCENARIO_GUIDE = [
+  ['Aurora Refining', 'Micro-segment formed on its strongest signal (Modernisation); one recommendation per account to the strongest contact; a second contact kept for "wrong contact"', 'Proceeds on its own to Niran Wattana by email (Rep A)', 'In For Review as a spot-check, or Step in: reject "Wrong contact" to get Ploy Siri back as the alternative'],
+  ['Bluewater Refinery', 'Clean item; email and LinkedIn both allowed; a duplicate signal row', 'Proceeds by email (Rep B); the duplicate row is not used', 'Step in and reject "Wrong channel" to get the same action back on LinkedIn'],
+  ['Cedar Petrochemicals', 'Low confidence: the only contact is not in the primary persona; no email or LinkedIn', 'Exception queue (Rep A); channel is a call', 'Accept, edit (minor wording, or change the ask for a major edit) or reject'],
+  ['Delta Coast Refining', 'Fallback: its strongest signal (service renewal) has fewer than 3 accounts, so it joins Engagement on its next signal', 'Proceeds (Rep B); runner-up is the renewal offering, with the reason stated', 'Open the card: the runner-up explains the fallback; reject "Wrong action" to bring it back'],
+  ['Eastgate Refinery', 'No verified email, LinkedIn URL only; a stale email click', 'Proceeds as a LinkedIn note and message (Rep A); the stale row is not used', 'Copy the message and mark an outcome on Next best action'],
+  ['Fernhill Refining', 'Brand check: the source mentions pricing, so the draft is regenerated once on its own; a newsletter sign-up that is not scored', 'Proceeds after one regeneration (Rep A); two versions kept', 'Open the card: History shows the regeneration'],
+  ['Granite Gas Processing', 'Proceed criteria: estimated deal size below the threshold; a score that is not a number', 'Exception queue (Rep B): about USD 122k against 250k; score worked out from signals', 'As the sales manager, reassign it to Sofia Ahlgren, then decide it as the Sales rep'],
+  ['Harbor Point Refinery', 'Inquiry micro-segment: the action routes to a person, so it is a task with a call script; an event date that is not a date', 'Proceeds as a task (Rep A); the bad-date row is not used', 'Export "Tasks for the team" from For Review'],
+  ['Ironwood Refining', 'Sensitive content: the inquiry mentions a plant incident', 'Exception queue (Rep A)', 'As the Sales rep, accept it: it goes to the sales manager. As the sales manager, approve and release, or send it back'],
+  ['Juniper Petrochem', 'Inquiry task for a contact with no email and no LinkedIn', 'Proceeds as a task (Rep B)', 'Mark the task done with an outcome'],
+  ['Kingfisher Refining', 'No micro-segment: no other account shares its signal; no approved, unexpired proof for the leadership action', 'Exception queue (Rep A) as a task: the only proof expired', 'Reject "Wrong action": the runner-up comes back; reject again: the account is closed for the pilot'],
+  ['Lantern Petrochemicals', 'No micro-segment; no consent basis, so no email or LinkedIn', 'Exception queue (Rep B); channel is a call', 'Reject "Not the right time": the account moves to the watch list'],
+  ['Any proceeded item', 'Weekly spot-check', 'About a fifth of each rep\'s proceeded items, at least one, appear in For Review as "Spot-check"', 'Rate it as if it had come to you; it counts toward G2 on the proceeded path'],
+  ['Engagement micro-segment', 'Pause a micro-segment', 'Its items show "Paused" and leave the queue', 'As the sales manager, Pause on the Micro-segments grid, then Resume'],
+  ['Build the set again', 'Engage-once', 'Accounts approved or proceeded in the first build are set aside the second time, as a process rule', 'After deciding some items, build the same set again'],
+  ['Any draft', 'Unsupported claim and banned words', 'Flagged in the card\'s checks', 'Edit a draft to add "guaranteed 30% less downtime" and accept: the edit is rated major and the claim shows as not verified'],
+];
+
+return { SAMPLE_AS_OF, LEADS, SIGNALS, LEAD_FILE: 'lead_file.csv', SIGNAL_FILE: 'signal_file.csv',
+  NBA_COLUMNS, nbaScenarioGrid, NBA_SCENARIO_GUIDE, NBA_SCENARIO_FILE: 'nba_test_scenarios.csv' };
 });
