@@ -469,12 +469,9 @@ function renderMain(){
       
     </div>
     <div class="ftabs">
-      <div class="ftab ${activeTab==='gates'?'active':''}" onclick="switchTab('gates')">Success gates</div>
-      <div class="ftab ${activeTab==='funnel'?'active':''}" onclick="switchTab('funnel')">Work-done funnel</div>
-      <div class="ftab ${activeTab==='weekly'?'active':''}" onclick="switchTab('weekly')">Weekly summary</div>
-      <div class="ftab ${activeTab==='readout'?'active':''}" onclick="switchTab('readout')">Pilot readout</div>
+      ${[['gates','Success gates'],['funnel','Work-done funnel'],['evidence','Supporting evidence'],['weekly','Weekly summary'],['readout','Pilot readout'],['log','Decision log'],['validation','Validation']].map(([k,l])=>`<div class="ftab ${activeTab===k?'active':''}" onclick="switchTab('${k}')">${l}</div>`).join('')}
     </div>
-    <div class="canvas">${activeTab==='gates'?renderGates():activeTab==='funnel'?renderFunnel():activeTab==='weekly'?renderWeekly():renderReadout()}</div>
+    <div class="canvas">${({gates:renderGates, funnel:renderFunnel, evidence:renderEvidence, weekly:renderWeekly, readout:renderReadout, log:renderLog, validation:renderValidation})[activeTab]()}</div>
   `;
 }
 
@@ -562,131 +559,341 @@ function renderGates(){
 }
 
 /* ═══════════════ 7.1 GATE STATUS against the thresholds agreed at kickoff ═══════════════ */
-const MIN_DECISIONS = 10; // below this, a gate reads "too early to call"
 const pillCss = (bg, fg) => `display:inline-flex;align-items:center;font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:999px;background:${bg};color:${fg}`;
-function gateState(value, threshold, n){ return value===null ? 'none' : n < MIN_DECISIONS ? 'early' : value >= threshold ? 'met' : 'below'; }
+function gateState(value, threshold, n){ return value===null ? 'none' : n < DemandAI.CONFIG.minDecisions ? 'early' : value >= threshold ? 'met' : 'below'; }
 function gateBadge(value, threshold, n){
   const st = gateState(value, threshold, n);
   if(st==='none') return `<span style="${pillCss('var(--s100)','var(--i3)')}">No data yet</span>`;
-  if(st==='early') return `<span style="${pillCss('var(--s100)','var(--i2)')}">Too early to call: ${n} of ${MIN_DECISIONS}</span>`;
+  if(st==='early') return `<span style="${pillCss('var(--s100)','var(--i2)')}">Too early to call: ${n} of ${DemandAI.CONFIG.minDecisions}</span>`;
   return st==='met' ? `<span style="${pillCss('var(--pos-lt)','var(--pos)')}">On track</span>` : `<span style="${pillCss('var(--neg-lt)','var(--neg)')}">Below the threshold</span>`;
 }
 
-/* ═══════════════ 7.2 WORK-DONE FUNNEL: counts per stage, from the lists and decisions ═══════════════ */
-function funnelData(runs, owner){
+/* ═══════════════ SHARED PIECES ═══════════════ */
+const ownerNow = () => isManager() ? REP_FILTER : myEmail();
+const pct0 = v => v===null || v===undefined || isNaN(v) ? '—' : Math.round(v)+'%';
+const arow = (label, val, sub) => `<div style="display:flex;align-items:baseline;gap:12px;padding:7px 0;border-bottom:1px solid var(--s75);font-size:12px"><span style="flex:1;color:var(--i2)">${label}${sub?`<span style="display:block;font-size:10.5px;color:var(--i3)">${sub}</span>`:''}</span><span style="color:var(--i1);font-weight:600;text-align:right">${val}</span></div>`;
+const apanel = (title, right, body) => `<div class="panel" style="margin-bottom:16px"><div class="panel-hdr"><span class="panel-ttl">${title}</span>${right||''}</div><div class="panel-body">${body}</div></div>`;
+const two = (a, b) => `<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">${a}${b}</div>`;
+// Every list's items with their decision, scoped to a rep when one is chosen.
+function itemsOf(runs, owner){
+  const out = [];
+  runs.forEach(run=>{ const keep = RUN; RUN = run; run.seg.recs.forEach(r=>{ if(!owner || ownerOf(r)===owner) out.push({ run, r, d:dec(r.key), x:draftOf(r), owner:ownerOf(r) }); }); RUN = keep; });
+  return out;
+}
+function logsOf(runs, owner){ return runs.flatMap(run=>run.saved.log.map(l=>({...l, list:run.saved.name, runId:run.saved.id}))).filter(l=>!owner || l.owner===owner).sort((a,b)=>b.at-a.at); }
+async function saveText(name, text){
+  let dl = null;
+  try{ dl = window.claude && window.claude.use ? await window.claude.use('downloads') : null; }catch(e){ dl = null; }
+  if(dl){ try{ await dl.save({filename:name, data:text}); showToast(name+' saved'); }catch(e){ if(!e || e.code!=='declined') showToast("This view can't save files"); } return; }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text],{type:'text/plain'})); a.download = name; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 0);
+}
+const noData = () => renderGates();
+
+/* ═══════════════ 7.2 WORK-DONE FUNNEL, over the process flow ═══════════════ */
+function funnelStages(runs, owner){
   const lists = new Map();
   runs.forEach(run=>{
     if(run.saved.src.sample && !lists.has('sample')) lists.set('sample', { stats: DemandAI.processLeads(DemandAISample.LEADS, {file:DemandAISample.LEAD_FILE}).stats });
-    else if(run.saved.src.listId && !lists.has(run.saved.src.listId)) lists.set(run.saved.src.listId, DemandAI.getList(run.saved.src.listId));
+    else if(run.saved.src.listId && !lists.has(run.saved.src.listId)){ const L = DemandAI.getList(run.saved.src.listId); if(L) lists.set(run.saved.src.listId, L); }
+    else if(run.saved.src.csv && !lists.has(run.saved.id)) lists.set(run.saved.id, { csvRows: Math.max(0, (run.saved.src.grid||[]).length-1), accounts: run.scored.length });
   });
-  const L = [...lists.values()].filter(Boolean);
-  const sum = f => L.reduce((t,l)=>t+(f(l.stats)||0), 0);
-  const recs = [], logs = [];
-  runs.forEach(run=>{ const keep = RUN; RUN = run; run.seg.recs.forEach(r=>{ if(!owner || ownerOf(r)===owner) recs.push({ r, d:dec(r.key), x:draftOf(r) }); }); run.saved.log.forEach(l=>{ if(!owner || l.owner===owner) logs.push(l); }); RUN = keep; });
+  const L = [...lists.values()], sum = f => L.reduce((t,l)=>t+(f(l)||0), 0);
+  const records = sum(l=>l.stats?l.stats.rowsRead:l.csvRows), valid = sum(l=>l.stats?l.stats.contacts:l.csvRows), inScope = sum(l=>l.stats?l.stats.accountsPass:l.accounts);
   const sigs = runs.flatMap(run=>(run.sig && run.sig.signals) || []);
-  const tiers = runs.flatMap(run=>run.scored.flatMap(r=>(r.people||[]).filter(p=>p.signals.length).map(p=>p.tier)));
-  const t = k => tiers.filter(x=>x===k).length;
+  const qualified = sigs.filter(s=>s.status==='Qualified'), extraRejected = runs.reduce((t,run)=>t+((run.sig&&run.sig.rejectedRows)||0),0);
+  const rejected = { length: sigs.filter(s=>s.status==='Rejected').length + extraRejected };
+  const found = sigs.length + extraRejected;
+  const scored = runs.flatMap(run=>run.scored.filter(r=>(r.people||[]).some(p=>p.signals.length)));
+  const tierOf = r => (r.people||[]).filter(p=>p.signals.length).map(p=>p.tier).sort()[0];
+  const it = itemsOf(runs, owner), logs = logsOf(runs, owner);
+  const segAccts = runs.reduce((n,run)=>n+run.seg.segments.reduce((m,g)=>m+g.accountIds.length,0),0);
+  const t = k => scored.filter(r=>tierOf(r)===k).length;
   return [
-    ['Data received', L.length ? `${sum(s=>s.rowsRead)} rows in ${L.length} lead file${L.length===1?'':'s'}; ${sum(s=>s.contacts)} valid contacts` : 'Uploaded as a scored CSV, so counting starts at signals'],
-    ['Lead discovery', L.length ? `${sum(s=>s.accountsPass)} accounts in scope; ${sum(s=>s.inFinalList)} contacts in the final lists` : '—'],
-    ['Signals', `${sigs.length} signal rows; ${sigs.filter(s=>s.status==='Qualified').length} qualified`],
-    ['Scoring', `${tiers.length} prospects with a live signal: ${t('A')} A, ${t('B')} B, ${t('C')} C`],
-    ['Micro-segments', `${runs.reduce((n,run)=>n+run.seg.segments.length,0)} formed across ${runs.length} list${runs.length===1?'':'s'}; ${runs.reduce((n,run)=>n+run.seg.engagedOnce.length,0)} accounts set aside by engage-once`],
-    ['Actions and outputs', `${recs.length} recommendations; ${recs.filter(x=>x.x.channel!=='Task').length} drafts and ${recs.filter(x=>x.x.channel==='Task').length} tasks; ${logs.filter(l=>/^Regenerated once/.test(l.decision)).length} regenerated once after a check`],
-    ['Exception check', `${recs.filter(x=>x.d.passed).length} passed all checks and proceeded; ${recs.filter(x=>!x.d.passed).length} went to the exception queue`],
-    ['Human in the loop', `${logs.filter(l=>l.decisive).length} decisions (${logs.filter(l=>l.decisive&&l.kind==='spot').length} spot-check ratings); ${recs.filter(x=>x.d.status==='Awaiting approval').length} waiting for the sales manager; ${recs.filter(x=>inQueue(x.d)).length} still to decide`],
-    ['Released and used', `${recs.filter(x=>x.d.status==='Released').length} released; ${recs.filter(x=>x.d.outcome).length} with an outcome (${recs.filter(x=>x.d.outcome==='Meeting booked').length} meetings booked)`],
+    { k:'Records received', n:records, sub:`${valid} valid contacts` },
+    { k:'Accounts in scope', of:0, n:inScope, sub:'after the checks and knock-outs' },
+    { k:'Signals found', n:found, sub:`${qualified.length} qualified · ${rejected.length} rejected · ${found-qualified.length-rejected.length} not used`, note:`${found?Math.round(qualified.length/found*100):0}% qualified`, nobase:true },
+    { k:'Accounts scored', of:1, n:scored.length, sub:`with a live signal: ${t('A')} A · ${t('B')} B · ${t('C')} C` },
+    { k:'Accounts in micro-segments', of:3, n:segAccts, sub:`${runs.reduce((n,run)=>n+run.seg.segments.length,0)} micro-segments formed · ${runs.reduce((n,run)=>n+run.seg.exceptions.length,0)} with no micro-segment · ${runs.reduce((n,run)=>n+run.seg.engagedOnce.length,0)} set aside by engage-once` },
+    { k:'Actions and drafts', of:3, n:it.length, sub:`${it.filter(x=>x.x.channel!=='Task').length} drafts · ${it.filter(x=>x.x.channel==='Task').length} tasks · ${logs.filter(l=>/^Regenerated once/.test(l.decision)).length} regenerated once` },
+    { k:'Completed on their own', of:5, n:it.filter(x=>x.d.passed).length, sub:`${it.filter(x=>!x.d.passed).length} went to the exception queue`, split:true },
+    { k:'Decided by a person', n:logs.filter(l=>l.decisive).length, sub:`${logs.filter(l=>l.decisive&&l.kind==='exception').length} exceptions · ${logs.filter(l=>l.decisive&&l.kind==='spot').length} spot-checks · ${logs.filter(l=>l.decisive&&l.kind==='alternative').length} alternatives`, nobase:true },
+    { k:'Released, ready to use', of:5, n:it.filter(x=>x.d.status==='Released').length, sub:`${it.filter(x=>x.d.outcome).length} with an outcome · ${it.filter(x=>x.d.outcome==='Meeting booked').length} meetings booked` },
   ];
 }
 function renderFunnel(){
-  const runs = analyticsRuns();
-  if(!runs.length) return renderGates();
-  const owner = isManager() ? REP_FILTER : myEmail();
+  const runs = analyticsRuns(); if(!runs.length) return noData();
+  const st = funnelStages(runs, ownerNow()), max = Math.max(1, ...st.map(s=>s.n));
   return `${repFilter()}
-    <div class="score-list">
-      <div class="sl-head" style="grid-template-columns:200px 1fr;"><div class="sl-th">Stage</div><div class="sl-th">What's counted</div></div>
-      ${funnelData(runs, owner).map(s=>`<div class="sl-row" style="grid-template-columns:200px 1fr;cursor:default"><div style="font-size:12px;font-weight:600;color:var(--i1)">${s[0]}</div><div style="font-size:12px;color:var(--i2)">${esc(s[1])}</div></div>`).join('')}
-    </div>
-    <div style="font-size:11px;color:var(--i3);margin-top:10px">Counted from the stored lists and decisions, the same data every screen reads.</div>`;
+    <div class="panel"><div class="panel-body" style="padding:18px 22px">
+      ${st.map((s,i)=>{
+        const base = s.of!==undefined ? st[s.of] : null;
+        const share = base && base.n ? Math.round(s.n/base.n*100) : null;
+        const lbl = share!==null ? `${share}% of ${base.k.toLowerCase()}` : s.note || (s.nobase ? 'decisions on exceptions, spot-checks and alternatives' : '');
+        return `${i?`<div style="display:flex;align-items:center;gap:8px;padding:2px 0 2px 22px;font-size:10.5px;color:var(--i3)"><span style="font-size:13px;color:var(--i4)">↓</span>${lbl}</div>`:''}
+        <div style="display:grid;grid-template-columns:220px 1fr 70px;gap:14px;align-items:center;padding:6px 0">
+          <div><div style="font-size:12.5px;font-weight:600;color:var(--i1)">${i+1} · ${s.k}</div><div style="font-size:10.5px;color:var(--i3);margin-top:2px">${esc(s.sub)}</div></div>
+          <div style="height:12px;background:var(--s75);border-radius:6px;overflow:hidden"><div style="height:100%;width:${Math.max(2, s.n/max*100)}%;background:${s.nobase?'var(--sec)':'var(--brand)'};border-radius:6px"></div></div>
+          <div style="font-family:var(--fd);font-size:17px;font-weight:700;color:var(--i1);text-align:right">${s.n}</div>
+        </div>`;
+      }).join('')}
+    </div></div>
+    <div style="font-size:11px;color:var(--i3);margin-top:-6px">Every stage of the process, counted from the stored lists and the decision log; each stage as a share of the stage it comes from.</div>`;
 }
 
-/* ═══════════════ 7.4 WEEKLY SUMMARY: the week's gates, work done and exceptions ═══════════════ */
+/* ═══════════════ SUPPORTING EVIDENCE: prioritisation accuracy, decision reasons and codes ═══════════════ */
+const REASON_CODE = Object.fromEntries(REJECT.map(([c,l])=>[l,c]));
+function renderEvidence(){
+  const runs = analyticsRuns(); if(!runs.length) return noData();
+  const owner = ownerNow(), it = itemsOf(runs, owner), logs = logsOf(runs, owner);
+  const judged = logs.filter(l=>l.decisive && l.firstPass && (!l.flag||l.checked));
+  // Prioritisation accuracy: if the ranking is right, higher tiers are accepted and convert more often.
+  const tierOfKey = new Map(); it.forEach(x=>tierOfKey.set(x.run.saved.id+'|'+x.r.key, x.r.person.tier));
+  const byTier = ['A','B','C'].map(t=>{
+    const items = it.filter(x=>x.r.person.tier===t), keys = new Set(items.map(x=>x.run.saved.id+'|'+x.r.key));
+    const j = judged.filter(l=>keys.has(l.runId+'|'+l.key));
+    return { t, n:items.length, j:j.length, a:j.filter(l=>l.accepted).length, meetings:items.filter(x=>x.d.outcome==='Meeting booked').length, replies:items.filter(x=>x.d.outcome==='Replied').length, out:items.filter(x=>x.d.outcome).length };
+  });
+  const reviewed = byTier.some(x=>x.j);
+  const ordered = reviewed && byTier.filter(x=>x.j).every((x,i,a)=>!i || (a[i-1].a/a[i-1].j) >= (x.a/x.j));
+  const tierTable = `<table style="width:100%;border-collapse:collapse;font-size:12px">
+    <tr style="color:var(--i3);font-size:10px;text-transform:uppercase;letter-spacing:.06em"><td style="padding:6px 0">Tier</td><td style="text-align:right">Recommendations</td><td style="text-align:right">Judged</td><td style="text-align:right">Accepted</td><td style="text-align:right">Replied</td><td style="text-align:right">Meetings</td></tr>
+    ${byTier.map(x=>`<tr style="border-top:1px solid var(--s75)"><td style="padding:8px 0;font-weight:600">Tier ${x.t}</td><td style="text-align:right">${x.n}</td><td style="text-align:right">${x.j}</td><td style="text-align:right;font-weight:600">${x.j?pct0(x.a/x.j*100):'—'}</td><td style="text-align:right">${x.replies}</td><td style="text-align:right">${x.meetings}</td></tr>`).join('')}
+  </table>
+  <div style="font-size:11.5px;color:${!reviewed?'var(--i3)':ordered?'var(--pos)':'var(--warn)'};margin-top:10px">${!reviewed ? 'Not reviewed yet: shown once people have judged recommendations.' : ordered ? 'Higher tiers are accepted at least as often as lower ones: the ranking holds.' : 'A lower tier is accepted more often than a higher one: the rubric or the signal weights need a look.'}</div>`;
+  // Decision reasons and codes
+  const rej = {}; logs.filter(l=>l.decisive && !l.accepted).forEach(l=>{ rej[l.reason]=(rej[l.reason]||0)+1; });
+  const tags = {}; logs.filter(l=>l.accepted).forEach(l=>(l.tags||[]).forEach(t=>{ tags[t]=(tags[t]||0)+1; }));
+  const edits = { as:logs.filter(l=>l.accepted && l.rating==='none').length, minor:logs.filter(l=>l.rating==='minor').length, major:logs.filter(l=>l.rating==='major').length };
+  const dq = {}; runs.forEach(run=>((run.sig&&run.sig.signals)||[]).filter(s=>s.status==='Rejected').forEach(s=>{ const k = `${s.code} ${DemandAI.CODES[s.code]||''}`.trim(); dq[k]=(dq[k]||0)+1; }));
+  const secs = k => { const v = logs.filter(l=>l.decisive && (!k || l.kind===k) && l.secs!=null).map(l=>l.secs).sort((a,b)=>a-b); return v.length ? v[Math.floor(v.length/2)] : null; };
+  const reasonRows = Object.entries(rej).sort((a,b)=>b[1]-a[1]).map(([k,n])=>arow(`<b style="font-family:var(--fm);font-size:11px;color:var(--i3);margin-right:6px">${REASON_CODE[k]||''}</b>${esc(k)}`, n, (CAUSE[REASON_CODE[k]]==='data'?"Gap in the client's data":CAUSE[REASON_CODE[k]]==='system'?"The system's judgement":''))).join('');
+  return `${repFilter()}
+    ${apanel('Prioritisation accuracy', '<span style="font-size:10.5px;color:var(--i3)">if reviewed</span>', tierTable)}
+    ${two(apanel('Rejection reasons and codes', '', reasonRows || '<div style="font-size:12px;color:var(--i3)">No rejections yet.</div>'),
+          apanel('Acceptance', '', arow('Accepted as it is', edits.as)+arow('Minor edit', edits.minor, 'Wording, tone or length only')+arow('Major edit', edits.major, 'Facts, the ask, the action or the person changed')
+            +`<div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--i3);margin:12px 0 4px">Quick tags</div>`
+            +(Object.keys(tags).length ? Object.entries(tags).sort((a,b)=>b[1]-a[1]).map(([k,n])=>arow(esc(k), n)).join('') : '<div style="font-size:12px;color:var(--i3)">No tags yet.</div>')))}
+    ${two(apanel('Data-quality reasons', '', Object.keys(dq).length ? Object.entries(dq).sort((a,b)=>b[1]-a[1]).map(([k,n])=>arow(esc(k), n)).join('') : '<div style="font-size:12px;color:var(--i3)">No data-quality issues in the signal files.</div>'),
+          apanel('Decision time', '<span style="font-size:10.5px;color:var(--i3)">median seconds</span>', arow('Exceptions', secs('exception')??'—')+arow('Spot-checks', secs('spot')??'—')+arow('Alternatives', secs('alternative')??'—')+arow('All decisions', secs(null)??'—')))}`;
+}
+
+/* ═══════════════ 8.1 DECISION LOG: every decision and automatic release, with its reason ═══════════════ */
+let LOG_KIND = 'all', LOG_Q = '';
+function renderLog(){
+  const runs = analyticsRuns(); if(!runs.length) return noData();
+  let ls = logsOf(runs, ownerNow());
+  const kinds = [['all','Everything'],['decisions','Decisions'],['auto','Automatic'],['outcomes','Outcomes'],['other','Changes']];
+  const isOut = l=>/^Outcome/.test(l.decision), isAuto = l=>l.kind==='system';
+  if(LOG_KIND==='decisions') ls = ls.filter(l=>l.decisive || /^Approved and released|^Sent back/.test(l.decision));
+  else if(LOG_KIND==='auto') ls = ls.filter(isAuto);
+  else if(LOG_KIND==='outcomes') ls = ls.filter(isOut);
+  else if(LOG_KIND==='other') ls = ls.filter(l=>!l.decisive && !isAuto(l) && !isOut(l));
+  if(LOG_Q) ls = ls.filter(l=>(l.who+' '+l.prospect+' '+l.company+' '+l.decision+' '+l.action+' '+l.note+' '+(l.reason||'')).toLowerCase().includes(LOG_Q));
+  const tone = d => /^Accepted|^Approved/.test(d)?'tag-green':/^Rejected|^Sent back/.test(d)?'tag-red':/^Outcome/.test(d)?'tag-violet':/^Proceeded|^Went ahead/.test(d)?'tag-blue':'tag-grey';
+  return `${repFilter(`<div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+      <div style="display:inline-flex;background:var(--s75);border-radius:999px;padding:3px">${kinds.map(([k,l])=>`<button onclick="LOG_KIND='${k}';renderMain()" style="padding:5px 11px;border-radius:999px;font-size:11.5px;font-weight:600;${LOG_KIND===k?'background:var(--surf);color:var(--i1);box-shadow:var(--sh)':'color:var(--i3)'}">${l}</button>`).join('')}</div>
+      <input placeholder="Search…" value="${esc(LOG_Q)}" onchange="LOG_Q=this.value.toLowerCase();renderMain()" style="padding:6px 9px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:12px;width:160px">
+      <button class="btn btn-sec btn-sm" onclick="downloadLog()">Download (.csv)</button></div>`)}
+    <div class="panel"><div class="panel-body" style="padding:0">
+      ${ls.length ? ls.slice(0,300).map(l=>`<div style="display:grid;grid-template-columns:120px 130px 1fr 1.2fr;gap:12px;padding:9px 14px;border-bottom:1px solid var(--s75);font-size:12px;align-items:start">
+        <div style="color:var(--i3)">${fmtDate(l.at)}<div style="font-size:10.5px">${new Date(l.at).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'})}${l.secs!=null?` · ${l.secs}s`:''}</div></div>
+        <div style="color:var(--i1)">${esc(l.who)}<div style="font-size:10.5px;color:var(--i3)">${esc(l.role)}</div></div>
+        <div><span class="tag ${tone(l.decision)}" style="display:inline-flex;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:999px">${esc(l.decision)}</span><div style="color:var(--i2);margin-top:3px">${esc(l.prospect)} · ${esc(l.company)}</div></div>
+        <div style="color:var(--i2)">${esc(l.action)}<div style="font-size:10.5px;color:var(--i3)">${[l.reason&&REASON_CODE[l.reason]?REASON_CODE[l.reason]+' '+l.reason:'', (l.tags||[]).join(', '), l.note, l.flag].filter(Boolean).map(esc).join(' · ')}</div></div>
+      </div>`).join('') : '<div style="padding:24px;text-align:center;font-size:12px;color:var(--i3)">Nothing matches.</div>'}
+      ${ls.length>300?`<div style="padding:10px 14px;font-size:11px;color:var(--i3)">Showing the latest 300 of ${ls.length}; the download has them all.</div>`:''}
+    </div></div>`;
+}
+function downloadLog(){
+  const rows = [['when','who','role','list','prospect','company','micro_segment','decision','item','first_pass','reason_code','reason','cause','tags','action','channel','version','seconds','queue_position','flag','checked','note']];
+  logsOf(analyticsRuns(), ownerNow()).forEach(l=>rows.push([new Date(l.at).toISOString(), l.who, l.role, l.list, l.prospect, l.company, l.segment, l.decision, l.kind||'', l.decisive?(l.firstPass?'yes':'no'):'',
+    REASON_CODE[l.reason]||'', l.reason||'', l.cause||'', (l.tags||[]).join('; '), l.action, l.channel, l.version||1, l.secs??'', l.position??'', l.flag||'', l.flag?(l.checked?'yes':'no'):'', l.note||'']));
+  saveText('decision_log.csv', DemandAI.toCSV(rows));
+}
+
+/* ═══════════════ VALIDATION: method, baseline, sample and threshold for each gate; data sufficiency ═══════════════ */
+function readiness(runs){
+  const R = DemandAI.CONFIG.readiness;
+  const accounts = runs.flatMap(run=>run.scored.filter(r=>!r.excluded));
+  const uniq = new Map(accounts.map(r=>[r.account.name.toLowerCase(), r])); const A = [...uniq.values()];
+  const contactable = A.filter(r=>(r.contacts||[]).some(c=>c.persona==='Primary' && !c.optOut && ((c.email && c.emailVerified) || c.linkedin)));
+  const covered = A.filter(r=>(r.signalCount||0) > 0 || (r.people||[]).some(p=>p.signals.length));
+  const qual = runs.flatMap(run=>((run.sig&&run.sig.signals)||[]).filter(s=>s.status==='Qualified'));
+  const recent = qual.filter(s=>s.age!==undefined && s.age <= R.recencyDays);
+  const actions = [...new Set(Object.values(DemandAI.CONFIG.segmentLibrary).flat())];
+  const asOf = runs[0] ? runs[0].saved.src.asOf : null;
+  const noProof = actions.filter(a=>{ const sg = Object.keys(DemandAI.CONFIG.segmentLibrary).find(k=>DemandAI.CONFIG.segmentLibrary[k].includes(a)); return !DemandAI.COLLATERAL.some(c=>c.segments.includes(sg) && (!asOf || c.expiry >= asOf)); });
+  const p = (a,b) => b ? a/b*100 : 0;
+  return [
+    { k:'Accounts in scope', v:A.length, ok:A.length >= R.accounts, show:`${A.length}`, need:`${R.accounts} or more`, fix:'More accounts in the selected vertical and region' },
+    { k:'Contactability', v:p(contactable.length, A.length), ok:p(contactable.length, A.length) >= R.contactable, show:`${pct0(p(contactable.length, A.length))} of accounts`, need:`${R.contactable}%+ with a primary-persona contact who has a verified email or LinkedIn URL`, fix:'Verified emails or LinkedIn URLs for the primary-persona contacts' },
+    { k:'Signal coverage', v:p(covered.length, A.length), ok:p(covered.length, A.length) >= R.coverage, show:`${pct0(p(covered.length, A.length))} of accounts`, need:`${R.coverage}%+ with at least one qualified signal`, fix:'More of the signal data the client holds: installed base, inquiries, service records, events' },
+    { k:'Recency', v:p(recent.length, qual.length), ok:qual.length>0 && p(recent.length, qual.length) >= R.recency, show:`${pct0(p(recent.length, qual.length))} of qualified signals`, need:`${R.recency}%+ from the last ${R.recencyDays} days`, fix:'A fresher signal export' },
+    { k:'Collateral', v:actions.length-noProof.length, ok:!noProof.length, show:`${actions.length-noProof.length} of ${actions.length} actions`, need:'Approved, unexpired proof for every action in the set', fix:noProof.length?`Proof for: ${noProof.join('; ')}`:'' },
+    { k:'Baseline', v:DemandAI.CONFIG.g1BaselineMinutes, ok:!!(DemandAI.configOverrides().g1BaselineMinutes), show:`${DemandAI.CONFIG.g1BaselineMinutes} min per usable first action`, need:'A timed baseline from the client on the same data', fix:'The client\'s timed baseline (the current figure is a placeholder)' },
+  ];
+}
+function renderValidation(){
+  const runs = analyticsRuns(), T = DemandAI.CONFIG, edit = isManager(), m = runs.length ? measure(runs, null) : null;
+  const inp = (id, v, unit) => edit ? `<input id="${id}" type="number" value="${v}" style="width:84px;padding:5px 8px;border:1px solid var(--bdk);border-radius:6px;font-size:12px;text-align:right"> <span style="color:var(--i3);font-size:11px">${unit}</span>` : `${v} ${unit}`;
+  const gate = (title, rows) => apanel(title, '', rows.map(([k,v])=>`<div style="display:grid;grid-template-columns:110px 1fr;gap:12px;padding:8px 0;border-bottom:1px solid var(--s75);font-size:12px;align-items:baseline"><span style="color:var(--i3)">${k}</span><span style="color:var(--i1);line-height:1.5">${v}</span></div>`).join(''));
+  const rd = runs.length ? readiness(runs) : [];
+  const gaps = rd.filter(x=>!x.ok).length;
+  const verdict = !rd.length ? '' : !gaps ? ['Sufficient','var(--pos-lt)','var(--pos)'] : gaps <= 2 ? ['Sufficient with gaps','var(--warn-lt)','var(--warn)'] : ['Not yet sufficient','var(--neg-lt)','var(--neg)'];
+  return `${two(
+    gate('G1 · Reduced human effort', [
+      ['Method', 'Minutes people spend per usable first action: review time in the exception queue plus spot-check time, divided by the recommendations released ready to use.'],
+      ['Baseline', inp('cfgBase', T.g1BaselineMinutes, 'min per first action')+'<div style="font-size:10.5px;color:var(--i3);margin-top:3px">Timed by the client on the same data, before measurement starts.</div>'],
+      ['Sample', m ? `${m.released} usable first actions; ${Math.round(Object.values(runs).reduce((t,run)=>t+run.saved.log.filter(l=>l.decisive).reduce((s,l)=>s+(l.secs||0),0),0)/60*10)/10} min of review` : 'No data yet'],
+      ['Threshold', inp('cfgG1', T.g1Threshold, '% less than the baseline')],
+    ]),
+    gate('G2 · Recommendation acceptance', [
+      ['Method', 'Share accepted on first pass (as it is or edited) among recommendations a person judged: every exception decided in the queue plus the weekly spot-check of items that proceeded. The two paths are weighted by how many items took each.'],
+      ['Baseline', 'None: acceptance is measured directly.'],
+      ['Sample', m ? `${m.exc.n} exception decisions and ${m.auto.n} spot-checks; spot-check share ${inp('cfgSpot', Math.round(T.spotCheckShare*100), '% of proceeded items, weekly')}` : `Spot-check share ${inp('cfgSpot', Math.round(T.spotCheckShare*100), '% of proceeded items, weekly')}`],
+      ['Threshold', inp('cfgG2', T.g2Threshold, '% accepted')],
+    ]))}
+    ${apanel('Counting rules', '', arow('A gate is too early to call below', edit?inp('cfgMin', T.minDecisions, 'decisions'):`${T.minDecisions} decisions`)
+      + arow('First pass only', 'An alternative accepted after a rejection is reported as "within one alternative"')
+      + arow('Checked before counting', 'Decisions under 5 seconds or in a run of identical decisions')
+      + arow('Proceed criteria: deal-size threshold', edit?inp('cfgDeal', T.dealSize.threshold/1000, 'k USD'):`${T.dealSize.threshold/1000}k USD`)
+      + (edit ? `<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px"><span style="flex:1;font-size:11px;color:var(--i3);align-self:center">Agreed at kickoff. Saved in this browser; every screen uses them.</span><button class="btn btn-primary btn-sm" onclick="saveValidation()">Save the settings</button></div>` : '<div style="font-size:11px;color:var(--i3);margin-top:10px">Set by the sales manager or admin.</div>'))}
+    ${rd.length ? apanel('Data sufficiency · the readiness gate before measurement', `<span style="${pillCss(verdict[1], verdict[2])}">${verdict[0]}</span>`,
+      rd.map(x=>`<div style="display:grid;grid-template-columns:150px 150px 1fr 22px;gap:12px;padding:8px 0;border-bottom:1px solid var(--s75);font-size:12px;align-items:baseline">
+        <b style="color:var(--i1)">${x.k}</b><span style="color:var(--i1)">${esc(x.show)}</span><span style="color:var(--i3)">${esc(x.need)}${!x.ok&&x.fix?`<span style="display:block;color:var(--warn);margin-top:2px">To close: ${esc(x.fix)}</span>`:''}</span>
+        <span style="color:${x.ok?'var(--pos)':'var(--warn)'};font-weight:700">${x.ok?'✓':'!'}</span></div>`).join('')
+      + '<div style="font-size:11px;color:var(--i3);margin-top:8px">Thresholds for each check are agreed at kickoff. Measurement starts once the gate is passed.</div>') : ''}`;
+}
+function saveValidation(){
+  const v = id => { const el = document.getElementById(id); return el ? Number(el.value) : NaN; };
+  const o = { g1BaselineMinutes:v('cfgBase'), g1Threshold:v('cfgG1'), g2Threshold:v('cfgG2'), minDecisions:v('cfgMin'), spotCheckShare:v('cfgSpot')/100, dealThreshold:v('cfgDeal')*1000 };
+  Object.keys(o).forEach(k=>{ if(!isFinite(o[k]) || o[k] < 0) delete o[k]; });
+  if(!DemandAI.saveConfig(o)){ showToast("This browser blocks storage, so the settings can't be kept"); return; }
+  A_RUNS = null; showToast('Settings saved'); renderMain();
+}
+
+/* ═══════════════ 7.4 WEEKLY SUMMARY: the week's gates, work done, exceptions and decision reasons, as a report ═══════════════ */
 let WEEK = null;
-function weekLogs(runs, owner, week){ return runs.flatMap(run=>run.saved.log).filter(l=>(!owner || l.owner===owner) && isoWeek(l.at)===week); }
+function weekLogs(runs, owner, week){ return logsOf(runs, owner).filter(l=>isoWeek(l.at)===week); }
+function weekData(runs, owner, week){
+  const ls = weekLogs(runs, owner, week), dec1 = ls.filter(l=>l.decisive);
+  const counts = l => !l.flag || l.checked, first = dec1.filter(l=>l.firstPass && counts(l));
+  const rate = xs => xs.length ? Math.round(xs.filter(l=>l.accepted).length/xs.length*100) : null;
+  const reasons = {}; dec1.filter(l=>!l.accepted).forEach(l=>{ reasons[l.reason]=(reasons[l.reason]||0)+1; });
+  const exceptions = {}; ls.filter(l=>l.decision==='To the exception queue').forEach(l=>(l.note||'').split(' · ').forEach(n=>{ const k = n.replace(/:.*$/,''); if(k) exceptions[k]=(exceptions[k]||0)+1; }));
+  const secs = dec1.reduce((t,l)=>t+(l.secs||0),0), released = ls.filter(l=>/^Proceeded on its own|^Accepted|^Approved and released/.test(l.decision) && l.kind!=='spot').length;
+  return { ls, rows: [
+    ['Recommendations built', ls.filter(l=>l.kind==='system' && /^Proceeded on its own|^To the exception queue/.test(l.decision)).length],
+    ['Proceeded on their own', ls.filter(l=>l.decision==='Proceeded on its own').length],
+    ['Sent to the exception queue', ls.filter(l=>l.decision==='To the exception queue').length],
+    ['Decisions made', `${dec1.length} (${dec1.filter(l=>l.kind==='spot').length} spot-check ratings)`],
+    ['G2 first-pass acceptance', first.length ? `${rate(first)}% of ${first.length} (exceptions ${rate(first.filter(l=>l.kind==='exception'))??'—'}%, spot-checks ${rate(first.filter(l=>l.kind==='spot'))??'—'}%)` : '—'],
+    ['G1 review time', `${Math.round(secs/60*10)/10} min${released?` · ${Math.round(secs/60/released*10)/10} min per usable first action (baseline ${DemandAI.CONFIG.g1BaselineMinutes})`:''}`],
+    ['Outcomes marked', ls.filter(l=>/^Outcome/.test(l.decision)).length],
+    ['Interventions on items that proceeded', ls.filter(l=>l.intervention).length],
+    ['Flagged decisions waiting for a check', dec1.filter(l=>l.flag && !l.checked).length],
+  ], exceptions, reasons };
+}
+function weekText(runs, owner, week){
+  const w = weekData(runs, owner, week), list = o => Object.keys(o).length ? Object.entries(o).sort((a,b)=>b[1]-a[1]).map(([k,n])=>`- ${k}: ${n}`) : ['- None'];
+  return [`# Weekly summary · ${week}`, ``, `For the business-unit lead${owner?` · ${repName(owner)}`:''}. Generated ${new Date().toLocaleString()}.`, ``, `## Gates and work done`, ...w.rows.map(([k,v])=>`- ${k}: ${v}`), ``, `## Why items went to a person`, ...list(w.exceptions), ``, `## Rejection reasons`, ...list(w.reasons)].join('\n');
+}
 function renderWeekly(){
-  const runs = analyticsRuns();
-  if(!runs.length) return renderGates();
-  const owner = isManager() ? REP_FILTER : myEmail();
+  const runs = analyticsRuns(); if(!runs.length) return noData();
+  const owner = ownerNow();
   const weeks = [...new Set(runs.flatMap(run=>run.saved.log.map(l=>isoWeek(l.at))).concat([isoWeek(Date.now())]))].sort().reverse();
   if(!WEEK || !weeks.includes(WEEK)) WEEK = weeks[0];
-  const ls = weekLogs(runs, owner, WEEK), dec1 = ls.filter(l=>l.decisive);
-  const first = dec1.filter(l=>l.firstPass && (!l.flag || l.checked)), acc = first.filter(l=>l.accepted).length;
-  const reasons = {}; dec1.filter(l=>!l.accepted).forEach(l=>{ reasons[l.reason]=(reasons[l.reason]||0)+1; });
-  const exceptions = {}; ls.filter(l=>l.decision==='To the exception queue').forEach(l=>l.note.split(' · ').forEach(n=>{ const k = n.replace(/:.*$/,''); exceptions[k]=(exceptions[k]||0)+1; }));
-  const secs = dec1.reduce((t,l)=>t+(l.secs||0),0), released = ls.filter(l=>/^Proceeded on its own|^Accepted|^Approved and released/.test(l.decision) && !(l.kind==='spot')).length;
-  const row = (label, val) => `<div style="display:flex;gap:12px;padding:7px 0;border-bottom:1px solid var(--s75);font-size:12px"><span style="flex:1;color:var(--i2)">${label}</span><span style="color:var(--i1);font-weight:600;text-align:right">${val}</span></div>`;
-  return `${repFilter(`<span style="font-size:12px;color:var(--i2);margin-left:10px">Week</span><select onchange="WEEK=this.value;renderMain()" style="padding:6px 9px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:12px">${weeks.map(w=>`<option ${w===WEEK?'selected':''}>${w}</option>`).join('')}</select>`)}
-    <div class="panel"><div class="panel-hdr"><span class="panel-ttl">Week ${esc(WEEK)} · for the business-unit lead</span></div><div class="panel-body">
-      ${row('Recommendations built', ls.filter(l=>l.kind==='system' && /^Proceeded on its own|^To the exception queue/.test(l.decision)).length)}
-      ${row('Proceeded on their own', ls.filter(l=>l.decision==='Proceeded on its own').length)}
-      ${row('Sent to the exception queue', ls.filter(l=>l.decision==='To the exception queue').length)}
-      ${row('Decisions made', `${dec1.length} (${dec1.filter(l=>l.kind==='spot').length} spot-check ratings)`)}
-      ${row('First-pass acceptance', first.length ? `${Math.round(acc/first.length*100)}% · ${acc} of ${first.length}` : '—')}
-      ${row('Review time', `${Math.round(secs/60*10)/10} min${released?` · ${Math.round(secs/60/released*10)/10} min per usable first action`:''}`)}
-      ${row('Outcomes marked', ls.filter(l=>/^Outcome/.test(l.decision)).length)}
-      ${row('Interventions on items that proceeded', ls.filter(l=>l.intervention).length)}
-      ${row('Flagged decisions waiting for a check', dec1.filter(l=>l.flag && !l.checked).length)}
-    </div></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px">
-      <div class="panel"><div class="panel-hdr"><span class="panel-ttl">Why items went to a person</span></div><div class="panel-body">${Object.keys(exceptions).length ? Object.entries(exceptions).sort((a,b)=>b[1]-a[1]).map(([k,n])=>row(esc(k), n)).join('') : '<div style="font-size:12px;color:var(--i3)">None this week.</div>'}</div></div>
-      <div class="panel"><div class="panel-hdr"><span class="panel-ttl">Rejection reasons</span></div><div class="panel-body">${Object.keys(reasons).length ? Object.entries(reasons).sort((a,b)=>b[1]-a[1]).map(([k,n])=>row(esc(k), n)).join('') : '<div style="font-size:12px;color:var(--i3)">None this week.</div>'}</div></div>
-    </div>`;
+  const w = weekData(runs, owner, WEEK), prevWeek = weeks[weeks.indexOf(WEEK)+1], p = prevWeek ? weekData(runs, owner, prevWeek) : null;
+  const list = o => Object.keys(o).length ? Object.entries(o).sort((a,b)=>b[1]-a[1]).map(([k,n])=>arow(esc(k), n)).join('') : '<div style="font-size:12px;color:var(--i3)">None this week.</div>';
+  return `${repFilter(`<span style="font-size:12px;color:var(--i2);margin-left:10px">Week</span><select onchange="WEEK=this.value;renderMain()" style="padding:6px 9px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:12px">${weeks.map(x=>`<option ${x===WEEK?'selected':''}>${x}</option>`).join('')}</select>
+      <button class="btn btn-primary btn-sm" style="margin-left:auto" onclick="saveText('weekly_summary_${WEEK}.md', weekText(analyticsRuns(), ownerNow(), WEEK))">Download the report (.md)</button>`)}
+    ${apanel(`Week ${esc(WEEK)} · for the business-unit lead`, p?`<span style="font-size:10.5px;color:var(--i3)">compared with ${esc(prevWeek)}</span>`:'', w.rows.map(([k,v],i)=>arow(k, v, p ? `last week: ${p.rows[i][1]}` : '')).join(''))}
+    ${two(apanel('Why items went to a person', '', list(w.exceptions)), apanel('Rejection reasons', '', list(w.reasons)))}`;
 }
 
-/* ═══════════════ 7.5 PILOT READOUT: the end-of-pilot evidence, downloadable ═══════════════ */
+/* ═══════════════ 7.5 PILOT READOUT, and the decision: validators judge their area, the sponsor decides ═══════════════ */
+const READOUT_KEY = 'demandai_readout_v1';
+const VALIDATORS = [['sales','Sales lead','The recommendations and the actions'],['marketing','Marketing','The messages, proof and brand'],['reps','Reps','Usefulness in daily work'],['compliance','Compliance','Sensitive content and approvals']];
+function readoutState(){ try{ return JSON.parse(localStorage.getItem(READOUT_KEY)||'{}'); }catch(e){ return {}; } }
+function saveReadoutState(s){ try{ localStorage.setItem(READOUT_KEY, JSON.stringify(s)); return true; }catch(e){ return false; } }
+function judge(area){
+  const v = document.querySelector(`input[name=v_${area}]:checked`), note = (document.getElementById('vn_'+area)||{}).value || '';
+  if(!v){ showToast('Choose a judgement'); return; }
+  const s = readoutState(); s.validators = s.validators || {}; s.validators[area] = { verdict:v.value, note, by:me().who, role:getRole(), at:Date.now() };
+  saveReadoutState(s); showToast('Judgement recorded'); renderMain();
+}
+function sponsorDecide(){
+  const v = document.querySelector('input[name=sponsor]:checked'), note = (document.getElementById('sponsorNote')||{}).value || '';
+  if(!v){ showToast('Choose a decision'); return; }
+  const s = readoutState(); s.sponsor = { decision:v.value, note, by:me().who, role:getRole(), at:Date.now() };
+  saveReadoutState(s); showToast('Decision recorded'); renderMain();
+}
+function betterData(runs, owner){
+  const it = itemsOf(runs, owner), logs = logsOf(runs, owner), out = [];
+  readiness(runs).filter(x=>!x.ok && x.fix).forEach(x=>out.push(`${x.k}: ${x.fix} (now ${x.show})`));
+  const low = it.filter(x=>x.r.result.confidence==='low').length; if(low) out.push(`Primary-persona contacts for ${low} account${low===1?'':'s'} that went to a person with low confidence`);
+  const noProof = it.filter(x=>x.x.noProof).length; if(noProof) out.push(`Approved proof for ${noProof} recommendation${noProof===1?'':'s'} that became a task because none was found`);
+  const unknownDeal = it.filter(x=>!DemandAI.estimateDealSize(x.r.account)).length; if(unknownDeal) out.push(`Revenue or headcount for ${unknownDeal} account${unknownDeal===1?'':'s'}, so the deal-size rule can be applied`);
+  const dataRej = logs.filter(l=>l.decisive && !l.accepted && l.cause==='data'); if(dataRej.length) out.push(`${dataRej.length} rejection${dataRej.length===1?'':'s'} came from gaps in the client's data (${[...new Set(dataRej.map(l=>l.reason))].join(', ')})`);
+  return out;
+}
 function readoutText(runs, owner){
-  const m = measure(runs, owner), T = DemandAI.CONFIG, fd = funnelData(runs, owner);
+  const m = measure(runs, owner), T = DemandAI.CONFIG, st = funnelStages(runs, owner), rs = readoutState();
   const pct = v => v===null ? 'not enough data' : Math.round(v)+'%';
-  const tags = {}; runs.flatMap(run=>run.saved.log).filter(l=>(!owner||l.owner===owner) && l.accepted).forEach(l=>(l.tags||[]).forEach(t=>{ tags[t]=(tags[t]||0)+1; }));
   const g1s = gateState(m.saved, T.g1Threshold, m.released), g2s = gateState(m.weighted, T.g2Threshold, m.pooled.n);
-  const said = st => ({none:'open', early:`too early to call (fewer than ${MIN_DECISIONS})`, met:'met', below:'not met'})[st];
+  const said = s => ({none:'open', early:`too early to call (fewer than ${T.minDecisions})`, met:'met', below:'not met'})[s];
+  const it = itemsOf(runs, owner), logs = logsOf(runs, owner);
+  const tierLine = ['A','B','C'].map(t=>{ const keys = new Set(it.filter(x=>x.r.person.tier===t).map(x=>x.run.saved.id+'|'+x.r.key)); const j = logs.filter(l=>l.decisive&&l.firstPass&&keys.has(l.runId+'|'+l.key)); return `tier ${t}: ${j.length?Math.round(j.filter(l=>l.accepted).length/j.length*100)+'% of '+j.length:'not judged'}`; }).join('; ');
+  const tags = {}; logs.filter(l=>l.accepted).forEach(l=>(l.tags||[]).forEach(t=>{ tags[t]=(tags[t]||0)+1; }));
+  const bd = betterData(runs, owner), V = rs.validators || {};
   return [
     `# Pilot readout`, ``, `Generated ${new Date().toLocaleString()} from ${runs.length} segmented list${runs.length===1?'':'s'}${owner?` · ${repName(owner)}`:''}.`, ``,
-    `## Success gates`,
-    `- G1 reduced human effort: ${m.saved===null?'not enough data':Math.round(m.saved)+'% less'} (${m.minutes===null?'—':(Math.round(m.minutes*10)/10)+' min'} per usable first action vs a ${m.base} min baseline; threshold ${T.g1Threshold}%): ${said(g1s)}`,
-    `- G2 recommendation acceptance: ${pct(m.weighted)} first pass, weighted across both paths (threshold ${T.g2Threshold}%): ${said(g2s)}`,
-    `  - Proceeded path: ${pct(m.auto.pct)} of ${m.auto.n} spot-checks, ${m.autoN} items`,
-    `  - Exception path: ${pct(m.exc.pct)} of ${m.exc.n} decisions, ${m.excN} items`,
+    `## The two success gates`,
+    `- G1 reduced human effort: ${m.saved===null?'not enough data':Math.round(m.saved)+'% less'} (${m.minutes===null?'—':(Math.round(m.minutes*10)/10)+' min'} per usable first action against a ${m.base} min baseline; threshold ${T.g1Threshold}% less): ${said(g1s)}`,
+    `- G2 recommendation acceptance: ${pct(m.weighted)} on first pass, weighted across both paths (threshold ${T.g2Threshold}%): ${said(g2s)}`,
+    `  - Proceeded path: ${pct(m.auto.pct)} of ${m.auto.n} spot-checks, from ${m.autoN} items`,
+    `  - Exception path: ${pct(m.exc.pct)} of ${m.exc.n} decisions, from ${m.excN} items`,
     `  - Within one alternative: ${pct(m.alternatives.pct)} of ${m.alternatives.n}`, ``,
-    `## Work done`, ...fd.map(([k,v])=>`- ${k}: ${v}`), ``,
-    `## What worked`, ...(Object.keys(tags).length ? Object.entries(tags).sort((a,b)=>b[1]-a[1]).map(([k,n])=>`- ${k}: ${n}`) : ['- No acceptance tags yet']), ``,
-    `## What to fix`, ...(Object.keys(m.reasons).length ? Object.entries(m.reasons).sort((a,b)=>b[1]-a[1]).map(([k,n])=>`- ${k}: ${n}`) : ['- No rejections yet']),
-    `- By cause: ${m.causes.data} from gaps in the client's data, ${m.causes.system} from the system's judgement, ${m.causes.other} other; ${m.compliance} compliance send-backs`, ``,
-    `## For the production decision`,
-    `- ${[g1s,g2s].some(x=>x==='none'||x==='early') ? 'Not enough decisions yet to call both gates.' : g1s==='met' && g2s==='met' ? 'Both gates met: the evidence supports moving to production.' : 'At least one gate not met: review the rejection reasons and the exception rules before deciding.'}`,
-    `- Interventions on items that proceeded: ${m.interventions}. Flagged decisions still to check: ${m.flagged}.`,
+    `## Work done`, ...st.map(s=>`- ${s.k}: ${s.n} (${s.sub})`), ``,
+    `## Supporting evidence`,
+    `- Prioritisation accuracy, first-pass acceptance by tier: ${tierLine}`,
+    `- Edits: ${m.edits.none} accepted as they were, ${m.edits.minor} minor, ${m.edits.major} major`,
+    `- Interventions on items that proceeded: ${m.interventions}; flagged decisions still to check: ${m.flagged}`, ``,
+    `## Decision reasons`,
+    ...(Object.keys(m.reasons).length ? Object.entries(m.reasons).sort((a,b)=>b[1]-a[1]).map(([k,n])=>`- ${REASON_CODE[k]||''} ${k}: ${n}`) : ['- No rejections yet']),
+    `- By cause: ${m.causes.data} from gaps in the client's data, ${m.causes.system} from the system's judgement, ${m.causes.other} other; ${m.compliance} compliance send-backs`,
+    `- What worked (acceptance tags): ${Object.keys(tags).length ? Object.entries(tags).sort((a,b)=>b[1]-a[1]).map(([k,n])=>`${k} ${n}`).join(', ') : 'none yet'}`, ``,
+    `## What better data would add`, ...(bd.length ? bd.map(x=>`- ${x}`) : ['- No data gaps found']), ``,
+    `## Validators`, ...VALIDATORS.map(([k,l,a])=>`- ${l} (${a}): ${V[k] ? `${V[k].verdict} · ${V[k].by}, ${fmtDate(V[k].at)}${V[k].note?` · ${V[k].note}`:''}` : 'not yet judged'}`), ``,
+    `## Sponsor decision`, `- ${rs.sponsor ? `${rs.sponsor.decision} · ${rs.sponsor.by}, ${fmtDate(rs.sponsor.at)}${rs.sponsor.note?` · ${rs.sponsor.note}`:''}` : 'Not yet decided'}`,
   ].join('\n');
 }
 function renderReadout(){
-  const runs = analyticsRuns();
-  if(!runs.length) return renderGates();
-  const owner = isManager() ? REP_FILTER : myEmail();
-  const text = readoutText(runs, owner);
-  const html = text.split('\n').map(l=>l.startsWith('# ')?`<div style="font-family:var(--fd);font-size:18px;font-weight:700;color:var(--i1);margin-bottom:4px">${esc(l.slice(2))}</div>`
+  const runs = analyticsRuns(); if(!runs.length) return noData();
+  const owner = ownerNow(), text = readoutText(runs, owner), rs = readoutState(), V = rs.validators || {};
+  const html = text.split('\n## Validators')[0].split('\n').map(l=>l.startsWith('# ')?`<div style="font-family:var(--fd);font-size:18px;font-weight:700;color:var(--i1);margin-bottom:4px">${esc(l.slice(2))}</div>`
     : l.startsWith('## ')?`<div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--brand);margin:16px 0 6px">${esc(l.slice(3))}</div>`
     : l.startsWith('  - ')?`<div style="font-size:12.5px;color:var(--i2);padding:2px 0 2px 28px">· ${esc(l.slice(4))}</div>`
     : l.startsWith('- ')?`<div style="font-size:12.5px;color:var(--i1);padding:3px 0 3px 12px">· ${esc(l.slice(2))}</div>`
     : l ? `<div style="font-size:12px;color:var(--i3)">${esc(l)}</div>` : '').join('');
-  return `${repFilter(`<button class="btn btn-primary btn-sm" style="margin-left:auto" onclick="downloadReadout()">Download readout (.md)</button>`)}
-    <div class="panel"><div class="panel-body" style="padding:20px 24px">${html}</div></div>`;
+  const radio = (name, opts, cur) => opts.map(o=>`<label style="display:inline-flex;align-items:center;gap:5px;margin-right:12px;font-size:12px;color:var(--i1);cursor:pointer"><input type="radio" name="${name}" value="${o}" ${cur===o?'checked':''} style="accent-color:var(--brand)">${o}</label>`).join('');
+  const validators = VALIDATORS.map(([k,l,a])=>`<div style="padding:10px 0;border-bottom:1px solid var(--s75)">
+      <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:6px"><b style="font-size:12.5px;color:var(--i1)">${l}</b><span style="font-size:11px;color:var(--i3)">${a}</span>
+        ${V[k]?`<span style="margin-left:auto;font-size:11px;color:var(--i2)">${esc(V[k].verdict)} · ${esc(V[k].by)}, ${fmtDate(V[k].at)}</span>`:''}</div>
+      ${radio('v_'+k, ['Satisfied','Satisfied with concerns','Not satisfied'], V[k]&&V[k].verdict)}
+      <div style="display:flex;gap:8px;margin-top:6px"><input id="vn_${k}" value="${esc(V[k]?V[k].note:'')}" placeholder="What they found" style="flex:1;padding:6px 9px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:12px"><button class="btn btn-sec btn-sm" onclick="judge('${k}')">Record</button></div>
+    </div>`).join('');
+  const canDecide = ['Admin','Sales manager'].includes(getRole());
+  return `${repFilter(`<button class="btn btn-primary btn-sm" style="margin-left:auto" onclick="saveText('pilot_readout.md', readoutText(analyticsRuns(), ownerNow()))">Download the readout (.md)</button>`)}
+    <div class="panel" style="margin-bottom:16px"><div class="panel-body" style="padding:20px 24px">${html}</div></div>
+    ${two(apanel('Validators judge their area', '', validators),
+      apanel('The sponsor decides on production', rs.sponsor?`<span style="font-size:11px;color:var(--i2)">${esc(rs.sponsor.decision)} · ${esc(rs.sponsor.by)}</span>`:'',
+        `<div style="font-size:12px;color:var(--i2);margin-bottom:10px;line-height:1.5">Once the validators have judged, the sponsor decides with the gates, the evidence and their judgements in front of them.</div>
+        ${radio('sponsor', ['Go to production','Extend the pilot','Stop'], rs.sponsor&&rs.sponsor.decision)}
+        <input id="sponsorNote" value="${esc(rs.sponsor?rs.sponsor.note:'')}" placeholder="Reasons and conditions" style="width:100%;margin-top:10px;padding:7px 10px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:12px">
+        <div style="display:flex;justify-content:flex-end;margin-top:10px">${canDecide?`<button class="btn btn-primary btn-sm" onclick="sponsorDecide()">Record the decision</button>`:'<span style="font-size:11px;color:var(--i3)">Recorded by the sponsor (admin or sales manager in the demo).</span>'}</div>`))}`;
 }
-async function downloadReadout(){
-  const text = readoutText(analyticsRuns(), isManager() ? REP_FILTER : myEmail());
-  let dl = null;
-  try{ dl = window.claude && window.claude.use ? await window.claude.use('downloads') : null; }catch(e){ dl = null; }
-  if(dl){ try{ await dl.save({filename:'pilot_readout.md', data:text}); showToast('Readout saved'); }catch(e){ if(!e || e.code!=='declined') showToast("This view can't save files"); } return; }
-  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text],{type:'text/markdown'})); a.download = 'pilot_readout.md'; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 0);
-}
+
 function repFilter(extra){
   return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">${isManager()?`<span style="font-size:12px;color:var(--i2)">Rep</span>
     <select onchange="REP_FILTER=this.value||null;renderMain()" style="padding:6px 9px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:12px">

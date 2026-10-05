@@ -39,7 +39,7 @@ function compute(src, runId, createdAt){
   if(src.csv){
     const r = DemandAI.processScoredProspects(src.grid, {file:src.fileName, sheet:src.sheet, asOf:src.asOf});
     scored = r.results; fileIssues = r.stats.rejected;
-    sig = { signals: scored.flatMap(x=>x.people.flatMap(p=>p.signals)), issues: r.issues };
+    sig = { signals: scored.flatMap(x=>x.people.flatMap(p=>p.signals)), issues: r.issues, rejectedRows: r.stats.rejected };
   }
   else if(src.sample){ const r = DemandAI.processLeads(DemandAISample.LEADS, {file:DemandAISample.LEAD_FILE, sheet:'Lead template'}); list = {accounts:r.accounts, contacts:r.contacts}; }
   else { const L = DemandAI.getList(src.listId); if(!L) return null; list = JSON.parse(JSON.stringify({accounts:L.accounts, contacts:L.contacts})); }

@@ -27,6 +27,10 @@ const CONFIG = {
   g1BaselineMinutes: 38,
   // Success gates: the thresholds agreed at kickoff (placeholders until then).
   g2Threshold: 70, g1Threshold: 50,
+  // A gate reads "too early to call" below this many decisions.
+  minDecisions: 10,
+  // 3.3 Data sufficiency: the readiness checks before measurement (placeholders until kickoff).
+  readiness: { accounts: 30, contactable: 60, coverage: 40, recency: 70, recencyDays: 90 },
   // Proceed criteria: an estimated first deal below this goes to a person (USD; placeholder until kickoff).
   dealSize: { threshold: 250000, base: { core: 600000, adjacent: 350000, other: 150000 } },
   brand: { maxSubjectWords: 6, competitors: [] },
@@ -82,6 +86,16 @@ const CONFIG = {
     'Newsletter sign-up':                   { reject: 'D1' },
   },
 };
+
+/* Gate settings agreed at kickoff, set on the Analytics Validation tab and kept in the browser. */
+const CONFIG_KEY = 'demandai_config_v1';
+const TUNABLE = ['g1BaselineMinutes', 'g1Threshold', 'g2Threshold', 'minDecisions', 'spotCheckShare'];
+function configOverrides() { try { return JSON.parse(localStorage.getItem(CONFIG_KEY) || '{}'); } catch (e) { return {}; } }
+function applyConfig(o) {
+  TUNABLE.forEach(k => { if (typeof o[k] === 'number' && isFinite(o[k])) CONFIG[k] = o[k]; });
+  if (typeof o.dealThreshold === 'number' && isFinite(o.dealThreshold)) CONFIG.dealSize.threshold = o.dealThreshold;
+}
+function saveConfig(o) { const all = Object.assign(configOverrides(), o); try { localStorage.setItem(CONFIG_KEY, JSON.stringify(all)); } catch (e) { return false; } applyConfig(all); return true; }
 
 const CODES = {
   D1: 'Wrong fit',
@@ -1087,8 +1101,10 @@ function reviewBadge() {
   });
   return n;
 }
+if (typeof localStorage !== 'undefined') applyConfig(configOverrides());
+
 return {
-  CONFIG, CODES, LEAD_COLUMNS, LEAD_REQUIRED, SIGNAL_COLUMNS, SIGNAL_REQUIRED,
+  CONFIG, CODES, saveConfig, configOverrides, LEAD_COLUMNS, LEAD_REQUIRED, SIGNAL_COLUMNS, SIGNAL_REQUIRED,
   parseCSV, toCSV, readTable, processLeads, classify, personaOf, fitFor, decayFactor,
   processSignals, scoreList, stack, tierFor, daysBetween, round1, buildSegments, segmentRanks, recommendChannel, draftFor, processScoredProspects, SEGMENT_COLUMNS, estimateDealSize,
   briefFor, callScript, checkDraft, confidenceFor, allowedChannels, proofFor, COLLATERAL, PLAYBOOK,
