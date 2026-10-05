@@ -101,28 +101,50 @@ const mine = r => isManager() || ownerOf(r)===myEmail();
 const inQueue = d => d.status==='Waiting' || d.spot==='pending';
 const STATUS_TONE = {Waiting:'tag-amber', 'Awaiting approval':'tag-violet', Released:'tag-green', Closed:'tag-red', 'Set aside':'tag-grey', 'Watch list':'tag-grey'};
 const statusTag = s => `<span class="tag ${STATUS_TONE[s]||'tag-grey'}">${esc(s==='Waiting'?'In For Review':s)}</span>`;
+// The status a rep sees on the next best action screen.
+function statusLabel(d){
+  if(d.spot==='pending') return ['Proceeded · spot-check', 'tag-blue'];
+  if(d.status==='Waiting') return ['Waiting for you in the exception queue', 'tag-amber'];
+  if(d.status==='Awaiting approval') return ['Waiting for the sales manager', 'tag-violet'];
+  if(d.status==='Released') return [d.released==='auto' ? 'Proceeded' : d.released==='approved' ? 'Approved' : 'Accepted', 'tag-green'];
+  return [d.status, d.status==='Closed' ? 'tag-red' : 'tag-grey'];
+}
+const statusPill = d => { const [t, c] = statusLabel(d); return `<span class="tag ${c}">${esc(t)}</span>`; };
 function whyHere(d){
   if(d.spot==='pending') return 'Spot-check';
-  return {exception:'Exception', alternative:'Alternative', 'sent back':'Sent back', 'taken control':'Taken control'}[d.why] || 'Exception';
+  return {exception:'Exception', alternative:'Alternative', 'sent back':'Sent back', 'stepped in':'Intervention'}[d.why] || 'Exception';
 }
 
-/* Run once when a list is built: the exception check, then a random spot-check sample of what went ahead. */
+/* Run once when a list is built: the exception check. What passes all four goes ahead on its own (path 1);
+   anything else waits in the owning rep's exception queue (path 2). */
 function routeRun(){
-  const recs = RUN.seg.recs, auto = [], now = Date.now();
-  recs.forEach(r=>{
+  const now = Date.now();
+  RUN.seg.recs.forEach(r=>{
     const rs = exceptionReasons(r);
-    if(rs.length){ setDec(r.key, {status:'Waiting', why:'exception', reasons:rs}); sysLog(r, 'Sent to For Review', rs.join(' · ')); }
-    else auto.push(r);
-  });
-  let h = 7; for(const ch of RUN.saved.id) h = (h*31 + ch.charCodeAt(0)) >>> 0;
-  const order = auto.map(r=>{ let x = h; for(const ch of r.key) x = (x*33 + ch.charCodeAt(0)) >>> 0; return [x, r]; }).sort((a,b)=>a[0]-b[0]).map(p=>p[1]);
-  const n = auto.length ? Math.max(1, Math.round(auto.length * DemandAI.CONFIG.spotCheckShare)) : 0;
-  const spot = new Set(order.slice(0, n).map(r=>r.key));
-  auto.forEach(r=>{
-    setDec(r.key, {status:'Released', released:'auto', passed:true, by:'System', at:now, spot: spot.has(r.key) ? 'pending' : null});
-    sysLog(r, 'Went ahead on its own', 'Passed all four exception checks' + (spot.has(r.key) ? ' · picked for a spot-check' : ''));
+    if(rs.length){ setDec(r.key, {status:'Waiting', why:'exception', reasons:rs}); sysLog(r, 'To the exception queue', rs.join(' · ')); }
+    else { setDec(r.key, {status:'Released', released:'auto', passed:true, by:'System', at:now}); sysLog(r, 'Proceeded on its own', 'Passed all four checks; released to the rep, ready to use'); }
   });
   updateRunStats(true);
+}
+/* Step 2 · The weekly spot-check: each week, a random share of what went ahead since the last draw is put in each
+   owning rep's queue to rate. Drawn once per week, the first time For Review or Today opens that week. */
+const SPOT_KEY = 'demandai_spot_weeks_v1';
+function isoWeek(t){ const d = new Date(t); d.setHours(0,0,0,0); d.setDate(d.getDate()+3-((d.getDay()+6)%7)); const w1 = new Date(d.getFullYear(),0,4); return d.getFullYear()+'-W'+String(1+Math.round(((d-w1)/864e5-3+((w1.getDay()+6)%7))/7)).padStart(2,'0'); }
+function spotDraws(){ try{ return JSON.parse(localStorage.getItem(SPOT_KEY)||'{}'); }catch(e){ return {}; } }
+function weeklySpotCheck(runs){
+  const week = isoWeek(Date.now()), draws = spotDraws();
+  if(draws[week]) return draws[week];
+  const byOwner = new Map();
+  runs.forEach(run=>{ const keep = RUN; RUN = run; run.seg.recs.forEach(r=>{ const d = dec(r.key); if(d.passed && d.released==='auto' && d.status==='Released' && !d.spotWeek){ const o = ownerOf(r); if(!byOwner.has(o)) byOwner.set(o, []); byOwner.get(o).push({run, r}); } }); RUN = keep; });
+  let picked = 0;
+  byOwner.forEach(list=>{
+    const order = list.map(x=>[Math.random(), x]).sort((a,b)=>a[0]-b[0]).map(p=>p[1]);
+    const n = Math.max(1, Math.round(list.length * DemandAI.CONFIG.spotCheckShare));
+    order.forEach((x,i)=>{ const keep = RUN; RUN = x.run; setDec(x.r.key, {spotWeek:week, spot: i<n ? 'pending' : null}); if(i<n){ sysLog(x.r, 'Picked for the weekly spot-check', week); picked++; } updateRunStats(); RUN = keep; });
+  });
+  draws[week] = { at: Date.now(), picked };
+  try{ localStorage.setItem(SPOT_KEY, JSON.stringify(draws)); }catch(e){}
+  return draws[week];
 }
 function sysLog(r, decision, note){
   RUN.saved.log.unshift({ at:Date.now(), who:'System', role:'System', key:r.key, prospect:liveRec(r).contact.name, company:r.account.name,
@@ -154,7 +176,8 @@ function logIt(r, decision, extra={}){
   RUN.saved.log.unshift({ at:Date.now(), who:m.who, role:m.role, key:r.key, prospect:liveRec(r).contact.name, company:r.account.name,
     segment:r.segment||'No micro-segment', decision, reason:extra.reason||'', tags:extra.tags||[], action:extra.action||chosenAction(r), channel:extra.channel||x.channel,
     note:extra.note||'', version:extra.version||(d.versions||[1]).length, secs, position:pos, openedAt: extra.decisive ? openedAt : null,
-    decisive:!!extra.decisive, kind:extra.kind||'', firstPass:extra.firstPass, accepted:extra.accepted, linkedTo:extra.linkedTo||'', flag, checked:false });
+    decisive:!!extra.decisive, kind:extra.kind||'', firstPass:extra.firstPass, accepted:extra.accepted, linkedTo:extra.linkedTo||'', flag, checked:false,
+    cause:extra.cause||'', compliance:!!extra.compliance, intervention:!!extra.intervention, owner:ownerOf(r), rating:extra.rating||'' });
 }
 // Every list's log, newest first (pages with several lists override this through ALL_RUNS).
 function allLogs(){ const runs = typeof ALL_RUNS==='function' ? ALL_RUNS() : [RUN]; return runs.flatMap(x=>x.saved.log).sort((a,b)=>b.at-a.at); }
@@ -174,9 +197,12 @@ const REJECT = [
   ['R4','Already engaged','Engage-once applies'],
   ['R12','Other','A comment is needed; nothing changes'],
 ];
+// Rejections split by cause: a gap in the client's data, or the system's own judgement. Compliance send-backs apart.
+const CAUSE = { R7:'data', R1:'data', R2:'data', R4:'data', R6:'system', R8:'system', R9:'system', R10:'system', R11:'system', R5:'system', R12:'other' };
+const causeOf = code => CAUSE[code] || 'other';
 const ACCEPT_TAGS = ['Accurate reasoning','Right timing','Right action','Ready to use','Saved research time'];
 let pickTags = new Set(), pickCode = null;
-const kindOfItem = d => d.spot==='pending' ? 'spot' : d.why==='alternative' ? 'alternative' : 'exception';
+const kindOfItem = d => d.spot==='pending' ? 'spot' : d.why==='alternative' ? 'alternative' : d.why==='stepped in' ? 'intervention' : 'exception';
 // The draft as it is in the card's fields now.
 function draftFromFields(r){
   const x = Object.assign({}, draftOf(r)), v = id => { const el = document.getElementById(id); return el ? el.value : null; };
@@ -185,13 +211,21 @@ function draftFromFields(r){
   else { if(v('dTask')!==null) x.task = v('dTask'); if(x.script && v('sOpen')!==null) x.script = Object.assign({}, x.script, {opener:v('sOpen'), questions:v('sQs').split('\n').filter(Boolean), objection:v('sObj'), response:v('sResp'), ask:v('sAsk')}); }
   return x;
 }
-// Step 4 · An edit is rated automatically: minor if a fifth of the words or fewer changed, major above that.
+// Step 4 · An edit is rated automatically. Minor: wording, tone or length only. Major: a change to the facts
+// (numbers, names, dates, claims), the ask, the action or the person.
 function editRating(before, after){
-  const a = DemandAIDraftText(before).toLowerCase().split(/\s+/).filter(Boolean), b = DemandAIDraftText(after).toLowerCase().split(/\s+/).filter(Boolean);
-  const left = new Map(); a.forEach(w=>left.set(w,(left.get(w)||0)+1));
-  let common = 0; b.forEach(w=>{ const n = left.get(w); if(n){ common++; left.set(w,n-1); } });
-  const changed = Math.max(a.length, b.length) - common;
-  return { changed, share: changed / Math.max(1, a.length), rating: changed / Math.max(1, a.length) <= 0.2 ? 'minor' : 'major' };
+  const t1 = DemandAIDraftText(before), t2 = DemandAIDraftText(after);
+  const facts = t => new Set((t.match(/\b\d[\d.,%]*\b|(?<![.?!]\s|^|\n)\b[A-Z][a-zA-Z&-]{2,}\b|\[[^\]]+\]/g)||[]).map(x=>x.toLowerCase()));
+  const ask = t => (t.match(/[^.?!\n]*\?/g)||[]).map(x=>x.trim().toLowerCase()).join('|');
+  const f1 = facts(t1), f2 = facts(t2);
+  const factChange = [...f1].some(x=>!f2.has(x)) || [...f2].some(x=>!f1.has(x));
+  const askChange = ask(t1)!==ask(t2);
+  const w1 = t1.split(/\s+/).filter(Boolean), w2 = t2.split(/\s+/).filter(Boolean);
+  const left = new Map(); w1.forEach(w=>left.set(w,(left.get(w)||0)+1));
+  let common = 0; w2.forEach(w=>{ const n = left.get(w); if(n){ common++; left.set(w,n-1); } });
+  const changed = Math.max(w1.length, w2.length) - common;
+  const why = factChange && askChange ? 'facts and the ask changed' : factChange ? 'facts changed' : askChange ? 'the ask changed' : 'wording, tone or length only';
+  return { changed, rating: factChange || askChange ? 'major' : 'minor', why };
 }
 function accept(key){
   const r = recOf(key), d = dec(key); if(!r || !inQueue(d)) return;
@@ -199,15 +233,15 @@ function accept(key){
   const before = draftOf(r), after = draftFromFields(r);
   const edited = JSON.stringify(before)!==JSON.stringify(after);
   let rating = null;
-  if(edited){ rating = editRating(before, after); change(key, `Edited before accepting (${rating.rating})`, ()=>setDec(key, {draft:after, edited:true, editRating:rating.rating})); }
-  const kind = kindOfItem(d), firstPass = kind!=='alternative';
+  if(edited){ rating = editRating(before, after); change(key, `Edited before accepting (${rating.rating}: ${rating.why})`, ()=>setDec(key, {draft:after, edited:true, editRating:rating.rating})); }
+  const kind = kindOfItem(d), firstPass = kind==='exception' || kind==='spot';
   const label = edited ? `Accepted with a ${rating.rating} edit` : 'Accepted';
   const sensitive = isSensitive(draftOf(r));
   if(kind==='spot') setDec(key, {spot:'accepted', spotBy:me().who, spotAt:Date.now()});
   else if(sensitive && !isManager()) setDec(key, {status:'Awaiting approval', acceptedBy:me().who, acceptedAt:Date.now()});
   else setDec(key, {status:'Released', released:'accepted', by:me().who, at:Date.now()});
-  logIt(r, label, {decisive:true, accepted:true, kind, firstPass, tags:[...pickTags], linkedTo:d.alternativeOf||'',
-    note:[edited?`${rating.changed} word${rating.changed===1?'':'s'} changed`:'', note, kind==='spot'?'Spot-check rating':'', sensitive&&!isManager()&&kind!=='spot'?'Sensitive: sent to the sales manager for approval':''].filter(Boolean).join(' · ')});
+  logIt(r, label, {decisive:true, accepted:true, kind, firstPass, rating: edited ? rating.rating : 'none', tags:[...pickTags], linkedTo:d.alternativeOf||'',
+    note:[edited?`${rating.rating} edit: ${rating.why}`:'', note, kind==='spot'?'Spot-check rating':'', sensitive&&!isManager()&&kind!=='spot'?'Sensitive: sent to the sales manager for approval':''].filter(Boolean).join(' · ')});
   persist();
   showToast(kind==='spot' ? 'Spot-check rated and logged' : sensitive && !isManager() ? 'Accepted: sensitive content goes to the sales manager for approval' : 'Accepted and released');
   refresh();
@@ -222,7 +256,7 @@ function sendBack(key){
   const r = recOf(key), note = ((document.getElementById('sbNote')||{}).value||'').trim();
   if(!note){ showToast('Say why it goes back'); return; }
   setDec(key, {status:'Waiting', why:'sent back', sentBackNote:note});
-  logIt(r, 'Sent back to the rep', {note}); persist(); showToast('Sent back to the rep'); refresh();
+  logIt(r, 'Sent back to the rep', {note, cause:'compliance', compliance:true}); persist(); showToast('Sent back to the rep'); refresh();
 }
 function reject(key){
   const r = recOf(key), d = dec(key);
@@ -253,7 +287,7 @@ function reject(key){
   else if(code==='R12' && !second) { next = {status:'Closed', spot:null}; outcome = 'Nothing changes automatically'; }
   else { next = {status:'Closed', spot:null}; outcome = second ? 'Second rejection: the account is closed for the pilot' : 'No alternative left: closed'; }
   setDec(key, Object.assign(next, {code, by:me().who, at:Date.now(), rejections:(d.rejections||[]).concat([{code, label, note, at:Date.now()}])}));
-  logIt(r, `Rejected: ${label}`, Object.assign({reason:label, decisive:true, accepted:false, kind, firstPass:kind!=='alternative', linkedTo,
+  logIt(r, `Rejected: ${label}`, Object.assign({reason:label, cause:causeOf(code), decisive:true, accepted:false, kind, firstPass:kind==='exception'||kind==='spot', linkedTo,
     note:[outcome, note].filter(Boolean).join(' · ')}, before));
   persist(); showToast(`${label}: ${outcome}`); refresh();
 }
@@ -277,10 +311,13 @@ function reassign(key, email){
   const r = recOf(key), from = ownerOf(r); if(!isManager() || !email || email===from) return;
   setDec(key, {owner:email}); logIt(r, `Reassigned to ${repName(email)}`, {note:`From ${repName(from)}`}); persist(); showToast(`Moved to ${repName(email)}'s queue`); refresh();
 }
-function takeControl(key){
+// A rep can step in on an item that proceeded: it's recorded as an intervention (an early warning), never required.
+function stepIn(key){
   const r = recOf(key);
-  setDec(key, {status:'Waiting', why:'taken control', spot:null}); logIt(r, 'Taken control', {note:'Pulled back into For Review'}); persist(); showToast('Pulled back into For Review'); refresh();
+  setDec(key, {status:'Waiting', why:'stepped in', intervened:true, spot:null}); logIt(r, 'Stepped in', {note:'Opened an item that proceeded, to edit or reject', kind:'intervention', intervention:true});
+  persist(); showToast('Moved to your exception queue as an intervention'); refresh();
 }
+
 function refresh(){ updateRunStats(); if(typeof onDecision==='function') onDecision(); if(openKey) openRec(openKey, true); }
 // Keeps the count that needs a person on the saved list, for the For Review badge on every page.
 function updateRunStats(quiet){
@@ -330,14 +367,14 @@ function openRec(key, keepTimer){
   if(!keepTimer || openKey!==key){ openedAt = Date.now(); pickTags = new Set(); pickCode = null; }
   openKey = key;
   const d = dec(key), lr = liveRec(r), c = lr.contact, x = draftOf(r), { chk, conf } = checksOf(r);
-  const live = inQueue(d) && mine(r), action = chosenAction(r), brief = DemandAI.briefFor(lr, action, {asOf:asOf(), channel:d.channel});
+  const live = inQueue(d) && mine(r) && !(typeof CARD_MODE!=='undefined' && CARD_MODE==='use'), action = chosenAction(r), brief = DemandAI.briefFor(lr, action, {asOf:asOf(), channel:d.channel});
   document.getElementById('detTitle').textContent = c.name;
   document.getElementById('detSub').textContent = [c.jobTitle, r.account.name].filter(Boolean).join(' · ');
   // 1 · Why it's here, and why now
   const why = d.spot==='pending' ? `It went ahead on its own after passing all four checks, and was picked at random for a spot-check. Rate it as if it had come to you.`
     : d.why==='alternative' ? `The alternative after a rejection of <b>${esc(d.alternativeOf||'the first recommendation')}</b>. It's offered once: a second rejection closes the account for the pilot.`
     : d.why==='sent back' ? `Sent back by the sales manager: ${esc(d.sentBackNote||'')}`
-    : d.why==='taken control' ? 'Pulled back into For Review after it went ahead on its own.'
+    : d.why==='stepped in' ? 'It proceeded on its own; the rep stepped in to edit or reject it. Recorded as an intervention.'
     : d.status==='Released' && d.released==='auto' ? 'Passed all four exception checks, so it went ahead on its own.'
     : (d.reasons||exceptionReasons(r)).map(esc).join('<br>') || 'Exception';
   html = panel("Why it's here", `<span class="tag ${d.spot==='pending'?'tag-blue':d.why==='alternative'?'tag-violet':'tag-amber'}">${inQueue(d)?whyHere(d):d.status==='Released'&&d.released==='auto'?'Went ahead':'Exception'}</span>`, `
@@ -381,7 +418,10 @@ function openRec(key, keepTimer){
   // 5 · The decision
   const by = d.by ? `${esc(d.by)} · ${fmtDate(d.at)} ${timeOf(d.at)}` : '';
   let decide = '';
-  if(inQueue(d) && !mine(r)) decide = `<div style="font-size:12px;color:var(--i2)">In ${esc(repName(ownerOf(r)))}'s queue.</div>`;
+  const useMode = typeof CARD_MODE!=='undefined' && CARD_MODE==='use';
+  if(useMode && (inQueue(d) || d.status==='Awaiting approval')) decide = `<div style="font-size:12px;color:var(--i1);margin-bottom:10px">${d.status==='Awaiting approval' ? 'Accepted, and waiting for the sales manager because the content is sensitive.' : d.spot==='pending' ? 'It proceeded and is ready to use. It was also picked for this week\'s spot-check in For Review.' : 'It can\'t be used until it\'s decided in the exception queue.'}</div>
+      <a class="btn btn-primary btn-sm" style="width:100%;justify-content:center;text-decoration:none" href="14-review.html?item=${encodeURIComponent(RUN.saved.id+'::'+key)}">Open in For Review →</a>`;
+  else if(inQueue(d) && !mine(r)) decide = `<div style="font-size:12px;color:var(--i2)">In ${esc(repName(ownerOf(r)))}'s queue.</div>`;
   else if(inQueue(d)) decide = `
     <div class="tags" style="margin-bottom:8px">${ACCEPT_TAGS.map(t=>`<button class="tag ${pickTags.has(t)?'tag-green':'tag-grey'}" style="cursor:pointer" onclick="pickTags.has('${t}')?pickTags.delete('${t}'):pickTags.add('${t}');this.className='tag '+(pickTags.has('${t}')?'tag-green':'tag-grey')">${t}</button>`).join('')}</div>
     <input id="acNote" placeholder="Comment (optional)" style="width:100%;padding:7px 10px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:12px;margin-bottom:8px">
@@ -397,13 +437,13 @@ function openRec(key, keepTimer){
        ${cap('Or send it back to the rep')}<input id="sbNote" placeholder="Why it goes back" style="width:100%;padding:7px 10px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:12px;margin-bottom:8px">
        <button class="btn btn-sec btn-sm" style="width:100%;justify-content:center" onclick="sendBack('${key}')">Send back</button>`
     : `<div style="font-size:12px;color:var(--i2)">Accepted by ${esc(d.acceptedBy||'')}; waiting for the sales manager's approval because the draft has sensitive content.</div>`;
-  else if(d.status==='Released') decide = `<div style="font-size:12px;color:var(--i1);margin-bottom:10px">${d.released==='auto'?'Went ahead on its own':d.released==='approved'?`Approved by ${by}`:`Accepted by ${by}`}${d.spot==='accepted'?` · spot-check accepted by ${esc(d.spotBy||'')}`:''}. It stays here as a ${x.channel==='Task'?'task':'ready message'}; export it from Export. Nothing is sent from the POC.</div>
+  else if(d.status==='Released') decide = `${x.channel!=='Task'?`<button class="btn btn-sec btn-sm" style="margin-bottom:10px" onclick="copyDraft('${key}')">Copy the message</button>`:''}<div style="font-size:12px;color:var(--i1);margin-bottom:10px">${d.released==='auto'?'Went ahead on its own':d.released==='approved'?`Approved by ${by}`:`Accepted by ${by}`}${d.spot==='accepted'?` · spot-check accepted by ${esc(d.spotBy||'')}`:''}. Ready to use: ${x.channel==='Task'?'act on the task':'send it from your own tool'}, then mark what happened. Nothing is sent from the POC.</div>
       ${cap('What happened')}
       <div class="tags">${OUTCOMES.map(o=>`<button class="tag ${d.outcome===o?'tag-violet':'tag-grey'}" style="cursor:pointer" onclick="outcome('${key}','${o}')">${o}</button>`).join('')}</div>
-      ${d.released==='auto' && !d.spot ? `<button class="btn btn-ghost btn-sm" style="margin-top:12px" onclick="takeControl('${key}')">Take control: review it yourself</button>` : ''}`;
+      ${d.released==='auto' && d.spot!=='pending' && mine(r) ? `<button class="btn btn-ghost btn-sm" style="margin-top:12px" onclick="stepIn('${key}')">Step in: edit or reject it</button>` : ''}`;
   else decide = `<div style="font-size:12px;color:var(--i1)">${esc((REJECT.find(x=>x[0]===d.code)||[])[1]||'Rejected')} · ${by}<div style="color:var(--i2);margin-top:3px">${esc(d.status)}</div></div>`;
   if(!inQueue(d) && typeof nextItem==='function' && typeof hasNext==='function' && hasNext()) decide += `<button class="btn btn-primary btn-sm" style="width:100%;justify-content:center;margin-top:12px" onclick="nextItem()">Next →</button>`;
-  html += panel(inQueue(d) ? 'Your decision' : 'Status', statusTag(d.status==='Released'&&d.spot==='pending'?'Waiting':d.status), decide);
+  html += panel(inQueue(d) && !useMode ? 'Your decision' : 'Status', inQueue(d) && !useMode ? statusTag('Waiting') : statusPill(d), decide);
   const hist = RUN.saved.log.filter(l=>l.key===key);
   if(hist.length) html += `<details class="panel" style="padding:10px 14px"><summary style="cursor:pointer;font-size:11.5px;font-weight:600;color:var(--i2)">History · ${hist.length}</summary>
     ${hist.map(l=>`<div style="padding:7px 0;border-bottom:1px solid var(--s75);font-size:11.5px"><b style="color:var(--i1)">${esc(l.decision)}</b> <span style="color:var(--i3)">· ${esc(l.who)} · ${fmtDate(l.at)} ${timeOf(l.at)}${l.secs!=null?` · ${l.secs}s`:''}</span>${l.note?`<div style="color:var(--i2);margin-top:2px">${esc(l.note)}</div>`:''}</div>`).join('')}
@@ -430,5 +470,45 @@ function g2(logs){
     together: rate(first),
     alternatives: rate(dec1.filter(l=>l.kind==='alternative' && counts(l))),
     flagged: dec1.filter(l=>l.flag && !l.checked).length,
+  };
+}
+
+function copyDraft(key){
+  const x = draftOf(recOf(key)), t = x.channel==='Email' ? `${x.subject}\n\n${x.body}` : x.channel==='LinkedIn' ? `${x.note}\n\n${x.message}` : DemandAIDraftText(x);
+  const done = () => showToast('Copied');
+  try{ navigator.clipboard.writeText(t).then(done, ()=>fallbackCopy(t)); }catch(e){ fallbackCopy(t); }
+}
+function fallbackCopy(t){ const a = document.createElement('textarea'); a.value = t; document.body.appendChild(a); a.select(); try{ document.execCommand('copy'); showToast('Copied'); }catch(e){ showToast("Couldn't copy here"); } a.remove(); }
+
+/* G2 weighted across the two paths, and G1 against the baseline. `runs` are the lists in view, `owner` an optional rep. */
+function measure(runs, owner){
+  const items = [], logs = [];
+  runs.forEach(run=>{ const keep = RUN; RUN = run; run.seg.recs.forEach(r=>{ if(!owner || ownerOf(r)===owner) items.push({ d:dec(r.key), r }); }); run.saved.log.forEach(l=>{ if(!owner || l.owner===owner) logs.push(l); }); RUN = keep; });
+  const counts = l => !l.flag || l.checked;
+  const rate = ls => { const n = ls.length, a = ls.filter(l=>l.accepted).length; return { n, a, pct: n ? a/n*100 : null }; };
+  const decisive = logs.filter(l=>l.decisive);
+  const first = decisive.filter(l=>l.firstPass && counts(l));
+  const autoN = items.filter(x=>x.d.passed).length, excN = items.length - autoN;
+  const auto = rate(first.filter(l=>l.kind==='spot')), exc = rate(first.filter(l=>l.kind==='exception'));
+  let weighted = null;
+  if(auto.pct!==null && exc.pct!==null) weighted = auto.pct*autoN/(autoN+excN) + exc.pct*excN/(autoN+excN);
+  else weighted = auto.pct!==null ? auto.pct : exc.pct;
+  const pooled = rate(first);
+  const rejections = decisive.filter(l=>!l.accepted);
+  const reasons = {}; rejections.forEach(l=>{ reasons[l.reason] = (reasons[l.reason]||0)+1; });
+  const released = items.filter(x=>x.d.status==='Released').length;
+  const secs = decisive.reduce((t,l)=>t+(l.secs||0), 0);
+  const minutes = released ? secs/60/released : null, base = DemandAI.CONFIG.g1BaselineMinutes;
+  return {
+    items: items.length, autoN, excN, auto, exc, weighted, pooled,
+    partial: auto.pct===null || exc.pct===null,
+    alternatives: rate(decisive.filter(l=>l.kind==='alternative' && counts(l))),
+    flagged: decisive.filter(l=>l.flag && !l.checked).length,
+    interventions: logs.filter(l=>l.intervention).length,
+    reasons, causes: { data: rejections.filter(l=>l.cause==='data').length, system: rejections.filter(l=>l.cause==='system').length, other: rejections.filter(l=>l.cause==='other').length },
+    compliance: logs.filter(l=>l.compliance).length,
+    edits: { none: decisive.filter(l=>l.accepted && l.rating==='none').length, minor: decisive.filter(l=>l.rating==='minor').length, major: decisive.filter(l=>l.rating==='major').length },
+    outcomes: items.reduce((o,x)=>{ if(x.d.outcome) o[x.d.outcome]=(o[x.d.outcome]||0)+1; return o; }, {}),
+    released, minutes, base, saved: minutes!==null ? (1 - minutes/base)*100 : null,
   };
 }

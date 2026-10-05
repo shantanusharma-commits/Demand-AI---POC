@@ -587,7 +587,7 @@ function search(fn, ph){ return `<div class="sl-srch"><svg width="12" height="12
 const pill = (cur,id,label) => `<div class="seg-pill ${cur===id?'active':''}" onclick="filt='${id}';renderResults()">${label}</div>`;
 
 /* ═══════════════ FOR REVIEW: only what needs a person, one item at a time ═══════════════ */
-let view = 'queue', q = '', RUNS = {}, MISSING = [];
+let view = 'queue', q = '', RUNS = {}, MISSING = [], SPOT = null;
 const _closeDrawer = closeDrawer;
 closeDrawer = function(){ openKey = null; _closeDrawer(); };
 function ALL_RUNS(){ return Object.values(RUNS); }
@@ -628,8 +628,8 @@ function render(){
     .filter(l=>mgr || l.who===me().who);
   const auto = all.filter(it=>decOf(it).passed).length;
   const ft = (id,label,n) => `<div class="ftab ${view===id?'active':''}" onclick="view='${id}';q='';render()">${label} <span class="ftab-cnt">${n}</span></div>`;
-  const m = g2(Object.values(RUNS).flatMap(run=>run.saved.log));
-  const pc = x => x.pct===null ? '—' : x.pct+'%';
+  const m = measure(Object.values(RUNS), mgr ? null : myEmail());
+  const pc = x => x.pct===null ? '—' : Math.round(x.pct)+'%';
   const stat = (label, x, sub) => `<div style="flex:1;min-width:120px;padding:10px 14px;border-right:1px solid var(--border)"><div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--i3)">${label}</div><div style="font-family:var(--fd);font-size:19px;font-weight:700;color:var(--i1);margin-top:2px">${pc(x)}</div><div style="font-size:10.5px;color:var(--i3)">${sub||`${x.a} of ${x.n} accepted`}</div></div>`;
   document.getElementById('mainArea').innerHTML = `
     <div class="topbar">
@@ -648,14 +648,14 @@ function render(){
         </div>
       </div>
     </div>
-    <div class="ftabs">${ft('queue',mgr?'Queue':'My queue',queue.length)}${mgr?ft('approvals','Approvals',approvals.length):''}${ft('released','Released',rel.length)}${ft('log','Decision log',logs.length)}</div>
+    <div class="ftabs">${ft('queue',mgr?'Queue':'My queue',queue.length)}${mgr?ft('approvals','Approvals',approvals.length):''}${ft('log','Decision log',logs.length)}</div>
     <div class="canvas">
-      ${all.length ? `<div style="font-size:12.5px;color:var(--i2);margin-bottom:12px;line-height:1.5">Only what needs a person is here: exceptions, spot-checks and alternatives. <b>${auto}</b> recommendation${auto===1?'':'s'} passed all four checks and went ahead on their own.</div>` :
+      ${all.length ? `<div style="font-size:12.5px;color:var(--i2);margin-bottom:12px;line-height:1.5">Only what needs a person: exceptions, this week's spot-checks and alternatives. <b>${auto}</b> passed all four checks and proceeded on their own; reps use them on <a href="12-nba.html" style="color:var(--brand);font-weight:600;text-decoration:none">Next best action</a>.${SPOT?` Spot-check for ${esc(isoWeek(SPOT.at))} drawn ${fmtDate(SPOT.at)}: ${SPOT.picked} picked.`:''}</div>` :
         `<div style="font-size:12.5px;color:var(--i2);margin-bottom:12px">Nothing yet. Items arrive here when you build micro-segments. <a href="12-nba.html" style="color:var(--brand);font-weight:600;text-decoration:none">Go to Micro-segments &amp; NBA →</a></div>`}
-      ${mgr && all.length ? `<div style="display:flex;flex-wrap:wrap;background:var(--surf);border:1px solid var(--border);border-radius:var(--rmd);margin-bottom:14px;overflow:hidden">
-        <div style="padding:10px 14px;border-right:1px solid var(--border);width:150px"><div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--brand)">G2 · accepted</div><div style="font-size:10.5px;color:var(--i3);margin-top:3px;line-height:1.4">First-pass decisions only</div></div>
-        ${stat('Exceptions', m.exceptions)}${stat('Spot-checks', m.spot)}${stat('Together', m.together)}${stat('Within one alternative', m.alternatives)}
-        <div style="flex:1;min-width:120px;padding:10px 14px"><div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--i3)">Flagged</div><div style="font-family:var(--fd);font-size:19px;font-weight:700;color:${m.flagged?'var(--warn)':'var(--i1)'};margin-top:2px">${m.flagged}</div><div style="font-size:10.5px;color:var(--i3)">fast or repetitive, to check</div></div>
+      ${all.length ? `<div style="display:flex;flex-wrap:wrap;background:var(--surf);border:1px solid var(--border);border-radius:var(--rmd);margin-bottom:14px;overflow:hidden">
+        <div style="padding:10px 14px;border-right:1px solid var(--border);width:150px"><div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--brand)">G2 · first pass</div><div style="font-family:var(--fd);font-size:19px;font-weight:700;color:var(--i1);margin-top:2px">${m.weighted===null?'—':Math.round(m.weighted)+'%'}</div><div style="font-size:10.5px;color:var(--i3)">weighted by path${m.partial&&m.weighted!==null?' · one path so far':''}</div></div>
+        ${stat('Proceeded path', m.auto, `${m.auto.a} of ${m.auto.n} spot-checks · ${m.autoN} items`)}${stat('Exception path', m.exc, `${m.exc.a} of ${m.exc.n} decided · ${m.excN} items`)}${stat('Within one alternative', m.alternatives)}
+        <div style="flex:1;min-width:120px;padding:10px 14px"><div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--i3)">Flagged</div><div style="font-family:var(--fd);font-size:19px;font-weight:700;color:${m.flagged?'var(--warn)':'var(--i1)'};margin-top:2px">${m.flagged}</div><div style="font-size:10.5px;color:var(--i3)">fast or repetitive, to check · ${m.interventions} intervention${m.interventions===1?'':'s'}</div></div>
       </div>` : ''}
       <div class="score-list">
         <div class="sl-toolbar">${search(view==='log'?'drawLog':'draw', view==='log'?'Search the log…':'Search prospects, companies or actions…')}</div>
@@ -734,7 +734,7 @@ function exportAll(kind){
 const PAGE_ID = '14-review.html';
 setTimeout(()=>{
   const _setRole = setRole; setRole = function(r){ _setRole(r); closeDrawer(); view='queue'; render(); };
-  loadRuns(); reviewBadge(); render();
+  loadRuns(); SPOT = weeklySpotCheck(Object.values(RUNS)); reviewBadge(); render();
   const id = new URLSearchParams(location.search).get('item');
   if(id) openItem(id);
 }, 0);

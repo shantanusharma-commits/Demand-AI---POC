@@ -23,6 +23,8 @@ const CONFIG = {
   minSegmentAccounts: 3,
   // For Review: the share of items that went ahead on their own picked at random for a spot-check.
   spotCheckShare: 0.2,
+  // G1: minutes a person spent per usable first action before the pilot (the client's timed baseline; placeholder).
+  g1BaselineMinutes: 38,
   brand: { maxSubjectWords: 6, competitors: [] },
   // The agreed action library per segment (proposed in the process flows; the client approves the final list).
   // The first option is the recommendation; the next is the runner-up unless the strongest signal says otherwise.
@@ -782,7 +784,9 @@ function buildSegments(results, opts = {}) {
     } else {
       runnerUp = lib[1] ? { action: lib[1], reason: `Second option in the ${segment} library` } : null;
     }
-    const people = r.people.filter(p => p.signals.length && (!keep || keep.has(r.account.id + '|' + p.contact.row)));
+    // One recommendation per account: the contact is the person with the strongest signals (people are already in
+    // that order); the others stay in order for a "wrong contact" alternative.
+    const people = r.people.filter(p => p.signals.length && (!keep || keep.has(r.account.id + '|' + p.contact.row))).slice(0, 1);
     for (const p of people) {
       // The message speaks to this person's own evidence: their strongest signal in the segment, else their strongest.
       const inSeg = p.signals.find(sg => (CONFIG.signalTypes[sg.type] || {}).segment === (segment || prominent.segment));
@@ -844,7 +848,8 @@ const COLLATERAL = [
 const BRAND = {
   banned: ['guarantee', 'guaranteed', 'best-in-class', 'best in class', 'world-class', 'cheapest', 'risk-free', 'no-brainer', '100%'],
   pricing: /(\$\s?\d|\bUSD\b|\bprice|\bpricing\b|\bdiscount|\bfree of charge\b)/i,
-  sensitive: /\b(incident|accident|explosion|fatalit|injur|emissions? breach|lawsuit)/i,
+  // A plant incident, security or regulation needs a person's judgement.
+  sensitive: /\b(incident|accident|explosion|fatalit|injur|lawsuit|security|cyber|breach|vulnerab|regulat|compliance|emission)/i,
   competitors: [],          // the client's brand pack fills this in Setup
   maxWords: 120, maxSubjectWords: 6, maxNote: 200,
 };

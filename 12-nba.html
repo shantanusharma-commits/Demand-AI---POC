@@ -587,6 +587,7 @@ function search(fn, ph){ return `<div class="sl-srch"><svg width="12" height="12
 const pill = (cur,id,label) => `<div class="seg-pill ${cur===id?'active':''}" onclick="filt='${id}';renderResults()">${label}</div>`;
 
 /* ═══════════════ STATE ═══════════════ */
+const CARD_MODE = 'use'; // this screen shows and uses the work; decisions happen in For Review
 let tab = 'new', srcId = null, view = 'grid', segFilt = null, vertFilt = null, q = '', renamingId = null;
 const _closeDrawer = closeDrawer;
 closeDrawer = function(){ openKey = null; _closeDrawer(); };
@@ -697,7 +698,7 @@ function openRun(id){
 
 /* ═══════════════ CHECKS POP-UP ═══════════════ */
 const SEG_STEPS = [
-  ['read',     'Read the scored prospects',        'The highest-priority prospects, or the ones chosen in Scoring'],
+  ['read',     'Read the scored accounts',        'The highest-priority prospects, or the ones chosen in Scoring'],
   ['engage',   'Engage-once rule',                 'Accounts already recommended in this pilot are set aside'],
   ['group',    'Group by the strongest signal',    `At least ${DemandAI.CONFIG.minSegmentAccounts} different accounts each; an account is in one only`],
   ['fallback', 'Fall back to the next signal',     'When too few accounts share the strongest signal'],
@@ -710,13 +711,13 @@ const SEG_STEPS = [
   ['claims',   'Every claim supported',            'Each claim matches its cited source'],
   ['confidence','Confidence',                      'Grounding, open flags and signal strength'],
   ['send',     'Exception check',                  'Segment too small, low confidence, sensitive content, a claim that can\'t be verified'],
-  ['spot',     'Spot-check sample',                'A random share of what went ahead is put in the rep\'s queue to rate'],
+  ['spot',     'Weekly spot-check',                'Each week a random share of what proceeded goes to each rep to rate'],
 ];
 function stepResult(k){
   const s = RUN.seg, recs = s.recs, byAcc = [...new Map(recs.map(r=>[r.account.id,r])).values()];
   const pl = (n,w) => `${n} ${w}${n===1?'':'s'}`;
   switch(k){
-    case 'read': return {sev:'', label:`${pl(recs.length,'prospect')} · ${pl(s.accountsConsidered,'account')}`};
+    case 'read': return {sev:'', label:`${pl(s.accountsConsidered,'account')} · one recommendation each`};
     case 'engage': return s.engagedOnce.length ? {sev:'info', label:`${pl(s.engagedOnce.length,'account')} set aside`} : {sev:'', label:'None engaged before'};
     case 'group': return s.segments.length ? {sev:'', label:`${pl(s.segments.length,'micro-segment')} formed`} : {sev:'warn', label:'None formed'};
     case 'fallback': { const n = byAcc.filter(r=>r.fallback).length; return n ? {sev:'info', label:`${pl(n,'account')} on the next signal`} : {sev:'', label:'Not needed'}; }
@@ -729,7 +730,7 @@ function stepResult(k){
     case 'claims': { const n = recs.filter(r=>checksOf(r).chk.unsupported.length).length; return n ? {sev:'warn', label:`${n} unsupported`} : {sev:'', label:'All verified'}; }
     case 'confidence': { const c = {}; recs.forEach(r=>{ const l = checksOf(r).conf.level; c[l]=(c[l]||0)+1; }); return {sev:c.Low?'info':'', label:['High','Medium','Low'].filter(l=>c[l]).map(l=>`${c[l]} ${l.toLowerCase()}`).join(' · ')}; }
     case 'send': { const ex = recs.filter(r=>dec(r.key).status==='Waiting').length; return {sev:ex?'info':'', label:`${recs.length-ex} go ahead · ${ex} to For Review`}; }
-    case 'spot': { const n = recs.filter(r=>dec(r.key).spot==='pending').length; return {sev:'', label: n ? `${pl(n,'item')} to rate` : 'Nothing went ahead'}; }
+    case 'spot': return {sev:'', label:'Drawn weekly in For Review'};
   }
 }
 function runChecks(){
@@ -781,7 +782,7 @@ function runChecks(){
 /* ═══════════════ RESULTS: the groups and the plan. Decisions happen in For Review. ═══════════════ */
 function renderResults(){
   const s = RUN.seg, recs = s.recs, waiting = recs.filter(r=>{ const d = dec(r.key); return inQueue(d) || d.status==='Awaiting approval'; }).length;
-  const auto = recs.filter(r=>dec(r.key).passed).length, spots = recs.filter(r=>dec(r.key).spot==='pending').length, exc = recs.filter(r=>dec(r.key).why==='exception' && dec(r.key).status==='Waiting').length;
+  const auto = recs.filter(r=>dec(r.key).passed).length, exc = recs.filter(r=>{ const d = dec(r.key); return d.status==='Waiting' || d.status==='Awaiting approval'; }).length;
   const ft = (id,label,n) => `<div class="ftab ${view===id?'active':''}" onclick="view='${id}';${id==='list'?'':'segFilt=null;vertFilt=null;'}q='';renderResults()">${label} <span class="ftab-cnt">${n}</span></div>`;
   const pl = (n,w) => `${n} ${w}${n===1?'':'s'}`;
   document.getElementById('mainArea').innerHTML = `
@@ -789,13 +790,13 @@ function renderResults(){
       <div class="topbar-l"><span class="tb-title">${esc(RUN.saved.name)}</span></div>
       <div class="topbar-r"><button class="btn btn-sec btn-sm" onclick="renderStart('new')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>Group another list</button></div>
     </div>
-    <div class="ftabs">${ft('grid','Micro-segments',s.segments.length)}${ft('list','Prospects',recs.length)}</div>
+    <div class="ftabs">${ft('grid','Micro-segments',s.segments.length)}${ft('list','Recommendations',recs.filter(mine).length)}</div>
     <div class="canvas">
       <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:${waiting?'var(--brand-lt)':'var(--pos-lt)'};border-radius:var(--rmd);margin-bottom:16px">
         <span style="width:26px;height:26px;border-radius:50%;background:${waiting?'var(--brand)':'var(--pos)'};color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0">${waiting?'→':'✓'}</span>
         <div style="flex:1;font-size:13px;color:var(--i1);line-height:1.5">${waiting
-          ? `<b>${auto}</b> went ahead on their own after passing the checks${spots?` (${spots} picked for a spot-check)`:''}. <b>${pl(exc,'exception')}</b> ${exc===1?'needs':'need'} a person in For Review.`
-          : `Nothing is waiting: ${auto} went ahead on their own and the rest have been decided in For Review.`}</div>
+          ? `<b>${auto}</b> passed all four checks and proceeded: ready to use. <b>${exc}</b> ${exc===1?'is':'are'} waiting in the exception queue for a decision.`
+          : `<b>${auto}</b> proceeded on their own and nothing is waiting in the exception queue. Use them below and mark what happened.`}</div>
         <a class="btn btn-primary btn-sm" href="14-review.html" style="text-decoration:none">Open For Review →</a>
       </div>
       ${view==='grid'?gridTab():listTab()}
@@ -816,10 +817,10 @@ function gridTab(){
   const tile = (recs, seg, v) => {
     const accs = accOf(recs.filter(r=>v===null||r.account.vertical===v));
     if(!accs.length) return `<td style="${td};text-align:center;color:var(--i4)">·</td>`;
-    const np = recs.filter(r=>v===null||r.account.vertical===v).length, alpha = v===null ? .14 : .08 + .32*accs.length/max;
+    const inCell = recs.filter(r=>v===null||r.account.vertical===v), np = inCell.filter(r=>dec(r.key).passed).length, alpha = v===null ? .14 : .08 + .32*accs.length/max;
     return `<td style="${td};text-align:center"><button onclick="${go(seg,v)}" title="See these prospects" style="display:inline-flex;flex-direction:column;align-items:center;justify-content:center;width:100%;max-width:120px;padding:8px 6px;border-radius:10px;background:rgba(125,82,162,${alpha.toFixed(2)})">
       <span style="font-family:var(--fd);font-size:18px;font-weight:700;color:var(--brand-dk);line-height:1.1">${accs.length}</span>
-      <span style="font-family:var(--fb);font-size:10.5px;color:var(--i2);margin-top:2px">${np} prospect${np===1?'':'s'}</span></button></td>`;
+      <span style="font-family:var(--fb);font-size:10.5px;color:var(--i2);margin-top:2px">${np} proceeded${inCell.length-np?` · ${inCell.length-np} waiting`:''}</span></button></td>`;
   };
   const grid = `<div style="background:var(--surf);border:1px solid var(--border);border-radius:var(--rmd);overflow-x:auto">
     <table style="width:100%;border-collapse:collapse;font-family:var(--fb);table-layout:fixed;min-width:${360+verts.length*110}px">
@@ -828,7 +829,7 @@ function gridTab(){
       <tbody>${rows.length ? rows.map(g=>{
         const byAcc = accOf(g.recs), fb = byAcc.filter(r=>r.fallback).length;
         return `<tr>
-          <td style="${td};cursor:pointer" onclick="${go(g.name,null)}"><div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">${segTag(g.name)}<span style="font-size:11px;color:var(--i3)">${g.recs.length} prospect${g.recs.length===1?'':'s'}</span></div>
+          <td style="${td};cursor:pointer" onclick="${go(g.name,null)}"><div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">${segTag(g.name)}<span style="font-size:11px;color:var(--i3)">${g.recs.length} account${g.recs.length===1?'':'s'}</span></div>
             <div style="font-size:12px;color:var(--i2)">${esc(SEG_MEANS[g.name]||'')}</div>
             <div style="font-size:12px;color:var(--i1);font-weight:600;margin-top:4px">→ ${esc(DemandAI.CONFIG.segmentLibrary[g.name][0])}</div>
             ${fb?`<div style="font-size:10.5px;color:var(--i3);margin-top:3px">${fb} of ${byAcc.length} accounts joined on their second signal</div>`:''}</td>
@@ -845,7 +846,7 @@ function gridTab(){
 
 
 function visibleRecs(){
-  let rs = RUN.seg.recs;
+  let rs = RUN.seg.recs.filter(mine);
   if(segFilt) rs = rs.filter(r=>segFilt==='__x' ? !r.segment : r.segment===segFilt);
   if(vertFilt) rs = rs.filter(r=>r.account.vertical===vertFilt);
   if(q) rs = rs.filter(r=>(liveRec(r).contact.name+' '+r.account.name+' '+chosenAction(r)).toLowerCase().includes(q));
@@ -856,26 +857,27 @@ function listTab(){
   const verts = [...new Set(RUN.seg.recs.map(r=>r.account.vertical))].sort();
   const sel = 'padding:6px 9px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:12px';
   return `<div class="score-list">
-    <div class="sl-toolbar">${search('drawList','Search prospects, companies or actions…')}
+    <div class="sl-toolbar">${search('drawList','Search accounts, contacts or actions…')}
       <select onchange="segFilt=this.value||null;drawList()" style="${sel}"><option value="">All micro-segments</option>${segs.map(n=>`<option value="${n}" ${segFilt===n?'selected':''}>${n==='__x'?'No micro-segment':esc(n)}</option>`).join('')}</select>
       <select onchange="vertFilt=this.value||null;drawList()" style="${sel}"><option value="">All verticals</option>${verts.map(v=>`<option ${vertFilt===v?'selected':''}>${esc(v)}</option>`).join('')}</select></div>
     <div id="rows"></div></div>
-    <div style="font-size:11px;color:var(--i3);margin-top:10px">Click a prospect to open it in For Review.</div>`;
+    <div style="font-size:11px;color:var(--i3);margin-top:10px">One recommendation per account. ${isManager()?'You see every rep\'s accounts.':'You see your own accounts.'} Click one to see the message, copy it and mark what happened.</div>`;
 }
 function drawList(){
   const el = document.getElementById('rows'); if(!el) return;
-  el.innerHTML = table([['Prospect','19%'],['Company','17%'],['Micro-segment','14%'],['Recommended action','28%'],['Channel','10%'],['Status','12%']],
+  el.innerHTML = table([['Account','16%'],['Contact','15%'],['Micro-segment','12%'],['Action and runner-up','23%'],['Channel','8%'],['Status','26%']],
     visibleRecs().map(r=>{
       const d = dec(r.key), lr = liveRec(r), x = draftOf(r);
-      return `<tr class="click" onclick="location.href='${reviewLink(r.key)}'">
-        <td><div class="person"><div class="co-av" style="background:${avColor(lr.contact.name)}">${initials(lr.contact.name)}</div><div>${cell(lr.contact.name, esc(lr.contact.jobTitle||''), 'dt-main')}</div></div></td>
-        <td>${cell(r.account.name, esc(r.account.vertical))}</td>
+      return `<tr class="click" onclick="openRec('${r.key}')">
+        <td>${cell(r.account.name, esc(r.account.vertical+' · '+r.status), 'dt-main')}</td>
+        <td><div class="person"><div class="co-av" style="background:${avColor(lr.contact.name)}">${initials(lr.contact.name)}</div><div>${cell(lr.contact.name, esc(lr.contact.jobTitle||''))}</div></div></td>
         <td>${segTag(r.segment)}</td>
-        <td class="wrap"><span class="clamp2" style="font-size:12px;color:var(--i1)" title="${esc(chosenAction(r))}">${esc(chosenAction(r))}</span></td>
-        <td>${cell(x.channel==='Task'?'Task for the team':x.channel)}</td>
-        <td>${inQueue(d) ? `<span class="tag ${d.spot==='pending'?'tag-blue':'tag-amber'}">${esc(whyHere(d))}</span><span class="sub">In For Review</span>` : `${statusTag(d.status)}${d.released==='auto'?'<span class="sub">On its own</span>':''}`}</td>
-      </tr>`;}).join(''), 'No prospects match.');
+        <td class="wrap"><span class="clamp2" style="font-size:12px;color:var(--i1)" title="${esc(chosenAction(r))}">${esc(chosenAction(r))}</span>${r.runnerUp?`<span class="sub" title="${esc(r.runnerUp.action)}">Runner-up: ${esc(r.runnerUp.action)}</span>`:''}</td>
+        <td>${cell(x.channel==='Task'?'Task':x.channel)}</td>
+        <td>${statusPill(d)}${d.outcome?`<span class="sub">${esc(d.outcome)}</span>`:isManager()?`<span class="sub">${esc(repName(ownerOf(r)))}</span>`:''}</td>
+      </tr>`;}).join(''), 'No recommendations match.');
 }
+function onDecision(){ renderResults(); }
 
 /* ═══════════════ SAVED ═══════════════ */
 function removeRun(id){ DemandAI.deleteSegmentation(id); showToast('Deleted'); renderStart('saved'); reviewBadge(); }

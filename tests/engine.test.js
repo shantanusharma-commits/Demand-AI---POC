@@ -214,8 +214,10 @@ test('drafts follow the outreach rules: short subject, short body, interest ques
       assert.doesNotMatch(d.note, /\?$/);
     }
   }
-  const farah = r.recs.find(x => x.contact.name === 'Farah Aziz');
-  assert.equal(E.recommendChannel(farah, farah.action).channel, 'LinkedIn');
+  // Farah Aziz has no verified email but a LinkedIn URL
+  const meridian = r.recs.find(x => x.account.name === 'Meridian Petrochem');
+  const farah = meridian.result.people.find(p => p.contact.name === 'Farah Aziz').contact;
+  assert.equal(E.recommendChannel({ ...meridian, contact: farah }, meridian.action).channel, 'LinkedIn');
 });
 
 test('channel rules: inquiries and renewals route to a person, hard limits on email and LinkedIn, consent required', () => {
@@ -283,5 +285,20 @@ test('micro-segments from an uploaded file: prospects with their signals, score 
   assert.deepEqual(r.stats, { rowsRead: 4, rejected: 2, prospects: 2, accounts: 1 });
   const nw = r.results[0];
   assert.deepEqual(nw.people.map(p => [p.contact.name, p.final, p.scoreFrom]), [['Aditi Rao', 72, 'file'], ['Wei Lim', 30, 'signals']]);
-  assert.equal(E.buildSegments(r.results).recs.length, 2);
+  // One recommendation per account, to the person with the strongest signals
+  assert.deepEqual(E.buildSegments(r.results).recs.map(x => x.contact.name), ['Aditi Rao']);
+});
+
+test('one recommendation per account, to the contact with the strongest signals', () => {
+  const r = sampleRecs();
+  const ids = r.recs.map(x => x.account.id);
+  assert.equal(new Set(ids).size, ids.length);
+  assert.equal(r.recs.find(x => x.account.name === 'Northwind Refining').contact.name, 'Aditi Rao');
+  assert.equal(r.recs.find(x => x.account.name === 'Meridian Petrochem').contact.name, 'Hassan Idris');
+});
+
+test('content touching an incident, security or regulation is flagged as sensitive', () => {
+  for (const t of ['after the incident at the plant', 'our cybersecurity review', 'the new emissions regulation']) {
+    assert.ok(E.checkDraft({ channel: 'Email', subject: 'hello', body: `Hi, about ${t}. Worth a chat?` }).flags.some(f => f.rule === 'Sensitive term'), t);
+  }
 });
