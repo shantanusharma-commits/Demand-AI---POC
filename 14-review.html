@@ -586,10 +586,11 @@ const hide = id => { const el=document.getElementById(id); if(el) el.style.displ
 function search(fn, ph){ return `<div class="sl-srch"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="color:var(--i3);flex-shrink:0"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><input type="text" placeholder="${ph}" value="${esc(q)}" oninput="q=this.value.toLowerCase();${fn}()"></div>`; }
 const pill = (cur,id,label) => `<div class="seg-pill ${cur===id?'active':''}" onclick="filt='${id}';renderResults()">${label}</div>`;
 
-/* ═══════════════ FOR REVIEW: one queue for every recommendation, decided one at a time ═══════════════ */
-let view = 'todo', q = '', RUNS = {}, MISSING = [];
+/* ═══════════════ FOR REVIEW: only what needs a person, one item at a time ═══════════════ */
+let view = 'queue', q = '', RUNS = {}, MISSING = [];
 const _closeDrawer = closeDrawer;
 closeDrawer = function(){ openKey = null; _closeDrawer(); };
+function ALL_RUNS(){ return Object.values(RUNS); }
 function loadRuns(){
   RUNS = {}; MISSING = [];
   DemandAI.loadSegmentations().forEach(saved=>{
@@ -597,41 +598,49 @@ function loadRuns(){
     if(c) RUNS[saved.id] = { saved, ...c }; else MISSING.push(saved.name);
   });
 }
-// Every item across all lists, newest list first, in each list's own (shuffled within tier) order.
+// Every item across all lists, newest list first, each list in its own order (shuffled within each tier).
 function items(){
   return Object.values(RUNS).sort((a,b)=>b.saved.createdAt-a.saved.createdAt)
     .flatMap(run=>run.seg.recs.map(r=>({ id: run.saved.id+'::'+r.key, run, r })));
 }
 function withRun(it, fn){ const keep = RUN; RUN = it.run; try{ return fn(); } finally { RUN = keep; } }
-const statusOf = it => withRun(it, ()=>dec(it.r.key).status);
-const waitingItems = () => items().filter(it=>statusOf(it)==='Waiting');
-function queuePos(key){ const i = waitingItems().findIndex(it=>it.run===RUN && it.r.key===key); return i<0 ? null : i+1; }
+const decOf = it => withRun(it, ()=>dec(it.r.key));
+const myQueue = () => items().filter(it=>withRun(it, ()=>inQueue(dec(it.r.key)) && mine(it.r)));
+function queuePos(key){ const i = myQueue().findIndex(it=>it.run===RUN && it.r.key===key); return i<0 ? null : i+1; }
 function openItem(id){
   const it = items().find(x=>x.id===id); if(!it) return;
   RUN = it.run; openRec(it.r.key);
 }
+const hasNext = () => myQueue().length > 0;
 function nextItem(){
-  const w = waitingItems();
-  if(!w.length){ closeDrawer(); showToast('Nothing left to review'); render(); return; }
+  const w = myQueue();
+  if(!w.length){ closeDrawer(); showToast('Your queue is clear'); render(); return; }
   openItem(w[0].id);
 }
 function onDecision(){ render(); }
 
 function render(){
-  const all = items(), todo = all.filter(it=>statusOf(it)==='Waiting'), done = all.length - todo.length;
-  const log = Object.values(RUNS).flatMap(run=>run.saved.log.map(l=>({...l, runId:run.saved.id, list:run.saved.name}))).sort((a,b)=>b.at-a.at);
+  const mgr = isManager(), all = items();
+  const queue = myQueue();
+  const approvals = all.filter(it=>decOf(it).status==='Awaiting approval' && withRun(it, ()=>mine(it.r)));
+  const rel = all.filter(it=>decOf(it).status==='Released' && withRun(it, ()=>mine(it.r)));
+  const logs = Object.values(RUNS).flatMap(run=>run.saved.log.map(l=>({...l, runId:run.saved.id}))).sort((a,b)=>b.at-a.at)
+    .filter(l=>mgr || l.who===me().who);
+  const auto = all.filter(it=>decOf(it).passed).length;
   const ft = (id,label,n) => `<div class="ftab ${view===id?'active':''}" onclick="view='${id}';q='';render()">${label} <span class="ftab-cnt">${n}</span></div>`;
-  const flagged = todo.filter(it=>withRun(it, ()=>exceptionOf(it.r))).length;
+  const m = g2(Object.values(RUNS).flatMap(run=>run.saved.log));
+  const pc = x => x.pct===null ? '—' : x.pct+'%';
+  const stat = (label, x, sub) => `<div style="flex:1;min-width:120px;padding:10px 14px;border-right:1px solid var(--border)"><div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--i3)">${label}</div><div style="font-family:var(--fd);font-size:19px;font-weight:700;color:var(--i1);margin-top:2px">${pc(x)}</div><div style="font-size:10.5px;color:var(--i3)">${sub||`${x.a} of ${x.n} accepted`}</div></div>`;
   document.getElementById('mainArea').innerHTML = `
     <div class="topbar">
-      <div class="topbar-l"><span class="tb-title">For Review</span></div>
+      <div class="topbar-l"><span class="tb-title">For Review</span><span class="tb-badge badge-neutral">${mgr?'Everyone\'s items':'Your items · '+esc(repName(myEmail()))}</span></div>
       <div class="topbar-r">
-        ${todo.length?`<button class="btn btn-primary btn-sm" onclick="nextItem()">Start reviewing →</button>`:''}
+        ${queue.length?`<button class="btn btn-primary btn-sm" onclick="nextItem()">Start reviewing →</button>`:''}
         <div style="position:relative">
           <button class="btn btn-sec btn-sm" onclick="event.stopPropagation();toggleExport()">Export <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg></button>
           <div id="exportMenu" style="display:none;position:absolute;right:0;top:34px;width:270px;background:var(--surf);border:1px solid var(--border);border-radius:var(--rmd);box-shadow:var(--sh-lg);padding:6px;z-index:250">
-            ${[['exportAll(\'approved\')','Approved messages','Emails and LinkedIn messages you approved'],
-               ['exportAll(\'tasks\')','Tasks for the team','Inquiries, renewals and cases with no proof'],
+            ${[['exportAll(\'approved\')','Released messages','Emails and LinkedIn messages ready to use'],
+               ['exportAll(\'tasks\')','Tasks for the team','Calls and follow-ups owned by a person'],
                ['exportAll(\'log\')','Decision log','Who decided what, when and why']].map(([fn,t,d])=>
               `<button onclick="toggleExport(false);${fn}" style="display:block;width:100%;text-align:left;padding:9px 10px;border-radius:var(--rsm)" onmouseover="this.style.background='var(--s50)'" onmouseout="this.style.background=''">
                 <span style="display:block;font-size:12.5px;font-weight:600;color:var(--i1)">${t}</span><span style="display:block;font-size:11px;color:var(--i3)">${d}</span></button>`).join('')}
@@ -639,49 +648,70 @@ function render(){
         </div>
       </div>
     </div>
-    <div class="ftabs">${ft('todo','To review',todo.length)}${ft('done','Decided',done)}${ft('log','Decision log',log.length)}</div>
+    <div class="ftabs">${ft('queue',mgr?'Queue':'My queue',queue.length)}${mgr?ft('approvals','Approvals',approvals.length):''}${ft('released','Released',rel.length)}${ft('log','Decision log',logs.length)}</div>
     <div class="canvas">
-      ${view!=='log' ? `<div style="font-size:12.5px;color:var(--i2);margin-bottom:14px;line-height:1.5">${all.length
-        ? `Every recommendation from Micro-segments &amp; NBA comes here and needs your approval or rejection before anything goes out.${flagged&&view==='todo'?` <b style="color:var(--warn)">${flagged} flagged</b> for a closer look.`:''}`
-        : `Nothing yet. Recommendations arrive here when you build micro-segments. <a href="12-nba.html" style="color:var(--brand);font-weight:600;text-decoration:none">Go to Micro-segments &amp; NBA →</a>`}</div>` : ''}
+      ${all.length ? `<div style="font-size:12.5px;color:var(--i2);margin-bottom:12px;line-height:1.5">Only what needs a person is here: exceptions, spot-checks and alternatives. <b>${auto}</b> recommendation${auto===1?'':'s'} passed all four checks and went ahead on their own.</div>` :
+        `<div style="font-size:12.5px;color:var(--i2);margin-bottom:12px">Nothing yet. Items arrive here when you build micro-segments. <a href="12-nba.html" style="color:var(--brand);font-weight:600;text-decoration:none">Go to Micro-segments &amp; NBA →</a></div>`}
+      ${mgr && all.length ? `<div style="display:flex;flex-wrap:wrap;background:var(--surf);border:1px solid var(--border);border-radius:var(--rmd);margin-bottom:14px;overflow:hidden">
+        <div style="padding:10px 14px;border-right:1px solid var(--border);width:150px"><div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--brand)">G2 · accepted</div><div style="font-size:10.5px;color:var(--i3);margin-top:3px;line-height:1.4">First-pass decisions only</div></div>
+        ${stat('Exceptions', m.exceptions)}${stat('Spot-checks', m.spot)}${stat('Together', m.together)}${stat('Within one alternative', m.alternatives)}
+        <div style="flex:1;min-width:120px;padding:10px 14px"><div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--i3)">Flagged</div><div style="font-family:var(--fd);font-size:19px;font-weight:700;color:${m.flagged?'var(--warn)':'var(--i1)'};margin-top:2px">${m.flagged}</div><div style="font-size:10.5px;color:var(--i3)">fast or repetitive, to check</div></div>
+      </div>` : ''}
       <div class="score-list">
-        <div class="sl-toolbar">${search(view==='log'?'drawLog':'drawQueue', view==='log'?'Search the log…':'Search prospects, companies or actions…')}</div>
+        <div class="sl-toolbar">${search(view==='log'?'drawLog':'draw', view==='log'?'Search the log…':'Search prospects, companies or actions…')}</div>
         <div id="rows"></div>
       </div>
       ${MISSING.length?`<div style="font-size:11px;color:var(--i3);margin-top:10px">Not shown: ${esc(MISSING.join(', '))} (the prospect list behind it was deleted).</div>`:''}
     </div>`;
-  if(view==='log') drawLog(log); else drawQueue();
+  if(view==='log') drawLog(); else draw();
 }
-function drawQueue(){
+function draw(){
   const el = document.getElementById('rows'); if(!el) return;
-  let its = items().filter(it=>view==='todo' ? statusOf(it)==='Waiting' : statusOf(it)!=='Waiting');
+  const mgr = isManager();
+  let its = view==='queue' ? myQueue()
+    : view==='approvals' ? items().filter(it=>decOf(it).status==='Awaiting approval' && withRun(it, ()=>mine(it.r)))
+    : items().filter(it=>decOf(it).status==='Released' && withRun(it, ()=>mine(it.r)));
   if(q) its = its.filter(it=>withRun(it, ()=>(liveRec(it.r).contact.name+' '+it.r.account.name+' '+chosenAction(it.r)).toLowerCase().includes(q)));
-  el.innerHTML = table([['Prospect','18%'],['Company','16%'],['Micro-segment','13%'],['Recommended action','25%'],['Channel','10%'],[view==='todo'?'Needs':'Decision','18%']],
-    its.map(it=>withRun(it, ()=>{
-      const r = it.r, d = dec(r.key), lr = liveRec(r), x = draftOf(r), ex = d.status==='Waiting' && exceptionOf(r);
+  const cols = [['Prospect','18%'],['Company','15%'],[view==='released'?'Released':'Why it\'s here','19%'],['Action','24%'],['Channel','10%']];
+  if(mgr) cols.push(['Owner','14%']); else cols.push([view==='released'?'Outcome':'','14%']);
+  el.innerHTML = table(cols, its.map(it=>withRun(it, ()=>{
+      const r = it.r, d = dec(r.key), lr = liveRec(r), x = draftOf(r);
+      const why = view==='released' ? `<span class="tag tag-green">${d.released==='auto'?'On its own':d.released==='approved'?'Approved':'Accepted'}</span>${d.outcome?`<span class="sub">${esc(d.outcome)}</span>`:''}`
+        : view==='approvals' ? `<span class="tag tag-violet">Sensitive content</span><span class="sub">Accepted by ${esc(d.acceptedBy||'')}</span>`
+        : `<span class="tag ${d.spot==='pending'?'tag-blue':d.why==='alternative'?'tag-violet':'tag-amber'}">${esc(whyHere(d))}</span><span class="sub" title="${esc((d.reasons||[]).join(' · '))}">${esc(d.spot==='pending'?'Rate it':d.why==='alternative'?'Offered once':d.why==='exception'?(d.reasons||[]).join(' · '):d.sentBackNote||'')}</span>`;
       return `<tr class="click" onclick="openItem('${it.id}')">
         <td><div class="person"><div class="co-av" style="background:${avColor(lr.contact.name)}">${initials(lr.contact.name)}</div><div>${cell(lr.contact.name, esc(lr.contact.jobTitle||''), 'dt-main')}</div></div></td>
         <td>${cell(r.account.name, esc(it.run.saved.name))}</td>
-        <td>${segTag(r.segment)}</td>
+        <td>${why}</td>
         <td class="wrap"><span class="clamp2" style="font-size:12px;color:var(--i1)" title="${esc(chosenAction(r))}">${esc(chosenAction(r))}</span></td>
-        <td>${cell(x.channel==='Task'?'Task for the team':x.channel)}</td>
-        <td>${d.status==='Waiting' ? (ex?`<span class="tag tag-amber">Closer look</span><span class="sub" title="${esc(ex)}">${esc(ex)}</span>`:'<span class="tag tag-grey">Your decision</span>') : `${statusTag(d.status)}<span class="sub">${esc(d.by||'')}${d.outcome?' · '+esc(d.outcome):''}</span>`}</td>
-      </tr>`;})).join(''), view==='todo' ? 'Nothing waiting. Everything has been decided.' : 'No decisions yet.');
+        <td>${cell(x.channel==='Task'?'Task':x.channel)}</td>
+        <td>${mgr ? cell(repName(ownerOf(r))) : view==='released' ? (d.outcome?esc(d.outcome):'<span class="muted">—</span>') : ''}</td>
+      </tr>`;})).join(''),
+    view==='queue' ? 'Nothing needs you right now.' : view==='approvals' ? 'No sensitive items waiting for approval.' : 'Nothing released yet.');
 }
-function drawLog(log){
+function drawLog(){
   const el = document.getElementById('rows'); if(!el) return;
-  let ls = log || Object.values(RUNS).flatMap(run=>run.saved.log.map(l=>({...l, runId:run.saved.id}))).sort((a,b)=>b.at-a.at);
+  const mgr = isManager();
+  let ls = Object.values(RUNS).flatMap(run=>run.saved.log.map(l=>({...l, runId:run.saved.id}))).sort((a,b)=>b.at-a.at).filter(l=>mgr || l.who===me().who);
   if(q) ls = ls.filter(l=>(l.who+' '+l.prospect+' '+l.company+' '+l.decision+' '+l.action+' '+l.note).toLowerCase().includes(q));
-  const tone = d => /^Approved/.test(d)?'tag-green':/^Rejected/.test(d)?'tag-red':/^Outcome/.test(d)?'tag-violet':d==='Marked as sent'?'tag-blue':'tag-grey';
-  el.innerHTML = table([['When','12%'],['Who','13%'],['Prospect','15%'],['Decision','23%'],['Action','19%'],['Note','18%']],
+  const tone = d => /^Accepted|^Approved/.test(d)?'tag-green':/^Rejected/.test(d)?'tag-red':/^Outcome/.test(d)?'tag-violet':/^Went ahead/.test(d)?'tag-blue':'tag-grey';
+  const kindLbl = {exception:'Exception', spot:'Spot-check', alternative:'Alternative'};
+  el.innerHTML = table([['When','12%'],['Who','12%'],['Prospect','15%'],['Decision','24%'],['Action','19%'],['Note','18%']],
     ls.map(l=>`<tr class="click" onclick="openItem('${l.runId}::${l.key}')">
-      <td>${cell(fmtDate(l.at), timeOf(l.at))}</td>
+      <td>${cell(fmtDate(l.at), timeOf(l.at)+(l.secs!=null?` · ${l.secs}s`:''))}</td>
       <td>${cell(l.who, esc(l.role))}</td>
       <td>${cell(l.prospect, esc(l.company))}</td>
-      <td class="wrap"><span class="tag ${tone(l.decision)}">${esc(l.decision)}</span>${l.flag?`<span class="sub" style="color:var(--warn)">${esc(l.flag)}</span>`:''}</td>
-      <td class="wrap"><span class="clamp2" style="font-size:12px;color:var(--i1)">${esc(l.action)}</span><span class="sub">${esc(l.channel)}</span></td>
+      <td class="wrap"><span class="tag ${tone(l.decision)}">${esc(l.decision)}</span>${l.decisive?`<span class="sub">${esc(kindLbl[l.kind]||'')}${l.firstPass?' · first pass':''}${l.position?` · #${l.position} in queue`:''}</span>`:''}
+        ${l.flag?`<span class="sub" style="color:var(--warn)">${esc(l.flag)}${l.checked?' · checked':''}</span>${mgr&&!l.checked?`<button class="btn btn-ghost btn-sm" style="margin-top:4px" onclick="event.stopPropagation();markChecked('${l.runId}',${l.at},'${l.key}')">Checked, count it</button>`:''}`:''}</td>
+      <td class="wrap"><span class="clamp2" style="font-size:12px;color:var(--i1)">${esc(l.action)}</span><span class="sub">${esc(l.channel)}${l.linkedTo?` · alternative to ${esc(l.linkedTo)}`:''}</span></td>
       <td class="wrap"><span class="clamp2" style="font-size:12px;color:var(--i2)">${[l.tags&&l.tags.length?l.tags.join(', '):'', l.note].filter(Boolean).map(esc).join(' · ')||'<span class="muted">—</span>'}</span></td>
     </tr>`).join(''), 'No decisions yet.');
+}
+// A flagged decision counts toward G2 only once a manager has checked it.
+function markChecked(runId, at, key){
+  const run = RUNS[runId]; if(!run) return;
+  const l = run.saved.log.find(x=>x.at===at && x.key===key); if(!l) return;
+  l.checked = true; RUN = run; logIt(recOf(key), 'Flagged decision checked', {note:l.flag}); persist(); RUN = null; render();
 }
 function toggleExport(on){
   const m = document.getElementById('exportMenu'); if(!m) return;
@@ -696,13 +726,14 @@ function exportAll(kind){
   const keepToast = window.showToast; window.showToast = ()=>{};
   try{ runs.forEach(run=>{ RUN = run; ({approved:exportApproved, tasks:exportTasks, log:exportLog})[kind](); }); }
   finally{ window.download = keepDl; window.showToast = keepToast; RUN = null; }
-  if(!rows || rows.length<2){ showToast(kind==='approved'?'No approved messages yet':kind==='tasks'?'No tasks yet':'No decisions yet'); return; }
-  download({approved:'approved_actions.csv', tasks:'tasks.csv', log:'decision_log.csv'}[kind], DemandAI.toCSV(rows));
+  if(!rows || rows.length<2){ showToast(kind==='approved'?'No released messages yet':kind==='tasks'?'No released tasks yet':'No decisions yet'); return; }
+  download({approved:'released_messages.csv', tasks:'tasks.csv', log:'decision_log.csv'}[kind], DemandAI.toCSV(rows));
 }
 
 /* ═══════════════ BOOT ═══════════════ */
 const PAGE_ID = '14-review.html';
 setTimeout(()=>{
+  const _setRole = setRole; setRole = function(r){ _setRole(r); closeDrawer(); view='queue'; render(); };
   loadRuns(); reviewBadge(); render();
   const id = new URLSearchParams(location.search).get('item');
   if(id) openItem(id);

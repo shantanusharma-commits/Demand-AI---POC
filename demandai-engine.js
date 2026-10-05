@@ -21,6 +21,8 @@ const CONFIG = {
   tierThresholds: { A: 35, B: 20 },
   // Micro-segments: a segment needs this many distinct accounts.
   minSegmentAccounts: 3,
+  // For Review: the share of items that went ahead on their own picked at random for a spot-check.
+  spotCheckShare: 0.2,
   brand: { maxSubjectWords: 6, competitors: [] },
   // The agreed action library per segment (proposed in the process flows; the client approves the final list).
   // The first option is the recommendation; the next is the runner-up unless the strongest signal says otherwise.
@@ -650,7 +652,7 @@ function lowerFirst(s) { return s && /^[A-Z][a-z]/.test(s) && !/^[A-Z][a-z]+ [A-
    For lists scored outside the platform. The score column is optional: without it, a prospect's score is
    their timing alone (signals weighted and stacked as in Scoring), since there's no fit rubric to apply. */
 const SEGMENT_COLUMNS = ['first_name', 'last_name', 'job_title', 'email', 'email_verified', 'linkedin_url', 'company_name',
-  'industry', 'country', 'existing_customer', 'consent_basis', 'score', 'signal_type', 'event_date', 'detail', 'source'];
+  'industry', 'country', 'existing_customer', 'consent_basis', 'score', 'signal_type', 'event_date', 'detail', 'source', 'owner_email'];
 const SEGMENT_REQUIRED = ['first_name', 'company_name', 'signal_type', 'event_date'];
 function processScoredProspects(grid, { file = 'prospect file', sheet = 'Sheet1', asOf } = {}) {
   const table = readTable(grid, { file, sheet, columns: SEGMENT_COLUMNS, required: SEGMENT_REQUIRED, anchor: 'signal_type' });
@@ -682,7 +684,7 @@ function processScoredProspects(grid, { file = 'prospect file', sheet = 'Sheet1'
       const consent = clean(r.consent_basis);
       const c = { row, firstName: first, lastName: clean(r.last_name), jobTitle: clean(r.job_title), email, emailRaw: clean(r.email),
         emailVerified: !!email && yesNo(r.email_verified) === 'Y', linkedin: li, linkedinRaw: clean(r.linkedin_url), country: clean(r.country),
-        consent, consentOk: CONFIG.consentBases.includes(consent.toLowerCase()), optOut: false, owner: '', accountId: acc.id };
+        consent, consentOk: CONFIG.consentBases.includes(consent.toLowerCase()), optOut: false, owner: clean(r.owner_email).toLowerCase(), accountId: acc.id };
       c.name = [c.firstName, c.lastName].filter(Boolean).join(' ');
       c.persona = personaOf(c.jobTitle);
       if (!c.consentOk) at(row, 'consent_basis', consent ? `"${consent}" isn't a recognised basis` : 'No consent basis', 'Call only', 'D3', 'Use legitimate interest, existing customer or opted in', 'info');
