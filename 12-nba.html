@@ -873,7 +873,7 @@ function drawList(){
         <td>${segTag(r.segment)}</td>
         <td class="wrap"><span class="clamp2" style="font-size:12px;color:var(--i1)" title="${esc(chosenAction(r))}">${esc(chosenAction(r))}</span></td>
         <td>${cell(x.channel==='Task'?'Task for the team':x.channel)}</td>
-        <td>${inQueue(d) ? `<span class="tag ${d.spot==='pending'?'tag-blue':'tag-amber'}">${esc(whyHere(d))}</span><span class="sub">In For Review</span>` : `${statusTag(d.status)}${d.released==='auto'?'<span class="sub">Went ahead on its own</span>':''}`}</td>
+        <td>${inQueue(d) ? `<span class="tag ${d.spot==='pending'?'tag-blue':'tag-amber'}">${esc(whyHere(d))}</span><span class="sub">In For Review</span>` : `${statusTag(d.status)}${d.released==='auto'?'<span class="sub">On its own</span>':''}`}</td>
       </tr>`;}).join(''), 'No prospects match.');
 }
 
