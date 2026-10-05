@@ -184,7 +184,7 @@ test('micro-segments: no account is in two segments, and leftovers are exception
   assert.equal(new Set(ids).size, ids.length);
   assert.deepEqual(r.segments.map(s => s.name), ['Inquiry']);
   assert.deepEqual(r.exceptions.map(x => x.account.id), ['d', 'e']);
-  assert.match(r.exceptions[0].exception, /Segment too small/);
+  assert.match(r.exceptions[0].exception, /No micro-segment/);
 });
 
 test('micro-segments on the sample: every scored account placed once, all prospects get an action', () => {
@@ -270,4 +270,18 @@ test('engage-once: an account already recommended in the pilot is set aside as a
   const r = sampleRecs({ engaged: new Map([['northwind refining', 'Earlier list']]) });
   assert.ok(!r.recs.some(x => x.account.name === 'Northwind Refining'));
   assert.deepEqual(r.engagedOnce.map(x => [x.account.name, x.label]), [['Northwind Refining', 'Earlier list']]);
+});
+
+test('micro-segments from an uploaded file: prospects with their signals, score optional', () => {
+  const g = [E.SEGMENT_COLUMNS,
+    ['Aditi', 'Rao', 'Head of Instrumentation', 'aditi@nw.com', 'Y', '', 'Northwind Refining', 'Refining', 'Singapore', 'N', 'Legitimate interest', '72', 'Inquiry or RFQ', '2026-09-20', 'Asked about migration', ''],
+    ['Wei', 'Lim', 'Plant Manager', 'wei@nw.com', 'Y', '', 'Northwind Refining', 'Refining', 'Singapore', 'N', 'Legitimate interest', '', 'Webinar attended', '2026-09-10', 'Modernising legacy control systems', ''],
+    ['Wei', 'Lim', 'Plant Manager', 'wei@nw.com', 'Y', '', 'Northwind Refining', 'Refining', 'Singapore', 'N', 'Legitimate interest', '', 'Webinar attended', '2026-09-10', 'Modernising legacy control systems', ''],
+    ['Ann', 'Lee', 'Engineer', 'ann@acme.com', 'Y', '', 'Acme', 'Petrochemicals', 'Thailand', 'Y', 'Opted in', '', 'Bogus', '2026-09-10', '', ''],
+  ];
+  const r = E.processScoredProspects(g, { asOf: '2026-09-30' });
+  assert.deepEqual(r.stats, { rowsRead: 4, rejected: 2, prospects: 2, accounts: 1 });
+  const nw = r.results[0];
+  assert.deepEqual(nw.people.map(p => [p.contact.name, p.final, p.scoreFrom]), [['Aditi Rao', 72, 'file'], ['Wei Lim', 30, 'signals']]);
+  assert.equal(E.buildSegments(r.results).recs.length, 2);
 });

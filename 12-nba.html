@@ -35,6 +35,9 @@ html{font-size:16px;-webkit-font-smoothing:antialiased;}
 body{margin:0;font-family:var(--fb);font-size:14px;background:var(--bg);color:var(--i1);overflow:hidden;height:100vh;}
 button{font:inherit;cursor:pointer;border:none;background:none;color:inherit;padding:0;}
 input,textarea,select{font:inherit;}
+:root{color-scheme:light;}
+input,textarea,select{background-color:#fff;color:var(--i1);}
+textarea[readonly],input[readonly]{background-color:var(--s50);}
 ::-webkit-scrollbar{width:4px;}
 ::-webkit-scrollbar-thumb{background:var(--s200);border-radius:2px;}
 @keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.55;transform:scale(1.3);}}
@@ -585,17 +588,29 @@ const pill = (cur,id,label) => `<div class="seg-pill ${cur===id?'active':''}" on
 /* ═══════════════ STATE ═══════════════ */
 const HANDOFF_KEY = 'demandai_nba_handoff_v1';
 let tab = 'new', srcId = null, RUN = null, view = 'grid', filt = 'all', segFilt = null, vertFilt = null, q = '', renamingId = null, openKey = null, openedAt = 0;
-const segTag = s => s ? `<span class="tag ${SEG_TONE[s]||'tag-grey'}">${esc(s)}</span>` : '<span class="tag tag-grey">Exception</span>';
+const segTag = s => s ? `<span class="tag ${SEG_TONE[s]||'tag-grey'}">${esc(s)}</span>` : '<span class="tag tag-grey">No micro-segment</span>';
 function me(){ const r = getRole(); return { who: ROLE_PERSON[r] || r, role: r }; }
 function handoff(){ try{ return JSON.parse(localStorage.getItem(HANDOFF_KEY)||'null'); }catch(e){ return null; } }
 const timeOf = t => new Date(t).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'});
 
-/* ═══════════════ START: New segmentation | Segmented lists ═══════════════ */
+/* ═══════════════ START: where the prospects come from ═══════════════ */
+let srcMode = 'scored', UPLOAD = null;
+// Plain-language meaning of each micro-segment: the reason to act now that its accounts share.
+const SEG_MEANS = { Inquiry:'Asked a question or for a quote', Modernisation:'Installed system nearing end of support', 'Service renewal':'Service contract coming up for renewal',
+  Project:'Capital project under way', Leadership:'New leader in a buying role', Engagement:'Engaged with our content or events' };
+function stepper(cur){
+  const steps = ['Choose prospects','Build micro-segments','Review each action','Export'];
+  return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:18px;flex-wrap:wrap">${steps.map((s,i)=>{
+    const n = i+1, done = n<cur, on = n===cur;
+    return `${i?'<span style="width:22px;height:1px;background:var(--bdk)"></span>':''}<span style="display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:${on?700:500};color:${on?'var(--i1)':done?'var(--i2)':'var(--i3)'}">
+      <span style="width:20px;height:20px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700;${on?'background:var(--brand);color:#fff':done?'background:var(--pos-lt);color:var(--pos)':'background:var(--s75);color:var(--i3)'}">${done?'✓':n}</span>${s}</span>`;
+  }).join('')}</div>`;
+}
 function sources(){
   const h = handoff(), runs = DemandAI.loadScorings();
   const out = [];
-  if(h) out.push({id:'handoff', label:'Sent from Scoring', sub:`${h.name} · ${h.keys.length} prospect${h.keys.length===1?'':'s'} chosen`});
-  runs.forEach(r=>out.push({id:r.id, label:r.name, sub:`Saved scored list · tier A and B`}));
+  if(h) out.push({id:'handoff', label:`Sent from Scoring: ${h.name}`, sub:`${h.keys.length} prospect${h.keys.length===1?'':'s'} chosen`});
+  runs.forEach(r=>out.push({id:r.id, label:r.name, sub:'Saved scored list · tier A and B'}));
   out.push({id:'sample', label:'Sample data', sub:'Fictional prospects and signals'});
   return out;
 }
@@ -603,12 +618,14 @@ function renderStart(t){
   RUN = null; closeDrawer();
   if(t) tab = t;
   const segs = DemandAI.loadSegmentations(), src = sources();
-  if(!src.find(s=>s.id===srcId)) srcId = src[0].id;
+  if(srcId!=='upload' && !src.find(s=>s.id===srcId)) srcId = src[0].id;
+  const active = srcMode==='upload' ? (UPLOAD ? 'upload' : null) : (srcId==='upload' ? src[0].id : srcId);
   const ft = (id,label,n) => `<div class="ftab ${tab===id?'active':''}" onclick="renderStart('${id}')">${label}${n!==undefined?` <span class="ftab-cnt">${n}</span>`:''}</div>`;
   let preview = '';
   if(tab==='new'){
-    const s = sourceFor(srcId), c = s && compute(s);
-    if(!c) preview = `<div style="font-size:12.5px;color:var(--neg)">The prospect list behind this scored list isn't saved any more.</div>`;
+    const s = active && sourceFor(active), c = s && compute(s);
+    if(!active) preview = `<div style="font-size:12.5px;color:var(--i3)">Upload a CSV above to see its prospects here.</div>`;
+    else if(!c) preview = `<div style="font-size:12.5px;color:var(--neg)">The prospect list behind this scored list isn't saved any more.</div>`;
     else {
       const keys = new Set(c.keys), rows = [];
       c.scored.forEach(r=>(r.people||[]).forEach(p=>{ if(keys.has(r.account.id+'|'+p.contact.row)) rows.push({r,p}); }));
@@ -616,7 +633,8 @@ function renderStart(t){
       const accs = new Set(rows.map(x=>x.r.account.id)).size;
       preview = `<div style="display:flex;gap:18px;font-size:12px;color:var(--i2);margin-bottom:12px;flex-wrap:wrap">
           <span><b style="color:var(--i1)">${rows.length}</b> prospects</span><span><b style="color:var(--i1)">${accs}</b> accounts</span>
-          <span style="color:var(--i3)">signals from ${esc(s.fileName)} · as of ${esc(s.asOf)}</span></div>
+          <span style="color:var(--i3)">signals from ${esc(s.fileName)} · as of ${esc(s.asOf)}</span>
+          ${c.fileIssues?`<span style="color:var(--warn)">${c.fileIssues} row${c.fileIssues===1?'':'s'} not used</span>`:''}</div>
         ${table([['Prospect','26%'],['Company','24%'],['Tier','12%'],['Score','10%','num'],['Strongest signal','28%']],
           rows.map(({r,p})=>`<tr>
             <td><div class="person"><div class="co-av" style="background:${avColor(p.contact.name)}">${initials(p.contact.name)}</div><div>${cell(p.contact.name, esc(p.contact.jobTitle||''), 'dt-main')}</div></div></td>
@@ -626,49 +644,92 @@ function renderStart(t){
             <td>${p.signals[0]?tagChip(p.signals[0].type):'<span class="muted">—</span>'}</td></tr>`).join(''), 'No prospects with a live signal.')}`;
     }
   }
+  const how = (n, t, d) => `<div style="flex:1;min-width:180px;padding:12px 14px;background:var(--surf);border:1px solid var(--border);border-radius:var(--rmd)">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px"><span style="width:20px;height:20px;border-radius:50%;background:var(--brand-lt);color:var(--brand-dk);font-size:10.5px;font-weight:700;display:inline-flex;align-items:center;justify-content:center">${n}</span><b style="font-size:12.5px;color:var(--i1)">${t}</b></div>
+    <div style="font-size:11.5px;color:var(--i2);line-height:1.5">${d}</div></div>`;
+  const pill = (m,l) => `<button onclick="srcMode='${m}';renderStart('new')" style="padding:6px 14px;border-radius:999px;font-size:12px;font-weight:600;${srcMode===m?'background:var(--surf);color:var(--i1);box-shadow:var(--sh)':'color:var(--i3)'}">${l}</button>`;
+  const min = DemandAI.CONFIG.minSegmentAccounts;
   document.getElementById('mainArea').innerHTML = `
     <div class="topbar"><div class="topbar-l"><span class="tb-title">Micro-segments &amp; NBA</span><span class="tb-badge badge-neutral">Rules only · you review every action</span></div></div>
-    <div class="ftabs">${ft('new','New segmentation')}${ft('saved','Segmented lists',segs.length)}</div>
+    <div class="ftabs">${ft('new','New micro-segments')}${ft('saved','Saved',segs.length)}</div>
     <div class="canvas">${tab==='new' ? `
-      <div style="max-width:880px;margin:24px auto 0">
-        <div style="font-family:var(--fd);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--brand);margin-bottom:8px">Step 3 · Micro-segments &amp; NBA</div>
-        <div style="font-family:var(--fd);font-size:22px;font-weight:700;color:var(--i1);margin-bottom:6px">Group the scored prospects and pick the next action</div>
-        <div style="font-size:13px;color:var(--i3);margin-bottom:20px;line-height:1.55">Choose the scored prospects, check them, and build the micro-segments. Each prospect then gets an action, a runner-up and a first draft for you to review.</div>
+      <div style="max-width:880px;margin:20px auto 0">
+        ${stepper(1)}
+        <div style="font-family:var(--fd);font-size:22px;font-weight:700;color:var(--i1);margin-bottom:6px">Group prospects by their reason to buy now</div>
+        <div style="font-size:13px;color:var(--i3);margin-bottom:14px;line-height:1.55">A <b style="color:var(--i2)">micro-segment</b> is a group of at least ${min} accounts that share the same reason to act now, such as a system nearing end of support. Everyone in it gets an action that fits that reason.</div>
+        <div style="display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap">
+          ${how(1,'Group','Each account joins the micro-segment of its strongest signal. With fewer than '+min+' accounts, it joins on its next signal.')}
+          ${how(2,'Recommend','Each prospect gets an action, a runner-up, a channel and a first draft.')}
+          ${how(3,'Review','You approve or reject each one. Every decision is logged; then export.')}
+        </div>
         <div class="panel" style="margin-bottom:12px">
-          <div class="panel-hdr"><span class="panel-ttl">1 · Scored prospects</span><a href="11-scoring.html" style="font-size:11px;color:var(--brand);font-weight:600;text-decoration:none">Score a list in Scoring →</a></div>
+          <div class="panel-hdr"><span class="panel-ttl">1 · Where the prospects come from</span></div>
           <div class="panel-body">
-            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px">
-              ${src.map(s=>`<button onclick="srcId='${s.id}';renderStart('new')" style="text-align:left;padding:10px 12px;border-radius:var(--rsm);border:1px solid ${srcId===s.id?'var(--brand)':'var(--border)'};background:${srcId===s.id?'var(--brand-lt)':'var(--surf)'}">
-                <div style="font-size:12.5px;font-weight:600;color:var(--i1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(s.label)}</div>
-                <div style="font-size:11px;color:var(--i3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(s.sub)}</div></button>`).join('')}
-            </div>
+            <div style="display:inline-flex;background:var(--s75);border-radius:999px;padding:3px;margin-bottom:12px">${pill('scored','A scored list')}${pill('upload','Upload a CSV')}</div>
+            ${srcMode==='scored' ? `
+            <select onchange="srcId=this.value;renderStart('new')" style="width:100%;padding:9px 11px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:13px">
+              ${src.map(s=>`<option value="${s.id}" ${s.id===active?'selected':''}>${esc(s.label)} · ${esc(s.sub)}</option>`).join('')}
+            </select>
+            <div style="font-size:11px;color:var(--i3);margin-top:8px">From Account Scoring: what you sent from there, or any scored list you saved. <a href="11-scoring.html" style="color:var(--brand);font-weight:600;text-decoration:none">Score a list →</a></div>` : `
+            ${UPLOAD ? `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--rsm);margin-bottom:10px">
+                <span style="font-size:12.5px;font-weight:600;color:var(--i1);flex:1">${esc(UPLOAD.fileName)}</span>
+                <button class="btn btn-ghost btn-sm" onclick="UPLOAD=null;renderStart('new')">Remove</button></div>` : `
+            <label id="segDrop" for="segInput" style="display:block;border:1.5px dashed var(--bdk);border-radius:var(--rmd);padding:22px 20px;cursor:pointer;background:var(--s50);text-align:center">
+              <input type="file" id="segInput" accept=".csv,.xlsx,.xls" style="display:none" onchange="onSegFile(this.files[0])">
+              <div style="font-size:13px;font-weight:600;color:var(--i1)">Click to choose the file, or drop it here</div>
+              <div style="font-size:11px;color:var(--i3);margin-top:4px">.csv or .xlsx · one row per signal: the prospect, their company and the signal · a score column is optional</div>
+            </label>`}
+            <div style="display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap">
+              <button class="btn btn-sec btn-sm" onclick="download('microsegment_template.csv', DemandAI.toCSV([DemandAI.SEGMENT_COLUMNS]))">Download the template (.csv)</button>
+              <span style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--i3)">Signals as of <input type="date" id="segAsOf" value="${UPLOAD?UPLOAD.asOf:todayIso()}" onchange="if(UPLOAD){UPLOAD.asOf=this.value;renderStart('new')}" style="padding:3px 6px;border:1px solid var(--bdk);border-radius:6px;font-size:11.5px"></span>
+            </div>`}
           </div>
         </div>
         <div class="panel">
-          <div class="panel-hdr"><span class="panel-ttl">2 · Prospects to segment</span><button class="btn btn-primary btn-sm" onclick="buildFrom('${srcId}')">Build micro-segments →</button></div>
+          <div class="panel-hdr"><span class="panel-ttl">2 · Prospects to group</span>${active?`<button class="btn btn-primary btn-sm" onclick="buildFrom('${active}')">Build micro-segments →</button>`:''}</div>
           <div class="panel-body">${preview}</div>
         </div>
       </div>` : `
-      <div class="score-list">${table([['Name','26%'],['Scored list','18%'],['Segments','9%','num'],['Prospects','9%','num'],['Approved','9%','num'],['Saved','12%'],['','17%']],
+      <div class="score-list">${table([['Name','26%'],['Prospects from','18%'],['Micro-segments','10%','num'],['Prospects','9%','num'],['Approved','9%','num'],['Saved','11%'],['','17%']],
         segs.map(r=>`<tr>
           <td><div class="person"><div class="co-av" style="background:${avColor(r.id)}">${initials(r.name)}</div><div style="flex:1;min-width:0">${renamingId===r.id
             ? `<div style="display:flex;gap:6px;align-items:center"><input id="renameInput" value="${esc(r.name)}" style="flex:1;min-width:0;padding:6px 9px;border:1px solid var(--brand-mid);border-radius:var(--rsm);font-size:12.5px" onkeydown="if(event.key==='Enter')finishRename('${r.id}');if(event.key==='Escape'){renamingId=null;renderStart('saved')}"><button class="btn btn-primary btn-sm" onclick="finishRename('${r.id}')">Save</button></div>`
             : `<div style="display:flex;align-items:center;gap:6px;min-width:0"><span class="dt-main" title="${esc(r.name)}">${esc(r.name)}</span><button title="Rename" onclick="startRename('${r.id}')" style="flex-shrink:0;color:var(--i3);display:flex;padding:2px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button></div><span class="sub">As of ${esc(r.src.asOf)}</span>`}</div></div></td>
-          <td>${cell(r.src.listName, r.src.sample?'Sample data':'')}</td>
+          <td>${cell(r.src.listName, r.src.sample?'Sample data':r.src.csv?'Uploaded CSV':'Scored list')}</td>
           <td class="num">${r.stats.segments}</td>
           <td class="num">${r.stats.prospects}</td>
           <td class="num">${Object.values(r.decisions||{}).filter(d=>d.status==='Approved'||d.status==='Sent').length}</td>
           <td>${cell(fmtDate(r.createdAt), timeOf(r.createdAt))}</td>
           <td style="text-align:right"><button class="btn btn-sec btn-sm" onclick="openRun('${r.id}')">Open</button> <button class="btn btn-ghost btn-sm" onclick="removeRun('${r.id}')">Delete</button></td>
-        </tr>`).join(''), `No segmented lists yet. <a href="#" onclick="renderStart('new');return false" style="color:var(--brand);font-weight:600">Build micro-segments</a> from a scored list.`)}
+        </tr>`).join(''), `Nothing saved yet. <a href="#" onclick="renderStart('new');return false" style="color:var(--brand);font-weight:600">Build micro-segments</a>; they are saved automatically.`)}
       </div>`}
     </div>`;
+  const dz = document.getElementById('segDrop');
+  if(dz){
+    dz.addEventListener('dragover', e=>{e.preventDefault(); dz.style.borderColor='var(--brand)';});
+    dz.addEventListener('dragleave', ()=>{dz.style.borderColor='var(--bdk)';});
+    dz.addEventListener('drop', e=>{e.preventDefault(); dz.style.borderColor='var(--bdk)'; if(e.dataTransfer.files[0]) onSegFile(e.dataTransfer.files[0]);});
+  }
+}
+async function onSegFile(file){
+  if(!file) return;
+  try{
+    const g = pickSheet(await readFileToGrids(file));
+    const asOf = (document.getElementById('segAsOf')||{}).value || todayIso();
+    const r = DemandAI.processScoredProspects(g.grid, {file:file.name, sheet:g.sheet, asOf});
+    if(r.issues.some(i=>i.severity==='stop')){ showToast(r.issues.find(i=>i.severity==='stop').issue); return; }
+    if(!r.stats.prospects){ showToast(`${file.name}: no rows with a usable signal. Check it against the template`); return; }
+    UPLOAD = { csv:true, name:file.name.replace(/\.[^.]+$/,''), listName:file.name.replace(/\.[^.]+$/,''), fileName:file.name, sheet:g.sheet, grid:g.grid, asOf, keys:null };
+    renderStart('new');
+    showToast(`${r.stats.rowsRead} rows read · ${r.stats.prospects} prospects at ${r.stats.accounts} accounts${r.stats.rejected?` · ${r.stats.rejected} not used`:''}`);
+  }catch(e){ showToast(e.message || 'Could not read that file'); }
 }
 
 /* ═══════════════ BUILD: re-score with the engine, then segment ═══════════════ */
 function sourceFor(id){
   if(id==='sample') return { sample:true, name:'Sample prospects', listName:'Sample prospects', fileName:DemandAISample.SIGNAL_FILE, sheet:'Signal template', grid:DemandAISample.SIGNALS, asOf:DemandAISample.SAMPLE_AS_OF, sandbox:true, keys:null };
   if(id==='handoff') return handoff();
+  if(id==='upload') return UPLOAD;
   const r = DemandAI.getScoring(id);
   return r && { name:r.name, listId:r.listId, listName:r.listName, fileName:r.fileName, sheet:r.sheet, grid:r.grid, asOf:r.asOf, sandbox:r.sandbox, keys:null };
 }
@@ -683,19 +744,27 @@ function engagedMap(exceptId){
   return m;
 }
 function compute(src, runId){
-  let list;
-  if(src.sample){ const r = DemandAI.processLeads(DemandAISample.LEADS, {file:DemandAISample.LEAD_FILE, sheet:'Lead template'}); list = {accounts:r.accounts, contacts:r.contacts}; }
+  let list, scored, sig, fileIssues = 0;
+  if(src.csv){
+    const r = DemandAI.processScoredProspects(src.grid, {file:src.fileName, sheet:src.sheet, asOf:src.asOf});
+    scored = r.results; fileIssues = r.stats.rejected;
+    sig = { signals: scored.flatMap(x=>x.people.flatMap(p=>p.signals)), issues: r.issues };
+  }
+  else if(src.sample){ const r = DemandAI.processLeads(DemandAISample.LEADS, {file:DemandAISample.LEAD_FILE, sheet:'Lead template'}); list = {accounts:r.accounts, contacts:r.contacts}; }
   else { const L = DemandAI.getList(src.listId); if(!L) return null; list = JSON.parse(JSON.stringify({accounts:L.accounts, contacts:L.contacts})); }
-  const sig = DemandAI.processSignals(src.grid, list, {file:src.fileName, sheet:src.sheet, asOf:src.asOf});
-  const scored = DemandAI.scoreList(list, sig);
-  const keys = src.keys || scored.flatMap(r=>(r.people||[]).filter(p=>p.signals.length && (p.tier==='A'||p.tier==='B')).map(p=>r.account.id+'|'+p.contact.row));
+  if(!src.csv){
+    sig = DemandAI.processSignals(src.grid, list, {file:src.fileName, sheet:src.sheet, asOf:src.asOf});
+    scored = DemandAI.scoreList(list, sig);
+  }
+  // An uploaded file is the list itself: every prospect in it. A scored list: tier A and B, unless chosen in Scoring.
+  const keys = src.csv ? scored.flatMap(r=>r.people.map(p=>r.account.id+'|'+p.contact.row)) : src.keys || scored.flatMap(r=>(r.people||[]).filter(p=>p.signals.length && (p.tier==='A'||p.tier==='B')).map(p=>r.account.id+'|'+p.contact.row));
   const seg = DemandAI.buildSegments(scored, {keys, engaged: engagedMap(runId)});
   // Order is shuffled within a priority tier, so position doesn't decide the outcome (seeded by the run, so it's stable).
   let h = 0; for(const ch of String(runId||src.name)) h = (h*31 + ch.charCodeAt(0)) >>> 0;
   const rnd = k => { let x = h; for(const ch of k) x = (x*31 + ch.charCodeAt(0)) >>> 0; return x; };
   const ti = {A:0,B:1,C:2};
   seg.recs.sort((a,b)=>(a.segment?0:1)-(b.segment?0:1) || (ti[a.person.tier]??3)-(ti[b.person.tier]??3) || rnd(a.key)-rnd(b.key));
-  return { sig, scored, keys, seg };
+  return { sig, scored, keys, seg, fileIssues };
 }
 function buildFrom(id){
   const src = sourceFor(id);
@@ -761,7 +830,7 @@ function logIt(r, decision, extra={}){
   const secs = openedAt ? Math.round((Date.now()-openedAt)/1000) : null;
   const pos = visibleRecs().findIndex(y=>y.key===r.key) + 1;
   RUN.saved.log.unshift({ at:Date.now(), who:m.who, role:m.role, key:r.key, prospect:liveRec(r).contact.name, company:r.account.name,
-    segment:r.segment||'Exception', decision, code:extra.code||'', tags:extra.tags||[], action:extra.action||chosenAction(r), channel:extra.channel||x.channel,
+    segment:r.segment||'No micro-segment', decision, code:extra.code||'', tags:extra.tags||[], action:extra.action||chosenAction(r), channel:extra.channel||x.channel,
     note:extra.note||'', version:extra.version||(d.versions||[1]).length, secs, position:pos||null,
     flag: extra.decisive && secs!==null && secs<5 ? 'Fast decision: checked before it counts' : '' });
 }
@@ -770,7 +839,7 @@ function logIt(r, decision, extra={}){
 const SEG_STEPS = [
   ['read',     'Read the scored prospects',        'Tier A and B, or the ones chosen in Scoring'],
   ['engage',   'Engage-once rule',                 'Accounts already recommended in this pilot are set aside'],
-  ['group',    'Group by the strongest signal',    `At least ${DemandAI.CONFIG.minSegmentAccounts} distinct accounts; no account in two segments`],
+  ['group',    'Group by the strongest signal',    `At least ${DemandAI.CONFIG.minSegmentAccounts} different accounts each; an account is in one only`],
   ['fallback', 'Fall back to the next signal',     'When too few accounts share the strongest signal'],
   ['except',   'Exception check',                  'Accounts that fit no segment go to a person'],
   ['action',   'Next best action and runner-up',   'From the segment\'s approved library, with a reason'],
@@ -787,7 +856,7 @@ function stepResult(k){
   switch(k){
     case 'read': return {sev:'', label:`${pl(recs.length,'prospect')} · ${pl(s.accountsConsidered,'account')}`};
     case 'engage': return s.engagedOnce.length ? {sev:'info', label:`${pl(s.engagedOnce.length,'account')} set aside`} : {sev:'', label:'None engaged before'};
-    case 'group': return s.segments.length ? {sev:'', label:`${pl(s.segments.length,'segment')} formed`} : {sev:'warn', label:'None formed'};
+    case 'group': return s.segments.length ? {sev:'', label:`${pl(s.segments.length,'micro-segment')} formed`} : {sev:'warn', label:'None formed'};
     case 'fallback': { const n = byAcc.filter(r=>r.fallback).length; return n ? {sev:'info', label:`${pl(n,'account')} on the next signal`} : {sev:'', label:'Not needed'}; }
     case 'except': { const n = new Set(s.exceptions.map(r=>r.account.id)).size; return n ? {sev:'warn', label:`${pl(n,'account')} to a person`} : {sev:'', label:'All segments proceed'}; }
     case 'action': { const n = byAcc.filter(r=>r.runnerUp&&r.runnerUp.fromStrongest).length; return {sev:'', label:`${pl(recs.length,'action')}${n?` · ${n} from strongest`:''}`}; }
@@ -835,9 +904,9 @@ function runChecks(){
       persist();
       const s = RUN.seg, ex = s.recs.filter(r=>exceptionOf(r)).length;
       document.getElementById('ckFoot').innerHTML = `
-        <span style="flex:1;font-size:12px;color:var(--i2)"><b>${s.segments.length}</b> segment${s.segments.length===1?'':'s'} · <b>${s.recs.length}</b> to review · <b>${ex}</b> need a closer look</span>
+        <span style="flex:1;font-size:12px;color:var(--i2)"><b>${s.segments.length}</b> micro-segment${s.segments.length===1?'':'s'} · <b>${s.recs.length}</b> to review · <b>${ex}</b> need a closer look</span>
         <button class="btn btn-ghost btn-sm" onclick="hide('checksOverlay');renderStart('new')">Back</button>
-        <button class="btn btn-primary btn-sm" onclick="hide('checksOverlay');renderResults()">View the segment grid →</button>`;
+        <button class="btn btn-primary btn-sm" onclick="hide('checksOverlay');renderResults()">View the micro-segments →</button>`;
     }
   };
   tick();
@@ -929,77 +998,96 @@ function refresh(){ renderResults(); if(openKey) openRec(openKey, true); }
 
 /* ═══════════════ RESULTS ═══════════════ */
 const STATUS_TONE = {Waiting:'tag-amber', Approved:'tag-green', Sent:'tag-blue', Closed:'tag-red', 'Set aside':'tag-grey', 'Watch list':'tag-grey'};
-const statusTag = s => `<span class="tag ${STATUS_TONE[s]||'tag-grey'}">${esc(s)}</span>`;
+const statusTag = s => `<span class="tag ${STATUS_TONE[s]||'tag-grey'}">${esc(s==='Waiting'?'To review':s)}</span>`;
 function renderResults(){
   const s = RUN.seg, recs = s.recs, st = k => recs.filter(r=>dec(r.key).status===k).length;
   const ft = (id,label,n) => `<div class="ftab ${view===id?'active':''}" onclick="view='${id}';filt='all';${id==='recs'?'':'segFilt=null;vertFilt=null;'}q='';renderResults()">${label} <span class="ftab-cnt">${n}</span></div>`;
+  const waiting = st('Waiting'), done = recs.length - waiting;
   const ex = recs.filter(r=>dec(r.key).status==='Waiting' && exceptionOf(r)).length;
+  const accs = new Set(s.segments.flatMap(g=>g.accountIds)).size;
+  const pl = (n,w) => `${n} ${w}${n===1?'':'s'}`;
+  const summary = s.segments.length
+    ? `<b>${pl(accs,'account')}</b> share a reason to buy now, in <b>${pl(s.segments.length,'micro-segment')}</b>. ${waiting ? `<b>${pl(waiting,'prospect')}</b> ${waiting===1?'has':'have'} an action waiting for your review${ex?`, ${ex} of them flagged for a closer look`:''}.` : 'Every action has been reviewed: export what you approved.'}`
+    : `No micro-segment formed: fewer than ${DemandAI.CONFIG.minSegmentAccounts} accounts share a signal. Each prospect still has an action to review.`;
   document.getElementById('mainArea').innerHTML = `
     <div class="topbar">
       <div class="topbar-l"><span class="tb-title">${esc(RUN.saved.name)}</span>
         <span class="tb-badge badge-neutral">${esc(RUN.saved.src.fileName)} · as of ${esc(RUN.saved.src.asOf)}</span></div>
       <div class="topbar-r">
-        <button class="btn btn-sec btn-sm" onclick="renderStart('new')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>Segment a different list</button>
-        <button class="btn btn-sec btn-sm" onclick="exportTasks()">Export tasks (.csv)</button>
-        <button class="btn btn-primary btn-sm" onclick="exportApproved()">Export approved (.csv)</button>
+        <button class="btn btn-sec btn-sm" onclick="renderStart('new')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>Group a different list</button>
+        <div style="position:relative">
+          <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();toggleExport()">Export <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg></button>
+          <div id="exportMenu" style="display:none;position:absolute;right:0;top:34px;width:270px;background:var(--surf);border:1px solid var(--border);border-radius:var(--rmd);box-shadow:var(--sh-lg);padding:6px;z-index:250">
+            ${[['exportApproved','Approved messages','Emails and LinkedIn messages you approved',st('Approved')+st('Sent')],
+               ['exportTasks','Tasks for the team','Inquiries, renewals and cases with no proof',recs.filter(r=>draftOf(r).channel==='Task' && !['Closed','Set aside','Watch list'].includes(dec(r.key).status)).length],
+               ['exportLog','Decision log','Who decided what, when and why',RUN.saved.log.length]].map(([fn,t,d,n])=>
+              `<button onclick="toggleExport(false);${fn}()" style="display:flex;width:100%;text-align:left;gap:10px;align-items:center;padding:9px 10px;border-radius:var(--rsm)" onmouseover="this.style.background='var(--s50)'" onmouseout="this.style.background=''">
+                <span style="flex:1;min-width:0"><span style="display:block;font-size:12.5px;font-weight:600;color:var(--i1)">${t}</span><span style="display:block;font-size:11px;color:var(--i3)">${d}</span></span>
+                <span style="font-family:var(--fm);font-size:11px;color:var(--i3)">${n}</span></button>`).join('')}
+          </div>
+        </div>
       </div>
     </div>
-    <div class="ftabs">${ft('grid','Segment grid',s.segments.length)}${ft('recs','Recommendations',recs.length)}${ft('log','Decision log',RUN.saved.log.length)}</div>
+    <div class="ftabs">${ft('grid','Micro-segments',s.segments.length)}${ft('recs','Review actions',recs.length)}${ft('log','Decision log',RUN.saved.log.length)}</div>
     <div class="canvas">
-      <div class="stats">
-        <div class="stat"><div class="stat-lbl">Micro-segments</div><div class="stat-val sv1">${s.segments.length}</div><div class="stat-sub">${DemandAI.CONFIG.minSegmentAccounts}+ accounts each</div></div>
-        <div class="stat"><div class="stat-lbl">To review</div><div class="stat-val sv3">${st('Waiting')}</div><div class="stat-sub">${ex} need a closer look</div></div>
-        <div class="stat"><div class="stat-lbl">Approved</div><div class="stat-val sv4">${st('Approved')+st('Sent')}</div><div class="stat-sub">${st('Sent')} sent</div></div>
-        <div class="stat"><div class="stat-lbl">Rejected</div><div class="stat-val" style="color:var(--neg)">${st('Closed')+st('Set aside')+st('Watch list')}</div><div class="stat-sub">${st('Watch list')} to the watch list</div></div>
-        <div class="stat"><div class="stat-lbl">Engaged once</div><div class="stat-val sv5">${s.engagedOnce.length}</div><div class="stat-sub">set aside by the process rule</div></div>
+      ${stepper(waiting ? 3 : 4)}
+      <div style="display:flex;align-items:center;gap:14px;padding:13px 16px;background:var(--surf);border:1px solid var(--border);border-radius:var(--rmd);margin-bottom:16px">
+        <div style="flex:1;font-size:13px;color:var(--i2);line-height:1.55">${summary}</div>
+        <div style="text-align:right;flex-shrink:0"><div style="font-family:var(--fd);font-size:18px;font-weight:700;color:var(--i1)">${done}<span style="color:var(--i3);font-size:13px"> / ${recs.length}</span></div><div style="font-size:10.5px;color:var(--i3)">reviewed</div></div>
+        ${waiting && view!=='recs' ? `<button class="btn btn-primary btn-sm" onclick="view='recs';filt='Waiting';segFilt=null;vertFilt=null;q='';renderResults()">Review actions →</button>` : ''}
       </div>
       ${view==='grid'?gridTab():view==='recs'?recsTab():logTab()}
     </div>`;
   if(view==='recs') drawRecs(); else if(view==='log') drawLog();
 }
+function toggleExport(on){
+  const m = document.getElementById('exportMenu'); if(!m) return;
+  const show = on===undefined ? m.style.display==='none' : on;
+  m.style.display = show ? 'block' : 'none';
+  if(show) setTimeout(()=>document.addEventListener('click', function c(e){ if(!m.contains(e.target)){ m.style.display='none'; document.removeEventListener('click', c); } }), 0);
+}
 
-/* 5.2 Segment grid: segments against verticals, with counts and share at tier A. 5.3 Drill-down from a cell. */
+/* 5.2 Segment grid: micro-segments against verticals, with counts and share at tier A. 5.3 Drill-down from a cell. */
 function gridTab(){
   const s = RUN.seg, min = DemandAI.CONFIG.minSegmentAccounts;
   const accOf = recs => [...new Map(recs.map(r=>[r.account.id,r])).values()];
-  const all = s.recs.concat(s.engagedOnce.map(e=>({account:e.account, result:e.result, person:{tier:e.result.tier}})));
-  const verts = [...new Set(all.map(r=>r.account.vertical))].sort();
-  const rows = s.segments.map(g=>({name:g.name, recs:g.recs})).concat(s.exceptions.length?[{name:null, recs:s.exceptions}]:[]);
-  const cellFor = (recs, seg, v) => {
+  const all = s.recs.map(r=>r.account).concat(s.engagedOnce.map(e=>e.account));
+  const verts = [...new Set(all.map(a=>a.vertical))].sort();
+  const rows = s.segments.map(g=>({name:g.name, recs:g.recs}));
+  const max = Math.max(1, ...rows.flatMap(g=>verts.map(v=>accOf(g.recs.filter(r=>r.account.vertical===v)).length)));
+  const go = (seg, v) => `segFilt=${seg?`'${seg}'`:"'__x'"};vertFilt=${v===null?'null':`'${esc(v)}'`};view='recs';filt='all';q='';renderResults()`;
+  const th = 'padding:10px 12px;font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--i3);border-bottom:1px solid var(--border);background:var(--s50)';
+  const td = 'padding:12px;border-bottom:1px solid var(--border);vertical-align:middle';
+  const tile = (recs, seg, v) => {
     const accs = accOf(recs.filter(r=>v===null||r.account.vertical===v));
-    if(!accs.length) return `<td class="num"><span class="muted">—</span></td>`;
-    const a = accs.filter(r=>r.result.tier==='A').length;
-    return `<td class="num"><button onclick="segFilt=${seg?`'${seg}'`:"'__x'"};vertFilt=${v===null?'null':`'${esc(v)}'`};view='recs';filt='all';q='';renderResults()" style="display:inline-flex;flex-direction:column;align-items:flex-end;padding:6px 10px;border-radius:var(--rsm);background:var(--brand-lt);min-width:84px">
-      <span style="font-family:var(--fd);font-size:17px;font-weight:700;color:var(--brand-dk)">${accs.length}</span>
-      <span style="font-size:10.5px;color:var(--i2)">${a} at tier A · ${Math.round(a/accs.length*100)}%</span></button></td>`;
+    if(!accs.length) return `<td style="${td};text-align:center;color:var(--i4)">·</td>`;
+    const a = accs.filter(r=>r.result.tier==='A').length, alpha = v===null ? .14 : .08 + .32*accs.length/max;
+    return `<td style="${td};text-align:center"><button onclick="${go(seg,v)}" title="See these prospects" style="display:inline-flex;flex-direction:column;align-items:center;justify-content:center;width:100%;max-width:120px;padding:8px 6px;border-radius:10px;background:rgba(125,82,162,${alpha.toFixed(2)})">
+      <span style="font-family:var(--fd);font-size:18px;font-weight:700;color:var(--brand-dk);line-height:1.1">${accs.length}</span>
+      <span style="font-family:var(--fb);font-size:10.5px;color:var(--i2);margin-top:2px">${a} at tier A</span></button></td>`;
   };
-  const w = Math.max(10, Math.floor(56/(verts.length+1)));
-  const grid = table([['Micro-segment','24%'],...verts.map(v=>[esc(v),w+'%','num']),['All verticals',w+'%','num']],
-    rows.map(g=>{
-      const byAcc = accOf(g.recs), fb = byAcc.filter(r=>r.fallback).length;
-      const ex = byAcc.filter(r=>r.account.existingCustomer).length, prim = g.recs.filter(r=>r.persona==='Primary').length;
-      return `<tr><td>${segTag(g.name)}<span class="sub">${g.name ? `${ex} existing · ${byAcc.length-ex} net-new · ${prim} primary persona${fb?` · ${fb} on next signal`:''}` : `Fewer than ${min} accounts share a signal`}</span></td>
-        ${verts.map(v=>cellFor(g.recs, g.name, v)).join('')}${cellFor(g.recs, g.name, null)}</tr>`;
-    }).join('') + (s.engagedOnce.length ? `<tr><td><span class="tag tag-grey">Engaged once</span><span class="sub">Process rule, not a low score</span></td>${verts.map(v=>{ const n = s.engagedOnce.filter(e=>e.account.vertical===v).length; return `<td class="num">${n||'<span class="muted">—</span>'}</td>`; }).join('')}<td class="num">${s.engagedOnce.length}</td></tr>` : ''),
-    'No segments formed.');
-  const detail = table([['Micro-segment','16%'],['Grouped on','21%'],['Accounts','23%'],['Recommended action','21%'],['Reviewed','9%','num'],['','10%']],
-    rows.map(g=>{
-      const byAcc = accOf(g.recs), on = [...new Set(byAcc.map(r=>r.groupedOn.type))];
-      const done = g.recs.filter(r=>dec(r.key).status!=='Waiting').length;
-      return `<tr class="click" onclick="segFilt=${g.name?`'${g.name}'`:"'__x'"};vertFilt=null;view='recs';filt='all';q='';renderResults()">
-        <td>${segTag(g.name)}</td>
-        <td class="wrap"><div class="tags">${on.map(tagChip).join('')}</div></td>
-        <td class="wrap"><span class="clamp2" style="font-size:12px;color:var(--i1)" title="${esc(byAcc.map(r=>r.account.name).join(', '))}">${esc(byAcc.map(r=>r.account.name).join(', '))}</span></td>
-        <td class="wrap"><span class="clamp2" style="font-size:12px;color:var(--i1)">${g.name?esc(DemandAI.CONFIG.segmentLibrary[g.name][0]):'From each account\'s strongest signal'}</span></td>
-        <td class="num">${done}<span class="sub">of ${g.recs.length}</span></td>
-        <td style="text-align:right"><button class="btn btn-sec btn-sm">Open →</button></td></tr>`;
-    }).join(''), 'No segments.');
-  return `<div class="score-list">${grid}</div>
-    <div style="font-size:11px;color:var(--i3);margin:10px 0 18px">Accounts per micro-segment and vertical, with the share at tier A. Click a cell to see its prospects.</div>
-    <div style="font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--i3);margin-bottom:8px">Segments</div>
-    <div class="score-list">${detail}</div>
-    ${s.engagedOnce.length?`<div style="font-size:11px;color:var(--i3);margin-top:10px">${s.engagedOnce.map(e=>`${esc(e.account.name)}: already recommended in ${esc(e.label)}`).join(' · ')}</div>`:''}`;
+  const grid = `<div style="background:var(--surf);border:1px solid var(--border);border-radius:var(--rmd);overflow-x:auto">
+    <table style="width:100%;border-collapse:collapse;font-family:var(--fb);table-layout:fixed;min-width:${360+verts.length*110}px">
+      <colgroup><col style="width:300px">${verts.map(()=>'<col>').join('')}<col style="width:120px"></colgroup>
+      <thead><tr><th style="${th};text-align:left">Micro-segment · next best action</th>${verts.map(v=>`<th style="${th};text-align:center">${esc(v)}</th>`).join('')}<th style="${th};text-align:center">All</th></tr></thead>
+      <tbody>${rows.length ? rows.map(g=>{
+        const byAcc = accOf(g.recs), fb = byAcc.filter(r=>r.fallback).length;
+        return `<tr>
+          <td style="${td}"><div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">${segTag(g.name)}<span style="font-size:11px;color:var(--i3)">${g.recs.length} prospect${g.recs.length===1?'':'s'}</span></div>
+            <div style="font-size:12px;color:var(--i2)">${esc(SEG_MEANS[g.name]||'')}</div>
+            <div style="font-size:12px;color:var(--i1);font-weight:600;margin-top:4px">→ ${esc(DemandAI.CONFIG.segmentLibrary[g.name][0])}</div>
+            ${fb?`<div style="font-size:10.5px;color:var(--i3);margin-top:3px">${fb} of ${byAcc.length} accounts joined on their second signal</div>`:''}</td>
+          ${verts.map(v=>tile(g.recs, g.name, v)).join('')}${tile(g.recs, g.name, null)}</tr>`;
+      }).join('') : `<tr><td colspan="${verts.length+2}" style="${td};text-align:center;color:var(--i3);font-size:12.5px">No micro-segment formed: fewer than ${min} accounts share a signal.</td></tr>`}</tbody>
+    </table></div>`;
+  const note = (tag, text, n, click) => `<div ${click?`onclick="${click}" `:''}style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surf);border:1px solid var(--border);border-radius:var(--rmd);margin-top:8px;${click?'cursor:pointer':''}">${tag}<span style="flex:1;font-size:12px;color:var(--i2)">${text}</span><span style="font-size:12px;font-weight:600;color:var(--i1)">${n}</span>${click?'<span style="color:var(--i3)">›</span>':''}</div>`;
+  const exAccs = accOf(s.exceptions);
+  return `${grid}
+    <div style="font-size:11px;color:var(--i3);margin:8px 2px 0">Each number is the accounts in that micro-segment and vertical, and how many are at tier A. Click a number to review those prospects.</div>
+    ${exAccs.length ? note('<span class="tag tag-grey">No micro-segment</span>', `${esc(exAccs.map(r=>r.account.name).join(', '))}: fewer than ${min} accounts share any of their signals, so they are reviewed one by one.`, `${s.exceptions.length} prospect${s.exceptions.length===1?'':'s'}`, go(null,null)) : ''}
+    ${s.engagedOnce.length ? note('<span class="tag tag-grey">Engaged once</span>', `${esc(s.engagedOnce.map(e=>e.account.name).join(', '))}: already recommended in this pilot, so not recommended again.`, `${s.engagedOnce.length} account${s.engagedOnce.length===1?'':'s'}`) : ''}`;
 }
+
 function visibleRecs(){
   let rs = RUN.seg.recs;
   if(segFilt) rs = rs.filter(r=>segFilt==='__x' ? !r.segment : r.segment===segFilt);
@@ -1018,7 +1106,7 @@ function recsTab(){
   const sel = 'padding:6px 9px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:12px;background:var(--surf);color:var(--i1)';
   return `<div class="score-list">
     <div class="sl-toolbar">${search('drawRecs','Search prospects, companies or actions…')}
-      <select onchange="segFilt=this.value||null;drawRecs()" style="${sel}"><option value="">All segments</option>${segs.map(n=>`<option value="${n}" ${segFilt===n?'selected':''}>${n==='__x'?'Exceptions':esc(n)}</option>`).join('')}</select>
+      <select onchange="segFilt=this.value||null;drawRecs()" style="${sel}"><option value="">All micro-segments</option>${segs.map(n=>`<option value="${n}" ${segFilt===n?'selected':''}>${n==='__x'?'No micro-segment':esc(n)}</option>`).join('')}</select>
       <select onchange="vertFilt=this.value||null;drawRecs()" style="${sel}"><option value="">All verticals</option>${verts.map(v=>`<option ${vertFilt===v?'selected':''}>${esc(v)}</option>`).join('')}</select>
       <div class="sl-seg-filter">${pills}</div></div>
     <div id="rows"></div></div>
@@ -1026,7 +1114,7 @@ function recsTab(){
 }
 function drawRecs(){
   const el = document.getElementById('rows'); if(!el) return;
-  el.innerHTML = table([['Prospect','16%'],['Company','15%'],['Score','7%','num'],['Segment','12%'],['Next best action','23%'],['Channel','11%'],['Confidence','8%'],['Status','8%']],
+  el.innerHTML = table([['Prospect','15%'],['Company','14%'],['Score','7%','num'],['Micro-segment','15%'],['Next best action','22%'],['Channel','10%'],['Confidence','8%'],['Status','9%']],
     visibleRecs().map(r=>{
       const d = dec(r.key), lr = liveRec(r), x = draftOf(r), { conf } = checksOf(r), ex = d.status==='Waiting' && exceptionOf(r);
       const how = d.manual ? 'Manual action' : d.useRunner ? 'Runner-up · '+(r.runnerUp.fromStrongest?'from the strongest signal':'next in the library') : r.reason;
@@ -1034,7 +1122,7 @@ function drawRecs(){
         <td><div class="person"><div class="co-av" style="background:${avColor(lr.contact.name)}">${initials(lr.contact.name)}</div><div>${cell(lr.contact.name, esc(lr.contact.jobTitle||''), 'dt-main')}</div></div></td>
         <td>${cell(r.account.name, esc(r.account.vertical+' · '+r.status))}</td>
         <td class="num" style="color:var(--i1);font-weight:600">${fmt1(r.person.final)}<span class="sub">Tier ${esc(r.person.tier)}</span></td>
-        <td>${segTag(r.segment)}<span class="sub">${r.segment ? (r.fallback ? 'On its next signal' : 'On its strongest signal') : 'Segment too small'}</span></td>
+        <td>${segTag(r.segment)}<span class="sub">${r.segment ? (r.fallback ? 'Joined on 2nd signal' : 'On strongest signal') : 'No micro-segment'}</span></td>
         <td class="wrap"><span class="clamp2" style="font-size:12px;color:var(--i1);font-weight:600" title="${esc(chosenAction(r))}">${esc(chosenAction(r))}</span><span class="sub" title="${esc(how)}">${esc(how)}</span></td>
         <td>${cell(x.channel, x.noProof?'<span style="color:var(--warn)">No proof found</span>':x.channel==='Task'?'To a person':'')}</td>
         <td><span class="tag ${conf.level==='High'?'tag-green':conf.level==='Medium'?'tag-amber':'tag-red'}">${conf.level}</span></td>
@@ -1067,7 +1155,7 @@ function exportApproved(){
   if(!rs.length){ showToast('No approved messages yet'); return; }
   const rows = [['prospect','job_title','company','email','linkedin_url','segment','action','channel','subject','message','linkedin_note','approved_by','approved_at','status']];
   rs.forEach(r=>{ const d = dec(r.key), x = draftOf(r), c = liveRec(r).contact;
-    rows.push([c.name, c.jobTitle||'', r.account.name, c.email||'', c.linkedin||'', r.segment||'Exception', chosenAction(r), x.channel,
+    rows.push([c.name, c.jobTitle||'', r.account.name, c.email||'', c.linkedin||'', r.segment||'No micro-segment', chosenAction(r), x.channel,
       x.subject||'', x.body||x.message||(x.script?[x.script.opener,...x.script.questions,x.script.ask].join(' | '):''), x.note||'', d.by||'', d.at?new Date(d.at).toISOString():'', d.status]); });
   download('approved_actions.csv', DemandAI.toCSV(rows));
 }
@@ -1077,7 +1165,7 @@ function exportTasks(){
   if(!rs.length){ showToast('No tasks in this list'); return; }
   const rows = [['owner','prospect','company','segment','task','why','call_opener','questions','objection','response','ask','status']];
   rs.forEach(r=>{ const x = draftOf(r), s = x.script || {}, c = liveRec(r).contact;
-    rows.push([c.owner||'', c.name, r.account.name, r.segment||'Exception', x.task, x.why, s.opener||'', (s.questions||[]).join(' | '), s.objection||'', s.response||'', s.ask||'', dec(r.key).status]); });
+    rows.push([c.owner||'', c.name, r.account.name, r.segment||'No micro-segment', x.task, x.why, s.opener||'', (s.questions||[]).join(' | '), s.objection||'', s.response||'', s.ask||'', dec(r.key).status]); });
   download('tasks.csv', DemandAI.toCSV(rows));
 }
 function exportLog(){
@@ -1103,7 +1191,7 @@ function openRec(key, keepTimer){
   document.getElementById('detSub').textContent = [lr.contact.jobTitle, r.account.name].filter(Boolean).join(' · ');
   let html = ex && !locked ? `<div style="margin-bottom:12px;padding:9px 12px;background:var(--warn-lt);color:var(--warn);border-radius:var(--rsm);font-size:12px"><b>Needs a closer look:</b> ${esc(ex)}</div>` : '';
   // Segment
-  html += panel('Micro-segment', segTag(r.segment), `
+  html += panel('1 · Why this group', segTag(r.segment), `
     <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:6px"><span style="color:var(--i3);font-size:11.5px;width:84px">Strongest</span>${tagChip(r.prominentSignal.type)}<span style="font-family:var(--fm);font-size:11px;color:var(--i3)">${fmt1(r.prominentSignal.weight)}</span></div>
     ${r.segment ? `<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px"><span style="color:var(--i3);font-size:11.5px;width:84px">Grouped on</span>${tagChip(r.groupedOn.type)}<span style="font-family:var(--fm);font-size:11px;color:var(--i3)">${fmt1(r.groupedOn.weight)}</span></div>` : ''}
     <div style="font-size:12.5px;color:var(--i1);line-height:1.55">${r.segment && r.fallback ? `Fewer than ${min} accounts share its strongest signal, so it is grouped on its next signal with ${segAccs.length-1} other account${segAccs.length===2?'':'s'}.`
@@ -1113,14 +1201,14 @@ function openRec(key, keepTimer){
   const card = (title, a, sub, chosen) => `<div style="padding:10px 12px;border:1px solid ${chosen?'var(--brand-mid)':'var(--border)'};background:${chosen?'var(--brand-lt)':'var(--surf)'};border-radius:var(--rsm);margin-bottom:8px">
     <div style="font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:${chosen?'var(--brand-dk)':'var(--i3)'};margin-bottom:4px">${title}${chosen?' · chosen':''}</div>
     <div style="font-size:12.5px;font-weight:600;color:var(--i1)">${esc(a)}</div><div style="font-size:11px;color:var(--i2);margin-top:3px;line-height:1.5">${sub}</div></div>`;
-  html += panel('Next best action', !locked && r.runnerUp && !d.manual ? `<button class="btn btn-sec btn-sm" onclick="swapAction('${key}')">${d.useRunner?'Swap back':'Swap to runner-up'}</button>` : '', `
+  html += panel('2 · Recommended action', !locked && r.runnerUp && !d.manual ? `<button class="btn btn-sec btn-sm" onclick="swapAction('${key}')">${d.useRunner?'Swap back':'Swap to runner-up'}</button>` : '', `
     ${card('Recommended', r.action, esc(r.reason), !d.useRunner && !d.manual)}
     ${r.runnerUp ? card('Runner-up', r.runnerUp.action, esc(r.runnerUp.reason.replace(/\.?$/,'.')), d.useRunner && !d.manual) : ''}
     ${d.manual ? card('Manual action', d.manual, 'Added by a reviewer; drafted with the segment\'s playbook.', true) : ''}
     ${!locked ? `<div style="display:flex;gap:6px;margin-top:2px"><input id="manualAct" placeholder="Add a manual action…" style="flex:1;min-width:0;padding:7px 10px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:12px"><button class="btn btn-sec btn-sm" onclick="addManual('${key}')">Add</button></div>` : ''}
     <div style="display:flex;gap:8px;align-items:baseline;font-size:12px;margin-top:10px"><span style="color:var(--i3);width:84px;flex-shrink:0">Channel</span><span><b style="color:var(--i1)">${esc(x.channel)}</b> <span style="color:var(--i3);font-size:11px">${esc(x.why)}</span></span></div>`);
   // Brief
-  html += panel('Brief', '', kv('Who', esc(brief.who)) + kv('Why now', esc(brief.whyNow)) + kv('Angle', esc(brief.angle))
+  html += panel('3 · Brief for the message', '', kv('Who', esc(brief.who)) + kv('Why now', esc(brief.whyNow)) + kv('Angle', esc(brief.angle))
     + kv('Proof', brief.proof ? `${esc(brief.proof.title)} <span style="color:var(--i3)">· ${esc(brief.proof.id)} · ${esc(brief.proof.type)}, ${brief.proof.year} · expires ${esc(brief.proof.expiry)}</span>` : `<span style="color:var(--warn)">No approved, unexpired proof${brief.expired.length?` (${esc(brief.expired.map(e=>e.title+' expired '+e.expiry).join('; '))})`:''}</span>`)
     + kv('Objection', esc(brief.objection)) + kv('Ask', esc(brief.ask)) + kv('Limits', esc(brief.constraints)));
   // Draft
@@ -1132,11 +1220,11 @@ function openRec(key, keepTimer){
   if(sc) draft += lbl(x.channel==='Task'?'Call script for the owner':'Call script')+lbl('Opener')+fld('sOpen',sc.opener,3,locked)+lbl('Discovery questions')+fld('sQs',sc.questions.join('\n'),3,locked)
     +lbl('Objection')+fld('sObj',sc.objection,0,locked)+lbl('Response')+fld('sResp',sc.response,2,locked)+lbl('The ask')+fld('sAsk',sc.ask,0,locked);
   const vs = versions(r);
-  html += panel(x.channel==='Task' ? `Task · to a person${x.noProof?' · no proof found':''}` : `Draft · ${esc(x.channel)}`, `<span style="display:flex;gap:6px">${d.edited?`<span class="tag tag-violet">Edited · ${esc(d.editRating||'')}</span>`:''}<span class="tag tag-grey">v${vs.length}</span></span>`, `
+  html += panel(x.channel==='Task' ? `4 · Task for a person${x.noProof?' · no proof found':''}` : `4 · Draft · ${esc(x.channel)}`, `<span style="display:flex;gap:6px">${d.edited?`<span class="tag tag-violet">Edited · ${esc(d.editRating||'')}</span>`:''}<span class="tag tag-grey">v${vs.length}</span></span>`, `
     <div style="margin-top:-8px">${draft}</div>
     ${!locked?`<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button class="btn btn-sec btn-sm" onclick="saveDraft('${key}','minor')">Save as minor edit</button><button class="btn btn-sec btn-sm" onclick="saveDraft('${key}','major')">Save as major edit</button></div>`:''}`);
   // Checks and confidence
-  html += panel('Checks', `<span class="tag ${conf.level==='High'?'tag-green':conf.level==='Medium'?'tag-amber':'tag-red'}">${conf.level} confidence</span>`, `
+  html += panel('5 · Checks', `<span class="tag ${conf.level==='High'?'tag-green':conf.level==='Medium'?'tag-amber':'tag-red'}">${conf.level} confidence</span>`, `
     <div style="font-size:12px;color:var(--i1);margin-bottom:8px">${esc(conf.reason)}</div>
     ${kv('Brand, rules', chk.flags.length ? chk.flags.map(f=>`<span style="color:var(--neg)">${esc(f.rule)}: ${esc(f.detail)}</span>`).join('<br>') : '<span style="color:var(--pos)">Pass</span>')}
     ${kv('Claims', chk.claims.length ? chk.claims.map(c=>`<span style="color:${c.verified?'var(--pos)':'var(--neg)'}">${c.verified?'✓':'✗'}</span> ${esc(c.text)}<span style="color:var(--i3)"> · ${c.verified?esc(c.source):'no approved source'}</span>`).join('<br>') : '<span style="color:var(--i3)">No product claims</span>')}`);
@@ -1159,7 +1247,7 @@ function openRec(key, keepTimer){
       <div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--i3);margin-bottom:6px">Outcome</div>
       <div class="tags">${['Replied','Meeting booked','No response','Bounced','Not interested'].map(o=>`<button class="tag ${d.outcome===o?'tag-violet':'tag-grey'}" style="cursor:pointer" onclick="outcome('${key}','${o}')">${o}</button>`).join('')}</div>`;
   else decide = `<div style="font-size:12px;color:var(--i1);margin-bottom:10px">${esc(d.code||'')} ${esc((REJECT.find(x=>x[0]===d.code)||[])[1]||'')} · ${by}<div style="color:var(--i2);margin-top:3px">${esc(d.status)}</div></div><button class="btn btn-sec btn-sm" onclick="undo('${key}')">Undo</button>`;
-  html += panel('Decision', statusTag(d.status), decide);
+  html += panel('6 · Your decision', statusTag(d.status), decide);
   // Versions and history
   if(vs.length>1) html += panel('Versions', `<span style="font-size:10.5px;color:var(--i3)">${vs.length}</span>`, vs.slice().reverse().map(v=>`<details style="padding:5px 0;border-bottom:1px solid var(--s75);font-size:11.5px"><summary style="cursor:pointer"><b style="color:var(--i1)">v${v.v}</b> <span style="color:var(--i2)">${esc(v.why)}</span> <span style="color:var(--i3)">· ${esc(v.by)} · ${timeOf(v.at)}</span></summary><pre style="white-space:pre-wrap;font-family:var(--fb);font-size:11.5px;color:var(--i2);margin:6px 0 0;background:var(--s50);padding:8px;border-radius:6px">${esc(DemandAIDraftText(v.draft))}</pre></details>`).join(''));
   const hist = RUN.saved.log.filter(l=>l.key===key);

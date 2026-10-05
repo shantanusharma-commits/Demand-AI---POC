@@ -646,6 +646,75 @@ function scoreList(list, signalResult) {
 function lowerFirst(s) { return s && /^[A-Z][a-z]/.test(s) && !/^[A-Z][a-z]+ [A-Z]/.test(s) ? s[0].toLowerCase() + s.slice(1) : s; }
 
 
+/* ─── Micro-segments straight from a file: prospects with their signals, one row per signal ───
+   For lists scored outside the platform. The score column is optional: without it, a prospect's score is
+   their timing alone (signals weighted and stacked as in Scoring), since there's no fit rubric to apply. */
+const SEGMENT_COLUMNS = ['first_name', 'last_name', 'job_title', 'email', 'email_verified', 'linkedin_url', 'company_name',
+  'industry', 'country', 'existing_customer', 'consent_basis', 'score', 'signal_type', 'event_date', 'detail', 'source'];
+const SEGMENT_REQUIRED = ['first_name', 'company_name', 'signal_type', 'event_date'];
+function processScoredProspects(grid, { file = 'prospect file', sheet = 'Sheet1', asOf } = {}) {
+  const table = readTable(grid, { file, sheet, columns: SEGMENT_COLUMNS, required: SEGMENT_REQUIRED, anchor: 'signal_type' });
+  const issues = table.issues.slice();
+  const at = (row, field, issue, outcome, code, fix, severity = 'flag') => issues.push({ file, sheet, row, field, issue, outcome, code, fix, severity });
+  const accounts = new Map(), people = new Map(), seen = new Set();
+  let rejected = 0;
+  for (const r of table.records) {
+    const row = r.__row, company = clean(r.company_name), first = clean(r.first_name);
+    if (!company || !first) { at(row, !company ? 'company_name' : 'first_name', 'Company or first name missing', 'Row not used', 'D3', 'Fill in both'); rejected++; continue; }
+    const type = clean(r.signal_type), cfg = CONFIG.signalTypes[type], date = clean(r.event_date);
+    const bad = (field, issue, code, fix) => { at(row, field, issue, 'Signal not used', code, fix); rejected++; };
+    if (!cfg) { bad('signal_type', `Signal type "${type}" isn't on the list`, 'D3', 'Choose the type from the template list'); continue; }
+    if (cfg.reject || cfg.knockout) { bad('signal_type', `"${type}" isn't used for segments`, 'D1', 'Nothing to fix'); continue; }
+    if (parseIsoDate(date) === null) { bad('event_date', `Event date "${date}" isn't YYYY-MM-DD`, 'D3', 'Write the date as YYYY-MM-DD'); continue; }
+    const age = daysBetween(date, asOf);
+    if (age < 0) { bad('event_date', `Event date ${date} is after ${asOf}`, 'D3', 'Check the date'); continue; }
+    if (age >= cfg.zero) { bad('event_date', `${age} days old; ${type} counts for ${cfg.zero} days`, 'D2', 'Nothing to fix: past its window'); continue; }
+    const accKey = normKey(company);
+    if (!accounts.has(accKey)) {
+      const cls = classify(clean(r.industry), '');
+      accounts.set(accKey, { id: 'acc-' + (accounts.size + 1), key: accKey, name: company, vertical: cls.vertical, verticalLevel: cls.level,
+        country: clean(r.country), existingCustomer: yesNo(r.existing_customer) === 'Y' });
+    }
+    const acc = accounts.get(accKey);
+    const email = EMAIL_RE.test(clean(r.email)) ? normEmail(r.email) : '', li = LINKEDIN_RE.test(clean(r.linkedin_url)) ? clean(r.linkedin_url) : '';
+    const pKey = acc.id + '|' + (email || normLinkedIn(li) || normKey(first + ' ' + clean(r.last_name)));
+    if (!people.has(pKey)) {
+      const consent = clean(r.consent_basis);
+      const c = { row, firstName: first, lastName: clean(r.last_name), jobTitle: clean(r.job_title), email, emailRaw: clean(r.email),
+        emailVerified: !!email && yesNo(r.email_verified) === 'Y', linkedin: li, linkedinRaw: clean(r.linkedin_url), country: clean(r.country),
+        consent, consentOk: CONFIG.consentBases.includes(consent.toLowerCase()), optOut: false, owner: '', accountId: acc.id };
+      c.name = [c.firstName, c.lastName].filter(Boolean).join(' ');
+      c.persona = personaOf(c.jobTitle);
+      if (!c.consentOk) at(row, 'consent_basis', consent ? `"${consent}" isn't a recognised basis` : 'No consent basis', 'Call only', 'D3', 'Use legitimate interest, existing customer or opted in', 'info');
+      const sc = parseNumber(r.score);
+      people.set(pKey, { contact: c, account: acc, signals: [], given: sc.value !== null && sc.value >= 0 && sc.value <= 100 ? sc.value : null });
+      if (clean(r.score) && (sc.value === null || sc.value < 0 || sc.value > 100)) at(row, 'score', `Score "${clean(r.score)}" isn't 0–100`, 'Score worked out from the signals', 'D3', 'Use a number from 0 to 100', 'info');
+    }
+    const p = people.get(pKey);
+    const dup = [pKey, type, date].join('|');
+    if (seen.has(dup)) { bad('signal_type', 'Same event already in the file', 'D5', 'Remove the repeated row'); continue; }
+    seen.add(dup);
+    const decay = decayFactor(cfg, age);
+    p.signals.push({ id: 'SIG-' + row, row, type, date, age, detail: clean(r.detail), source: clean(r.source), segment: cfg.segment,
+      tier: cfg.tier, strength: cfg.strength, decay, weight: cfg.tier * cfg.strength * decay, personName: p.contact.name, status: 'Qualified' });
+  }
+  const results = [...accounts.values()].map(account => {
+    const ps = [...people.values()].filter(p => p.account === account && p.signals.length).map(p => {
+      p.signals.sort((x, y) => y.weight - x.weight);
+      const raw = stack(p.signals.map(s => s.weight)), timing = round1(raw / CONFIG.timingMax * 100);
+      const final = p.given !== null ? p.given : timing;
+      return { contact: p.contact, signals: p.signals, raw: round1(raw), score: timing, timing, final, scoreFrom: p.given !== null ? 'file' : 'signals',
+        tier: tierFor(final, true), whyNow: p.signals.slice(0, 2).map((s, i) => `${i ? 'also ' : ''}${lowerFirst(s.detail || s.type)}`).join('; ') };
+    }).sort((a, b) => b.final - a.final);
+    const signalCount = ps.reduce((t, p) => t + p.signals.length, 0);
+    const hasPrimary = ps.some(p => p.contact.persona === 'Primary');
+    const best = ps[0];
+    return { account, contacts: ps.map(p => p.contact), people: ps, signalCount, score: best ? best.final : undefined, tier: best ? best.tier : 'Watch list',
+      confidence: !hasPrimary ? 'low' : signalCount >= 2 ? 'high' : 'medium', confidenceWhy: !hasPrimary ? 'No contact in the primary persona' : '' };
+  }).filter(r => r.people.length);
+  return { results, issues, stats: { rowsRead: table.records.length, rejected, prospects: results.reduce((t, r) => t + r.people.length, 0), accounts: results.length } };
+}
+
 /* ─── Stage 9: micro-segments and next best action ───
    Each account goes to the segment of its strongest signal. A segment forms only with at least
    CONFIG.minSegmentAccounts distinct accounts; an account whose strongest signal doesn't reach that falls
@@ -716,7 +785,7 @@ function buildSegments(results, opts = {}) {
       // The message speaks to this person's own evidence: their strongest signal in the segment, else their strongest.
       const inSeg = p.signals.find(sg => (CONFIG.signalTypes[sg.type] || {}).segment === (segment || prominent.segment));
       const signal = inSeg || p.signals[0];
-      const exception = !segment ? `Segment too small: fewer than ${min} accounts share any of its signals`
+      const exception = !segment ? `No micro-segment: fewer than ${min} accounts share any of its signals`
         : r.confidence === 'low' ? 'Low confidence: no contact in the primary persona' : '';
       const ago = signal.age !== undefined ? ` (${signal.age} days ago)` : '';
       recs.push({ key: r.account.id + '|' + p.contact.row, contact: p.contact, account: r.account, result: r, person: p,
@@ -979,7 +1048,7 @@ function deleteSegmentation(id) { return saveSegmentations(loadSegmentations().f
 return {
   CONFIG, CODES, LEAD_COLUMNS, LEAD_REQUIRED, SIGNAL_COLUMNS, SIGNAL_REQUIRED,
   parseCSV, toCSV, readTable, processLeads, classify, personaOf, fitFor, decayFactor,
-  processSignals, scoreList, stack, tierFor, daysBetween, round1, buildSegments, segmentRanks, recommendChannel, draftFor,
+  processSignals, scoreList, stack, tierFor, daysBetween, round1, buildSegments, segmentRanks, recommendChannel, draftFor, processScoredProspects, SEGMENT_COLUMNS,
   briefFor, callScript, checkDraft, confidenceFor, allowedChannels, proofFor, COLLATERAL, PLAYBOOK,
   loadLists, saveList, getList, deleteList, loadScorings, saveScoring, getScoring, deleteScoring,
   loadSegmentations, saveSegmentation, getSegmentation, deleteSegmentation,
