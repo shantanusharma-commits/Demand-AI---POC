@@ -302,3 +302,20 @@ test('content touching an incident, security or regulation is flagged as sensiti
     assert.ok(E.checkDraft({ channel: 'Email', subject: 'hello', body: `Hi, about ${t}. Worth a chat?` }).flags.some(f => f.rule === 'Sensitive term'), t);
   }
 });
+
+test('deal size: estimated from vertical, size and account type; below the threshold is flagged', () => {
+  const r = sampleRecs();
+  const nw = r.recs.find(x => x.account.name === 'Northwind Refining'), mp = r.recs.find(x => x.account.name === 'Meridian Petrochem');
+  assert.deepEqual([E.estimateDealSize(nw.account).value, E.estimateDealSize(nw.account).below], [600000, false]);
+  assert.deepEqual([E.estimateDealSize(mp.account).value, E.estimateDealSize(mp.account).below], [210000, true]);
+  assert.equal(E.estimateDealSize({ name: 'x' }), null); // nothing to go on: the rule isn't applied
+});
+
+test('a draft that fails a brand or rule check is regenerated once without the source wording', () => {
+  const r = sampleRecs();
+  const ap = r.recs.find(x => x.account.name === 'Andaman Petroleum');
+  const first = E.draftFor(ap, ap.action, { asOf: S.SAMPLE_AS_OF });
+  assert.ok(E.checkDraft(first).flags.some(f => f.rule === 'Pricing or commercial terms'));
+  const again = E.draftFor(ap, ap.action, { asOf: S.SAMPLE_AS_OF, variant: 'clean' });
+  assert.equal(E.checkDraft(again).flags.length, 0);
+});

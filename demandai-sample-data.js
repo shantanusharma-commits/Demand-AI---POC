@@ -60,7 +60,7 @@ const SIGNALS = [
   ['Coral Bay Refinery', '', 'Capital project', '2026-06-10', 'Hydrotreater revamp announced; front-end design under way', 'Account plan', ''],
   ['Sunda Refining', 'dewi.lestari@sundarefining.co.id', 'Installed system (current)', '2026-09-30', 'Control system X R7 running at Cilacap', 'Installed base', 'Control system X R7'],
   ['Andaman Petroleum', 'anong.chai@andamanpetroleum.co.th', 'Installed system near end of support', '2026-09-30', 'Control system X R4 at Map Ta Phut reaches end of support in 2027', 'Installed base', 'Control system X R4'],
-  ['Andaman Petroleum', 'anong.chai@andamanpetroleum.co.th', 'Email clicked', '2026-09-12', 'Clicked "Lifecycle services overview"', 'Campaign tool export', ''],
+  ['Andaman Petroleum', 'anong.chai@andamanpetroleum.co.th', 'Email clicked', '2026-09-12', 'Clicked "Lifecycle services pricing overview"', 'Campaign tool export', ''],
   ['Lotus Chemicals', 'linh.nguyen@lotuschem.vn', 'Newsletter sign-up', '2026-09-02', 'Subscribed to the process automation newsletter', 'Marketing automation', ''],
   ['Lotus Chemicals', 'linh.nguyen@lotuschem.vn', 'Leadership change', '2025-11-02', 'New plant director appointed', 'Customer meeting notes', ''],
   ['Borneo Gas Processing', 'rizal.hamid@borneogas.com.my', 'Content download', '2026-09-15', 'Whitepaper: gas plant control modernisation', 'Marketing automation', ''],

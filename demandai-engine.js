@@ -25,6 +25,10 @@ const CONFIG = {
   spotCheckShare: 0.2,
   // G1: minutes a person spent per usable first action before the pilot (the client's timed baseline; placeholder).
   g1BaselineMinutes: 38,
+  // Success gates: the thresholds agreed at kickoff (placeholders until then).
+  g2Threshold: 70, g1Threshold: 50,
+  // Proceed criteria: an estimated first deal below this goes to a person (USD; placeholder until kickoff).
+  dealSize: { threshold: 250000, base: { core: 600000, adjacent: 350000, other: 150000 } },
   brand: { maxSubjectWords: 6, competitors: [] },
   // The agreed action library per segment (proposed in the process flows; the client approves the final list).
   // The first option is the recommendation; the next is the runner-up unless the strongest signal says otherwise.
@@ -650,6 +654,21 @@ function scoreList(list, signalResult) {
 function lowerFirst(s) { return s && /^[A-Z][a-z]/.test(s) && !/^[A-Z][a-z]+ [A-Z]/.test(s) ? s[0].toLowerCase() + s.slice(1) : s; }
 
 
+/* ─── Estimated deal size, for the proceed criteria ───
+   A rough first-deal estimate: a base by how core the vertical is, scaled by company size and account type.
+   Returns null when there's nothing to go on (no revenue and no headcount), so the rule isn't applied. */
+function estimateDealSize(account) {
+  const d = CONFIG.dealSize, b = CONFIG.sizeBands;
+  const rev = parseNumber(account.revenue || '').value, emp = parseNumber(account.employees || '').value;
+  if (rev === null && emp === null) return null;
+  const base = d.base[account.verticalLevel] || d.base.other;
+  const size = rev !== null ? (rev >= b.revenueAbove ? 1 : rev >= b.revenueIn ? 0.6 : 0.35)
+    : (emp >= b.employeesAbove ? 1 : emp >= b.employeesIn ? 0.6 : 0.35);
+  const type = (CONFIG.accountTypes[normKey(account.accountType)] || CONFIG.accountTypes.other).level;
+  const value = Math.round(base * size * (0.4 + 0.6 * type / 100) / 1000) * 1000;
+  return { value, below: value < d.threshold, basis: `${account.verticalLevel || 'other'} vertical, ${rev !== null ? 'revenue' : 'headcount'} band, ${account.accountType || 'account type unknown'}` };
+}
+
 /* ─── Micro-segments straight from a file: prospects with their signals, one row per signal ───
    For lists scored outside the platform. The score column is optional: without it, a prospect's score is
    their timing alone (signals weighted and stacked as in Scoring), since there's no fit rubric to apply. */
@@ -953,8 +972,10 @@ function draftFor(rec, action, opts = {}) {
   const first = rec.contact.firstName || rec.contact.name.split(' ')[0];
   const copy = COPY[action] || GENERIC;
   const ch = recommendChannel(rec, action, opts.channel);
-  const open = opener(evidenceFor(rec, action), rec.account);
   const variant = opts.variant || '';
+  // 'clean' is the one automatic regeneration after a failed brand or rule check: the opener drops the source wording.
+  const ev = evidenceFor(rec, action);
+  const open = opener(variant === 'clean' ? { ...ev, detail: '' } : ev, rec.account);
   if (ch.channel === 'Task') return { channel: 'Task', why: ch.why, task: `${action} for ${rec.contact.name} at ${rec.account.name}. Context: ${open}`,
     script: copy.script ? callScript(rec, action, open) : null, proof: null };
   const proof = proofFor(action, rec, opts.asOf).item;
@@ -1067,7 +1088,7 @@ function reviewBadge() {
 return {
   CONFIG, CODES, LEAD_COLUMNS, LEAD_REQUIRED, SIGNAL_COLUMNS, SIGNAL_REQUIRED,
   parseCSV, toCSV, readTable, processLeads, classify, personaOf, fitFor, decayFactor,
-  processSignals, scoreList, stack, tierFor, daysBetween, round1, buildSegments, segmentRanks, recommendChannel, draftFor, processScoredProspects, SEGMENT_COLUMNS,
+  processSignals, scoreList, stack, tierFor, daysBetween, round1, buildSegments, segmentRanks, recommendChannel, draftFor, processScoredProspects, SEGMENT_COLUMNS, estimateDealSize,
   briefFor, callScript, checkDraft, confidenceFor, allowedChannels, proofFor, COLLATERAL, PLAYBOOK,
   loadLists, saveList, getList, deleteList, loadScorings, saveScoring, getScoring, deleteScoring,
   loadSegmentations, saveSegmentation, getSegmentation, deleteSegmentation, reviewBadge,

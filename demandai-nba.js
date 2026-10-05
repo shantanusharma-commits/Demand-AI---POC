@@ -79,9 +79,13 @@ function checksOf(r){ const x = draftOf(r), chk = DemandAI.checkDraft(x); return
 function exceptionReasons(r){
   const { chk } = checksOf(r), out = [];
   if(!r.segment) out.push('Segment too small');
+  const deal = DemandAI.estimateDealSize(r.account);
+  if(deal && deal.below) out.push(`Below the deal-size threshold: about USD ${Math.round(deal.value/1000)}k against ${Math.round(DemandAI.CONFIG.dealSize.threshold/1000)}k`);
   if(r.result.confidence==='low') out.push('Low confidence: no contact in the primary persona');
   if(chk.flags.some(f=>f.rule==='Sensitive term')) out.push('Sensitive content');
   if(chk.unsupported.length) out.push("A claim can't be verified");
+  const brand = chk.flags.filter(f=>f.rule!=='Sensitive term');
+  if(brand.length) out.push(`Brand or rule check: ${brand.map(f=>f.rule.toLowerCase()).join(', ')}`);
   return out;
 }
 const exceptionOf = r => exceptionReasons(r).join(' · ');
@@ -95,6 +99,23 @@ const isManager = () => ['Sales manager','Admin'].includes(getRole());
 const myEmail = () => getRole()==='Sales rep' ? 'rep.a@client-sample.com' : null;
 function ownerOf(r){ return dec(r.key).owner || liveRec(r).contact.owner || ''; }
 const mine = r => isManager() || ownerOf(r)===myEmail();
+// 6.3 Step in at any time: the sales manager can pause a whole micro-segment. Its items stay where they are but can't be
+// used or decided until it's resumed.
+const segKey = r => r.segment || '__none';
+const pausedInfo = r => ((RUN.saved.paused||{})[segKey(r)]) || null;
+function pauseSegment(name){
+  if(!isManager()) return;
+  RUN.saved.paused = RUN.saved.paused || {};
+  RUN.saved.paused[name] = { by: me().who, at: Date.now() };
+  RUN.seg.recs.filter(r=>segKey(r)===name).forEach(r=>logIt(r, 'Micro-segment paused', {note:`${name==='__none'?'No micro-segment':name} paused`}));
+  persist(); showToast(`${name==='__none'?'Items with no micro-segment':name} paused`); refresh();
+}
+function resumeSegment(name){
+  if(!isManager() || !RUN.saved.paused) return;
+  delete RUN.saved.paused[name];
+  RUN.seg.recs.filter(r=>segKey(r)===name).forEach(r=>logIt(r, 'Micro-segment resumed'));
+  persist(); showToast('Resumed'); refresh();
+}
 
 // Where an item is: in a queue (exception, spot-check, alternative, sent back, taken control), waiting for the
 // manager's approval, released, or closed.
@@ -102,14 +123,15 @@ const inQueue = d => d.status==='Waiting' || d.spot==='pending';
 const STATUS_TONE = {Waiting:'tag-amber', 'Awaiting approval':'tag-violet', Released:'tag-green', Closed:'tag-red', 'Set aside':'tag-grey', 'Watch list':'tag-grey'};
 const statusTag = s => `<span class="tag ${STATUS_TONE[s]||'tag-grey'}">${esc(s==='Waiting'?'In For Review':s)}</span>`;
 // The status a rep sees on the next best action screen.
-function statusLabel(d){
+function statusLabel(d, r){
+  if(r && pausedInfo(r)) return ['Paused by the sales manager', 'tag-grey'];
   if(d.spot==='pending') return ['Proceeded · spot-check', 'tag-blue'];
   if(d.status==='Waiting') return ['Waiting for you in the exception queue', 'tag-amber'];
   if(d.status==='Awaiting approval') return ['Waiting for the sales manager', 'tag-violet'];
   if(d.status==='Released') return [d.released==='auto' ? 'Proceeded' : d.released==='approved' ? 'Approved' : 'Accepted', 'tag-green'];
   return [d.status, d.status==='Closed' ? 'tag-red' : 'tag-grey'];
 }
-const statusPill = d => { const [t, c] = statusLabel(d); return `<span class="tag ${c}">${esc(t)}</span>`; };
+const statusPill = (d, r) => { const [t, c] = statusLabel(d, r); return `<span class="tag ${c}">${esc(t)}</span>`; };
 function whyHere(d){
   if(d.spot==='pending') return 'Spot-check';
   return {exception:'Exception', alternative:'Alternative', 'sent back':'Sent back', 'stepped in':'Intervention'}[d.why] || 'Exception';
@@ -120,6 +142,14 @@ function whyHere(d){
 function routeRun(){
   const now = Date.now();
   RUN.seg.recs.forEach(r=>{
+    // 5.16 A draft that fails the brand or rule checks is regenerated once on its own before it can become an exception.
+    const first = draftOf(r), flags = DemandAI.checkDraft(first).flags.filter(f=>f.rule!=='Sensitive term');
+    if(flags.length){
+      setDec(r.key, {variant:'clean'});
+      const again = DemandAI.checkDraft(draftOf(r)).flags.filter(f=>f.rule!=='Sensitive term');
+      setDec(r.key, {versions:[{v:1, at:now, by:'System', why:'Generated from the action', draft:first}, {v:2, at:now, by:'System', why:`Regenerated once: ${flags.map(f=>f.rule.toLowerCase()).join(', ')}`, draft:draftOf(r)}]});
+      sysLog(r, 'Regenerated once after a brand or rule check', `${flags.map(f=>`${f.rule}: ${f.detail}`).join(' · ')}${again.length?' · still failing':' · now passes'}`);
+    }
     const rs = exceptionReasons(r);
     if(rs.length){ setDec(r.key, {status:'Waiting', why:'exception', reasons:rs}); sysLog(r, 'To the exception queue', rs.join(' · ')); }
     else { setDec(r.key, {status:'Released', released:'auto', passed:true, by:'System', at:now}); sysLog(r, 'Proceeded on its own', 'Passed all four checks; released to the rep, ready to use'); }
@@ -133,16 +163,18 @@ function isoWeek(t){ const d = new Date(t); d.setHours(0,0,0,0); d.setDate(d.get
 function spotDraws(){ try{ return JSON.parse(localStorage.getItem(SPOT_KEY)||'{}'); }catch(e){ return {}; } }
 function weeklySpotCheck(runs){
   const week = isoWeek(Date.now()), draws = spotDraws();
-  if(draws[week]) return draws[week];
+  const done = (draws[week] && draws[week].reps) || {};
   const byOwner = new Map();
-  runs.forEach(run=>{ const keep = RUN; RUN = run; run.seg.recs.forEach(r=>{ const d = dec(r.key); if(d.passed && d.released==='auto' && d.status==='Released' && !d.spotWeek){ const o = ownerOf(r); if(!byOwner.has(o)) byOwner.set(o, []); byOwner.get(o).push({run, r}); } }); RUN = keep; });
-  let picked = 0;
-  byOwner.forEach(list=>{
+  runs.forEach(run=>{ const keep = RUN; RUN = run; run.seg.recs.forEach(r=>{ const d = dec(r.key); if(d.passed && d.released==='auto' && d.status==='Released' && !d.spotWeek && !pausedInfo(r)){ const o = ownerOf(r) || 'unassigned'; if(!byOwner.has(o)) byOwner.set(o, []); byOwner.get(o).push({run, r}); } }); RUN = keep; });
+  // Once per week per rep: a rep is drawn the first time that week they have items that proceeded.
+  byOwner.forEach((list, owner)=>{
+    if(done[owner] !== undefined) return;
     const order = list.map(x=>[Math.random(), x]).sort((a,b)=>a[0]-b[0]).map(p=>p[1]);
     const n = Math.max(1, Math.round(list.length * DemandAI.CONFIG.spotCheckShare));
-    order.forEach((x,i)=>{ const keep = RUN; RUN = x.run; setDec(x.r.key, {spotWeek:week, spot: i<n ? 'pending' : null}); if(i<n){ sysLog(x.r, 'Picked for the weekly spot-check', week); picked++; } updateRunStats(); RUN = keep; });
+    order.forEach((x,i)=>{ const keep = RUN; RUN = x.run; setDec(x.r.key, {spotWeek:week, spot: i<n ? 'pending' : null}); if(i<n) sysLog(x.r, 'Picked for the weekly spot-check', week); updateRunStats(); RUN = keep; });
+    done[owner] = Math.min(n, list.length);
   });
-  draws[week] = { at: Date.now(), picked };
+  draws[week] = { at: (draws[week]||{}).at || Date.now(), reps: done, picked: Object.values(done).reduce((t,n)=>t+n,0) };
   try{ localStorage.setItem(SPOT_KEY, JSON.stringify(draws)); }catch(e){}
   return draws[week];
 }
@@ -322,7 +354,7 @@ function refresh(){ updateRunStats(); if(typeof onDecision==='function') onDecis
 // Keeps the count that needs a person on the saved list, for the For Review badge on every page.
 function updateRunStats(quiet){
   if(!RUN) return;
-  RUN.saved.stats.waiting = RUN.seg.recs.filter(r=>{ const d = dec(r.key); return inQueue(d) || d.status==='Awaiting approval'; }).length;
+  RUN.saved.stats.waiting = RUN.seg.recs.filter(r=>{ const d = dec(r.key); return !pausedInfo(r) && (inQueue(d) || d.status==='Awaiting approval'); }).length;
   RUN.saved.stats.auto = RUN.seg.recs.filter(r=>dec(r.key).passed).length;
   if(!quiet){ persist(); reviewBadge(); }
 }
@@ -367,7 +399,8 @@ function openRec(key, keepTimer){
   if(!keepTimer || openKey!==key){ openedAt = Date.now(); pickTags = new Set(); pickCode = null; }
   openKey = key;
   const d = dec(key), lr = liveRec(r), c = lr.contact, x = draftOf(r), { chk, conf } = checksOf(r);
-  const live = inQueue(d) && mine(r) && !(typeof CARD_MODE!=='undefined' && CARD_MODE==='use'), action = chosenAction(r), brief = DemandAI.briefFor(lr, action, {asOf:asOf(), channel:d.channel});
+  const paused = pausedInfo(r);
+  const live = inQueue(d) && mine(r) && !paused && !(typeof CARD_MODE!=='undefined' && CARD_MODE==='use'), action = chosenAction(r), brief = DemandAI.briefFor(lr, action, {asOf:asOf(), channel:d.channel});
   document.getElementById('detTitle').textContent = c.name;
   document.getElementById('detSub').textContent = [c.jobTitle, r.account.name].filter(Boolean).join(' · ');
   // 1 · Why it's here, and why now
@@ -419,7 +452,8 @@ function openRec(key, keepTimer){
   const by = d.by ? `${esc(d.by)} · ${fmtDate(d.at)} ${timeOf(d.at)}` : '';
   let decide = '';
   const useMode = typeof CARD_MODE!=='undefined' && CARD_MODE==='use';
-  if(useMode && (inQueue(d) || d.status==='Awaiting approval')) decide = `<div style="font-size:12px;color:var(--i1);margin-bottom:10px">${d.status==='Awaiting approval' ? 'Accepted, and waiting for the sales manager because the content is sensitive.' : d.spot==='pending' ? 'It proceeded and is ready to use. It was also picked for this week\'s spot-check in For Review.' : 'It can\'t be used until it\'s decided in the exception queue.'}</div>
+  if(paused) decide = `<div style="font-size:12px;color:var(--i1);margin-bottom:8px">The ${esc(r.segment||'no-micro-segment')} group was paused by ${esc(paused.by)} on ${fmtDate(paused.at)}. Don't use or decide it until it's resumed.</div>${isManager()?`<button class="btn btn-sec btn-sm" onclick="resumeSegment('${segKey(r)}')">Resume the micro-segment</button>`:''}`;
+  else   if(useMode && (inQueue(d) || d.status==='Awaiting approval')) decide = `<div style="font-size:12px;color:var(--i1);margin-bottom:10px">${d.status==='Awaiting approval' ? 'Accepted, and waiting for the sales manager because the content is sensitive.' : d.spot==='pending' ? 'It proceeded and is ready to use. It was also picked for this week\'s spot-check in For Review.' : 'It can\'t be used until it\'s decided in the exception queue.'}</div>
       <a class="btn btn-primary btn-sm" style="width:100%;justify-content:center;text-decoration:none" href="14-review.html?item=${encodeURIComponent(RUN.saved.id+'::'+key)}">Open in For Review →</a>`;
   else if(inQueue(d) && !mine(r)) decide = `<div style="font-size:12px;color:var(--i2)">In ${esc(repName(ownerOf(r)))}'s queue.</div>`;
   else if(inQueue(d)) decide = `
@@ -443,7 +477,7 @@ function openRec(key, keepTimer){
       ${d.released==='auto' && d.spot!=='pending' && mine(r) ? `<button class="btn btn-ghost btn-sm" style="margin-top:12px" onclick="stepIn('${key}')">Step in: edit or reject it</button>` : ''}`;
   else decide = `<div style="font-size:12px;color:var(--i1)">${esc((REJECT.find(x=>x[0]===d.code)||[])[1]||'Rejected')} · ${by}<div style="color:var(--i2);margin-top:3px">${esc(d.status)}</div></div>`;
   if(!inQueue(d) && typeof nextItem==='function' && typeof hasNext==='function' && hasNext()) decide += `<button class="btn btn-primary btn-sm" style="width:100%;justify-content:center;margin-top:12px" onclick="nextItem()">Next →</button>`;
-  html += panel(inQueue(d) && !useMode ? 'Your decision' : 'Status', inQueue(d) && !useMode ? statusTag('Waiting') : statusPill(d), decide);
+  html += panel(inQueue(d) && !useMode && !paused ? 'Your decision' : 'Status', inQueue(d) && !useMode && !paused ? statusTag('Waiting') : statusPill(d, r), decide);
   const hist = RUN.saved.log.filter(l=>l.key===key);
   if(hist.length) html += `<details class="panel" style="padding:10px 14px"><summary style="cursor:pointer;font-size:11.5px;font-weight:600;color:var(--i2)">History · ${hist.length}</summary>
     ${hist.map(l=>`<div style="padding:7px 0;border-bottom:1px solid var(--s75);font-size:11.5px"><b style="color:var(--i1)">${esc(l.decision)}</b> <span style="color:var(--i3)">· ${esc(l.who)} · ${fmtDate(l.at)} ${timeOf(l.at)}${l.secs!=null?` · ${l.secs}s`:''}</span>${l.note?`<div style="color:var(--i2);margin-top:2px">${esc(l.note)}</div>`:''}</div>`).join('')}

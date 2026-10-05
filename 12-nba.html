@@ -796,7 +796,7 @@ function renderResults(){
         <span style="width:26px;height:26px;border-radius:50%;background:${waiting?'var(--brand)':'var(--pos)'};color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0">${waiting?'→':'✓'}</span>
         <div style="flex:1;font-size:13px;color:var(--i1);line-height:1.5">${waiting
           ? `<b>${auto}</b> passed all four checks and proceeded: ready to use. <b>${exc}</b> ${exc===1?'is':'are'} waiting in the exception queue for a decision.`
-          : `<b>${auto}</b> proceeded on their own and nothing is waiting in the exception queue. Use them below and mark what happened.`}</div>
+          : `<b>${auto}</b> proceeded on their own and nothing is waiting in the exception queue. Use them below and mark what happened.`}${Object.keys(RUN.saved.paused||{}).length?` <b>Paused:</b> ${esc(Object.keys(RUN.saved.paused).map(k=>k==='__none'?'no micro-segment':k).join(', '))}; its items can't be used or decided until it's resumed.`:''}</div>
         <a class="btn btn-primary btn-sm" href="14-review.html" style="text-decoration:none">Open For Review →</a>
       </div>
       ${view==='grid'?gridTab():listTab()}
@@ -832,7 +832,7 @@ function gridTab(){
           <td style="${td};cursor:pointer" onclick="${go(g.name,null)}"><div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">${segTag(g.name)}<span style="font-size:11px;color:var(--i3)">${g.recs.length} account${g.recs.length===1?'':'s'}</span></div>
             <div style="font-size:12px;color:var(--i2)">${esc(SEG_MEANS[g.name]||'')}</div>
             <div style="font-size:12px;color:var(--i1);font-weight:600;margin-top:4px">→ ${esc(DemandAI.CONFIG.segmentLibrary[g.name][0])}</div>
-            ${fb?`<div style="font-size:10.5px;color:var(--i3);margin-top:3px">${fb} of ${byAcc.length} accounts joined on their second signal</div>`:''}</td>
+            ${fb?`<div style="font-size:10.5px;color:var(--i3);margin-top:3px">${fb} of ${byAcc.length} accounts joined on their second signal</div>`:''}${(RUN.saved.paused||{})[g.name]?`<div style="margin-top:6px"><span class="tag tag-grey">Paused by ${esc(RUN.saved.paused[g.name].by)}</span></div>`:''}${isManager()?`<button class="btn btn-ghost btn-sm" style="margin-top:6px;padding:0 6px" onclick="event.stopPropagation();${(RUN.saved.paused||{})[g.name]?'resumeSegment':'pauseSegment'}('${g.name}')">${(RUN.saved.paused||{})[g.name]?'Resume':'Pause this micro-segment'}</button>`:''}</td>
           ${verts.map(v=>tile(g.recs, g.name, v)).join('')}${tile(g.recs, g.name, null)}</tr>`;
       }).join('') : `<tr><td colspan="${verts.length+2}" style="${td};text-align:center;color:var(--i3);font-size:12.5px">No micro-segment formed: fewer than ${min} accounts share a signal.</td></tr>`}</tbody>
     </table></div>`;
@@ -874,7 +874,7 @@ function drawList(){
         <td>${segTag(r.segment)}</td>
         <td class="wrap"><span class="clamp2" style="font-size:12px;color:var(--i1)" title="${esc(chosenAction(r))}">${esc(chosenAction(r))}</span>${r.runnerUp?`<span class="sub" title="${esc(r.runnerUp.action)}">Runner-up: ${esc(r.runnerUp.action)}</span>`:''}</td>
         <td>${cell(x.channel==='Task'?'Task':x.channel)}</td>
-        <td>${statusPill(d)}${d.outcome?`<span class="sub">${esc(d.outcome)}</span>`:isManager()?`<span class="sub">${esc(repName(ownerOf(r)))}</span>`:''}</td>
+        <td>${statusPill(d, r)}${d.outcome?`<span class="sub">${esc(d.outcome)}</span>`:isManager()?`<span class="sub">${esc(repName(ownerOf(r)))}</span>`:''}</td>
       </tr>`;}).join(''), 'No recommendations match.');
 }
 function onDecision(){ renderResults(); }

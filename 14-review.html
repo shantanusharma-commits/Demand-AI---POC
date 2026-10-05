@@ -605,7 +605,8 @@ function items(){
 }
 function withRun(it, fn){ const keep = RUN; RUN = it.run; try{ return fn(); } finally { RUN = keep; } }
 const decOf = it => withRun(it, ()=>dec(it.r.key));
-const myQueue = () => items().filter(it=>withRun(it, ()=>inQueue(dec(it.r.key)) && mine(it.r)));
+const myQueue = () => items().filter(it=>withRun(it, ()=>inQueue(dec(it.r.key)) && mine(it.r) && !pausedInfo(it.r)));
+const pausedCount = () => items().filter(it=>withRun(it, ()=>(inQueue(dec(it.r.key)) || dec(it.r.key).status==='Awaiting approval') && mine(it.r) && pausedInfo(it.r))).length;
 function queuePos(key){ const i = myQueue().findIndex(it=>it.run===RUN && it.r.key===key); return i<0 ? null : i+1; }
 function openItem(id){
   const it = items().find(x=>x.id===id); if(!it) return;
@@ -622,7 +623,7 @@ function onDecision(){ render(); }
 function render(){
   const mgr = isManager(), all = items();
   const queue = myQueue();
-  const approvals = all.filter(it=>decOf(it).status==='Awaiting approval' && withRun(it, ()=>mine(it.r)));
+  const approvals = all.filter(it=>decOf(it).status==='Awaiting approval' && withRun(it, ()=>mine(it.r) && !pausedInfo(it.r)));
   const rel = all.filter(it=>decOf(it).status==='Released' && withRun(it, ()=>mine(it.r)));
   const logs = Object.values(RUNS).flatMap(run=>run.saved.log.map(l=>({...l, runId:run.saved.id}))).sort((a,b)=>b.at-a.at)
     .filter(l=>mgr || l.who===me().who);
@@ -650,7 +651,7 @@ function render(){
     </div>
     <div class="ftabs">${ft('queue',mgr?'Queue':'My queue',queue.length)}${mgr?ft('approvals','Approvals',approvals.length):''}${ft('log','Decision log',logs.length)}</div>
     <div class="canvas">
-      ${all.length ? `<div style="font-size:12.5px;color:var(--i2);margin-bottom:12px;line-height:1.5">Only what needs a person: exceptions, this week's spot-checks and alternatives. <b>${auto}</b> passed all four checks and proceeded on their own; reps use them on <a href="12-nba.html" style="color:var(--brand);font-weight:600;text-decoration:none">Next best action</a>.${SPOT?` Spot-check for ${esc(isoWeek(SPOT.at))} drawn ${fmtDate(SPOT.at)}: ${SPOT.picked} picked.`:''}</div>` :
+      ${all.length ? `<div style="font-size:12.5px;color:var(--i2);margin-bottom:12px;line-height:1.5">Only what needs a person: exceptions, this week's spot-checks and alternatives. <b>${auto}</b> passed all four checks and proceeded on their own; reps use them on <a href="12-nba.html" style="color:var(--brand);font-weight:600;text-decoration:none">Next best action</a>.${SPOT&&SPOT.picked?` This week's spot-check (${esc(isoWeek(SPOT.at))}): ${SPOT.picked} picked across ${Object.keys(SPOT.reps).length} rep${Object.keys(SPOT.reps).length===1?'':'s'}; each rep is drawn once a week.`:''}${pausedCount()?` <b>${pausedCount()}</b> held back because their micro-segment is paused.`:''}</div>` :
         `<div style="font-size:12.5px;color:var(--i2);margin-bottom:12px">Nothing yet. Items arrive here when you build micro-segments. <a href="12-nba.html" style="color:var(--brand);font-weight:600;text-decoration:none">Go to Micro-segments &amp; NBA →</a></div>`}
       ${all.length ? `<div style="display:flex;flex-wrap:wrap;background:var(--surf);border:1px solid var(--border);border-radius:var(--rmd);margin-bottom:14px;overflow:hidden">
         <div style="padding:10px 14px;border-right:1px solid var(--border);width:150px"><div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--brand)">G2 · first pass</div><div style="font-family:var(--fd);font-size:19px;font-weight:700;color:var(--i1);margin-top:2px">${m.weighted===null?'—':Math.round(m.weighted)+'%'}</div><div style="font-size:10.5px;color:var(--i3)">weighted by path${m.partial&&m.weighted!==null?' · one path so far':''}</div></div>
@@ -669,7 +670,7 @@ function draw(){
   const el = document.getElementById('rows'); if(!el) return;
   const mgr = isManager();
   let its = view==='queue' ? myQueue()
-    : view==='approvals' ? items().filter(it=>decOf(it).status==='Awaiting approval' && withRun(it, ()=>mine(it.r)))
+    : view==='approvals' ? items().filter(it=>decOf(it).status==='Awaiting approval' && withRun(it, ()=>mine(it.r) && !pausedInfo(it.r)))
     : items().filter(it=>decOf(it).status==='Released' && withRun(it, ()=>mine(it.r)));
   if(q) its = its.filter(it=>withRun(it, ()=>(liveRec(it.r).contact.name+' '+it.r.account.name+' '+chosenAction(it.r)).toLowerCase().includes(q)));
   const cols = [['Prospect','18%'],['Company','15%'],[view==='released'?'Released':'Why it\'s here','19%'],['Action','24%'],['Channel','10%']];
