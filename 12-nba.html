@@ -826,39 +826,33 @@ function gridTab(){
   const s = RUN.seg, min = DemandAI.CONFIG.minSegmentAccounts;
   const accOf = recs => [...new Map(recs.map(r=>[r.account.id,r])).values()];
   const all = s.recs.map(r=>r.account).concat(s.engagedOnce.map(e=>e.account));
-  const verts = [...new Set(all.map(a=>a.vertical))].sort();
   const rows = s.segments.map(g=>({name:g.name, recs:g.recs}));
-  const max = Math.max(1, ...rows.flatMap(g=>verts.map(v=>accOf(g.recs.filter(r=>r.account.vertical===v)).length)));
-  const go = (seg, v) => `segFilt=${seg?`'${seg}'`:"'__x'"};vertFilt=${v===null?'null':`'${esc(v)}'`};view='list';q='';renderResults()`;
+  const go = seg => `segFilt=${seg?`'${seg}'`:"'__x'"};vertFilt=null;view='list';q='';renderResults()`;
   const th = 'padding:10px 12px;font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--i3);border-bottom:1px solid var(--border);background:var(--s50)';
   const td = 'padding:12px;border-bottom:1px solid var(--border);vertical-align:middle';
-  const tile = (recs, seg, v) => {
-    const accs = accOf(recs.filter(r=>v===null||r.account.vertical===v));
-    if(!accs.length) return `<td style="${td};text-align:center;color:var(--i4)">·</td>`;
-    const inCell = recs.filter(r=>v===null||r.account.vertical===v), np = inCell.filter(r=>dec(r.key).passed).length, alpha = v===null ? .14 : .08 + .32*accs.length/max;
-    return `<td style="${td};text-align:center"><button onclick="${go(seg,v)}" title="See these prospects" style="display:inline-flex;flex-direction:column;align-items:center;justify-content:center;width:100%;max-width:120px;padding:8px 6px;border-radius:10px;background:rgba(125,82,162,${alpha.toFixed(2)})">
-      <span style="font-family:var(--fd);font-size:18px;font-weight:700;color:var(--brand-dk);line-height:1.1">${accs.length}</span>
-      <span style="font-family:var(--fb);font-size:10.5px;color:var(--i2);margin-top:2px">${np} proceeded${inCell.length-np?` · ${inCell.length-np} waiting`:''}</span></button></td>`;
-  };
+  const num = (n, sub, tone) => `<td style="${td};text-align:center"><div style="font-family:var(--fd);font-size:18px;font-weight:700;color:${n?tone:'var(--i4)'};line-height:1.1">${n}</div><div style="font-size:10.5px;color:var(--i3);margin-top:2px">${sub}</div></td>`;
   const grid = `<div style="background:var(--surf);border:1px solid var(--border);border-radius:var(--rmd);overflow-x:auto">
-    <table style="width:100%;border-collapse:collapse;font-family:var(--fb);table-layout:fixed;min-width:${360+verts.length*110}px">
-      <colgroup><col style="width:300px">${verts.map(()=>'<col>').join('')}<col style="width:120px"></colgroup>
-      <thead><tr><th style="${th};text-align:left">Micro-segment · recommended action</th>${verts.map(v=>`<th style="${th};text-align:center">${esc(v)}</th>`).join('')}<th style="${th};text-align:center">All</th></tr></thead>
+    <table style="width:100%;border-collapse:collapse;font-family:var(--fb);table-layout:fixed;min-width:640px">
+      <colgroup><col><col style="width:110px"><col style="width:110px"><col style="width:120px"><col style="width:90px"></colgroup>
+      <thead><tr><th style="${th};text-align:left">Micro-segment · recommended action</th><th style="${th};text-align:center">Accounts</th><th style="${th};text-align:center">Proceeded</th><th style="${th};text-align:center">Waiting</th><th style="${th}"></th></tr></thead>
       <tbody>${rows.length ? rows.map(g=>{
-        const byAcc = accOf(g.recs), fb = byAcc.filter(r=>r.fallback).length;
-        return `<tr>
-          <td style="${td};cursor:pointer" onclick="${go(g.name,null)}"><div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">${segTag(g.name)}<span style="font-size:11px;color:var(--i3)">${g.recs.length} account${g.recs.length===1?'':'s'}</span></div>
+        const byAcc = accOf(g.recs), fb = byAcc.filter(r=>r.fallback).length, np = g.recs.filter(r=>dec(r.key).passed).length;
+        const paused = (RUN.saved.paused||{})[g.name];
+        return `<tr style="cursor:pointer" onclick="${go(g.name)}">
+          <td style="${td}"><div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">${segTag(g.name)}${paused?`<span class="tag tag-grey">Paused by ${esc(paused.by)}</span>`:''}</div>
             <div style="font-size:12px;color:var(--i2)">${esc(SEG_MEANS[g.name]||'')}</div>
             <div style="font-size:12px;color:var(--i1);font-weight:600;margin-top:4px">→ ${esc(DemandAI.CONFIG.segmentLibrary[g.name][0])}</div>
-            ${fb?`<div style="font-size:10.5px;color:var(--i3);margin-top:3px">${fb} of ${byAcc.length} accounts joined on their second signal</div>`:''}${(RUN.saved.paused||{})[g.name]?`<div style="margin-top:6px"><span class="tag tag-grey">Paused by ${esc(RUN.saved.paused[g.name].by)}</span></div>`:''}${isManager()?`<button class="btn btn-ghost btn-sm" style="margin-top:6px;padding:0 6px" onclick="event.stopPropagation();${(RUN.saved.paused||{})[g.name]?'resumeSegment':'pauseSegment'}('${g.name}')">${(RUN.saved.paused||{})[g.name]?'Resume':'Pause this micro-segment'}</button>`:''}</td>
-          ${verts.map(v=>tile(g.recs, g.name, v)).join('')}${tile(g.recs, g.name, null)}</tr>`;
-      }).join('') : `<tr><td colspan="${verts.length+2}" style="${td};text-align:center;color:var(--i3);font-size:12.5px">No micro-segment formed: fewer than ${min} accounts share a signal.</td></tr>`}</tbody>
+            ${fb?`<div style="font-size:10.5px;color:var(--i3);margin-top:3px">${fb} of ${byAcc.length} accounts joined on their second signal</div>`:''}
+            ${isManager()?`<button class="btn btn-ghost btn-sm" style="margin-top:6px;padding:0 6px" onclick="event.stopPropagation();${paused?'resumeSegment':'pauseSegment'}('${g.name}')">${paused?'Resume':'Pause this micro-segment'}</button>`:''}</td>
+          ${num(byAcc.length, byAcc.length===1?'account':'accounts', 'var(--brand-dk)')}${num(np, 'ready to use', 'var(--pos)')}${num(g.recs.length-np, 'in For Review', 'var(--warn)')}
+          <td style="${td};text-align:right"><span class="btn btn-sec btn-sm">View →</span></td></tr>`;
+      }).join('') : `<tr><td colspan="5" style="${td};text-align:center;color:var(--i3);font-size:12.5px">No micro-segment formed: fewer than ${min} accounts share a signal.</td></tr>`}</tbody>
     </table></div>`;
   const note = (tag, text, n, click) => `<div ${click?`onclick="${click}" `:''}style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surf);border:1px solid var(--border);border-radius:var(--rmd);margin-top:8px;${click?'cursor:pointer':''}">${tag}<span style="flex:1;font-size:12px;color:var(--i2)">${text}</span><span style="font-size:12px;font-weight:600;color:var(--i1)">${n}</span>${click?'<span style="color:var(--i3)">›</span>':''}</div>`;
   const exAccs = accOf(s.exceptions);
   return `${grid}
-    <div style="font-size:11px;color:var(--i3);margin:8px 2px 0">A micro-segment is a group of at least ${min} accounts with the same reason to buy now. Numbers are accounts per vertical; click one to see its prospects.</div>
-    ${exAccs.length ? note('<span class="tag tag-grey">No micro-segment</span>', `${esc(exAccs.map(r=>r.account.name).join(', '))}: fewer than ${min} accounts share any of their signals, so each gets its own action.`, `${s.exceptions.length} prospect${s.exceptions.length===1?'':'s'}`, go(null,null)) : ''}
+    <div style="font-size:11px;color:var(--i3);margin:8px 2px 0">A micro-segment is a group of at least ${min} accounts with the same reason to buy now. Click one to see its accounts.</div>
+    ${exAccs.length ? note('<span class="tag tag-grey">No micro-segment</span>', `${esc(exAccs.map(r=>r.account.name).join(', '))}: fewer than ${min} accounts share any of their signals, so each gets its own action.`, `${s.exceptions.length} account${s.exceptions.length===1?'':'s'}`, go(null)) : ''}
     ${s.engagedOnce.length ? note('<span class="tag tag-grey">Engaged once</span>', `${esc(s.engagedOnce.map(e=>e.account.name).join(', '))}: already recommended in this pilot, so not recommended again.`, `${s.engagedOnce.length} account${s.engagedOnce.length===1?'':'s'}`) : ''}`;
 }
 
