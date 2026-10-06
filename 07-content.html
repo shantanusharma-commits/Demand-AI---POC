@@ -35,6 +35,9 @@ html{font-size:16px;-webkit-font-smoothing:antialiased;}
 body{margin:0;font-family:var(--fb);font-size:14px;background:var(--bg);color:var(--i1);overflow:hidden;height:100vh;}
 button{font:inherit;cursor:pointer;border:none;background:none;color:inherit;padding:0;}
 input,textarea,select{font:inherit;}
+:root{color-scheme:light;}
+input,textarea,select{background-color:#fff;color:var(--i1);}
+textarea[readonly],input[readonly]{background-color:var(--s50);}
 ::-webkit-scrollbar{width:4px;}
 ::-webkit-scrollbar-thumb{background:var(--s200);border-radius:2px;}
 @keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.55;transform:scale(1.3);}}
@@ -56,7 +59,7 @@ input,textarea,select{font:inherit;}
 .nav-body::-webkit-scrollbar{width:3px;}
 .nav-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.07);}
 .nav-sec{padding:8px 14px 3px;font-size:9px;letter-spacing:.09em;text-transform:uppercase;color:var(--r4);font-weight:600;}
-.nav-item{display:flex;align-items:center;gap:9px;height:32px;padding:0 10px;margin:1px 6px;border-radius:7px;color:var(--r3);font-size:12.5px;font-weight:500;cursor:pointer;position:relative;transition:background var(--fast) var(--ease),color var(--fast) var(--ease);}
+.nav-item{display:flex;text-decoration:none;align-items:center;gap:9px;height:32px;padding:0 10px;margin:1px 6px;border-radius:7px;color:var(--r3);font-size:12.5px;font-weight:500;cursor:pointer;position:relative;transition:background var(--fast) var(--ease),color var(--fast) var(--ease);}
 .nav-item:hover{background:var(--rhov);color:var(--r2);}
 .nav-item.active{background:var(--ract);color:var(--r1);}
 .nav-item.active::before{content:'';position:absolute;left:0;top:7px;bottom:7px;width:2.5px;background:var(--brand-mid);border-radius:0 2px 2px 0;}
@@ -366,6 +369,60 @@ input,textarea,select{font:inherit;}
 /* Toast */
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--i1);color:#fff;font-size:12.5px;font-weight:500;padding:9px 18px;border-radius:999px;z-index:900;pointer-events:none;animation:fadeUp .2s var(--ease);}
 
+
+/* ─── Data tables and tags (Prospecting, Scoring) ─── */
+.dt-wrap{overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none;}
+.dt-wrap::-webkit-scrollbar{display:none;}
+.dt{width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed;font-size:12.5px;}
+.dt th{padding:11px 16px;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--i3);text-align:left;background:var(--s50);border-bottom:1px solid var(--border);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.dt td{padding:13px 16px;color:var(--i2);border-bottom:1px solid var(--s75);vertical-align:middle;line-height:1.45;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dt tr:last-child td{border-bottom:none;}
+.dt tbody tr{transition:background var(--fast);}
+.dt tbody tr:hover td{background:#FAFBFC;}
+.dt tbody tr.click{cursor:pointer;}
+.dt th.num,.dt td.num{text-align:right;}
+.dt td.num{font-family:var(--fm);font-variant-numeric:tabular-nums;}
+.dt td.wrap{white-space:normal;}
+.dt .dt-main{color:var(--i1);font-weight:600;overflow:hidden;text-overflow:ellipsis;}
+.dt .val{color:var(--i1);overflow:hidden;text-overflow:ellipsis;}
+.dt .sub{display:block;font-size:11px;color:var(--i3);margin-top:2px;overflow:hidden;text-overflow:ellipsis;}
+.dt .muted{color:var(--i4);}
+.dt .person{display:flex;align-items:center;gap:10px;min-width:0;}
+.dt .person > div:last-child{min-width:0;}
+.clamp2{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;white-space:normal;}
+.dt-empty{padding:28px;text-align:center;font-size:12.5px;color:var(--i3);}
+.tag{display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 10px;border-radius:999px;font-family:var(--fb);font-size:11px;font-weight:600;letter-spacing:0;text-transform:none;white-space:nowrap;background:var(--s75);color:var(--i2);vertical-align:middle;}
+.tag::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0;}
+.tag-green{background:#E8F5EE;color:#24704F;}
+.tag-amber{background:#FDF2E1;color:#A8620F;}
+.tag-red{background:#FBEAEA;color:#A83A3A;}
+.tag-blue{background:#E4F2FB;color:#00659A;}
+.tag-violet{background:#F0EAF8;color:#6A4290;}
+.tag-teal{background:#E3F4F2;color:#1B7369;}
+.tag-pink{background:#FBE9F1;color:#A1386A;}
+.tag-grey{background:#EEF1F4;color:#5B6774;}
+.tags{display:flex;flex-wrap:wrap;gap:6px;}
+
+/* ─── Checks pop-up ─── */
+@keyframes ckspin{to{transform:rotate(360deg);}}
+@keyframes ckpop{from{transform:scale(.6);opacity:0;}to{transform:scale(1);opacity:1;}}
+.ck{width:22px;height:22px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;}
+.ck-wait{border:2px solid var(--s100);}
+.ck-run{border:2.5px solid var(--brand-lt);border-top-color:var(--brand);animation:ckspin .7s linear infinite;}
+.ck-ok{background:var(--pos);color:#fff;animation:ckpop .2s var(--ease);}
+.ck-warn{background:var(--warn);color:#fff;animation:ckpop .2s var(--ease);}
+.ck-stop{background:var(--neg);color:#fff;animation:ckpop .2s var(--ease);}
+.ck-info{background:var(--s300);color:#fff;animation:ckpop .2s var(--ease);}
+.ck-row{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--s75);transition:opacity var(--base);}
+.ck-row.pending{opacity:.45;}
+
+/* ─── Checkboxes: grey when empty, brand colour when ticked ─── */
+.dt input[type=checkbox]{-webkit-appearance:none;appearance:none;width:16px;height:16px;margin:0;border-radius:4px;border:1.5px solid var(--s200);background:var(--s75);cursor:pointer;vertical-align:middle;display:inline-grid;place-content:center;transition:background var(--fast),border-color var(--fast);}
+.dt input[type=checkbox]:hover{border-color:var(--s300);}
+.dt input[type=checkbox]:checked,.dt input[type=checkbox]:indeterminate{background:var(--brand);border-color:var(--brand);}
+.dt input[type=checkbox]:checked::after{content:'';width:9px;height:5px;border:2px solid #fff;border-top:0;border-right:0;transform:translateY(-1px) rotate(-45deg);}
+.dt input[type=checkbox]:indeterminate::after{content:'';width:8px;height:2px;background:#fff;border-radius:1px;}
+.dt input[type=checkbox]:focus-visible{outline:2px solid var(--brand-mid);outline-offset:2px;}
 </style>
 </head>
 <body>
@@ -380,7 +437,7 @@ input,textarea,select{font:inherit;}
     <div><div class="nav-nm">DemandAI</div></div>
   </div>
   <div class="nav-body">
-    <a class="nav-item active" href="00-today.html">
+    <a class="nav-item " href="00-today.html">
       <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
       <span class="nav-lbl">Today</span>
     </a>
@@ -437,274 +494,310 @@ input,textarea,select{font:inherit;}
   </div>
 </nav>
 
+<!-- ════ MAIN ════ -->
 <main class="main" id="mainArea"></main>
 
+<!-- Detail drawer -->
 <div class="detail-drawer" id="detailDrawer">
   <div class="drawer-hdr">
-    <div><div class="drawer-title" id="detTitle">Item detail</div><div class="drawer-sub" id="detSub">—</div></div>
-    <div class="drawer-close" onclick="closeDrawer()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
+    <div>
+      <div class="drawer-title" id="detTitle">Recommendation</div>
+      <div class="drawer-sub" id="detSub">—</div>
+    </div>
+    <div class="drawer-close" onclick="closeDrawer()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </div>
   </div>
-  <div class="drawer-body" id="detBody"></div>
+  <div class="drawer-body" id="detBody">
+    <div class="detail-empty" style="padding:40px 0">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--i4)" stroke-width="1.5" stroke-linecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      <div style="font-size:11.5px;color:var(--i4);line-height:1.5;text-align:center">Click any row<br>to see the breakdown</div>
+    </div>
+  </div>
 </div>
-</div>
+</div><!-- /shell -->
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="demandai-engine.js"></script>
+<script src="demandai-sample-data.js"></script>
+<script src="demandai-nba.js"></script>
 <script>
 function showToast(msg){document.querySelectorAll('.toast').forEach(t=>t.remove());const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2600);}
+function initials(n){return String(n).split(' ').filter(Boolean).map(w=>w[0]).join('').slice(0,2).toUpperCase();}
+function avColor(id){const c=['#7D52A2','#0094DA','#FF8820','#2E7D5A','#B23F3F'];let h=0;for(const ch of String(id))h+=ch.charCodeAt(0);return c[h%c.length];}
 function closeDrawer(){ document.getElementById('detailDrawer').classList.remove('open'); }
+function esc(s){return String(s===undefined||s===null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function fallbackDownload(name, text){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'text/csv'}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},0);}
+// On claude.ai the page can't start a download itself: the viewer confirms a save. Opened as a plain file, it downloads directly.
+async function download(name, text){
+  let dl = null;
+  try{ dl = window.claude && window.claude.use ? await window.claude.use('downloads') : null; }catch(e){ dl = null; }
+  if(!dl){ fallbackDownload(name, text); return; }
+  try{ await dl.save({filename:name, data:text}); showToast(name+' saved'); }
+  catch(e){ if(e && e.code==='declined') return; showToast(e && e.code==='rate_limited' ? 'A save is already open' : "This view can't save files"); }
+}
+function todayIso(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+const fmt1 = n => n===undefined||n===null ? '—' : (Math.round(n*10)/10).toLocaleString('en-US',{minimumFractionDigits:n%1?1:0,maximumFractionDigits:1});
+const fmtDate = t => new Date(t).toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'});
 
-let activeTab = 'claims';
+function readFileToGrids(file){
+  return new Promise((resolve,reject)=>{
+    const isCsv = /\.csv$/i.test(file.name), isXlsx = /\.(xlsx|xls)$/i.test(file.name);
+    if(!isCsv && !isXlsx){ reject(new Error('Use a .csv or .xlsx file')); return; }
+    const reader = new FileReader();
+    reader.onerror = ()=>reject(new Error('Could not read the file'));
+    reader.onload = ev=>{
+      try{
+        if(isCsv){ resolve([{sheet:'(CSV)', grid:DemandAI.parseCSV(ev.target.result)}]); return; }
+        if(typeof XLSX==='undefined'){ reject(new Error('The Excel reader did not load. Save the sheet as CSV and upload that instead')); return; }
+        const wb = XLSX.read(new Uint8Array(ev.target.result),{type:'array',cellDates:true});
+        resolve(wb.SheetNames.map(n=>({sheet:n, grid:XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true,defval:''})})));
+      }catch(e){ reject(e); }
+    };
+    if(isCsv) reader.readAsText(file); else reader.readAsArrayBuffer(file);
+  });
+}
+function pickSheet(grids){
+  const has = g => g.grid.slice(0,10).some(r=>(r||[]).some(c=>String(c).trim().toLowerCase().replace(/\*/g,'').replace(/\s+/g,'_')==='signal_type'));
+  return grids.find(g=>/signal template/i.test(g.sheet) && has(g)) || grids.find(has) || grids[0];
+}
 
-const APPROVED_CLAIMS = [
-  {id:'c1', text:'Meridian Chemical Corp migrated from a legacy DCS to our platform in 2024 with zero unplanned downtime during cutover', source:'Case study: Meridian Chemical Corp Migration', product:'Process control DCS platform', vertical:'Chemicals', owner:'Rajiv Nair', status:'approved', expiry:'2026-03-15', citedIn:4},
-  {id:'c2', text:'Average site-assessment turnaround is 10 business days from request to report', source:'Internal service-level record', product:'Process control DCS platform', vertical:'All', owner:'Rajiv Nair', status:'approved', expiry:'2026-01-20', citedIn:2},
-  {id:'c3', text:'Our OT-cyber compliance guide covers grid-reliability audit requirements', source:null, product:'Process control DCS platform', vertical:'Power Generation', owner:'Rajiv Nair', status:'draft', expiry:'—', citedIn:0},
-];
-const BANNED = [
-  {id:'b1', rule:'Never claim "zero downtime" without a named, cited case study', reason:'Unsupportable as a general claim'},
-  {id:'b2', rule:'Never use "guaranteed" in relation to savings or ROI', reason:'Legal — no guarantee language'},
-  {id:'b3', rule:'Never name a specific competitor product in outbound content', reason:'Brand guideline'},
-];
-const COLLATERAL = [
-  {id:'k1', title:'Migration Case Study — Meridian Chemical Corp', type:'Case study', product:'Process control DCS platform', vertical:'Chemicals', actions:['Propose a migration or upgrade discussion'], owner:'Rajiv Nair', status:'approved', expiry:'2026-03-15', citedIn:4},
-  {id:'k2', title:'Site Assessment Overview — One-pager', type:'Datasheet', product:'Process control DCS platform', vertical:'All', actions:['Offer a site assessment or health check'], owner:'Rajiv Nair', status:'approved', expiry:'2026-06-01', citedIn:3},
-  {id:'k3', title:'Regulatory Compliance Brief — Grid Reliability', type:'Whitepaper', product:'Process control DCS platform', vertical:'Power Generation', actions:['Invite to a webinar or event'], owner:'Rajiv Nair', status:'expired', expiry:'2025-11-01', citedIn:1},
-];
-const MESSAGES = [
-  {id:'m1', stage:'Awareness', message:'A modern DCS platform reduces unplanned downtime and simplifies compliance reporting.', proof:'c1'},
-  {id:'m2', stage:'Consideration', message:'Site assessments typically surface 2–3 concrete risks worth addressing before a renewal decision locks in.', proof:'c2'},
-  {id:'m3', stage:'Purchase', message:'Migration projects are scoped to run alongside existing operations, not replace them overnight.', proof:'c1'},
-  {id:'m4', stage:'Loyalty', message:'Existing customers get priority scheduling on site assessments and health checks.', proof:null},
-];
-const BRAND_DOCS = [
-  {name:'Client Brand Guidelines v3.pdf', size:'2.4 MB', owner:'Rajiv Nair', when:'3 weeks ago', status:'approved'},
-  {name:'Sign-off and Email Signature Standards.docx', size:'180 KB', owner:'Rajiv Nair', when:'3 weeks ago', status:'approved'},
-  {name:'Q1 Messaging Refresh — Draft.pptx', size:'5.1 MB', owner:'Rajiv Nair', when:'2 days ago', status:'draft'},
-];
-const BRAND = {
-  tone: 'Direct, specific, no hype. Lead with the account\u2019s own signal, not a generic pitch.',
-  signoff: '"Best, [newline] Client Team" — no first names of AEs unless the rep edits it in.',
-  glossary: [{use:'site assessment', not:'audit'},{use:'process control platform', not:'system' },{use:'DCS', not:'legacy control system'}],
-};
+/* ═══════════════ SHARED PIECES: tables, tags, pop-ups ═══════════════ */
+function table(cols, rows, empty){
+  return `<div class="dt-wrap"><table class="dt">
+    <colgroup>${cols.map(c=>`<col style="width:${c[1]}">`).join('')}</colgroup>
+    <thead><tr>${cols.map(c=>`<th class="${c[2]||''}">${c[0]}</th>`).join('')}</tr></thead>
+    <tbody>${rows || `<tr><td colspan="${cols.length}" class="dt-empty">${empty}</td></tr>`}</tbody>
+  </table></div>`;
+}
+const cell = (v, sub, cls='val') => `<span class="${cls}" title="${esc(v||'')}">${v?esc(v):'<span class="muted">—</span>'}</span>${sub?`<span class="sub" title="${esc(String(sub).replace(/<[^>]+>/g,''))}">${sub}</span>`:''}`;
+const SEG_TONE = {Inquiry:'tag-blue',Modernisation:'tag-violet','Service renewal':'tag-teal',Project:'tag-amber',Leadership:'tag-pink',Engagement:'tag-green'};
+function tagChip(t){ const c = DemandAI.CONFIG.signalTypes[t]; return `<span class="tag ${(c&&SEG_TONE[c.segment])||'tag-grey'}">${esc(t)}</span>`; }
+function tierPill(t){
+  const m = {A:['tag-green','Tier A'],B:['tag-amber','Tier B'],C:['tag-blue','Tier C'],'Watch list':['tag-grey','Watch list'],'Below fit floor':['tag-grey','Below floor'],Excluded:['tag-red','Excluded']}[t];
+  return `<span class="tag ${m[0]}">${m[1]}</span>`;
+}
+function overlay(id){
+  let ov = document.getElementById(id);
+  if(!ov){ ov=document.createElement('div'); ov.id=id; ov.style.cssText='position:fixed;inset:0;background:rgba(20,26,33,.45);z-index:600;display:flex;align-items:center;justify-content:center;padding:16px'; document.body.appendChild(ov); }
+  ov.style.display='flex'; return ov;
+}
+const hide = id => { const el=document.getElementById(id); if(el) el.style.display='none'; };
+function search(fn, ph){ return `<div class="sl-srch"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="color:var(--i3);flex-shrink:0"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><input type="text" placeholder="${ph}" value="${esc(q)}" oninput="q=this.value.toLowerCase();${fn}()"></div>`; }
+const pill = (cur,id,label) => `<div class="seg-pill ${cur===id?'active':''}" onclick="filt='${id}';renderResults()">${label}</div>`;
 
-const ACTIONS_COVERAGE = [
-  {action:'Propose a migration or upgrade discussion', proof:true},
-  {action:'Share a relevant case study or reference project', proof:true},
-  {action:'Offer a site assessment or health check', proof:true},
-  {action:'Invite to a webinar or event', proof:false},
-  {action:'Introduction to a new leader in a buying role', proof:false},
-  {action:'Consideration message on the use case', proof:false},
-  {action:'Cross-sell to an existing customer site', proof:false},
-  {action:'Follow up on an inquiry or RFQ', proof:false},
-];
+/* ═══════════════ CONTENT LIBRARY: the brand pack the drafts follow ═══════════════ */
+let tab = 'guidelines', DRAFT = null, SUGGEST = null;
+const canEdit = () => ['Admin','Sales manager'].includes(getRole());
+const canPublish = () => getRole()==='Admin';
+function me(){ const r = getRole(); return { who: ROLE_PERSON[r] || r, role: r }; }
+const SECTIONS = [['guidelines','Brand guidelines'],['voice','Voice and tone'],['negative','Negative keywords'],['claims','Approved claims'],['framework','Messaging framework'],['versions','Versions']];
+const SECTION_KEYS = { guidelines:['guideline'], voice:['voice'], negative:['negative','competitors'], claims:['claims'], framework:['framework'] };
+function draft(){ if(!DRAFT) DRAFT = DemandAI.brandDraft(); return DRAFT; }
+function changedSections(){
+  const live = DemandAI.brandPack(), d = DemandAI.brandPending();
+  if(!d) return [];
+  return SECTIONS.filter(([k])=>SECTION_KEYS[k] && SECTION_KEYS[k].some(f=>JSON.stringify(live[f]??null)!==JSON.stringify(d.draft[f]??null))).map(s=>s[1]);
+}
+function commit(msg){
+  if(!canEdit()){ showToast('Only the admin or sales manager can change the brand pack'); return; }
+  if(!DemandAI.saveBrandDraft(draft())){ showToast("This browser blocks storage, so changes can't be kept"); return; }
+  if(msg) showToast(msg);
+  render();
+}
+const field = 'padding:8px 10px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:12.5px;color:var(--i1);background:#fff';
+const label = t => `<div style="font-size:11px;font-weight:600;color:var(--i2);margin:12px 0 5px">${t}</div>`;
+const card = (title, right, body) => `<div class="panel" style="margin-bottom:14px"><div class="panel-hdr"><span class="panel-ttl">${title}</span>${right||''}</div><div class="panel-body">${body}</div></div>`;
+const ro = () => canEdit() ? '' : 'disabled';
 
-function renderMain(){
+function render(){
+  const live = DemandAI.brandPack(), pend = DemandAI.brandPending(), changed = changedSections();
+  const ft = (k,l) => `<div class="ftab ${tab===k?'active':''}" onclick="tab='${k}';render()">${l}${changed.includes(l)?' <span style="width:6px;height:6px;border-radius:50%;background:var(--ter);display:inline-block;margin-left:4px"></span>':''}</div>`;
   document.getElementById('mainArea').innerHTML = `
-    <div class="topbar">
-      <div class="topbar-l"><span class="tb-title">Content library</span></div>
-      <div class="topbar-r">${activeTab!=='coverage' ? `<button class="btn btn-primary btn-sm" onclick="openAddModal()">+ Add</button>` : ''}</div>
-    </div>
-    <div class="ftabs">
-      <div class="ftab ${activeTab==='brand'?'active':''}" onclick="switchTab('brand')">Brand guidelines</div>
-      <div class="ftab ${activeTab==='claims'?'active':''}" onclick="switchTab('claims')">Approved claims</div>
-      <div class="ftab ${activeTab==='banned'?'active':''}" onclick="switchTab('banned')">Banned phrases</div>
-      <div class="ftab ${activeTab==='collateral'?'active':''}" onclick="switchTab('collateral')">Case studies &amp; collateral</div>
-      <div class="ftab ${activeTab==='messages'?'active':''}" onclick="switchTab('messages')">Key messages</div>
-      <div class="ftab ${activeTab==='coverage'?'active':''}" onclick="switchTab('coverage')">Coverage</div>
-    </div>
-    <div class="canvas">${renderTabBody()}</div>
-  `;
+    <div class="topbar"><div class="topbar-l"><span class="tb-title">Content library</span><span class="tb-badge badge-neutral">Live: ${esc(DemandAI.brandVersion())}</span></div></div>
+    <div class="ftabs">${SECTIONS.map(([k,l])=>ft(k,l)).join('')}</div>
+    <div class="canvas">
+      ${pend && changed.length ? `<div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--ter-lt);border-radius:var(--rmd);margin-bottom:16px">
+        <div style="flex:1;font-size:12.5px;color:var(--i1);line-height:1.5"><b>Unpublished changes</b> in ${esc(changed.join(', '))}. Drafts keep using ${esc(DemandAI.brandVersion())} until they're published.${pend.submitted?` Submitted for approval by ${esc(pend.submitted.by)} on ${fmtDate(pend.submitted.at)}.`:''}</div>
+        ${canPublish() ? `<button class="btn btn-primary btn-sm" onclick="publish()">Publish as v${live.v+1}</button>` : canEdit() && !pend.submitted ? `<button class="btn btn-primary btn-sm" onclick="submitForApproval()">Submit for approval</button>` : ''}
+        ${canEdit() ? `<button class="btn btn-ghost btn-sm" onclick="discard()">Discard</button>` : ''}
+      </div>` : ''}
+      ${!canEdit() ? `<div style="font-size:12px;color:var(--i3);margin-bottom:14px">View only: the admin and the sales manager maintain the brand pack.</div>` : ''}
+      <div style="max-width:980px">${({guidelines:guidelinesTab, voice:voiceTab, negative:negativeTab, claims:claimsTab, framework:frameworkTab, versions:versionsTab})[tab]()}</div>
+    </div>`;
+}
+function publish(){
+  const note = prompt('What changed? (recorded with the version)', changedSections().join(', ')) ;
+  if(note===null) return;
+  const v = DemandAI.publishBrand(me().who, note);
+  if(!v){ showToast('Nothing to publish'); return; }
+  DRAFT = null; showToast(`Published as Brand v${v.v}: new drafts follow it`); render();
+}
+function submitForApproval(){ DemandAI.submitBrand(me().who); showToast('Submitted: the admin publishes it'); render(); }
+function discard(){ if(!confirm('Discard the unpublished changes?')) return; DemandAI.discardBrandDraft(); DRAFT = null; showToast('Discarded'); render(); }
+
+/* ─── Brand guidelines: the reference document, and rules read from it ─── */
+function guidelinesTab(){
+  const g = draft().guideline;
+  return card('Brand guideline document', '', `
+      ${g ? `<div style="display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--rsm);margin-bottom:12px">
+          <div style="flex:1"><div style="font-size:12.5px;font-weight:600;color:var(--i1)">${esc(g.name)}</div><div style="font-size:11px;color:var(--i3)">${Math.round(g.size/1024)} KB · uploaded by ${esc(g.by)} on ${fmtDate(g.at)}${g.data?'':' · reference only (too large to keep in the browser)'}</div></div>
+          ${g.data?`<a class="btn btn-sec btn-sm" href="${g.data}" download="${esc(g.name)}" style="text-decoration:none">Open</a>`:''}
+          ${canEdit()?`<button class="btn btn-ghost btn-sm" onclick="draft().guideline=null;SUGGEST=null;commit('Removed')">Remove</button>`:''}</div>` : ''}
+      ${canEdit() ? `<label for="gFile" style="display:block;border:1.5px dashed var(--bdk);border-radius:var(--rmd);padding:20px;cursor:pointer;background:var(--s50);text-align:center">
+          <input type="file" id="gFile" accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.md" style="display:none" onchange="onGuideline(this.files[0])">
+          <div style="font-size:13px;font-weight:600;color:var(--i1)">${g?'Replace the guideline document':'Upload the brand guideline document'}</div>
+          <div style="font-size:11px;color:var(--i3);margin-top:3px">PDF, Word or PowerPoint is kept as the reference. A .txt or .md file is also read for rules you can add in one click.</div></label>` : ''}
+      ${label('Key rules from the guidelines, in your words')}
+      <textarea ${ro()} rows="5" style="width:100%;${field};line-height:1.6" onchange="draft().voice.notes=this.value;commit('Saved to the draft')">${esc(draft().voice.notes||'')}</textarea>
+      <div style="font-size:11px;color:var(--i3);margin-top:6px">For the reviewer's reference. What the drafts follow strictly is set on the other tabs: voice and tone, negative keywords, approved claims and the messaging framework.</div>`)
+    + (SUGGEST ? card('Rules found in the document', `<span style="font-size:11px;color:var(--i3)">${esc(SUGGEST.name)}</span>`,
+        (SUGGEST.items.length ? SUGGEST.items.map((x,i)=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--s75);font-size:12px">
+            <span class="tag tag-grey">${esc(x.kind)}</span><span style="flex:1;color:var(--i1)">${esc(x.value)}</span>
+            ${x.added?'<span style="color:var(--pos);font-weight:600">Added</span>':canEdit()?`<button class="btn btn-sec btn-sm" onclick="addSuggestion(${i})">Add to the draft</button>`:''}</div>`).join('')
+          : '<div style="font-size:12px;color:var(--i3)">No rules in a form the system can read. Lines like "Never use the word synergy", "Do not mention Acme", "Always sign off as …", "Keep emails under 120 words" or "Tone: formal" are picked up.</div>')) : '');
+}
+async function onGuideline(file){
+  if(!file) return;
+  const keep = file.size <= 1.5*1024*1024;
+  const data = keep ? await new Promise(res=>{ const r = new FileReader(); r.onload = ()=>res(r.result); r.onerror = ()=>res(null); r.readAsDataURL(file); }) : null;
+  draft().guideline = { name:file.name, size:file.size, at:Date.now(), by:me().who, data };
+  SUGGEST = null;
+  if(/\.(txt|md)$/i.test(file.name)){ const text = await file.text(); SUGGEST = { name:file.name, items: readRules(text) }; }
+  commit(`${file.name} added to the draft${SUGGEST?`; ${SUGGEST.items.length} rule${SUGGEST.items.length===1?'':'s'} found`:''}`);
+}
+// Reads plain statements of the rules from a text guideline. Anything else stays in the document for people to read.
+function readRules(text){
+  const out = [], split = v => v.split(/[,;|]| or | and /).map(x=>x.replace(/["“”'‘’.]/g,'').replace(/^(?:the )?(?:words?|phrases?|terms?)\s+/i,'').trim()).filter(x=>x && x.length<40);
+  const clean = v => v.replace(/["“”'‘’]/g,'').replace(/[.\s]+$/,'').trim();
+  text.split(/\r?\n/).forEach(line=>{
+    const l = line.replace(/^[\s*\-•#\d.)]+/,'').trim();
+    let m;
+    if((m = l.match(/^competitors?\s*(?:are|include)?\s*[:\-]?\s*(.+)$/i)) || (m = l.match(/^(?:do not|don't|never)\s+(?:mention|name|reference)\s+(?:competitors?\s*(?:such as|like|:)?\s*)?(.+)$/i))) split(m[1]).forEach(v=>out.push({kind:'Competitor', value:v}));
+    else if((m = l.match(/^(?:avoid|never (?:say|use|write)|do not (?:say|use|write)|don't (?:say|use|write)|banned(?: words| phrases)?|negative keywords?)\s*[:\-]?\s*(.+)$/i))) split(m[1]).forEach(v=>out.push({kind:'Negative keyword', value:v}));
+    else if((m = l.match(/^(?:always\s+)?sign[\s-]?off(?:\s+(?:as|with))?\s*[:\-]?\s*(.+)$/i))) out.push({kind:'Sign-off', value:clean(m[1])});
+    else if((m = l.match(/(?:emails?|messages?|drafts?).*?(?:under|below|at most|no more than|max(?:imum)?(?: of)?)\s+(\d+)\s+words/i))) out.push({kind:'Email length', value:m[1]});
+    else if((m = l.match(/sentences?.*?(?:under|below|at most|no more than|max(?:imum)?(?: of)?|no longer than)\s+(\d+)\s+words/i))) out.push({kind:'Sentence length', value:m[1]});
+    else if((m = l.match(/^(?:tone|voice)\b\s*(?:should be|is|:|-)?\s*(.+)$/i)) || (m = l.match(/^(?:be|write|sound)\s+(formal|warm|friendly|direct|concise)\b(.*)$/i))){ const p = /formal/i.test(m[1]) ? 'Formal' : /warm|friendly/i.test(m[1]) ? 'Warm' : /direct|concise/i.test(m[1]) ? 'Direct' : null; if(p) out.push({kind:'Voice', value:p}); }
+    else if((m = l.match(/^(?:never open with|don't open with|do not open with|avoid opening with)\s*[:\-]?\s*(.+)$/i))) split(m[1]).forEach(v=>out.push({kind:'Banned opener', value:v}));
+    else if(/no exclamation|exclamation marks?.*(?:never|avoid|not)|(?:never|avoid|don't|do not) use exclamation/i.test(l)) out.push({kind:'Rule', value:'No exclamation marks'});
+  });
+  const seen = new Set(); return out.filter(x=>{ const k = x.kind+'|'+x.value.toLowerCase(); return !seen.has(k) && seen.add(k); });
+}
+function addSuggestion(i){
+  const x = SUGGEST.items[i], d = draft();
+  if(x.kind==='Negative keyword' && !d.negative.some(w=>w.toLowerCase()===x.value.toLowerCase())) d.negative.push(x.value.toLowerCase());
+  if(x.kind==='Competitor' && !d.competitors.includes(x.value)) d.competitors.push(x.value);
+  if(x.kind==='Sign-off') d.voice.signoff = x.value;
+  if(x.kind==='Voice') d.voice.preset = x.value;
+  if(x.kind==='Banned opener') (d.voice.bannedOpeners = d.voice.bannedOpeners || []).push(x.value);
+  if(x.kind==='Rule') d.voice.noExclamation = true;
+  if(x.kind==='Email length') d.voice.maxWords = +x.value;
+  if(x.kind==='Sentence length') d.voice.maxSentenceWords = +x.value;
+  x.added = true; commit('Added to the draft');
 }
 
-function switchTab(t){ activeTab = t; renderMain(); }
-
-function statusBadge(s){
-  if(s==='approved') return '<span class="sc sc-h">APPROVED</span>';
-  if(s==='draft') return '<span class="sc sc-m">DRAFT</span>';
-  return '<span class="sc sc-l">EXPIRED</span>';
-}
-function expiringSoon(dateStr){
-  if(dateStr==='—') return false;
-  const d = new Date(dateStr); const now = new Date('2026-01-20'); // pilot "today"
-  const days = (d-now)/(1000*60*60*24);
-  return days>=0 && days<=30;
-}
-
-function renderTabBody(){
-  if(activeTab==='brand') return `
-    <div class="panel" style="margin-bottom:14px">
-      <div class="panel-hdr"><span class="panel-ttl">Uploaded documents</span></div>
-      <div class="panel-body" style="padding:0">
-        ${BRAND_DOCS.map(d=>`<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--s75)">
-          <span style="font-size:16px">📎</span>
-          <div style="flex:1"><div style="font-size:12px;font-weight:600;color:var(--i1)">${d.name}</div><div style="font-size:10.5px;color:var(--i3)">${d.size} · uploaded by ${d.owner} · ${d.when}</div></div>
-          ${statusBadge(d.status)}
-        </div>`).join('')}
-        <div style="padding:10px 14px"><button class="btn btn-sec btn-sm" onclick="openAddModal()">+ Upload a document</button></div>
+/* ─── Voice and tone ─── */
+function voiceTab(){
+  const v = draft().voice, P = DemandAI.VOICE_PRESETS, pre = P[v.preset] || P.Direct;
+  const sample = `${pre.greeting.replace('{first}','Aditi')}\n\nSaw you opened "Migration planning guide". A comparable refinery moved its legacy control system to a current platform within one planned shutdown. [Case study, 2025]\n\nWorth comparing the options?\n\n${pre.closing}\n${v.signoff||'Client Team'}`;
+  return card('Voice', '', `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">${Object.entries(P).map(([k,p])=>`<button ${ro()} onclick="draft().voice.preset='${k}';commit('Voice set to ${k}')" style="text-align:left;padding:12px;border-radius:var(--rsm);border:1px solid ${v.preset===k?'var(--brand)':'var(--border)'};background:${v.preset===k?'var(--brand-lt)':'var(--surf)'}">
+        <div style="font-size:13px;font-weight:700;color:var(--i1)">${k}</div><div style="font-size:11.5px;color:var(--i2);margin-top:3px;line-height:1.5">${esc(p.about)}</div>
+        <div style="font-size:11px;color:var(--i3);margin-top:6px">${esc(p.greeting.replace('{first}','Aditi'))} … ${esc(p.closing)}</div></button>`).join('')}</div>`)
+    + card('Rules every draft must meet', '', `<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 18px">
+        <div>${label('Sign-off')}<input ${ro()} value="${esc(v.signoff||'')}" style="width:100%;${field}" onchange="draft().voice.signoff=this.value.trim();commit('Saved to the draft')"></div>
+        <div>${label('Email length (words, at most)')}<input ${ro()} type="number" value="${v.maxWords}" style="width:100%;${field}" onchange="draft().voice.maxWords=+this.value;commit('Saved to the draft')"></div>
+        <div>${label('Sentence length (words, at most)')}<input ${ro()} type="number" value="${v.maxSentenceWords}" style="width:100%;${field}" onchange="draft().voice.maxSentenceWords=+this.value;commit('Saved to the draft')"></div>
+        <div>${label('Punctuation')}<label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--i1);padding:8px 0"><input ${ro()} type="checkbox" ${v.noExclamation?'checked':''} onchange="draft().voice.noExclamation=this.checked;commit('Saved to the draft')" style="accent-color:var(--brand)">No exclamation marks</label></div>
       </div>
-    </div>
-    <div class="panel" style="margin-bottom:14px">
-      <div class="panel-hdr"><span class="panel-ttl">Tone of voice</span></div>
-      <div class="panel-body" style="font-size:12px;color:var(--i2);line-height:1.6">${BRAND.tone}</div>
-    </div>
-    <div class="panel" style="margin-bottom:14px">
-      <div class="panel-hdr"><span class="panel-ttl">Sign-off format</span></div>
-      <div class="panel-body" style="font-size:12px;color:var(--i2);white-space:pre-line">${BRAND.signoff}</div>
-    </div>
-    <div class="panel">
-      <div class="panel-hdr"><span class="panel-ttl">Glossary</span></div>
-      <div class="panel-body" style="padding:0">
-        ${BRAND.glossary.map(g=>`<div style="display:flex;gap:16px;padding:9px 14px;border-bottom:1px solid var(--s75);font-size:12px"><span style="color:var(--pos);font-weight:600">Use: ${g.use}</span><span style="color:var(--neg)">Not: ${g.not}</span></div>`).join('')}
-      </div>
-    </div>`;
-
-  if(activeTab==='claims') return `
-    <div class="score-list">
-      <div class="sl-head" style="grid-template-columns:2.5fr 1fr 1fr 90px 90px;"><div class="sl-th">Claim</div><div class="sl-th">Vertical</div><div class="sl-th">Owner</div><div class="sl-th">Status</div><div class="sl-th">Expires</div></div>
-      ${APPROVED_CLAIMS.map(c=>`
-      <div class="sl-row" style="grid-template-columns:2.5fr 1fr 1fr 90px 90px;cursor:pointer" onclick="openClaim('${c.id}')">
-        <div style="font-size:12px;color:var(--i1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.text}</div>
-        <div style="font-size:11px;color:var(--i3)">${c.vertical}</div>
-        <div style="font-size:11px;color:var(--i3)">${c.owner}</div>
-        <div>${statusBadge(c.status)}</div>
-        <div style="font-size:10.5px;color:${expiringSoon(c.expiry)?'var(--warn)':'var(--i4)'}">${c.expiry}${expiringSoon(c.expiry)?' ⚠':''}</div>
-      </div>`).join('')}
-    </div>`;
-
-  if(activeTab==='banned') return `
-    <div class="score-list">
-      <div class="sl-head" style="grid-template-columns:2fr 1.5fr;"><div class="sl-th">Rule</div><div class="sl-th">Reason</div></div>
-      ${BANNED.map(b=>`<div class="sl-row" style="grid-template-columns:2fr 1.5fr;"><div style="font-size:12px;color:var(--i1)">${b.rule}</div><div style="font-size:11.5px;color:var(--i3)">${b.reason}</div></div>`).join('')}
-    </div>`;
-
-  if(activeTab==='collateral') return `
-    <div class="score-list">
-      <div class="sl-head" style="grid-template-columns:2fr 1fr 1.3fr 90px 90px;"><div class="sl-th">Title</div><div class="sl-th">Type</div><div class="sl-th">Supports action</div><div class="sl-th">Status</div><div class="sl-th">Cited in</div></div>
-      ${COLLATERAL.map(k=>`
-      <div class="sl-row" style="grid-template-columns:2fr 1fr 1.3fr 90px 90px;cursor:pointer" onclick="openCollateral('${k.id}')">
-        <div style="font-size:12px;color:var(--i1)">${k.title}</div>
-        <div style="font-size:11px;color:var(--i3)">${k.type}</div>
-        <div style="font-size:10.5px;color:var(--i3)">${k.actions.join(', ')}</div>
-        <div>${statusBadge(k.status)}</div>
-        <div style="font-size:11px;color:var(--i3)">${k.citedIn} drafts</div>
-      </div>`).join('')}
-    </div>`;
-
-  if(activeTab==='messages') return `
-    <div class="score-list">
-      <div class="sl-head" style="grid-template-columns:120px 2fr 1fr;"><div class="sl-th">Stage</div><div class="sl-th">Message</div><div class="sl-th">Proof point</div></div>
-      ${MESSAGES.map(m=>`<div class="sl-row" style="grid-template-columns:120px 2fr 1fr;"><div style="font-size:11.5px;font-weight:600;color:var(--i1)">${m.stage}</div><div style="font-size:12px;color:var(--i2)">${m.message}</div><div style="font-size:11px;color:${m.proof?'var(--i3)':'var(--neg)'}">${m.proof?'Linked claim':'No proof point linked'}</div></div>`).join('')}
-    </div>`;
-
-  if(activeTab==='coverage'){
-    const covered = ACTIONS_COVERAGE.filter(a=>a.proof).length;
-    return `
-    <div class="panel" style="margin-bottom:14px">
-      <div class="panel-body" style="font-size:12px;color:var(--i2)">${covered} of ${ACTIONS_COVERAGE.length} enabled actions have approved proof. This feeds the readiness gate — an action without proof routes to a task instead of a draft.</div>
-    </div>
-    <div class="score-list">
-      <div class="sl-head" style="grid-template-columns:2fr 140px 1fr;"><div class="sl-th">Action</div><div class="sl-th">Proof</div><div class="sl-th">Fix</div></div>
-      ${ACTIONS_COVERAGE.map(a=>`
-      <div class="sl-row" style="grid-template-columns:2fr 140px 1fr;">
-        <div style="font-size:12px;color:var(--i1)">${a.action}</div>
-        <div>${a.proof ? '<span class="sc sc-h">Available</span>' : '<span class="sc sc-l">No approved proof</span>'}</div>
-        <div style="font-size:11px;color:var(--i3)">${a.proof ? '—' : `<a href="#" onclick="switchTab('collateral');return false" style="color:var(--brand)">Add collateral for this action →</a>`}</div>
-      </div>`).join('')}
-    </div>`;
-  }
-  return '';
+      ${label('Openers to avoid')}${chips('bannedOpeners', v.bannedOpeners||[], 'e.g. Just checking in', true)}
+      <div style="font-size:11px;color:var(--i3);margin-top:8px">A draft that breaks one of these is rewritten once automatically; if it still breaks it, it goes to a person in For Review.</div>`)
+    + card('Preview', `<span style="font-size:11px;color:var(--i3)">how an email opens and closes</span>`, `<pre style="white-space:pre-wrap;font-family:var(--fb);font-size:12.5px;color:var(--i1);line-height:1.6;margin:0;padding:12px;background:var(--s50);border-radius:var(--rsm)">${esc(sample)}</pre>`);
+}
+// A small list editor: chips with remove, and an input to add.
+function chips(key, list, ph, voice){
+  const path = voice ? `draft().voice.${key}` : `draft().${key}`;
+  return `<div class="tags" style="margin-bottom:8px">${list.map((w,i)=>`<span class="tag tag-grey">${esc(w)}${canEdit()?` <button onclick="${path}.splice(${i},1);commit('Removed')" style="margin-left:4px;color:var(--i3)">×</button>`:''}</span>`).join('') || '<span style="font-size:12px;color:var(--i3)">None yet.</span>'}</div>
+    ${canEdit()?`<div style="display:flex;gap:8px"><input id="add_${key}" placeholder="${esc(ph)}" style="flex:1;${field}" onkeydown="if(event.key==='Enter')addTo('${key}',${!!voice})"><button class="btn btn-sec btn-sm" onclick="addTo('${key}',${!!voice})">Add</button></div>`:''}`;
+}
+function addTo(key, voice){
+  const el = document.getElementById('add_'+key), v = (el.value||'').trim(); if(!v) return;
+  const list = voice ? (draft().voice[key] = draft().voice[key] || []) : draft()[key];
+  v.split(',').map(x=>x.trim()).filter(Boolean).forEach(x=>{ const val = key==='negative' ? x.toLowerCase() : x; if(!list.some(y=>y.toLowerCase()===val.toLowerCase())) list.push(val); });
+  commit('Added to the draft');
 }
 
-function openClaim(id){
-  const c = APPROVED_CLAIMS.find(x=>x.id===id);
-  document.getElementById('detTitle').textContent = 'Approved claim';
-  document.getElementById('detSub').textContent = c.vertical+' · '+c.owner;
-  document.getElementById('detBody').innerHTML = `
-    <div class="panel" style="margin-bottom:12px"><div class="panel-body" style="font-size:12.5px;color:var(--i1);line-height:1.6">"${c.text}"</div></div>
-    <div class="panel" style="margin-bottom:12px"><div class="panel-hdr"><span class="panel-ttl">Source</span></div><div class="panel-body" style="font-size:12px;color:var(--i2)">${c.source || '<span style="color:var(--neg)">No source yet — draft, not approved</span>'}</div></div>
-    <div class="panel" style="margin-bottom:12px"><div class="panel-hdr"><span class="panel-ttl">Used in</span></div><div class="panel-body" style="font-size:12px;color:var(--i2)">Cited in ${c.citedIn} draft${c.citedIn===1?'':'s'}</div></div>
-    <div style="display:flex;gap:8px">
-      <button class="btn btn-sec btn-sm" style="flex:1;justify-content:center" onclick="showToast('Editing creates a new version — drafts keep the version they cited')">Edit</button>
-      ${c.status!=='approved' ? `<button class="btn btn-primary btn-sm" style="flex:1;justify-content:center" onclick="showToast('Approved — now usable in drafts')">Approve</button>` : `<button class="btn btn-sec btn-sm" style="flex:1;justify-content:center;color:var(--neg)" onclick="showToast('Retired — no longer usable in new drafts')">Retire</button>`}
-    </div>`;
-  document.getElementById('detailDrawer').classList.add('open');
-}
-function openCollateral(id){
-  const k = COLLATERAL.find(x=>x.id===id);
-  document.getElementById('detTitle').textContent = k.title;
-  document.getElementById('detSub').textContent = k.type+' · '+k.vertical;
-  document.getElementById('detBody').innerHTML = `
-    <div class="panel" style="margin-bottom:12px"><div class="panel-hdr"><span class="panel-ttl">Supports</span></div><div class="panel-body" style="font-size:12px;color:var(--i2)">${k.actions.join(', ')}</div></div>
-    <div class="panel" style="margin-bottom:12px"><div class="panel-hdr"><span class="panel-ttl">Used in</span></div><div class="panel-body" style="font-size:12px;color:var(--i2)">Cited in ${k.citedIn} draft${k.citedIn===1?'':'s'}${k.status==='expired'?'<br><span style="color:var(--neg)">Expired — no longer usable until renewed</span>':''}</div></div>
-    <div style="display:flex;gap:8px">
-      <button class="btn btn-sec btn-sm" style="flex:1;justify-content:center" onclick="showToast('Editing creates a new version')">Edit</button>
-      <button class="btn btn-sec btn-sm" style="flex:1;justify-content:center;color:var(--neg)" onclick="showToast('Retired')">Retire</button>
-    </div>`;
-  document.getElementById('detailDrawer').classList.add('open');
+/* ─── Negative keywords and competitors ─── */
+function negativeTab(){
+  return card('Negative keywords', `<span style="font-size:11px;color:var(--i3)">${draft().negative.length} words or phrases</span>`, `<div style="font-size:12px;color:var(--i2);margin-bottom:10px">Words and phrases a draft must never use. A draft that contains one is rewritten once, then sent to a person.</div>${chips('negative', draft().negative, 'Add words or phrases, separated by commas')}`)
+    + card('Competitor names', '', `<div style="font-size:12px;color:var(--i2);margin-bottom:10px">Never named in a draft.</div>${chips('competitors', draft().competitors, 'Add a competitor')}`)
+    + card('Always checked', '', `<div style="font-size:12px;color:var(--i2);line-height:1.6">Pricing and commercial terms are left to the account team. A plant incident, security or regulation sends the item to the sales manager for approval.</div>`);
 }
 
-function openAddModal(){
-  const labels = {claims:'an approved claim', banned:'a banned phrase or rule', collateral:'case study or collateral', messages:'a key message', brand:'a brand guideline entry'};
-  const fileTabs = ['collateral','brand'];
-  const showFile = fileTabs.includes(activeTab);
-  openModal(`
-    <div style="font-family:var(--fd);font-size:15px;font-weight:700;color:var(--i1);margin-bottom:4px">Add ${labels[activeTab]||'an item'}</div>
-    <div style="font-size:11.5px;color:var(--i3);margin-bottom:14px">Submitted as draft — the admin approves before it\u2019s usable in drafts.</div>
-    ${modalField('mTitle','Title or text','','')}
-    ${showFile ? `
-    <div style="margin-bottom:12px">
-      <div style="font-size:11px;font-weight:600;color:var(--i2);margin-bottom:5px">File — upload, or leave blank and just write the entry above</div>
-      <div onclick="document.getElementById('mFile').click()" style="border:1.5px dashed var(--bdk);border-radius:8px;padding:14px;text-align:center;cursor:pointer;background:var(--s50)">
-        <input type="file" id="mFile" style="display:none" onchange="handleFilePicked(this)" accept=".pdf,.doc,.docx,.ppt,.pptx,.png,.jpg,.jpeg">
-        <div id="mFileLabel" style="font-size:11.5px;color:var(--i3)">Click to choose a file (PDF, Word, PowerPoint, or image)</div>
-      </div>
-    </div>` : ''}
-    ${modalField('mOwner','Owner','Rajiv Nair')}
-    ${modalField('mExpiry','Expiry date (YYYY-MM-DD)','')}
-    ${modalActions('confirmAdd()')}
-  `);
+/* ─── Approved claims ─── */
+const SEGS = Object.keys(DemandAI.CONFIG.segmentLibrary);
+function claimsTab(){
+  const today = todayIso(), cs = draft().claims;
+  return card('Approved claims', `<span style="font-size:11px;color:var(--i3)">${cs.filter(c=>c.status==='approved' && c.expiry>=today).length} usable now</span>`,
+    `<div style="font-size:12px;color:var(--i2);margin-bottom:10px">The only claims a draft can make, each with its source. A draft cites one approved, unexpired claim word for word; any other claim sends the item to a person. With no claim for a case, the action becomes a task.</div>`
+    + cs.map((c,i)=>{ const expired = c.expiry < today;
+      return `<div style="padding:12px 0;border-top:1px solid var(--s75)">
+        <div style="display:flex;gap:10px;align-items:flex-start">
+          <div style="flex:1"><div style="font-size:12.5px;color:var(--i1);line-height:1.5">${esc(c.claim)}</div>
+            <div style="font-size:11px;color:var(--i3);margin-top:3px">${esc(c.id)} · ${esc(c.type)}, ${c.year} · ${esc(c.title)} · expires ${esc(c.expiry)} · for ${esc((c.segments||[]).join(', ')||'no micro-segment')}</div></div>
+          <span class="tag ${expired?'tag-red':c.status==='approved'?'tag-green':c.status==='retired'?'tag-grey':'tag-amber'}">${expired?'Expired':c.status==='approved'?'Approved':c.status==='retired'?'Retired':'Draft'}</span>
+          ${canEdit()?`<select onchange="draft().claims[${i}].status=this.value;commit('Saved to the draft')" style="${field};padding:4px 6px;font-size:11.5px">${['approved','draft','retired'].map(s=>`<option ${c.status===s?'selected':''} value="${s}">${s[0].toUpperCase()+s.slice(1)}</option>`).join('')}</select>`:''}
+        </div></div>`; }).join('')
+    + (canEdit() ? `<div style="border-top:1px solid var(--border);margin-top:6px;padding-top:12px">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--i3)">Add a claim</div>
+        ${label('The claim, exactly as a draft may say it')}<textarea id="cClaim" rows="2" style="width:100%;${field}" placeholder="A comparable site … within one planned shutdown."></textarea>
+        <div style="display:grid;grid-template-columns:1.4fr 1fr .6fr 1fr;gap:10px">
+          <div>${label('Source title')}<input id="cTitle" style="width:100%;${field}" placeholder="Case study title"></div>
+          <div>${label('Type')}<select id="cType" style="width:100%;${field}">${['Case study','One-pager','Brochure','Webinar recording','Peer story','Datasheet'].map(t=>`<option>${t}</option>`).join('')}</select></div>
+          <div>${label('Year')}<input id="cYear" type="number" value="${new Date().getFullYear()}" style="width:100%;${field}"></div>
+          <div>${label('Expires')}<input id="cExp" type="date" style="width:100%;${field}"></div>
+        </div>
+        ${label('Micro-segments it supports')}<div style="display:flex;gap:14px;flex-wrap:wrap">${SEGS.map(s=>`<label style="font-size:12px;color:var(--i1);display:flex;gap:5px;align-items:center"><input type="checkbox" class="cSeg" value="${esc(s)}" style="accent-color:var(--brand)">${esc(s)}</label>`).join('')}</div>
+        <div style="display:flex;justify-content:flex-end;margin-top:12px"><button class="btn btn-primary btn-sm" onclick="addClaim()">Add as approved</button></div></div>` : ''));
 }
-function handleFilePicked(input){
-  const label = document.getElementById('mFileLabel');
-  if(input.files && input.files[0]){
-    const f = input.files[0];
-    const kb = Math.round(f.size/1024);
-    label.innerHTML = `📎 <b>${f.name}</b> <span style="color:var(--i4)">(${kb} KB)</span> — click to change`;
-    label.style.color = 'var(--i1)';
-  }
-}
-function confirmAdd(){
-  const title = document.getElementById('mTitle').value.trim();
-  if(!title){ showToast('Enter a title or text'); return; }
-  const fileInput = document.getElementById('mFile');
-  const hasFile = fileInput && fileInput.files && fileInput.files[0];
-  closeModal();
-  showToast(hasFile ? `"${fileInput.files[0].name}" uploaded — added as draft, submit for approval when ready` : 'Added as draft — submit for approval when ready');
-  renderMain();
+function addClaim(){
+  const v = id => (document.getElementById(id).value||'').trim();
+  const claim = v('cClaim').replace(/\s+/g,' '), title = v('cTitle'), exp = v('cExp'), segs = [...document.querySelectorAll('.cSeg:checked')].map(x=>x.value);
+  if(!claim || !title || !exp || !segs.length){ showToast('Add the claim, its source, an expiry date and at least one micro-segment'); return; }
+  const ids = draft().claims.map(c=>+String(c.id).replace(/\D/g,'')||0);
+  draft().claims.push({ id:'CL-'+String(Math.max(6,...ids)+1).padStart(2,'0'), type:v('cType'), year:+v('cYear')||new Date().getFullYear(), title, segments:segs, expiry:exp, claim:/[.!?]$/.test(claim)?claim:claim+'.', status:'approved', owner:me().who });
+  commit('Claim added to the draft');
 }
 
-function openModal(html){
-  let ov = document.getElementById('modalOverlay');
-  if(!ov){
-    ov = document.createElement('div');
-    ov.id = 'modalOverlay';
-    ov.style.cssText = 'position:fixed;inset:0;background:rgba(20,26,33,.45);z-index:600;display:flex;align-items:center;justify-content:center;';
-    ov.onclick = (e)=>{ if(e.target===ov) closeModal(); };
-    document.body.appendChild(ov);
-  }
-  ov.innerHTML = `<div style="background:var(--surf);border-radius:var(--rlg);box-shadow:var(--sh-lg);width:440px;max-width:90vw;padding:22px;" onclick="event.stopPropagation()">${html}</div>`;
-  ov.style.display = 'flex';
+/* ─── Messaging framework ─── */
+function frameworkTab(){
+  const f = draft().framework;
+  return `<div style="font-size:12px;color:var(--i2);margin-bottom:12px">For each micro-segment: the angle a message takes, the objection to pre-empt and how to answer it, and the discovery questions for calls. Used in every brief, draft and call script.</div>`
+    + SEGS.map(s=>{ const x = f[s] || {angle:'',objection:'',response:'',questions:[]};
+      const inp = (k, val, rows) => rows ? `<textarea ${ro()} rows="${rows}" style="width:100%;${field};line-height:1.5" onchange="setFw('${s}','${k}',this.value)">${esc(val)}</textarea>` : `<input ${ro()} value="${esc(val)}" style="width:100%;${field}" onchange="setFw('${s}','${k}',this.value)">`;
+      return card(`<span class="tag ${({Inquiry:'tag-blue',Modernisation:'tag-violet','Service renewal':'tag-teal',Project:'tag-amber',Leadership:'tag-pink',Engagement:'tag-green'})[s]||'tag-grey'}">${esc(s)}</span>`, '', `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 16px">
+          <div>${label('Angle')}${inp('angle', x.angle)}</div><div>${label('Objection to pre-empt')}${inp('objection', x.objection)}</div>
+          <div>${label('How to answer it')}${inp('response', x.response, 2)}</div><div>${label('Discovery questions, one per line')}${inp('questions', (x.questions||[]).join('\n'), 3)}</div>
+        </div>`); }).join('');
 }
-function closeModal(){ const ov=document.getElementById('modalOverlay'); if(ov) ov.style.display='none'; }
-function modalField(id, label, value, placeholder){
-  return `<div style="margin-bottom:12px"><div style="font-size:11px;font-weight:600;color:var(--i2);margin-bottom:5px">${label}</div><input id="${id}" value="${(value||'').replace(/"/g,'&quot;')}" placeholder="${placeholder||''}" style="width:100%;border:1px solid var(--bdk);border-radius:8px;padding:8px 10px;font-size:12.5px;font-family:var(--fb);outline:none"></div>`;
-}
-function modalActions(onSave){
-  return `<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px"><button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button><button class="btn btn-primary btn-sm" onclick="${onSave}">Save</button></div>`;
+function setFw(seg, k, val){ const f = draft().framework; f[seg] = f[seg] || {angle:'',objection:'',response:'',questions:[]}; f[seg][k] = k==='questions' ? val.split('\n').map(x=>x.trim()).filter(Boolean) : val.trim(); commit('Saved to the draft'); }
+
+/* ─── Versions ─── */
+function versionsTab(){
+  const live = DemandAI.brandPack(), hist = (live.history||[]).slice().reverse();
+  return card('Brand pack versions', `<span style="font-size:11px;color:var(--i2)">Live: ${esc(DemandAI.brandVersion())}</span>`,
+    `<div style="font-size:12px;color:var(--i2);margin-bottom:10px">Changes are made to a draft. Only a published version reaches the drafts, and every segmented list records the version it was drafted with, so results can be compared. Old versions are kept.</div>`
+    + hist.map(h=>`<div style="display:flex;gap:12px;padding:9px 0;border-top:1px solid var(--s75);font-size:12px"><b style="width:70px;color:var(--i1)">v${h.v}</b><span style="flex:1;color:var(--i2)">${esc(h.note||'')}</span><span style="color:var(--i3)">${h.at?`${fmtDate(h.at)} · ${esc(h.by)}`:'Kickoff'}</span></div>`).join(''));
 }
 
-renderMain();
-
+/* ═══════════════ BOOT ═══════════════ */
 const PAGE_ID = '07-content.html';
+setTimeout(()=>{
+  try{ DemandAI.reviewBadge(); }catch(e){}
+  const _setRole = setRole; setRole = function(r){ _setRole(r); render(); };
+  render();
+}, 0);
 
 /* ═══════════════ ROLE ENGINE — shared across every screen ═══════════════ */
 const ALL_ROLES = ['Admin','Sales manager','Sales rep','Viewer','Platform admin'];

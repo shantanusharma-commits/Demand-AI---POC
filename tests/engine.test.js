@@ -371,3 +371,29 @@ test('scenarios: each exception rule is triggered by its account, and only there
 test('the configuration version says the scoring weights are fixed in the POC', () => {
   assert.equal(E.configVersion(), 'Config v1 · starting values · scoring weights fixed');
 });
+
+// Keep this last: it publishes a brand pack into a stand-in browser store, which the engine then keeps using.
+test('a published brand pack changes the drafts and the checks', () => {
+  const store = {};
+  global.localStorage = { getItem: k => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = String(v); } };
+  const d = E.brandDraft();
+  d.voice.preset = 'Formal'; d.voice.signoff = 'Client Sales';
+  d.negative.push('synergy'); d.competitors.push('Rivalco');
+  d.claims = d.claims.filter(c => c.id !== 'WB-05');
+  assert.ok(E.saveBrandDraft(d));
+  assert.equal(E.brandVersion(), 'Brand v1');      // a draft isn't live until it's published
+  assert.ok(E.publishBrand('Admin', 'Formal voice'));
+  assert.equal(E.brandVersion(), 'Brand v2');
+  const r = sampleRecs(), rec = r.recs.find(x => x.contact.name === 'Aditi Rao');
+  const draft = E.draftFor(rec, rec.action, { asOf: S.SAMPLE_AS_OF });
+  assert.match(draft.body, /^Dear Aditi,/);
+  assert.match(draft.body, /Kind regards,\nClient Sales$/);
+  assert.doesNotMatch(draft.body, /Webinar recording/);   // the withdrawn claim is no longer cited
+  const flags = E.checkDraft({ ...draft, body: draft.body.replace('Kind regards', 'Great synergy with Rivalco! Kind regards') }).flags.map(f => f.rule);
+  assert.ok(flags.includes('Banned claim') && flags.includes('Competitor name') && flags.includes('Tone of voice'));
+  E.useBrand('Brand v1');                               // a list built with v1 keeps drafting with v1
+  assert.match(E.draftFor(rec, rec.action, { asOf: S.SAMPLE_AS_OF }).body, /^Hi Aditi,/);
+  E.useBrand();
+  assert.equal(E.brandVersion(), 'Brand v2');
+  delete global.localStorage;
+});

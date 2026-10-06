@@ -901,6 +901,53 @@ const BRAND = {
 };
 const cite = item => `[${item.type}, ${item.year}]`;
 
+/* ─── The brand pack: voice and tone, negative keywords, approved claims and the messaging framework ───
+   Maintained in the Content library. Changes are made to a draft and only reach the drafts once the admin publishes
+   them as a new version; every list records the brand version it was drafted with. The defaults are the values above. */
+const VOICE_PRESETS = {
+  Direct: { greeting: 'Hi {first},', closing: 'Best,', about: "Short sentences, the prospect's own trigger first, one point, one question." },
+  Formal: { greeting: 'Dear {first},', closing: 'Kind regards,', about: 'Complete sentences, a courteous ask, no slang or contractions.' },
+  Warm:   { greeting: 'Hi {first},', closing: 'All the best,', about: 'Friendly and personal, still one point and one ask.' },
+};
+const BRAND_KEY = 'demandai_brand_v1';
+function defaultBrand() {
+  return { v: 1, voice: { preset: 'Direct', signoff: 'Client Team', maxWords: BRAND.maxWords, maxSentenceWords: 35, noExclamation: true,
+      bannedOpeners: ['I hope this email finds you well', 'Just checking in', 'Hope you are well'], notes: 'Direct, specific, no hype. Lead with the account\'s own signal, not a generic pitch.' },
+    negative: BRAND.banned.slice(), competitors: [], claims: COLLATERAL.map(c => ({ ...c, status: 'approved', owner: 'Marketing' })),
+    framework: JSON.parse(JSON.stringify(PLAYBOOK)), guideline: null, history: [{ v: 1, at: null, by: '', note: 'Starting brand pack' }] };
+}
+function brandStore() { try { return JSON.parse(localStorage.getItem(BRAND_KEY) || 'null'); } catch (e) { return null; } }
+function brandSave(st) { try { localStorage.setItem(BRAND_KEY, JSON.stringify(st)); return true; } catch (e) { return false; } }
+let ACTIVE_BRAND = null;
+function brandPack() { if (!ACTIVE_BRAND) { const st = brandStore(); ACTIVE_BRAND = (st && st.live) || defaultBrand(); } return ACTIVE_BRAND; }
+function brandDraft() { const st = brandStore(); return (st && st.draft) || JSON.parse(JSON.stringify(brandPack())); }
+function saveBrandDraft(d) { const st = brandStore() || {}; st.draft = d; st.submitted = null; return brandSave(st); }
+function submitBrand(by) { const st = brandStore() || {}; if (!st.draft) return false; st.submitted = { by, at: Date.now() }; return brandSave(st); }
+function discardBrandDraft() { const st = brandStore() || {}; st.draft = null; st.submitted = null; return brandSave(st); }
+function brandPending() { const st = brandStore(); return st && st.draft ? { draft: st.draft, submitted: st.submitted || null } : null; }
+function publishBrand(by, note) {
+  const st = brandStore() || {}, live = st.live || defaultBrand(), d = st.draft;
+  if (!d) return null;
+  d.v = (live.v || 1) + 1;
+  d.history = (live.history || []).concat([{ v: d.v, at: Date.now(), by, note: note || '' }]);
+  // Earlier versions are kept, so a list drafted with one keeps drafting with it.
+  st.archive = st.archive || {}; st.archive[live.v || 1] = Object.assign({}, live, { history: undefined });
+  st.live = d; st.draft = null; st.submitted = null;
+  if (!brandSave(st)) return null;
+  ACTIVE_BRAND = null; return d;
+}
+function brandVersion() { return 'Brand v' + brandPack().v; }
+// Point the drafting at the brand version a list was built with ('Brand vN'); no label means the live version.
+function useBrand(label) {
+  const st = brandStore(), live = (st && st.live) || defaultBrand(), v = +(String(label || '').match(/\d+/) || [0])[0];
+  if (!v || v === live.v) { if (!ACTIVE_BRAND || ACTIVE_BRAND.v !== live.v) ACTIVE_BRAND = live; return; }
+  if (ACTIVE_BRAND && ACTIVE_BRAND.v === v) return;
+  const old = st && st.archive && st.archive[v];
+  ACTIVE_BRAND = old ? Object.assign({}, old, { v }) : v === 1 ? defaultBrand() : live;
+}
+const approvedClaims = () => brandPack().claims.filter(c => c.status === 'approved');
+const framework = seg => brandPack().framework[seg] || PLAYBOOK[seg] || PLAYBOOK.Engagement;
+
 const COPY = {
   'Call to follow up on the inquiry':        { task: true, script: true },
   'Route the inquiry to the sales owner':    { task: true },
@@ -948,7 +995,7 @@ function evidenceFor(rec, action) {
 }
 function proofFor(action, rec, asOf) {
   const seg = segmentOfAction(action, rec);
-  const fits = COLLATERAL.filter(c => c.segments.includes(seg));
+  const fits = approvedClaims().filter(c => (c.segments || []).includes(seg));
   const live = fits.filter(c => !asOf || c.expiry >= asOf).sort((a, b) => (b.segments[0] === seg) - (a.segments[0] === seg));
   return { item: live[0] || null, expired: fits.filter(c => asOf && c.expiry < asOf) };
 }
@@ -973,14 +1020,14 @@ function recommendChannel(rec, action, prefer) {
 // 5.14 Call script: opener, discovery questions, objection handling, the ask.
 function callScript(rec, action, open) {
   const first = rec.contact.firstName || rec.contact.name.split(' ')[0];
-  const pb = PLAYBOOK[segmentOfAction(action, rec)] || PLAYBOOK.Engagement;
+  const pb = framework(segmentOfAction(action, rec));
   const copy = COPY[action] || GENERIC;
   return { opener: `Hi ${first}, it's [name] from Client. ${open}`, questions: pb.questions, objection: pb.objection, response: pb.response,
     ask: copy.cta || 'Would a follow-up conversation with the right specialist help?' };
 }
 // 5.11 The brief: who, why now, angle, proof, objection, ask and constraints.
 function briefFor(rec, action, opts = {}) {
-  const sg = evidenceFor(rec, action), pb = PLAYBOOK[segmentOfAction(action, rec)] || PLAYBOOK.Engagement;
+  const sg = evidenceFor(rec, action), pb = framework(segmentOfAction(action, rec));
   const proof = proofFor(action, rec, opts.asOf);
   const ch = recommendChannel(rec, action, opts.channel);
   return {
@@ -1016,7 +1063,9 @@ function draftFor(rec, action, opts = {}) {
     return { channel: 'LinkedIn', why: ch.why, note: note.length > BRAND.maxNote ? `Hi ${first}, would be good to connect.` : note,
       message: variant === 'short' ? `Thanks for connecting, ${first}. ${cta}` : `Thanks for connecting, ${first}. ${proofLine} ${cta}`, proof };
   }
-  const body = variant === 'short' ? `Hi ${first},\n\n${open} ${cta}\n\nBest,\nClient Team` : `Hi ${first},\n\n${open} ${proofLine}\n\n${cta}\n\nBest,\nClient Team`;
+  const vc = brandPack().voice, pre = VOICE_PRESETS[vc.preset] || VOICE_PRESETS.Direct;
+  const hello = pre.greeting.replace('{first}', first), bye = `${pre.closing}\n${vc.signoff || 'Client Team'}`;
+  const body = variant === 'short' ? `${hello}\n\n${open} ${cta}\n\n${bye}` : `${hello}\n\n${open} ${proofLine}\n\n${cta}\n\n${bye}`;
   return { channel: 'Email', why: ch.why, subject: copy.subject, body, words: body.split(/\s+/).filter(Boolean).length, proof };
 }
 function draftText(d) {
@@ -1028,14 +1077,20 @@ function draftText(d) {
 // 5.16 Brand and rule checks, 5.17 claim verification.
 function checkDraft(d) {
   const text = draftText(d), low = text.toLowerCase(), flags = [];
-  for (const w of BRAND.banned) if (low.includes(w)) flags.push({ rule: 'Banned claim', detail: `"${w}"` });
-  for (const w of BRAND.competitors.concat(CONFIG.brand.competitors || [])) if (w && low.includes(w.toLowerCase())) flags.push({ rule: 'Competitor name', detail: `"${w}"` });
+  const pack = brandPack(), vc = pack.voice;
+  for (const w of pack.negative) if (w && low.includes(w.toLowerCase())) flags.push({ rule: 'Banned claim', detail: `"${w}"` });
+  for (const w of pack.competitors.concat(CONFIG.brand.competitors || [])) if (w && low.includes(w.toLowerCase())) flags.push({ rule: 'Competitor name', detail: `"${w}"` });
+  // Voice and tone: the measurable rules from the brand pack.
+  if (vc.noExclamation && /!/.test(text)) flags.push({ rule: 'Tone of voice', detail: 'Exclamation marks' });
+  for (const o of vc.bannedOpeners || []) if (o && low.includes(o.toLowerCase())) flags.push({ rule: 'Tone of voice', detail: `"${o}"` });
+  const longest = Math.max(0, ...text.split(/(?<=[.?!])\s+|\n+/).map(x => x.split(/\s+/).filter(Boolean).length));
+  if (vc.maxSentenceWords && longest > vc.maxSentenceWords) flags.push({ rule: 'Tone of voice', detail: `A sentence of ${longest} words (limit ${vc.maxSentenceWords})` });
   if (BRAND.pricing.test(text)) flags.push({ rule: 'Pricing or commercial terms', detail: 'Pricing is left to the account team' });
   if (BRAND.sensitive.test(text)) flags.push({ rule: 'Sensitive term', detail: 'Needs compliance approval' });
   if (d.channel === 'Email') {
     const sw = (d.subject || '').split(/\s+/).filter(Boolean).length, bw = (d.body || '').split(/\s+/).filter(Boolean).length;
     if (sw > CONFIG.brand.maxSubjectWords) flags.push({ rule: 'Length', detail: `Subject is ${sw} words (limit ${CONFIG.brand.maxSubjectWords})` });
-    if (bw > BRAND.maxWords) flags.push({ rule: 'Length', detail: `Body is ${bw} words (limit ${BRAND.maxWords})` });
+    if (bw > (vc.maxWords || BRAND.maxWords)) flags.push({ rule: 'Length', detail: `Body is ${bw} words (limit ${vc.maxWords || BRAND.maxWords})` });
   }
   if (d.channel === 'LinkedIn' && (d.note || '').length > BRAND.maxNote) flags.push({ rule: 'Length', detail: `Connection note is ${d.note.length} characters (limit ${BRAND.maxNote})` });
   // Claims: anything citing a source, or that reads like a product claim. A claim is verified only when it is
@@ -1047,7 +1102,7 @@ function checkDraft(d) {
     const m = s.match(/\[([^\]]+, \d{4})\]\s*$/);
     if (!m && !claimLike.test(s)) continue;
     const bare = s.replace(/\s*\[[^\]]+, \d{4}\]\s*$/, '');
-    const src = COLLATERAL.find(c => cite(c) === `[${m ? m[1] : ''}]` && c.claim === bare);
+    const src = approvedClaims().find(c => cite(c) === `[${m ? m[1] : ''}]` && c.claim === bare);
     claims.push({ text: bare, source: src ? `${src.id} · ${src.title}` : '', verified: !!src });
   }
   const seen = new Set();
@@ -1119,6 +1174,7 @@ return {
   parseCSV, toCSV, readTable, processLeads, classify, personaOf, fitFor, decayFactor,
   processSignals, scoreList, stack, tierFor, daysBetween, round1, buildSegments, segmentRanks, recommendChannel, draftFor, processScoredProspects, SEGMENT_COLUMNS, estimateDealSize,
   briefFor, callScript, checkDraft, confidenceFor, allowedChannels, proofFor, COLLATERAL, PLAYBOOK,
+  VOICE_PRESETS, defaultBrand, brandPack, brandDraft, saveBrandDraft, submitBrand, discardBrandDraft, brandPending, publishBrand, brandVersion, useBrand, approvedClaims,
   loadLists, saveList, getList, deleteList, loadScorings, saveScoring, getScoring, deleteScoring,
   loadSegmentations, saveSegmentation, getSegmentation, deleteSegmentation, reviewBadge,
 };

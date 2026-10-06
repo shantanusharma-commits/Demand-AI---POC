@@ -58,7 +58,7 @@ input,textarea,select{background-color:#fff;color:var(--i1);}
 .nav-body::-webkit-scrollbar{width:3px;}
 .nav-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.07);}
 .nav-sec{padding:8px 14px 3px;font-size:9px;letter-spacing:.09em;text-transform:uppercase;color:var(--r4);font-weight:600;}
-.nav-item{display:flex;align-items:center;gap:9px;height:32px;padding:0 10px;margin:1px 6px;border-radius:7px;color:var(--r3);font-size:12.5px;font-weight:500;cursor:pointer;position:relative;transition:background var(--fast) var(--ease),color var(--fast) var(--ease);}
+.nav-item{display:flex;text-decoration:none;align-items:center;gap:9px;height:32px;padding:0 10px;margin:1px 6px;border-radius:7px;color:var(--r3);font-size:12.5px;font-weight:500;cursor:pointer;position:relative;transition:background var(--fast) var(--ease),color var(--fast) var(--ease);}
 .nav-item:hover{background:var(--rhov);color:var(--r2);}
 .nav-item.active{background:var(--ract);color:var(--r1);}
 .nav-item.active::before{content:'';position:absolute;left:0;top:7px;bottom:7px;width:2.5px;background:var(--brand-mid);border-radius:0 2px 2px 0;}
@@ -483,7 +483,7 @@ let REP_FILTER = null, A_RUNS = null;
 function analyticsRuns(){
   if(A_RUNS) return A_RUNS;
   A_RUNS = [];
-  try{ DemandAI.loadSegmentations().forEach(saved=>{ const c = compute(saved.src, saved.id, saved.createdAt); if(c) A_RUNS.push({ saved, ...c }); }); }catch(e){ A_RUNS = []; }
+  try{ DemandAI.loadSegmentations().forEach(saved=>{ const c = compute(saved.src, saved.id, saved.createdAt, saved.brandVersion); if(c) A_RUNS.push({ saved, ...c }); }); }catch(e){ A_RUNS = []; }
   return A_RUNS;
 }
 function renderGates(){
@@ -722,7 +722,7 @@ function readiness(runs){
   const recent = qual.filter(s=>s.age!==undefined && s.age <= R.recencyDays);
   const actions = [...new Set(Object.values(DemandAI.CONFIG.segmentLibrary).flat())];
   const asOf = runs[0] ? runs[0].saved.src.asOf : null;
-  const noProof = actions.filter(a=>{ const sg = Object.keys(DemandAI.CONFIG.segmentLibrary).find(k=>DemandAI.CONFIG.segmentLibrary[k].includes(a)); return !DemandAI.COLLATERAL.some(c=>c.segments.includes(sg) && (!asOf || c.expiry >= asOf)); });
+  const noProof = actions.filter(a=>{ const sg = Object.keys(DemandAI.CONFIG.segmentLibrary).find(k=>DemandAI.CONFIG.segmentLibrary[k].includes(a)); return !DemandAI.approvedClaims().some(c=>c.segments.includes(sg) && (!asOf || c.expiry >= asOf)); });
   const p = (a,b) => b ? a/b*100 : 0;
   return [
     { k:'Accounts in scope', v:A.length, ok:A.length >= R.accounts, show:`${A.length}`, need:`${R.accounts} or more`, fix:'More accounts in the selected vertical and region' },
@@ -907,7 +907,7 @@ function downloadOutcomes(){
   const rs = outcomeRecords(analyticsRuns(), ownerNow());
   const cols = [['list','list'],['account','account'],['vertical','vertical'],['status','status'],['tier','tier'],['micro_segment','segment'],['grouped_on','groupedOn'],['signals','signals'],['action','action'],['recommended','recommended'],['runner_up','runnerUp'],
     ['contact','contact'],['contact_title','contactTitle'],['channel','channel'],['draft','draft'],['path','path'],['exceptions','exceptions'],['decision','decision'],['reason_code','reasonCode'],['reason','reason'],['cause','cause'],['tags','tags'],
-    ['alternative_needed','alternativeNeeded'],['alternative_accepted','alternativeAccepted'],['outcome','outcome'],['final_status','finalStatus'],['owner','owner'],['config_version','config']];
+    ['alternative_needed','alternativeNeeded'],['alternative_accepted','alternativeAccepted'],['outcome','outcome'],['final_status','finalStatus'],['owner','owner'],['config_version','config'],['brand_version','brand']];
   const rows = [cols.map(c=>c[0])].concat(rs.map(o=>cols.map(([,k])=>{ const v = o[k]; return Array.isArray(v) ? v.join('; ') : v===null ? '' : typeof v==='boolean' ? (v?'yes':'no') : v; })));
   saveText('outcome_log.csv', DemandAI.toCSV(rows));
 }
@@ -945,7 +945,7 @@ function renderLoop(){
         <td style="padding:8px 8px 8px 0;color:var(--i1)">${esc(o.decision)}${o.reasonCode?`<div style="color:var(--i3)">${esc(o.reasonCode)} ${esc(o.reason)}</div>`:''}${o.tags?`<div style="color:var(--i3)">${esc(o.tags)}</div>`:''}</td>
         <td style="padding:8px 8px 8px 0;color:var(--i2)">${o.alternativeNeeded ? (o.alternativeAccepted===null ? 'Needed, not decided' : o.alternativeAccepted ? 'Needed, accepted' : 'Needed, rejected') : '—'}</td>
         <td style="padding:8px 8px 8px 0;color:var(--i2)">${esc(o.outcome||'—')}</td>
-        <td style="padding:8px 0;color:var(--i3);font-size:10.5px">${esc(o.config.replace(' · scoring weights fixed',''))}</td></tr>`).join('')}
+        <td style="padding:8px 0;color:var(--i3);font-size:10.5px">${esc(o.config.replace(' · scoring weights fixed',''))}<div>${esc(o.brand)}</div></td></tr>`).join('')}
     </table></div>`)}
     ${apanel('Which actions worked in which segments', `<span style="font-size:10.5px;color:var(--i3)">production: preferred actions (8.2)</span>`, table(['Micro-segment · action','Recommended','Judged','Accepted','Replies or meetings',''],
       actions.map(x=>tr([esc(x.k), x.n, x.j, x.rate===null?'—':pct0(x.rate), x.w, x.j>=MIN && x.rate>=70 && x.w ? flag('Preferred-action candidate','g') : x.j<MIN ? flag(`Needs ${MIN}+ judged`) : ''])))

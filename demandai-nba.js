@@ -34,7 +34,8 @@ function engagedMap(exceptId, before){
   });
   return m;
 }
-function compute(src, runId, createdAt){
+function compute(src, runId, createdAt, brand){
+  DemandAI.useBrand(brand);
   let list, scored, sig, fileIssues = 0;
   if(src.csv){
     const r = DemandAI.processScoredProspects(src.grid, {file:src.fileName, sheet:src.sheet, asOf:src.asOf});
@@ -72,9 +73,11 @@ function liveRec(r){
   return Object.assign({}, r, { contact:p.contact, person:p });
 }
 function chosenAction(r){ const d = dec(r.key); return d.manual ? d.manual : d.useRunner && r.runnerUp ? r.runnerUp.action : r.action; }
-function generated(r){ const d = dec(r.key); return DemandAI.draftFor(liveRec(r), chosenAction(r), {asOf:asOf(), channel:d.channel, variant:d.variant}); }
+// Drafts and checks use the brand version the list was built with.
+const pinBrand = () => DemandAI.useBrand(RUN && RUN.saved && RUN.saved.brandVersion);
+function generated(r){ pinBrand(); const d = dec(r.key); return DemandAI.draftFor(liveRec(r), chosenAction(r), {asOf:asOf(), channel:d.channel, variant:d.variant}); }
 function draftOf(r){ const d = dec(r.key); return d.draft || generated(r); }
-function checksOf(r){ const x = draftOf(r), chk = DemandAI.checkDraft(x); return { chk, conf: DemandAI.confidenceFor(liveRec(r), x, chk, chosenAction(r)) }; }
+function checksOf(r){ pinBrand(); const x = draftOf(r), chk = DemandAI.checkDraft(x); return { chk, conf: DemandAI.confidenceFor(liveRec(r), x, chk, chosenAction(r)) }; }
 
 /* Step 1 · Exception check: four rules. Anything that passes all four goes ahead on its own. */
 function exceptionReasons(r){
@@ -90,7 +93,7 @@ function exceptionReasons(r){
   return out;
 }
 const exceptionOf = r => exceptionReasons(r).join(' · ');
-const isSensitive = x => DemandAI.checkDraft(x).flags.some(f=>f.rule==='Sensitive term');
+const isSensitive = x => pinBrand() || DemandAI.checkDraft(x).flags.some(f=>f.rule==='Sensitive term');
 
 /* People: the rep who owns each item (owner_email in the lead file, or reassigned), and who is looking. */
 const REPS = { 'rep.a@client-sample.com':'Sofia Ahlgren', 'rep.b@client-sample.com':'Marco Lindqvist' };
@@ -181,7 +184,7 @@ function weeklySpotCheck(runs){
 }
 function sysLog(r, decision, note){
   RUN.saved.log.unshift({ at:Date.now(), who:'System', role:'System', key:r.key, prospect:liveRec(r).contact.name, company:r.account.name,
-    segment:r.segment||'No micro-segment', decision, action:chosenAction(r), channel:draftOf(r).channel, note, kind:'system', config:RUN.saved.configVersion||'' });
+    segment:r.segment||'No micro-segment', decision, action:chosenAction(r), channel:draftOf(r).channel, note, kind:'system', config:RUN.saved.configVersion||'', brand:RUN.saved.brandVersion||'' });
 }
 function versions(r){ const d = dec(r.key); return d.versions || [{v:1, at:RUN.saved.createdAt, by:'System', why:'Generated from the action', draft:generated(r)}]; }
 // 5.19 Every version kept: record the draft before and after each change.
@@ -210,7 +213,7 @@ function logIt(r, decision, extra={}){
     segment:r.segment||'No micro-segment', decision, reason:extra.reason||'', tags:extra.tags||[], action:extra.action||chosenAction(r), channel:extra.channel||x.channel,
     note:extra.note||'', version:extra.version||(d.versions||[1]).length, secs, position:pos, openedAt: extra.decisive ? openedAt : null,
     decisive:!!extra.decisive, kind:extra.kind||'', firstPass:extra.firstPass, accepted:extra.accepted, linkedTo:extra.linkedTo||'', flag, checked:false,
-    cause:extra.cause||'', compliance:!!extra.compliance, intervention:!!extra.intervention, owner:ownerOf(r), rating:extra.rating||'', config:RUN.saved.configVersion||'' });
+    cause:extra.cause||'', compliance:!!extra.compliance, intervention:!!extra.intervention, owner:ownerOf(r), rating:extra.rating||'', config:RUN.saved.configVersion||'', brand:RUN.saved.brandVersion||'' });
 }
 // Every list's log, newest first (pages with several lists override this through ALL_RUNS).
 function allLogs(){ const runs = typeof ALL_RUNS==='function' ? ALL_RUNS() : [RUN]; return runs.flatMap(x=>x.saved.log).sort((a,b)=>b.at-a.at); }
@@ -563,6 +566,6 @@ function outcomeRecord(r){
     decision: first ? (first.accepted ? (first.rating==='minor' ? 'Edited (minor)' : first.rating==='major' ? 'Edited (major)' : 'Accepted') : 'Rejected') : d.passed ? (d.spot==='accepted' ? 'Accepted (spot-check)' : 'Not judged (proceeded)') : 'Not decided yet',
     reasonCode: first && !first.accepted ? (REJECT.find(z=>z[1]===first.reason)||[''])[0] : '', reason: first && !first.accepted ? first.reason : '', cause: first && first.cause || '',
     tags: first ? (first.tags||[]).join('; ') : '', alternativeNeeded: !!d.alternativeUsed, alternativeAccepted: alt ? !!alt.accepted : null,
-    outcome: d.outcome || '', finalStatus: d.status, owner: repName(ownerOf(r)), config: RUN.saved.configVersion || 'Config v1 · starting values · scoring weights fixed',
+    outcome: d.outcome || '', finalStatus: d.status, owner: repName(ownerOf(r)), config: RUN.saved.configVersion || 'Config v1 · starting values · scoring weights fixed', brand: RUN.saved.brandVersion || 'Brand v1',
   };
 }

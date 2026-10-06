@@ -59,7 +59,7 @@ textarea[readonly],input[readonly]{background-color:var(--s50);}
 .nav-body::-webkit-scrollbar{width:3px;}
 .nav-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.07);}
 .nav-sec{padding:8px 14px 3px;font-size:9px;letter-spacing:.09em;text-transform:uppercase;color:var(--r4);font-weight:600;}
-.nav-item{display:flex;align-items:center;gap:9px;height:32px;padding:0 10px;margin:1px 6px;border-radius:7px;color:var(--r3);font-size:12.5px;font-weight:500;cursor:pointer;position:relative;transition:background var(--fast) var(--ease),color var(--fast) var(--ease);}
+.nav-item{display:flex;text-decoration:none;align-items:center;gap:9px;height:32px;padding:0 10px;margin:1px 6px;border-radius:7px;color:var(--r3);font-size:12.5px;font-weight:500;cursor:pointer;position:relative;transition:background var(--fast) var(--ease),color var(--fast) var(--ease);}
 .nav-item:hover{background:var(--rhov);color:var(--r2);}
 .nav-item.active{background:var(--ract);color:var(--r1);}
 .nav-item.active::before{content:'';position:absolute;left:0;top:7px;bottom:7px;width:2.5px;background:var(--brand-mid);border-radius:0 2px 2px 0;}
@@ -700,7 +700,7 @@ function buildFrom(id){
   if(!c.seg.recs.length && !c.seg.engagedOnce.length){ showToast('No prospects with a live signal to group'); return; }
   const accountNames = {}; c.scored.forEach(r=>{ accountNames[r.account.id] = r.account.name; });
   const saved = { id:runId, name:`${src.listName||src.name} · ${todayIso()}`, createdAt:Date.now(),
-    src:{...src, keys:c.keys}, accountNames, decisions:{}, log:[], configVersion: DemandAI.configVersion(), stats:{ segments:c.seg.segments.length, prospects:c.seg.recs.length, waiting:c.seg.recs.length } };
+    src:{...src, keys:c.keys}, accountNames, decisions:{}, log:[], configVersion: DemandAI.configVersion(), brandVersion: DemandAI.brandVersion(), stats:{ segments:c.seg.segments.length, prospects:c.seg.recs.length, waiting:c.seg.recs.length } };
   RUN = { saved, ...c };
   routeRun();
   view='grid'; segFilt=null; vertFilt=null; q='';
@@ -708,7 +708,7 @@ function buildFrom(id){
 }
 function openRun(id){
   const saved = DemandAI.getSegmentation(id); if(!saved) return;
-  const c = compute(saved.src, saved.id, saved.createdAt);
+  const c = compute(saved.src, saved.id, saved.createdAt, saved.brandVersion);
   if(!c){ showToast("The prospect list behind it isn't saved any more"); return; }
   RUN = { saved, ...c }; view='grid'; segFilt=null; vertFilt=null; q='';
   renderResults();
