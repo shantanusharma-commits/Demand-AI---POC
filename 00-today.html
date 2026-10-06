@@ -632,7 +632,7 @@ function render(){
   const spots = queue.filter(x=>x.d.spot==='pending'), exceptions = queue.filter(x=>x.d.spot!=='pending');
   const approvals = mgr ? items.filter(x=>x.d.status==='Awaiting approval' && !x.paused) : [];
   const waitingMgr = rep ? mineItems.filter(x=>x.d.status==='Awaiting approval') : [];
-  const ready = mineItems.filter(x=>x.d.status==='Released' && !x.d.outcome && x.d.spot!=='pending').sort((a,b)=>(a.d.at||0)-(b.d.at||0));
+  const ready = mineItems.filter(x=>x.d.status==='Released' && (!x.d.outcome || x.d.outcome==='Sent') && x.d.spot!=='pending').sort((a,b)=>(a.d.at||0)-(b.d.at||0));
   const meetings = mineItems.filter(x=>x.d.outcome==='Meeting booked').length;
   const spotDoneWeek = mineItems.filter(x=>x.d.spotWeek===isoWeek(Date.now()) && x.d.spot && x.d.spot!=='pending').length;
   const m = measure(RUNS, mgr || !rep ? null : myEmail()), g = gateStatus(m);
@@ -664,7 +664,7 @@ function render(){
       ${stat('In For Review', queue.length, `${exceptions.length} exception${exceptions.length===1?'':'s'} · ${spots.length} spot-check${spots.length===1?'':'s'}`, '14-review.html', queue.length?'var(--ter-dk)':'')}
       ${mgr ? stat('Approvals', approvals.length, 'sensitive content, accepted by the rep', '14-review.html', approvals.length?'var(--brand)':'')
             : stat('With the sales manager', waitingMgr.length, 'sensitive content you accepted', '12-nba.html')}
-      ${stat('Ready to use', ready.length, 'released, no outcome marked yet', '12-nba.html')}
+      ${stat('Awaiting outcome', ready.length, 'released actions: mark what happened below', '#outcomes')}
       ${stat('G2 acceptance', g.g2===null?'—':g.g2+'%', g.g2Word, '13-analytics.html', g.g2Tone)}
       ${stat('G1 effort saved', g.g1===null?'—':g.g1+'%', g.g1Word, '13-analytics.html', g.g1Tone)}
     </div>` : `<div class="stats" style="margin-bottom:18px;grid-template-columns:repeat(4,1fr)">
@@ -678,8 +678,14 @@ function render(){
       `<span class="tag ${x.d.spot==='pending'?'tag-blue':'tag-amber'}">${esc(whyHere(x.d))}</span>`, `14-review.html?item=${encodeURIComponent(x.id)}`)).join('');
   const aRows = approvals.slice(0,5).map(x=>line(`${esc(x.who)} · ${esc(x.account)}`, `Accepted by ${esc(repName(x.owner))} · ${esc(x.action)}`,
       `<span class="tag tag-violet">Approval</span>`, `14-review.html?item=${encodeURIComponent(x.id)}`)).join('');
-  const rRows = ready.slice(0,6).map(x=>line(`${esc(x.who)} · ${esc(x.account)}`, `${esc(x.action)} · ${esc(x.channel)} · released ${ago(x.d.at)}`,
-      `<span class="tag tag-green">${esc(withRun(x.run, ()=>statusLabel(x.d, x.r)[0]))}</span>`, `12-nba.html?run=${encodeURIComponent(x.run.saved.id)}&rec=${encodeURIComponent(x.r.key)}`)).join('');
+  const rRows = ready.slice(0,8).map(x=>`<div style="padding:10px 14px;border-bottom:1px solid var(--s75)">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="flex:1;min-width:0"><div style="font-size:12.5px;font-weight:600;color:var(--i1)">${esc(x.who)} · ${esc(x.account)}</div>
+        <div style="font-size:11px;color:var(--i3);margin-top:2px">${esc(x.action)} · ${esc(x.channel)} · released ${ago(x.d.at)}${x.d.outcome?` · marked ${esc(x.d.outcome)}`:''}</div></div>
+        <a href="12-nba.html?run=${encodeURIComponent(x.run.saved.id)}&rec=${encodeURIComponent(x.r.key)}" style="font-size:11.5px;color:var(--brand);font-weight:600;text-decoration:none;white-space:nowrap">Open the message →</a>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">${OUTCOMES.map(o=>`<button class="tag ${x.d.outcome===o?'tag-violet':'tag-grey'}" style="cursor:pointer;border:none" onclick="markOutcome('${x.id}','${o}')">${o}</button>`).join('')}</div>
+    </div>`).join('');
 
   const spotPanel = (() => {
     const picked = SPOT ? SPOT.picked : 0, mine = SPOT && SPOT.reps ? (rep ? (SPOT.reps[myEmail()]||0) : picked) : 0;
@@ -715,8 +721,8 @@ function render(){
   const left = worker ? [
       box('Waiting in For Review', queue.length ? link('14-review.html', `Open the queue (${queue.length}) →`) : '', qRows || empty(segs.length ? 'Your queue is clear.' : 'Build micro-segments to start.')),
       mgr ? box('Approvals', approvals.length ? link('14-review.html', 'Review them →') : '', aRows || empty('No sensitive items waiting for your approval.')) : '',
-      box('Ready to use, no outcome yet', ready.length ? `<span style="font-size:11px;color:var(--i3)">oldest first</span>` : '', rRows || empty('Nothing released is waiting for an outcome.') +
-        (ready.length ? `<div style="padding:8px 14px;font-size:11px;color:var(--i3)">There's no CRM in the pilot, so mark Sent, Replied, Meeting booked or No response on Next best action.</div>` : '')),
+      `<div id="outcomes"></div>` + box('Awaiting your outcome update', ready.length ? `<span style="font-size:11px;color:var(--i3)">${ready.length} · oldest first</span>` : '', (rRows || empty('Nothing released is waiting for an outcome.')) +
+        `<div style="padding:8px 14px;font-size:11px;color:var(--i3)">There's no CRM or calendar sync in the pilot, so outcomes are marked here, or on the action's card in Micro-segments &amp; NBA. Sent stays on this list until you mark the reply, a meeting or no response.</div>`),
     ].join('') : recentPanel;
   const right = worker ? spotPanel + gatePanel + recentPanel : gatePanel;
 
@@ -726,6 +732,12 @@ function render(){
     </div>${meetings ? `<div style="font-size:11.5px;color:var(--i3)">${meetings} meeting${meetings===1?'':'s'} booked from your actions so far.</div>` : ''}</div>`;
 }
 
+// Mark what happened with a released action, without leaving Today.
+function markOutcome(id, o){
+  const x = allItems().find(i=>i.id===id); if(!x) return;
+  withRun(x.run, ()=>outcome(x.r.key, o));
+  render();
+}
 const PAGE_ID = '00-today.html';
 setTimeout(()=>{
   const _setRole = setRole; setRole = function(r){ _setRole(r); render(); reviewBadge(); };
