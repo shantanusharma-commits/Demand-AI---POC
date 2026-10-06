@@ -1017,7 +1017,8 @@ function openProspect(key){
 
 /* ═══════════════ BOOT ═══════════════ */
 (function boot(){
-  const id = new URLSearchParams(location.search).get('list');
+  const p = new URLSearchParams(location.search), id = p.get('list');
+  if(p.get('run') && DemandAI.getScoring(p.get('run'))){ openRun(p.get('run')); return; }
   if(id && DemandAI.getList(id)) selListId = id;
   renderStart('new');
 })();

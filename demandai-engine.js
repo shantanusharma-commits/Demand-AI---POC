@@ -1159,7 +1159,7 @@ function deleteSegmentation(id) { return saveSegmentations(loadSegmentations().f
 function reviewBadge() {
   const n = loadSegmentations().reduce((t, r) => t + ((r.stats || {}).waiting ?? (r.stats || {}).prospects ?? 0), 0);
   if (typeof document === 'undefined') return n;
-  document.querySelectorAll('a[href="14-review.html"]').forEach(a => {
+  document.querySelectorAll('a.nav-item[href="14-review.html"]').forEach(a => {
     let b = a.querySelector('.nav-count');
     if (!n) { if (b) b.remove(); return; }
     if (!b) { b = document.createElement('span'); b.className = 'nav-count'; b.style.cssText = 'margin-left:auto;min-width:18px;height:18px;padding:0 6px;border-radius:9px;background:#FF8820;color:#fff;font-size:10px;font-weight:700;display:inline-flex;align-items:center;justify-content:center'; a.appendChild(b); }

@@ -905,7 +905,7 @@ function finishRename(id){
 const PAGE_ID = '12-nba.html';
 setTimeout(()=>{
   const p = new URLSearchParams(location.search);
-  if(p.get('run') && DemandAI.getSegmentation(p.get('run'))){ openRun(p.get('run')); return; }
+  if(p.get('run') && DemandAI.getSegmentation(p.get('run'))){ openRun(p.get('run')); if(p.get('rec') && RUN && recOf(p.get('rec'))) openRec(p.get('rec')); return; }
   if(p.get('from')==='scoring' && handoff()) srcId = 'handoff';
   reviewBadge(); renderStart('new');
   if(p.get('from')==='scoring' && handoff()){ try{ history.replaceState(null, '', location.pathname); }catch(e){} buildFrom('handoff'); }
