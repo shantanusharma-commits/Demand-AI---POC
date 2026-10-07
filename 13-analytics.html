@@ -448,7 +448,7 @@ input,textarea,select{background-color:#fff;color:var(--i1);}
 <script src="demandai-nba.js"></script>
 <script>
 function showToast(msg){document.querySelectorAll('.toast').forEach(t=>t.remove());const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2600);}
-let activeTab = 'gates';
+let activeTab = (t => ['gates','funnel','evidence','weekly','readout','log','loop','validation'].includes(t) ? t : 'gates')(new URLSearchParams(location.search).get('tab'));
 
 function toggleGatesWorking(){
   const el = document.getElementById('gatesWorking');
@@ -712,27 +712,6 @@ function downloadLog(){
 }
 
 /* ═══════════════ VALIDATION: method, baseline, sample and threshold for each gate; data sufficiency ═══════════════ */
-function readiness(runs){
-  const R = DemandAI.CONFIG.readiness;
-  const accounts = runs.flatMap(run=>run.scored.filter(r=>!r.excluded));
-  const uniq = new Map(accounts.map(r=>[r.account.name.toLowerCase(), r])); const A = [...uniq.values()];
-  const contactable = A.filter(r=>(r.contacts||[]).some(c=>c.persona==='Primary' && !c.optOut && ((c.email && c.emailVerified) || c.linkedin)));
-  const covered = A.filter(r=>(r.signalCount||0) > 0 || (r.people||[]).some(p=>p.signals.length));
-  const qual = runs.flatMap(run=>((run.sig&&run.sig.signals)||[]).filter(s=>s.status==='Qualified'));
-  const recent = qual.filter(s=>s.age!==undefined && s.age <= R.recencyDays);
-  const actions = [...new Set(Object.values(DemandAI.CONFIG.segmentLibrary).flat())];
-  const asOf = runs[0] ? runs[0].saved.src.asOf : null;
-  const noProof = actions.filter(a=>{ const sg = Object.keys(DemandAI.CONFIG.segmentLibrary).find(k=>DemandAI.CONFIG.segmentLibrary[k].includes(a)); return !DemandAI.approvedClaims().some(c=>c.segments.includes(sg) && (!asOf || c.expiry >= asOf)); });
-  const p = (a,b) => b ? a/b*100 : 0;
-  return [
-    { k:'Accounts in scope', v:A.length, ok:A.length >= R.accounts, show:`${A.length}`, need:`${R.accounts} or more`, fix:'More accounts in the selected vertical and region' },
-    { k:'Contactability', v:p(contactable.length, A.length), ok:p(contactable.length, A.length) >= R.contactable, show:`${pct0(p(contactable.length, A.length))} of accounts`, need:`${R.contactable}%+ with a primary-persona contact who has a verified email or LinkedIn URL`, fix:'Verified emails or LinkedIn URLs for the primary-persona contacts' },
-    { k:'Signal coverage', v:p(covered.length, A.length), ok:p(covered.length, A.length) >= R.coverage, show:`${pct0(p(covered.length, A.length))} of accounts`, need:`${R.coverage}%+ with at least one qualified signal`, fix:'More of the signal data the client holds: installed base, inquiries, service records, events' },
-    { k:'Recency', v:p(recent.length, qual.length), ok:qual.length>0 && p(recent.length, qual.length) >= R.recency, show:`${pct0(p(recent.length, qual.length))} of qualified signals`, need:`${R.recency}%+ from the last ${R.recencyDays} days`, fix:'A fresher signal export' },
-    { k:'Collateral', v:actions.length-noProof.length, ok:!noProof.length, show:`${actions.length-noProof.length} of ${actions.length} actions`, need:'Approved, unexpired proof for every action in the set', fix:noProof.length?`Proof for: ${noProof.join('; ')}`:'' },
-    { k:'Baseline', v:DemandAI.CONFIG.g1BaselineMinutes, ok:!!(DemandAI.configOverrides().g1BaselineMinutes), show:`${DemandAI.CONFIG.g1BaselineMinutes} min per usable first action`, need:'A timed baseline from the client on the same data', fix:'The client\'s timed baseline (the current figure is a placeholder)' },
-  ];
-}
 function renderValidation(){
   const runs = analyticsRuns(), T = DemandAI.CONFIG, edit = isManager(), m = runs.length ? measure(runs, null) : null;
   const inp = (id, v, unit) => edit ? `<input id="${id}" type="number" value="${v}" style="width:84px;padding:5px 8px;border:1px solid var(--bdk);border-radius:6px;font-size:12px;text-align:right"> <span style="color:var(--i3);font-size:11px">${unit}</span>` : `${v} ${unit}`;

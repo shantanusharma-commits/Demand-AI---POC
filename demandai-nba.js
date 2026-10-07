@@ -93,6 +93,71 @@ function exceptionReasons(r){
   return out;
 }
 const exceptionOf = r => exceptionReasons(r).join(' · ');
+
+/* Why an item needs a person, in a few fixed categories, and by when. Used by Today and For Review. */
+const REASON_CATS = { sensitive:'Sensitive content', claim:'Unsupported claim', low:'Low confidence', small:'Segment too small',
+  deal:'Below deal size', brand:'Brand or rule check', spot:'Spot-check', alternative:'Alternative offered', sentback:'Sent back', intervention:'Stepped in', other:'Other' };
+function reasonCats(r, d){
+  if(d.spot==='pending') return ['spot'];
+  if(d.why==='alternative') return ['alternative'];
+  if(d.why==='sent back') return ['sentback'];
+  if(d.why==='stepped in') return ['intervention'];
+  const out = [];
+  (d.reasons || exceptionReasons(r)).forEach(t=>{
+    const c = /^Sensitive/.test(t) ? 'sensitive' : /claim/.test(t) ? 'claim' : /^Low confidence/.test(t) ? 'low'
+      : /^Segment too small/.test(t) ? 'small' : /deal-size/.test(t) ? 'deal' : /^Brand/.test(t) ? 'brand' : 'other';
+    if(!out.includes(c)) out.push(c);
+  });
+  return out.length ? out : ['other'];
+}
+const dayStart = t => { const d = new Date(t); d.setHours(0,0,0,0); return +d; };
+function addWorkDays(t, n){ const d = new Date(dayStart(t)); while(n > 0){ d.setDate(d.getDate()+1); if(d.getDay()%6) n--; } while(!(d.getDay()%6)) d.setDate(d.getDate()+1); return +d; }
+// The review deadline: 5 pm on the due working day. Spot-checks are due by Friday of the week they were drawn.
+function dueOf(r, d){
+  const D = DemandAI.CONFIG.reviewDue, start = d.routedAt || (RUN && RUN.saved.createdAt) || Date.now();
+  if(d.spot==='pending'){ const f = new Date(dayStart(start)); f.setDate(f.getDate() + ((5 - f.getDay() + 7) % 7)); return +f + 17*36e5; }
+  let days = Math.min(...reasonCats(r, d).map(c=>D[c] ?? D.other));
+  if(r.segment==='Inquiry') days = Math.min(days, D.inquiry);
+  if(days===0 && new Date(start).getHours() >= 15) days = 1;      // arrived late in the day: due the next working day
+  return (days ? addWorkDays(start, days) : dayStart(start)) + 17*36e5;
+}
+const DUE_BUCKETS = [['overdue','Overdue'],['today','Due today'],['tomorrow','Due tomorrow'],['2days','Due within two days'],['later','Due later']];
+function dueBucket(t, now = Date.now()){
+  if(t < now) return 'overdue';
+  const n = Math.round((dayStart(t) - dayStart(now)) / 864e5);
+  return n<=0 ? 'today' : n===1 ? 'tomorrow' : n<=2 ? '2days' : 'later';
+}
+function dueLabel(t, now = Date.now()){
+  const b = dueBucket(t, now), hm = new Date(t).toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'});
+  if(b==='overdue') return 'Overdue since ' + new Date(t).toLocaleDateString(undefined,{weekday:'short', day:'numeric', month:'short'});
+  if(b==='today') return 'By ' + hm + ' today';
+  if(b==='tomorrow') return 'By ' + hm + ' tomorrow';
+  return 'By ' + new Date(t).toLocaleDateString(undefined,{weekday:'short', day:'numeric', month:'short'});
+}
+
+/* 3.3 Data sufficiency: the readiness checks before measurement. Used by Analytics (Validation) and Today (blockers). */
+function readiness(runs){
+  const pct0 = v => v===null||v===undefined ? '—' : Math.round(v)+'%';
+  const R = DemandAI.CONFIG.readiness;
+  const accounts = runs.flatMap(run=>run.scored.filter(r=>!r.excluded));
+  const uniq = new Map(accounts.map(r=>[r.account.name.toLowerCase(), r])); const A = [...uniq.values()];
+  const contactable = A.filter(r=>(r.contacts||[]).some(c=>c.persona==='Primary' && !c.optOut && ((c.email && c.emailVerified) || c.linkedin)));
+  const covered = A.filter(r=>(r.signalCount||0) > 0 || (r.people||[]).some(p=>p.signals.length));
+  const qual = runs.flatMap(run=>((run.sig&&run.sig.signals)||[]).filter(s=>s.status==='Qualified'));
+  const recent = qual.filter(s=>s.age!==undefined && s.age <= R.recencyDays);
+  const actions = [...new Set(Object.values(DemandAI.CONFIG.segmentLibrary).flat())];
+  const asOf = runs[0] ? runs[0].saved.src.asOf : null;
+  const noProof = actions.filter(a=>{ const sg = Object.keys(DemandAI.CONFIG.segmentLibrary).find(k=>DemandAI.CONFIG.segmentLibrary[k].includes(a)); return !DemandAI.approvedClaims().some(c=>c.segments.includes(sg) && (!asOf || c.expiry >= asOf)); });
+  const p = (a,b) => b ? a/b*100 : 0;
+  return [
+    { k:'Accounts in scope', v:A.length, ok:A.length >= R.accounts, show:`${A.length}`, need:`${R.accounts} or more`, fix:'More accounts in the selected vertical and region' },
+    { k:'Contactability', v:p(contactable.length, A.length), ok:p(contactable.length, A.length) >= R.contactable, show:`${pct0(p(contactable.length, A.length))} of accounts`, need:`${R.contactable}%+ with a primary-persona contact who has a verified email or LinkedIn URL`, fix:'Verified emails or LinkedIn URLs for the primary-persona contacts' },
+    { k:'Signal coverage', v:p(covered.length, A.length), ok:p(covered.length, A.length) >= R.coverage, show:`${pct0(p(covered.length, A.length))} of accounts`, need:`${R.coverage}%+ with at least one qualified signal`, fix:'More of the signal data the client holds: installed base, inquiries, service records, events' },
+    { k:'Recency', v:p(recent.length, qual.length), ok:qual.length>0 && p(recent.length, qual.length) >= R.recency, show:`${pct0(p(recent.length, qual.length))} of qualified signals`, need:`${R.recency}%+ from the last ${R.recencyDays} days`, fix:'A fresher signal export' },
+    { k:'Collateral', v:actions.length-noProof.length, ok:!noProof.length, show:`${actions.length-noProof.length} of ${actions.length} actions`, need:'Approved, unexpired proof for every action in the set', fix:noProof.length?`Proof for: ${noProof.join('; ')}`:'' },
+    { k:'Baseline', v:DemandAI.CONFIG.g1BaselineMinutes, ok:!!(DemandAI.configOverrides().g1BaselineMinutes), show:`${DemandAI.CONFIG.g1BaselineMinutes} min per usable first action`, need:'A timed baseline from the client on the same data', fix:'The client\'s timed baseline (the current figure is a placeholder)' },
+  ];
+}
 const isSensitive = x => pinBrand() || DemandAI.checkDraft(x).flags.some(f=>f.rule==='Sensitive term');
 
 /* People: the rep who owns each item (owner_email in the lead file, or reassigned), and who is looking. */

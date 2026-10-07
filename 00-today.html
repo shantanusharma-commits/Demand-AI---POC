@@ -586,34 +586,181 @@ const hide = id => { const el=document.getElementById(id); if(el) el.style.displ
 function search(fn, ph){ return `<div class="sl-srch"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="color:var(--i3);flex-shrink:0"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><input type="text" placeholder="${ph}" value="${esc(q)}" oninput="q=this.value.toLowerCase();${fn}()"></div>`; }
 const pill = (cur,id,label) => `<div class="seg-pill ${cur===id?'active':''}" onclick="filt='${id}';renderResults()">${label}</div>`;
 
-/* ═══════════════ CONTENT LIBRARY: the brand pack the drafts follow ═══════════════ */
-/* ═══════════════ TODAY: what needs you, built from the stored lists and decisions ═══════════════ */
-let RUNS = [], SPOT = null;
+/* ═══════════════ TODAY: land on your work. Blockers first, then what waits on you and by when, then what the system did ═══════════════ */
+let RUNS = [], SPOT = null, MISSING = [];
 function loadRuns(){
-  RUNS = [];
-  DemandAI.loadSegmentations().forEach(saved=>{ const c = compute(saved.src, saved.id, saved.createdAt, saved.brandVersion); if(c) RUNS.push({ saved, ...c }); });
+  RUNS = []; MISSING = [];
+  DemandAI.loadSegmentations().forEach(saved=>{ const c = compute(saved.src, saved.id, saved.createdAt, saved.brandVersion); if(c) RUNS.push({ saved, ...c }); else MISSING.push(saved); });
 }
 function ALL_RUNS(){ return RUNS; }
 function withRun(run, fn){ const keep = RUN; RUN = run; try{ return fn(); } finally { RUN = keep; } }
 // Every recommendation with its decision, newest list first.
 function allItems(){
   return RUNS.slice().sort((a,b)=>b.saved.createdAt-a.saved.createdAt).flatMap(run=>withRun(run, ()=>run.seg.recs.map(r=>{
-    const d = dec(r.key), lr = liveRec(r);
-    return { id: run.saved.id+'::'+r.key, run, r, d, mine: mine(r), paused: !!pausedInfo(r), owner: ownerOf(r),
+    const d = dec(r.key), lr = liveRec(r), q = inQueue(d) && !pausedInfo(r);
+    return { id: run.saved.id+'::'+r.key, run, r, d, mine: mine(r), paused: !!pausedInfo(r), owner: ownerOf(r), queued: q,
+      due: q ? dueOf(r, d) : null, cats: q ? reasonCats(r, d) : [],
       who: lr.contact.name, account: r.account.name, action: chosenAction(r), channel: draftOf(r).channel, segment: r.segment };
   })));
 }
 const ago = t => { if(!t) return ''; const h = (Date.now()-t)/36e5; return h<1 ? 'just now' : h<24 ? Math.round(h)+'h ago' : Math.round(h/24)+'d ago'; };
 const firstName = () => (ROLE_PERSON[getRole()] || getRole()).split(' ')[0];
 const greeting = () => { const h = new Date().getHours(); return h<12 ? 'Good morning' : h<18 ? 'Good afternoon' : 'Good evening'; };
-const link = (href, text) => `<a href="${href}" style="font-size:11.5px;color:var(--brand);font-weight:600;text-decoration:none">${text}</a>`;
-const stat = (lbl, val, sub, href, tone) => `<a class="stat" href="${href}" style="text-decoration:none;display:block">
-    <div class="stat-lbl">${lbl}</div><div class="stat-val" style="${tone?`color:${tone}`:''}">${val}</div><div class="stat-sub">${sub}</div></a>`;
-const box = (title, right, body) => `<div class="panel" style="margin-bottom:16px"><div class="panel-hdr"><span class="panel-ttl">${title}</span>${right||''}</div><div class="panel-body" style="padding:0">${body}</div></div>`;
-const empty = t => `<div style="padding:16px 14px;font-size:12px;color:var(--i3)">${t}</div>`;
-const line = (main, sub, right, href) => `<a href="${href}" style="display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--s75);text-decoration:none;color:inherit">
-    <div style="flex:1;min-width:0"><div style="font-size:12.5px;font-weight:600;color:var(--i1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${main}</div>
-    <div style="font-size:11px;color:var(--i3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${sub}</div></div>${right||''}<span style="color:var(--i3);font-size:13px">›</span></a>`;
+const link = (href, text) => `<a href="${href}" style="font-size:11.5px;color:var(--brand);font-weight:600;text-decoration:none;white-space:nowrap">${text}</a>`;
+const box = (title, right, body, id) => `<div class="panel" ${id?`id="${id}"`:''} style="margin-bottom:16px"><div class="panel-hdr"><span class="panel-ttl">${title}</span>${right||''}</div><div class="panel-body" style="padding:0">${body}</div></div>`;
+const empty = t => `<div style="padding:14px;font-size:12px;color:var(--i3)">${t}</div>`;
+const nbaLink = (run, show) => run ? `12-nba.html?run=${encodeURIComponent(run.saved.id)}${show?`&show=${show}`:''}` : '12-nba.html';
+const pl = (n, one, many) => `${n} ${n===1?one:(many||one+'s')}`;
+
+/* ─── 1 · Getting started: shown on the first visit, reopened from the help icon ─── */
+const INTRO_KEY = 'demandai_today_intro_v1';
+const introOpen = () => { try{ return localStorage.getItem(INTRO_KEY)!=='closed'; }catch(e){ return true; } };
+function setIntro(open){ try{ localStorage.setItem(INTRO_KEY, open?'open':'closed'); }catch(e){} render(); if(open) window.scrollTo(0,0); }
+function introCard(){
+  const term = (t, d) => `<div style="padding:8px 0;border-top:1px solid var(--s75)"><div style="font-size:12.5px;font-weight:700;color:var(--i1)">${t}</div><div style="font-size:12px;color:var(--i2);line-height:1.5;margin-top:2px">${d}</div></div>`;
+  return `<div class="panel" style="margin-bottom:16px;border-color:var(--brand-mid)"><div class="panel-body" style="padding:16px 18px">
+    <div style="display:flex;align-items:flex-start;gap:12px">
+      <div style="flex:1"><div style="font-family:var(--fd);font-size:15px;font-weight:700;color:var(--i1)">Getting started with Today</div>
+        <div style="font-size:12.5px;color:var(--i2);margin-top:4px;line-height:1.55">Today lands you on your work, in the order to do it. The system does most of the work on its own; this page shows what it needs from you so work keeps moving.</div></div>
+      <button class="btn btn-primary btn-sm" onclick="setIntro(false)">Got it</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 28px;margin-top:10px">
+      <div>${term('1 · Blockers', 'Anything that stops work: a scheduled run that didn\'t run, an upload rejected by hard stops, data that\'s missing, an expired claim an action needs, or approvals holding up release. Clear these first. Each one links to where it\'s fixed.')}
+        ${term('2 · Waiting for your review', 'The items the system couldn\'t decide on its own, grouped by when they\'re due. Click a group or a reason to open For Review showing just those.')}
+        ${term('3 · What the system did', 'How many recommendations went ahead on their own (they passed all four checks: segment size, confidence, sensitive content and claims) and how many need a person.')}</div>
+      <div>${term('Went ahead on its own', 'Released straight to the rep, ready to use. Each week a few are picked for a spot-check rating so we know they were right.')}
+        ${term('Exception', 'An item that failed a check and needs a person to accept, edit or reject it.')}
+        ${term('Outcomes', 'There\'s no CRM link in the pilot, so mark what happened: Sent, Replied, Meeting booked or No response.')}
+        ${term('G2 and G1', 'The pilot\'s success gates: G2 is how often recommendations are accepted first time; G1 is the review time saved against the baseline.')}</div>
+    </div>
+    <div style="font-size:11.5px;color:var(--i3);margin-top:10px">Reopen this any time with the <b>?</b> at the top of the page. New to the pilot? The work starts in ${link('10-prospecting.html','Prospecting')}, then ${link('11-scoring.html','Account Scoring')}, then ${link('12-nba.html','Micro-segments &amp; NBA')}.</div>
+  </div></div>`;
+}
+
+/* ─── 2 · Blockers: anything stopping work, with what's wrong and where it's fixed ─── */
+function blockers(ctx){
+  const { mgr, scope, lists, scorings, segs } = ctx, out = [], now = Date.now();
+  // Approvals: for a manager they sit at the very top (approvalsCard); a rep sees their own held items here.
+  if(!mgr){
+    const held = scope.filter(x=>x.d.status==='Awaiting approval');
+    if(held.length) out.push({ title:`${pl(held.length,'message')} held for the sales manager's approval`, detail:`Sensitive content: nothing is released until the sales manager approves (${held.map(x=>esc(x.account)).join(', ')}).`, href:nbaLink(held[0].run,'waiting'), cta:'See them', who:'Sales manager' });
+  }
+  // A run that failed: its prospect list was deleted, so the recommendations can't be opened or decided.
+  MISSING.forEach(s=>out.push({ title:`Run failed: "${esc(s.name)}" can't be opened`, detail:'The prospect list behind it was deleted, so its recommendations can\'t be shown or decided.', href:'12-nba.html', cta:'Rebuild from a saved list', who:'Sales manager' }));
+  // A scheduled run that didn't run on time.
+  DemandAI.CONFIG.schedule.forEach(s=>{
+    const last = Math.max(0, ...(s.id==='nba' ? segs : scorings).map(x=>x.createdAt||0));
+    if(last && now - last > s.everyDays*864e5 + 4*36e5)
+      out.push({ title:`Scheduled run didn't run: ${s.name}`, detail:`Last ran ${ago(last)}; it's expected ${s.everyDays===1?'every day':`every ${s.everyDays} days`}. Until it runs, new signals don't reach the reps.`, href:s.page, cta:'Run it now', who:s.owner });
+  });
+  if(mgr){
+    // An upload where rows failed hard stops and weren't loaded.
+    lists.filter(l=>now-(l.createdAt||0) < 14*864e5).forEach(l=>{
+      const st = l.stats||{}, n = st.notLoaded || (st.issuesBySeverity||{}).stop || 0;
+      if(n) out.push({ title:`Upload partly rejected: ${pl(n,'row')} of "${esc(l.name)}" failed hard stops`, detail:'Those rows weren\'t loaded, so their contacts can\'t be scored or recommended. Fix the file and upload it again.', href:'10-prospecting.html', cta:'See the rejected rows', who:'Sales manager' });
+    });
+    // Not enough data to measure the pilot.
+    const gaps = RUNS.length ? readiness(RUNS).filter(x=>!x.ok && x.k!=='Collateral') : [];
+    if(gaps.length) out.push({ title:'Not enough data to measure the pilot yet', detail:gaps.map(x=>`<b>${esc(x.k)}</b>: ${esc(x.show)}, needs ${esc(x.need.replace(/^A /,'a '))}`).join(' · '), href:'13-analytics.html?tab=validation', cta:'See the readiness checks', who:'Sales manager with the client' });
+  }
+  // An approved claim that has expired while an open action needs it.
+  const today = todayIso();
+  DemandAI.brandPack().claims.filter(c=>c.status==='approved' && c.expiry && c.expiry < today).forEach(c=>{
+    const hit = scope.filter(x=>x.segment && c.segments.includes(x.segment) && !['Closed','Set aside'].includes(x.d.status));
+    if(hit.length) out.push({ title:`Proof expired: "${esc(c.title)}" (${esc(c.id)})`, detail:`Expired ${fmtDate(c.expiry)}. ${pl(hit.length,'action')} in ${esc([...new Set(hit.map(x=>x.segment))].join(', '))} can't cite it, so their drafts go out without approved proof.`, href:'07-content.html?tab=claims', cta:'Renew or replace the claim', who:'Admin' });
+  });
+  return out;
+}
+function blockerRow(b){
+  return `<div style="display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border-top:1px solid var(--s75)">
+    <span style="width:8px;height:8px;border-radius:50%;background:var(--neg);margin-top:6px;flex-shrink:0"></span>
+    <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700;color:var(--i1)">${b.title}</div>
+      <div style="font-size:12px;color:var(--i2);margin-top:3px;line-height:1.5">${b.detail}</div>
+      <div style="font-size:11px;color:var(--i3);margin-top:3px">Fixed by: ${esc(b.who)}</div></div>
+    <a class="btn btn-sec btn-sm" href="${b.href}" style="text-decoration:none;white-space:nowrap">${b.cta} →</a></div>`;
+}
+
+/* ─── 3 · Waiting for my review, grouped by when it's due ─── */
+function reviewSection(queue, mgr){
+  if(!queue.length) return box('Waiting for your review', '', empty('Nothing is waiting for your review. New items arrive when micro-segments are built.'), 'review');
+  const sorted = queue.slice().sort((a,b)=>a.due-b.due), first = sorted[0];
+  const groups = DUE_BUCKETS.map(([k,l])=>({ k, l, its: sorted.filter(x=>dueBucket(x.due)===k) })).filter(g=>g.its.length);
+  const tone = k => k==='overdue'||k==='today' ? 'var(--neg)' : k==='tomorrow' ? 'var(--warn)' : 'var(--i2)';
+  const body = `<div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--brand-lt)">
+      <div style="flex:1;font-size:12.5px;color:var(--i1)"><b>Recommended:</b> start with ${esc(first.who)} · ${esc(first.account)}, ${esc(dueLabel(first.due).replace(/^./, c=>c.toLowerCase()))}. The queue is in the order things are due; you can filter it any way you like.</div>
+      <a class="btn btn-primary btn-sm" href="14-review.html?item=${encodeURIComponent(first.id)}" style="text-decoration:none">Start reviewing →</a></div>
+    ${groups.map(g=>{
+      const counts = {}; g.its.forEach(x=>x.cats.forEach(c=>{ counts[c] = (counts[c]||0)+1; }));
+      return `<div style="padding:12px 14px;border-top:1px solid var(--s75)">
+        <div style="display:flex;align-items:baseline;gap:10px">
+          <a href="14-review.html?due=${g.k}" style="font-size:13px;font-weight:700;color:${tone(g.k)};text-decoration:none">${g.l} · ${g.its.length}</a>
+          <span style="font-size:11.5px;color:var(--i3)">${esc(dueLabel(g.its[0].due))}</span>
+          <span style="margin-left:auto">${link(`14-review.html?due=${g.k}`, 'Open these →')}</span></div>
+        <div class="tags" style="margin:7px 0 4px">${Object.entries(counts).sort((a,b)=>b[1]-a[1]).map(([c,n])=>`<a class="tag ${c==='spot'?'tag-blue':c==='sensitive'?'tag-violet':'tag-amber'}" href="14-review.html?due=${g.k}&reason=${c}" style="text-decoration:none">${esc(REASON_CATS[c])} · ${n}</a>`).join('')}</div>
+        ${g.its.slice(0,3).map(x=>`<a href="14-review.html?item=${encodeURIComponent(x.id)}" style="display:flex;gap:10px;align-items:center;padding:5px 0;text-decoration:none;color:inherit">
+          <span style="flex:1;min-width:0;font-size:12px;color:var(--i1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><b>${esc(x.who)}</b> · ${esc(x.account)} <span style="color:var(--i3)">· ${esc(x.action)}${mgr?` · ${esc(repName(x.owner))}`:''}</span></span>
+          <span style="font-size:11px;color:var(--i3);white-space:nowrap">${esc(REASON_CATS[x.cats[0]])}</span><span style="color:var(--i3)">›</span></a>`).join('')}
+        ${g.its.length>3 ? `<div style="padding-top:2px">${link(`14-review.html?due=${g.k}`, `+ ${g.its.length-3} more`)}</div>` : ''}
+      </div>`; }).join('')}`;
+  return box(`Waiting for your review · ${queue.length}`, link('14-review.html','Open the queue →'), body, 'review');
+}
+
+/* ─── Manager only: approvals at the very top, and the set-up and data card ─── */
+function approvalsCard(approvals){
+  if(!approvals.length) return '';
+  return `<div class="panel" style="margin-bottom:16px;border-color:var(--brand-mid)"><div class="panel-hdr" style="background:var(--brand-lt)"><span class="panel-ttl" style="color:var(--brand-dk)">Waiting on you: ${pl(approvals.length,'approval')}</span>${link('14-review.html?view=approvals','Review them →')}</div><div class="panel-body" style="padding:0">
+    <div style="padding:10px 14px;font-size:12px;color:var(--i2)">Reps accepted these messages, but they contain sensitive content, so nothing is released until you approve or send them back.</div>
+    ${approvals.slice(0,5).map(x=>`<a href="14-review.html?item=${encodeURIComponent(x.id)}" style="display:flex;gap:10px;align-items:center;padding:9px 14px;border-top:1px solid var(--s75);text-decoration:none;color:inherit">
+      <span style="flex:1;font-size:12.5px;color:var(--i1)"><b>${esc(x.who)}</b> · ${esc(x.account)} <span style="color:var(--i3)">· accepted by ${esc(repName(x.owner))} · ${esc(x.action)}</span></span><span class="tag tag-violet">Approval</span><span style="color:var(--i3)">›</span></a>`).join('')}
+  </div></div>`;
+}
+function setupCard(lists, scorings, segs){
+  const rd = RUNS.length ? readiness(RUNS) : [], ok = rd.filter(x=>x.ok).length, pend = DemandAI.brandPending();
+  const row = (k, v, href, cta) => `<div style="display:flex;align-items:center;gap:10px;padding:8px 14px;border-top:1px solid var(--s75);font-size:12px"><span style="color:var(--i2);flex:1">${k}</span><span style="color:var(--i1);font-weight:600">${v}</span>${href?link(href, cta):''}</div>`;
+  return box('Set-up and data', link('09-setup.html','Setup →'),
+    row('Configuration', esc(DemandAI.configVersion().split(' · ')[0]), '13-analytics.html?tab=validation', 'Settings →') +
+    row('Brand pack', esc(DemandAI.brandVersion()) + (pend ? ' · draft waiting' : ''), '07-content.html', 'Content →') +
+    row('Data readiness', rd.length ? `${ok} of ${rd.length} checks pass` : 'No data yet', '13-analytics.html?tab=validation', 'Checks →') +
+    row('Saved lists', `${lists.length} prospect · ${scorings.length} scored · ${segs.length} micro-segment`, '10-prospecting.html', 'Lists →'));
+}
+
+/* ─── 4 · What the system did, from the latest run ─── */
+function systemDid(scope){
+  const latest = RUNS.slice().sort((a,b)=>b.saved.createdAt-a.saved.createdAt)[0];
+  if(!latest) return '';
+  const its = scope.filter(x=>x.run===latest), went = its.filter(x=>x.d.released==='auto'), need = its.filter(x=>x.d.released!=='auto');
+  const accepted = need.filter(x=>x.d.status==='Released').length, rejected = need.filter(x=>['Closed','Set aside'].includes(x.d.status)).length;
+  const waiting = need.filter(x=>inQueue(x.d) || x.d.status==='Awaiting approval').length;
+  const big = (n, l, href, c) => `<a href="${href}" style="text-decoration:none;display:block;padding:12px 16px;border-right:1px solid var(--s75)"><div style="font-family:var(--fd);font-size:24px;font-weight:700;color:${c}">${n}</div><div style="font-size:11.5px;color:var(--i2)">${l} →</div></a>`;
+  return box('What the system did', `<span style="font-size:11px;color:var(--i3)">Latest run: ${esc(latest.saved.name)} · ${ago(latest.saved.createdAt)}</span>`,
+    `<div style="display:grid;grid-template-columns:repeat(4,1fr)">
+      ${big(went.length, 'went ahead on their own', nbaLink(latest,'proceeded'), 'var(--pos)')}
+      ${big(need.length, 'needed a person', nbaLink(latest,'waiting'), 'var(--ter-dk)')}
+      ${big(accepted, 'of those accepted', '14-review.html?view=log', 'var(--i1)')}
+      ${big(rejected, 'rejected or closed', '14-review.html?view=log', 'var(--i1)')}
+    </div>
+    <div style="padding:9px 14px;border-top:1px solid var(--s75);font-size:11.5px;color:var(--i3)">Went ahead = passed all four checks (segment size, confidence, sensitive content, claims) and was released to the rep. ${waiting ? `${waiting} of those that needed a person are still waiting.` : 'Everything that needed a person has been decided.'}</div>`);
+}
+
+/* ─── 7 · Work done: the funnel strip for the latest run ─── */
+function workDone(scope){
+  const latest = RUNS.slice().sort((a,b)=>b.saved.createdAt-a.saved.createdAt)[0];
+  if(!latest) return '';
+  const its = scope.filter(x=>x.run===latest), accts = new Set((latest.keys||[]).map(k=>k.split('|')[0])).size;
+  const steps = [
+    [ (latest.keys||[]).length, 'prospects read', nbaLink(latest) ],
+    [ accts, 'accounts', nbaLink(latest) ],
+    [ its.filter(x=>x.segment).length, 'in micro-segments', nbaLink(latest) ],
+    [ its.length, 'recommendations', nbaLink(latest) ],
+    [ its.filter(x=>x.d.released==='auto').length, 'went ahead', nbaLink(latest,'proceeded') ],
+    [ its.filter(x=>x.d.released!=='auto').length, 'needed a person', nbaLink(latest,'waiting') ],
+    [ its.filter(x=>x.d.status==='Released').length, 'released', nbaLink(latest) ],
+    [ its.filter(x=>x.d.outcome).length, 'outcome marked', '#outcomes' ],
+    [ its.filter(x=>x.d.outcome==='Meeting booked').length, 'meetings booked', nbaLink(latest,'meeting') ],
+  ];
+  return box('Work done', `<span style="font-size:11px;color:var(--i3)">${esc(latest.saved.name)} · ${link('13-analytics.html?tab=funnel','Full funnel →')}</span>`,
+    `<div style="display:flex;overflow-x:auto">${steps.map(([n,l,h],i)=>`<a href="${h}" style="flex:1;min-width:92px;text-decoration:none;padding:12px 10px;text-align:center;border-left:${i?'1px solid var(--s75)':'none'}"><div style="font-family:var(--fd);font-size:20px;font-weight:700;color:var(--i1)">${n}</div><div style="font-size:11px;color:var(--i3);line-height:1.3">${l}</div></a>`).join('')}</div>`);
+}
 
 function gateStatus(m){
   const C = DemandAI.CONFIG, decided = m.pooled.n;
@@ -626,33 +773,32 @@ function gateStatus(m){
 
 function render(){
   loadRuns(); SPOT = weeklySpotCheck(RUNS);
-  const role = getRole(), mgr = isManager(), rep = role==='Sales rep', worker = mgr || rep;
-  const items = allItems(), mineItems = items.filter(x=>x.mine && (mgr || x.owner===myEmail()));
-  const queue = mineItems.filter(x=>inQueue(x.d) && !x.paused);
-  const spots = queue.filter(x=>x.d.spot==='pending'), exceptions = queue.filter(x=>x.d.spot!=='pending');
+  const role = getRole(), mgr = isManager(), rep = role==='Sales rep';
+  const items = allItems(), scope = items.filter(x=>x.mine && (mgr || x.owner===myEmail()));
+  const queue = scope.filter(x=>x.queued);
   const approvals = mgr ? items.filter(x=>x.d.status==='Awaiting approval' && !x.paused) : [];
-  const waitingMgr = rep ? mineItems.filter(x=>x.d.status==='Awaiting approval') : [];
-  const ready = mineItems.filter(x=>x.d.status==='Released' && (!x.d.outcome || x.d.outcome==='Sent') && x.d.spot!=='pending').sort((a,b)=>(a.d.at||0)-(b.d.at||0));
-  const meetings = mineItems.filter(x=>x.d.outcome==='Meeting booked').length;
-  const spotDoneWeek = mineItems.filter(x=>x.d.spotWeek===isoWeek(Date.now()) && x.d.spot && x.d.spot!=='pending').length;
-  const m = measure(RUNS, mgr || !rep ? null : myEmail()), g = gateStatus(m);
+  const toUpdate = scope.filter(x=>x.d.status==='Released' && (!x.d.outcome || x.d.outcome==='Sent') && x.d.spot!=='pending').sort((a,b)=>(a.d.at||0)-(b.d.at||0));
+  const latest = RUNS.slice().sort((a,b)=>b.saved.createdAt-a.saved.createdAt)[0];
+  const m = measure(RUNS, mgr ? null : myEmail()), g = gateStatus(m);
   const lists = DemandAI.loadLists(), scorings = DemandAI.loadScorings(), segs = DemandAI.loadSegmentations();
   const nothing = !lists.length && !scorings.length && !segs.length;
+  const bl = blockers({ mgr, scope, lists, scorings, segs });
   const dateLine = new Date().toLocaleDateString(undefined,{weekday:'long', day:'numeric', month:'long'});
-
-  const head = `<div class="topbar"><div class="topbar-l"><span class="tb-title">Today</span><span style="font-size:12px;color:var(--i3);margin-left:10px">${esc(dateLine)}</span></div></div>`;
-  const hello = `<div style="margin-bottom:18px"><div style="font-family:var(--fd);font-size:22px;font-weight:700;color:var(--i1)">${greeting()}, ${esc(firstName())}</div>
+  const head = `<div class="topbar"><div class="topbar-l"><span class="tb-title">Today</span><span style="font-size:12px;color:var(--i3);margin-left:10px">${esc(dateLine)}</span></div>
+    <div class="topbar-r"><button class="btn btn-ghost btn-sm" title="What is this page?" onclick="setIntro(true)" style="width:28px;height:28px;padding:0;justify-content:center;border-radius:50%;border:1px solid var(--bdk);font-weight:700;margin-right:4px">?</button></div></div>`;
+  const nowNeed = approvals.length + bl.length + queue.length;
+  const hello = `<div style="margin-bottom:16px"><div style="font-family:var(--fd);font-size:22px;font-weight:700;color:var(--i1)">${greeting()}, ${esc(firstName())}</div>
     <div style="font-size:13px;color:var(--i3);margin-top:4px">${nothing ? "Nothing has been built yet. Here's how the pilot runs." :
-      worker ? (queue.length + approvals.length ? `${queue.length + approvals.length} item${queue.length + approvals.length===1?'':'s'} need${queue.length + approvals.length===1?'s':''} you today.` : 'Nothing is waiting for you. Ready-to-use actions and recent lists are below.')
-      : 'View only: the pilot at a glance.'}</div></div>`;
+      bl.length ? `${pl(bl.length,'blocker')} to clear first, then ${pl(queue.length,'item')} waiting for your review.` :
+      queue.length ? `No blockers. ${pl(queue.length,'item')} waiting for your review.` : 'No blockers and nothing waiting for your review.'}</div></div>`;
 
   if(nothing){
     const step = (n, t, d, href, cta) => `<div class="panel" style="flex:1"><div class="panel-body">
         <div style="font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--brand)">STEP ${n}</div>
         <div style="font-family:var(--fd);font-size:15px;font-weight:700;color:var(--i1);margin:6px 0 4px">${t}</div>
         <div style="font-size:12px;color:var(--i2);line-height:1.55;margin-bottom:12px">${d}</div>${link(href, cta)}</div></div>`;
-    document.getElementById('mainArea').innerHTML = head + `<div class="canvas">${hello}
-      <div style="display:flex;gap:14px;max-width:980px">
+    document.getElementById('mainArea').innerHTML = head + `<div class="canvas" style="max-width:1120px">${hello}${introOpen()?introCard():''}
+      <div style="display:flex;gap:14px">
         ${step(1, 'Bring in prospects', 'Upload the account and contact file, or use the sample. Bad rows are set aside with a reason.', '10-prospecting.html', 'Go to Prospecting →')}
         ${step(2, 'Score the accounts', 'Fit, intent and timing give each account a tier and a reason. Send the best to micro-segments.', '11-scoring.html', 'Go to Scoring →')}
         ${step(3, 'Plan the next step', 'Accounts are grouped by their reason to buy now, and each gets an action and a first message. Exceptions come to For Review.', '12-nba.html', 'Go to Micro-segments & NBA →')}
@@ -660,78 +806,46 @@ function render(){
     return;
   }
 
-  const tiles = worker ? `<div class="stats" style="margin-bottom:18px">
-      ${stat('In For Review', queue.length, `${exceptions.length} exception${exceptions.length===1?'':'s'} · ${spots.length} spot-check${spots.length===1?'':'s'}`, '14-review.html', queue.length?'var(--ter-dk)':'')}
-      ${mgr ? stat('Approvals', approvals.length, 'sensitive content, accepted by the rep', '14-review.html', approvals.length?'var(--brand)':'')
-            : stat('With the sales manager', waitingMgr.length, 'sensitive content you accepted', '12-nba.html')}
-      ${stat('Awaiting outcome', ready.length, 'released actions: mark what happened below', '#outcomes')}
-      ${stat('G2 acceptance', g.g2===null?'—':g.g2+'%', g.g2Word, '13-analytics.html', g.g2Tone)}
-      ${stat('G1 effort saved', g.g1===null?'—':g.g1+'%', g.g1Word, '13-analytics.html', g.g1Tone)}
-    </div>` : `<div class="stats" style="margin-bottom:18px;grid-template-columns:repeat(4,1fr)">
-      ${stat('Recommendations', m.items, `${m.autoN} proceeded · ${m.excN} exceptions`, '13-analytics.html')}
-      ${stat('Meetings booked', m.outcomes['Meeting booked']||0, 'marked by the reps', '13-analytics.html')}
-      ${stat('G2 acceptance', g.g2===null?'—':g.g2+'%', g.g2Word, '13-analytics.html', g.g2Tone)}
-      ${stat('G1 effort saved', g.g1===null?'—':g.g1+'%', g.g1Word, '13-analytics.html', g.g1Tone)}
+  const blockersBox = bl.length
+    ? `<div class="panel" style="margin-bottom:16px;border-color:var(--neg)"><div class="panel-hdr" style="background:var(--neg-lt)"><span class="panel-ttl" style="color:var(--neg)">Blockers · ${bl.length}</span><span style="font-size:11px;color:var(--neg)">Work is stuck until these are cleared</span></div><div class="panel-body" style="padding:0">${bl.map(blockerRow).join('')}</div></div>`
+    : `<div style="display:flex;align-items:center;gap:8px;padding:10px 14px;margin-bottom:16px;background:var(--pos-lt);border-radius:var(--rmd);font-size:12.5px;color:var(--pos);font-weight:600"><span style="width:8px;height:8px;border-radius:50%;background:var(--pos)"></span>No blockers. Your work is running.</div>`;
+
+  const exceptions = queue.filter(x=>x.d.spot!=='pending'), went = scope.filter(x=>x.d.released==='auto');
+  const meetings = scope.filter(x=>x.d.outcome==='Meeting booked').length;
+  const tile = (lbl, val, sub, href, tone) => `<a class="stat" href="${href}" style="text-decoration:none;display:block;cursor:pointer" onmouseover="this.style.background='var(--s50)'" onmouseout="this.style.background=''">
+    <div class="stat-lbl">${lbl}</div><div class="stat-val" style="${tone?`color:${tone}`:''}">${val}</div><div class="stat-sub">${sub} <span style="color:var(--brand)">→</span></div></a>`;
+  const tiles = `<div class="stats" style="margin-bottom:16px;grid-template-columns:repeat(6,1fr)">
+      ${tile('Exceptions waiting', exceptions.length, 'failed a check, need a decision', '14-review.html?kind=exception', exceptions.length?'var(--ter-dk)':'')}
+      ${tile('Went ahead on their own', went.length, 'released to reps, ready to use', nbaLink(latest,'proceeded'), 'var(--pos)')}
+      ${tile('Outcomes to update', toUpdate.length, 'released, no result marked yet', '#outcomes')}
+      ${tile('Meetings booked', meetings, 'marked by the reps', '13-analytics.html?tab=loop')}
+      ${tile('G2 acceptance', g.g2===null?'—':g.g2+'%', g.g2Word, '13-analytics.html?tab=gates', g.g2Tone)}
+      ${tile('G1 effort saved', g.g1===null?'—':g.g1+'%', g.g1Word, '13-analytics.html?tab=gates', g.g1Tone)}
     </div>`;
 
-  const qRows = queue.slice(0,6).map(x=>line(`${esc(x.who)} · ${esc(x.account)}`, `${esc(x.action)} · ${esc(x.channel)}${x.segment?` · ${esc(x.segment)}`:''}`,
-      `<span class="tag ${x.d.spot==='pending'?'tag-blue':'tag-amber'}">${esc(whyHere(x.d))}</span>`, `14-review.html?item=${encodeURIComponent(x.id)}`)).join('');
-  const aRows = approvals.slice(0,5).map(x=>line(`${esc(x.who)} · ${esc(x.account)}`, `Accepted by ${esc(repName(x.owner))} · ${esc(x.action)}`,
-      `<span class="tag tag-violet">Approval</span>`, `14-review.html?item=${encodeURIComponent(x.id)}`)).join('');
-  const rRows = ready.slice(0,8).map(x=>`<div style="padding:10px 14px;border-bottom:1px solid var(--s75)">
+  const rRows = toUpdate.slice(0,8).map(x=>`<div style="padding:10px 14px;border-bottom:1px solid var(--s75)">
       <div style="display:flex;align-items:center;gap:10px">
         <div style="flex:1;min-width:0"><div style="font-size:12.5px;font-weight:600;color:var(--i1)">${esc(x.who)} · ${esc(x.account)}</div>
         <div style="font-size:11px;color:var(--i3);margin-top:2px">${esc(x.action)} · ${esc(x.channel)} · released ${ago(x.d.at)}${x.d.outcome?` · marked ${esc(x.d.outcome)}`:''}</div></div>
-        <a href="12-nba.html?run=${encodeURIComponent(x.run.saved.id)}&rec=${encodeURIComponent(x.r.key)}" style="font-size:11.5px;color:var(--brand);font-weight:600;text-decoration:none;white-space:nowrap">Open the message →</a>
+        <a href="${nbaLink(x.run)}&rec=${encodeURIComponent(x.r.key)}" style="font-size:11.5px;color:var(--brand);font-weight:600;text-decoration:none;white-space:nowrap">Open the message →</a>
       </div>
       <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">${OUTCOMES.map(o=>`<button class="tag ${x.d.outcome===o?'tag-violet':'tag-grey'}" style="cursor:pointer;border:none" onclick="markOutcome('${x.id}','${o}')">${o}</button>`).join('')}</div>
     </div>`).join('');
+  const outcomesBox = box(`Outcomes to update · ${toUpdate.length}`, toUpdate.length ? `<span style="font-size:11px;color:var(--i3)">oldest first</span>` : '', (rRows || empty('Nothing released is waiting for an outcome.')) +
+    `<div style="padding:8px 14px;font-size:11px;color:var(--i3)">There's no CRM or calendar link in the pilot, so outcomes are marked here, or on the action's card in Micro-segments &amp; NBA. Sent stays on this list until you mark the reply, a meeting or no response.</div>`, 'outcomes');
 
-  const spotPanel = (() => {
-    const picked = SPOT ? SPOT.picked : 0, mine = SPOT && SPOT.reps ? (rep ? (SPOT.reps[myEmail()]||0) : picked) : 0;
-    const body = `<div style="padding:12px 14px">
-        <div style="display:flex;gap:20px;margin-bottom:8px">
-          <div><div class="stat-lbl">Picked this week</div><div style="font-family:var(--fd);font-size:20px;font-weight:700;color:var(--i1)">${mine}</div></div>
-          <div><div class="stat-lbl">Done</div><div style="font-family:var(--fd);font-size:20px;font-weight:700;color:var(--pos)">${spotDoneWeek}</div></div>
-          <div><div class="stat-lbl">Still to do</div><div style="font-family:var(--fd);font-size:20px;font-weight:700;color:${spots.length?'var(--ter-dk)':'var(--i1)'}">${spots.length}</div></div>
-        </div>
-        <div style="font-size:11px;color:var(--i3);line-height:1.5">Each week ${Math.round(DemandAI.CONFIG.spotCheckShare*100)}% of the items that proceeded on their own (at least one per rep) are picked for a rating. ${SPOT && SPOT.at ? `This week's draw: ${fmtDate(SPOT.at)}.` : 'No items have proceeded yet this week.'}</div>
-      </div>`;
-    return box("This week's spot-checks", spots.length ? link('14-review.html', 'Rate them →') : '', body);
-  })();
-
-  const gatePanel = box('Success gates', link('13-analytics.html', 'Analytics →'), `<div style="padding:12px 14px">
-      ${[['G2 · first-pass acceptance', g.g2, g.g2Tone, g.g2Word, m.weighted!==null ? `${m.pooled.a} of ${m.pooled.n} accepted on first pass, weighted across both paths` : 'Decide in For Review to start the count'],
-         ['G1 · less review effort', g.g1, g.g1Tone, g.g1Word, m.minutes!==null ? `${Math.round(m.minutes*10)/10} min per usable first action against ${m.base} min before` : 'Needs released actions to measure']]
-        .map(([t, v, tone, w, d])=>`<div style="padding:8px 0;border-bottom:1px solid var(--s75)">
-          <div style="display:flex;align-items:baseline;gap:10px"><span style="flex:1;font-size:12.5px;font-weight:600;color:var(--i1)">${t}</span>
-          <span style="font-family:var(--fd);font-size:18px;font-weight:700;color:${tone}">${v===null?'—':v+'%'}</span></div>
-          <div style="font-size:11px;color:${tone};margin-top:2px">${esc(w)}</div><div style="font-size:11px;color:var(--i3);margin-top:2px">${esc(d)}</div></div>`).join('')}
-      <div style="font-size:11px;color:var(--i3);margin-top:8px">${mgr || !rep ? 'Everyone' : 'Your decisions'} · ${m.flagged ? `${m.flagged} quick decision${m.flagged===1?'':'s'} waiting for a check · ` : ''}${esc(DemandAI.configVersion().split(' · ')[0])} · ${esc(DemandAI.brandVersion())}</div>
-    </div>`);
-
-  const recent = [
-    ...lists.map(l=>({ at:l.createdAt, kind:'Prospect list', name:l.name, sub:`${(l.stats&&l.stats.accounts)||(l.accounts||[]).length} accounts · ${(l.stats&&l.stats.contacts)||(l.contacts||[]).length} contacts`, href:`11-scoring.html?list=${encodeURIComponent(l.id)}`, cta:'Score' })),
-    ...scorings.map(r=>({ at:r.createdAt, kind:'Scored list', name:r.name, sub:`${(r.stats&&r.stats.scored)||0} scored · ${(r.stats&&r.stats.A)||0} in tier A`, href:`11-scoring.html?run=${encodeURIComponent(r.id)}`, cta:'Open' })),
-    ...segs.map(s=>({ at:s.createdAt, kind:'Micro-segments', name:s.name, sub:`${(s.stats&&s.stats.segments)||0} micro-segments · ${(s.stats&&s.stats.prospects)||0} recommendations · ${(s.stats&&s.stats.waiting)||0} waiting · ${esc(s.brandVersion||'Brand v1')}`, href:`12-nba.html?run=${encodeURIComponent(s.id)}`, cta:'Open' })),
-  ].sort((a,b)=>(b.at||0)-(a.at||0)).slice(0,8);
-  const KIND_TONE = {'Prospect list':'tag-grey', 'Scored list':'tag-blue', 'Micro-segments':'tag-violet'};
-  const recentPanel = box('Recent lists', '', recent.map(x=>line(esc(x.name), `${x.sub} · ${x.at?fmtDate(x.at):''}`, `<span class="tag ${KIND_TONE[x.kind]}">${x.kind}</span>`, x.href)).join(''));
-
-  const left = worker ? [
-      box('Waiting in For Review', queue.length ? link('14-review.html', `Open the queue (${queue.length}) →`) : '', qRows || empty(segs.length ? 'Your queue is clear.' : 'Build micro-segments to start.')),
-      mgr ? box('Approvals', approvals.length ? link('14-review.html', 'Review them →') : '', aRows || empty('No sensitive items waiting for your approval.')) : '',
-      `<div id="outcomes"></div>` + box('Awaiting your outcome update', ready.length ? `<span style="font-size:11px;color:var(--i3)">${ready.length} · oldest first</span>` : '', (rRows || empty('Nothing released is waiting for an outcome.')) +
-        `<div style="padding:8px 14px;font-size:11px;color:var(--i3)">There's no CRM or calendar sync in the pilot, so outcomes are marked here, or on the action's card in Micro-segments &amp; NBA. Sent stays on this list until you mark the reply, a meeting or no response.</div>`),
-    ].join('') : recentPanel;
-  const right = worker ? spotPanel + gatePanel + recentPanel : gatePanel;
-
-  document.getElementById('mainArea').innerHTML = head + `<div class="canvas">${hello}${tiles}
-    <div style="display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:16px;align-items:start">
-      <div>${left}</div><div>${right}</div>
-    </div>${meetings ? `<div style="font-size:11.5px;color:var(--i3)">${meetings} meeting${meetings===1?'':'s'} booked from your actions so far.</div>` : ''}</div>`;
+  document.getElementById('mainArea').innerHTML = head + `<div class="canvas" style="max-width:1120px">${hello}
+    ${introOpen() ? introCard() : ''}
+    ${mgr ? approvalsCard(approvals) : ''}
+    ${blockersBox}
+    ${reviewSection(queue, mgr)}
+    ${systemDid(scope)}
+    ${tiles}
+    ${outcomesBox}
+    ${workDone(scope)}
+    ${mgr ? setupCard(lists, scorings, segs) : ''}
+  </div>`;
 }
-
 // Mark what happened with a released action, without leaving Today.
 function markOutcome(id, o){
   const x = allItems().find(i=>i.id===id); if(!x) return;

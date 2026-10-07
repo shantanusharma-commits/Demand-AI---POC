@@ -588,7 +588,9 @@ const pill = (cur,id,label) => `<div class="seg-pill ${cur===id?'active':''}" on
 
 /* ═══════════════ STATE ═══════════════ */
 const CARD_MODE = 'use'; // this screen shows and uses the work; decisions happen in For Review
-let tab = 'new', srcId = null, view = 'grid', segFilt = null, vertFilt = null, q = '', renamingId = null;
+let tab = 'new', srcId = null, view = 'grid', segFilt = null, vertFilt = null, q = '', renamingId = null, showFilt = null;
+// From Today: ?show=proceeded | waiting | meeting
+const SHOW_LABEL = { proceeded:'Went ahead on their own', waiting:'Waiting for a person', meeting:'Meeting booked' };
 const _closeDrawer = closeDrawer;
 closeDrawer = function(){ openKey = null; _closeDrawer(); };
 const reviewLink = key => `14-review.html?item=${encodeURIComponent(RUN.saved.id+'::'+key)}`;
@@ -861,6 +863,7 @@ function visibleRecs(){
   let rs = RUN.seg.recs.filter(mine);
   if(segFilt) rs = rs.filter(r=>segFilt==='__x' ? !r.segment : r.segment===segFilt);
   if(vertFilt) rs = rs.filter(r=>r.account.vertical===vertFilt);
+  if(showFilt) rs = rs.filter(r=>{ const d = dec(r.key); return showFilt==='proceeded' ? d.released==='auto' : showFilt==='waiting' ? (inQueue(d) || d.status==='Awaiting approval') : showFilt==='meeting' ? d.outcome==='Meeting booked' : true; });
   if(q) rs = rs.filter(r=>(liveRec(r).contact.name+' '+r.account.name+' '+chosenAction(r)).toLowerCase().includes(q));
   return rs;
 }
@@ -872,6 +875,7 @@ function listTab(){
     <div class="sl-toolbar">${search('drawList','Search accounts, contacts or actions…')}
       <select onchange="segFilt=this.value||null;drawList()" style="${sel}"><option value="">All micro-segments</option>${segs.map(n=>`<option value="${n}" ${segFilt===n?'selected':''}>${n==='__x'?'No micro-segment':esc(n)}</option>`).join('')}</select>
       <select onchange="vertFilt=this.value||null;drawList()" style="${sel}"><option value="">All verticals</option>${verts.map(v=>`<option ${vertFilt===v?'selected':''}>${esc(v)}</option>`).join('')}</select></div>
+    ${showFilt ? `<div style="display:flex;align-items:center;gap:8px;padding:8px 14px;border-bottom:1px solid var(--border);font-size:12px;color:var(--i2)">Showing <span class="tag tag-blue">${esc(SHOW_LABEL[showFilt]||showFilt)}</span><a href="#" onclick="showFilt=null;renderResults();return false" style="color:var(--brand);font-weight:600;text-decoration:none">Show all</a>${showFilt==='proceeded'?'<span style="color:var(--i3)">· passed all four checks: segment size, confidence, sensitive content and claims</span>':''}</div>` : ''}
     <div id="rows"></div></div>
     <div style="font-size:11px;color:var(--i3);margin-top:10px">One recommendation per account. ${isManager()?'You see every rep\'s accounts.':'You see your own accounts.'} Click one to see the message, copy it and mark what happened.</div>`;
 }
@@ -905,7 +909,7 @@ function finishRename(id){
 const PAGE_ID = '12-nba.html';
 setTimeout(()=>{
   const p = new URLSearchParams(location.search);
-  if(p.get('run') && DemandAI.getSegmentation(p.get('run'))){ openRun(p.get('run')); if(p.get('rec') && RUN && recOf(p.get('rec'))) openRec(p.get('rec')); return; }
+  if(p.get('run') && DemandAI.getSegmentation(p.get('run'))){ openRun(p.get('run')); if(p.get('show')){ showFilt = p.get('show'); view = 'list'; renderResults(); } if(p.get('rec') && RUN && recOf(p.get('rec'))) openRec(p.get('rec')); return; }
   if(p.get('from')==='scoring' && handoff()) srcId = 'handoff';
   reviewBadge(); renderStart('new');
   if(p.get('from')==='scoring' && handoff()){ try{ history.replaceState(null, '', location.pathname); }catch(e){} buildFrom('handoff'); }

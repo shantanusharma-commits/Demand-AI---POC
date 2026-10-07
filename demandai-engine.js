@@ -34,6 +34,14 @@ const CONFIG = {
   // Proceed criteria: an estimated first deal below this goes to a person (USD; placeholder until kickoff).
   dealSize: { threshold: 250000, base: { core: 600000, adjacent: 350000, other: 150000 } },
   brand: { maxSubjectWords: 6, competitors: [] },
+  // Review by when: working days from the moment an item reaches For Review (0 = by 5 pm the same day).
+  // A buyer who asked (an inquiry) and sensitive content are same-day; spot-checks are due by Friday of the week drawn.
+  reviewDue: { inquiry: 0, sensitive: 0, sentback: 0, alternative: 1, intervention: 1, brand: 1, claim: 2, low: 2, small: 2, deal: 2, other: 2 },
+  // How often each run is expected. In the POC people start runs by hand; Today calls out a run that is overdue.
+  schedule: [
+    { id: 'nba', name: 'Micro-segments & NBA build', everyDays: 1, page: '12-nba.html', owner: 'Sales manager' },
+    { id: 'scoring', name: 'Signal file scoring', everyDays: 7, page: '11-scoring.html', owner: 'Sales manager' },
+  ],
   // The agreed action library per segment (proposed in the process flows; the client approves the final list).
   // The first option is the recommendation; the next is the runner-up unless the strongest signal says otherwise.
   segmentLibrary: {

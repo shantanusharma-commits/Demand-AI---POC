@@ -605,7 +605,18 @@ function items(){
 }
 function withRun(it, fn){ const keep = RUN; RUN = it.run; try{ return fn(); } finally { RUN = keep; } }
 const decOf = it => withRun(it, ()=>dec(it.r.key));
-const myQueue = () => items().filter(it=>withRun(it, ()=>inQueue(dec(it.r.key)) && mine(it.r) && !pausedInfo(it.r)));
+// The recommended order: whatever is due first comes first.
+const dueOfIt = it => withRun(it, ()=>dueOf(it.r, dec(it.r.key)));
+const catsOfIt = it => withRun(it, ()=>reasonCats(it.r, dec(it.r.key)));
+const myQueue = () => items().filter(it=>withRun(it, ()=>inQueue(dec(it.r.key)) && mine(it.r) && !pausedInfo(it.r))).sort((a,b)=>dueOfIt(a)-dueOfIt(b));
+// Filters arriving from Today (?due=today&reason=sensitive&kind=exception).
+let FILT = { due:null, reason:null, kind:null };
+const filtered = its => its.filter(it=>(!FILT.due || dueBucket(dueOfIt(it))===FILT.due) && (!FILT.reason || catsOfIt(it).includes(FILT.reason))
+  && (!FILT.kind || (FILT.kind==='spot' ? decOf(it).spot==='pending' : decOf(it).spot!=='pending')));
+function filterBar(){
+  const parts = [FILT.due && (DUE_BUCKETS.find(b=>b[0]===FILT.due)||[])[1], FILT.reason && REASON_CATS[FILT.reason], FILT.kind && (FILT.kind==='spot'?'Spot-checks':'Exceptions')].filter(Boolean);
+  return parts.length ? `<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:12px;color:var(--i2)">Showing ${parts.map(x=>`<span class="tag tag-blue">${esc(x)}</span>`).join('')}<a href="#" onclick="FILT={due:null,reason:null,kind:null};history.replaceState(null,'',location.pathname);render();return false" style="color:var(--brand);font-weight:600;text-decoration:none">Show all</a></div>` : '';
+}
 const pausedCount = () => items().filter(it=>withRun(it, ()=>(inQueue(dec(it.r.key)) || dec(it.r.key).status==='Awaiting approval') && mine(it.r) && pausedInfo(it.r))).length;
 function queuePos(key){ const i = myQueue().findIndex(it=>it.run===RUN && it.r.key===key); return i<0 ? null : i+1; }
 function openItem(id){
@@ -658,6 +669,7 @@ function render(){
         ${stat('Proceeded path', m.auto, `${m.auto.a} of ${m.auto.n} spot-checks · ${m.autoN} items`)}${stat('Exception path', m.exc, `${m.exc.a} of ${m.exc.n} decided · ${m.excN} items`)}${stat('Within one alternative', m.alternatives)}
         <div style="flex:1;min-width:120px;padding:10px 14px"><div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--i3)">Flagged</div><div style="font-family:var(--fd);font-size:19px;font-weight:700;color:${m.flagged?'var(--warn)':'var(--i1)'};margin-top:2px">${m.flagged}</div><div style="font-size:10.5px;color:var(--i3)">fast or repetitive, to check · ${m.interventions} intervention${m.interventions===1?'':'s'}</div></div>
       </div>` : ''}
+      ${view==='queue' ? filterBar() : ''}
       <div class="score-list">
         <div class="sl-toolbar">${search(view==='log'?'drawLog':'draw', view==='log'?'Search the log…':'Search prospects, companies or actions…')}</div>
         <div id="rows"></div>
@@ -669,11 +681,12 @@ function render(){
 function draw(){
   const el = document.getElementById('rows'); if(!el) return;
   const mgr = isManager();
-  let its = view==='queue' ? myQueue()
+  let its = view==='queue' ? filtered(myQueue())
     : view==='approvals' ? items().filter(it=>decOf(it).status==='Awaiting approval' && withRun(it, ()=>mine(it.r) && !pausedInfo(it.r)))
     : items().filter(it=>decOf(it).status==='Released' && withRun(it, ()=>mine(it.r)));
   if(q) its = its.filter(it=>withRun(it, ()=>(liveRec(it.r).contact.name+' '+it.r.account.name+' '+chosenAction(it.r)).toLowerCase().includes(q)));
-  const cols = [['Prospect','18%'],['Company','15%'],[view==='released'?'Released':'Why it\'s here','19%'],['Action','24%'],['Channel','10%']];
+  const cols = [['Prospect','17%'],['Company','14%'],[view==='released'?'Released':'Why it\'s here','17%'],['Action','20%'],['Channel','8%']];
+  if(view==='queue') cols.push(['Due','11%']);
   if(mgr) cols.push(['Owner','14%']); else cols.push([view==='released'?'Outcome':'','14%']);
   el.innerHTML = table(cols, its.map(it=>withRun(it, ()=>{
       const r = it.r, d = dec(r.key), lr = liveRec(r), x = draftOf(r);
@@ -686,6 +699,7 @@ function draw(){
         <td>${why}</td>
         <td class="wrap"><span class="clamp2" style="font-size:12px;color:var(--i1)" title="${esc(chosenAction(r))}">${esc(chosenAction(r))}</span></td>
         <td>${cell(x.channel==='Task'?'Task':x.channel)}</td>
+        ${view==='queue' ? (()=>{ const t = dueOf(r, d), b = dueBucket(t); return `<td><span style="font-size:12px;font-weight:600;color:${b==='overdue'||b==='today'?'var(--neg)':b==='tomorrow'?'var(--warn)':'var(--i2)'}">${esc(dueLabel(t))}</span></td>`; })() : ''}
         <td>${mgr ? cell(repName(ownerOf(r))) : view==='released' ? (d.outcome?esc(d.outcome):'<span class="muted">—</span>') : ''}</td>
       </tr>`;})).join(''),
     view==='queue' ? 'Nothing needs you right now.' : view==='approvals' ? 'No sensitive items waiting for approval.' : 'Nothing released yet.');
@@ -736,7 +750,10 @@ const PAGE_ID = '14-review.html';
 setTimeout(()=>{
   const _setRole = setRole; setRole = function(r){ _setRole(r); closeDrawer(); view='queue'; render(); };
   loadRuns(); SPOT = weeklySpotCheck(Object.values(RUNS)); reviewBadge(); render();
-  const id = new URLSearchParams(location.search).get('item');
+  const P = new URLSearchParams(location.search), id = P.get('item');
+  FILT = { due:P.get('due'), reason:P.get('reason'), kind:P.get('kind') };
+  if(['approvals','log','queue'].includes(P.get('view')) && (P.get('view')!=='approvals' || isManager())) view = P.get('view');
+  if(FILT.due || FILT.reason || FILT.kind || P.get('view')) render();
   if(id) openItem(id);
 }, 0);
 

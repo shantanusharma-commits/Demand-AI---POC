@@ -587,7 +587,7 @@ function search(fn, ph){ return `<div class="sl-srch"><svg width="12" height="12
 const pill = (cur,id,label) => `<div class="seg-pill ${cur===id?'active':''}" onclick="filt='${id}';renderResults()">${label}</div>`;
 
 /* ═══════════════ CONTENT LIBRARY: the brand pack the drafts follow ═══════════════ */
-let tab = 'guidelines', DRAFT = null, SUGGEST = null;
+let tab = (t => ['guidelines','voice','negative','claims','framework','versions'].includes(t) ? t : 'guidelines')(new URLSearchParams(location.search).get('tab')), DRAFT = null, SUGGEST = null;
 const canEdit = () => ['Admin','Sales manager'].includes(getRole());
 const canPublish = () => getRole()==='Admin';
 function me(){ const r = getRole(); return { who: ROLE_PERSON[r] || r, role: r }; }
