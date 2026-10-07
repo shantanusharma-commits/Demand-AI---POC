@@ -862,11 +862,12 @@ function render(){
 
   // Waiting in For Review: earliest due first, with when each is due.
   const dueTone = t => { const b = dueBucket(t); return b==='overdue'||b==='today' ? 'var(--neg)' : b==='tomorrow' ? 'var(--warn)' : 'var(--i3)'; };
-  let lastB = null;
+  // One flat list, earliest due first; an overdue item carries an Overdue tag rather than a heading of its own.
+  const dueDay = t => new Date(t).toLocaleDateString(undefined,{weekday:'short', day:'numeric', month:'short'});
   const qRows = queue.slice(0,5).map(x=>{
-    const b = dueBucket(x.due), hdr = b!==lastB ? `<div style="padding:8px 14px 4px;font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:${dueTone(x.due)};background:var(--s50)">${(DUE_BUCKETS.find(z=>z[0]===b)||[])[1]}</div>` : ''; lastB = b;
-    return hdr + line(`${esc(x.who)} · ${esc(x.account)}`, `${esc(x.action)} · ${esc(x.channel)} · ${esc(REASON_CATS[x.cats[0]])}${mgr?` · ${esc(repName(x.owner))}`:''}`,
-      `<span style="font-size:11px;font-weight:600;color:${dueTone(x.due)};white-space:nowrap">${esc(dueLabel(x.due))}</span><span class="tag ${x.d.spot==='pending'?'tag-blue':'tag-amber'}">${esc(whyHere(x.d))}</span>`, `14-review.html?item=${encodeURIComponent(x.id)}`);
+    const late = dueBucket(x.due)==='overdue';
+    return line(`${esc(x.who)} · ${esc(x.account)}`, `${esc(x.action)} · ${esc(x.channel)} · ${esc(REASON_CATS[x.cats[0]])}${mgr?` · ${esc(repName(x.owner))}`:''}`,
+      `<span style="font-size:11px;font-weight:600;color:${dueTone(x.due)};white-space:nowrap">${esc(late ? 'Was due ' + dueDay(x.due) : dueLabel(x.due))}</span>${late?'<span class="tag tag-red">Overdue</span>':''}<span class="tag ${x.d.spot==='pending'?'tag-blue':'tag-amber'}">${esc(whyHere(x.d))}</span>`, `14-review.html?item=${encodeURIComponent(x.id)}`);
   }).join('');
   const aRows = approvals.slice(0,5).map(x=>line(`${esc(x.who)} · ${esc(x.account)}`, `Accepted by ${esc(repName(x.owner))} · ${esc(x.action)}`,
       `<span class="tag tag-violet">Approval</span>`, `14-review.html?item=${encodeURIComponent(x.id)}`)).join('');
