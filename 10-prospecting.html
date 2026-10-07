@@ -422,6 +422,10 @@ input,textarea,select{background-color:#fff;color:var(--i1);}
 .dt input[type=checkbox]:checked::after{content:'';width:9px;height:5px;border:2px solid #fff;border-top:0;border-right:0;transform:translateY(-1px) rotate(-45deg);}
 .dt input[type=checkbox]:indeterminate::after{content:'';width:8px;height:2px;background:#fff;border-radius:1px;}
 .dt input[type=checkbox]:focus-visible{outline:2px solid var(--brand-mid);outline-offset:2px;}
+.stat-link{position:relative;cursor:pointer;display:block;text-decoration:none;transition:background var(--fast) var(--ease);}
+.stat-link:hover{background:var(--brand-lt);}
+.stat-link::after{content:'›';position:absolute;top:10px;right:14px;font-size:17px;color:var(--i4);}
+.stat-link:hover .stat-lbl{color:var(--brand);}
 </style>
 </head>
 <body>
@@ -565,9 +569,9 @@ function renderStart(tab){
   const lists = DemandAI.loadLists();
   const t = (id,label,n) => `<div class="ftab ${startTab===id?'active':''}" onclick="renderStart('${id}')">${label}${n!==undefined?` <span class="ftab-cnt">${n}</span>`:''}</div>`;
   document.getElementById('mainArea').innerHTML = `
-    <div class="topbar"><div class="topbar-l"><span class="tb-title">Lead discovery and research</span><span class="tb-badge badge-neutral">Stages 1–5 · rules only</span></div></div>
-    <div class="ftabs">${t('upload','Upload')}${t('saved','Saved lists',lists.length)}</div>
-    <div class="canvas">${startTab==='upload' ? `
+    <div class="topbar"><div class="topbar-l"><span class="tb-title">Lead discovery and research</span><span class="tb-badge badge-neutral">Stages 1–5 · rules only</span></div><div class="topbar-r">${helpBtn()}</div></div>
+    <div class="ftabs">${t('upload','Upload')}${t('saved','Saved lists',lists.length)}${t('corrections','Corrections',loadCorrections().length)}</div>
+    <div class="canvas">${startTab==='corrections' ? correctionsTable(loadCorrections()) : startTab==='upload' ? `${funnelStrip()}
       <div style="max-width:640px;margin:24px auto 0">
         <div style="font-family:var(--fd);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--brand);margin-bottom:8px">Step 1 · Prospecting</div>
         <div style="font-family:var(--fd);font-size:22px;font-weight:700;color:var(--i1);margin-bottom:6px">Upload the lead file</div>
@@ -588,7 +592,7 @@ function renderStart(tab){
           This prototype reads the file in your browser. The production build runs it as a background job.
         </div>
       </div>` : `
-      <div class="score-list">${table([['List',300],['Source file',220],['Accounts',120,'num'],['In the list',130,'num'],['Saved',190],['',190]],
+      ${funnelStrip()}<div class="score-list">${table([['List',280],['Source file',200],['Accounts',110,'num'],['In the list',120,'num'],['What it led to',300],['Saved',170],['',180]],
         lists.map(l=>`<tr>
           <td><div class="person"><div class="co-av" style="background:${avColor(l.id)}">${initials(l.name)}</div><div style="flex:1">${renamingId===l.id
             ? `<div style="display:flex;gap:6px;align-items:center"><input id="renameInput" value="${esc(l.name)}" style="flex:1;min-width:0;padding:6px 9px;border:1px solid var(--brand-mid);border-radius:var(--rsm);font-size:12.5px" onkeydown="if(event.key==='Enter')finishRename('${l.id}');if(event.key==='Escape'){renamingId=null;renderStart('saved')}"><button class="btn btn-primary btn-sm" onclick="finishRename('${l.id}')">Save</button></div>`
@@ -596,6 +600,7 @@ function renderStart(tab){
           <td>${cell(l.sourceFile)}</td>
           <td class="num">${l.stats.accountsPass}<span class="sub">of ${l.stats.accounts}</span></td>
           <td class="num">${l.stats.inFinalList}<span class="sub">contacts</span></td>
+          <td>${(()=>{ const d = ledTo(l.id); return !d.runs ? '<span class="muted">Not scored yet</span>' : `<span class="val">${d.scored} scored · ${d.recs} recommended</span><span class="sub">${d.released} released · ${d.meetings} meeting${d.meetings===1?'':'s'} booked${d.segId?` · <a href="12-nba.html?run=${encodeURIComponent(d.segId)}" style="color:var(--brand);font-weight:600;text-decoration:none">Open in NBA →</a>`:''}</span>`; })()}</td>
           <td>${cell(new Date(l.createdAt).toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'}), new Date(l.createdAt).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}))}</td>
           <td style="text-align:right"><a class="btn btn-sec btn-sm" style="text-decoration:none" href="11-scoring.html?list=${encodeURIComponent(l.id)}">Score →</a> <button class="btn btn-ghost btn-sm" onclick="removeList('${l.id}')">Delete</button></td>
         </tr>`).join(''), `No saved lists yet. <a href="#" onclick="renderStart('upload');return false" style="color:var(--brand);font-weight:600">Upload a lead file</a> to build one.`)}
@@ -621,7 +626,7 @@ async function onFile(file){
 function useSample(){ processFile(DemandAISample.LEAD_FILE, 'Lead template', DemandAISample.LEADS, true); }
 function processFile(fileName, sheet, grid, sandbox){
   const result = DemandAI.processLeads(grid, {file:fileName, sheet});
-  RUN = {fileName, sheet, sandbox, result};
+  RUN = {fileName, sheet, sandbox, result, grid: grid.map(r=>r.slice()), removed:{}};
   view = 'list'; filt='all'; q='';
   RUN.savedId = null; SEL.clear();
   openChecks();
@@ -694,6 +699,7 @@ function openChecks(){
   </div>`;
   let i = 0;
   const tick = () => {
+    if(!RUN || !document.getElementById('ckBar')) return;   // the file was left before the checks finished
     if(i>0){
       const res = stepResult(STEPS[i-1][0], by), c = document.getElementById('ckc-'+(i-1));
       c.className = 'ck ' + (res.sev==='stop'?'ck-stop':res.sev==='warn'?'ck-warn':res.sev==='info'?'ck-info':'ck-ok');
@@ -727,12 +733,13 @@ function renderRun(){
       <div class="topbar-l"><span class="tb-title">${esc(RUN.fileName)}</span>
         <span class="tb-badge badge-neutral">${esc(RUN.sheet)}</span></div>
       <div class="topbar-r">
+        ${helpBtn()}
         <button class="btn btn-sec btn-sm" onclick="renderStart('upload')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>Upload a different file</button>
         <button class="btn btn-sec btn-sm" onclick="openSave(false)" ${s.accountsPass?'':'disabled style="opacity:.5;cursor:not-allowed"'}>${RUN.savedId?'Saved ✓':'Save list'}</button>
         <button id="goScoring" class="btn btn-primary btn-sm" onclick="openSave(true, SEL.size>0)" ${s.accountsPass?'':'disabled style="opacity:.5;cursor:not-allowed"'}>${SEL.size?`Send ${SEL.size} selected to Scoring →`:'Save and go to Scoring →'}</button>
       </div>
     </div>
-    <div class="ftabs">${tab('list','Final list',r.contacts.length)}${tab('accounts','Accounts',r.accounts.length)}</div>
+    <div class="ftabs">${tab('list','Final list',r.contacts.length)}${tab('accounts','Accounts',r.accounts.length)}${tab('corrections','Corrections',loadCorrections().filter(x=>x.file===RUN.fileName).length)}</div>
     <div class="canvas">
       <div class="stats">
         <div class="stat"><div class="stat-lbl">Rows read</div><div class="stat-val sv1">${s.rowsRead}</div><div class="stat-sub">${s.notLoaded} not loaded · ${s.merged} merged duplicate${s.merged===1?'':'s'}</div></div>
@@ -741,9 +748,9 @@ function renderRun(){
         <div class="stat"><div class="stat-lbl">Excluded</div><div class="stat-val sv5">${s.accounts-s.accountsPass}</div><div class="stat-sub">knock-out rule, logged</div></div>
         <div class="stat"><div class="stat-lbl">In the final list</div><div class="stat-val sv4">${s.inFinalList}</div><div class="stat-sub">of ${s.contacts} contacts</div></div>
       </div>
-      ${view==='list'?renderListTab():renderAccountsTab()}
+      ${view==='list'?renderListTab():view==='corrections'?correctionsTable(loadCorrections().filter(x=>x.file===RUN.fileName)):renderAccountsTab()}
     </div>`;
-  if(view==='list') drawListRows(); else drawAccRows();
+  if(view==='list') drawListRows(); else if(view==='accounts') drawAccRows();
 }
 
 function toolbar(pills, onSearch, placeholder){
@@ -816,13 +823,15 @@ function drawListRows(){
   let cs;
   cs = visibleContacts();
   const accById = new Map(RUN.result.accounts.map(a=>[a.id,a]));
-  const cols = [['<input type="checkbox" id="selAll" title="Select all" onclick="toggleAll(this.checked)" style="cursor:pointer;vertical-align:middle">',58],['Contact',220],['Account',190],['Job title',210],['Persona',140],['Email',270],['LinkedIn',250],['Location',190],['Industry',180],['Employees',120,'num'],['Reachable by',170],['Consent',170],['Owner',220],['Status',230],['Issues',290]];
+  const fixed = correctedRows();
+  const cols = [['<input type="checkbox" id="selAll" title="Select all" onclick="toggleAll(this.checked)" style="cursor:pointer;vertical-align:middle">',58],['',80],['Contact',220],['Account',190],['Job title',210],['Persona',140],['Email',270],['LinkedIn',250],['Location',190],['Industry',180],['Employees',120,'num'],['Reachable by',170],['Consent',170],['Owner',220],['Status',230],['Issues',290]];
   el.innerHTML = table(cols, cs.map(c=>{
     const a = accById.get(c.accountId), reason = (c.status.match(/\((.*)\)$/)||[])[1];
     const emailSub = c.emailRaw ? (c.email ? (c.emailVerified ? '<span style="color:var(--pos)">Verified</span>' : '<span style="color:var(--warn)">Not verified</span>') : '<span style="color:var(--neg)">Malformed</span>') : '';
     return `<tr${SEL.has(c.row)?' style="background:var(--brand-lt)"':''}>
       <td>${selectable(c)?`<input type="checkbox" ${SEL.has(c.row)?'checked':''} onclick="toggleSel(${c.row},this.checked);this.closest('tr').style.background=this.checked?'var(--brand-lt)':''" style="cursor:pointer;vertical-align:middle">`:'<span class="muted" title="Not in the list">—</span>'}</td>
-      <td><div class="person"><div class="co-av" style="background:${avColor(c.company)}">${initials(c.name)}</div><div>${cell(c.name,'Row '+c.row, 'dt-main')}</div></div></td>
+      <td><button class="btn btn-sec btn-sm" title="Correct this person's details" onclick="openEdit(${c.row})">Edit</button></td>
+      <td><div class="person"><div class="co-av" style="background:${avColor(c.company)}">${initials(c.name)}</div><div>${cell(c.name, fixed.has(c.row) ? 'Row '+c.row+' · <span style="color:var(--brand);font-weight:600">Corrected</span>' : 'Row '+c.row, 'dt-main')}</div></div></td>
       <td>${cell(c.company)}</td>
       <td>${cell(c.jobTitle)}</td>
       <td>${personaTag(c.persona)}</td>
@@ -935,10 +944,140 @@ function saveList(go){
     sandbox:RUN.sandbox, stats:r.stats, accounts:r.accounts, contacts:r.contacts };
   if(!DemandAI.saveList(list)){ showToast("This browser blocks storage, so the list can't be saved. Allow site data and try again"); return; }
   if(!RUN.selOnly) RUN.savedId = list.id;
+  // Corrections made before saving belong to this list from now on.
+  saveCorrections(loadCorrections().map(x=>x.file===RUN.fileName && !x.listId ? Object.assign(x, {listId:list.id}) : x));
   document.getElementById('saveOverlay').style.display='none';
   if(go){ location.href = '11-scoring.html?list='+encodeURIComponent(list.id); return; }
   showToast(`Saved as "${name}"`);
   renderRun();
+}
+
+/* ═══════════════ GUIDE: what this screen is for, opened on the first visit and from the ? ═══════════════ */
+const P_GUIDE_KEY = 'demandai_prospecting_intro_v1';
+const helpBtn = () => `<button class="btn btn-ghost btn-sm" title="How Prospecting works" onclick="openGuide()" style="width:28px;height:28px;padding:0;justify-content:center;border-radius:50%;border:1px solid var(--bdk);font-weight:700">?</button>`;
+function openGuide(){
+  try{ localStorage.setItem(P_GUIDE_KEY, 'closed'); }catch(e){}
+  const term = (t, d) => `<div style="padding:10px 0;border-bottom:1px solid var(--s75)"><div style="font-size:12.5px;font-weight:700;color:var(--i1)">${t}</div><div style="font-size:12px;color:var(--i2);line-height:1.55;margin-top:3px">${d}</div></div>`;
+  document.getElementById('detTitle').textContent = 'How Prospecting works';
+  document.getElementById('detSub').textContent = 'Step 1 of 3: the list everything else is built on';
+  document.getElementById('detBody').innerHTML = `<div style="font-size:12.5px;color:var(--i2);line-height:1.6;margin-bottom:6px">Prospecting turns a lead file into a clean list of people you may contact. The action happens later, in Micro-segments &amp; NBA; this is where you make sure the list behind it is right.</div>`
+    + term('1 · Upload the lead file', 'One row per contact, in the lead template. Or use the sample.')
+    + term('2 · Read the checks', 'Fixed rules, not AI: required fields, email and LinkedIn format, duplicates, consent, opt-outs, the pilot region. Nothing is fixed silently; every issue is shown on its row.')
+    + term('3 · Look over the list, and correct it', 'Spot-check a few people. If someone has moved company, an email is wrong or missing, or the headcount is off, click <b>Edit</b> on the row. The checks run again on the corrected row.')
+    + term('4 · Save it and go to Scoring', 'Save the whole list or only the people you select. Scoring ranks the accounts; Micro-segments &amp; NBA groups them and writes the first message.')
+    + term('In the final list · Not contactable · Not in the list', 'In the list and reachable; in the list but no usable channel or consent; taken out by a rule (opted out, outside the pilot region, managed separately) or by you.')
+    + term('Corrections', 'Every edit is recorded: what changed, from what, why, and how you know. Minor (a title, a headcount) or major (wrong email, moved company). In the pilot they are only collected; in production they feed back into the data and its sources.')
+    + term('What it led to', 'Each saved list shows what came of it: prospects scored, recommendations made, messages released and meetings booked.');
+  document.getElementById('detailDrawer').classList.add('open');
+}
+function maybeGuide(){ let seen = false; try{ seen = localStorage.getItem(P_GUIDE_KEY)==='closed'; }catch(e){} if(!seen) openGuide(); }
+
+/* ═══════════════ WHAT EACH LIST LED TO: scored, recommended, released, meetings ═══════════════ */
+function ledTo(listId){
+  const sc = DemandAI.loadScorings().filter(r=>r.listId===listId), segs = DemandAI.loadSegmentations().filter(s=>s.src && s.src.listId===listId);
+  const dec = segs.flatMap(s=>Object.values(s.decisions||{}));
+  return { scored: sc.reduce((t,r)=>t+((r.stats&&r.stats.scored)||0),0), runs: sc.length, recs: segs.reduce((t,s)=>t+((s.stats&&s.stats.prospects)||0),0),
+    released: dec.filter(d=>d && d.status==='Released').length, meetings: dec.filter(d=>d && d.outcome==='Meeting booked').length, segId: segs[0] && segs[0].id };
+}
+function funnelStrip(){
+  const lists = DemandAI.loadLists(); if(!lists.length) return '';
+  const t = lists.map(l=>ledTo(l.id)).reduce((a,b)=>({scored:a.scored+b.scored, recs:a.recs+b.recs, released:a.released+b.released, meetings:a.meetings+b.meetings}), {scored:0,recs:0,released:0,meetings:0});
+  const contacts = lists.reduce((n,l)=>n+((l.stats&&l.stats.inFinalList)||0),0);
+  const step = (lbl, v, sub, href) => `<a class="stat stat-link" href="${href}"><div class="stat-lbl">${lbl}</div><div class="stat-val" style="color:var(--i1)">${v}</div><div class="stat-sub">${sub}</div></a>`;
+  return `<div style="font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--i3);margin-bottom:6px">What your lists led to</div>
+    <div class="stats" style="grid-template-columns:repeat(5,1fr);margin-bottom:18px">
+      ${step('Contacts in your lists', contacts, `${lists.length} saved list${lists.length===1?'':'s'}`, '#" onclick="renderStart(\'saved\');return false')}
+      ${step('Prospects scored', t.scored, 'Account Scoring', '11-scoring.html')}
+      ${step('Recommendations', t.recs, 'Micro-segments &amp; NBA', '12-nba.html')}
+      ${step('Released', t.released, 'ready to use', '12-nba.html')}
+      ${step('Meetings booked', t.meetings, 'marked by the reps', '13-analytics.html?tab=loop')}
+    </div>`;
+}
+
+/* ═══════════════ CORRECTIONS: edit a row, the checks run again, and every change is recorded ═══════════════ */
+const CORR_KEY = 'demandai_corrections_v1';
+const loadCorrections = () => { try{ return JSON.parse(localStorage.getItem(CORR_KEY)||'[]'); }catch(e){ return []; } };
+const saveCorrections = all => { try{ localStorage.setItem(CORR_KEY, JSON.stringify(all)); return true; }catch(e){ return false; } };
+const EDIT_FIELDS = [['first_name','First name','major'],['last_name','Last name','major'],['job_title','Job title','minor'],['email','Email','major'],['email_verified','Email verified (Y/N)','minor'],
+  ['linkedin_url','LinkedIn URL','major'],['city','City','minor'],['country','Country','minor'],['owner_email','Owner (email)','minor'],['employee_count','Employees (whole account)','minor'],['industry','Industry (whole account)','minor']];
+const ACCOUNT_FIELDS = ['employee_count','industry'];
+const EDIT_REASONS = ['Moved to another company','Wrong or bounced email','Missing email found','Wrong LinkedIn profile','Wrong job title','Wrong headcount or size','Wrong industry','Wrong location','Duplicate person','Other'];
+const EDIT_SOURCES = ['Checked their LinkedIn profile','Found with a third-party tool','Known from the account team','Bounce or reply','Other'];
+const hdrIdx = () => RUN.grid.findIndex(r=>r.includes('company_name') && r.includes('first_name'));
+const colIdx = f => RUN.grid[hdrIdx()].indexOf(f);
+const rawOf = (row, f) => { const i = colIdx(f); return i<0 ? '' : String((RUN.grid[row-1]||[])[i] ?? ''); };
+function openEdit(row){
+  const c = RUN.result.contacts.find(x=>x.row===row); if(!c) return;
+  const inp = (f, l) => `<label style="display:block;margin-bottom:9px"><span style="font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--i3)">${l}</span>
+    <input data-f="${f}" value="${esc(rawOf(row, f))}" style="width:100%;margin-top:3px;padding:7px 9px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:12.5px"></label>`;
+  const sel = (id, opts, ph) => `<select id="${id}" style="width:100%;padding:7px 9px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:12.5px"><option value="">${ph}</option>${opts.map(o=>`<option>${esc(o)}</option>`).join('')}</select>`;
+  document.getElementById('detTitle').textContent = 'Correct ' + c.name;
+  document.getElementById('detSub').textContent = `${c.company} · row ${row}`;
+  document.getElementById('detBody').innerHTML = `
+    <div style="font-size:12px;color:var(--i2);line-height:1.55;margin-bottom:12px">Change what's wrong; the checks run again on this row. Employees and industry change for the whole account.</div>
+    ${EDIT_FIELDS.map(([f,l])=>inp(f,l)).join('')}
+    <div style="padding:12px;background:var(--s50);border-radius:var(--rmd);margin:6px 0 12px">
+      <div style="font-size:12px;font-weight:700;color:var(--i1);margin-bottom:8px">Why, and how you know</div>
+      ${sel('edReason', EDIT_REASONS, 'What was wrong…')}<div style="height:7px"></div>${sel('edSource', EDIT_SOURCES, 'How you know…')}
+      <textarea id="edNote" rows="2" placeholder="Note (optional)" style="width:100%;margin-top:7px;padding:7px 9px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:12px;font-family:var(--fb)"></textarea>
+      <label style="display:flex;gap:8px;align-items:flex-start;margin-top:8px;font-size:12px;color:var(--i1)"><input type="checkbox" id="edRemove" style="margin-top:2px"> Take this person out of the list (for example, they've moved company)</label>
+    </div>
+    <button class="btn btn-primary btn-sm" style="width:100%;justify-content:center" onclick="saveEdit(${row})">Save the correction</button>
+    <div style="font-size:11px;color:var(--i3);margin-top:10px;line-height:1.5">Recorded under Corrections. In the pilot, corrections are collected to improve the data in production; they are not sent anywhere.</div>`;
+  const r = document.getElementById('edReason'); r.onchange = () => { if(r.value==='Moved to another company' || r.value==='Duplicate person') document.getElementById('edRemove').checked = true; };
+  document.getElementById('detailDrawer').classList.add('open');
+}
+function saveEdit(row){
+  const c = RUN.result.contacts.find(x=>x.row===row); if(!c) return;
+  const reason = document.getElementById('edReason').value, source = document.getElementById('edSource').value, note = document.getElementById('edNote').value.trim();
+  const remove = document.getElementById('edRemove').checked;
+  if(!reason){ showToast('Say what was wrong: it is what makes the correction useful later'); document.getElementById('edReason').focus(); return; }
+  const changes = [];
+  document.querySelectorAll('#detBody input[data-f]').forEach(el=>{ const f = el.dataset.f, was = rawOf(row, f), now = el.value.trim(); if(now !== was.trim()) changes.push({ f, was, now }); });
+  if(!changes.length && !remove){ showToast('Nothing changed'); return; }
+  const H = RUN.grid[hdrIdx()];
+  changes.forEach(ch=>{
+    const i = H.indexOf(ch.f);
+    if(ACCOUNT_FIELDS.includes(ch.f)){ const ci = H.indexOf('company_name'), co = RUN.grid[row-1][ci]; RUN.grid.forEach((g,k)=>{ if(k>hdrIdx() && g[ci]===co) g[i] = ch.now; }); }
+    else RUN.grid[row-1][i] = ch.now;
+  });
+  if(remove) (RUN.removed = RUN.removed || {})[row] = reason;
+  const who = ROLE_PERSON[getRole()] || getRole(), at = Date.now(), all = loadCorrections();
+  const base = { at, who, role:getRole(), file:RUN.fileName, listId:RUN.savedId||null, row, contact:c.name, company:c.company, reason, source, note };
+  const sev = f => reason==='Moved to another company' ? 'major' : (EDIT_FIELDS.find(x=>x[0]===f)||[])[2] || 'minor';
+  changes.forEach(ch=>all.unshift({ ...base, id:'cor-'+at.toString(36)+ch.f, field:(EDIT_FIELDS.find(x=>x[0]===ch.f)||[,ch.f])[1], from:ch.was, to:ch.now, severity:sev(ch.f) }));
+  if(remove) all.unshift({ ...base, id:'cor-'+at.toString(36)+'rm', field:'In the list', from:'Yes', to:'Taken out', severity:'major' });
+  saveCorrections(all);
+  recheck();
+  closeDrawer(); showToast(`Corrected and checked again${remove?': taken out of the list':''}`);
+  renderRun();
+}
+// Run the checks again on the corrected file; people a reviewer took out stay out, with the reason.
+function recheck(){
+  const r = DemandAI.processLeads(RUN.grid, {file:RUN.fileName, sheet:RUN.sheet});
+  Object.entries(RUN.removed||{}).forEach(([row, why])=>{ const c = r.contacts.find(x=>x.row===+row); if(c){ c.status = `Not in the list (taken out by a reviewer: ${why.toLowerCase()})`; c.contactable = false; } });
+  r.stats.inFinalList = r.contacts.filter(c=>c.status==='In the final list').length;
+  RUN.result = r;
+}
+const correctedRows = () => new Set(loadCorrections().filter(x=>x.file===RUN.fileName).map(x=>x.row));
+function correctionsTable(rows){
+  const tone = s => s==='major' ? 'tag-red' : 'tag-amber';
+  const n = rows.length, major = rows.filter(x=>x.severity==='major').length;
+  const top = Object.entries(rows.reduce((o,x)=>{ o[x.reason]=(o[x.reason]||0)+1; return o; },{})).sort((a,b)=>b[1]-a[1])[0];
+  return `<div style="display:flex;gap:10px;align-items:flex-start;padding:12px 14px;margin-bottom:12px;background:var(--brand-lt);border:1px solid var(--brand-mid);border-radius:var(--rmd)">
+      <span class="tag tag-violet">Pilot</span><div style="font-size:12.5px;color:var(--i1);line-height:1.55"><b>Captured in the pilot, used in production.</b> Every correction is kept with what changed, why and how you know. In the pilot nothing is sent back; in production they show which data sources and rules to fix, so the lists get better the more you use the tool.</div></div>
+    <div class="stats" style="grid-template-columns:repeat(4,1fr)">
+      <div class="stat"><div class="stat-lbl">Corrections</div><div class="stat-val" style="color:var(--i1)">${n}</div><div class="stat-sub">${new Set(rows.map(x=>x.file+x.row)).size} people</div></div>
+      <div class="stat"><div class="stat-lbl">Major</div><div class="stat-val" style="color:var(--neg)">${major}</div><div class="stat-sub">wrong email, moved company, wrong person</div></div>
+      <div class="stat"><div class="stat-lbl">Minor</div><div class="stat-val" style="color:var(--warn)">${n-major}</div><div class="stat-sub">title, headcount, location</div></div>
+      <div class="stat"><div class="stat-lbl">Most common</div><div class="stat-val" style="color:var(--i1);font-size:15px;line-height:1.3">${top?esc(top[0]):'—'}</div><div class="stat-sub">${top?top[1]+' time'+(top[1]===1?'':'s'):'No corrections yet'}</div></div>
+    </div>
+    <div class="score-list">${table([['When',150],['Who',150],['Contact',220],['Field',170],['Was',220],['Now',220],['Kind',100],['Why',210],['How we know',210]],
+      rows.map(x=>`<tr><td>${cell(new Date(x.at).toLocaleDateString(undefined,{day:'numeric',month:'short'}), new Date(x.at).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}))}</td>
+        <td>${cell(x.who, esc(x.role))}</td><td>${cell(x.contact, esc(x.company+' · '+x.file))}</td><td>${cell(x.field)}</td>
+        <td><span style="color:var(--i3);text-decoration:line-through">${dash(x.from)}</span></td><td>${cell(x.to)}</td>
+        <td><span class="tag ${tone(x.severity)}">${x.severity==='major'?'Major':'Minor'}</span></td><td>${cell(x.reason, esc(x.note||''))}</td><td>${cell(x.source)}</td></tr>`).join(''),
+      'No corrections yet. Click Edit on a row in the final list to correct it.')}</div>`;
 }
 
 /* ═══════════════ RENAME A SAVED LIST ═══════════════ */
@@ -952,6 +1091,7 @@ function finishRename(id){
 }
 
 renderStart();
+maybeGuide();
 
 setTimeout(()=>{ try{ DemandAI.reviewBadge(); }catch(e){} }, 0);
 const PAGE_ID = '10-prospecting.html';
