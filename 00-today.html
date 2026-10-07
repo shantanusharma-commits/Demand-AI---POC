@@ -423,39 +423,6 @@ textarea[readonly],input[readonly]{background-color:var(--s50);}
 .dt input[type=checkbox]:checked::after{content:'';width:9px;height:5px;border:2px solid #fff;border-top:0;border-right:0;transform:translateY(-1px) rotate(-45deg);}
 .dt input[type=checkbox]:indeterminate::after{content:'';width:8px;height:2px;background:#fff;border-radius:1px;}
 .dt input[type=checkbox]:focus-visible{outline:2px solid var(--brand-mid);outline-offset:2px;}
-/* Today: a calm, spacious layout */
-.t-canvas{padding:32px 40px 56px;max-width:1320px;}
-.t-card{background:#fff;border:1px solid #ECEEF2;border-radius:16px;margin-bottom:24px;box-shadow:0 1px 2px rgba(20,26,33,.03);overflow:hidden;}
-.t-hdr{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:20px 24px 12px;}
-.t-ttl{font-family:var(--fd);font-size:14.5px;font-weight:600;color:var(--i1);letter-spacing:-.01em;}
-.t-ttl .n{color:var(--i3);font-weight:500;margin-left:6px;}
-.t-link{font-size:12.5px;color:var(--brand);font-weight:600;text-decoration:none;white-space:nowrap;}
-.t-link:hover{text-decoration:underline;}
-.t-row{display:flex;align-items:center;gap:16px;padding:14px 24px;text-decoration:none;color:inherit;border-top:1px solid #F2F3F6;transition:background var(--fast) var(--ease);}
-.t-row:hover{background:#FAFAFC;}
-.t-main{font-size:13.5px;font-weight:600;color:var(--i1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.t-sub{font-size:12px;color:var(--i3);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.t-group{padding:16px 24px 6px;font-size:11.5px;font-weight:600;letter-spacing:.02em;}
-.t-empty{padding:6px 24px 22px;font-size:13px;color:var(--i3);}
-.t-foot{padding:14px 24px 18px;border-top:1px solid #F2F3F6;}
-.t-kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:16px;margin-bottom:32px;}
-.t-kpi{display:block;background:#fff;border:1px solid #ECEEF2;border-radius:16px;padding:20px 22px;text-decoration:none;transition:border-color var(--fast) var(--ease),box-shadow var(--fast) var(--ease),transform var(--fast) var(--ease);}
-.t-kpi:hover{border-color:var(--brand-mid);box-shadow:0 6px 20px rgba(125,82,162,.10);transform:translateY(-1px);}
-.t-kpi .l{font-size:12.5px;color:var(--i2);font-weight:500;}
-.t-kpi .v{font-family:var(--fd);font-size:30px;font-weight:700;letter-spacing:-.03em;color:var(--i1);margin:10px 0 6px;line-height:1;}
-.t-kpi .s{font-size:11.5px;color:var(--i3);line-height:1.45;min-height:33px;}
-.t-num{font-family:var(--fd);font-size:26px;font-weight:700;letter-spacing:-.03em;line-height:1;}
-.t-cap{font-size:12px;color:var(--i3);margin-top:6px;}
-.t-bar{height:6px;background:#EEF0F4;border-radius:99px;overflow:hidden;margin-top:10px;position:relative;}
-.t-bar>span{position:absolute;left:0;top:0;bottom:0;border-radius:99px;}
-.t-bar>i{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--i2);border-radius:2px;}
-.t-mini{display:block;border:1px solid #F0F1F4;border-radius:12px;padding:14px 16px;text-decoration:none;transition:border-color var(--fast) var(--ease);}
-.t-mini:hover{border-color:var(--brand-mid);}
-.t-dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex-shrink:0;}
-.t-chip{border:1px solid #E4E7EC;background:#fff;color:var(--i2);font-size:12px;font-weight:500;padding:5px 12px;border-radius:99px;cursor:pointer;transition:all var(--fast) var(--ease);}
-.t-chip:hover{border-color:var(--brand-mid);color:var(--brand-dk);}
-.t-chip.on{background:var(--brand);border-color:var(--brand);color:#fff;}
-@media (max-width:1180px){ .t-kpis{grid-template-columns:repeat(3,minmax(0,1fr));} }
 </style>
 </head>
 <body>
@@ -639,10 +606,12 @@ function allItems(){
 const ago = t => { if(!t) return ''; const h = (Date.now()-t)/36e5; return h<1 ? 'just now' : h<24 ? Math.round(h)+'h ago' : Math.round(h/24)+'d ago'; };
 const firstName = () => (ROLE_PERSON[getRole()] || getRole()).split(' ')[0];
 const greeting = () => { const h = new Date().getHours(); return h<12 ? 'Good morning' : h<18 ? 'Good afternoon' : 'Good evening'; };
-const box = (title, right, body, id, n) => `<div class="t-card" ${id?`id="${id}"`:''}><div class="t-hdr"><span class="t-ttl">${title}${n!==undefined?`<span class="n">${n}</span>`:''}</span>${right||''}</div>${body}</div>`;
-const empty = t => `<div class="t-empty">${t}</div>`;
-const line = (main, sub, right, href) => `<a class="t-row" href="${href}"><div style="flex:1;min-width:0"><div class="t-main">${main}</div><div class="t-sub">${sub}</div></div>${right||''}<span style="color:var(--i4);font-size:16px">›</span></a>`;
-const link = (href, text) => `<a class="t-link" href="${href}">${text}</a>`;
+const link = (href, text) => `<a href="${href}" style="font-size:11.5px;color:var(--brand);font-weight:600;text-decoration:none;white-space:nowrap">${text}</a>`;
+const box = (title, right, body, id) => `<div class="panel" ${id?`id="${id}"`:''} style="margin-bottom:20px"><div class="panel-hdr"><span class="panel-ttl">${title}</span>${right||''}</div><div class="panel-body" style="padding:0">${body}</div></div>`;
+const empty = t => `<div style="padding:14px;font-size:12px;color:var(--i3)">${t}</div>`;
+const line = (main, sub, right, href) => `<a href="${href}" style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--s75);text-decoration:none;color:inherit">
+    <div style="flex:1;min-width:0"><div style="font-size:12.5px;font-weight:600;color:var(--i1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${main}</div>
+    <div style="font-size:11px;color:var(--i3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${sub}</div></div>${right||''}<span style="color:var(--i3);font-size:13px">›</span></a>`;
 const nbaLink = (run, show) => run ? `12-nba.html?run=${encodeURIComponent(run.saved.id)}${show?`&show=${show}`:''}` : '12-nba.html';
 const pl = (n, one, many) => `${n} ${n===1?one:(many||one+'s')}`;
 
@@ -725,16 +694,13 @@ function approvalsCard(approvals){
 }
 function setupCard(lists, scorings, segs){
   const rd = RUNS.length ? readiness(RUNS) : [], ok = rd.filter(x=>x.ok).length, pend = DemandAI.brandPending();
-  const mini = (label, value, note, tone, href) => `<a class="t-mini" href="${href}">
-      <div style="display:flex;align-items:center;gap:8px"><span class="t-dot" style="background:${tone}"></span><span style="font-size:12px;color:var(--i2);font-weight:500">${label}</span></div>
-      <div style="font-family:var(--fd);font-size:17px;font-weight:700;color:var(--i1);margin-top:8px">${value}</div>
-      <div style="font-size:11.5px;color:var(--i3);margin-top:3px">${note}</div></a>`;
-  return box('Set-up and data', link('09-setup.html','Setup →'), `<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:4px 24px 24px">
-    ${mini('Configuration', esc(DemandAI.configVersion().split(' · ')[0]), 'thresholds and rules', 'var(--pos)', '13-analytics.html?tab=validation')}
-    ${mini('Brand pack', esc(DemandAI.brandVersion()), pend ? 'a draft is waiting' : 'live, no draft', pend ? 'var(--warn)' : 'var(--pos)', '07-content.html')}
-    ${mini('Data readiness', rd.length ? `${ok} of ${rd.length}` : '—', 'checks pass', rd.length && ok===rd.length ? 'var(--pos)' : 'var(--warn)', '13-analytics.html?tab=validation')}
-    ${mini('Saved lists', `${lists.length + scorings.length + segs.length}`, `${lists.length} prospect · ${scorings.length} scored · ${segs.length} segmented`, 'var(--sec)', '10-prospecting.html')}
-  </div>`);
+  const row = (k, tag, href) => `<a href="${href}" style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--s75);text-decoration:none;color:inherit">
+      <span style="flex:1;font-size:12.5px;color:var(--i1)">${k}</span>${tag}<span style="color:var(--i3);font-size:13px">›</span></a>`;
+  return box('Set-up and data', link('09-setup.html','Setup →'),
+    row('Configuration', `<span class="tag tag-green">${esc(DemandAI.configVersion().split(' · ')[0])}</span>`, '13-analytics.html?tab=validation') +
+    row('Brand pack', `<span class="tag ${pend?'tag-amber':'tag-green'}">${esc(DemandAI.brandVersion())}${pend?' · draft waiting':''}</span>`, '07-content.html') +
+    row('Data readiness', rd.length ? `<span class="tag ${ok===rd.length?'tag-green':'tag-amber'}">${ok} of ${rd.length} checks pass</span>` : '<span class="tag tag-grey">No data yet</span>', '13-analytics.html?tab=validation') +
+    row('Saved lists', `<span class="tag tag-grey">${lists.length + scorings.length + segs.length} list${lists.length + scorings.length + segs.length===1?'':'s'}</span>`, '10-prospecting.html'));
 }
 
 /* ─── 4 · What the system did, from the latest run ─── */
@@ -839,107 +805,120 @@ function render(){
   const head = `<div class="topbar"><div class="topbar-l"><span class="tb-title">Today</span><span style="font-size:12px;color:var(--i3);margin-left:10px">${esc(dateLine)}</span></div>
     <div class="topbar-r"><button class="btn btn-ghost btn-sm" title="How Today works" onclick="openGuide()" style="width:28px;height:28px;padding:0;justify-content:center;border-radius:50%;border:1px solid var(--bdk);font-weight:700;margin-right:4px">?</button></div></div>`;
   const needs = queue.length + approvals.length;
-  const hello = `<div style="margin-bottom:24px"><div style="font-family:var(--fd);font-size:26px;font-weight:700;letter-spacing:-.02em;color:var(--i1)">${greeting()}, ${esc(firstName())}</div>
-    <div style="font-size:14px;color:var(--i2);margin-top:6px">${nothing ? "Nothing has been built yet. Here's how the pilot runs." :
-      worker ? (needs ? `${needs} item${needs===1?' needs':'s need'} you today.` : 'Nothing is waiting for you.') : 'The pilot at a glance.'}
-      <a class="t-link" href="#" onclick="openGuide();return false" style="margin-left:8px">How Today works</a></div></div>`;
+  const hello = `<div style="margin-bottom:14px"><div style="font-family:var(--fd);font-size:22px;font-weight:700;color:var(--i1)">${greeting()}, ${esc(firstName())}</div>
+    <div style="font-size:13px;color:var(--i3);margin-top:4px">${nothing ? "Nothing has been built yet. Here's how the pilot runs." :
+      worker ? (needs ? `${needs} item${needs===1?' needs':'s need'} you today.` : 'Nothing is waiting for you. Ready-to-use actions and recent lists are below.') : 'View only: the pilot at a glance.'}
+      <a href="#" onclick="openGuide();return false" style="color:var(--brand);font-weight:600;text-decoration:none;margin-left:6px">How Today works</a></div></div>`;
 
   if(nothing){
-    const step = (n, t, d, href, cta) => `<div class="t-card" style="flex:1;padding:24px"><div style="font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--brand)">STEP ${n}</div>
-        <div style="font-family:var(--fd);font-size:16px;font-weight:700;color:var(--i1);margin:10px 0 6px">${t}</div>
-        <div style="font-size:13px;color:var(--i2);line-height:1.6;margin-bottom:16px">${d}</div>${link(href, cta)}</div>`;
-    document.getElementById('mainArea').innerHTML = head + `<div class="t-canvas">${hello}
-      <div style="display:flex;gap:20px">
-        ${step(1, 'Bring in prospects', 'Upload the account and contact file, or use the sample.', '10-prospecting.html', 'Go to Prospecting →')}
-        ${step(2, 'Score the accounts', 'Each account gets a tier and a reason. Send the best on.', '11-scoring.html', 'Go to Scoring →')}
-        ${step(3, 'Plan the next step', 'Accounts are grouped and each gets an action and a message.', '12-nba.html', 'Go to Micro-segments & NBA →')}
+    const step = (n, t, d, href, cta) => `<div class="panel" style="flex:1"><div class="panel-body">
+        <div style="font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--brand)">STEP ${n}</div>
+        <div style="font-family:var(--fd);font-size:15px;font-weight:700;color:var(--i1);margin:6px 0 4px">${t}</div>
+        <div style="font-size:12px;color:var(--i2);line-height:1.55;margin-bottom:12px">${d}</div>${link(href, cta)}</div></div>`;
+    document.getElementById('mainArea').innerHTML = head + `<div class="canvas">${hello}
+      <div style="display:flex;gap:14px;max-width:980px">
+        ${step(1, 'Bring in prospects', 'Upload the account and contact file, or use the sample. Bad rows are set aside with a reason.', '10-prospecting.html', 'Go to Prospecting →')}
+        ${step(2, 'Score the accounts', 'Fit, intent and timing give each account a tier and a reason. Send the best to micro-segments.', '11-scoring.html', 'Go to Scoring →')}
+        ${step(3, 'Plan the next step', 'Accounts are grouped by their reason to buy now, and each gets an action and a first message. Exceptions come to For Review.', '12-nba.html', 'Go to Micro-segments & NBA →')}
       </div></div>`;
     maybeGuide(); return;
   }
 
-  // 2 · Blockers: a notice just above the tiles; the detail opens in the side panel.
+  // 2 · Blockers: a notification just above the tiles; the detail opens in the side panel.
   const notice = bl.length
-    ? `<a href="#" onclick="openBlockers();return false" style="display:flex;align-items:center;gap:12px;padding:14px 20px;margin-bottom:20px;background:#FDF3F3;border:1px solid #F5D5D5;border-radius:14px;text-decoration:none">
-        <span class="t-dot" style="background:var(--neg);width:9px;height:9px"></span>
-        <span style="flex:1;font-size:13.5px;color:var(--i1)"><b style="color:var(--neg)">${pl(bl.length,'blocker')}</b> &nbsp;${bl[0].title}${bl.length>1?` <span style="color:var(--i3)">and ${bl.length-1} more</span>`:''}</span>
-        <span style="font-size:13px;font-weight:600;color:var(--neg);white-space:nowrap">View and fix →</span></a>`
-    : `<a href="#" onclick="openBlockers();return false" style="display:inline-flex;align-items:center;gap:8px;padding:8px 14px;margin-bottom:20px;background:#EFF8F3;border-radius:99px;text-decoration:none;font-size:12.5px;color:var(--pos);font-weight:600"><span class="t-dot" style="background:var(--pos)"></span>No blockers. Your work is running.</a>`;
+    ? `<a href="#" onclick="openBlockers();return false" style="display:flex;align-items:center;gap:10px;padding:11px 14px;margin-bottom:14px;background:var(--neg-lt);border:1px solid #F0C9C9;border-radius:var(--rmd);text-decoration:none">
+        <span style="width:9px;height:9px;border-radius:50%;background:var(--neg);flex-shrink:0"></span>
+        <span style="flex:1;font-size:12.5px;color:var(--i1)"><b style="color:var(--neg)">${pl(bl.length,'blocker')}</b> stopping work: ${bl[0].title}${bl.length>1?` · and ${bl.length-1} more`:''}</span>
+        <span style="font-size:12px;font-weight:700;color:var(--neg);white-space:nowrap">View and fix →</span></a>`
+    : `<a href="#" onclick="openBlockers();return false" style="display:flex;align-items:center;gap:8px;padding:8px 14px;margin-bottom:14px;background:var(--pos-lt);border-radius:var(--rmd);text-decoration:none;font-size:12px;color:var(--pos);font-weight:600"><span style="width:8px;height:8px;border-radius:50%;background:var(--pos)"></span>No blockers. Your work is running.</a>`;
 
   // 3 · Tiles, each drills down to the items behind it.
+  const stat = (lbl, val, sub, href, tone) => `<a class="stat" href="${href}" style="text-decoration:none;display:block" onmouseover="this.style.background='var(--s50)'" onmouseout="this.style.background=''">
+    <div class="stat-lbl">${lbl}</div><div class="stat-val" style="${tone?`color:${tone}`:''}">${val}</div><div class="stat-sub">${sub}</div></a>`;
   const marked = scope.filter(x=>x.d.outcome && x.d.outcome!=='Sent'), positive = marked.filter(x=>['Replied','Meeting booked'].includes(x.d.outcome)).length;
   const outRate = marked.length ? Math.round(positive/marked.length*100) : null;
-  const kpi = (lbl, val, sub, href, tone) => `<a class="t-kpi" href="${href}"><div class="l">${lbl}</div><div class="v" style="${tone?`color:${tone}`:''}">${val}</div><div class="s" title="${esc(sub)}">${sub}</div></a>`;
-  const tiles = worker ? `<div class="t-kpis">
-      ${kpi('In For Review', queue.length, `${exceptions.length} exceptions · ${spots.length} spot-checks`, '14-review.html', queue.length?'var(--ter-dk)':'')}
-      ${mgr ? kpi('Approvals', approvals.length, 'sensitive, accepted by a rep', '14-review.html?view=approvals', approvals.length?'var(--brand)':'')
-            : kpi('With your manager', waitingMgr.length, 'sensitive, you accepted', nbaLink(latest,'waiting'))}
-      ${kpi('Awaiting outcome', ready.length, 'released, result not marked', '#outcomes')}
-      ${kpi('Outcome rate', outRate===null?'—':outRate+'%', marked.length ? `${positive} of ${marked.length} replied or met` : 'no results yet', '13-analytics.html?tab=loop', outRate===null?'':'var(--pos)')}
-      ${kpi('G2 acceptance', g.g2===null?'—':g.g2+'%', g.g2Word, '13-analytics.html?tab=gates', g.g2Tone)}
-      ${kpi('G1 effort saved', g.g1===null?'—':g.g1+'%', g.g1Word, '13-analytics.html?tab=gates', g.g1Tone)}
-    </div>` : `<div class="t-kpis" style="grid-template-columns:repeat(4,minmax(0,1fr))">
-      ${kpi('Recommendations', m.items, `${m.autoN} proceeded · ${m.excN} exceptions`, '13-analytics.html')}
-      ${kpi('Meetings booked', m.outcomes['Meeting booked']||0, 'marked by the reps', '13-analytics.html?tab=loop')}
-      ${kpi('G2 acceptance', g.g2===null?'—':g.g2+'%', g.g2Word, '13-analytics.html?tab=gates', g.g2Tone)}
-      ${kpi('G1 effort saved', g.g1===null?'—':g.g1+'%', g.g1Word, '13-analytics.html?tab=gates', g.g1Tone)}
+  const tiles = worker ? `<div class="stats" style="margin-bottom:18px;grid-template-columns:repeat(6,1fr)">
+      ${stat('In For Review', queue.length, `${exceptions.length} exception${exceptions.length===1?'':'s'} · ${spots.length} spot-check${spots.length===1?'':'s'}`, '14-review.html', queue.length?'var(--ter-dk)':'')}
+      ${mgr ? stat('Approvals', approvals.length, 'accepted by a rep, needs you', '14-review.html?view=approvals', approvals.length?'var(--brand)':'')
+            : stat('With the sales manager', waitingMgr.length, 'sensitive content you accepted', nbaLink(latest,'waiting'))}
+      ${stat('Awaiting outcome', ready.length, 'mark what happened', '#outcomes')}
+      ${stat('Outcome rate', outRate===null?'—':outRate+'%', marked.length ? `${positive} replied or booked a meeting, of ${marked.length} with a result` : 'No results marked yet', '13-analytics.html?tab=loop', outRate===null?'':'var(--pos)')}
+      ${stat('G2 acceptance', g.g2===null?'—':g.g2+'%', g.g2Word, '13-analytics.html?tab=gates', g.g2Tone)}
+      ${stat('G1 effort saved', g.g1===null?'—':g.g1+'%', g.g1Word, '13-analytics.html?tab=gates', g.g1Tone)}
+    </div>` : `<div class="stats" style="margin-bottom:18px;grid-template-columns:repeat(4,1fr)">
+      ${stat('Recommendations', m.items, `${m.autoN} proceeded · ${m.excN} exceptions`, '13-analytics.html')}
+      ${stat('Meetings booked', m.outcomes['Meeting booked']||0, 'marked by the reps', '13-analytics.html?tab=loop')}
+      ${stat('G2 acceptance', g.g2===null?'—':g.g2+'%', g.g2Word, '13-analytics.html?tab=gates', g.g2Tone)}
+      ${stat('G1 effort saved', g.g1===null?'—':g.g1+'%', g.g1Word, '13-analytics.html?tab=gates', g.g1Tone)}
     </div>`;
 
-  // Waiting in For Review: earliest due first, five at a time.
+  // Waiting in For Review: earliest due first, with when each is due.
   const dueTone = t => { const b = dueBucket(t); return b==='overdue'||b==='today' ? 'var(--neg)' : b==='tomorrow' ? 'var(--warn)' : 'var(--i3)'; };
   let lastB = null;
   const qRows = queue.slice(0,5).map(x=>{
-    const b = dueBucket(x.due), hdr = b!==lastB ? `<div class="t-group" style="color:${dueTone(x.due)}">${(DUE_BUCKETS.find(z=>z[0]===b)||[])[1]}</div>` : ''; lastB = b;
-    return hdr + line(`${esc(x.who)} <span style="color:var(--i3);font-weight:500">· ${esc(x.account)}</span>`, `${esc(REASON_CATS[x.cats[0]])} · ${esc(x.action)}`,
-      `<span style="font-size:12px;font-weight:600;color:${dueTone(x.due)};white-space:nowrap">${esc(dueLabel(x.due).replace(/^By /,''))}</span>`, `14-review.html?item=${encodeURIComponent(x.id)}`);
+    const b = dueBucket(x.due), hdr = b!==lastB ? `<div style="padding:8px 14px 4px;font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:${dueTone(x.due)};background:var(--s50)">${(DUE_BUCKETS.find(z=>z[0]===b)||[])[1]}</div>` : ''; lastB = b;
+    return hdr + line(`${esc(x.who)} · ${esc(x.account)}`, `${esc(x.action)} · ${esc(x.channel)} · ${esc(REASON_CATS[x.cats[0]])}${mgr?` · ${esc(repName(x.owner))}`:''}`,
+      `<span style="font-size:11px;font-weight:600;color:${dueTone(x.due)};white-space:nowrap">${esc(dueLabel(x.due))}</span><span class="tag ${x.d.spot==='pending'?'tag-blue':'tag-amber'}">${esc(whyHere(x.d))}</span>`, `14-review.html?item=${encodeURIComponent(x.id)}`);
   }).join('');
-  const aRows = approvals.slice(0,4).map(x=>line(`${esc(x.who)} <span style="color:var(--i3);font-weight:500">· ${esc(x.account)}</span>`, `Accepted by ${esc(repName(x.owner))}`,
-      `<span class="tag tag-violet">Approve</span>`, `14-review.html?item=${encodeURIComponent(x.id)}`)).join('');
-  const rRows = ready.slice(0,4).map(x=>`<div class="t-row" style="flex-wrap:wrap;row-gap:10px">
-      <div style="flex:1;min-width:220px"><div class="t-main">${esc(x.who)} <span style="color:var(--i3);font-weight:500">· ${esc(x.account)}</span></div>
-        <div class="t-sub">${esc(x.channel)} · released ${ago(x.d.at)}${x.d.outcome?` · ${esc(x.d.outcome)}`:''} · <a class="t-link" style="font-size:12px" href="${nbaLink(x.run)}&rec=${encodeURIComponent(x.r.key)}">Open</a></div></div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap">${OUTCOMES.map(o=>`<button class="t-chip ${x.d.outcome===o?'on':''}" onclick="markOutcome('${x.id}','${o}')">${o}</button>`).join('')}</div>
+  const aRows = approvals.slice(0,5).map(x=>line(`${esc(x.who)} · ${esc(x.account)}`, `Accepted by ${esc(repName(x.owner))} · ${esc(x.action)}`,
+      `<span class="tag tag-violet">Approval</span>`, `14-review.html?item=${encodeURIComponent(x.id)}`)).join('');
+  const rRows = ready.slice(0,4).map(x=>`<div style="padding:10px 14px;border-bottom:1px solid var(--s75)">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="flex:1;min-width:0"><div style="font-size:12.5px;font-weight:600;color:var(--i1)">${esc(x.who)} · ${esc(x.account)}</div>
+        <div style="font-size:11px;color:var(--i3);margin-top:2px">${esc(x.action)} · ${esc(x.channel)} · released ${ago(x.d.at)}${x.d.outcome?` · marked ${esc(x.d.outcome)}`:''}</div></div>
+        <a href="${nbaLink(x.run)}&rec=${encodeURIComponent(x.r.key)}" style="font-size:11.5px;color:var(--brand);font-weight:600;text-decoration:none;white-space:nowrap">Open the message →</a>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">${OUTCOMES.map(o=>`<button class="tag ${x.d.outcome===o?'tag-violet':'tag-grey'}" style="cursor:pointer;border:none" onclick="markOutcome('${x.id}','${o}')">${o}</button>`).join('')}</div>
     </div>`).join('');
 
-  // Right column.
+  // Right column: what the system did, spot-checks, gates, recent lists (and set-up for a manager).
   const latestIts = latest ? scope.filter(x=>x.run===latest) : [], wentN = latestIts.filter(x=>x.d.released==='auto').length;
-  const didPanel = latest ? box('What the system did', `<span class="t-cap" style="margin:0">${ago(latest.saved.createdAt)}</span>`, `<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:4px 24px 24px">
-      <a class="t-mini" href="${nbaLink(latest,'proceeded')}"><div class="t-num" style="color:var(--pos)">${wentN}</div><div class="t-cap">went ahead on their own</div></a>
-      <a class="t-mini" href="${nbaLink(latest,'waiting')}"><div class="t-num" style="color:var(--ter-dk)">${latestIts.length-wentN}</div><div class="t-cap">needed a person</div></a>
-    </div>`) : '';
+  const didPanel = latest ? box('What the system did', `<span style="font-size:11px;color:var(--i3)">${ago(latest.saved.createdAt)}</span>`, `<div style="padding:12px 14px">
+      <div style="display:flex;gap:22px;margin-bottom:6px">
+        <a href="${nbaLink(latest,'proceeded')}" style="text-decoration:none"><div class="stat-lbl">Went ahead on their own</div><div style="font-family:var(--fd);font-size:20px;font-weight:700;color:var(--pos)">${wentN}</div></a>
+        <a href="${nbaLink(latest,'waiting')}" style="text-decoration:none"><div class="stat-lbl">Needed a person</div><div style="font-family:var(--fd);font-size:20px;font-weight:700;color:var(--ter-dk)">${latestIts.length-wentN}</div></a>
+      </div>
+      </div>`) : '';
   const spotPanel = (() => {
     const picked = SPOT ? SPOT.picked : 0, mineN = SPOT && SPOT.reps ? (rep ? (SPOT.reps[myEmail()]||0) : picked) : 0;
-    const n = (v, l, c) => `<div><div class="t-num" style="font-size:22px;color:${c}">${v}</div><div class="t-cap">${l}</div></div>`;
-    return box("This week's spot-checks", spots.length ? link('14-review.html?kind=spot', 'Rate them →') : '', `<div style="display:flex;gap:36px;padding:4px 24px 24px">
-        ${n(mineN, 'picked', 'var(--i1)')}${n(spotDoneWeek, 'done', 'var(--pos)')}${n(spots.length, 'to do · by Friday', spots.length?'var(--ter-dk)':'var(--i1)')}</div>`);
+    return box("This week's spot-checks", spots.length ? link('14-review.html?kind=spot', 'Rate them →') : '', `<div style="padding:12px 14px">
+        <div style="display:flex;gap:20px;margin-bottom:8px">
+          <div><div class="stat-lbl">Picked this week</div><div style="font-family:var(--fd);font-size:20px;font-weight:700;color:var(--i1)">${mineN}</div></div>
+          <div><div class="stat-lbl">Done</div><div style="font-family:var(--fd);font-size:20px;font-weight:700;color:var(--pos)">${spotDoneWeek}</div></div>
+          <div><div class="stat-lbl">Still to do</div><div style="font-family:var(--fd);font-size:20px;font-weight:700;color:${spots.length?'var(--ter-dk)':'var(--i1)'}">${spots.length}</div></div>
+        </div>
+        </div>`);
   })();
-  const gateRow = (t, v, target, tone, w) => `<a href="13-analytics.html?tab=gates" style="display:block;text-decoration:none;padding:6px 24px 18px">
-      <div style="display:flex;align-items:baseline"><span style="flex:1;font-size:13px;font-weight:600;color:var(--i1)">${t}</span><span style="font-family:var(--fd);font-size:18px;font-weight:700;color:${tone}">${v===null?'—':v+'%'}</span></div>
-      <div class="t-bar"><span style="width:${v===null?0:Math.min(100,Math.max(0,v))}%;background:${v===null?'transparent':tone}"></span><i style="left:${target}%" title="Target ${target}%"></i></div>
-      <div class="t-cap">${esc(w)}</div></a>`;
-  const gatePanel = box('Success gates', link('13-analytics.html?tab=gates', 'Analytics →'),
-    gateRow('G2 · first-pass acceptance', g.g2, DemandAI.CONFIG.g2Threshold, g.g2===null?'var(--i3)':g.g2Tone, g.g2Word) +
-    gateRow('G1 · less review effort', g.g1, DemandAI.CONFIG.g1Threshold, g.g1===null?'var(--i3)':g.g1Tone, g.g1Word));
+  const gatePanel = box('Success gates', link('13-analytics.html?tab=gates', 'Analytics →'), `<div style="padding:12px 14px">
+      ${[['G2 · first-pass acceptance', g.g2, g.g2Tone, g.g2Word, m.weighted!==null ? `${m.pooled.a} of ${m.pooled.n} accepted on first pass, weighted across both paths` : 'Decide in For Review to start the count'],
+         ['G1 · less review effort', g.g1, g.g1Tone, g.g1Word, m.minutes!==null && g.g1!==null ? `${Math.round(m.minutes*10)/10} min per usable first action against ${m.base} min before` : 'Needs decisions to measure']]
+        .map(([t, v, tone, w, d])=>`<a href="13-analytics.html?tab=gates" style="display:block;text-decoration:none;padding:8px 0;border-bottom:1px solid var(--s75)">
+          <div style="display:flex;align-items:baseline;gap:10px"><span style="flex:1;font-size:12.5px;font-weight:600;color:var(--i1)">${t}</span>
+          <span style="font-family:var(--fd);font-size:18px;font-weight:700;color:${tone}">${v===null?'—':v+'%'}</span></div>
+          <div style="font-size:11px;color:${tone};margin-top:2px">${esc(w)}</div><div style="font-size:11px;color:var(--i3);margin-top:2px">${esc(d)}</div></a>`).join('')}
+      </div>`);
   const recent = [
-    ...lists.map(l=>({ at:l.createdAt, kind:'Prospect list', name:l.name, href:`11-scoring.html?list=${encodeURIComponent(l.id)}` })),
-    ...scorings.map(r=>({ at:r.createdAt, kind:'Scored list', name:r.name, href:`11-scoring.html?run=${encodeURIComponent(r.id)}` })),
-    ...segs.map(s=>({ at:s.createdAt, kind:'Micro-segments', name:s.name, href:`12-nba.html?run=${encodeURIComponent(s.id)}` })),
+    ...lists.map(l=>({ at:l.createdAt, kind:'Prospect list', name:l.name, sub:`${(l.stats&&l.stats.accounts)||(l.accounts||[]).length} accounts`, href:`11-scoring.html?list=${encodeURIComponent(l.id)}` })),
+    ...scorings.map(r=>({ at:r.createdAt, kind:'Scored list', name:r.name, sub:`${(r.stats&&r.stats.scored)||0} scored · ${(r.stats&&r.stats.A)||0} tier A`, href:`11-scoring.html?run=${encodeURIComponent(r.id)}` })),
+    ...segs.map(s=>({ at:s.createdAt, kind:'Micro-segments', name:s.name, sub:`${(s.stats&&s.stats.segments)||0} micro-segments · ${(s.stats&&s.stats.prospects)||0} recommendations`, href:`12-nba.html?run=${encodeURIComponent(s.id)}` })),
   ].sort((a,b)=>(b.at||0)-(a.at||0)).slice(0,4);
-  const recentPanel = box('Recent lists', '', recent.map(x=>line(esc(x.name), `${x.kind} · ${x.at?fmtDate(x.at):''}`, '', x.href)).join('') || empty('No lists yet.'));
+  const KIND_TONE = {'Prospect list':'tag-grey', 'Scored list':'tag-blue', 'Micro-segments':'tag-violet'};
+  const recentPanel = box('Recent lists', '', recent.map(x=>line(esc(x.name), `${x.sub} · ${x.at?fmtDate(x.at):''}`, `<span class="tag ${KIND_TONE[x.kind]}">${x.kind}</span>`, x.href)).join('') || empty('No lists yet.'));
 
   const left = worker ? [
-      box('Waiting in For Review', queue.length ? link('14-review.html', 'Open the queue →') : '', queue.length ? qRows + (queue.length>5 ? `<div class="t-foot">${link('14-review.html', `${queue.length-5} more, earliest due first →`)}</div>` : '<div style="height:8px"></div>') : empty('Nothing is waiting for your review.'), 'review', queue.length || undefined),
-      mgr ? box('Approvals', approvals.length ? link('14-review.html?view=approvals', 'Review them →') : '', approvals.length ? aRows + '<div style="height:8px"></div>' : empty('Nothing waiting for your approval.'), '', approvals.length || undefined) : '',
-      box('Awaiting your outcome update', ready.length>4 ? link('12-nba.html', `All ${ready.length} →`) : '', ready.length ? rRows + '<div style="height:8px"></div>' : empty('Nothing released is waiting for an outcome.'), 'outcomes', ready.length || undefined),
+      box('Waiting in For Review', queue.length ? link('14-review.html', `Open the queue (${queue.length}) →`) : '', queue.length ? qRows + (queue.length>5 ? `<div style="padding:8px 14px">${link('14-review.html', `+ ${queue.length-5} more, earliest due first`)}</div>` : '') : empty('Nothing is waiting for your review.')),
+      mgr ? box('Approvals', approvals.length ? link('14-review.html?view=approvals', 'Review them →') : '', aRows || empty('No sensitive items waiting for your approval.')) : '',
+      box('Awaiting your outcome update', ready.length ? `<span style="font-size:11px;color:var(--i3)">${ready.length} · oldest first</span>` : '', (rRows || empty('Nothing released is waiting for an outcome.')) +
+        '', 'outcomes'),
     ].join('') : recentPanel;
-  const right = worker ? didPanel + gatePanel + spotPanel + (mgr ? setupCard(lists, scorings, segs) : '') + recentPanel : gatePanel;
+  const right = worker ? didPanel + spotPanel + gatePanel + (mgr ? setupCard(lists, scorings, segs) : '') + recentPanel : gatePanel;
 
-  document.getElementById('mainArea').innerHTML = head + `<div class="t-canvas">${hello}${notice}${tiles}
-    <div style="display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:28px;align-items:start">
+  document.getElementById('mainArea').innerHTML = head + `<div class="canvas" style="padding:20px 28px 48px">${hello}${notice}${tiles}
+    <div style="display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:20px;align-items:start">
       <div>${left}</div><div>${right}</div>
     </div></div>`;
   maybeGuide();
 }
-
 // First visit: open the guide in the side panel once.
 function maybeGuide(){ let seen = false; try{ seen = localStorage.getItem(GUIDE_KEY)==='closed'; }catch(e){} if(!seen) openGuide(); }
 
