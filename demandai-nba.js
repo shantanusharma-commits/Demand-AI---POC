@@ -200,6 +200,7 @@ function statusLabel(d, r){
   if(d.spot==='pending') return ['Proceeded · spot-check', 'tag-blue'];
   if(d.status==='Waiting') return ['Waiting for you in the exception queue', 'tag-amber'];
   if(d.status==='Awaiting approval') return ['Waiting for the sales manager', 'tag-violet'];
+  if(d.meeting) return [d.meeting.seen ? 'Meeting booked · call script ready' : 'New: call script for the meeting', 'tag-violet'];
   if(d.status==='Released') return [d.released==='auto' ? 'Proceeded' : d.released==='approved' ? 'Approved' : 'Accepted', 'tag-green'];
   return [d.status, d.status==='Closed' ? 'tag-red' : 'tag-grey'];
 }
@@ -491,7 +492,56 @@ function addManual(key){
 }
 // Step 9 · Outcome update. Step 10 · Reassign. Step in at any time: take control of an item that went ahead.
 const OUTCOMES = ['Sent','Replied','Meeting booked','No response'];
-function outcome(key, o){ const r = recOf(key); setDec(key, {outcome:o}); logIt(r, 'Outcome: '+o); persist(); showToast(`Outcome logged: ${o}`); refresh(); }
+function outcome(key, o){
+  const r = recOf(key), d = dec(key), booked = o==='Meeting booked' && !d.meeting;
+  // A booked meeting brings the account back as the next best action: a call script for the meeting, flagged as new.
+  setDec(key, {outcome:o, meeting: o==='Meeting booked' ? (d.meeting || {at:Date.now(), seen:false, script:meetingScript(r)}) : null});
+  logIt(r, 'Outcome: '+o);
+  if(booked) sysLog(r, 'Call script ready for the meeting', 'Back on Micro-segments & NBA as the next step');
+  persist(); DemandAI.reviewBadge();
+  showToast(booked ? 'Meeting booked: a call script is ready on Micro-segments & NBA' : `Outcome logged: ${o}`); refresh();
+}
+// The call script for a booked meeting: built from what was sent, why now, the proof and the playbook.
+function meetingScript(r){
+  pinBrand();
+  const lr = liveRec(r), action = chosenAction(r), brief = DemandAI.briefFor(lr, action, {asOf:asOf()}), x = draftOf(r);
+  const base = DemandAI.callScript(lr, action, brief.whyNow), first = (lr.contact.name||'').split(' ')[0];
+  const sent = x.channel==='Email' ? `the email "${x.subject}"` : x.channel==='LinkedIn' ? 'the LinkedIn message' : 'the follow-up';
+  return {
+    opener: `Hi ${first}, thanks for making the time. We reached out with ${sent} because of your ${r.reason.replace(/\s*\([^)]*\)/g, '').replace(/:\s*/, ' (').replace(/\.?$/, ')').replace(/^./, c=>c.toLowerCase())}. Is that still the priority on your side?`,
+    agenda: ['Confirm the situation and who else is involved', 'Share what similar sites did' + (brief.proof ? ` (${brief.proof.title})` : ''), 'Agree a next step and a date'],
+    questions: base.questions, objection: base.objection, response: base.response,
+    ask: `Close on a next step: ${base.ask.replace(/\?$/, '')}, with a date in the next two weeks.`,
+    context: brief.whyNow, proof: brief.proof ? brief.proof.title : '',
+  };
+}
+// The notice on Micro-segments & NBA: meetings booked whose call script hasn't been opened yet.
+function meetingBanner(){
+  const hits = DemandAI.loadSegmentations().map(sv=>({ sv, n: Object.values(sv.decisions||{}).filter(d=>d && d.meeting && !d.meeting.seen).length })).filter(x=>x.n);
+  if(!hits.length) return '';
+  const n = hits.reduce((t,x)=>t+x.n, 0), go = `12-nba.html?run=${encodeURIComponent(hits[0].sv.id)}&show=meeting`;
+  return `<a href="${go}" style="display:flex;align-items:center;gap:10px;padding:11px 14px;margin-bottom:14px;background:var(--brand-lt);border:1px solid var(--brand-mid);border-radius:var(--rmd);text-decoration:none">
+    <span class="tag tag-violet">New</span><span style="flex:1;font-size:12.5px;color:var(--i1)"><b>${n} meeting${n===1?'':'s'} booked</b>: the call script${n===1?' is':'s are'} ready. Next best action: prepare and run the meeting.</span>
+    <span style="font-size:12px;font-weight:700;color:var(--brand);white-space:nowrap">Open ${n===1?'it':'them'} →</span></a>`;
+}
+function meetingPanel(key){
+  const d = dec(key), m = d.meeting; if(!m || !m.script) return '';
+  const sc = m.script, li = a => `<ol style="margin:4px 0 0 18px;padding:0;font-size:12px;color:var(--i1);line-height:1.6">${a.map(t=>`<li>${esc(t)}</li>`).join('')}</ol>`;
+  return panel('Meeting booked: call script', `<span class="tag ${m.seen?'tag-green':'tag-violet'}">${m.seen?'Ready':'New'}</span>`, `
+    <div style="font-size:11px;color:var(--i3);margin-bottom:6px">Generated ${fmtDate(m.at)} ${timeOf(m.at)}, when the meeting was marked as booked.</div>
+    ${lbl('Opener')}<div style="font-size:12.5px;color:var(--i1);line-height:1.55">${esc(sc.opener)}</div>
+    ${lbl('Agenda')}${li(sc.agenda)}
+    ${lbl('Discovery questions')}${li(sc.questions||[])}
+    ${lbl('If they say')}<div style="font-size:12px;color:var(--i1)">${esc(sc.objection||'')}</div>
+    ${lbl('You say')}<div style="font-size:12px;color:var(--i1)">${esc(sc.response||'')}</div>
+    ${lbl('The ask')}<div style="font-size:12.5px;color:var(--i1);font-weight:600">${esc(sc.ask)}</div>
+    <button class="btn btn-sec btn-sm" style="margin-top:10px" onclick="copyMeeting('${key}')">Copy the script</button>`);
+}
+function copyMeeting(key){
+  const sc = (dec(key).meeting||{}).script; if(!sc) return;
+  const t = ['Opener: '+sc.opener, 'Agenda:\n- '+sc.agenda.join('\n- '), 'Questions:\n- '+(sc.questions||[]).join('\n- '), 'If they say: '+sc.objection, 'You say: '+sc.response, 'The ask: '+sc.ask].join('\n\n');
+  if(navigator.clipboard) navigator.clipboard.writeText(t).then(()=>showToast('Copied'), ()=>fallbackCopy(t)); else fallbackCopy(t);
+}
 function reassign(key, email){
   const r = recOf(key), from = ownerOf(r); if(!isManager() || !email || email===from) return;
   setDec(key, {owner:email}); logIt(r, `Reassigned to ${repName(email)}`, {note:`From ${repName(from)}`}); persist(); showToast(`Moved to ${repName(email)}'s queue`); refresh();
@@ -556,6 +606,11 @@ function openRec(key, keepTimer){
   const live = inQueue(d) && mine(r) && !paused && !(typeof CARD_MODE!=='undefined' && CARD_MODE==='use'), action = chosenAction(r), brief = DemandAI.briefFor(lr, action, {asOf:asOf(), channel:d.channel});
   document.getElementById('detTitle').textContent = c.name;
   document.getElementById('detSub').textContent = [c.jobTitle, r.account.name].filter(Boolean).join(' · ');
+  // 0 · A booked meeting comes first: its call script. Opening it clears the notification.
+  html = '';
+  if(d.outcome==='Meeting booked' && !d.meeting){ setDec(key, {meeting:{at:d.at||Date.now(), seen:true, script:meetingScript(r)}}); persist(); }
+  const dm = dec(key).meeting;
+  if(dm){ html += meetingPanel(key); if(!dm.seen){ setDec(key, {meeting:Object.assign({}, dm, {seen:true})}); persist(); DemandAI.reviewBadge(); } }
   // 1 · Why it's here, and why now
   const why = d.spot==='pending' ? `It went ahead on its own after passing all four checks, and was picked at random for a spot-check. Rate it as if it had come to you.`
     : d.why==='alternative' ? `The alternative after a rejection of <b>${esc(d.alternativeOf||'the first recommendation')}</b>. It's offered once: a second rejection closes the account for the pilot.`
@@ -563,7 +618,7 @@ function openRec(key, keepTimer){
     : d.why==='stepped in' ? 'It proceeded on its own; the rep stepped in to edit or reject it. Recorded as an intervention.'
     : d.status==='Released' && d.released==='auto' ? 'Passed all four exception checks, so it went ahead on its own.'
     : (d.reasons||exceptionReasons(r)).map(esc).join('<br>') || 'Exception';
-  html = panel("Why it's here", `<span class="tag ${d.spot==='pending'?'tag-blue':d.why==='alternative'?'tag-violet':'tag-amber'}">${inQueue(d)?whyHere(d):d.status==='Released'&&d.released==='auto'?'Went ahead':'Exception'}</span>`, `
+  html += panel("Why it's here", `<span class="tag ${d.spot==='pending'?'tag-blue':d.why==='alternative'?'tag-violet':'tag-amber'}">${inQueue(d)?whyHere(d):d.status==='Released'&&d.released==='auto'?'Went ahead':'Exception'}</span>`, `
     <div style="font-size:12.5px;color:var(--i1);line-height:1.55;margin-bottom:8px">${why}</div>
     ${kv('Why now', esc(r.reason.replace(/^./,m=>m.toUpperCase())))}
     ${kv('Checks', `<span class="tags" style="display:inline-flex;flex-wrap:wrap;gap:4px">${fourChecks(r).map(([k,ok])=>`<span class="tag ${ok?'tag-green':'tag-red'}">${ok?'✓':'✗'} ${esc(k)}</span>`).join('')}</span>`)}

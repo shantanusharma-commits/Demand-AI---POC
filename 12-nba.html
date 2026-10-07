@@ -622,7 +622,7 @@ function renderStart(t){
   document.getElementById('mainArea').innerHTML = `
     <div class="topbar"><div class="topbar-l"><span class="tb-title">Micro-segments &amp; NBA</span></div></div>
     <div class="ftabs">${ft('new','New')}${ft('saved','Saved',segs.length)}</div>
-    <div class="canvas">${tab==='new' ? `
+    <div class="canvas">${meetingBanner()}${tab==='new' ? `
       <div style="max-width:560px;margin:56px auto 0">
         <div style="font-family:var(--fd);font-size:22px;font-weight:700;color:var(--i1);margin-bottom:6px">Group prospects and plan the next step</div>
         <div style="font-size:13px;color:var(--i3);margin-bottom:22px;line-height:1.55">Prospects with the same reason to buy now are grouped, and each one gets a recommended action and a first message. They then go to For Review for approval.</div>
@@ -883,13 +883,15 @@ function visibleRecs(){
   if(vertFilt) rs = rs.filter(r=>r.account.vertical===vertFilt);
   if(showFilt) rs = rs.filter(r=>{ const d = dec(r.key); return showFilt==='proceeded' ? d.released==='auto' : showFilt==='waiting' ? (inQueue(d) || d.status==='Awaiting approval') : showFilt==='meeting' ? d.outcome==='Meeting booked' : true; });
   if(q) rs = rs.filter(r=>(liveRec(r).contact.name+' '+r.account.name+' '+chosenAction(r)).toLowerCase().includes(q));
-  return rs;
+  // New call scripts first: the meeting is the next best action now.
+  const fresh = r => { const m = dec(r.key).meeting; return m && !m.seen ? 0 : 1; };
+  return rs.slice().sort((a,b)=>fresh(a)-fresh(b));
 }
 function listTab(){
   const segs = RUN.seg.segments.map(g=>g.name).concat(RUN.seg.exceptions.length?['__x']:[]);
   const verts = [...new Set(RUN.seg.recs.map(r=>r.account.vertical))].sort();
   const sel = 'padding:6px 9px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:12px';
-  return `<div class="score-list">
+  return `${showFilt!=='meeting' ? meetingBanner() : ''}<div class="score-list">
     <div class="sl-toolbar">${search('drawList','Search accounts, contacts or actions…')}
       <select onchange="segFilt=this.value||null;drawList()" style="${sel}"><option value="">All micro-segments</option>${segs.map(n=>`<option value="${n}" ${segFilt===n?'selected':''}>${n==='__x'?'No micro-segment':esc(n)}</option>`).join('')}</select>
       <select onchange="vertFilt=this.value||null;drawList()" style="${sel}"><option value="">All verticals</option>${verts.map(v=>`<option ${vertFilt===v?'selected':''}>${esc(v)}</option>`).join('')}</select></div>

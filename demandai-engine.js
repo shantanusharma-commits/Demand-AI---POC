@@ -1173,6 +1173,14 @@ function reviewBadge() {
     if (!b) { b = document.createElement('span'); b.className = 'nav-count'; b.style.cssText = 'margin-left:auto;min-width:18px;height:18px;padding:0 6px;border-radius:9px;background:#FF8820;color:#fff;font-size:10px;font-weight:700;display:inline-flex;align-items:center;justify-content:center'; a.appendChild(b); }
     b.textContent = n;
   });
+  // Micro-segments & NBA: a meeting was booked and its call script hasn't been opened yet.
+  const m = loadSegmentations().reduce((t, r) => t + Object.values(r.decisions || {}).filter(d => d && d.meeting && !d.meeting.seen).length, 0);
+  document.querySelectorAll('a.nav-item[href="12-nba.html"]').forEach(a => {
+    let b = a.querySelector('.nav-count');
+    if (!m) { if (b) b.remove(); return; }
+    if (!b) { b = document.createElement('span'); b.className = 'nav-count'; b.title = 'Meetings booked: call scripts ready'; b.style.cssText = 'margin-left:auto;min-width:18px;height:18px;padding:0 6px;border-radius:9px;background:#7D52A2;color:#fff;font-size:10px;font-weight:700;display:inline-flex;align-items:center;justify-content:center'; a.appendChild(b); }
+    b.textContent = m;
+  });
   return n;
 }
 if (typeof localStorage !== 'undefined') applyConfig(configOverrides());

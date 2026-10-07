@@ -381,6 +381,9 @@ textarea[readonly],input[readonly]{background-color:var(--s50);}
 .dt tbody tr:hover td{background:#FAFBFC;}
 .dt tbody tr.click{cursor:pointer;}
 .dt th.num,.dt td.num{text-align:right;}
+.col-filt{appearance:none;-webkit-appearance:none;border:none;background:transparent;font:inherit;letter-spacing:inherit;text-transform:inherit;color:inherit;cursor:pointer;padding:0;max-width:100%;outline:none;}
+.col-filt:hover{color:var(--brand);}
+.col-filt.on{color:var(--brand);}
 .dt td.num{font-family:var(--fm);font-variant-numeric:tabular-nums;}
 .dt td.wrap{white-space:normal;}
 .dt .dt-main{color:var(--i1);font-weight:600;overflow:hidden;text-overflow:ellipsis;}
@@ -616,29 +619,31 @@ const SOON = ['overdue','today','tomorrow','2days'];
 const dueIs = (it, f) => f==='soon' ? SOON.includes(dueBucket(dueOfIt(it))) : dueBucket(dueOfIt(it))===f;
 const filtered = its => its.filter(it=>(!FILT.due || dueIs(it, FILT.due)) && (!FILT.reason || catsOfIt(it).includes(FILT.reason))
   && (!FILT.kind || (FILT.kind==='spot' ? decOf(it).spot==='pending' : decOf(it).spot!=='pending'))
-  && (!FILT.seg || it.r.segment===FILT.seg) && (!FILT.rep || withRun(it, ()=>ownerOf(it.r))===FILT.rep));
-// The filters, up front: when it's due, why it's here, what kind. Each chip shows how many it would leave.
-function filterBar(){
-  const all = myQueue(); if(!all.length) return '';
-  const count = patch => { const keep = FILT; FILT = Object.assign({}, FILT, patch); const n = filtered(all).length; FILT = keep; return n; };
-  const chip = (patch, label, on) => { const n = count(patch); return n || on ? `<div class="seg-pill ${on?'active':''}" onclick='setFilt(${JSON.stringify(patch)})'>${esc(label)} · ${n}</div>` : ''; };
-  const cats = {}; all.forEach(it=>catsOfIt(it).forEach(c=>{ cats[c] = 1; }));
-  const row = (lbl, chips) => `<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><span style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--i3);width:44px">${lbl}</span>${chips}</div>`;
-  const extra = [FILT.seg && ['seg', FILT.seg], FILT.rep && ['rep', repName(FILT.rep)]].filter(Boolean);
-  const shown = filtered(all).length, any = FILT.due || FILT.reason || FILT.kind || FILT.seg || FILT.rep;
-  return `<div style="display:flex;flex-direction:column;gap:7px;padding:12px 14px;margin-bottom:12px;background:var(--surf);border:1px solid var(--border);border-radius:var(--rmd)">
-    <div style="display:flex;align-items:baseline;gap:8px"><span style="font-size:12.5px;font-weight:700;color:var(--i1)">${FILT.preset ? 'Recommended view: due in the next two days' : any ? 'Filtered' : 'Everything in your queue'}</span>
-      <span style="font-size:11.5px;color:var(--i3)">Showing ${shown} of ${all.length}, earliest due first</span>
-      ${any ? `<a href="#" onclick="setFilt(null);return false" style="margin-left:auto;font-size:11.5px;color:var(--brand);font-weight:600;text-decoration:none">Show all ${all.length}</a>` : `<a href="#" onclick="setFilt({due:'soon'}, true);return false" style="margin-left:auto;font-size:11.5px;color:var(--brand);font-weight:600;text-decoration:none">Back to the recommended view</a>`}</div>
-    ${row('Due', chip({due:'soon'}, 'Next two days', FILT.due==='soon') + chip({due:'overdue'}, 'Overdue', FILT.due==='overdue') + chip({due:'today'}, 'Due today', FILT.due==='today') + chip({due:null}, 'Any time', !FILT.due))}
-    ${row('Why', Object.keys(REASON_CATS).filter(c=>cats[c]).map(c=>chip({reason: FILT.reason===c ? null : c}, REASON_CATS[c], FILT.reason===c)).join('') + chip({reason:null}, 'Any reason', !FILT.reason))}
-    ${row('Type', chip({kind: FILT.kind==='exception' ? null : 'exception'}, 'Exceptions', FILT.kind==='exception') + chip({kind: FILT.kind==='spot' ? null : 'spot'}, 'Spot-checks', FILT.kind==='spot'))}
-    ${extra.length ? row('Also', extra.map(([k,v])=>`<div class="seg-pill active" onclick='setFilt(${JSON.stringify({[k]:null})})'>${esc(v)} ✕</div>`).join('')) : ''}
-  </div>`;
+  && (!FILT.seg || it.r.segment===FILT.seg) && (!FILT.rep || withRun(it, ()=>ownerOf(it.r))===FILT.rep)
+  && (!FILT.ch || withRun(it, ()=>draftOf(it.r).channel)===FILT.ch));
+/* Filters live in the column headers (Why it's here, Channel, Due, Owner); a tag in a row filters by its value.
+   What's applied shows as chips above the list, with how many rows are left. */
+const FILT_KEYS = ['due','reason','kind','seg','rep','ch'];
+const DUE_OPTS = [['soon','Next 2 days'],['overdue','Overdue'],['today','Due today'],['tomorrow','Due tomorrow'],['later','Due later']];
+function colFilter(label, key, opts){
+  const cur = key==='why' ? (FILT.kind ? 'k:'+FILT.kind : FILT.reason ? 'r:'+FILT.reason : '') : (FILT[key]||'');
+  return `<select class="col-filt ${cur?'on':''}" title="Filter by ${esc(label.toLowerCase())}" onclick="event.stopPropagation()" onchange="colFilt('${key}', this.value)">
+    <option value="">${esc(label)}${cur?'':' ▾'}</option>${opts.map(([v,l])=>`<option value="${esc(v)}" ${v===cur?'selected':''}>${esc(v===cur ? label+': '+l : l)}</option>`).join('')}</select>`;
+}
+function colFilt(key, v){
+  if(key==='why') return setFilt({ kind: v.startsWith('k:') ? v.slice(2) : null, reason: v.startsWith('r:') ? v.slice(2) : null });
+  setFilt({ [key]: v || null });
+}
+function filterSummary(total, shown){
+  const lbl = { due: v=>(DUE_OPTS.find(o=>o[0]===v)||[,v])[1], reason: v=>REASON_CATS[v], kind: v=>v==='spot'?'Spot-checks':'Exceptions', seg: v=>v, rep: v=>repName(v), ch: v=>v };
+  const on = FILT_KEYS.filter(k=>FILT[k]);
+  return `${on.map(k=>`<span class="seg-pill active" onclick='setFilt(${JSON.stringify({[k]:null})})' title="Remove this filter">${esc(lbl[k](FILT[k]))}${FILT.preset&&k==='due'?' (recommended)':''} ✕</span>`).join('')}
+    <span style="margin-left:auto;font-size:11.5px;color:var(--i3);white-space:nowrap">Showing <b style="color:var(--i1)">${shown}</b> of ${total}</span>
+    ${on.length ? `<a href="#" onclick="setFilt(null);return false" style="font-size:11.5px;color:var(--brand);font-weight:600;text-decoration:none;white-space:nowrap">Clear filters</a>` : ''}`;
 }
 function setFilt(patch, preset){
-  FILT = patch ? Object.assign({}, FILT, patch, {preset: !!preset}) : { due:null, reason:null, kind:null, seg:null, rep:null };
-  history.replaceState(null, '', location.pathname); view = 'queue'; render();
+  FILT = patch ? Object.assign({}, FILT, patch, {preset: !!preset}) : { due:null, reason:null, kind:null, seg:null, rep:null, ch:null };
+  history.replaceState(null, '', location.pathname); if(view==='log') view = 'queue'; render();
 }
 const pausedCount = () => items().filter(it=>withRun(it, ()=>(inQueue(dec(it.r.key)) || dec(it.r.key).status==='Awaiting approval') && mine(it.r) && pausedInfo(it.r))).length;
 function queuePos(key){ const i = myQueue().findIndex(it=>it.run===RUN && it.r.key===key); return i<0 ? null : i+1; }
@@ -703,9 +708,8 @@ function render(){
         ${stat('Proceeded path', m.auto, `${m.auto.a} of ${m.auto.n} spot-checks · ${m.autoN} items`)}${stat('Exception path', m.exc, `${m.exc.a} of ${m.exc.n} decided · ${m.excN} items`)}${stat('Within one alternative', m.alternatives)}
         <div style="flex:1;min-width:120px;padding:10px 14px"><div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--i3)">Flagged</div><div style="font-family:var(--fd);font-size:19px;font-weight:700;color:${m.flagged?'var(--warn)':'var(--i1)'};margin-top:2px">${m.flagged}</div><div style="font-size:10.5px;color:var(--i3)">fast or repetitive, to check · ${m.interventions} intervention${m.interventions===1?'':'s'}</div></div>
       </div>` : ''}
-      ${view==='queue' ? filterBar() : ''}
       <div class="score-list">
-        <div class="sl-toolbar">${search(view==='log'?'drawLog':'draw', view==='log'?'Search the log…':'Search prospects, companies or actions…')}</div>
+        <div class="sl-toolbar">${search(view==='log'?'drawLog':'draw', view==='log'?'Search the log…':'Search prospects, companies or actions…')}${view!=='log'?'<div id="filtSum" style="display:flex;align-items:center;gap:6px;flex:1;flex-wrap:wrap"></div>':''}</div>
         <div id="rows"></div>
       </div>
       ${MISSING.length?`<div style="font-size:11px;color:var(--i3);margin-top:10px">Not shown: ${esc(MISSING.join(', '))} (the prospect list behind it was deleted).</div>`:''}
@@ -715,29 +719,35 @@ function render(){
 function draw(){
   const el = document.getElementById('rows'); if(!el) return;
   const mgr = isManager();
-  let its = view==='queue' ? filtered(myQueue())
-    : view==='approvals' ? items().filter(it=>decOf(it).status==='Awaiting approval' && withRun(it, ()=>mine(it.r) && !pausedInfo(it.r)))
+  const base = view==='queue' ? myQueue() : view==='approvals' ? items().filter(it=>decOf(it).status==='Awaiting approval' && withRun(it, ()=>mine(it.r) && !pausedInfo(it.r))) : null;
+  let its = view==='queue' ? filtered(base)
+    : view==='approvals' ? base.filter(it=>(!FILT.rep || withRun(it, ()=>ownerOf(it.r))===FILT.rep) && (!FILT.ch || withRun(it, ()=>draftOf(it.r).channel)===FILT.ch))
     : items().filter(it=>decOf(it).status==='Released' && withRun(it, ()=>mine(it.r)));
   if(q) its = its.filter(it=>withRun(it, ()=>(liveRec(it.r).contact.name+' '+it.r.account.name+' '+chosenAction(it.r)).toLowerCase().includes(q)));
   const quick = view==='queue' || view==='approvals';
-  const cols = [['Prospect','15%'],['Company','13%'],[view==='released'?'Released':'Why it\'s here','16%'],['Action','18%'],['Channel','7%']];
-  if(view==='queue') cols.push(['Due','10%']);
-  if(mgr) cols.push(['Owner','11%']); else cols.push([view==='released'?'Outcome':'','11%']);
+  const src = base || [], cats = {}; src.forEach(it=>catsOfIt(it).forEach(c=>{ cats[c] = 1; }));
+  const whyOpts = [['k:exception','Exceptions'],['k:spot','Spot-checks'], ...Object.keys(REASON_CATS).filter(c=>cats[c] && c!=='spot').map(c=>['r:'+c, REASON_CATS[c]])];
+  const chOpts = [...new Set(src.map(it=>withRun(it, ()=>draftOf(it.r).channel)))].map(c=>[c,c]);
+  const repOpts = Object.keys(REPS).map(e=>[e, repName(e)]);
+  const cols = [['Prospect','15%'],['Company','13%'],[view==='queue' ? colFilter('Why it\'s here','why',whyOpts) : view==='released'?'Released':'Why it\'s here','16%'],['Action','18%'],[base ? colFilter('Channel','ch',chOpts) : 'Channel','8%']];
+  if(view==='queue') cols.push([colFilter('Due','due',DUE_OPTS),'10%']);
+  if(mgr) cols.push([base ? colFilter('Owner','rep',repOpts) : 'Owner','11%']); else cols.push([view==='released'?'Outcome':'','11%']);
+  const sum = document.getElementById('filtSum'); if(sum) sum.innerHTML = base ? filterSummary(base.length, its.length) : '';
   if(quick) cols.push(['','10%']);
   ROWS_AT = Date.now();
   el.innerHTML = table(cols, its.map(it=>withRun(it, ()=>{
       const r = it.r, d = dec(r.key), lr = liveRec(r), x = draftOf(r);
       const why = view==='released' ? `<span class="tag tag-green">${d.released==='auto'?'On its own':d.released==='approved'?'Approved':'Accepted'}</span>${d.outcome?`<span class="sub">${esc(d.outcome)}</span>`:''}`
         : view==='approvals' ? `<span class="tag tag-violet">Sensitive content</span><span class="sub">Accepted by ${esc(d.acceptedBy||'')}</span>`
-        : `<span class="tag ${d.spot==='pending'?'tag-blue':d.why==='alternative'?'tag-violet':'tag-amber'}">${esc(whyHere(d))}</span><span class="sub" title="${esc((d.reasons||[]).join(' · '))}">${esc(d.spot==='pending'?'Rate it':d.why==='alternative'?'Offered once':d.why==='exception'?(d.reasons||[]).join(' · '):d.sentBackNote||'')}</span>`;
+        : `<span class="tag ${d.spot==='pending'?'tag-blue':d.why==='alternative'?'tag-violet':'tag-amber'}" style="cursor:pointer" title="Show only these" onclick='event.stopPropagation();setFilt(${JSON.stringify(d.spot==='pending'?{kind:'spot',reason:null}:{reason:reasonCats(r,d)[0],kind:null})})'>${esc(whyHere(d))}</span><span class="sub" title="${esc((d.reasons||[]).join(' · '))}">${esc(d.spot==='pending'?'Rate it':d.why==='alternative'?'Offered once':d.why==='exception'?(d.reasons||[]).join(' · '):d.sentBackNote||'')}</span>`;
       return `<tr class="click" onclick="openItem('${it.id}')">
         <td><div class="person"><div class="co-av" style="background:${avColor(lr.contact.name)}">${initials(lr.contact.name)}</div><div>${cell(lr.contact.name, esc(lr.contact.jobTitle||''), 'dt-main')}</div></div></td>
         <td>${cell(r.account.name, esc(it.run.saved.name))}</td>
         <td>${why}</td>
         <td class="wrap"><span class="clamp2" style="font-size:12px;color:var(--i1)" title="${esc(chosenAction(r))}">${esc(chosenAction(r))}</span></td>
-        <td>${cell(x.channel==='Task'?'Task':x.channel)}</td>
-        ${view==='queue' ? (()=>{ const t = dueOf(r, d), b = dueBucket(t); return `<td><span style="font-size:12px;font-weight:600;color:${b==='overdue'||b==='today'?'var(--neg)':b==='tomorrow'?'var(--warn)':'var(--i2)'}">${esc(dueLabel(t))}</span></td>`; })() : ''}
-        <td>${mgr ? cell(repName(ownerOf(r))) : view==='released' ? (d.outcome?esc(d.outcome):'<span class="muted">—</span>') : ''}</td>
+        <td><span style="cursor:pointer" title="Show only ${esc(x.channel)}" onclick='event.stopPropagation();setFilt(${JSON.stringify({ch:x.channel})})'>${cell(x.channel)}</span></td>
+        ${view==='queue' ? (()=>{ const t = dueOf(r, d), b = dueBucket(t); return `<td><span style="cursor:pointer;font-size:12px;font-weight:600;color:${b==='overdue'||b==='today'?'var(--neg)':b==='tomorrow'?'var(--warn)':'var(--i2)'}" title="Show only these" onclick='event.stopPropagation();setFilt(${JSON.stringify({due: b==='2days'?'soon':b})})'>${esc(dueLabel(t))}</span>${b==='overdue'?' <span class="tag tag-red">Overdue</span>':''}</td>`; })() : ''}
+        <td>${mgr ? `<span style="cursor:pointer" title="Show only ${esc(repName(ownerOf(r)))}" onclick='event.stopPropagation();setFilt(${JSON.stringify({rep:ownerOf(r)||null})})'>${cell(repName(ownerOf(r)))}</span>` : view==='released' ? (d.outcome?esc(d.outcome):'<span class="muted">—</span>') : ''}</td>
         ${quick ? `<td style="text-align:right">${view==='approvals' ? (mgr ? `<button class="btn btn-sec btn-sm" title="Approve and release without opening it" onclick="event.stopPropagation();quickDecide('${it.id}')">✓ Approve</button>` : '')
           : mine(r) ? `<button class="btn btn-sec btn-sm" title="${d.spot==='pending'?'Rate it as accepted':'Accept it as it is'} without opening it; open the row to edit or reject" onclick="event.stopPropagation();quickDecide('${it.id}')">✓ ${d.spot==='pending'?'Rate OK':'Accept'}</button>` : ''}</td>` : ''}
       </tr>`;})).join(''),
@@ -790,7 +800,7 @@ setTimeout(()=>{
   const _setRole = setRole; setRole = function(r){ _setRole(r); closeDrawer(); view='queue'; render(); };
   loadRuns(); SPOT = weeklySpotCheck(Object.values(RUNS)); reviewBadge(); render();
   const P = new URLSearchParams(location.search), id = P.get('item');
-  FILT = { due:P.get('due'), reason:P.get('reason'), kind:P.get('kind'), seg:P.get('seg'), rep:P.get('rep') };
+  FILT = { due:P.get('due'), reason:P.get('reason'), kind:P.get('kind'), seg:P.get('seg'), rep:P.get('rep'), ch:P.get('ch') };
   // Land on the work: a manager with approvals waiting starts there; otherwise the queue, in the recommended view.
   const fromLink = FILT.due || FILT.reason || FILT.kind || FILT.seg || FILT.rep;
   if(!fromLink && !id){ FILT.due = 'soon'; FILT.preset = true; if(!filtered(myQueue()).length){ FILT.due = null; FILT.preset = false; } }

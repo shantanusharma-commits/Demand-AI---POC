@@ -7,10 +7,8 @@
 (function(){
   const PAGE = (location.pathname.split('/').pop() || '00-today.html');
   const ON_REVIEW = PAGE === '14-review.html';
-  const INTRO_KEY = 'demandai_copilot_intro_v1:' + PAGE;
   const S = { msgs: [], plans: {}, runs: {}, seq: 0 };
 
-  const seen = () => { try{ return localStorage.getItem(INTRO_KEY)==='seen'; }catch(e){ return false; } };
   const inRun = (run, fn) => { const keep = RUN; RUN = run; try{ return fn(); } finally { RUN = keep; } };
   const runs = () => (typeof ALL_RUNS==='function' ? ALL_RUNS() : []).slice().sort((a,b)=>b.saved.createdAt-a.saved.createdAt);
   const SEGS = Object.keys(SEG_MEANS);
@@ -207,19 +205,11 @@
   function help(lead){
     return p(lead) + `<div style="display:flex;flex-direction:column;align-items:flex-start;gap:6px;margin-top:10px">${suggestions().map(s=>`<button class="tag tag-grey" style="cursor:pointer;border:none;text-align:left" onclick="Copilot.ask(this.textContent)">${esc(s)}</button>`).join('')}</div>`;
   }
-  function intro(){
-    const where = ON_REVIEW ? 'For Review' : 'Today';
-    return `<div class="panel" style="margin-bottom:14px;border-color:var(--brand-mid)"><div class="panel-hdr" style="background:var(--brand-lt)"><span class="panel-ttl" style="color:var(--brand-dk)">Meet Copilot</span><span class="tag tag-violet">New</span></div><div class="panel-body">
-      <div style="font-size:12.5px;color:var(--i1);line-height:1.55;margin-bottom:10px">Your assistant on ${where}. Ask it in plain words ${ON_REVIEW ? 'to narrow this queue, explain why an item is here, or show how often reps agreed with the system' : "what's due, why something is in your queue, or how often reps agree with the system"}.</div>
-      <div style="display:flex;gap:10px;padding:8px 0;border-top:1px solid var(--s75)"><span class="tag tag-blue" style="height:fit-content">Copilot</span><div style="font-size:12px;color:var(--i2);line-height:1.5">Answers and filters. <b>It never changes your data.</b></div></div>
-      <div style="display:flex;gap:10px;padding:8px 0;border-top:1px solid var(--s75)"><span class="tag tag-violet" style="height:fit-content">Autopilot</span><div style="font-size:12px;color:var(--i2);line-height:1.5">When you ask for a change, like approving a batch of spot-checks, Copilot hands it to Autopilot. Autopilot shows you exactly what will change, runs only when you confirm, reports back here and can be undone. It accepts an exception only when its sole reason is low-risk (segment too small or below deal size), and never approves sensitive content.</div></div>
-      <button class="btn btn-primary btn-sm" style="margin-top:8px" onclick="Copilot.dismissIntro()">Got it</button></div></div>`;
-  }
   function ensure(){
     let dr = document.getElementById('copilotDrawer'); if(dr) return dr;
     dr = document.createElement('div'); dr.className = 'detail-drawer'; dr.id = 'copilotDrawer'; dr.style.width = '420px'; dr.style.zIndex = '310';
     dr.innerHTML = `<div class="drawer-hdr"><div><div class="drawer-title"><span style="color:var(--brand)">✦</span> Copilot</div><div class="drawer-sub">Answers and filters. Never changes your data.</div></div>
-        <div style="display:flex;align-items:center;gap:6px"><a href="#" onclick="Copilot.showIntro();return false" style="font-size:11px;color:var(--brand);font-weight:600;text-decoration:none">About</a>
+        <div style="display:flex;align-items:center;gap:6px">
         <div class="drawer-close" onclick="Copilot.close()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div></div></div>
       <div class="drawer-body" id="cpBody"></div>
       <form id="cpForm" onsubmit="Copilot.ask(document.getElementById('cpInput').value);return false" style="position:sticky;bottom:0;display:flex;gap:8px;padding:12px 16px;background:var(--surf);border-top:1px solid var(--border)">
@@ -230,7 +220,7 @@
   }
   function draw(){
     const body = document.getElementById('cpBody'); if(!body) return;
-    body.innerHTML = (seen() ? '' : intro()) + S.msgs.map(m=>m.you
+    body.innerHTML = S.msgs.map(m=>m.you
       ? `<div style="display:flex;justify-content:flex-end;margin:12px 0 8px"><div style="max-width:85%;padding:8px 12px;background:var(--brand-lt);color:var(--i1);border-radius:12px 12px 2px 12px;font-size:12.5px">${esc(m.you)}</div></div>`
       : `<div style="display:flex;gap:8px;margin-bottom:6px"><span style="color:var(--brand);font-size:14px;line-height:1.3">✦</span><div style="flex:1;min-width:0">${m.html}</div></div>`).join('');
     body.parentElement.scrollTop = body.parentElement.scrollHeight;
@@ -238,7 +228,7 @@
   function say(html){ S.msgs.push({ html }); draw(); }
 
   window.Copilot = {
-    button(){ return `<button class="btn btn-sec btn-sm" onclick="Copilot.open()" title="Ask Copilot" style="gap:6px"><span style="color:var(--brand)">✦</span> Copilot${seen()?'':' <span class="tag tag-violet" style="padding:0 6px">New</span>'}</button>`; },
+    button(){ return `<button class="btn btn-sec btn-sm" onclick="Copilot.open()" title="Ask Copilot" style="gap:6px"><span style="color:var(--brand)">✦</span> Copilot</button>`; },
     open(){
       const d = document.getElementById('detailDrawer'); if(d) d.classList.remove('open');
       ensure(); if(!S.msgs.length) S.msgs.push({ html: help(`Hi ${esc((ROLE_PERSON[getRole()]||getRole()).split(' ')[0])}. Ask me anything about your ${ON_REVIEW?'queue':'day'}. For example:`) });
@@ -254,8 +244,6 @@
     },
     runPlan, undo,
     cancel(id){ delete S.plans[id]; const el = document.getElementById('plan-'+id); if(el) el.innerHTML = '<span class="tag tag-grey">Cancelled: nothing changed</span>'; },
-    dismissIntro(){ try{ localStorage.setItem(INTRO_KEY,'seen'); }catch(e){} draw(); refreshPage(); },
-    showIntro(){ try{ localStorage.removeItem(INTRO_KEY); }catch(e){} draw(); },
     openItem(id){ this.close(); if(typeof openItem==='function') openItem(id); },
     // For Review only: apply a filter or switch view on the page underneath.
     show(o){
