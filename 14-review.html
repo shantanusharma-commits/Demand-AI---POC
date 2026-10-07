@@ -612,12 +612,33 @@ const catsOfIt = it => withRun(it, ()=>reasonCats(it.r, dec(it.r.key)));
 const myQueue = () => items().filter(it=>withRun(it, ()=>inQueue(dec(it.r.key)) && mine(it.r) && !pausedInfo(it.r))).sort((a,b)=>dueOfIt(a)-dueOfIt(b));
 // Filters arriving from Today (?due=today&reason=sensitive&kind=exception).
 let FILT = { due:null, reason:null, kind:null, seg:null, rep:null };
-const filtered = its => its.filter(it=>(!FILT.due || dueBucket(dueOfIt(it))===FILT.due) && (!FILT.reason || catsOfIt(it).includes(FILT.reason))
+const SOON = ['overdue','today','tomorrow','2days'];
+const dueIs = (it, f) => f==='soon' ? SOON.includes(dueBucket(dueOfIt(it))) : dueBucket(dueOfIt(it))===f;
+const filtered = its => its.filter(it=>(!FILT.due || dueIs(it, FILT.due)) && (!FILT.reason || catsOfIt(it).includes(FILT.reason))
   && (!FILT.kind || (FILT.kind==='spot' ? decOf(it).spot==='pending' : decOf(it).spot!=='pending'))
   && (!FILT.seg || it.r.segment===FILT.seg) && (!FILT.rep || withRun(it, ()=>ownerOf(it.r))===FILT.rep));
+// The filters, up front: when it's due, why it's here, what kind. Each chip shows how many it would leave.
 function filterBar(){
-  const parts = [FILT.due && (DUE_BUCKETS.find(b=>b[0]===FILT.due)||[])[1], FILT.reason && REASON_CATS[FILT.reason], FILT.kind && (FILT.kind==='spot'?'Spot-checks':'Exceptions'), FILT.seg, FILT.rep && repName(FILT.rep)].filter(Boolean);
-  return parts.length ? `<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:12px;color:var(--i2)">Showing ${parts.map(x=>`<span class="tag tag-blue">${esc(x)}</span>`).join('')}<a href="#" onclick="FILT={due:null,reason:null,kind:null,seg:null,rep:null};history.replaceState(null,'',location.pathname);render();return false" style="color:var(--brand);font-weight:600;text-decoration:none">Show all</a></div>` : '';
+  const all = myQueue(); if(!all.length) return '';
+  const count = patch => { const keep = FILT; FILT = Object.assign({}, FILT, patch); const n = filtered(all).length; FILT = keep; return n; };
+  const chip = (patch, label, on) => { const n = count(patch); return n || on ? `<div class="seg-pill ${on?'active':''}" onclick='setFilt(${JSON.stringify(patch)})'>${esc(label)} · ${n}</div>` : ''; };
+  const cats = {}; all.forEach(it=>catsOfIt(it).forEach(c=>{ cats[c] = 1; }));
+  const row = (lbl, chips) => `<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><span style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--i3);width:44px">${lbl}</span>${chips}</div>`;
+  const extra = [FILT.seg && ['seg', FILT.seg], FILT.rep && ['rep', repName(FILT.rep)]].filter(Boolean);
+  const shown = filtered(all).length, any = FILT.due || FILT.reason || FILT.kind || FILT.seg || FILT.rep;
+  return `<div style="display:flex;flex-direction:column;gap:7px;padding:12px 14px;margin-bottom:12px;background:var(--surf);border:1px solid var(--border);border-radius:var(--rmd)">
+    <div style="display:flex;align-items:baseline;gap:8px"><span style="font-size:12.5px;font-weight:700;color:var(--i1)">${FILT.preset ? 'Recommended view: due in the next two days' : any ? 'Filtered' : 'Everything in your queue'}</span>
+      <span style="font-size:11.5px;color:var(--i3)">Showing ${shown} of ${all.length}, earliest due first</span>
+      ${any ? `<a href="#" onclick="setFilt(null);return false" style="margin-left:auto;font-size:11.5px;color:var(--brand);font-weight:600;text-decoration:none">Show all ${all.length}</a>` : `<a href="#" onclick="setFilt({due:'soon'}, true);return false" style="margin-left:auto;font-size:11.5px;color:var(--brand);font-weight:600;text-decoration:none">Back to the recommended view</a>`}</div>
+    ${row('Due', chip({due:'soon'}, 'Next two days', FILT.due==='soon') + chip({due:'overdue'}, 'Overdue', FILT.due==='overdue') + chip({due:'today'}, 'Due today', FILT.due==='today') + chip({due:null}, 'Any time', !FILT.due))}
+    ${row('Why', Object.keys(REASON_CATS).filter(c=>cats[c]).map(c=>chip({reason: FILT.reason===c ? null : c}, REASON_CATS[c], FILT.reason===c)).join('') + chip({reason:null}, 'Any reason', !FILT.reason))}
+    ${row('Type', chip({kind: FILT.kind==='exception' ? null : 'exception'}, 'Exceptions', FILT.kind==='exception') + chip({kind: FILT.kind==='spot' ? null : 'spot'}, 'Spot-checks', FILT.kind==='spot'))}
+    ${extra.length ? row('Also', extra.map(([k,v])=>`<div class="seg-pill active" onclick='setFilt(${JSON.stringify({[k]:null})})'>${esc(v)} ✕</div>`).join('')) : ''}
+  </div>`;
+}
+function setFilt(patch, preset){
+  FILT = patch ? Object.assign({}, FILT, patch, {preset: !!preset}) : { due:null, reason:null, kind:null, seg:null, rep:null };
+  history.replaceState(null, '', location.pathname); view = 'queue'; render();
 }
 const pausedCount = () => items().filter(it=>withRun(it, ()=>(inQueue(dec(it.r.key)) || dec(it.r.key).status==='Awaiting approval') && mine(it.r) && pausedInfo(it.r))).length;
 function queuePos(key){ const i = myQueue().findIndex(it=>it.run===RUN && it.r.key===key); return i<0 ? null : i+1; }
@@ -627,7 +648,7 @@ function openItem(id){
 }
 const hasNext = () => myQueue().length > 0;
 function nextItem(){
-  const w = myQueue();
+  const f = filtered(myQueue()), w = f.length ? f : myQueue();
   if(!w.length){ closeDrawer(); showToast('Your queue is clear'); render(); return; }
   openItem(w[0].id);
 }
@@ -663,7 +684,7 @@ function render(){
         </div>
       </div>
     </div>
-    <div class="ftabs">${ft('queue',mgr?'Queue':'My queue',queue.length)}${mgr?ft('approvals','Approvals',approvals.length):''}${ft('log','Decision log',logs.length)}</div>
+    <div class="ftabs">${mgr?ft('approvals','Approvals',approvals.length):''}${ft('queue',mgr?'Queue':'My queue',queue.length)}${ft('log','Decision log',logs.length)}</div>
     <div class="canvas">
       ${all.length ? `<div style="font-size:12.5px;color:var(--i2);margin-bottom:12px;line-height:1.5">Only what needs a person: exceptions, this week's spot-checks and alternatives. <b>${auto}</b> passed all four checks and proceeded on their own; reps use them on <a href="12-nba.html" style="color:var(--brand);font-weight:600;text-decoration:none">Next best action</a>.${SPOT&&SPOT.picked?` This week's spot-check (${esc(isoWeek(SPOT.at))}): ${SPOT.picked} picked across ${Object.keys(SPOT.reps).length} rep${Object.keys(SPOT.reps).length===1?'':'s'}; each rep is drawn once a week.`:''}${pausedCount()?` <b>${pausedCount()}</b> held back because their micro-segment is paused.`:''}</div>` :
         `<div style="font-size:12.5px;color:var(--i2);margin-bottom:12px">Nothing yet. Items arrive here when you build micro-segments. <a href="12-nba.html" style="color:var(--brand);font-weight:600;text-decoration:none">Go to Micro-segments &amp; NBA →</a></div>`}
@@ -755,8 +776,12 @@ setTimeout(()=>{
   loadRuns(); SPOT = weeklySpotCheck(Object.values(RUNS)); reviewBadge(); render();
   const P = new URLSearchParams(location.search), id = P.get('item');
   FILT = { due:P.get('due'), reason:P.get('reason'), kind:P.get('kind'), seg:P.get('seg'), rep:P.get('rep') };
+  // Land on the work: a manager with approvals waiting starts there; otherwise the queue, in the recommended view.
+  const fromLink = FILT.due || FILT.reason || FILT.kind || FILT.seg || FILT.rep;
+  if(!fromLink && !id){ FILT.due = 'soon'; FILT.preset = true; if(!filtered(myQueue()).length){ FILT.due = null; FILT.preset = false; } }
   if(['approvals','log','queue'].includes(P.get('view')) && (P.get('view')!=='approvals' || isManager())) view = P.get('view');
-  if(FILT.due || FILT.reason || FILT.kind || FILT.seg || FILT.rep || P.get('view')) render();
+  else if(!fromLink && !id && isManager() && items().some(it=>decOf(it).status==='Awaiting approval' && withRun(it, ()=>mine(it.r) && !pausedInfo(it.r)))) view = 'approvals';
+  render();
   if(id) openItem(id);
 }, 0);
 

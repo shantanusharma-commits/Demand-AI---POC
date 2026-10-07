@@ -407,6 +407,67 @@ function reject(key){
     note:[outcome, note].filter(Boolean).join(' · ')}, before));
   persist(); showToast(`${label}: ${outcome}`); refresh();
 }
+/* The recommended and runner-up actions side by side: what each one is, and what would change. One click picks. */
+function optionFacts(r, action){
+  pinBrand();
+  const lr = liveRec(r), x = DemandAI.draftFor(lr, action, {asOf:asOf()}), chk = DemandAI.checkDraft(x), conf = DemandAI.confidenceFor(lr, x, chk, action);
+  const brief = DemandAI.briefFor(lr, action, {asOf:asOf()});
+  return { channel: x.channel, proof: brief.proof ? brief.proof.title : '', ok: !chk.flags.length && !chk.unsupported.length,
+    flags: chk.flags.map(f=>f.rule).concat(chk.unsupported.length ? ['Unverified claim'] : []), conf: conf.level };
+}
+function compareActions(r, key, live){
+  const d = dec(key);
+  if(!r.runnerUp) return `<div style="font-size:12.5px;font-weight:600;color:var(--i1)">${esc(r.action)}</div><div style="font-size:11px;color:var(--i2);margin-top:3px">${esc(r.reason)}</div><div style="font-size:11px;color:var(--i3);margin-top:6px">No runner-up for this one.</div>`;
+  const A = optionFacts(r, r.action), B = optionFacts(r, r.runnerUp.action), useB = d.useRunner && !d.manual, useA = !d.useRunner && !d.manual;
+  const cellv = (v, other) => `<span style="${v!==other?'font-weight:700;color:var(--i1)':'color:var(--i2)'}">${esc(v||'—')}</span>`;
+  const rowv = (k, a, b) => `<tr><td style="padding:6px 8px 6px 0;font-size:11px;color:var(--i3);vertical-align:top;white-space:nowrap">${k}</td><td style="padding:6px 8px;font-size:12px;vertical-align:top">${a}</td><td style="padding:6px 0 6px 8px;font-size:12px;vertical-align:top">${b}</td></tr>`;
+  const head = (t, chosen, other) => `<th style="text-align:left;padding:0 8px 8px;vertical-align:bottom;width:44%"><div style="font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:${chosen?'var(--brand-dk)':'var(--i3)'}">${t}</div>
+      <div style="margin-top:6px">${chosen ? '<span class="tag tag-violet">Chosen</span>' : live ? `<button class="btn btn-sec btn-sm" onclick="${other}">Use this instead</button>` : ''}</div></th>`;
+  const checks = f => f.ok ? '<span style="color:var(--pos)">✓ All pass</span>' : `<span style="color:var(--neg)">✗ ${esc(f.flags.join(', '))}</span>`;
+  return `<table style="width:100%;border-collapse:collapse">
+    <thead><tr><th></th>${head('Recommended', useA, `swapAction('${key}')`)}${head('Runner-up', useB, `swapAction('${key}')`)}</tr></thead>
+    <tbody style="border-top:1px solid var(--s75)">
+      ${rowv('Action', `<b style="color:var(--i1)">${esc(r.action)}</b>`, `<b style="color:var(--i1)">${esc(r.runnerUp.action)}</b>`)}
+      ${rowv('Why', `<span style="color:var(--i2)">${esc(r.reason)}</span>`, `<span style="color:var(--i2)">${esc(r.runnerUp.reason)}</span>`)}
+      ${rowv('Channel', cellv(A.channel, B.channel), cellv(B.channel, A.channel))}
+      ${rowv('Proof', cellv(A.proof||'None approved', B.proof||'None approved'), cellv(B.proof||'None approved', A.proof||'None approved'))}
+      ${rowv('Confidence', cellv(A.conf, B.conf), cellv(B.conf, A.conf))}
+      ${rowv('Brand and claims', checks(A), checks(B))}
+    </tbody></table>
+    <div style="font-size:10.5px;color:var(--i3);margin-top:6px">Bold marks what differs. Picking one redrafts the message below; then accept or reject as usual.</div>`;
+}
+/* Ask about this item: quick answers inside the panel, so the reviewer keeps their place. */
+const ITEM_QS = [['why','Why is it here?'],['compare','How does the runner-up differ?'],['similar','How did similar items go?'],['account','What do we know about the account?']];
+function itemAsk(key, q){
+  const r = recOf(key); if(!r) return;
+  const d = dec(key), lr = liveRec(r), el = document.getElementById('itemAns'); if(!el) return;
+  const p = t => `<div style="font-size:12px;color:var(--i1);line-height:1.55">${t}</div>`;
+  let out = '';
+  if(q==='why'){
+    out = p(d.spot==='pending' ? 'It passed every check and went ahead on its own; it was picked at random for this week\'s spot-check.'
+      : `The system couldn't decide it alone: ${esc((d.reasons||exceptionReasons(r)).join('; ') || whyHere(d))}.`)
+      + `<div class="tags" style="margin-top:6px">${fourChecks(r).map(([k,ok])=>`<span class="tag ${ok?'tag-green':'tag-red'}">${ok?'✓':'✗'} ${esc(k)}</span>`).join('')}</div>`
+      + p(`<span style="color:var(--i2)">Why now: ${esc(r.reason)}</span>`);
+  } else if(q==='compare'){
+    if(!r.runnerUp) out = p('There is no runner-up for this one.');
+    else { const A = optionFacts(r, r.action), B = optionFacts(r, r.runnerUp.action), diff = [];
+      if(A.channel!==B.channel) diff.push(`the channel changes from ${A.channel} to ${B.channel}`);
+      if(A.conf!==B.conf) diff.push(`confidence goes from ${A.conf} to ${B.conf}`);
+      if((A.proof||'')!==(B.proof||'')) diff.push(B.proof ? `it cites "${B.proof}"` : 'it has no approved proof');
+      if(A.ok!==B.ok) diff.push(B.ok ? 'it passes every check' : `it fails ${B.flags.join(', ')}`);
+      out = p(`Switching to <b>${esc(r.runnerUp.action)}</b>: ${diff.length ? esc(diff.join('; ')) : 'same channel, confidence and checks; only the action and the message change'}.`); }
+  } else if(q==='similar'){
+    const t = trackRecord(r.segment||undefined), runs = typeof ALL_RUNS==='function' ? ALL_RUNS() : [RUN], o = {};
+    runs.forEach(run=>{ const keep = RUN; RUN = run; run.seg.recs.forEach(x=>{ const dx = dec(x.key); if(x.segment===r.segment && dx.outcome) o[dx.outcome] = (o[dx.outcome]||0)+1; }); RUN = keep; });
+    out = p(t.n ? `In ${esc(r.segment||'items with no micro-segment')}, reps accepted the first recommendation <b>${t.a} of ${t.n}</b> times (${t.pct}%)${t.early?'; early days, so read it as a hint':''}.` : `No decisions yet in ${esc(r.segment||'this group')}.`)
+      + p(Object.keys(o).length ? `Outcomes marked so far: ${Object.entries(o).map(([k,n])=>`${esc(k)} ${n}`).join(' · ')}.` : '<span style="color:var(--i2)">No outcomes marked in this group yet.</span>');
+  } else if(q==='account'){
+    const a = r.account, deal = DemandAI.estimateDealSize(a), sigs = r.result.people.flatMap(pp=>pp.signals.map(sg=>({...sg, who: pp.contact ? pp.contact.name : ''}))).slice(0,6);
+    out = p(`<b>${esc(a.name)}</b> · ${esc(a.vertical||'')} · ${a.existingCustomer?'existing customer':'net-new'} · tier ${esc(r.person.tier||'')}${deal?` · deal about USD ${Math.round(deal.value/1000)}k`:''}`)
+      + `<div style="margin-top:6px">${sigs.map(sg=>`<div style="font-size:11.5px;padding:5px 0;border-top:1px solid var(--s75)"><b>${esc(sg.type)}</b> <span style="color:var(--i3)">· ${sg.age!=null?`${sg.age} days ago`:esc(sg.date||'')} · ${esc(sg.who)}</span><div style="color:var(--i2)">${esc(sg.detail||'')}${sg.source?` <span style="color:var(--i3)">· source: ${esc(sg.source)}</span>`:''}</div></div>`).join('')}</div>`;
+  }
+  el.innerHTML = `<div style="display:flex;gap:8px;padding:10px 12px;background:var(--s50);border-radius:var(--rsm)"><span style="color:var(--brand)">✦</span><div style="flex:1;min-width:0">${out}</div></div>`;
+}
 function swapAction(key){
   const r = recOf(key); if(!r || !r.runnerUp) return;
   const d = dec(key), to = d.useRunner ? 'recommended' : 'runner-up';
@@ -503,14 +564,14 @@ function openRec(key, keepTimer){
     ${kv('Micro-segment', `${segTag(r.segment)} <span style="color:var(--i3)">${r.segment?esc(SEG_MEANS[r.segment]||''):''}</span>`)}
     ${kv('Owner', isManager() ? `<select onchange="reassign('${key}',this.value)" style="padding:3px 6px;border:1px solid var(--bdk);border-radius:6px;font-size:12px">${['',...Object.keys(REPS)].map(e=>`<option value="${e}" ${ownerOf(r)===e?'selected':''}>${esc(repName(e))}</option>`).join('')}</select>` : esc(repName(ownerOf(r))))}`);
   // 2 · The action
-  const card = (title, a, sub, chosen) => `<div style="padding:10px 12px;border:1px solid ${chosen?'var(--brand-mid)':'var(--border)'};background:${chosen?'var(--brand-lt)':'var(--surf)'};border-radius:var(--rsm);margin-bottom:8px">
-    <div style="font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:${chosen?'var(--brand-dk)':'var(--i3)'};margin-bottom:4px">${title}${chosen?' · chosen':''}</div>
-    <div style="font-size:12.5px;font-weight:600;color:var(--i1)">${esc(a)}</div><div style="font-size:11px;color:var(--i2);margin-top:3px;line-height:1.5">${sub}</div></div>`;
-  html += panel('The action', live && r.runnerUp && !d.manual ? `<button class="btn btn-sec btn-sm" onclick="swapAction('${key}')">${d.useRunner?'Swap back':'Swap to runner-up'}</button>` : '', `
-    ${card('Recommended', r.action, esc(r.reason), !d.useRunner && !d.manual)}
-    ${r.runnerUp ? card('Runner-up', r.runnerUp.action, esc(r.runnerUp.reason.replace(/\.?$/,'.')), d.useRunner && !d.manual) : ''}
-    ${d.manual ? card('Manual action', d.manual, 'Added by a reviewer.', true) : ''}
-    ${live ? `<div style="display:flex;gap:6px"><input id="manualAct" placeholder="Or add a manual action…" style="flex:1;min-width:0;padding:7px 10px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:12px"><button class="btn btn-sec btn-sm" onclick="addManual('${key}')">Add</button></div>` : ''}`);
+  html += panel(r.runnerUp && !d.manual ? 'The action: compare and pick' : 'The action', '', `
+    ${compareActions(r, key, live)}
+    ${d.manual ? `<div style="padding:10px 12px;border:1px solid var(--brand-mid);background:var(--brand-lt);border-radius:var(--rsm);margin-top:8px"><div style="font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--brand-dk);margin-bottom:4px">Manual action · chosen</div><div style="font-size:12.5px;font-weight:600;color:var(--i1)">${esc(d.manual)}</div></div>` : ''}
+    ${live ? `<div style="display:flex;gap:6px;margin-top:8px"><input id="manualAct" placeholder="Neither? Add a manual action…" style="flex:1;min-width:0;padding:7px 10px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:12px"><button class="btn btn-sec btn-sm" onclick="addManual('${key}')">Add</button></div>` : ''}`);
+  // 2b · Ask about this item, answered here so the context stays on screen
+  html += panel('Ask about this item', '<span style="font-size:10.5px;color:var(--i3)">answers only, changes nothing</span>', `
+    <div class="tags">${ITEM_QS.map(([id,l])=>`<button class="tag tag-grey" style="cursor:pointer;border:none" onclick="itemAsk('${key}','${id}')">${l}</button>`).join('')}</div>
+    <div id="itemAns" style="margin-top:8px"></div>`);
   // 3 · Contact and channel
   html += panel('Contact and channel', '', kv('Contact', `${esc(c.name)} <span style="color:var(--i3)">· ${esc(c.jobTitle||'')} · ${esc(c.persona||'')} persona</span>`)
     + kv('Reach', [c.email?esc(c.email)+(c.emailVerified?'':' <span style="color:var(--warn)">(not verified)</span>'):'', c.linkedin?'LinkedIn':''].filter(Boolean).join(' · ') || '<span style="color:var(--i3)">No email or LinkedIn</span>')
