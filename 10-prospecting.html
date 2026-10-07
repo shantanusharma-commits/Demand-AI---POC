@@ -571,7 +571,7 @@ function renderStart(tab){
   document.getElementById('mainArea').innerHTML = `
     <div class="topbar"><div class="topbar-l"><span class="tb-title">Lead discovery and research</span><span class="tb-badge badge-neutral">Stages 1–5 · rules only</span></div><div class="topbar-r">${helpBtn()}</div></div>
     <div class="ftabs">${t('upload','Upload')}${t('saved','Saved lists',lists.length)}${t('corrections','Corrections',loadCorrections().length)}</div>
-    <div class="canvas">${startTab==='corrections' ? correctionsTable(loadCorrections()) : startTab==='upload' ? `${funnelStrip()}
+    <div class="canvas">${startTab==='corrections' ? correctionsTable(loadCorrections()) : startTab==='upload' ? `
       <div style="max-width:640px;margin:24px auto 0">
         <div style="font-family:var(--fd);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--brand);margin-bottom:8px">Step 1 · Prospecting</div>
         <div style="font-family:var(--fd);font-size:22px;font-weight:700;color:var(--i1);margin-bottom:6px">Upload the lead file</div>
@@ -976,8 +976,11 @@ function maybeGuide(){ let seen = false; try{ seen = localStorage.getItem(P_GUID
 function ledTo(listId){
   const sc = DemandAI.loadScorings().filter(r=>r.listId===listId), segs = DemandAI.loadSegmentations().filter(s=>s.src && s.src.listId===listId);
   const dec = segs.flatMap(s=>Object.values(s.decisions||{}));
-  return { scored: sc.reduce((t,r)=>t+((r.stats&&r.stats.scored)||0),0), runs: sc.length, recs: segs.reduce((t,s)=>t+((s.stats&&s.stats.prospects)||0),0),
-    released: dec.filter(d=>d && d.status==='Released').length, meetings: dec.filter(d=>d && d.outcome==='Meeting booked').length, segId: segs[0] && segs[0].id };
+  const recs = segs.reduce((t,s)=>t+((s.stats&&s.stats.prospects)||0),0);
+  // A list built into micro-segments was scored, even if the scoring run itself wasn't saved.
+  const scored = Math.max(sc.reduce((t,r)=>t+((r.stats&&r.stats.scored)||0),0), recs);
+  const released = Math.max(dec.filter(d=>d && d.status==='Released').length, segs.reduce((t,s)=>t+((s.stats&&s.stats.auto)||0),0));
+  return { scored, runs: Math.max(sc.length, segs.length), recs, released, meetings: dec.filter(d=>d && d.outcome==='Meeting booked').length, segId: segs[0] && segs[0].id };
 }
 function funnelStrip(){
   const lists = DemandAI.loadLists(); if(!lists.length) return '';
