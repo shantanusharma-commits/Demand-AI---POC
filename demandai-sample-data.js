@@ -137,6 +137,13 @@ function nbaScenarioGrid(asOf){
       x.type, typeof x.ago === 'number' ? isoMinus(asOf, x.ago) : x.ago, x.detail, x.source, x.c.owner, x.c.revenue, x.c.employees, 'Owner-operator'];
   }));
 }
+// A pilot week in progress: the same accounts, two of them now mentioning a security audit or an emissions regulation,
+// so more items carry sensitive content. Micro-segments & NBA applies a few decisions on top (see seedWeek there).
+function nbaWeekGrid(asOf){
+  const g = nbaScenarioGrid(asOf), co = g[0].indexOf('company_name'), det = g[0].indexOf('detail');
+  const extra = { 'Granite Gas Processing':' ahead of the site security audit', 'Lantern Petrochemicals':' to meet the new emissions regulation' };
+  return g.map((row,i)=> i && extra[row[co]] ? row.map((v,j)=> j===det ? String(v).replace(/\.?$/, '') + extra[row[co]] : v) : row);
+}
 // What each account shows, what to expect, and how to test it. Owners: Rep A is Sofia Ahlgren (the Sales rep role), Rep B is Marco Lindqvist.
 const NBA_SCENARIO_GUIDE = [
   ['Aurora Refining', 'Micro-segment formed on its strongest signal (Modernisation); one recommendation per account to the strongest contact; a second contact kept for "wrong contact"', 'Proceeds on its own to Niran Wattana by email (Rep A)', 'In For Review as a spot-check, or Step in: reject "Wrong contact" to get Ploy Siri back as the alternative'],
@@ -158,5 +165,5 @@ const NBA_SCENARIO_GUIDE = [
 ];
 
 return { SAMPLE_AS_OF, LEADS, SIGNALS, LEAD_FILE: 'lead_file.csv', SIGNAL_FILE: 'signal_file.csv',
-  NBA_COLUMNS, nbaScenarioGrid, NBA_SCENARIO_GUIDE, NBA_SCENARIO_FILE: 'nba_test_scenarios.csv' };
+  NBA_COLUMNS, nbaScenarioGrid, nbaWeekGrid, NBA_SCENARIO_GUIDE, NBA_SCENARIO_FILE: 'nba_test_scenarios.csv' };
 });

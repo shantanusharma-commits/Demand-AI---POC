@@ -423,6 +423,11 @@ textarea[readonly],input[readonly]{background-color:var(--s50);}
 .dt input[type=checkbox]:checked::after{content:'';width:9px;height:5px;border:2px solid #fff;border-top:0;border-right:0;transform:translateY(-1px) rotate(-45deg);}
 .dt input[type=checkbox]:indeterminate::after{content:'';width:8px;height:2px;background:#fff;border-radius:1px;}
 .dt input[type=checkbox]:focus-visible{outline:2px solid var(--brand-mid);outline-offset:2px;}
+.stat-link{position:relative;cursor:pointer;display:block;text-decoration:none;transition:background var(--fast) var(--ease);}
+.stat-link:hover{background:var(--brand-lt);}
+.stat-link::after{content:'›';position:absolute;top:10px;right:14px;font-size:17px;color:var(--i4);transition:color var(--fast) var(--ease),transform var(--fast) var(--ease);}
+.stat-link:hover::after{color:var(--brand);transform:translateX(2px);}
+.stat-link:hover .stat-lbl{color:var(--brand);}
 </style>
 </head>
 <body>
@@ -776,7 +781,8 @@ function openGuide(){
   openPanel('How Today works', 'Your work, in the order to do it',
     `<div style="font-size:12.5px;color:var(--i2);line-height:1.6;margin-bottom:6px">The system does most of the work on its own. Today shows what it needs from you so work keeps moving. Do it in this order:</div>`
     + term('1 · Clear blockers', 'The red notice above the tiles. Anything that stops work: a run that failed, an upload rejected by hard stops, missing data, an expired claim, approvals holding up release. Click it to see each one and where it\'s fixed.')
-    + term('2 · Review what\'s waiting, by when it\'s due', 'Items the system couldn\'t decide on its own, earliest due first. Click one to open it in For Review, or a tile to open the matching list.')
+    + term('2 · Review what\'s waiting, by when it\'s due', 'Items the system couldn\'t decide on its own, earliest due first. Click one to open it in For Review.')
+    + term('Tiles open the detail', 'Every tile at the top is clickable: it opens the items behind the number, already filtered. Panel titles with an arrow, like Open the queue →, do the same.')
     + term('3 · Mark outcomes', 'There\'s no CRM link in the pilot, so mark what happened with each released message: Sent, Replied, Meeting booked or No response.')
     + term('Went ahead on its own', 'Passed all four checks (segment size, confidence, sensitive content, claims) and was released to the rep, ready to use. Each week a few are picked for a spot-check rating.')
     + term('Exception', 'Failed a check, so a person accepts, edits or rejects it.')
@@ -833,7 +839,7 @@ function render(){
     : `<a href="#" onclick="openBlockers();return false" style="display:flex;align-items:center;gap:8px;padding:8px 14px;margin-bottom:14px;background:var(--pos-lt);border-radius:var(--rmd);text-decoration:none;font-size:12px;color:var(--pos);font-weight:600"><span style="width:8px;height:8px;border-radius:50%;background:var(--pos)"></span>No blockers. Your work is running.</a>`;
 
   // 3 · Tiles, each drills down to the items behind it.
-  const stat = (lbl, val, sub, href, tone) => `<a class="stat" href="${href}" style="text-decoration:none;display:block" onmouseover="this.style.background='var(--s50)'" onmouseout="this.style.background=''">
+  const stat = (lbl, val, sub, href, tone) => `<a class="stat stat-link" href="${href}" title="Open the items behind ${esc(lbl.toLowerCase())}">
     <div class="stat-lbl">${lbl}</div><div class="stat-val" style="${tone?`color:${tone}`:''}">${val}</div><div class="stat-sub">${sub}</div></a>`;
   const marked = scope.filter(x=>x.d.outcome && x.d.outcome!=='Sent'), positive = marked.filter(x=>['Replied','Meeting booked'].includes(x.d.outcome)).length;
   const outRate = marked.length ? Math.round(positive/marked.length*100) : null;
@@ -880,14 +886,20 @@ function render(){
       </div>
       </div>`) : '';
   const spotPanel = (() => {
-    const picked = SPOT ? SPOT.picked : 0, mineN = SPOT && SPOT.reps ? (rep ? (SPOT.reps[myEmail()]||0) : picked) : 0;
-    return box("This week's spot-checks", spots.length ? link('14-review.html?kind=spot', 'Rate them →') : '', `<div style="padding:12px 14px">
-        <div style="display:flex;gap:20px;margin-bottom:8px">
-          <div><div class="stat-lbl">Picked this week</div><div style="font-family:var(--fd);font-size:20px;font-weight:700;color:var(--i1)">${mineN}</div></div>
-          <div><div class="stat-lbl">Done</div><div style="font-family:var(--fd);font-size:20px;font-weight:700;color:var(--pos)">${spotDoneWeek}</div></div>
-          <div><div class="stat-lbl">Still to do</div><div style="font-family:var(--fd);font-size:20px;font-weight:700;color:${spots.length?'var(--ter-dk)':'var(--i1)'}">${spots.length}</div></div>
+    const picked = SPOT ? SPOT.picked : 0, total = SPOT && SPOT.reps ? (rep ? (SPOT.reps[myEmail()]||0) : picked) : 0;
+    const done = spotDoneWeek, pct = total ? Math.round(done/total*100) : 0, fri = spots[0] ? dueLabel(spots[0].due) : '';
+    const rows = spots.slice(0,3).map(x=>line(`${esc(x.who)} · ${esc(x.account)}`, `${esc(x.action)}${mgr?` · ${esc(repName(x.owner))}`:''}`,
+      `<span class="tag tag-blue">Rate it</span>`, `14-review.html?item=${encodeURIComponent(x.id)}`)).join('');
+    return box("This week's spot-checks", spots.length ? link('14-review.html?kind=spot', 'Rate them →') : '', `
+      <div style="padding:14px 16px 12px">
+        <div style="display:flex;align-items:baseline;gap:8px">
+          <span style="font-family:var(--fd);font-size:22px;font-weight:700;color:var(--i1)">${done}<span style="color:var(--i3);font-size:15px"> / ${total}</span></span>
+          <span style="font-size:12px;color:var(--i2)">rated</span>
+          <span style="margin-left:auto" class="tag ${!total?'tag-grey':done>=total?'tag-green':'tag-amber'}">${!total?'None picked yet':done>=total?'All done':`${total-done} to rate · ${esc(fri.replace(/^By /,'by '))}`}</span>
         </div>
-        </div>`);
+        <div class="progress-track" style="height:6px;background:var(--s100);border-radius:99px;margin-top:10px;overflow:hidden"><div style="width:${pct}%;height:100%;background:var(--pos);border-radius:99px"></div></div>
+      </div>
+      ${rows}`);
   })();
   const gatePanel = box('Success gates', link('13-analytics.html?tab=gates', 'Analytics →'), `<div style="padding:12px 14px">
       ${[['G2 · first-pass acceptance', g.g2, g.g2Tone, g.g2Word, m.weighted!==null ? `${m.pooled.a} of ${m.pooled.n} accepted on first pass, weighted across both paths` : 'Decide in For Review to start the count'],

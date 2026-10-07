@@ -602,6 +602,7 @@ function sources(){
   if(h) out.push({id:'handoff', label:`Sent from Scoring: ${h.name} (${h.keys.length} prospect${h.keys.length===1?'':'s'})`});
   runs.forEach(r=>out.push({id:r.id, label:`Scored list: ${r.name}`}));
   out.push({id:'scenarios', label:'Sample: every NBA test scenario (12 accounts)'});
+  out.push({id:'week', label:'Sample: a pilot week in progress (some decisions already made)'});
   out.push({id:'sample', label:'Sample data (Scoring sample)'});
   out.push({id:'upload', label:'Upload a CSV…'});
   return out;
@@ -705,8 +706,25 @@ function buildFrom(id){
     src:{...src, keys:c.keys}, accountNames, decisions:{}, log:[], configVersion: DemandAI.configVersion(), brandVersion: DemandAI.brandVersion(), stats:{ segments:c.seg.segments.length, prospects:c.seg.recs.length, waiting:c.seg.recs.length } };
   RUN = { saved, ...c };
   routeRun();
+  if(src.week) seedWeek();
   view='grid'; segFilt=null; vertFilt=null; q='';
   runChecks();
+}
+// Sample history for "a pilot week in progress": what the reps did earlier today, so Today, Approvals and the gates have something to show.
+function seedWeek(){
+  const t = Date.now(), REP = r => repName(ownerOf(r));
+  const push = (r, decision, extra, at, who) => { logIt(r, decision, extra); Object.assign(RUN.saved.log[0], { at, who, role:'Sales rep', flag:'', secs: extra.decisive ? 150 : null }); };
+  RUN.seg.recs.forEach(r=>{
+    const d = dec(r.key);
+    if(inQueue(d) && d.spot!=='pending' && reasonCats(r, d).includes('sensitive')){
+      const at = t - 3*36e5;
+      setDec(r.key, {status:'Awaiting approval', acceptedBy:REP(r), acceptedAt:at});
+      push(r, 'Accepted', {decisive:true, accepted:true, kind:'exception', firstPass:true, rating:'none', note:'Sensitive: sent to the sales manager for approval'}, at, REP(r));
+    }
+  });
+  RUN.seg.recs.filter(r=>dec(r.key).released==='auto' && dec(r.key).spot!=='pending').slice(0,2).forEach((r,i)=>{
+    const o = i ? 'Meeting booked' : 'Replied'; setDec(r.key, {outcome:o}); push(r, 'Outcome: '+o, {}, t - 2*36e5, REP(r));
+  });
 }
 function openRun(id){
   const saved = DemandAI.getSegmentation(id); if(!saved) return;

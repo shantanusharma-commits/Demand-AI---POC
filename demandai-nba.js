@@ -19,6 +19,7 @@ let UPLOAD = null;
 function sourceFor(id){
   if(id==='sample') return { sample:true, name:'Sample prospects', listName:'Sample prospects', fileName:DemandAISample.SIGNAL_FILE, sheet:'Signal template', grid:DemandAISample.SIGNALS, asOf:DemandAISample.SAMPLE_AS_OF, sandbox:true, keys:null };
   if(id==='scenarios'){ const asOf = todayIso(); return { csv:true, scenarios:true, sample:false, name:'NBA test scenarios', listName:'NBA test scenarios', fileName:DemandAISample.NBA_SCENARIO_FILE, sheet:'(CSV)', grid:DemandAISample.nbaScenarioGrid(asOf), asOf, keys:null }; }
+  if(id==='week'){ const asOf = todayIso(); return { csv:true, scenarios:true, week:true, sample:false, name:'A pilot week in progress', listName:'A pilot week in progress', fileName:'pilot_week.csv', sheet:'(CSV)', grid:DemandAISample.nbaWeekGrid(asOf), asOf, keys:null }; }
   if(id==='handoff') return handoff();
   if(id==='upload') return UPLOAD;
   const r = DemandAI.getScoring(id);
