@@ -1075,7 +1075,7 @@ function correctionsTable(rows){
       <div class="stat"><div class="stat-lbl">Minor</div><div class="stat-val" style="color:var(--warn)">${n-major}</div><div class="stat-sub">title, headcount, location</div></div>
       <div class="stat"><div class="stat-lbl">Most common</div><div class="stat-val" style="color:var(--i1);font-size:15px;line-height:1.3">${top?esc(top[0]):'—'}</div><div class="stat-sub">${top?top[1]+' time'+(top[1]===1?'':'s'):'No corrections yet'}</div></div>
     </div>
-    <div class="score-list">${table([['When',150],['Who',150],['Contact',220],['Field',170],['Was',220],['Now',220],['Kind',100],['Why',210],['How we know',210]],
+    <div class="score-list">${table([['Corrected on',140],['Corrected by',160],['Person corrected',230],['Field changed',180],['Before',220],['After',220],['Severity',100],['Reason',210],['Verified by',220]],
       rows.map(x=>`<tr><td>${cell(new Date(x.at).toLocaleDateString(undefined,{day:'numeric',month:'short'}), new Date(x.at).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}))}</td>
         <td>${cell(x.who, esc(x.role))}</td><td>${cell(x.contact, esc(x.company+' · '+x.file))}</td><td>${cell(x.field)}</td>
         <td><span style="color:var(--i3);text-decoration:line-through">${dash(x.from)}</span></td><td>${cell(x.to)}</td>
