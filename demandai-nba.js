@@ -96,6 +96,8 @@ function exceptionReasons(r){
 const exceptionOf = r => exceptionReasons(r).join(' · ');
 
 /* Why an item needs a person, in a few fixed categories, and by when. Used by Today and For Review. */
+// Exception reasons Autopilot may clear when a person asks it to. Everything else always needs a person.
+const AUTOPILOT_LOW_RISK = ['small', 'deal'];
 const REASON_CATS = { sensitive:'Sensitive content', claim:'Unsupported claim', low:'Low confidence', small:'Segment too small',
   deal:'Below deal size', brand:'Brand or rule check', spot:'Spot-check', alternative:'Alternative offered', sentback:'Sent back', intervention:'Stepped in', other:'Other' };
 function reasonCats(r, d){
@@ -468,11 +470,17 @@ function itemAsk(key, q){
   }
   el.innerHTML = `<div style="display:flex;gap:8px;padding:10px 12px;background:var(--s50);border-radius:var(--rsm)"><span style="color:var(--brand)">✦</span><div style="flex:1;min-width:0">${out}</div></div>`;
 }
+// A released item that went ahead on its own can still be switched to the runner-up by its rep before they use it.
+// That counts as stepping in (an intervention), the same as editing it.
+const canSwapReleased = r => { const d = dec(r.key); return d.status==='Released' && !d.outcome && mine(r) && !pausedInfo(r); };
 function swapAction(key){
   const r = recOf(key); if(!r || !r.runnerUp) return;
-  const d = dec(key), to = d.useRunner ? 'recommended' : 'runner-up';
+  const d = dec(key), to = d.useRunner ? 'recommended' : 'runner-up', after = d.status==='Released';
+  if(after){ const f = optionFacts(r, d.useRunner ? r.action : r.runnerUp.action);
+    if(!f.ok){ showToast(`The ${to} fails ${f.flags.join(', ').toLowerCase()}, so it can't replace a released message. Step in to edit or reject instead.`); return; } }
   change(key, `Swapped to the ${to}`, ()=>setDec(key, {useRunner:!d.useRunner, manual:null, draft:null, edited:false}));
-  logIt(r, `Swapped to the ${to} action`); persist(); refresh();
+  logIt(r, `Swapped to the ${to} action`, after ? {intervention:true, note:'After release: the rep switched the action before using it'} : {}); persist(); refresh();
+  if(after) showToast(`Switched to the ${to}; the message is redrafted and the change is logged`);
 }
 function addManual(key){
   const v = (document.getElementById('manualAct')||{}).value.trim();
@@ -565,7 +573,7 @@ function openRec(key, keepTimer){
     ${kv('Owner', isManager() ? `<select onchange="reassign('${key}',this.value)" style="padding:3px 6px;border:1px solid var(--bdk);border-radius:6px;font-size:12px">${['',...Object.keys(REPS)].map(e=>`<option value="${e}" ${ownerOf(r)===e?'selected':''}>${esc(repName(e))}</option>`).join('')}</select>` : esc(repName(ownerOf(r))))}`);
   // 2 · The action
   html += panel(r.runnerUp && !d.manual ? 'The action: compare and pick' : 'The action', '', `
-    ${compareActions(r, key, live)}
+    ${compareActions(r, key, live || canSwapReleased(r))}${!live && inQueue(d) && mine(r) && !paused && r.runnerUp ? `<div style="font-size:11px;color:var(--i3);margin-top:6px">Waiting for a decision: pick the action in <a href="14-review.html?item=${encodeURIComponent(RUN.saved.id+'::'+key)}" style="color:var(--brand);font-weight:600;text-decoration:none">For Review →</a></div>` : ''}
     ${d.manual ? `<div style="padding:10px 12px;border:1px solid var(--brand-mid);background:var(--brand-lt);border-radius:var(--rsm);margin-top:8px"><div style="font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--brand-dk);margin-bottom:4px">Manual action · chosen</div><div style="font-size:12.5px;font-weight:600;color:var(--i1)">${esc(d.manual)}</div></div>` : ''}
     ${live ? `<div style="display:flex;gap:6px;margin-top:8px"><input id="manualAct" placeholder="Neither? Add a manual action…" style="flex:1;min-width:0;padding:7px 10px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:12px"><button class="btn btn-sec btn-sm" onclick="addManual('${key}')">Add</button></div>` : ''}`);
   // 2b · Ask about this item, answered here so the context stays on screen

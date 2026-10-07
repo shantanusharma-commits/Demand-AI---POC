@@ -653,6 +653,16 @@ function nextItem(){
   openItem(w[0].id);
 }
 function onDecision(){ render(); }
+// One click from the row: accept (or rate a spot-check) as it is, or approve a held message. Rejecting needs a
+// reason, so that still opens the item. The time counted is from when the list was shown.
+let ROWS_AT = Date.now();
+function quickDecide(id){
+  const it = items().find(x=>x.id===id); if(!it) return;
+  closeDrawer(); document.getElementById('detBody').innerHTML = '';
+  RUN = it.run; openedAt = ROWS_AT; pickTags = new Set();
+  if(dec(it.r.key).status==='Awaiting approval') managerApprove(it.r.key); else accept(it.r.key);
+  const l = it.run.saved.log[0]; if(l && l.key===it.r.key){ l.note = [l.note, 'From the queue row'].filter(Boolean).join(' · '); RUN = it.run; persist(); }
+}
 
 function render(){
   const mgr = isManager(), all = items();
@@ -709,9 +719,12 @@ function draw(){
     : view==='approvals' ? items().filter(it=>decOf(it).status==='Awaiting approval' && withRun(it, ()=>mine(it.r) && !pausedInfo(it.r)))
     : items().filter(it=>decOf(it).status==='Released' && withRun(it, ()=>mine(it.r)));
   if(q) its = its.filter(it=>withRun(it, ()=>(liveRec(it.r).contact.name+' '+it.r.account.name+' '+chosenAction(it.r)).toLowerCase().includes(q)));
-  const cols = [['Prospect','17%'],['Company','14%'],[view==='released'?'Released':'Why it\'s here','17%'],['Action','20%'],['Channel','8%']];
-  if(view==='queue') cols.push(['Due','11%']);
-  if(mgr) cols.push(['Owner','14%']); else cols.push([view==='released'?'Outcome':'','14%']);
+  const quick = view==='queue' || view==='approvals';
+  const cols = [['Prospect','15%'],['Company','13%'],[view==='released'?'Released':'Why it\'s here','16%'],['Action','18%'],['Channel','7%']];
+  if(view==='queue') cols.push(['Due','10%']);
+  if(mgr) cols.push(['Owner','11%']); else cols.push([view==='released'?'Outcome':'','11%']);
+  if(quick) cols.push(['','10%']);
+  ROWS_AT = Date.now();
   el.innerHTML = table(cols, its.map(it=>withRun(it, ()=>{
       const r = it.r, d = dec(r.key), lr = liveRec(r), x = draftOf(r);
       const why = view==='released' ? `<span class="tag tag-green">${d.released==='auto'?'On its own':d.released==='approved'?'Approved':'Accepted'}</span>${d.outcome?`<span class="sub">${esc(d.outcome)}</span>`:''}`
@@ -725,6 +738,8 @@ function draw(){
         <td>${cell(x.channel==='Task'?'Task':x.channel)}</td>
         ${view==='queue' ? (()=>{ const t = dueOf(r, d), b = dueBucket(t); return `<td><span style="font-size:12px;font-weight:600;color:${b==='overdue'||b==='today'?'var(--neg)':b==='tomorrow'?'var(--warn)':'var(--i2)'}">${esc(dueLabel(t))}</span></td>`; })() : ''}
         <td>${mgr ? cell(repName(ownerOf(r))) : view==='released' ? (d.outcome?esc(d.outcome):'<span class="muted">—</span>') : ''}</td>
+        ${quick ? `<td style="text-align:right">${view==='approvals' ? (mgr ? `<button class="btn btn-sec btn-sm" title="Approve and release without opening it" onclick="event.stopPropagation();quickDecide('${it.id}')">✓ Approve</button>` : '')
+          : mine(r) ? `<button class="btn btn-sec btn-sm" title="${d.spot==='pending'?'Rate it as accepted':'Accept it as it is'} without opening it; open the row to edit or reject" onclick="event.stopPropagation();quickDecide('${it.id}')">✓ ${d.spot==='pending'?'Rate OK':'Accept'}</button>` : ''}</td>` : ''}
       </tr>`;})).join(''),
     view==='queue' ? 'Nothing needs you right now.' : view==='approvals' ? 'No sensitive items waiting for approval.' : 'Nothing released yet.');
 }

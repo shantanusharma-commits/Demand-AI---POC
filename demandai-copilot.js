@@ -114,27 +114,47 @@
     return help("I can answer questions about your work and filter it. I don't change anything myself. Try one of these:");
   }
 
-  /* ─── Autopilot: does what you approved, then reports back ─── */
+  /* ─── Autopilot: does what you approved, then reports back ───
+     It rates spot-checks that still pass every check, and accepts an exception only when every reason it is
+     here is low-risk (AUTOPILOT_LOW_RISK: segment too small, below deal size) and you asked for those.
+     Sensitive content, unsupported claims, brand or rule checks and low confidence always stay with a person. */
+  const LOW = AUTOPILOT_LOW_RISK, lowNames = LOW.map(c=>REASON_CATS[c].toLowerCase()).join(' or ');
+  // Would Autopilot take this item now? Returns null when it would, or the reason it leaves it for a person.
+  function blockedWhy(x){
+    return inRun(x.run, ()=>{
+      const d = dec(x.r.key);
+      if(d.spot==='pending'){ const why = exceptionReasons(x.r); return why.length ? `fails a check now: ${why.join('; ')}` : null; }
+      if(d.status!=='Waiting' || pausedInfo(x.r)) return 'already decided';
+      const cats = reasonCats(x.r, d), now = exceptionReasons(x.r).map(t=>reasonCats(x.r, {reasons:[t]})[0]);
+      const risky = [...new Set(cats.concat(now))].filter(c=>!LOW.includes(c));
+      if(risky.length) return `${risky.map(c=>REASON_CATS[c].toLowerCase()).join(', ')} needs a person`;
+      if(isSensitive(draftOf(x.r))) return 'sensitive content needs a person';
+      return null;
+    });
+  }
   function autopilotPlan(text, f){
     if(f.kind==='approvals' || (f.reason==='sensitive' && f.kind!=='spot'))
       return p("Autopilot won't approve sensitive content. Each one is held because the draft mentions something sensitive, so a person reads it before it's released.")
         + rows(match(approvals(), {...f, reason:null})) + filterBtn({kind:'approvals'});
-    if(f.kind==='exception' || (f.reason && f.kind!=='spot'))
-      return p("Autopilot won't accept exceptions. Each one failed a check, so a person decides it. I can narrow the queue so you can work through them quickly.")
+    if(f.reason && !LOW.includes(f.reason) && f.kind!=='spot')
+      return p(`Autopilot won't accept items with ${esc(REASON_CATS[f.reason].toLowerCase())}; a person decides those. It can accept exceptions whose only reason is ${esc(lowNames)}. I can narrow the queue so you can work through these quickly.`)
         + rows(match(queue(), f)) + (match(queue(), f).length ? filterBtn(f) : '');
-    const pool = match(queue().filter(x=>x.d.spot==='pending'), {...f, kind:'spot', reason:null});
+    // Which items: exceptions when you named them (or a low-risk reason), otherwise spot-checks.
+    const wantsExc = f.kind==='exception' || (f.reason && LOW.includes(f.reason));
+    const pool = wantsExc ? match(queue().filter(x=>x.d.spot!=='pending'), {...f, kind:'exception'}) : match(queue().filter(x=>x.d.spot==='pending'), {...f, kind:'spot', reason:null});
     const ok = [], skip = [];
-    pool.forEach(x=>inRun(x.run, ()=>{ const why = exceptionReasons(x.r); (why.length ? skip : ok).push({ x, why }); }));
-    const assumed = f.kind ? '' : note('You didn\'t say which items, so this covers spot-checks only: they already went ahead on their own. Autopilot never accepts exceptions or approves sensitive content.');
-    if(!pool.length) return p(`Nothing for Autopilot to do: no spot-checks waiting ${f.seg||f.rep||f.due?`(${esc(describe({...f, kind:'spot'}))})`:'for you'}.`) + assumed;
+    pool.forEach(x=>{ const why = blockedWhy(x); (why ? skip : ok).push({ x, why }); });
+    const what = wantsExc ? 'exceptions' : 'spot-checks';
+    const assumed = f.kind || f.reason ? '' : note(`You didn't say which items, so this covers spot-checks only. To clear exceptions, name them, for example "accept all segment too small items".`);
+    if(!pool.length) return p(`Nothing for Autopilot to do: no ${what} waiting ${f.seg||f.rep||f.due||f.reason?`(${esc(describe({...f, kind: wantsExc?'exception':'spot'}))})`:'for you'}.`) + assumed;
     const id = 'p' + (++S.seq);
     S.plans[id] = { text, ids: ok.map(o=>o.x.id) };
     return p(`That changes data, so I'm handing it to <b>Autopilot</b>. Before it runs, here is exactly what it will do:`)
-      + `<div style="margin-top:10px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--pos)">Rate as accepted · ${ok.length}</div>`
-      + (ok.length ? rows(ok.map(o=>o.x), 8) : note('None: every match fails a check now.'))
+      + `<div style="margin-top:10px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--pos)">${wantsExc ? 'Accept and release' : 'Rate as accepted'} · ${ok.length}</div>`
+      + (ok.length ? rows(ok.map(o=>o.x), 8) : note(`None: every match has a reason a person must decide.`))
       + (skip.length ? `<div style="margin-top:10px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--warn)">Left for you · ${skip.length}</div>`
-          + skip.slice(0,6).map(o=>`<div style="font-size:12px;padding:6px 0;border-top:1px solid var(--s75)"><b>${esc(o.x.who)}</b> · ${esc(o.x.account)}<div style="font-size:11px;color:var(--warn)">Fails a check now: ${esc(o.why.join('; '))}</div></div>`).join('') : '')
-      + note(`Autopilot checks every item again before it acts. Each one is logged under your name as "Accepted by Autopilot" with your instruction. These don't count toward G2, because nobody judged each one. You can undo the run.`) + assumed
+          + skip.slice(0,6).map(o=>`<div style="font-size:12px;padding:6px 0;border-top:1px solid var(--s75)"><b>${esc(o.x.who)}</b> · ${esc(o.x.account)}<div style="font-size:11px;color:var(--warn)">${esc(o.why.replace(/^./, c=>c.toUpperCase()))}</div></div>`).join('') : '')
+      + note(`Autopilot checks every item again before it acts${wantsExc ? `, and accepts an exception only when its sole reason is ${esc(lowNames)}` : ''}. Each one is logged under your name as "Accepted by Autopilot" with your instruction. These don't count toward G2, because nobody judged each one. You can undo the run.`) + assumed
       + (ok.length ? `<div id="plan-${id}" style="display:flex;gap:8px;margin-top:10px"><button class="btn btn-primary btn-sm" onclick="Copilot.runPlan('${id}')">Run with Autopilot · ${ok.length}</button><button class="btn btn-sec btn-sm" onclick="Copilot.cancel('${id}')">Cancel</button></div>` : '');
   }
   function runPlan(id){
@@ -143,31 +163,34 @@
     const byId = new Map(all().map(x=>[x.id, x])), done = [], skipped = [];
     plan.ids.forEach(i=>{
       const x = byId.get(i);
-      if(!x || x.d.spot!=='pending'){ skipped.push({x, why:'already decided'}); return; }
+      if(!x || !x.queued){ skipped.push({x, why:'already decided'}); return; }
+      const why = blockedWhy(x); if(why){ skipped.push({x, why}); return; }
       inRun(x.run, ()=>{
-        const why = exceptionReasons(x.r);
-        if(why.length){ skipped.push({x, why:why.join('; ')}); return; }
-        const before = JSON.parse(JSON.stringify(dec(x.r.key)));
-        setDec(x.r.key, {spot:'accepted', spotBy:me().who+' (Autopilot)', spotAt:Date.now(), autopilot:true});
-        logIt(x.r, 'Accepted by Autopilot', {kind:'spot', note:`Spot-check · instruction: "${plan.text}" · checked again: all checks pass · not counted toward G2`});
+        const spot = x.d.spot==='pending', before = JSON.parse(JSON.stringify(dec(x.r.key)));
+        if(spot) setDec(x.r.key, {spot:'accepted', spotBy:me().who+' (Autopilot)', spotAt:Date.now(), autopilot:true});
+        else setDec(x.r.key, {status:'Released', released:'autopilot', by:me().who+' (Autopilot)', at:Date.now(), autopilot:true});
+        logIt(x.r, 'Accepted by Autopilot', {kind: spot ? 'spot' : 'exception',
+          note:`${spot ? 'Spot-check' : `Exception (${x.cats.map(c=>REASON_CATS[c]).join(', ')})`} · instruction: "${plan.text}" · checked again before acting · not counted toward G2`});
         RUN.saved.log[0].autopilot = id;
         updateRunStats(true); persist();
-        done.push({ x, before });
+        done.push({ x, before, spot });
       });
     });
     S.runs[id] = done;
-    say(p(`<b>Autopilot finished.</b> It rated ${pl(done.length,'spot-check')} as accepted${skipped.length?` and left ${skipped.length} for you`:''}.`)
+    const nSpot = done.filter(o=>o.spot).length, nExc = done.length - nSpot;
+    const did = [nSpot && `rated ${pl(nSpot,'spot-check')} as accepted`, nExc && `accepted and released ${pl(nExc,'exception')}`].filter(Boolean).join(' and ') || 'changed nothing';
+    say(p(`<b>Autopilot finished.</b> It ${did}${skipped.length?`, and left ${skipped.length} for you`:''}.`)
       + rows(done.map(o=>o.x), 8)
       + skipped.map(o=>o.x ? `<div style="font-size:11px;color:var(--warn);padding-top:4px">Left for you: ${esc(o.x.who)} · ${esc(o.x.account)} (${esc(o.why)})</div>` : '').join('')
       + note('Logged in the decision log under your name.')
       + `<div id="undo-${id}" style="display:flex;gap:8px;margin-top:8px">${done.length?`<button class="btn btn-sec btn-sm" onclick="Copilot.undo('${id}')">Undo this run</button>`:''}<a class="btn btn-ghost btn-sm" href="14-review.html?view=log" ${ON_REVIEW?`onclick="Copilot.show({view:'log'});return false"`:''} style="text-decoration:none">Decision log →</a></div>`);
-    refreshPage(); showToast(`Autopilot rated ${pl(done.length,'spot-check')}`);
+    refreshPage(); showToast(`Autopilot ${did}`);
   }
   function undo(id){
     const done = S.runs[id]; if(!done) return; delete S.runs[id];
-    done.forEach(o=>inRun(o.x.run, ()=>{ RUN.saved.decisions[o.x.r.key] = o.before; logIt(o.x.r, 'Autopilot run undone', {note:'Back in the spot-check queue'}); updateRunStats(true); persist(); }));
+    done.forEach(o=>inRun(o.x.run, ()=>{ RUN.saved.decisions[o.x.r.key] = o.before; logIt(o.x.r, 'Autopilot run undone', {note:'Back in For Review'}); updateRunStats(true); persist(); }));
     const el = document.getElementById('undo-'+id); if(el) el.innerHTML = '<span class="tag tag-grey">Undone</span>';
-    say(p(`Undone. ${pl(done.length,'spot-check')} ${done.length===1?'is':'are'} back in For Review for a person to rate.`));
+    say(p(`Undone. ${pl(done.length,'item')} ${done.length===1?'is':'are'} back in For Review for a person to decide.`));
     refreshPage(); showToast('Autopilot run undone');
   }
   function refreshPage(){ try{ if(typeof loadRuns==='function') loadRuns(); if(typeof render==='function') render(); if(typeof reviewBadge==='function') reviewBadge(); }catch(e){} }
@@ -189,7 +212,7 @@
     return `<div class="panel" style="margin-bottom:14px;border-color:var(--brand-mid)"><div class="panel-hdr" style="background:var(--brand-lt)"><span class="panel-ttl" style="color:var(--brand-dk)">Meet Copilot</span><span class="tag tag-violet">New</span></div><div class="panel-body">
       <div style="font-size:12.5px;color:var(--i1);line-height:1.55;margin-bottom:10px">Your assistant on ${where}. Ask it in plain words ${ON_REVIEW ? 'to narrow this queue, explain why an item is here, or show how often reps agreed with the system' : "what's due, why something is in your queue, or how often reps agree with the system"}.</div>
       <div style="display:flex;gap:10px;padding:8px 0;border-top:1px solid var(--s75)"><span class="tag tag-blue" style="height:fit-content">Copilot</span><div style="font-size:12px;color:var(--i2);line-height:1.5">Answers and filters. <b>It never changes your data.</b></div></div>
-      <div style="display:flex;gap:10px;padding:8px 0;border-top:1px solid var(--s75)"><span class="tag tag-violet" style="height:fit-content">Autopilot</span><div style="font-size:12px;color:var(--i2);line-height:1.5">When you ask for a change, like approving a batch of spot-checks, Copilot hands it to Autopilot. Autopilot shows you exactly what will change, runs only when you confirm, reports back here and can be undone. It never accepts exceptions or approves sensitive content.</div></div>
+      <div style="display:flex;gap:10px;padding:8px 0;border-top:1px solid var(--s75)"><span class="tag tag-violet" style="height:fit-content">Autopilot</span><div style="font-size:12px;color:var(--i2);line-height:1.5">When you ask for a change, like approving a batch of spot-checks, Copilot hands it to Autopilot. Autopilot shows you exactly what will change, runs only when you confirm, reports back here and can be undone. It accepts an exception only when its sole reason is low-risk (segment too small or below deal size), and never approves sensitive content.</div></div>
       <button class="btn btn-primary btn-sm" style="margin-top:8px" onclick="Copilot.dismissIntro()">Got it</button></div></div>`;
   }
   function ensure(){
