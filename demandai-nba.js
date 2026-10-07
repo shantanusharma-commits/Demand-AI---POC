@@ -88,6 +88,7 @@ function exceptionReasons(r){
   if(deal && deal.below) out.push(`Below the deal-size threshold: about USD ${Math.round(deal.value/1000)}k against ${Math.round(DemandAI.CONFIG.dealSize.threshold/1000)}k`);
   if(r.result.confidence==='low') out.push('Low confidence: no contact in the primary persona');
   if(chk.flags.some(f=>f.rule==='Sensitive term')) out.push('Sensitive content');
+  const dx = draftOf(r); if(dx.unreachable) out.push("Can't reach them: " + dx.why.replace(/\.$/, ''));
   if(chk.unsupported.length) out.push("A claim can't be verified");
   const brand = chk.flags.filter(f=>f.rule!=='Sensitive term');
   if(brand.length) out.push(`Brand or rule check: ${brand.map(f=>f.rule.toLowerCase()).join(', ')}`);
@@ -97,9 +98,10 @@ const exceptionOf = r => exceptionReasons(r).join(' · ');
 
 /* Why an item needs a person, in a few fixed categories, and by when. Used by Today and For Review. */
 // Exception reasons Autopilot may clear when a person asks it to. Everything else always needs a person.
-const AUTOPILOT_LOW_RISK = ['small', 'deal'];
+// Segment too small is not on it: a person assigns the micro-segment before the item is released.
+const AUTOPILOT_LOW_RISK = ['deal'];
 const REASON_CATS = { sensitive:'Sensitive content', claim:'Unsupported claim', low:'Low confidence', small:'Segment too small',
-  deal:'Below deal size', brand:'Brand or rule check', spot:'Spot-check', alternative:'Alternative offered', sentback:'Sent back', intervention:'Stepped in', other:'Other' };
+  deal:'Below deal size', brand:'Brand or rule check', reach:"Can't reach them", spot:'Spot-check', alternative:'Alternative offered', sentback:'Sent back', intervention:'Stepped in', other:'Other' };
 function reasonCats(r, d){
   if(d.spot==='pending') return ['spot'];
   if(d.why==='alternative') return ['alternative'];
@@ -108,7 +110,7 @@ function reasonCats(r, d){
   const out = [];
   (d.reasons || exceptionReasons(r)).forEach(t=>{
     const c = /^Sensitive/.test(t) ? 'sensitive' : /claim/.test(t) ? 'claim' : /^Low confidence/.test(t) ? 'low'
-      : /^Segment too small/.test(t) ? 'small' : /deal-size/.test(t) ? 'deal' : /^Brand/.test(t) ? 'brand' : 'other';
+      : /^Segment too small/.test(t) ? 'small' : /deal-size/.test(t) ? 'deal' : /^Brand/.test(t) ? 'brand' : /^Can't reach/.test(t) ? 'reach' : 'other';
     if(!out.includes(c)) out.push(c);
   });
   return out.length ? out : ['other'];
@@ -174,6 +176,11 @@ const mine = r => isManager() || ownerOf(r)===myEmail();
 // 6.3 Step in at any time: the sales manager can pause a whole micro-segment. Its items stay where they are but can't be
 // used or decided until it's resumed.
 const segKey = r => r.segment || '__none';
+// The micro-segment an item is in: the one it was grouped into, or the one a reviewer assigned when there was none.
+const segOf = r => r.segment || (RUN && dec(r.key).assignedSeg) || '';
+// When a released item joined its micro-segment: the build date if it went ahead on its own, else when it was released.
+function segSince(r){ const d = dec(r.key); if(d.status!=='Released' || !segOf(r)) return null; return d.segmentAt || (d.released==='auto' ? RUN.saved.createdAt : d.at) || null; }
+const segChoices = () => RUN.seg.segments.map(g=>g.name);
 const pausedInfo = r => ((RUN.saved.paused||{})[segKey(r)]) || null;
 function pauseSegment(name){
   if(!isManager()) return;
@@ -326,7 +333,7 @@ const kindOfItem = d => d.spot==='pending' ? 'spot' : d.why==='alternative' ? 'a
 function draftFromFields(r){
   const x = Object.assign({}, draftOf(r)), v = id => { const el = document.getElementById(id); return el ? el.value : null; };
   if(x.channel==='Email'){ if(v('dSubj')!==null){ x.subject = v('dSubj'); x.body = v('dBody'); x.words = x.body.split(/\s+/).filter(Boolean).length; } }
-  else if(x.channel==='LinkedIn'){ if(v('dNote')!==null){ x.note = v('dNote'); x.message = v('dMsg'); } }
+  else if(x.channel==='LinkedIn'){ if(v('dNote')!==null) x.note = v('dNote'); }
   else { if(v('dTask')!==null) x.task = v('dTask'); if(x.script && v('sOpen')!==null) x.script = Object.assign({}, x.script, {opener:v('sOpen'), questions:v('sQs').split('\n').filter(Boolean), objection:v('sObj'), response:v('sResp'), ask:v('sAsk')}); }
   return x;
 }
@@ -348,6 +355,11 @@ function editRating(before, after){
 }
 function accept(key){
   const r = recOf(key), d = dec(key); if(!r || !inQueue(d)) return;
+  if(!r.segment && d.spot!=='pending'){
+    const pick = (document.getElementById('assignSeg')||{}).value || d.assignedSeg;
+    if(!pick){ showToast('Assign a micro-segment first: it is released into that micro-segment'); const el = document.getElementById('assignSeg'); if(el) el.focus(); return; }
+    setDec(key, {assignedSeg:pick, segmentAt:Date.now()}); logIt(r, `Assigned to the ${pick} micro-segment`, {note:'It had no micro-segment of its own'});
+  }
   const note = (document.getElementById('acNote')||{}).value || '';
   const before = draftOf(r), after = draftFromFields(r);
   const edited = JSON.stringify(before)!==JSON.stringify(after);
@@ -413,7 +425,7 @@ function reject(key){
 /* The recommended and runner-up actions side by side: what each one is, and what would change. One click picks. */
 function optionFacts(r, action){
   pinBrand();
-  const lr = liveRec(r), x = DemandAI.draftFor(lr, action, {asOf:asOf()}), chk = DemandAI.checkDraft(x), conf = DemandAI.confidenceFor(lr, x, chk, action);
+  const lr = liveRec(r), x = DemandAI.draftFor(lr, action, {asOf:asOf(), variant:dec(r.key).variant, channel:dec(r.key).channel}), chk = DemandAI.checkDraft(x), conf = DemandAI.confidenceFor(lr, x, chk, action);
   const brief = DemandAI.briefFor(lr, action, {asOf:asOf()});
   return { channel: x.channel, proof: brief.proof ? brief.proof.title : '', ok: !chk.flags.length && !chk.unsupported.length,
     flags: chk.flags.map(f=>f.rule).concat(chk.unsupported.length ? ['Unverified claim'] : []), conf: conf.level };
@@ -440,10 +452,10 @@ function compareActions(r, key, live){
     <div style="font-size:10.5px;color:var(--i3);margin-top:6px">Bold marks what differs. Picking one redrafts the message below; then accept or reject as usual.</div>`;
 }
 /* Ask about this item: quick answers inside the panel, so the reviewer keeps their place. */
-const ITEM_QS = [['why','Why is it here?'],['compare','How does the runner-up differ?'],['similar','How did similar items go?'],['account','What do we know about the account?']];
-function itemAsk(key, q){
-  const r = recOf(key); if(!r) return;
-  const d = dec(key), lr = liveRec(r), el = document.getElementById('itemAns'); if(!el) return;
+const ITEM_QS = [['why','Why is it here?'],['compare','How does the runner-up differ?'],['similar','How did similar items go?'],['account','What do we know about this account?']];
+function itemAnswer(key, q){
+  const r = recOf(key); if(!r) return '';
+  const d = dec(key), lr = liveRec(r);
   const p = t => `<div style="font-size:12px;color:var(--i1);line-height:1.55">${t}</div>`;
   let out = '';
   if(q==='why'){
@@ -469,7 +481,7 @@ function itemAsk(key, q){
     out = p(`<b>${esc(a.name)}</b> · ${esc(a.vertical||'')} · ${a.existingCustomer?'existing customer':'net-new'} · tier ${esc(r.person.tier||'')}${deal?` · deal about USD ${Math.round(deal.value/1000)}k`:''}`)
       + `<div style="margin-top:6px">${sigs.map(sg=>`<div style="font-size:11.5px;padding:5px 0;border-top:1px solid var(--s75)"><b>${esc(sg.type)}</b> <span style="color:var(--i3)">· ${sg.age!=null?`${sg.age} days ago`:esc(sg.date||'')} · ${esc(sg.who)}</span><div style="color:var(--i2)">${esc(sg.detail||'')}${sg.source?` <span style="color:var(--i3)">· source: ${esc(sg.source)}</span>`:''}</div></div>`).join('')}</div>`;
   }
-  el.innerHTML = `<div style="display:flex;gap:8px;padding:10px 12px;background:var(--s50);border-radius:var(--rsm)"><span style="color:var(--brand)">✦</span><div style="flex:1;min-width:0">${out}</div></div>`;
+  return out;
 }
 // A released item that went ahead on its own can still be switched to the runner-up by its rep before they use it.
 // That counts as stepping in (an intervention), the same as editing it.
@@ -570,7 +582,7 @@ function exportApproved(){
   const rows = [['owner','prospect','job_title','company','email','linkedin_url','micro_segment','action','channel','subject','message','linkedin_note','released','released_by','released_at','outcome']];
   rs.forEach(r=>{ const d = dec(r.key), x = draftOf(r), c = liveRec(r).contact;
     rows.push([repName(ownerOf(r)), c.name, c.jobTitle||'', r.account.name, c.email||'', c.linkedin||'', r.segment||'No micro-segment', chosenAction(r), x.channel,
-      x.subject||'', x.body||x.message||(x.script?[x.script.opener,...x.script.questions,x.script.ask].join(' | '):''), x.note||'',
+      x.subject||'', x.body||(x.script?[x.script.opener,...x.script.questions,x.script.ask].join(' | '):''), x.note||'',
       d.released==='auto'?'On its own':d.released==='approved'?'Approved by the sales manager':'Accepted by the rep', d.by||'', d.at?new Date(d.at).toISOString():'', d.outcome||'']); });
   download('released_messages.csv', DemandAI.toCSV(rows));
 }
@@ -606,8 +618,8 @@ function openRec(key, keepTimer){
   const live = inQueue(d) && mine(r) && !paused && !(typeof CARD_MODE!=='undefined' && CARD_MODE==='use'), action = chosenAction(r), brief = DemandAI.briefFor(lr, action, {asOf:asOf(), channel:d.channel});
   document.getElementById('detTitle').textContent = c.name;
   document.getElementById('detSub').textContent = [c.jobTitle, r.account.name].filter(Boolean).join(' · ');
-  // 0 · A booked meeting comes first: its call script. Opening it clears the notification.
-  html = '';
+  // 0 · Copilot about this account, then a booked meeting's call script. Opening the script clears the notification.
+  html = typeof Copilot!=='undefined' ? `<button class="btn btn-sec btn-sm" style="width:100%;justify-content:center;margin-bottom:12px;gap:6px" onclick="Copilot.open()"><span style="color:var(--brand)">✦</span> Ask Copilot about ${esc(r.account.name)}</button>` : '';
   if(d.outcome==='Meeting booked' && !d.meeting){ setDec(key, {meeting:{at:d.at||Date.now(), seen:true, script:meetingScript(r)}}); persist(); }
   const dm = dec(key).meeting;
   if(dm){ html += meetingPanel(key); if(!dm.seen){ setDec(key, {meeting:Object.assign({}, dm, {seen:true})}); persist(); DemandAI.reviewBadge(); } }
@@ -624,17 +636,13 @@ function openRec(key, keepTimer){
     ${kv('Checks', `<span class="tags" style="display:inline-flex;flex-wrap:wrap;gap:4px">${fourChecks(r).map(([k,ok])=>`<span class="tag ${ok?'tag-green':'tag-red'}">${ok?'✓':'✗'} ${esc(k)}</span>`).join('')}</span>`)}
     ${(()=>{ const s = r.segment ? trackRecord(r.segment) : null, a = trackRecord();
       return kv('Track record', a.n ? `${s && s.n ? `In ${esc(r.segment)}, reps agreed with the first recommendation <b>${s.a} of ${s.n}</b> times (${s.pct}%)` : `No decisions in ${esc(r.segment||'this group')} yet`}<span style="color:var(--i3)"> · ${a.a} of ${a.n} (${a.pct}%) across all${a.early?'; early days, so read it as a hint':''}</span>` : '<span style="color:var(--i3)">No decisions yet, so no track record</span>'); })()}
-    ${kv('Micro-segment', `${segTag(r.segment)} <span style="color:var(--i3)">${r.segment?esc(SEG_MEANS[r.segment]||''):''}</span>`)}
+    ${kv('Micro-segment', `${segTag(segOf(r))} <span style="color:var(--i3)">${segOf(r)?esc(SEG_MEANS[segOf(r)]||''):'none yet: assign one to release it'}${!r.segment&&segOf(r)?' · assigned by a reviewer':''}${segSince(r)?` · in it since ${fmtDate(segSince(r))}`:''}</span>`)}
     ${kv('Owner', isManager() ? `<select onchange="reassign('${key}',this.value)" style="padding:3px 6px;border:1px solid var(--bdk);border-radius:6px;font-size:12px">${['',...Object.keys(REPS)].map(e=>`<option value="${e}" ${ownerOf(r)===e?'selected':''}>${esc(repName(e))}</option>`).join('')}</select>` : esc(repName(ownerOf(r))))}`);
   // 2 · The action
   html += panel(r.runnerUp && !d.manual ? 'The action: compare and pick' : 'The action', '', `
     ${compareActions(r, key, live || canSwapReleased(r))}${!live && inQueue(d) && mine(r) && !paused && r.runnerUp ? `<div style="font-size:11px;color:var(--i3);margin-top:6px">Waiting for a decision: pick the action in <a href="14-review.html?item=${encodeURIComponent(RUN.saved.id+'::'+key)}" style="color:var(--brand);font-weight:600;text-decoration:none">For Review →</a></div>` : ''}
     ${d.manual ? `<div style="padding:10px 12px;border:1px solid var(--brand-mid);background:var(--brand-lt);border-radius:var(--rsm);margin-top:8px"><div style="font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--brand-dk);margin-bottom:4px">Manual action · chosen</div><div style="font-size:12.5px;font-weight:600;color:var(--i1)">${esc(d.manual)}</div></div>` : ''}
     ${live ? `<div style="display:flex;gap:6px;margin-top:8px"><input id="manualAct" placeholder="Neither? Add a manual action…" style="flex:1;min-width:0;padding:7px 10px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:12px"><button class="btn btn-sec btn-sm" onclick="addManual('${key}')">Add</button></div>` : ''}`);
-  // 2b · Ask about this item, answered here so the context stays on screen
-  html += panel('Ask about this item', '<span style="font-size:10.5px;color:var(--i3)">answers only, changes nothing</span>', `
-    <div class="tags">${ITEM_QS.map(([id,l])=>`<button class="tag tag-grey" style="cursor:pointer;border:none" onclick="itemAsk('${key}','${id}')">${l}</button>`).join('')}</div>
-    <div id="itemAns" style="margin-top:8px"></div>`);
   // 3 · Contact and channel
   html += panel('Contact and channel', '', kv('Contact', `${esc(c.name)} <span style="color:var(--i3)">· ${esc(c.jobTitle||'')} · ${esc(c.persona||'')} persona</span>`)
     + kv('Reach', [c.email?esc(c.email)+(c.emailVerified?'':' <span style="color:var(--warn)">(not verified)</span>'):'', c.linkedin?'LinkedIn':''].filter(Boolean).join(' · ') || '<span style="color:var(--i3)">No email or LinkedIn</span>')
@@ -644,7 +652,7 @@ function openRec(key, keepTimer){
   let draft = '';
   const sc = x.script;
   if(x.channel==='Email') draft = lbl('Subject')+fld('dSubj',x.subject,0,ro)+lbl('Body', `${x.body.split(/\s+/).filter(Boolean).length} words`)+fld('dBody',x.body,9,ro);
-  else if(x.channel==='LinkedIn') draft = lbl('Connection note', `${x.note.length}/200`)+fld('dNote',x.note,3,ro)+lbl('First message after they accept')+fld('dMsg',x.message,4,ro);
+  else if(x.channel==='LinkedIn') draft = lbl('Connection note · the only message, no follow-up', `${x.note.length}/200`)+fld('dNote',x.note,3,ro);
   else draft = lbl('Task')+fld('dTask',x.task,3,ro);
   if(sc) draft += lbl('Call script · opener')+fld('sOpen',sc.opener,3,ro)+lbl('Discovery questions')+fld('sQs',sc.questions.join('\n'),3,ro)
     +lbl('Objection')+fld('sObj',sc.objection,0,ro)+lbl('Response')+fld('sResp',sc.response,2,ro)+lbl('The ask')+fld('sAsk',sc.ask,0,ro);
@@ -669,6 +677,9 @@ function openRec(key, keepTimer){
   else if(inQueue(d) && !mine(r)) decide = `<div style="font-size:12px;color:var(--i2)">In ${esc(repName(ownerOf(r)))}'s queue.</div>`;
   else if(inQueue(d)) decide = `
     <div class="tags" style="margin-bottom:8px">${ACCEPT_TAGS.map(t=>`<button class="tag ${pickTags.has(t)?'tag-green':'tag-grey'}" style="cursor:pointer" onclick="pickTags.has('${t}')?pickTags.delete('${t}'):pickTags.add('${t}');this.className='tag '+(pickTags.has('${t}')?'tag-green':'tag-grey')">${t}</button>`).join('')}</div>
+ ${!r.segment && d.spot!=='pending' ? `<div style="padding:10px 12px;margin-bottom:8px;background:var(--warn-lt, #FFF6E5);border-radius:var(--rsm)"><div style="font-size:12px;font-weight:700;color:var(--i1);margin-bottom:6px">Assign a micro-segment to release it</div>
+      <select id="assignSeg" style="width:100%;padding:7px 9px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:12px"><option value="">Pick a micro-segment…</option>${segChoices().map(n=>`<option ${d.assignedSeg===n?'selected':''}>${esc(n)}</option>`).join('')}</select>
+      <div style="font-size:11px;color:var(--i3);margin-top:5px">No other account shared its signal, so it has no micro-segment of its own. Accepting releases it into the one you pick.</div></div>` : ''}
     <input id="acNote" placeholder="Comment (optional)" style="width:100%;padding:7px 10px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:12px;margin-bottom:8px">
     <button class="btn btn-primary btn-sm" style="width:100%;justify-content:center" onclick="accept('${key}')">${d.spot==='pending'?'Rate: accept':'Accept'}</button>
     ${cap('Or reject · why?')}
@@ -700,7 +711,7 @@ function openRec(key, keepTimer){
 }
 function DemandAIDraftText(x){
   if(x.channel==='Email') return `Subject: ${x.subject}\n\n${x.body}`;
-  if(x.channel==='LinkedIn') return `Note: ${x.note}\n\nMessage: ${x.message}`;
+  if(x.channel==='LinkedIn') return x.note;
   const s = x.script; return [x.task, s && `Opener: ${s.opener}`, s && `Questions: ${s.questions.join(' / ')}`, s && `Objection: ${s.objection} → ${s.response}`, s && `Ask: ${s.ask}`].filter(Boolean).join('\n');
 }
 
@@ -720,7 +731,7 @@ function g2(logs){
 }
 
 function copyDraft(key){
-  const x = draftOf(recOf(key)), t = x.channel==='Email' ? `${x.subject}\n\n${x.body}` : x.channel==='LinkedIn' ? `${x.note}\n\n${x.message}` : DemandAIDraftText(x);
+  const x = draftOf(recOf(key)), t = x.channel==='Email' ? `${x.subject}\n\n${x.body}` : x.channel==='LinkedIn' ? x.note : DemandAIDraftText(x);
   const done = () => showToast('Copied');
   try{ navigator.clipboard.writeText(t).then(done, ()=>fallbackCopy(t)); }catch(e){ fallbackCopy(t); }
 }

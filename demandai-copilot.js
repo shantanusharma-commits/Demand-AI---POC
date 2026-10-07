@@ -10,7 +10,9 @@
   const S = { msgs: [], plans: {}, runs: {}, seq: 0 };
 
   const inRun = (run, fn) => { const keep = RUN; RUN = run; try{ return fn(); } finally { RUN = keep; } };
-  const runs = () => (typeof ALL_RUNS==='function' ? ALL_RUNS() : []).slice().sort((a,b)=>b.saved.createdAt-a.saved.createdAt);
+  const runs = () => (typeof ALL_RUNS==='function' ? ALL_RUNS() : (typeof RUN!=='undefined' && RUN ? [RUN] : [])).slice().sort((a,b)=>b.saved.createdAt-a.saved.createdAt);
+  // The account open in the side panel, if any: Copilot then answers about it first.
+  const itemCtx = () => { const d = document.getElementById('detailDrawer'); return d && d.classList.contains('open') && typeof openKey!=='undefined' && openKey && RUN && recOf(openKey) ? { run: RUN, key: openKey, r: recOf(openKey) } : null; };
   const SEGS = Object.keys(SEG_MEANS);
   const pl = (n, one, many) => `${n} ${n===1?one:(many||one+'s')}`;
 
@@ -66,7 +68,13 @@
 
   /* ─── Copilot: answers and filters, read only ─── */
   function answer(text){
-    const f = parse(text), t = f.t, q = queue();
+    const f = parse(text), t = f.t, q = queue(), ctx = itemCtx();
+    // About the open account: why it's here, the runner-up, similar items, what we know about it.
+    if(ctx && !/\b(approve|accept|rate|release|clear|reject|all)\b/.test(t)){
+      const k = /runner|differ|alternative|instead/.test(t) ? 'compare' : /similar|track|agree|how did|outcome/.test(t) ? 'similar'
+        : /account|know|signal|company|who|tell me/.test(t) ? 'account' : /why|here|reason|check/.test(t) ? 'why' : null;
+      if(k) return `<div style="font-size:11px;color:var(--i3);margin-bottom:4px">About ${esc(ctx.r.account.name)}</div>` + inRun(ctx.run, ()=>itemAnswer(ctx.key, k));
+    }
     if(/\b(reject|close|delete|send back|remove)\b/.test(t))
       return p("Autopilot doesn't reject or send back. A rejection needs a reason from a person, so it stays with you.") + (match(q, f).length ? rows(match(q, f)) + filterBtn(f) : '');
     if(/\b(approve|accept|rate|release|clear)\b/.test(t)) return autopilotPlan(text, f);
@@ -114,7 +122,7 @@
 
   /* ─── Autopilot: does what you approved, then reports back ───
      It rates spot-checks that still pass every check, and accepts an exception only when every reason it is
-     here is low-risk (AUTOPILOT_LOW_RISK: segment too small, below deal size) and you asked for those.
+     here is low-risk (AUTOPILOT_LOW_RISK: below deal size; segment too small needs a person to assign a micro-segment) and you asked for those.
      Sensitive content, unsupported claims, brand or rule checks and low confidence always stay with a person. */
   const LOW = AUTOPILOT_LOW_RISK, lowNames = LOW.map(c=>REASON_CATS[c].toLowerCase()).join(' or ');
   // Would Autopilot take this item now? Returns null when it would, or the reason it leaves it for a person.
@@ -143,7 +151,7 @@
     const ok = [], skip = [];
     pool.forEach(x=>{ const why = blockedWhy(x); (why ? skip : ok).push({ x, why }); });
     const what = wantsExc ? 'exceptions' : 'spot-checks';
-    const assumed = f.kind || f.reason ? '' : note(`You didn't say which items, so this covers spot-checks only. To clear exceptions, name them, for example "accept all segment too small items".`);
+    const assumed = f.kind || f.reason ? '' : note(`You didn't say which items, so this covers spot-checks only. To clear exceptions, name them, for example "accept all below deal size items".`);
     if(!pool.length) return p(`Nothing for Autopilot to do: no ${what} waiting ${f.seg||f.rep||f.due||f.reason?`(${esc(describe({...f, kind: wantsExc?'exception':'spot'}))})`:'for you'}.`) + assumed;
     const id = 'p' + (++S.seq);
     S.plans[id] = { text, ids: ok.map(o=>o.x.id) };
@@ -195,6 +203,8 @@
 
   /* ─── The panel ─── */
   function suggestions(){
+    const ctx = itemCtx();
+    if(ctx) return ITEM_QS.map(([,l])=>l).concat(['What should I do first?']);
     const q = queue(), spotSegs = {};
     q.filter(x=>x.d.spot==='pending' && x.segment).forEach(x=>{ spotSegs[x.segment] = (spotSegs[x.segment]||0)+1; });
     const seg = Object.entries(spotSegs).sort((a,b)=>b[1]-a[1]).map(e=>e[0])[0];
@@ -230,8 +240,13 @@
   window.Copilot = {
     button(){ return `<button class="btn btn-sec btn-sm" onclick="Copilot.open()" title="Ask Copilot" style="gap:6px"><span style="color:var(--brand)">✦</span> Copilot</button>`; },
     open(){
-      const d = document.getElementById('detailDrawer'); if(d) d.classList.remove('open');
-      ensure(); if(!S.msgs.length) S.msgs.push({ html: help(`Hi ${esc((ROLE_PERSON[getRole()]||getRole()).split(' ')[0])}. Ask me anything about your ${ON_REVIEW?'queue':'day'}. For example:`) });
+      // With an account open, Copilot sits beside it and starts with that account; otherwise it covers your work.
+      const ctx = itemCtx(), dr = ensure(), det = document.getElementById('detailDrawer');
+      dr.style.right = ctx ? (det.offsetWidth || 500) + 'px' : '0';
+      const key = ctx ? ctx.run.saved.id + '::' + ctx.key : '';
+      if(key !== S.ctx || !S.msgs.length){ S.ctx = key; S.msgs.push({ html: ctx
+        ? help(`Ask me about <b>${esc(ctx.r.account.name)}</b>. It stays open beside it. For example:`)
+        : help(`Hi ${esc((ROLE_PERSON[getRole()]||getRole()).split(' ')[0])}. Ask me anything about your ${ON_REVIEW?'queue':'day'}. For example:`) }); }
       draw(); document.getElementById('copilotDrawer').classList.add('open'); setTimeout(()=>{ const i = document.getElementById('cpInput'); if(i) i.focus(); }, 50);
     },
     close(){ const dr = document.getElementById('copilotDrawer'); if(dr) dr.classList.remove('open'); },

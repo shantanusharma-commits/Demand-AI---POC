@@ -141,23 +141,25 @@ function nbaScenarioGrid(asOf){
 // so more items carry sensitive content. Micro-segments & NBA applies a few decisions on top (see seedWeek there).
 function nbaWeekGrid(asOf){
   const g = nbaScenarioGrid(asOf), co = g[0].indexOf('company_name'), det = g[0].indexOf('detail');
-  const extra = { 'Granite Gas Processing':' ahead of the site security audit', 'Lantern Petrochemicals':' to meet the new emissions regulation' };
+  // Sensitive wording on a few more accounts, so the pilot week has a real list of approvals for the sales manager.
+  const extra = { 'Granite Gas Processing':' ahead of the site security audit', 'Lantern Petrochemicals':' to meet the new emissions regulation',
+    'Bluewater Refinery':' after a cyber security review', 'Delta Coast Refining':' following a compliance finding', 'Fernhill Refining':' after a near-miss incident' };
   return g.map((row,i)=> i && extra[row[co]] ? row.map((v,j)=> j===det ? String(v).replace(/\.?$/, '') + extra[row[co]] : v) : row);
 }
 // What each account shows, what to expect, and how to test it. Owners: Rep A is Sofia Ahlgren (the Sales rep role), Rep B is Marco Lindqvist.
 const NBA_SCENARIO_GUIDE = [
   ['Aurora Refining', 'Micro-segment formed on its strongest signal (Modernisation); one recommendation per account to the strongest contact; a second contact kept for "wrong contact"', 'Proceeds on its own to Niran Wattana by email (Rep A)', 'In For Review as a spot-check, or Step in: reject "Wrong contact" to get Ploy Siri back as the alternative'],
   ['Bluewater Refinery', 'Clean item; email and LinkedIn both allowed; a duplicate signal row', 'Proceeds by email (Rep B); the duplicate row is not used', 'Step in and reject "Wrong channel" to get the same action back on LinkedIn'],
-  ['Cedar Petrochemicals', 'Low confidence: the only contact is not in the primary persona; no email or LinkedIn', 'Exception queue (Rep A); channel is a call', 'Accept, edit (minor wording, or change the ask for a major edit) or reject'],
+  ['Cedar Petrochemicals', 'Low confidence: the only contact is not in the primary persona; no email or LinkedIn', 'Exception queue (Rep A): low confidence, and no way to reach them (email drafted, held for a person)', 'Accept, edit (minor wording, or change the ask for a major edit) or reject'],
   ['Delta Coast Refining', 'Fallback: its strongest signal (service renewal) has fewer than 3 accounts, so it joins Engagement on its next signal', 'Proceeds (Rep B); runner-up is the renewal offering, with the reason stated', 'Open the card: the runner-up explains the fallback; reject "Wrong action" to bring it back'],
-  ['Eastgate Refinery', 'No verified email, LinkedIn URL only; a stale email click', 'Proceeds as a LinkedIn note and message (Rep A); the stale row is not used', 'Copy the message and mark an outcome on Next best action'],
+  ['Eastgate Refinery', 'No verified email, LinkedIn URL only; a stale email click', 'Proceeds as one LinkedIn connection note (Rep A); the stale row is not used', 'Copy the note and mark an outcome on Next best action'],
   ['Fernhill Refining', 'Brand check: the source mentions pricing, so the draft is regenerated once on its own; a newsletter sign-up that is not scored', 'Proceeds after one regeneration (Rep A); two versions kept', 'Open the card: History shows the regeneration'],
   ['Granite Gas Processing', 'Proceed criteria: estimated deal size below the threshold; a score that is not a number', 'Exception queue (Rep B): about USD 122k against 250k; score worked out from signals', 'As the sales manager, reassign it to Sofia Ahlgren, then decide it as the Sales rep'],
-  ['Harbor Point Refinery', 'Inquiry micro-segment: the action routes to a person, so it is a task with a call script; an event date that is not a date', 'Proceeds as a task (Rep A); the bad-date row is not used', 'Export "Tasks for the team" from For Review'],
+  ['Harbor Point Refinery', 'Inquiry micro-segment: an email offering a short call with a specialist; an event date that is not a date', 'Proceeds by email (Rep A); the bad-date row is not used', 'Mark "Meeting booked": a call script for the meeting appears on Micro-segments & NBA'],
   ['Ironwood Refining', 'Sensitive content: the inquiry mentions a plant incident', 'Exception queue (Rep A)', 'As the Sales rep, accept it: it goes to the sales manager. As the sales manager, approve and release, or send it back'],
-  ['Juniper Petrochem', 'Inquiry task for a contact with no email and no LinkedIn', 'Proceeds as a task (Rep B)', 'Mark the task done with an outcome'],
-  ['Kingfisher Refining', 'No micro-segment: no other account shares its signal; no approved, unexpired proof for the leadership action', 'Exception queue (Rep A) as a task: the only proof expired', 'Reject "Wrong action": the runner-up comes back; reject again: the account is closed for the pilot'],
-  ['Lantern Petrochemicals', 'No micro-segment; no consent basis, so no email or LinkedIn', 'Exception queue (Rep B); channel is a call', 'Reject "Not the right time": the account moves to the watch list'],
+  ['Juniper Petrochem', 'Inquiry for a contact with no email and no LinkedIn', 'Exception queue (Rep B): can\'t reach them, so a person finds a way', 'Accept once the contact details are confirmed, or reject'],
+  ['Kingfisher Refining', 'No micro-segment: no other account shares its signal; no approved, unexpired proof for the leadership action', 'Exception queue (Rep A): an email with no proof line, because the only proof expired', 'Reject "Wrong action": the runner-up comes back; reject again: the account is closed for the pilot'],
+  ['Lantern Petrochemicals', 'No micro-segment; no consent basis, so no email or LinkedIn', 'Exception queue (Rep B): held, a person confirms consent before anything is sent', 'Reject "Not the right time": the account moves to the watch list'],
   ['Any proceeded item', 'Weekly spot-check', 'About a fifth of each rep\'s proceeded items, at least one, appear in For Review as "Spot-check"', 'Rate it as if it had come to you; it counts toward G2 on the proceeded path'],
   ['Engagement micro-segment', 'Pause a micro-segment', 'Its items show "Paused" and leave the queue', 'As the sales manager, Pause on the Micro-segments grid, then Resume'],
   ['Build the set again', 'Engage-once', 'Accounts approved or proceeded in the first build are set aside the second time, as a process rule', 'After deciding some items, build the same set again'],

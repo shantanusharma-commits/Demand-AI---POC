@@ -521,6 +521,7 @@ textarea[readonly],input[readonly]{background-color:var(--s50);}
 <script src="demandai-engine.js"></script>
 <script src="demandai-sample-data.js"></script>
 <script src="demandai-nba.js"></script>
+<script src="demandai-copilot.js"></script>
 <script>
 function showToast(msg){document.querySelectorAll('.toast').forEach(t=>t.remove());const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2600);}
 function initials(n){return String(n).split(' ').filter(Boolean).map(w=>w[0]).join('').slice(0,2).toUpperCase();}
@@ -590,7 +591,7 @@ const pill = (cur,id,label) => `<div class="seg-pill ${cur===id?'active':''}" on
 const CARD_MODE = 'use'; // this screen shows and uses the work; decisions happen in For Review
 let tab = 'new', srcId = null, view = 'grid', segFilt = null, vertFilt = null, q = '', renamingId = null, showFilt = null;
 // From Today: ?show=proceeded | waiting | meeting
-const SHOW_LABEL = { proceeded:'Went ahead on their own', waiting:'Waiting for a person', meeting:'Meeting booked' };
+const SHOW_LABEL = { proceeded:'Went ahead on their own', waiting:'Waiting for a person', meeting:'Meeting booked', released:'Released: ready to use', rejected:'Not accepted' };
 const _closeDrawer = closeDrawer;
 closeDrawer = function(){ openKey = null; _closeDrawer(); };
 const reviewLink = key => `14-review.html?item=${encodeURIComponent(RUN.saved.id+'::'+key)}`;
@@ -879,9 +880,10 @@ function gridTab(){
 
 function visibleRecs(){
   let rs = RUN.seg.recs.filter(mine);
-  if(segFilt) rs = rs.filter(r=>segFilt==='__x' ? !r.segment : r.segment===segFilt);
+  if(segFilt) rs = rs.filter(r=>segFilt==='__x' ? !segOf(r) : segOf(r)===segFilt);
   if(vertFilt) rs = rs.filter(r=>r.account.vertical===vertFilt);
-  if(showFilt) rs = rs.filter(r=>{ const d = dec(r.key); return showFilt==='proceeded' ? d.released==='auto' : showFilt==='waiting' ? (inQueue(d) || d.status==='Awaiting approval') : showFilt==='meeting' ? d.outcome==='Meeting booked' : true; });
+  if(showFilt) rs = rs.filter(r=>{ const d = dec(r.key); return showFilt==='proceeded' ? d.released==='auto' : showFilt==='waiting' ? (inQueue(d) || d.status==='Awaiting approval') : showFilt==='meeting' ? d.outcome==='Meeting booked'
+    : showFilt==='released' ? d.status==='Released' : showFilt==='rejected' ? ['Closed','Set aside','Watch list'].includes(d.status) : true; });
   if(q) rs = rs.filter(r=>(liveRec(r).contact.name+' '+r.account.name+' '+chosenAction(r)).toLowerCase().includes(q));
   // New call scripts first: the meeting is the next best action now.
   const fresh = r => { const m = dec(r.key).meeting; return m && !m.seen ? 0 : 1; };
@@ -894,7 +896,8 @@ function listTab(){
   return `${showFilt!=='meeting' ? meetingBanner() : ''}<div class="score-list">
     <div class="sl-toolbar">${search('drawList','Search accounts, contacts or actions…')}
       <select onchange="segFilt=this.value||null;drawList()" style="${sel}"><option value="">All micro-segments</option>${segs.map(n=>`<option value="${n}" ${segFilt===n?'selected':''}>${n==='__x'?'No micro-segment':esc(n)}</option>`).join('')}</select>
-      <select onchange="vertFilt=this.value||null;drawList()" style="${sel}"><option value="">All verticals</option>${verts.map(v=>`<option ${vertFilt===v?'selected':''}>${esc(v)}</option>`).join('')}</select></div>
+      <select onchange="vertFilt=this.value||null;drawList()" style="${sel}"><option value="">All verticals</option>${verts.map(v=>`<option ${vertFilt===v?'selected':''}>${esc(v)}</option>`).join('')}</select>
+      <select onchange="showFilt=this.value||null;renderResults()" style="${sel}"><option value="">All statuses</option>${[['released','Released: ready to use'],['waiting','Waiting for a person'],['rejected','Not accepted'],['meeting','Meeting booked']].map(([v,l])=>`<option value="${v}" ${showFilt===v?'selected':''}>${l}</option>`).join('')}</select></div>
     ${showFilt ? `<div style="display:flex;align-items:center;gap:8px;padding:8px 14px;border-bottom:1px solid var(--border);font-size:12px;color:var(--i2)">Showing <span class="tag tag-blue">${esc(SHOW_LABEL[showFilt]||showFilt)}</span><a href="#" onclick="showFilt=null;renderResults();return false" style="color:var(--brand);font-weight:600;text-decoration:none">Show all</a>${showFilt==='proceeded'?'<span style="color:var(--i3)">· passed all four checks: segment size, confidence, sensitive content and claims</span>':''}</div>` : ''}
     <div id="rows"></div></div>
     <div style="font-size:11px;color:var(--i3);margin-top:10px">One recommendation per account. ${isManager()?'You see every rep\'s accounts.':'You see your own accounts.'} Click one to see the message, copy it and mark what happened.</div>`;
@@ -907,7 +910,7 @@ function drawList(){
       return `<tr class="click" onclick="openRec('${r.key}')">
         <td>${cell(r.account.name, esc(r.account.vertical+' · '+r.status), 'dt-main')}</td>
         <td><div class="person"><div class="co-av" style="background:${avColor(lr.contact.name)}">${initials(lr.contact.name)}</div><div>${cell(lr.contact.name, esc(lr.contact.jobTitle||''))}</div></div></td>
-        <td>${segTag(r.segment)}</td>
+        <td>${segTag(segOf(r))}${!r.segment&&segOf(r)?'<span class="sub">assigned</span>':''}${segSince(r)?`<span class="sub">since ${esc(fmtDate(segSince(r)))}</span>`:''}</td>
         <td class="wrap"><span class="clamp2" style="font-size:12px;color:var(--i1)" title="${esc(chosenAction(r))}">${esc(chosenAction(r))}</span>${r.runnerUp?`<span class="sub" title="${esc(r.runnerUp.action)}">Runner-up: ${esc(r.runnerUp.action)}</span>`:''}</td>
         <td>${cell(x.channel==='Task'?'Task':x.channel)}</td>
         <td>${statusPill(d, r)}${d.outcome?`<span class="sub">${esc(d.outcome)}</span>`:isManager()?`<span class="sub">${esc(repName(ownerOf(r)))}</span>`:''}</td>

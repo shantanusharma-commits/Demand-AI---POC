@@ -220,14 +220,14 @@ test('drafts follow the outreach rules: short subject, short body, interest ques
   assert.equal(E.recommendChannel({ ...meridian, contact: farah }, meridian.action).channel, 'LinkedIn');
 });
 
-test('channel rules: inquiries and renewals route to a person, hard limits on email and LinkedIn, consent required', () => {
+test('channel rules: email or LinkedIn only, hard limits on both, consent required, otherwise held for a person', () => {
   const rec = { contact: { name: 'Pat Lee', email: 'p@x.com', emailVerified: true, linkedin: 'https://linkedin.com/in/p', consentOk: true } };
-  assert.equal(E.recommendChannel(rec, 'Call to follow up on the inquiry').channel, 'Task');
-  assert.equal(E.recommendChannel(rec, 'Offer a renewal review').channel, 'Task');
-  assert.equal(E.recommendChannel(rec, 'Offer a site assessment').channel, 'Email');
+  assert.equal(E.recommendChannel(rec, 'Call to follow up on the inquiry').channel, 'Email');
+  assert.equal(E.recommendChannel(rec, 'Offer a renewal review').channel, 'Email');
   assert.equal(E.recommendChannel({ contact: { ...rec.contact, emailVerified: false } }, 'Offer a site assessment').channel, 'LinkedIn');
-  assert.equal(E.recommendChannel({ contact: { ...rec.contact, consentOk: false } }, 'Offer a site assessment').channel, 'Call');
-  assert.equal(E.recommendChannel({ contact: { name: 'Pat Lee' } }, 'Offer a site assessment').channel, 'Call');
+  const noConsent = E.recommendChannel({ contact: { ...rec.contact, consentOk: false } }, 'Offer a site assessment');
+  assert.deepEqual([noConsent.channel, noConsent.unreachable], ['Email', true]);
+  assert.equal(E.recommendChannel({ contact: { name: 'Pat Lee' } }, 'Offer a site assessment').unreachable, true);
 });
 
 function sampleRecs(opts) {
@@ -246,14 +246,23 @@ test('drafts cite one approved proof point and pass the brand and claim checks',
   assert.match(E.confidenceFor(rec, d, chk).reason, /1 of 1 claim verified, no open flags/);
 });
 
-test('no approved proof for the case: a task for the owner, not a draft', () => {
+test('no approved proof for the case: the draft goes out without a proof line, and says so', () => {
   const r = sampleRecs();
   const rec = r.recs[0];
   // Leadership's only item expired on 2026-06-30
   const d = E.draftFor(rec, 'Share a peer case study from their sector', { asOf: S.SAMPLE_AS_OF });
-  assert.equal(d.channel, 'Task');
+  assert.ok(['Email', 'LinkedIn'].includes(d.channel));
   assert.ok(d.noProof);
-  assert.ok(d.script.questions.length >= 2);
+  assert.doesNotMatch(d.body || d.note, /\[[^\]]+, \d{4}\]/);
+});
+
+test('LinkedIn is one connection note, no follow-up message', () => {
+  const r = sampleRecs();
+  const rec = r.recs[0];
+  const d = E.draftFor({ ...rec, contact: { ...rec.contact, emailVerified: false, linkedin: 'https://linkedin.com/in/x', consentOk: true } }, rec.action, { asOf: S.SAMPLE_AS_OF });
+  assert.equal(d.channel, 'LinkedIn');
+  assert.ok(d.note.length <= 200);
+  assert.equal(d.message, undefined);
 });
 
 test('brand checks and claim verification catch an edited draft', () => {
@@ -351,7 +360,8 @@ test('scenarios: three micro-segments, a fallback and two accounts with no micro
 
 test('scenarios: channels, tasks and proof', () => {
   const { draft } = scenarios();
-  assert.deepEqual(['Aurora', 'Eastgate', 'Cedar', 'Lantern', 'Harbor', 'Juniper'].map(n => draft(n).channel), ['Email', 'LinkedIn', 'Call', 'Call', 'Task', 'Task']);
+  assert.deepEqual(['Aurora', 'Eastgate', 'Cedar', 'Lantern', 'Harbor', 'Juniper'].map(n => draft(n).channel), ['Email', 'LinkedIn', 'Email', 'Email', 'Email', 'Email']);
+  assert.deepEqual(['Cedar', 'Lantern', 'Juniper'].map(n => draft(n).unreachable), [true, true, true]);
   assert.ok(draft('Kingfisher').noProof);
 });
 

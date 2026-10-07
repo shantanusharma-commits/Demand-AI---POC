@@ -36,7 +36,7 @@ const CONFIG = {
   brand: { maxSubjectWords: 6, competitors: [] },
   // Review by when: working days from the moment an item reaches For Review (0 = by 5 pm the same day).
   // A buyer who asked (an inquiry) and sensitive content are same-day; spot-checks are due by Friday of the week drawn.
-  reviewDue: { inquiry: 0, sensitive: 0, sentback: 0, alternative: 1, intervention: 1, brand: 1, claim: 2, low: 2, small: 2, deal: 2, other: 2 },
+  reviewDue: { inquiry: 0, sensitive: 0, sentback: 0, reach: 1, alternative: 1, intervention: 1, brand: 1, claim: 2, low: 2, small: 2, deal: 2, other: 2 },
   // How often each run is expected. In the POC people start runs by hand; Today calls out a run that is overdue.
   schedule: [
     { id: 'nba', name: 'Micro-segments & NBA build', everyDays: 1, page: '12-nba.html', owner: 'Sales manager' },
@@ -956,24 +956,31 @@ function useBrand(label) {
 const approvedClaims = () => brandPack().claims.filter(c => c.status === 'approved');
 const framework = seg => brandPack().framework[seg] || PLAYBOOK[seg] || PLAYBOOK.Engagement;
 
+// Every action goes out as an email or a LinkedIn connection note. 'bridge' is the one line that ties their signal
+// to why the action matters; it makes no product claim (the proof line carries the only claim).
 const COPY = {
-  'Call to follow up on the inquiry':        { task: true, script: true },
-  'Route the inquiry to the sales owner':    { task: true },
-  'Propose a migration-path discussion':     { subject: 'migration planning', cta: 'Worth comparing the options?', alt: 'Would a short call to compare options help?' },
-  'Offer a site assessment':                 { subject: 'site assessment', cta: 'Worth a look?', alt: 'Would that be useful before the date?' },
-  'Offer a lifecycle service review':        { subject: 'lifecycle review', cta: 'Worth exploring?', alt: 'Would a short review help?' },
-  'Offer a renewal review':                  { task: true, script: true },
-  'Route to the service owner':              { task: true },
-  'Share a comparable case study and offer a technical session': { subject: 'similar project', cta: 'Worth a look?', alt: 'Would a short technical session help?' },
-  'Offer a reference-site visit':            { subject: 'reference site visit', cta: 'Would that be useful?', alt: 'Worth arranging?' },
-  'Offer an early design workshop':          { subject: 'design workshop', cta: 'Worth exploring?', alt: 'Would an early workshop help?' },
-  'Introduce Client to the new leader':      { subject: 'your new role', cta: 'Worth a conversation once you have settled in?', alt: 'Would a short intro be useful?' },
-  'Share a peer case study from their sector': { subject: 'peer example', cta: 'Would that be useful?', alt: 'Worth a look?' },
-  'Invite to a short briefing':              { subject: 'quick briefing', cta: 'Worth scheduling?', alt: 'Would a short briefing help?' },
-  'Follow up on the topic they engaged with': { subject: 'following up', cta: 'Worth a short conversation?', alt: 'Would it help to compare notes?' },
-  'Invite to a related session':             { subject: 'related session', cta: 'Interested?', alt: 'Shall I send the invite?' },
+  'Call to follow up on the inquiry':        { cta: 'Would a 20-minute call this week help?', alt: 'Shall I set up a short call?', bridge: 'The quickest way to answer it properly is a short call with a specialist.' },
+  'Route the inquiry to the sales owner':    { cta: 'Shall I connect you with them?', alt: 'Would an introduction help?', bridge: 'Your account owner can give you a specific answer for your site.' },
+  'Propose a migration-path discussion':     { cta: 'Worth comparing the options?', alt: 'Would a short call to compare options help?', bridge: 'Most sites plan the move around one shutdown, so the order of work matters early.' },
+  'Offer a site assessment':                 { cta: 'Worth a look?', alt: 'Would that be useful before the date?', bridge: 'A short assessment shows what to replace first and what can wait.' },
+  'Offer a lifecycle service review':        { cta: 'Worth exploring?', alt: 'Would a short review help?', bridge: 'A lifecycle review maps what needs attention before support ends.' },
+  'Offer a renewal review':                  { cta: 'Would a short review before the renewal help?', alt: 'Worth a quick review?', bridge: 'A review before renewing makes sure the cover still matches how the site runs.' },
+  'Route to the service owner':              { cta: 'Shall I connect you with them?', alt: 'Would an introduction help?', bridge: 'Your service owner can walk you through the options for your site.' },
+  'Share a comparable case study and offer a technical session': { cta: 'Worth a look?', alt: 'Would a short technical session help?', bridge: 'A team with a similar setup went through the same decision recently.' },
+  'Offer a reference-site visit':            { cta: 'Would that be useful?', alt: 'Worth arranging?', bridge: 'Seeing a similar site running can answer questions a document cannot.' },
+  'Offer an early design workshop':          { cta: 'Worth exploring?', alt: 'Would an early workshop help?', bridge: 'Decisions made at the design stage are the cheapest ones to change.' },
+  'Introduce Client to the new leader':      { cta: 'Worth a conversation once you have settled in?', alt: 'Would a short intro be useful?', bridge: 'Happy to share what your team already runs with us, so you have the full picture.' },
+  'Share a peer case study from their sector': { cta: 'Would that be useful?', alt: 'Worth a look?', bridge: 'A peer in your sector faced the same question this year.' },
+  'Invite to a short briefing':              { cta: 'Worth scheduling?', alt: 'Would a short briefing help?', bridge: 'A short briefing covers what has changed and what it means for your site.' },
+  'Follow up on the topic they engaged with': { cta: 'Worth a short conversation?', alt: 'Would it help to compare notes?', bridge: 'Happy to go one level deeper on how it would apply at your site.' },
+  'Invite to a related session':             { cta: 'Interested?', alt: 'Shall I send the invite?', bridge: 'We have a related session coming up that goes into the practical side.' },
 };
-const GENERIC = { subject: 'quick question', cta: 'Worth a conversation?', alt: 'Would that be useful?' };
+// Subject lines come from the signal: short, specific to them, no hype, no punctuation tricks.
+const SUBJECT_BY_SIGNAL = { 'Inquiry or RFQ': 'your question', 'Installed system near end of support': 'end-of-support planning',
+  'Service contract renewal': 'your upcoming renewal', 'Capital project': 'your project timeline', 'Leadership change': 'your new role',
+  'Webinar attended': 'after the session', 'Webinar registered': 'before the session', 'Content download': 'your download',
+  'Email clicked': 'following up' };
+const GENERIC = { cta: 'Worth a conversation?', alt: 'Would that be useful?', bridge: '' };
 
 function opener(sg, account) {
   const d = clean(sg.detail).replace(/\.$/, '');
@@ -1012,18 +1019,15 @@ function allowedChannels(c) {
   const out = [];
   if (c.consentOk !== false && c.email && c.emailVerified) out.push('Email');
   if (c.consentOk !== false && c.linkedin) out.push('LinkedIn');
-  out.push('Call');
   return out;
 }
 function recommendChannel(rec, action, prefer) {
-  const c = rec.contact, copy = COPY[action] || {};
-  if (copy.task) return { channel: 'Task', why: 'Inquiries, renewals and sensitive cases go to a person on the account team, not straight to the prospect.' };
-  const allowed = allowedChannels(c);
+  const c = rec.contact, allowed = allowedChannels(c);
   if (prefer && allowed.includes(prefer)) return { channel: prefer, why: `${prefer} chosen by the reviewer, within the limits.` };
-  if (c.consentOk === false) return { channel: 'Call', why: 'No recognised consent basis, so no email or LinkedIn: call only.' };
   if (allowed[0] === 'Email') return { channel: 'Email', why: c.linkedin ? 'Verified email, so email first; LinkedIn is the fallback.' : 'Verified, sendable email.' };
-  if (allowed[0] === 'LinkedIn') return { channel: 'LinkedIn', why: 'No verified email, but a LinkedIn URL: connection note, then a message.' };
-  return { channel: 'Call', why: 'No verified email and no LinkedIn URL: call is the only channel.' };
+  if (allowed[0] === 'LinkedIn') return { channel: 'LinkedIn', why: 'No verified email, but a LinkedIn URL: one connection note.' };
+  // Neither is allowed: drafted as an email, but held for a person (see 'unreachable').
+  return { channel: 'Email', unreachable: true, why: c.consentOk === false ? 'No recognised consent basis: a person must confirm before anything is sent.' : 'No verified email and no LinkedIn URL: a person must find a way to reach them.' };
 }
 // 5.14 Call script: opener, discovery questions, objection handling, the ask.
 function callScript(rec, action, open) {
@@ -1044,7 +1048,7 @@ function briefFor(rec, action, opts = {}) {
     angle: pb.angle, proof: proof.item, expired: proof.expired, objection: pb.objection,
     ask: (COPY[action] || GENERIC).cta || 'A conversation with the right specialist',
     constraints: ch.channel === 'Email' ? `Subject of ${CONFIG.brand.maxSubjectWords} words or fewer, under 80 words, one proof point, one ask, no pricing` :
-      ch.channel === 'LinkedIn' ? `Connection note under ${CONFIG.brand.maxNote} characters with no pitch; short message after acceptance` :
+      ch.channel === 'LinkedIn' ? `One connection note under ${CONFIG.brand.maxNote} characters: their signal and a reason to connect; no follow-up message` :
       ch.channel === 'Call' ? 'Opener, two or three questions, the objection, one ask' : 'For a person on the account team',
     channel: ch,
   };
@@ -1058,27 +1062,27 @@ function draftFor(rec, action, opts = {}) {
   // 'clean' is the one automatic regeneration after a failed brand or rule check: the opener drops the source wording.
   const ev = evidenceFor(rec, action);
   const open = opener(variant === 'clean' ? { ...ev, detail: '' } : ev, rec.account);
-  if (ch.channel === 'Task') return { channel: 'Task', why: ch.why, task: `${action} for ${rec.contact.name} at ${rec.account.name}. Context: ${open}`,
-    script: copy.script ? callScript(rec, action, open) : null, proof: null };
-  const proof = proofFor(action, rec, opts.asOf).item;
-  if (!proof) return { channel: 'Task', why: 'No approved, unexpired proof for this case: routed to the owner to add proof, or call instead.', noProof: true,
-    task: `${action} for ${rec.contact.name} at ${rec.account.name}. Add approved proof, or call. Context: ${open}`, script: callScript(rec, action, open), proof: null };
-  const proofLine = `${proof.claim} ${cite(proof)}`;
+  const proof = proofFor(action, rec, opts.asOf).item, proofLine = proof ? `${proof.claim} ${cite(proof)}` : '';
   const cta = variant === 'tone' || variant === 'alt' ? copy.alt || copy.cta : copy.cta;
-  if (ch.channel === 'Call') return { channel: 'Call', why: ch.why, script: callScript(rec, action, open), proof };
+  const base = { why: ch.why, proof, noProof: !proof, unreachable: !!ch.unreachable };
+  // LinkedIn: one connection note, no follow-up message. Their signal, then a reason to connect.
   if (ch.channel === 'LinkedIn') {
-    const note = `Hi ${first}, ${open.charAt(0).toLowerCase() + open.slice(1)} Would be good to connect.`;
-    return { channel: 'LinkedIn', why: ch.why, note: note.length > BRAND.maxNote ? `Hi ${first}, would be good to connect.` : note,
-      message: variant === 'short' ? `Thanks for connecting, ${first}. ${cta}` : `Thanks for connecting, ${first}. ${proofLine} ${cta}`, proof };
+    const hook = open ? open.charAt(0).toLowerCase() + open.slice(1) + ' ' : '';
+    const tries = [`Hi ${first}, ${hook}${copy.bridge} Would be good to connect.`, `Hi ${first}, ${hook}Would be good to connect.`, `Hi ${first}, would be good to connect.`];
+    return { ...base, channel: 'LinkedIn', note: tries.find(t => t.length <= BRAND.maxNote).replace(/\s+/g, ' ') };
   }
+  // Email: a subject from their signal; their signal first, why it matters, one proof point, one easy question.
   const vc = brandPack().voice, pre = VOICE_PRESETS[vc.preset] || VOICE_PRESETS.Direct;
   const hello = pre.greeting.replace('{first}', first), bye = `${pre.closing}\n${vc.signoff || 'Client Team'}`;
-  const body = variant === 'short' ? `${hello}\n\n${open} ${cta}\n\n${bye}` : `${hello}\n\n${open} ${proofLine}\n\n${cta}\n\n${bye}`;
-  return { channel: 'Email', why: ch.why, subject: copy.subject, body, words: body.split(/\s+/).filter(Boolean).length, proof };
+  const lead = `${open} ${copy.bridge}`.trim();
+  const lines = variant === 'short' ? [lead] : [lead, proofLine].filter(Boolean);
+  const body = `${hello}\n\n${lines.join('\n\n')}\n\n${cta}\n\n${bye}`;
+  const subject = SUBJECT_BY_SIGNAL[ev && ev.type] || 'quick question';
+  return { ...base, channel: 'Email', subject, body, words: body.split(/\s+/).filter(Boolean).length };
 }
 function draftText(d) {
   if (d.channel === 'Email') return `${d.subject}\n${d.body}`;
-  if (d.channel === 'LinkedIn') return `${d.note}\n${d.message}`;
+  if (d.channel === 'LinkedIn') return d.note || '';
   const s = d.script;
   return [d.task, s && s.opener, s && s.questions.join(' '), s && s.response, s && s.ask].filter(Boolean).join('\n');
 }
