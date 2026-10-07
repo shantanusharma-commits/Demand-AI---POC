@@ -521,6 +521,7 @@ textarea[readonly],input[readonly]{background-color:var(--s50);}
 <script src="demandai-engine.js"></script>
 <script src="demandai-sample-data.js"></script>
 <script src="demandai-nba.js"></script>
+<script src="demandai-copilot.js"></script>
 <script>
 function showToast(msg){document.querySelectorAll('.toast').forEach(t=>t.remove());const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2600);}
 function initials(n){return String(n).split(' ').filter(Boolean).map(w=>w[0]).join('').slice(0,2).toUpperCase();}
@@ -610,12 +611,13 @@ const dueOfIt = it => withRun(it, ()=>dueOf(it.r, dec(it.r.key)));
 const catsOfIt = it => withRun(it, ()=>reasonCats(it.r, dec(it.r.key)));
 const myQueue = () => items().filter(it=>withRun(it, ()=>inQueue(dec(it.r.key)) && mine(it.r) && !pausedInfo(it.r))).sort((a,b)=>dueOfIt(a)-dueOfIt(b));
 // Filters arriving from Today (?due=today&reason=sensitive&kind=exception).
-let FILT = { due:null, reason:null, kind:null };
+let FILT = { due:null, reason:null, kind:null, seg:null, rep:null };
 const filtered = its => its.filter(it=>(!FILT.due || dueBucket(dueOfIt(it))===FILT.due) && (!FILT.reason || catsOfIt(it).includes(FILT.reason))
-  && (!FILT.kind || (FILT.kind==='spot' ? decOf(it).spot==='pending' : decOf(it).spot!=='pending')));
+  && (!FILT.kind || (FILT.kind==='spot' ? decOf(it).spot==='pending' : decOf(it).spot!=='pending'))
+  && (!FILT.seg || it.r.segment===FILT.seg) && (!FILT.rep || withRun(it, ()=>ownerOf(it.r))===FILT.rep));
 function filterBar(){
-  const parts = [FILT.due && (DUE_BUCKETS.find(b=>b[0]===FILT.due)||[])[1], FILT.reason && REASON_CATS[FILT.reason], FILT.kind && (FILT.kind==='spot'?'Spot-checks':'Exceptions')].filter(Boolean);
-  return parts.length ? `<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:12px;color:var(--i2)">Showing ${parts.map(x=>`<span class="tag tag-blue">${esc(x)}</span>`).join('')}<a href="#" onclick="FILT={due:null,reason:null,kind:null};history.replaceState(null,'',location.pathname);render();return false" style="color:var(--brand);font-weight:600;text-decoration:none">Show all</a></div>` : '';
+  const parts = [FILT.due && (DUE_BUCKETS.find(b=>b[0]===FILT.due)||[])[1], FILT.reason && REASON_CATS[FILT.reason], FILT.kind && (FILT.kind==='spot'?'Spot-checks':'Exceptions'), FILT.seg, FILT.rep && repName(FILT.rep)].filter(Boolean);
+  return parts.length ? `<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:12px;color:var(--i2)">Showing ${parts.map(x=>`<span class="tag tag-blue">${esc(x)}</span>`).join('')}<a href="#" onclick="FILT={due:null,reason:null,kind:null,seg:null,rep:null};history.replaceState(null,'',location.pathname);render();return false" style="color:var(--brand);font-weight:600;text-decoration:none">Show all</a></div>` : '';
 }
 const pausedCount = () => items().filter(it=>withRun(it, ()=>(inQueue(dec(it.r.key)) || dec(it.r.key).status==='Awaiting approval') && mine(it.r) && pausedInfo(it.r))).length;
 function queuePos(key){ const i = myQueue().findIndex(it=>it.run===RUN && it.r.key===key); return i<0 ? null : i+1; }
@@ -647,6 +649,7 @@ function render(){
     <div class="topbar">
       <div class="topbar-l"><span class="tb-title">For Review</span><span class="tb-badge badge-neutral">${mgr?'Everyone\'s items':'Your items · '+esc(repName(myEmail()))}</span></div>
       <div class="topbar-r">
+        ${Copilot.button()}
         ${queue.length?`<button class="btn btn-primary btn-sm" onclick="nextItem()">Start reviewing →</button>`:''}
         <div style="position:relative">
           <button class="btn btn-sec btn-sm" onclick="event.stopPropagation();toggleExport()">Export <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg></button>
@@ -751,9 +754,9 @@ setTimeout(()=>{
   const _setRole = setRole; setRole = function(r){ _setRole(r); closeDrawer(); view='queue'; render(); };
   loadRuns(); SPOT = weeklySpotCheck(Object.values(RUNS)); reviewBadge(); render();
   const P = new URLSearchParams(location.search), id = P.get('item');
-  FILT = { due:P.get('due'), reason:P.get('reason'), kind:P.get('kind') };
+  FILT = { due:P.get('due'), reason:P.get('reason'), kind:P.get('kind'), seg:P.get('seg'), rep:P.get('rep') };
   if(['approvals','log','queue'].includes(P.get('view')) && (P.get('view')!=='approvals' || isManager())) view = P.get('view');
-  if(FILT.due || FILT.reason || FILT.kind || P.get('view')) render();
+  if(FILT.due || FILT.reason || FILT.kind || FILT.seg || FILT.rep || P.get('view')) render();
   if(id) openItem(id);
 }, 0);
 

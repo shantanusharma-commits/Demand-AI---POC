@@ -526,6 +526,7 @@ textarea[readonly],input[readonly]{background-color:var(--s50);}
 <script src="demandai-engine.js"></script>
 <script src="demandai-sample-data.js"></script>
 <script src="demandai-nba.js"></script>
+<script src="demandai-copilot.js"></script>
 <script>
 function showToast(msg){document.querySelectorAll('.toast').forEach(t=>t.remove());const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2600);}
 function initials(n){return String(n).split(' ').filter(Boolean).map(w=>w[0]).join('').slice(0,2).toUpperCase();}
@@ -782,6 +783,7 @@ function openGuide(){
     `<div style="font-size:12.5px;color:var(--i2);line-height:1.6;margin-bottom:6px">The system does most of the work on its own. Today shows what it needs from you so work keeps moving. Do it in this order:</div>`
     + term('1 · Clear blockers', 'The red notice above the tiles. Anything that stops work: a run that failed, an upload rejected by hard stops, missing data, an expired claim, approvals holding up release. Click it to see each one and where it\'s fixed.')
     + term('2 · Review what\'s waiting, by when it\'s due', 'Items the system couldn\'t decide on its own, earliest due first. Click one to open it in For Review.')
+    + term('Copilot and Autopilot', 'Copilot, top right, answers questions and filters your work; it never changes your data. Ask it for a change, like approving a batch of spot-checks, and it hands that to Autopilot, which shows what will change, runs only when you confirm, and can be undone.')
     + term('Tiles open the detail', 'Every tile at the top is clickable: it opens the items behind the number, already filtered. Panel titles with an arrow, like Open the queue →, do the same.')
     + term('3 · Mark outcomes', 'There\'s no CRM link in the pilot, so mark what happened with each released message: Sent, Replied, Meeting booked or No response.')
     + term('Went ahead on its own', 'Passed all four checks (segment size, confidence, sensitive content, claims) and was released to the rep, ready to use. Each week a few are picked for a spot-check rating.')
@@ -809,7 +811,7 @@ function render(){
 
   // 1 · Title first.
   const head = `<div class="topbar"><div class="topbar-l"><span class="tb-title">Today</span><span style="font-size:12px;color:var(--i3);margin-left:10px">${esc(dateLine)}</span></div>
-    <div class="topbar-r"><button class="btn btn-ghost btn-sm" title="How Today works" onclick="openGuide()" style="width:28px;height:28px;padding:0;justify-content:center;border-radius:50%;border:1px solid var(--bdk);font-weight:700;margin-right:4px">?</button></div></div>`;
+    <div class="topbar-r">${worker ? Copilot.button() : ''}<button class="btn btn-ghost btn-sm" title="How Today works" onclick="openGuide()" style="width:28px;height:28px;padding:0;justify-content:center;border-radius:50%;border:1px solid var(--bdk);font-weight:700;margin-right:4px">?</button></div></div>`;
   const needs = queue.length + approvals.length;
   const hello = `<div style="margin-bottom:14px"><div style="font-family:var(--fd);font-size:22px;font-weight:700;color:var(--i1)">${greeting()}, ${esc(firstName())}</div>
     <div style="font-size:13px;color:var(--i3);margin-top:4px">${nothing ? "Nothing has been built yet. Here's how the pilot runs." :
@@ -866,6 +868,11 @@ function render(){
     return hdr + line(`${esc(x.who)} · ${esc(x.account)}`, `${esc(x.action)} · ${esc(x.channel)} · ${esc(REASON_CATS[x.cats[0]])}${mgr?` · ${esc(repName(x.owner))}`:''}`,
       `<span style="font-size:11px;font-weight:600;color:${dueTone(x.due)};white-space:nowrap">${esc(dueLabel(x.due))}</span><span class="tag ${x.d.spot==='pending'?'tag-blue':'tag-amber'}">${esc(whyHere(x.d))}</span>`, `14-review.html?item=${encodeURIComponent(x.id)}`);
   }).join('');
+  // The recommended first item: the earliest due, said in so many words.
+  const startHere = x => `<div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--brand-lt);border-bottom:1px solid var(--s75)">
+      <div style="flex:1;min-width:0;font-size:12.5px;color:var(--i1);line-height:1.5"><b style="color:var(--brand-dk)">Start here:</b> ${esc(x.who)} · ${esc(x.account)}
+        <div style="font-size:11px;color:var(--i2)">${esc(dueLabel(x.due))}, the earliest in your queue · ${esc(REASON_CATS[x.cats[0]])}</div></div>
+      <a class="btn btn-primary btn-sm" href="14-review.html?item=${encodeURIComponent(x.id)}" style="text-decoration:none;white-space:nowrap">Start reviewing →</a></div>`;
   const aRows = approvals.slice(0,5).map(x=>line(`${esc(x.who)} · ${esc(x.account)}`, `Accepted by ${esc(repName(x.owner))} · ${esc(x.action)}`,
       `<span class="tag tag-violet">Approval</span>`, `14-review.html?item=${encodeURIComponent(x.id)}`)).join('');
   const rRows = ready.slice(0,4).map(x=>`<div style="padding:10px 14px;border-bottom:1px solid var(--s75)">
@@ -884,7 +891,17 @@ function render(){
         <a href="${nbaLink(latest,'proceeded')}" style="text-decoration:none"><div class="stat-lbl">Went ahead on their own</div><div style="font-family:var(--fd);font-size:20px;font-weight:700;color:var(--pos)">${wentN}</div></a>
         <a href="${nbaLink(latest,'waiting')}" style="text-decoration:none"><div class="stat-lbl">Needed a person</div><div style="font-family:var(--fd);font-size:20px;font-weight:700;color:var(--ter-dk)">${latestIts.length-wentN}</div></a>
       </div>
-      </div>`) : '';
+      </div>${trustRow()}`) : '';
+  // Trust: how often people agreed with the system so far, overall and where it's strongest.
+  function trustRow(){
+    const all = trackRecord(), segs = Object.keys(SEG_MEANS).map(s=>[s, trackRecord(s)]).filter(([,r])=>r.n>=2).sort((a,b)=>b[1].pct-a[1].pct);
+    return `<a href="13-analytics.html?tab=gates" style="display:block;padding:12px 16px;border-top:1px solid var(--s75);text-decoration:none">
+      <div class="stat-lbl">How often reps agreed with it</div>
+      ${all.n ? `<div style="display:flex;align-items:baseline;gap:8px;margin-top:2px"><span style="font-family:var(--fd);font-size:20px;font-weight:700;color:var(--i1)">${all.pct}%</span><span style="font-size:11.5px;color:var(--i2)">${all.a} of ${all.n} first recommendations accepted</span></div>
+        ${all.early ? `<div style="font-size:11px;color:var(--i3);margin-top:3px">Early days: only ${all.n} decision${all.n===1?'':'s'} so far, so read it as a hint.</div>` : ''}
+        ${segs.length ? `<div style="font-size:11px;color:var(--i3);margin-top:3px">${segs.slice(0,3).map(([s,r])=>`${esc(s)} ${r.a} of ${r.n}`).join(' · ')}</div>` : ''}`
+        : `<div style="font-size:11.5px;color:var(--i3);margin-top:3px">No decisions yet. It builds up as people accept or reject items.</div>`}</a>`;
+  }
   const spotPanel = (() => {
     const picked = SPOT ? SPOT.picked : 0, total = SPOT && SPOT.reps ? (rep ? (SPOT.reps[myEmail()]||0) : picked) : 0;
     const done = spotDoneWeek, pct = total ? Math.round(done/total*100) : 0, fri = spots[0] ? dueLabel(spots[0].due) : '';
@@ -918,7 +935,7 @@ function render(){
   const recentPanel = box('Recent lists', '', recent.map(x=>line(esc(x.name), `${x.sub} · ${x.at?fmtDate(x.at):''}`, `<span class="tag ${KIND_TONE[x.kind]}">${x.kind}</span>`, x.href)).join('') || empty('No lists yet.'));
 
   const left = worker ? [
-      box('Waiting in For Review', queue.length ? link('14-review.html', `Open the queue (${queue.length}) →`) : '', queue.length ? qRows + (queue.length>5 ? `<div style="padding:8px 14px">${link('14-review.html', `+ ${queue.length-5} more, earliest due first`)}</div>` : '') : empty('Nothing is waiting for your review.')),
+      box('Waiting in For Review', queue.length ? link('14-review.html', `Open the queue (${queue.length}) →`) : '', queue.length ? startHere(queue[0]) + qRows + (queue.length>5 ? `<div style="padding:8px 14px">${link('14-review.html', `+ ${queue.length-5} more, earliest due first`)}</div>` : '') : empty('Nothing is waiting for your review.')),
       mgr ? box('Approvals', approvals.length ? link('14-review.html?view=approvals', 'Review them →') : '', aRows || empty('No sensitive items waiting for your approval.')) : '',
       box('Awaiting your outcome update', ready.length ? `<span style="font-size:11px;color:var(--i3)">${ready.length} · oldest first</span>` : '', (rRows || empty('Nothing released is waiting for an outcome.')) +
         '', 'outcomes'),

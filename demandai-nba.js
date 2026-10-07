@@ -283,6 +283,20 @@ function logIt(r, decision, extra={}){
 }
 // Every list's log, newest first (pages with several lists override this through ALL_RUNS).
 function allLogs(){ const runs = typeof ALL_RUNS==='function' ? ALL_RUNS() : [RUN]; return runs.flatMap(x=>x.saved.log).sort((a,b)=>b.at-a.at); }
+/* Trust: how often people agreed with the system's first recommendation (optionally in one micro-segment),
+   and the four checks every recommendation goes through. Shown wherever a decision is asked for. */
+function trackRecord(seg){
+  const ls = allLogs().filter(l=>l.decisive && l.firstPass && (!l.flag || l.checked) && (seg===undefined || l.segment===seg));
+  const a = ls.filter(l=>l.accepted).length;
+  return { n: ls.length, a, pct: ls.length ? Math.round(a/ls.length*100) : null, early: ls.length < (DemandAI.CONFIG.minDecisions||10) };
+}
+function fourChecks(r){
+  const rs = exceptionReasons(r), has = re => rs.some(t=>re.test(t));
+  const out = [['Segment size', !has(/^Segment too small/)], ['Confidence', !has(/^Low confidence/)], ['Sensitive content', !has(/^Sensitive/)], ['Claims', !has(/claim/)]];
+  if(has(/deal-size/)) out.push(['Deal size', false]);
+  if(has(/^Brand/)) out.push(['Brand and rules', false]);
+  return out;
+}
 
 /* ═══════════════ DECISIONS: one item at a time, no bulk ═══════════════ */
 // Step 6 · Rejection reasons, shown as words. Each decides what comes back.
@@ -483,6 +497,9 @@ function openRec(key, keepTimer){
   html = panel("Why it's here", `<span class="tag ${d.spot==='pending'?'tag-blue':d.why==='alternative'?'tag-violet':'tag-amber'}">${inQueue(d)?whyHere(d):d.status==='Released'&&d.released==='auto'?'Went ahead':'Exception'}</span>`, `
     <div style="font-size:12.5px;color:var(--i1);line-height:1.55;margin-bottom:8px">${why}</div>
     ${kv('Why now', esc(r.reason.replace(/^./,m=>m.toUpperCase())))}
+    ${kv('Checks', `<span class="tags" style="display:inline-flex;flex-wrap:wrap;gap:4px">${fourChecks(r).map(([k,ok])=>`<span class="tag ${ok?'tag-green':'tag-red'}">${ok?'✓':'✗'} ${esc(k)}</span>`).join('')}</span>`)}
+    ${(()=>{ const s = r.segment ? trackRecord(r.segment) : null, a = trackRecord();
+      return kv('Track record', a.n ? `${s && s.n ? `In ${esc(r.segment)}, reps agreed with the first recommendation <b>${s.a} of ${s.n}</b> times (${s.pct}%)` : `No decisions in ${esc(r.segment||'this group')} yet`}<span style="color:var(--i3)"> · ${a.a} of ${a.n} (${a.pct}%) across all${a.early?'; early days, so read it as a hint':''}</span>` : '<span style="color:var(--i3)">No decisions yet, so no track record</span>'); })()}
     ${kv('Micro-segment', `${segTag(r.segment)} <span style="color:var(--i3)">${r.segment?esc(SEG_MEANS[r.segment]||''):''}</span>`)}
     ${kv('Owner', isManager() ? `<select onchange="reassign('${key}',this.value)" style="padding:3px 6px;border:1px solid var(--bdk);border-radius:6px;font-size:12px">${['',...Object.keys(REPS)].map(e=>`<option value="${e}" ${ownerOf(r)===e?'selected':''}>${esc(repName(e))}</option>`).join('')}</select>` : esc(repName(ownerOf(r))))}`);
   // 2 · The action
@@ -555,6 +572,7 @@ function openRec(key, keepTimer){
   const body = document.getElementById('detBody'), top = keepTimer ? body.scrollTop : 0;
   body.innerHTML = html; body.scrollTop = top;
   const dr = document.getElementById('detailDrawer'); dr.style.width = '500px'; dr.classList.add('open');
+  const cp = document.getElementById('copilotDrawer'); if(cp) cp.classList.remove('open');
 }
 function DemandAIDraftText(x){
   if(x.channel==='Email') return `Subject: ${x.subject}\n\n${x.body}`;
