@@ -1083,6 +1083,7 @@ function draftFor(rec, action, opts = {}) {
 function draftText(d) {
   if (d.channel === 'Email') return `${d.subject}\n${d.body}`;
   if (d.channel === 'LinkedIn') return d.note || '';
+  if (d.channel === 'Content') return d.text || '';
   const s = d.script;
   return [d.task, s && s.opener, s && s.questions.join(' '), s && s.response, s && s.ask].filter(Boolean).join('\n');
 }
@@ -1121,6 +1122,8 @@ function checkDraft(d) {
   const uniq = claims.filter(c => !seen.has(c.text) && seen.add(c.text));
   return { flags, claims: uniq, unsupported: uniq.filter(c => !c.verified) };
 }
+// The same brand and claim checks for long-form content from the Content studio (blogs, whitepapers, posts).
+function checkContent(text) { return checkDraft({ channel: 'Content', text: String(text || '') }); }
 // 5.18 Confidence from grounding, open flags and signal strength.
 function confidenceFor(rec, d, chk, action) {
   const w = ((action ? evidenceFor(rec, action) : rec.signal) || {}).weight || 0;
@@ -1193,7 +1196,7 @@ return {
   CONFIG, CODES, saveConfig, configOverrides, configVersion, LEAD_COLUMNS, LEAD_REQUIRED, SIGNAL_COLUMNS, SIGNAL_REQUIRED,
   parseCSV, toCSV, readTable, processLeads, classify, personaOf, fitFor, decayFactor,
   processSignals, scoreList, stack, tierFor, daysBetween, round1, buildSegments, segmentRanks, recommendChannel, draftFor, processScoredProspects, SEGMENT_COLUMNS, estimateDealSize,
-  briefFor, callScript, checkDraft, confidenceFor, allowedChannels, proofFor, COLLATERAL, PLAYBOOK,
+  briefFor, callScript, checkDraft, checkContent, confidenceFor, allowedChannels, proofFor, COLLATERAL, PLAYBOOK,
   VOICE_PRESETS, defaultBrand, brandPack, brandDraft, saveBrandDraft, submitBrand, discardBrandDraft, brandPending, publishBrand, brandVersion, useBrand, approvedClaims,
   loadLists, saveList, getList, deleteList, loadScorings, saveScoring, getScoring, deleteScoring,
   loadSegmentations, saveSegmentation, getSegmentation, deleteSegmentation, reviewBadge,

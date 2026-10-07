@@ -1,0 +1,1168 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Content studio — DemandAI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --brand:#7D52A2;--brand-dk:#5E3A80;--brand-lt:#F0EBF8;--brand-mid:#C9B3E8;
+  --sec:#0094DA;--sec-lt:#E6F4FC;--sec-dk:#005E8E;
+  --ter:#FF8820;--ter-lt:#FFF0E0;--ter-dk:#B85800;
+  --pos:#2E7D5A;--pos-lt:#EAF5F0;
+  --warn:#C4751A;--warn-lt:#FDF6E8;
+  --neg:#B23F3F;--neg-lt:#FBECEC;
+  --rail:#130D1C;--rb:rgba(255,255,255,.07);
+  --r1:#fff;--r2:rgba(255,255,255,.76);--r3:rgba(255,255,255,.43);--r4:rgba(255,255,255,.21);
+  --rhov:rgba(255,255,255,.05);--ract:rgba(125,82,162,.22);
+  --bg:#F5F6F9;--surf:#fff;--border:#E5E9EE;--bdk:#D1D7DE;
+  --i1:#141A21;--i2:#4A5664;--i3:#9DA8B5;--i4:#C9D1DA;
+  --s50:#F4F6F8;--s75:#ECEFF3;--s100:#E1E6EC;--s200:#C9D1DA;--s300:#9DA8B5;
+  --fd:"Sora",system-ui,sans-serif;
+  --fb:"Plus Jakarta Sans",-apple-system,sans-serif;
+  --fm:"JetBrains Mono",monospace;
+  --rsm:8px;--rmd:12px;--rlg:16px;
+  --ease:cubic-bezier(.4,0,.2,1);--fast:120ms;--base:200ms;
+  --sh:0 2px 8px rgba(20,26,33,.07),0 1px 3px rgba(20,26,33,.05);
+  --sh-lg:0 8px 40px rgba(20,26,33,.14),0 2px 8px rgba(20,26,33,.08);
+  --nav-w:224px;--chat-w:400px;--hh:54px;--tabs-h:42px;
+}
+*,*::before,*::after{box-sizing:border-box;}
+html{font-size:16px;-webkit-font-smoothing:antialiased;}
+body{margin:0;font-family:var(--fb);font-size:14px;background:var(--bg);color:var(--i1);overflow:hidden;height:100vh;}
+button{font:inherit;cursor:pointer;border:none;background:none;color:inherit;padding:0;}
+input,textarea,select{font:inherit;}
+:root{color-scheme:light;}
+input,textarea,select{background-color:#fff;color:var(--i1);}
+textarea[readonly],input[readonly]{background-color:var(--s50);}
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-thumb{background:var(--s200);border-radius:2px;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.55;transform:scale(1.3);}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+@keyframes slideLeft{from{opacity:0;transform:translateX(24px);}to{opacity:1;transform:translateX(0);}}
+@keyframes slideDown{from{opacity:0;transform:translateY(-5px);}to{opacity:1;transform:translateY(0);}}
+@keyframes msgIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
+@keyframes barGrow{from{width:0}to{width:var(--bw)}}
+
+/* ─── SHELL ─────────────────────────────── */
+.shell{display:grid;grid-template-columns:var(--nav-w) 1fr;height:100vh;width:100vw;}
+
+/* ─── NAV ─────────────────────────────── */
+.nav{background:var(--rail);display:flex;flex-direction:column;height:100vh;overflow:hidden;border-right:1px solid var(--rb);}
+.nav-brand{display:flex;align-items:center;gap:9px;padding:13px 13px 11px;border-bottom:1px solid var(--rb);flex-shrink:0;}
+.nav-nm{font-family:var(--fd);font-size:14px;font-weight:600;color:var(--r1);letter-spacing:-.01em;}
+.nav-org{font-size:10px;color:var(--r3);margin-top:1px;}
+.nav-body{flex:1;overflow-y:auto;padding:6px 0;}
+.nav-body::-webkit-scrollbar{width:3px;}
+.nav-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.07);}
+.nav-sec{padding:8px 14px 3px;font-size:9px;letter-spacing:.09em;text-transform:uppercase;color:var(--r4);font-weight:600;}
+.nav-item{display:flex;text-decoration:none;align-items:center;gap:9px;height:32px;padding:0 10px;margin:1px 6px;border-radius:7px;color:var(--r3);font-size:12.5px;font-weight:500;cursor:pointer;position:relative;transition:background var(--fast) var(--ease),color var(--fast) var(--ease);}
+.nav-item:hover{background:var(--rhov);color:var(--r2);}
+.nav-item.active{background:var(--ract);color:var(--r1);}
+.nav-item.active::before{content:'';position:absolute;left:0;top:7px;bottom:7px;width:2.5px;background:var(--brand-mid);border-radius:0 2px 2px 0;}
+.nav-ic{width:15px;height:15px;flex-shrink:0;opacity:.7;}
+.nav-item.active .nav-ic{opacity:1;color:var(--brand-mid);}
+.nav-lbl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.nav-div{height:1px;background:var(--rb);margin:6px 10px;}
+.nav-foot{padding:10px;border-top:1px solid var(--rb);flex-shrink:0;}
+.nav-user{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:var(--rsm);cursor:pointer;transition:background var(--fast) var(--ease);}
+.nav-user:hover{background:var(--rhov);}
+.nav-av{width:28px;height:28px;border-radius:7px;background:linear-gradient(135deg,var(--brand),var(--brand-dk));color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;}
+.nav-un{font-size:12px;color:var(--r2);font-weight:500;}
+.nav-ur{font-size:10px;color:var(--r4);margin-top:1px;}
+
+/* ─── MAIN ─────────────────────────────── */
+.main{display:flex;flex-direction:column;height:100vh;overflow:hidden;min-width:0;}
+
+/* Topbar */
+.topbar{height:var(--hh);padding:0 20px;display:flex;align-items:center;justify-content:space-between;background:var(--surf);border-bottom:1px solid var(--border);flex-shrink:0;gap:10px;}
+.topbar-l{display:flex;align-items:center;gap:10px;flex:1;min-width:0;}
+.tb-title{font-family:var(--fd);font-size:15px;font-weight:600;color:var(--i1);}
+.tb-badge{display:inline-flex;align-items:center;gap:4px;font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 9px;border-radius:999px;}
+.badge-live{background:var(--pos-lt);color:var(--pos);}
+.badge-dot{width:5px;height:5px;border-radius:50%;background:currentColor;animation:pulse 1.6s ease-in-out infinite;}
+.badge-neutral{background:var(--s100);color:var(--i3);}
+.topbar-r{display:flex;align-items:center;gap:7px;flex-shrink:0;}
+.btn{display:inline-flex;align-items:center;gap:6px;font-family:var(--fb);font-size:12.5px;font-weight:600;height:30px;padding:0 12px;border-radius:var(--rsm);border:1px solid transparent;cursor:pointer;white-space:nowrap;transition:all var(--fast) var(--ease);}
+.btn-primary{background:var(--brand);color:#fff;}
+.btn-primary:hover{background:var(--brand-dk);}
+.btn-sec{background:var(--surf);border-color:var(--bdk);color:var(--i1);}
+.btn-sec:hover{background:var(--s75);}
+.btn-copilot{background:var(--brand-lt);border-color:var(--brand-mid);color:var(--brand-dk);}
+.btn-copilot:hover{background:var(--brand-mid);}
+.btn-copilot.active{background:var(--brand);color:#fff;border-color:var(--brand);}
+.btn-ghost{color:var(--i2);}
+.btn-ghost:hover{background:var(--s75);}
+.btn-sm{height:27px;font-size:11.5px;padding:0 10px;border-radius:6px;}
+
+/* Tabs */
+.ftabs{height:var(--tabs-h);padding:0 20px;display:flex;align-items:stretch;gap:0;border-bottom:1px solid var(--border);background:var(--surf);flex-shrink:0;}
+.ftab{display:flex;align-items:center;gap:6px;padding:0 16px;font-size:13px;font-weight:500;color:var(--i3);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;transition:color var(--fast) var(--ease);}
+.ftab:hover{color:var(--i2);}
+.ftab.active{color:var(--i1);border-bottom-color:var(--brand);}
+.ftab-cnt{font-family:var(--fm);font-size:10.5px;color:var(--i4);}
+.ftab.active .ftab-cnt{color:var(--brand);}
+
+/* Canvas */
+.canvas{flex:1;overflow-y:auto;padding:16px 20px 40px;}
+.canvas::-webkit-scrollbar{width:5px;}
+
+/* ─── STATS STRIP ─────────────────────── */
+.stats{display:grid;grid-template-columns:repeat(5,1fr);background:var(--surf);border:1px solid var(--border);border-radius:var(--rmd);overflow:hidden;margin-bottom:16px;}
+.stat{padding:13px 16px;border-right:1px solid var(--border);}
+.stat:last-child{border-right:none;}
+.stat-lbl{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--i3);font-weight:600;margin-bottom:4px;}
+.stat-val{font-family:var(--fd);font-size:24px;font-weight:700;letter-spacing:-.03em;line-height:1;margin-bottom:3px;}
+.stat-sub{font-size:11px;color:var(--i3);}
+.sv1{color:var(--brand);}
+.sv2{color:var(--sec);}
+.sv3{color:var(--ter-dk);}
+.sv4{color:var(--pos);}
+.sv5{color:var(--i1);}
+.stat-link:hover{background:var(--s50);}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--i1);color:#fff;font-size:12.5px;font-weight:500;padding:9px 18px;border-radius:999px;z-index:900;pointer-events:none;animation:fadeUp .2s var(--ease);}
+.tag{display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 10px;border-radius:999px;font-family:var(--fb);font-size:11px;font-weight:600;letter-spacing:0;text-transform:none;white-space:nowrap;background:var(--s75);color:var(--i2);vertical-align:middle;}
+.tag::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0;}
+.tag-green{background:#E8F5EE;color:#24704F;}
+.tag-amber{background:#FDF2E1;color:#A8620F;}
+.tag-red{background:#FBEAEA;color:#A83A3A;}
+.tag-blue{background:#E4F2FB;color:#00659A;}
+.tag-violet{background:#F0EAF8;color:#6A4290;}
+.tag-teal{background:#E3F4F2;color:#1B7369;}
+.tag-pink{background:#FBE9F1;color:#A1386A;}
+.tag-grey{background:#EEF1F4;color:#5B6774;}
+.tags{display:flex;flex-wrap:wrap;gap:6px;}
+
+/* ─── CONTENT STUDIO ─────────────────────── */
+.tb-crumb{font-size:12.5px;color:var(--i3);display:flex;align-items:center;gap:6px;min-width:0;}
+.tb-crumb a{color:var(--i3);cursor:pointer;text-decoration:none;}
+.tb-crumb a:hover{color:var(--brand);}
+.tb-crumb b{color:var(--i1);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sub{font-size:12px;color:var(--i3);line-height:1.55;}
+.panel{background:var(--surf);border:1px solid var(--border);border-radius:var(--rmd);}
+.filters{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
+.fchip{height:28px;padding:0 12px;border-radius:999px;border:1px solid var(--bdk);background:var(--surf);font-size:12px;font-weight:500;color:var(--i2);}
+.fchip.on{background:var(--brand-lt);border-color:var(--brand-mid);color:var(--brand-dk);font-weight:600;}
+.fchip .n{font-family:var(--fm);font-size:10.5px;color:var(--i3);margin-left:4px;}
+.search{height:30px;border:1px solid var(--bdk);border-radius:var(--rsm);padding:0 10px;font-size:12.5px;width:220px;}
+.ltbl{width:100%;border-collapse:collapse;font-size:12.5px;}
+.ltbl th{text-align:left;font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--i3);font-weight:600;padding:9px 12px;border-bottom:1px solid var(--border);background:var(--s50);white-space:nowrap;}
+.ltbl td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle;}
+.ltbl tr.row{cursor:pointer;}
+.ltbl tr.row:hover td{background:var(--s50);}
+.ltbl tr:last-child td{border-bottom:none;}
+.t-title{font-weight:600;color:var(--i1);}
+.t-sub{font-size:11px;color:var(--i3);margin-top:2px;}
+.empty{padding:40px 20px;text-align:center;color:var(--i3);font-size:12.5px;}
+.camp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;}
+.camp{background:var(--surf);border:1px solid var(--border);border-radius:var(--rmd);padding:14px 16px;cursor:pointer;transition:border-color var(--fast) var(--ease),box-shadow var(--fast) var(--ease);}
+.camp:hover{border-color:var(--brand-mid);box-shadow:var(--sh);}
+.camp-nm{font-family:var(--fd);font-size:14px;font-weight:600;margin-bottom:4px;}
+.camp-meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;}
+.camp-new{border-style:dashed;display:flex;align-items:center;justify-content:center;color:var(--brand);font-weight:600;min-height:120px;}
+.chead{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px;}
+.chead h2{font-family:var(--fd);font-size:17px;margin:0 0 4px;}
+.kv{display:flex;gap:18px;flex-wrap:wrap;font-size:12px;color:var(--i2);margin-top:6px;}
+.kv b{font-weight:600;color:var(--i1);}
+
+/* Modal (Flowbite modal pattern) */
+.mov{position:fixed;inset:0;background:rgba(20,26,33,.42);display:flex;align-items:flex-start;justify-content:center;padding:6vh 16px;z-index:500;overflow-y:auto;}
+.mdl{background:var(--surf);border-radius:var(--rlg);box-shadow:var(--sh-lg);width:100%;max-width:620px;animation:fadeUp .18s var(--ease);}
+.mdl-h{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid var(--border);}
+.mdl-h h3{margin:0;font-family:var(--fd);font-size:15px;}
+.mdl-b{padding:16px 20px;display:flex;flex-direction:column;gap:14px;max-height:66vh;overflow-y:auto;}
+.mdl-f{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:12px 20px;border-top:1px solid var(--border);}
+.lbl{font-size:11.5px;font-weight:600;color:var(--i2);margin-bottom:6px;display:block;}
+.inp,.sel,.ta{width:100%;border:1px solid var(--bdk);border-radius:var(--rsm);padding:7px 10px;font-size:13px;}
+.ta{min-height:64px;resize:vertical;}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.types{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;}
+.type{border:1px solid var(--bdk);border-radius:var(--rsm);padding:10px 8px;text-align:center;font-size:12px;font-weight:600;color:var(--i2);background:var(--surf);}
+.type .ic{font-size:18px;display:block;margin-bottom:4px;}
+.type.on{border-color:var(--brand);background:var(--brand-lt);color:var(--brand-dk);}
+.seg{display:inline-flex;border:1px solid var(--bdk);border-radius:var(--rsm);overflow:hidden;}
+.seg button{height:30px;padding:0 12px;font-size:12px;font-weight:500;color:var(--i2);border-right:1px solid var(--bdk);}
+.seg button:last-child{border-right:none;}
+.seg button.on{background:var(--brand);color:#fff;}
+.brandbox{background:var(--brand-lt);border:1px solid var(--brand-mid);border-radius:var(--rsm);padding:10px 12px;font-size:12px;color:var(--brand-dk);line-height:1.55;}
+.srcs{display:flex;flex-direction:column;gap:6px;}
+.src{display:flex;gap:8px;align-items:flex-start;font-size:12px;color:var(--i2);padding:7px 9px;border:1px solid var(--border);border-radius:var(--rsm);}
+.src input{margin-top:2px;}
+.src b{color:var(--i1);font-weight:600;}
+
+/* Split view: chat left, document right */
+.studio{display:grid;grid-template-columns:clamp(300px,27vw,380px) minmax(0,1fr);height:100%;min-height:0;}
+.chat{display:flex;flex-direction:column;border-right:1px solid var(--border);background:var(--surf);min-height:0;}
+.chat-h{padding:12px 14px;border-bottom:1px solid var(--border);}
+.chat-h .t{font-family:var(--fd);font-size:13px;font-weight:600;}
+.msgs{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;}
+.msg{max-width:92%;font-size:12.5px;line-height:1.55;padding:9px 12px;border-radius:12px;animation:msgIn .15s var(--ease);white-space:pre-wrap;}
+.msg.ai{background:var(--s75);color:var(--i1);border-top-left-radius:4px;align-self:flex-start;}
+.msg.me{background:var(--brand);color:#fff;border-top-right-radius:4px;align-self:flex-end;}
+.msg .who{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;opacity:.6;margin-bottom:3px;}
+.chips{display:flex;flex-wrap:wrap;gap:6px;padding:0 14px 10px;}
+.chip{height:26px;padding:0 10px;border-radius:999px;border:1px solid var(--brand-mid);background:var(--brand-lt);color:var(--brand-dk);font-size:11.5px;font-weight:600;}
+.chip:hover{background:var(--brand-mid);}
+.target{margin:0 14px 8px;font-size:11.5px;background:var(--ter-lt);color:var(--ter-dk);border-radius:var(--rsm);padding:6px 10px;display:flex;justify-content:space-between;align-items:center;gap:8px;}
+.target button{font-weight:700;color:var(--ter-dk);}
+.composer{display:flex;gap:8px;padding:10px 14px 14px;border-top:1px solid var(--border);}
+.composer textarea{flex:1;border:1px solid var(--bdk);border-radius:var(--rsm);padding:8px 10px;font-size:12.5px;resize:none;height:40px;}
+.docside{display:flex;flex-direction:column;min-height:0;background:var(--bg);}
+.doc-tools{display:flex;align-items:center;gap:6px;flex-wrap:nowrap;overflow-x:auto;white-space:nowrap;padding:8px 16px;background:var(--surf);border-bottom:1px solid var(--border);}
+.doc-tools .sp{flex:1;}
+.doc-tools .lab{font-size:11px;color:var(--i3);font-weight:600;}
+.tbtn{width:28px;height:28px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;color:var(--i2);font-size:13px;}
+.tbtn:hover{background:var(--s75);color:var(--i1);}
+.tsep{width:1px;height:18px;background:var(--border);}
+.doc-scroll{flex:1;overflow-y:auto;padding:24px 20px 60px;}
+.paper{max-width:760px;margin:0 auto;background:#fff;border:1px solid var(--border);border-radius:var(--rmd);box-shadow:var(--sh);padding:40px 56px 48px;}
+.paper-meta{max-width:760px;margin:0 auto 10px;display:flex;gap:6px;flex-wrap:nowrap;align-items:center;white-space:nowrap;overflow:hidden;}
+#doc{outline:none;font-size:15px;line-height:1.7;color:#1d242c;font-family:var(--fb);}
+#doc h1{font-family:var(--fd);font-size:26px;line-height:1.25;margin:0 0 16px;letter-spacing:-.02em;}
+#doc h2{font-family:var(--fd);font-size:18px;margin:26px 0 8px;}
+#doc p{margin:0 0 12px;}
+#doc ul,#doc ol{margin:0 0 12px;padding-left:22px;}
+#doc blockquote{margin:0 0 12px;padding:8px 14px;border-left:3px solid var(--brand-mid);color:var(--i2);background:var(--s50);}
+#doc [data-b]{position:relative;border-radius:4px;transition:background var(--fast) var(--ease);}
+#doc [data-b]:hover{background:#FAF8FD;}
+#doc [data-b].sel{background:#FFF6EC;box-shadow:-10px 0 0 #FFF6EC,10px 0 0 #FFF6EC;}
+#doc [data-b].flash{animation:flash 1.1s var(--ease);}
+@keyframes flash{0%{background:#EAF5F0}100%{background:transparent}}
+.gutter{position:absolute;display:none;gap:4px;z-index:5;}
+.gutter button{height:24px;padding:0 8px;border-radius:6px;background:var(--surf);border:1px solid var(--bdk);font-size:11px;font-weight:600;color:var(--i2);box-shadow:var(--sh);}
+.gutter button:hover{border-color:var(--brand);color:var(--brand);}
+.checks{max-width:760px;margin:12px auto 0;}
+.chk-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:12px;}
+.chk-detail{margin-top:8px;font-size:12px;color:var(--i2);line-height:1.6;}
+.chk-detail div{padding:3px 0;}
+.okc{color:var(--pos);font-weight:600;}
+.badc{color:var(--neg);font-weight:600;}
+.savebar{display:flex;align-items:center;gap:8px;}
+.dd{position:relative;display:inline-block;}
+.ddm{position:absolute;top:calc(100% + 5px);right:0;min-width:200px;background:var(--surf);border:1px solid var(--border);border-radius:var(--rmd);box-shadow:var(--sh-lg);z-index:200;overflow:hidden;display:none;}
+.ddm.open{display:block;}
+.ddm button{display:block;width:100%;text-align:left;padding:9px 14px;font-size:12.5px;color:var(--i1);}
+.ddm button:hover{background:var(--s50);}
+.ddm .h{font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--i3);font-weight:600;padding:8px 14px 4px;}
+.skill{font-family:var(--fm);font-size:10.5px;background:var(--s75);color:var(--i2);padding:2px 6px;border-radius:4px;}
+
+@media print{
+  body{overflow:visible;height:auto;background:#fff;}
+  .nav,.chat,.doc-tools,.topbar,.paper-meta,.checks,.gutter,#roleSwitchBtn{display:none !important;}
+  .shell,.studio{display:block;height:auto;}
+  .main,.docside,.doc-scroll{height:auto;overflow:visible;background:#fff;padding:0;}
+  .paper{border:none;box-shadow:none;padding:0;max-width:none;}
+  #doc [data-b]{background:none !important;box-shadow:none !important;}
+}
+
+</style>
+</head>
+<body>
+<div class="shell">
+<nav class="nav">
+  <div class="nav-brand">
+    <div style="width:26px;height:26px;flex-shrink:0">
+      <svg width="26" height="26" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+        <image href="data:image/png;base64,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" width="200" height="200"/>
+      </svg>
+    </div>
+    <div><div class="nav-nm">DemandAI</div></div>
+  </div>
+  <div class="nav-body">
+    <a class="nav-item " href="00-today.html">
+      <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <span class="nav-lbl">Today</span>
+    </a>
+    <div class="nav-div"></div>
+    <div class="nav-sec">Configure</div>
+    <a class="nav-item " href="09-setup.html">
+      <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      <span class="nav-lbl">Setup</span>
+    </a>
+    <a class="nav-item " href="08-users.html">
+      <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <span class="nav-lbl">Users and roles</span>
+    </a>
+    <a class="nav-item " href="07-content.html">
+      <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      <span class="nav-lbl">Content library</span>
+    </a>
+    <div class="nav-div"></div>
+    <div class="nav-sec">Work</div>
+    <a class="nav-item " href="14-review.html">
+      <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      <span class="nav-lbl">For Review</span>
+    </a>
+    <div class="nav-div"></div>
+    <div class="nav-sec">Acquire</div>
+    <a class="nav-item " href="10-prospecting.html">
+      <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      <span class="nav-lbl">Prospecting</span>
+    </a>
+    <div class="nav-div"></div>
+    <div class="nav-sec">Reasoning</div>
+    <a class="nav-item " href="11-scoring.html">
+      <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      <span class="nav-lbl">Account Scoring</span>
+    </a>
+    <div class="nav-div"></div>
+    <div class="nav-sec">Engage</div>
+    <a class="nav-item " href="12-nba.html">
+      <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+      <span class="nav-lbl">Micro-segments &amp; NBA</span>
+    </a>
+    <a class="nav-item active" href="15-content-studio.html">
+      <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+      <span class="nav-lbl">Content studio</span>
+    </a>
+    <div class="nav-div"></div>
+    <div class="nav-sec">Measure</div>
+    <a class="nav-item " href="13-analytics.html">
+      <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      <span class="nav-lbl">Analytics</span>
+    </a>
+  </div>
+  <div class="nav-foot">
+    <div class="nav-user">
+      <div class="nav-av">PK</div>
+      <div><div class="nav-un">Pavan Kumar</div><div class="nav-ur">Sales manager</div></div>
+    </div>
+  </div>
+</nav>
+
+
+<!-- ════ MAIN ════ -->
+<main class="main" id="mainArea"></main>
+</div>
+
+<script src="demandai-engine.js"></script>
+<script src="demandai-sample-data.js"></script>
+<script>
+const PAGE_ID = '15-content-studio.html';
+function showToast(msg){document.querySelectorAll('.toast').forEach(t=>t.remove());const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2600);}
+function initials(n){return String(n).split(' ').filter(Boolean).map(w=>w[0]).join('').slice(0,2).toUpperCase();}
+function avColor(id){const c=['#7D52A2','#0094DA','#FF8820','#2E7D5A','#B23F3F'];let h=0;for(const ch of String(id))h+=ch.charCodeAt(0);return c[h%c.length];}
+function closeDrawer(){ document.getElementById('detailDrawer').classList.remove('open'); }
+function esc(s){return String(s===undefined||s===null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function fallbackDownload(name, text){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'text/csv'}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},0);}
+// On claude.ai the page can't start a download itself: the viewer confirms a save. Opened as a plain file, it downloads directly.
+async function download(name, text){
+  let dl = null;
+  try{ dl = window.claude && window.claude.use ? await window.claude.use('downloads') : null; }catch(e){ dl = null; }
+  if(!dl){ fallbackDownload(name, text); return; }
+  try{ await dl.save({filename:name, data:text}); showToast(name+' saved'); }
+  catch(e){ if(e && e.code==='declined') return; showToast(e && e.code==='rate_limited' ? 'A save is already open' : "This view can't save files"); }
+}
+function todayIso(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+const fmt1 = n => n===undefined||n===null ? '—' : (Math.round(n*10)/10).toLocaleString('en-US',{minimumFractionDigits:n%1?1:0,maximumFractionDigits:1});
+const fmtDate = t => new Date(t).toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'});
+
+
+/* ═══════════════ ROLE ENGINE — shared across every screen ═══════════════ */
+const ALL_ROLES = ['Admin','Sales manager','Sales rep','Viewer','Platform admin'];
+const ROLE_PERSON = {
+  'Admin':'Rajiv Nair', 'Sales manager':'Pavan Kumar', 'Sales rep':'Sofia Ahlgren',
+  'Viewer':'Elena Vogel', 'Platform admin':'Shantanu Rao'
+};
+const ROLE_NAV_ALLOWED = {
+  'Admin': ['00-today.html','14-review.html','09-setup.html','07-content.html','08-users.html','10-prospecting.html','11-scoring.html','12-nba.html','15-content-studio.html','13-analytics.html'],
+  'Sales manager': ['00-today.html','14-review.html','10-prospecting.html','11-scoring.html','12-nba.html','15-content-studio.html','07-content.html','13-analytics.html','09-setup.html','08-users.html'],
+  'Sales rep': ['00-today.html','14-review.html','10-prospecting.html','11-scoring.html','12-nba.html','15-content-studio.html','07-content.html','13-analytics.html'],
+  'Viewer': ['13-analytics.html'],
+  'Platform admin': [],
+};
+function getThisPageId(){
+  if(typeof PAGE_ID !== 'undefined') return PAGE_ID;
+  try { return location.pathname.split('/').pop(); } catch(e){ return ''; }
+}
+function getRole(){
+  try { return localStorage.getItem('demandai_role') || 'Sales manager'; }
+  catch(e){ return 'Sales manager'; }
+}
+function setRole(role){
+  try { localStorage.setItem('demandai_role', role); } catch(e){}
+  const ov = document.getElementById('roleModalOverlay');
+  if(ov) ov.style.display = 'none';
+  applyRoleToNav();
+}
+function applyRoleToNav(){
+  const role = getRole();
+  const allowed = ROLE_NAV_ALLOWED[role] || [];
+  document.querySelectorAll('.nav-item').forEach(a=>{
+    const href = a.getAttribute('href');
+    a.style.display = allowed.includes(href) ? '' : 'none';
+  });
+  const unEl = document.querySelector('.nav-un');
+  const urEl = document.querySelector('.nav-ur');
+  const avEl = document.querySelector('.nav-av');
+  if(unEl) unEl.textContent = ROLE_PERSON[role];
+  if(urEl) urEl.textContent = role;
+  if(avEl) avEl.textContent = ROLE_PERSON[role].split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+
+  const thisPage = getThisPageId();
+  const pageIsKnown = Object.values(ROLE_NAV_ALLOWED).some(list => list.includes(thisPage));
+  if(!pageIsKnown){ return; } // can't verify this page's id reliably here — don't block access on a guess
+  if(!allowed.includes(thisPage)){
+    const main = document.querySelector('.main') || document.getElementById('mainArea');
+    const PAGE_NAMES = {'00-today.html':'Today','09-setup.html':'Setup','07-content.html':'Content library','08-users.html':'Users and roles','10-prospecting.html':'Prospecting','11-scoring.html':'Account Scoring','12-nba.html':'Next Best Action','13-analytics.html':'Analytics','14-review.html':'Review','15-content-studio.html':'Content studio'};
+    const firstAllowedHref = allowed[0] || '00-today.html';
+    if(main) main.innerHTML = `
+      <div class="topbar"><div class="topbar-l"><span class="tb-title">No access</span></div></div>
+      <div class="canvas" style="display:flex;align-items:center;justify-content:center;min-height:70vh">
+        <div style="text-align:center;max-width:360px">
+          <div style="font-size:28px;margin-bottom:10px">🔒</div>
+          <div style="font-family:var(--fd);font-size:15px;font-weight:700;color:var(--i1);margin-bottom:6px">Not available for this role</div>
+          <div style="font-size:12px;color:var(--i3);line-height:1.6">${role} doesn't have access to this screen. Switch role from the sidebar, or use the menu to go to <a href="${firstAllowedHref}" style="color:var(--brand)">${PAGE_NAMES[firstAllowedHref]||firstAllowedHref}</a>.</div>
+        </div>
+      </div>`;
+  }
+}
+function renderRoleSwitcher(){
+  const foot = document.querySelector('.nav-foot');
+  if(!foot || document.getElementById('roleSwitchBtn')) return;
+  const btn = document.createElement('div');
+  btn.id = 'roleSwitchBtn';
+  btn.style.cssText = 'padding:8px 10px 0;cursor:pointer;';
+  btn.innerHTML = `<div style="font-size:10px;color:var(--r3);text-decoration:underline;text-align:center">Switch role (demo)</div>`;
+  btn.onclick = openRoleModal;
+  foot.appendChild(btn);
+}
+function openRoleModal(){
+  let ov = document.getElementById('roleModalOverlay');
+  if(!ov){
+    ov = document.createElement('div');
+    ov.id = 'roleModalOverlay';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(20,26,33,.45);z-index:700;display:flex;align-items:center;justify-content:center;';
+    ov.onclick = (e)=>{ if(e.target===ov) ov.style.display='none'; };
+    document.body.appendChild(ov);
+  }
+  const current = getRole();
+  ov.innerHTML = `<div style="background:var(--surf);border-radius:var(--rlg);box-shadow:var(--sh-lg);width:360px;padding:20px;" onclick="event.stopPropagation()">
+    <div style="font-family:var(--fd);font-size:14px;font-weight:700;color:var(--i1);margin-bottom:4px">Preview as a role</div>
+    <div style="font-size:11px;color:var(--i3);margin-bottom:14px">Changes what you see, matching what that role actually has access to. If this screen isn't available for the new role, use the sidebar to go to one that is.</div>
+    ${ALL_ROLES.map(r=>`<div onclick="setRole('${r}')" style="padding:10px 12px;border-radius:8px;cursor:pointer;margin-bottom:4px;background:${r===current?'var(--brand-lt)':'transparent'};display:flex;align-items:center;justify-content:space-between">
+      <div><div style="font-size:12.5px;font-weight:600;color:var(--i1)">${r}</div><div style="font-size:10.5px;color:var(--i3)">${ROLE_PERSON[r]}</div></div>
+      ${r===current?'<span style="color:var(--brand)">✓</span>':''}
+    </div>`).join('')}
+    <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;margin-top:10px" onclick="document.getElementById('roleModalOverlay').style.display='none'">Close</button>
+  </div>`;
+  ov.style.display = 'flex';
+}
+document.addEventListener('DOMContentLoaded', function(){ applyRoleToNav(); renderRoleSwitcher(); });
+if(document.readyState !== 'loading'){ applyRoleToNav(); renderRoleSwitcher(); }
+
+
+/* ═══════════════ CONTENT STUDIO ═══════════════
+   Generative content: blogs, whitepapers, emails, social posts and call scripts, written in the client's brand voice.
+   One writer (a router) picks the instructions for the content type; the brand pack from the Content library applies
+   to every piece, and the same brand and claim checks as the outreach drafts run on every change.
+   Rules only in the POC: production swaps the templates for the model, the checks and the approved sources stay.
+   Nothing is published from here: content is saved to the library, attached to a campaign, and downloaded. */
+const E = DemandAI;
+const ST_KEY = 'demandai_studio_v1';
+const TYPES = {
+  blog:       { label: 'Blog',        ic: '📝', skill: 'blog-post',   about: 'A headline, short sections and one call to action' },
+  whitepaper: { label: 'Whitepaper',  ic: '📄', skill: 'whitepaper',  about: 'Executive summary, the problem, a sequence, evidence and next steps' },
+  email:      { label: 'Email',       ic: '✉️', skill: 'email',       about: 'A subject line, one point and one ask' },
+  post:       { label: 'Social post', ic: '💬', skill: 'social-post', about: 'A hook, a short line or two and one ask' },
+  script:     { label: 'Call script', ic: '📞', skill: 'call-script', about: 'Opener, questions, the likely objection and the ask' },
+};
+const TONES = ['Direct', 'Formal', 'Warm'];
+const LENGTHS = ['Short', 'Medium', 'Long'];
+const AUDIENCE = {
+  Modernisation: 'Sites planning a control system migration', Inquiry: 'Accounts that asked us a question',
+  'Service renewal': 'Customers with a renewal coming up', Project: 'Teams starting a new project',
+  Leadership: 'Newly appointed plant leaders', Engagement: 'Accounts reading our content',
+};
+const PERSONA = { Modernisation: 'plant and automation managers', Inquiry: 'engineering teams', 'Service renewal': 'site maintenance leads',
+  Project: 'project and design leads', Leadership: 'new plant leaders', Engagement: 'operations teams' };
+
+const uid = () => Math.random().toString(36).slice(2, 9);
+const cap = s => { s = String(s || '').trim(); return s.charAt(0).toUpperCase() + s.slice(1); };
+const lc = s => { s = String(s || '').trim(); return /^[A-Z][a-z]/.test(s) ? s.charAt(0).toLowerCase() + s.slice(1) : s; };
+const noDot = s => String(s || '').trim().replace(/[.?!]+$/, '');
+const cited = c => `${c.claim} [${c.type}, ${c.year}]`;
+const me = () => (typeof ROLE_PERSON !== 'undefined' ? ROLE_PERSON[getRole()] : '') || 'Pavan Kumar';
+const brandTone = () => (E.brandPack().voice || {}).preset || 'Direct';
+const fmtWhen = t => { if (!t) return '—'; const d = Math.round((Date.now() - t) / 864e5); return d <= 0 ? 'Today' : d === 1 ? 'Yesterday' : d < 7 ? d + ' days ago' : fmtDate(t); };
+
+/* ─── Store ─── */
+function loadStore() { try { return JSON.parse(localStorage.getItem(ST_KEY) || 'null'); } catch (e) { return null; } }
+function saveStore() { try { localStorage.setItem(ST_KEY, JSON.stringify(S)); } catch (e) {} }
+let S = loadStore();
+
+/* ─── The writer: one router, one set of instructions per content type ─── */
+const LAYOUT = {
+  blog:       { Short: ['title', 'intro', 'why', 'proof', 'cta'], Medium: ['title', 'intro', 'why', 'questions', 'proof', 'objection', 'cta'],
+                Long: ['title', 'intro', 'why', 'steps', 'questions', 'proof', 'objection', 'pitfalls', 'cta'] },
+  whitepaper: { Short: ['title', 'summary', 'challenge', 'steps', 'proof', 'cta'], Medium: ['title', 'summary', 'challenge', 'good', 'steps', 'proof', 'questions', 'cta'],
+                Long: ['title', 'summary', 'challenge', 'good', 'steps', 'pitfalls', 'proof', 'questions', 'objection', 'cta'] },
+  email:      { Short: ['subject', 'greeting', 'ebody', 'ecta', 'closing'], Medium: ['subject', 'greeting', 'ebody', 'proof1', 'ecta', 'closing'],
+                Long: ['subject', 'greeting', 'ebody', 'ebody2', 'proof1', 'ecta', 'closing'] },
+  post:       { Short: ['hook', 'pcta'], Medium: ['hook', 'pline', 'pcta'], Long: ['hook', 'pline', 'proof1', 'pcta'] },
+  script:     { Short: ['title', 'sopener', 'squestions', 'sask'], Medium: ['title', 'sopener', 'squestions', 'sobjection', 'sask'],
+                Long: ['title', 'sopener', 'squestions', 'sproof', 'sobjection', 'sask'] },
+};
+const HEAD = {
+  why: ['Why it matters now', 'Why now, not later'], questions: ['Questions worth asking', 'Questions for your team'],
+  proof: ['What comparable sites did', 'Evidence from comparable sites'], objection: ['A common concern', 'What we often hear'],
+  cta: ['Next step', 'Where to start'], steps: ['A practical sequence', 'How to sequence the work'], pitfalls: ['Where plans slip', 'What to watch for'],
+  summary: ['Executive summary', 'In brief'], challenge: ['The challenge', 'What makes it hard'], good: ['What good looks like', 'The outcome to aim for'],
+  sopener: ['Opener', 'Opening'], squestions: ['Questions to ask', 'Discovery questions'], sproof: ['If they ask for proof', 'Proof to mention'],
+  sobjection: ['If they push back', 'The likely objection'], sask: ['The ask', 'Close'],
+};
+const LIST_ROLES = { questions: 'ul', squestions: 'ul', steps: 'ol' };
+const PROOF_ROLES = ['proof', 'proof1', 'sproof'];
+const GEN = {
+  title: (c, v) => [c.it.title, `${cap(c.topic)}: what to settle first`, `What comparable sites learned about ${lc(c.topic)}`][v % 3],
+  intro: (c, v) => [
+    `Most ${c.persona} we work with know the moment is coming. The question is whether they set the timing, or the timing is set for them. This post covers what to settle first, and what comparable sites did.`,
+    `${cap(c.topic)} rarely starts as a project. It starts as a question someone on site asks, and it's easier to answer while there's still time to plan. Here is how we'd approach it.`,
+    `If ${lc(c.topic)} is on your list this year, you're not alone. The sites that handled it well made a few decisions early. This post walks through them.`][v % 3],
+  why: (c, v) => [
+    `Timing is the hidden cost. ${noDot(c.fw.angle)}, and the decision stays in your hands: the work fits a window you choose, the people you need are booked, and nothing is rushed.`,
+    `Waiting rarely makes the decision easier. The options narrow as dates get closer, and the work ends up scheduled around constraints rather than around the plant.`,
+    `The earlier the question is asked, the more options there are. Planning early turns a forced change into a planned one.`][v % 3],
+  questions: (c, v) => [c.fw.questions.slice(), c.fw.questions.concat(['Who else needs to be part of the decision?']),
+    ['What has changed on site in the last two years?'].concat(c.fw.questions.slice(0, 2))][v % 3],
+  proof: (c, v) => {
+    const cl = c.claims.map(cited);
+    return [cl.join(' '), 'One example says more than a list of features. ' + cl.join(' '),
+      cl.slice().reverse().join(' ') + ' Your account team can share the full story.'][v % 3];
+  },
+  objection: (c, v) => [`"${noDot(c.fw.objection)}." ${c.fw.response}`, `We often hear: "${noDot(c.fw.objection)}." ${c.fw.response}`,
+    `It's fair to ask whether now is the time. ${c.fw.response}`][v % 3],
+  cta: (c, v) => [
+    'If this is on your list, a short conversation is a good place to start. We can share how comparable sites sequenced the work, and what they would do differently.',
+    'Start with one question: what would we need to know to plan this properly? If it helps, we can walk through it with your team.',
+    'Talk to your account team about where to start. A short call is usually enough to see whether it is worth planning now.'][v % 3],
+  steps: (c, v) => [
+    ['Agree the window you want to work in.', 'List what has to keep running, and what can stop.', 'Settle the scope with the people who will run it.', 'Plan the cutover, and the way back if something goes wrong.'],
+    ['Write down the date you cannot move.', 'Work back from it to the decisions you need.', 'Name one owner for each decision.'],
+    ['Start with what the site needs to keep doing.', 'Agree the scope before the design is fixed.', 'Book the people who know the current system.', 'Choose the window, then plan backwards.']][v % 3],
+  pitfalls: (c, v) => [
+    'Plans slip in predictable places. The scope grows after the design is fixed, the people who know the old system are not in the room, or the window is agreed before the work is understood. Naming these early is most of the cure.',
+    'Most delays trace back to one of three things: a scope that keeps moving, missing knowledge of the current system, or a window agreed too late.'][v % 2],
+  summary: (c, v) => [
+    `${cap(c.topic)} is a decision most ${c.persona} will face. This paper sets out what to decide first, a practical sequence, and what comparable sites did.`,
+    `This paper is for ${c.persona} looking at ${lc(c.topic)}. ${noDot(c.fw.angle)}: it covers the decisions to make early and how comparable sites approached them.`][v % 2],
+  challenge: (c, v) => [
+    "The difficulty is rarely technical. It's timing, scope and people: deciding before the date is forced, agreeing what is in and out, and keeping the people who know the site involved.",
+    'Every site has a version of the same problem. The current setup still runs, the people who know it are busy, and the next window is closer than it looks.'][v % 2],
+  good: (c, v) => [
+    'A good outcome looks ordinary. The work fits a window the site chose, the team knows the plan, and nothing surprises operations.',
+    'The aim is a change that operations barely notice: planned, scoped with the people who run the plant, and finished inside the window.'][v % 2],
+  subject: (c, v) => 'Subject: ' + [cap(c.topic.split(/\s+/).slice(0, 5).join(' ')), 'A question about your timing', 'Planning ahead, briefly'][v % 3],
+  greeting: c => c.voice.greeting.replace('{first}', '{first name}'),
+  ebody: (c, v) => [
+    `A quick thought on ${lc(c.topic)}: it's easier when it starts early, before the date is set for you. I'm writing to share how comparable sites approached it.`,
+    `A quick note on ${lc(c.topic)}. The sites that handled it well made a few decisions early, and I thought the sequence might be useful to you.`][v % 2],
+  ebody2: c => `${c.fw.questions[0]} If the answer is still open, that's usually the right moment to talk.`,
+  proof1: (c, v) => cited(c.claims[v % c.claims.length]),
+  ecta: (c, v) => ['Would a 20-minute call next week be useful?', "Is this on your list for this year? If so, I can share what comparable sites did."][v % 2],
+  closing: c => `${c.voice.closing}\n${c.signoff}`,
+  hook: (c, v) => [`${cap(c.topic)} is rarely decided by technology. It's decided by the calendar.`,
+    `One question we hear from ${c.persona} every week: ${c.fw.questions[0]}`, 'The best time to plan is before the date is set for you.'][v % 3],
+  pline: (c, v) => ['The sites that handled it well settled scope and timing early, kept the people who know the plant involved, and planned the way back as well as the way forward.',
+    "Three things we see again and again: decide the window first, agree the scope early, and don't lose the people who know the current system."][v % 2],
+  pcta: (c, v) => ["What's the one decision you'd want settled first?", 'If this is on your list, our team is happy to compare notes.'][v % 2],
+  sopener: (c, v) => [`Hi {first name}, this is {your name} from Client. I'm calling about ${lc(c.topic)}. Do you have two minutes?`,
+    `Hi {first name}, {your name} from Client. A quick one about ${lc(c.topic)}: is now a bad time?`][v % 2],
+  squestions: (c, v) => [c.fw.questions.slice(), c.fw.questions.concat(['What would make this worth a second conversation?'])][v % 2],
+  sproof: c => c.claims.map(cited).join(' '),
+  sobjection: c => `If they say "${noDot(c.fw.objection)}": ${c.fw.response}`,
+  sask: (c, v) => ['Would it be worth a short follow-up with the people who own the decision?', 'Can we put 30 minutes in the diary to go through it properly?'][v % 2],
+};
+// Extra sentences the writer can add when asked for more detail (no product claims).
+const MORE = ['That is usually where the real decisions sit.', 'It helps to write the answer down and share it with the people who run the plant.',
+  'Comparable sites found it easier once one person owned the plan.', 'None of this needs a decision today, only a date to decide by.'];
+
+const CONTRACT = [[/\bI'm\b/g, 'I am'], [/\bit's\b/g, 'it is'], [/\bIt's\b/g, 'It is'], [/\byou're\b/g, 'you are'], [/\bYou're\b/g, 'You are'],
+  [/\bdon't\b/g, 'do not'], [/\bcan't\b/g, 'cannot'], [/\bwon't\b/g, 'will not'], [/\bwe'll\b/g, 'we will'], [/\bwe'd\b/g, 'we would'],
+  [/\byou'd\b/g, 'you would'], [/\bWhat's\b/g, 'What is'], [/\bthat's\b/g, 'that is'], [/\bthere's\b/g, 'there is'], [/\bwe're\b/g, 'we are'],
+  [/\baren't\b/g, 'are not'], [/\bisn't\b/g, 'is not'], [/\bThey're\b/g, 'They are'], [/\bthey're\b/g, 'they are']];
+function toneize(text, tone, role) {
+  if (Array.isArray(text)) return text.map(t => toneize(t, tone, role));
+  let t = String(text);
+  if (tone === 'Formal') { for (const [a, b] of CONTRACT) t = t.replace(a, b); t = t.replace(/^Hi \{/, 'Dear {').replace(/^Hi\b/, 'Dear'); }
+  if (tone === 'Warm') {
+    if (role === 'intro' || role === 'summary') t += ' We hope it helps.';
+    if (role === 'cta' || role === 'ecta' || role === 'pcta') t += ' We would be glad to help.';
+  }
+  return t;
+}
+function ctxOf(it) {
+  const pack = E.brandPack();
+  const fw = (pack.framework && pack.framework[it.seg]) || E.PLAYBOOK[it.seg] || E.PLAYBOOK.Engagement;
+  return { it, fw, claims: E.approvedClaims().filter(c => (it.sources || []).includes(c.id)), topic: it.topic || it.title,
+    persona: PERSONA[it.seg] || 'teams', voice: E.VOICE_PRESETS[it.tone] || E.VOICE_PRESETS.Direct, signoff: (pack.voice && pack.voice.signoff) || 'Client Team' };
+}
+function genBlock(c, role, v) {
+  const text = toneize(GEN[role](c, v), c.it.tone, role);
+  const tag = role === 'title' ? 'h1' : LIST_ROLES[role] || 'p';
+  return { tag, role, v, text };
+}
+// The plan for a whole document: the sections for this type and length, with headings.
+function generate(it) {
+  const c = ctxOf(it), out = [];
+  for (const role of LAYOUT[it.type][it.length]) {
+    if (PROOF_ROLES.includes(role) && !c.claims.length) continue;     // no approved source, no proof section
+    if (HEAD[role] && it.type !== 'email' && it.type !== 'post') out.push({ tag: 'h2', role: 'h:' + role, v: 0, text: HEAD[role][0] });
+    out.push(genBlock(c, role, 0));
+  }
+  return out;
+}
+function blockInner(b) {
+  if (b.tag === 'ul' || b.tag === 'ol') return b.text.map(i => `<li>${esc(i)}</li>`).join('');
+  return esc(b.text).replace(/\n/g, '<br>');
+}
+const blockHtml = b => `<${b.tag} data-b="${uid()}" data-role="${b.role}" data-v="${b.v || 0}">${blockInner(b)}</${b.tag}>`;
+const docHtml = blocks => blocks.map(blockHtml).join('');
+
+/* ─── Seed: two campaigns and a few pieces, so the library isn't empty on first open ─── */
+// The approved sources a piece actually cites, read back through the claim check.
+const citedIn = it => E.checkContent(textOfHtml(it.html)).claims.filter(c => c.verified).map(c => c.source.split(' · ')[0]);
+function newItem(o) {
+  const it = Object.assign({ id: uid(), type: 'blog', title: '', topic: '', campaign: '', seg: 'Modernisation', tone: brandTone(), length: 'Medium',
+    sources: [], notes: '', status: 'Draft', brandV: E.brandPack().v, created: Date.now(), updated: Date.now(), by: me(), chat: [], versions: [] }, o);
+  if (!it.title) it.title = it.topic;
+  it.html = docHtml(generate(it));
+  if (!it.chat.length) { const used = citedIn(it);
+    it.chat = [{ who: 'ai', text: `Drafted with the ${TYPES[it.type].skill} instructions and Brand v${it.brandV}: ${it.tone} voice, ${it.length.toLowerCase()} length. ` +
+      (used.length ? `Cites ${used.join(', ')} word for word.` : 'It makes no product claims.') + '\n\nClick any paragraph to change just that one, or tell me what to change in the whole piece.' }]; }
+  return it;
+}
+function seed() {
+  const d = n => Date.now() - n * 864e5;
+  const c1 = { id: 'c1', name: 'Legacy modernisation, Q4', seg: 'Modernisation', goal: 'Book site assessments with sites running end-of-support control systems', dates: 'Oct – Dec 2026', created: d(12), by: 'Pavan Kumar' };
+  const c2 = { id: 'c2', name: 'Service renewal check-ins', seg: 'Service renewal', goal: 'Review cover with customers whose contract renews in the next 90 days', dates: 'Nov 2026 – Jan 2027', created: d(6), by: 'Pavan Kumar' };
+  const items = [
+    newItem({ type: 'blog', title: 'Plan the migration before end of support sets the date', topic: 'control system migration', campaign: 'c1', seg: 'Modernisation', sources: ['CS-01', 'OP-02'], status: 'Ready', created: d(10), updated: d(3), by: 'Pavan Kumar' }),
+    newItem({ type: 'email', title: 'Migration planning: first-touch email', topic: 'planning your control system migration', campaign: 'c1', seg: 'Modernisation', sources: ['CS-01'], length: 'Medium', created: d(4), updated: d(2), by: 'Sofia Ahlgren' }),
+    newItem({ type: 'whitepaper', title: 'Modernising legacy control systems: a planning guide', topic: 'legacy control system modernisation', campaign: 'c1', seg: 'Modernisation', sources: ['CS-01', 'OP-02', 'BR-03'], length: 'Long', created: d(9), updated: d(1), by: 'Pavan Kumar' }),
+    newItem({ type: 'post', title: 'Renewal season: check the cover still fits', topic: 'service contract renewal', campaign: 'c2', seg: 'Service renewal', sources: ['BR-03'], length: 'Long', status: 'Ready', created: d(5), updated: d(5), by: 'Sofia Ahlgren' }),
+    newItem({ type: 'script', title: 'Renewal review call', topic: 'your service renewal', campaign: 'c2', seg: 'Service renewal', sources: ['BR-03'], created: d(2), updated: d(2), by: 'Sofia Ahlgren' }),
+  ];
+  // One piece with an edit that the checks catch, so the library shows what a flagged piece looks like.
+  items[1].html = items[1].html.replace('Would a 20-minute call next week be useful?', 'Our approach is guaranteed to cut downtime. Would a 20-minute call next week be useful?');
+  return { v: 1, campaigns: [c1, c2], items };
+}
+if (!S || !S.items) { S = seed(); saveStore(); }
+
+/* ─── Checks: the same brand and claim checks the outreach drafts get ─── */
+function textOfHtml(html) { const d = document.createElement('div'); d.innerHTML = html; return blocksText(d); }
+function blocksText(root) {
+  return Array.from(root.children).map(el => (el.tagName === 'UL' || el.tagName === 'OL') ? Array.from(el.children).map(li => li.textContent).join('\n') : el.innerText || el.textContent).join('\n');
+}
+function checksOf(it) { return E.checkContent(textOfHtml(it.html)); }
+const issuesOf = chk => chk.flags.length + chk.unsupported.length;
+function checkTag(chk) {
+  const n = issuesOf(chk);
+  return n ? `<span class="tag tag-red">${n} to fix</span>` : `<span class="tag tag-green">Checks pass</span>`;
+}
+const statusTag = s => s === 'Ready' ? '<span class="tag tag-green">Ready to use</span>' : '<span class="tag tag-grey">Draft</span>';
+const typeTag = t => `<span class="tag tag-violet">${TYPES[t].label}</span>`;
+const campOf = id => S.campaigns.find(c => c.id === id);
+const itemOf = id => S.items.find(i => i.id === id);
+
+/* ─── Views ─── */
+let VIEW = { tab: 'library', camp: null, item: null };
+let LF = { type: '', status: '', camp: '', q: '' };
+function render() {
+  const main = document.getElementById('mainArea');
+  if (VIEW.item && itemOf(VIEW.item)) { renderEditor(main); return; }
+  VIEW.item = null;
+  const tabs = `<div class="ftabs">
+    <div class="ftab ${VIEW.tab === 'library' ? 'active' : ''}" onclick="go('library')">Library <span class="ftab-cnt">${S.items.length}</span></div>
+    <div class="ftab ${VIEW.tab === 'campaigns' ? 'active' : ''}" onclick="go('campaigns')">Campaigns <span class="ftab-cnt">${S.campaigns.length}</span></div></div>`;
+  const top = `<div class="topbar"><div class="topbar-l"><span class="tb-title">Content studio</span>
+      <span class="sub">Blogs, whitepapers, emails, posts and call scripts in the client's brand voice</span></div>
+    <div class="topbar-r"><button class="btn btn-primary" onclick="openNew()">+ New content</button></div></div>`;
+  main.innerHTML = top + tabs + `<div class="canvas" id="canvas">${VIEW.tab === 'campaigns' ? (VIEW.camp ? campaignDetail() : campaignsView()) : libraryView()}</div>`;
+}
+function go(tab) { VIEW = { tab, camp: null, item: null }; render(); }
+
+function libraryView() {
+  const all = S.items.slice().sort((a, b) => b.updated - a.updated);
+  const withChk = all.map(it => ({ it, chk: checksOf(it) }));
+  const ready = withChk.filter(x => x.it.status === 'Ready').length, fix = withChk.filter(x => issuesOf(x.chk)).length;
+  const tile = (lbl, val, sub, cls, on, click) => `<div class="stat stat-link" style="cursor:pointer;${on ? 'background:var(--brand-lt)' : ''}" onclick="${click}">
+      <div class="stat-lbl">${lbl}</div><div class="stat-val ${cls}">${val}</div><div class="stat-sub">${sub}</div></div>`;
+  const stats = `<div class="stats" style="grid-template-columns:repeat(4,1fr)">
+    ${tile('Content pieces', all.length, 'In the library', 'sv5', !LF.status && !LF.fix, "setLF({status:'',fix:false})")}
+    ${tile('Ready to use', ready, 'Checks pass, marked ready', 'sv4', LF.status === 'Ready', "setLF({status:'Ready',fix:false})")}
+    ${tile('Need a fix', fix, 'A brand or claim check failed', 'sv3', LF.fix, "setLF({fix:true,status:''})")}
+    ${tile('Campaigns', S.campaigns.length, 'Content grouped by campaign', 'sv1', false, "go('campaigns')")}</div>`;
+  const counts = t => all.filter(i => i.type === t).length;
+  const chips = `<button class="fchip ${!LF.type ? 'on' : ''}" onclick="setLF({type:''})">All types</button>` +
+    Object.keys(TYPES).map(t => `<button class="fchip ${LF.type === t ? 'on' : ''}" onclick="setLF({type:'${t}'})">${TYPES[t].label}<span class="n">${counts(t)}</span></button>`).join('');
+  const campSel = `<select class="sel" style="width:auto;height:30px;padding:0 8px" onchange="setLF({camp:this.value})">
+      <option value="">All campaigns</option><option value="none" ${LF.camp === 'none' ? 'selected' : ''}>No campaign</option>
+      ${S.campaigns.map(c => `<option value="${c.id}" ${LF.camp === c.id ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select>`;
+  let rows = withChk.filter(({ it, chk }) => (!LF.type || it.type === LF.type) && (!LF.status || it.status === LF.status) && (!LF.fix || issuesOf(chk))
+    && (!LF.camp || (LF.camp === 'none' ? !it.campaign : it.campaign === LF.camp))
+    && (!LF.q || (it.title + ' ' + it.topic).toLowerCase().includes(LF.q.toLowerCase())));
+  return stats + `<div class="filters">${chips}<span style="flex:1"></span>${campSel}
+      <input class="search" placeholder="Search titles" value="${esc(LF.q)}" oninput="LF.q=this.value;clearTimeout(window._sq);window._sq=setTimeout(()=>{render();const s=document.querySelector('.search');s.focus();s.setSelectionRange(s.value.length,s.value.length);},250)"></div>
+    <div class="panel">${itemsTable(rows, true)}</div>`;
+}
+function setLF(o) { Object.assign(LF, o); render(); }
+function itemsTable(rows, showCamp) {
+  if (!rows.length) return `<div class="empty">Nothing here yet. <a href="#" onclick="openNew();return false" style="color:var(--brand)">Create content</a></div>`;
+  return `<table class="ltbl"><thead><tr><th>Title</th><th>Type</th>${showCamp ? '<th>Campaign</th>' : ''}<th>Tone · length</th><th>Brand checks</th><th>Status</th><th>Updated</th><th></th></tr></thead><tbody>
+    ${rows.map(({ it, chk }) => { const cp = campOf(it.campaign); return `<tr class="row" onclick="openItem('${it.id}')">
+      <td><div class="t-title">${esc(it.title)}</div><div class="t-sub">${esc(AUDIENCE[it.seg] || it.seg)} · Brand v${it.brandV}</div></td>
+      <td>${typeTag(it.type)}</td>
+      ${showCamp ? `<td>${cp ? `<a href="#" onclick="event.stopPropagation();openCamp('${cp.id}');return false" style="color:var(--i1)">${esc(cp.name)}</a>` : '<span class="sub">None</span>'}</td>` : ''}
+      <td class="sub">${it.tone} · ${it.length}</td><td>${checkTag(chk)}</td><td>${statusTag(it.status)}</td>
+      <td><div>${fmtWhen(it.updated)}</div><div class="t-sub">${esc(it.by)}</div></td>
+      <td style="white-space:nowrap;text-align:right"><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();dupItem('${it.id}')">Duplicate</button>
+        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();delItem('${it.id}')">Delete</button></td></tr>`; }).join('')}
+    </tbody></table>`;
+}
+function dupItem(id) { const s = itemOf(id), c = JSON.parse(JSON.stringify(s)); Object.assign(c, { id: uid(), title: s.title + ' (copy)', status: 'Draft', created: Date.now(), updated: Date.now(), by: me(), chat: [], versions: [] }); S.items.push(c); saveStore(); render(); showToast('Duplicated as a draft'); }
+function delItem(id) { const s = itemOf(id); if (!confirm(`Delete "${s.title}" from the library?`)) return; S.items = S.items.filter(i => i.id !== id); saveStore(); render(); showToast('Deleted'); }
+
+function campaignsView() {
+  return `<p class="sub" style="margin:0 0 12px">A campaign groups the content for one push: a blog, the emails, the posts and the call script that go with it. Create content from inside a campaign, or attach a piece you already have.</p>
+  <div class="camp-grid">${S.campaigns.map(c => {
+    const its = S.items.filter(i => i.campaign === c.id);
+    const by = Object.keys(TYPES).map(t => [t, its.filter(i => i.type === t).length]).filter(x => x[1]);
+    const ready = its.filter(i => i.status === 'Ready').length;
+    return `<div class="camp" onclick="openCamp('${c.id}')"><div class="camp-nm">${esc(c.name)}</div><div class="sub">${esc(c.goal)}</div>
+      <div class="camp-meta">${by.map(([t, n]) => `<span class="tag tag-violet">${n} ${TYPES[t].label.toLowerCase()}${n > 1 ? 's' : ''}</span>`).join('') || '<span class="tag tag-grey">No content yet</span>'}</div>
+      <div class="kv"><span>Audience <b>${esc(AUDIENCE[c.seg] || c.seg)}</b></span><span>${esc(c.dates || '')}</span><span><b>${ready}</b> of ${its.length} ready</span></div></div>`;
+  }).join('')}<div class="camp camp-new" onclick="openNewCampaign()">+ New campaign</div></div>`;
+}
+function openCamp(id) { VIEW = { tab: 'campaigns', camp: id, item: null }; render(); }
+function campaignDetail() {
+  const c = campOf(VIEW.camp); if (!c) { VIEW.camp = null; return campaignsView(); }
+  const its = S.items.filter(i => i.campaign === c.id).sort((a, b) => b.updated - a.updated);
+  const missing = Object.keys(TYPES).filter(t => !its.some(i => i.type === t));
+  return `<div class="tb-crumb" style="margin-bottom:10px"><a onclick="go('campaigns')">Campaigns</a> / <b>${esc(c.name)}</b></div>
+    <div class="chead"><div><h2>${esc(c.name)}</h2><div class="sub">${esc(c.goal)}</div>
+      <div class="kv"><span>Audience <b>${esc(AUDIENCE[c.seg] || c.seg)}</b></span><span>Dates <b>${esc(c.dates || '—')}</b></span><span>Created by <b>${esc(c.by)}</b></span></div></div>
+      <div style="display:flex;gap:8px"><button class="btn btn-sec" onclick="openAttach('${c.id}')">Add existing content</button>
+      <button class="btn btn-primary" onclick="openNew({campaign:'${c.id}'})">+ New content in this campaign</button></div></div>
+    ${missing.length && its.length ? `<div class="sub" style="margin-bottom:10px">Not in this campaign yet: ${missing.map(t => `<a href="#" style="color:var(--brand)" onclick="openNew({campaign:'${c.id}',type:'${t}'});return false">${TYPES[t].label.toLowerCase()}</a>`).join(', ')}</div>` : ''}
+    <div class="panel">${itemsTable(its.map(it => ({ it, chk: checksOf(it) })), false)}</div>`;
+}
+function openAttach(cid) {
+  const free = S.items.filter(i => i.campaign !== cid);
+  modal(`Add content to ${esc(campOf(cid).name)}`, free.length ? `<div class="srcs">${free.map(i => `<label class="src"><input type="checkbox" value="${i.id}">
+      <div><b>${esc(i.title)}</b><div>${TYPES[i.type].label} · ${i.campaign ? 'now in ' + esc(campOf(i.campaign).name) : 'no campaign'}</div></div></label>`).join('')}</div>` : '<div class="sub">Everything in the library is already in this campaign.</div>',
+    `<span></span><div style="display:flex;gap:8px"><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="doAttach('${cid}')">Add to campaign</button></div>`);
+}
+function doAttach(cid) {
+  const ids = Array.from(document.querySelectorAll('.mdl .src input:checked')).map(x => x.value);
+  ids.forEach(id => { itemOf(id).campaign = cid; }); saveStore(); closeModal(); render(); if (ids.length) showToast(`${ids.length} added to the campaign`);
+}
+function openNewCampaign(after) {
+  modal('New campaign', `<div><label class="lbl">Name</label><input class="inp" id="ncName" placeholder="e.g. Project season, spring"></div>
+    <div><label class="lbl">Goal</label><input class="inp" id="ncGoal" placeholder="What this campaign should achieve"></div>
+    <div class="row2"><div><label class="lbl">Audience</label><select class="sel" id="ncSeg">${Object.keys(AUDIENCE).map(k => `<option value="${k}">${AUDIENCE[k]}</option>`).join('')}</select></div>
+    <div><label class="lbl">Dates</label><input class="inp" id="ncDates" placeholder="e.g. Jan – Mar 2027"></div></div>`,
+    `<span></span><div style="display:flex;gap:8px"><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="saveCampaign(${after ? 'true' : 'false'})">Create campaign</button></div>`);
+  setTimeout(() => document.getElementById('ncName').focus(), 30);
+}
+function saveCampaign(backToNew) {
+  const name = document.getElementById('ncName').value.trim();
+  if (!name) { showToast('Give the campaign a name'); return; }
+  const c = { id: uid(), name, goal: document.getElementById('ncGoal').value.trim() || '—', seg: document.getElementById('ncSeg').value, dates: document.getElementById('ncDates').value.trim(), created: Date.now(), by: me() };
+  S.campaigns.push(c); saveStore(); closeModal();
+  if (backToNew) { NEWF.campaign = c.id; NEWF.seg = c.seg; openNew(); } else openCamp(c.id);
+}
+
+/* ─── Modal helper (Flowbite modal pattern) ─── */
+function modal(title, body, foot, wide) {
+  closeModal();
+  const ov = document.createElement('div'); ov.className = 'mov'; ov.id = 'mov';
+  ov.innerHTML = `<div class="mdl" style="${wide ? 'max-width:720px' : ''}"><div class="mdl-h"><h3>${title}</h3><button class="tbtn" onclick="closeModal()" aria-label="Close">✕</button></div>
+    <div class="mdl-b">${body}</div><div class="mdl-f">${foot}</div></div>`;
+  ov.addEventListener('mousedown', e => { if (e.target === ov) closeModal(); });
+  document.body.appendChild(ov);
+}
+function closeModal() { const m = document.getElementById('mov'); if (m) m.remove(); }
+
+/* ─── New content: type, topic, campaign, audience, tone, length, approved sources ─── */
+let NEWF = null;
+function openNew(pre) {
+  if (pre || !NEWF) {
+    const cp = pre && pre.campaign ? campOf(pre.campaign) : null;
+    NEWF = Object.assign({ type: 'blog', topic: '', campaign: '', seg: cp ? cp.seg : 'Modernisation', tone: brandTone(), length: 'Medium', notes: '' }, pre || {});
+    NEWF.sources = E.approvedClaims().filter(c => c.segments.includes(NEWF.seg)).map(c => c.id);
+  }
+  const f = NEWF, pack = E.brandPack(), vc = pack.voice, bt = brandTone();
+  const claims = E.approvedClaims(), mine = claims.filter(c => c.segments.includes(f.seg)), other = claims.filter(c => !c.segments.includes(f.seg));
+  const src = c => `<label class="src"><input type="checkbox" value="${c.id}" ${f.sources.includes(c.id) ? 'checked' : ''} onchange="NEWF.sources=Array.from(document.querySelectorAll('#nfSrc input:checked')).map(x=>x.value)">
+      <div><b>${c.id} · ${esc(c.title)}</b> <span class="sub">${c.type}, ${c.year}</span><div>${esc(c.claim)}</div></div></label>`;
+  modal('New content', `
+    <div><label class="lbl">What are you writing?</label><div class="types">${Object.keys(TYPES).map(t => `<button class="type ${f.type === t ? 'on' : ''}" onclick="nf({type:'${t}'})"><span class="ic">${TYPES[t].ic}</span>${TYPES[t].label}</button>`).join('')}</div>
+      <div class="sub" style="margin-top:6px">${TYPES[f.type].about}.</div></div>
+    <div><label class="lbl">Topic or working title</label><input class="inp" id="nfTopic" value="${esc(f.topic)}" oninput="NEWF.topic=this.value" placeholder="${f.type === 'email' ? 'e.g. planning your control system migration' : 'e.g. Plan the migration before end of support sets the date'}"></div>
+    <div class="row2">
+      <div><label class="lbl">Campaign</label><select class="sel" onchange="if(this.value==='+'){openNewCampaign(true);return;} const c=campOf(this.value); nf({campaign:this.value, seg:c?c.seg:NEWF.seg, resetSrc:!!c})">
+        <option value="">No campaign</option>${S.campaigns.map(c => `<option value="${c.id}" ${f.campaign === c.id ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}<option value="+">+ New campaign…</option></select></div>
+      <div><label class="lbl">Audience</label><select class="sel" onchange="nf({seg:this.value,resetSrc:true})">${Object.keys(AUDIENCE).map(k => `<option value="${k}" ${f.seg === k ? 'selected' : ''}>${AUDIENCE[k]}</option>`).join('')}</select></div>
+    </div>
+    <div class="row2">
+      <div><label class="lbl">Tone</label><div class="seg">${TONES.map(t => `<button class="${f.tone === t ? 'on' : ''}" onclick="nf({tone:'${t}'})">${t}${t === bt ? ' ★' : ''}</button>`).join('')}</div>
+        <div class="sub" style="margin-top:5px">★ Brand default. ${esc(E.VOICE_PRESETS[f.tone].about)}</div></div>
+      <div><label class="lbl">Length</label><div class="seg">${LENGTHS.map(l => `<button class="${f.length === l ? 'on' : ''}" onclick="nf({length:'${l}'})">${l}</button>`).join('')}</div>
+        <div class="sub" style="margin-top:5px">${LAYOUT[f.type][f.length].length} parts: ${LAYOUT[f.type][f.length].map(r => r === 'title' ? 'title' : (HEAD[r] ? HEAD[r][0] : r.replace(/^[ep]/, '')).toLowerCase()).join(', ')}</div></div>
+    </div>
+    <div><label class="lbl">Approved sources it may cite</label>
+      <div class="srcs" id="nfSrc">${mine.map(src).join('')}${other.length ? `<details><summary class="sub" style="cursor:pointer;margin:4px 0">Other approved sources (${other.length})</summary><div class="srcs">${other.map(src).join('')}</div></details>` : ''}</div>
+      <div class="sub" style="margin-top:6px">Only these can be cited, word for word. Anything else that reads like a product claim is flagged before the piece can be marked ready.</div></div>
+    <div><label class="lbl">Anything else the writer should know? <span class="sub">(optional)</span></label><textarea class="ta" id="nfNotes" oninput="NEWF.notes=this.value" placeholder="e.g. mention the two-day site assessment">${esc(f.notes)}</textarea></div>
+    <div class="brandbox"><b>Brand v${pack.v} applies automatically.</b> ${esc(vc.preset)} voice${f.tone !== bt ? ` (adjusted to ${f.tone} for this piece)` : ''}, ${pack.negative.length} banned words checked, sentences under ${vc.maxSentenceWords} words${vc.noExclamation ? ', no exclamation marks' : ''}, signed "${esc(vc.signoff)}". Maintained in the <a href="07-content.html" style="color:var(--brand-dk)">Content library</a>.</div>`,
+    `<span class="sub">Writer → <span class="skill">${TYPES[f.type].skill}</span> instructions</span>
+     <div style="display:flex;gap:8px"><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="createItem()">Generate draft</button></div>`, true);
+}
+function nf(o) {
+  const reset = o.resetSrc; delete o.resetSrc; Object.assign(NEWF, o);
+  if (reset) NEWF.sources = E.approvedClaims().filter(c => c.segments.includes(NEWF.seg)).map(c => c.id);
+  const sc = document.querySelector('.mdl-b') ? document.querySelector('.mdl-b').scrollTop : 0;
+  openNew(); const b = document.querySelector('.mdl-b'); if (b) b.scrollTop = sc;
+}
+function createItem() {
+  const f = NEWF, topic = f.topic.trim();
+  if (!topic) { showToast('Add a topic or working title'); document.getElementById('nfTopic').focus(); return; }
+  const it = newItem({ type: f.type, title: topic, topic, campaign: f.campaign, seg: f.seg, tone: f.tone, length: f.length, sources: f.sources.slice(), notes: f.notes.trim() });
+  const used = citedIn(it);
+  it.chat = [{ who: 'me', text: `Write a ${TYPES[f.type].label.toLowerCase()} on "${topic}" for ${lc(AUDIENCE[f.seg])}. ${f.tone}, ${f.length.toLowerCase()}.` },
+    { who: 'ai', text: `Here's a first draft, written with the ${TYPES[f.type].skill} instructions and Brand v${it.brandV}: ${f.tone} voice, banned words and sentence length checked. ` +
+      (used.length ? `It cites ${used.length} approved source${used.length > 1 ? 's' : ''} word for word (${used.join(', ')}).` : f.sources.length ? 'This length has no proof section, so it makes no product claims. Ask me to add proof.' : 'No approved source was selected, so it makes no product claims.') +
+      `\n\nClick any paragraph to change just that one, or tell me what to change in the whole piece.` }];
+  S.items.push(it); saveStore(); NEWF = null; closeModal();
+  VIEW = { tab: VIEW.tab, camp: VIEW.camp, item: it.id }; render();
+  if (it.notes) setTimeout(() => sendChat(it.notes), 300);
+}
+function openItem(id) { VIEW = { tab: VIEW.tab, camp: VIEW.camp, item: id }; render(); }
+
+/* ─── Editor: chat on the left, the document on the right ─── */
+let TARGET = null, DIRTY = false, UNDO = [];
+function cur() { return itemOf(VIEW.item); }
+function renderEditor(main) {
+  const it = cur(), cp = campOf(it.campaign);
+  TARGET = null; DIRTY = false; UNDO = [];
+  const back = VIEW.camp ? `<a onclick="leaveEditor()">${esc(cp ? cp.name : 'Campaign')}</a>` : `<a onclick="leaveEditor()">Content studio</a>`;
+  main.innerHTML = `<div class="topbar"><div class="topbar-l"><div class="tb-crumb">${back} / <b id="crumbTitle">${esc(it.title)}</b></div>
+      ${typeTag(it.type)} <span id="stTag">${statusTag(it.status)}</span><span class="sub" id="dirtyLbl"></span></div>
+    <div class="topbar-r savebar">
+      <div class="dd"><button class="btn btn-sec" onclick="toggleDD('ddDl',event)">Download ▾</button>
+        <div class="ddm" id="ddDl"><div class="h">Download</div><button onclick="dl('doc')">Word document (.doc)</button><button onclick="dl('pdf')">PDF (print)</button><button onclick="dl('md')">Markdown (.md)</button><button onclick="dl('html')">Web page (.html)</button><button onclick="dl('copy')">Copy text</button></div></div>
+      <button class="btn btn-sec" onclick="saveDoc()">Save to library</button>
+      <button class="btn btn-primary" id="readyBtn" onclick="markReady()">${it.status === 'Ready' ? 'Back to draft' : 'Mark ready'}</button></div></div>
+    <div class="studio" style="flex:1;min-height:0">
+      <div class="chat"><div class="chat-h"><div class="t">Writer</div><div class="sub">Uses the <span class="skill">${TYPES[it.type].skill}</span> instructions and Brand v${it.brandV}. It only cites approved sources.</div></div>
+        <div class="msgs" id="msgs"></div><div id="targetBar"></div><div class="chips" id="chips"></div>
+        <div class="composer"><textarea id="chatIn" placeholder="Tell the writer what to change…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat();}"></textarea>
+          <button class="btn btn-primary" style="height:40px" onclick="sendChat()">Send</button></div></div>
+      <div class="docside">
+        <div class="doc-tools">
+          <button class="tbtn" title="Bold" onmousedown="event.preventDefault()" onclick="fmt('bold')"><b>B</b></button>
+          <button class="tbtn" title="Italic" onmousedown="event.preventDefault()" onclick="fmt('italic')"><i>I</i></button>
+          <button class="tbtn" title="Underline" onmousedown="event.preventDefault()" onclick="fmt('underline')"><u>U</u></button>
+          <span class="tsep"></span>
+          <button class="tbtn" title="Heading" onmousedown="event.preventDefault()" onclick="fmt('formatBlock','H2')">H</button>
+          <button class="tbtn" title="Paragraph" onmousedown="event.preventDefault()" onclick="fmt('formatBlock','P')">¶</button>
+          <button class="tbtn" title="Bulleted list" onmousedown="event.preventDefault()" onclick="fmt('insertUnorderedList')">•</button>
+          <button class="tbtn" title="Numbered list" onmousedown="event.preventDefault()" onclick="fmt('insertOrderedList')">1.</button>
+          <button class="tbtn" title="Quote" onmousedown="event.preventDefault()" onclick="fmt('formatBlock','BLOCKQUOTE')">❝</button>
+          <button class="tbtn" title="Link" onmousedown="event.preventDefault()" onclick="addLink()">🔗</button>
+          <span class="tsep"></span>
+          <button class="tbtn" title="Undo" onmousedown="event.preventDefault()" onclick="undoAny()">↶</button>
+          <button class="tbtn" title="Redo" onmousedown="event.preventDefault()" onclick="fmt('redo')">↷</button>
+          <span class="tsep"></span>
+          <span class="lab">Tone</span><select class="sel" style="width:auto;height:28px;padding:0 6px" onchange="setTone(this.value)">${TONES.map(t => `<option ${it.tone === t ? 'selected' : ''}>${t}</option>`).join('')}</select>
+          <span class="lab">Length</span><select class="sel" style="width:auto;height:28px;padding:0 6px" onchange="setLength(this.value)">${LENGTHS.map(l => `<option ${it.length === l ? 'selected' : ''}>${l}</option>`).join('')}</select>
+          <span class="sp"></span><span class="sub" id="wc"></span></div>
+        <div class="doc-scroll" id="docScroll">
+          <div class="paper-meta">${typeTag(it.type)}<span class="tag tag-grey">${esc(AUDIENCE[it.seg] || it.seg)}</span><span class="tag tag-blue">Brand v${it.brandV}</span><span style="flex:1"></span><span class="sub">Campaign</span><select class="sel" style="width:auto;max-width:220px;height:26px;padding:0 6px;font-size:12px" onchange="setCampaign(this.value)"><option value="">None</option>${S.campaigns.map(c => `<option value="${c.id}" ${it.campaign === c.id ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select></div>
+          <div class="paper" style="position:relative"><div id="doc" contenteditable="true" spellcheck="true">${it.html}</div>
+            <div class="gutter" id="gutter"><button onclick="regenTarget()">↻ Regenerate</button><button onclick="askTarget()">✎ Ask to change</button><button onclick="removeTarget()">✕</button></div></div>
+          <div class="checks panel" style="padding:12px 14px" id="checks"></div>
+        </div></div></div>`;
+  const doc = document.getElementById('doc');
+  doc.addEventListener('click', e => { const b = e.target.closest('#doc > *'); selectBlock(b); });
+  doc.addEventListener('input', () => { markEdited(); tagBlocks(); setDirty(true); clearTimeout(window._ck); window._ck = setTimeout(runChecks, 350); });
+  document.getElementById('docScroll').addEventListener('scroll', placeGutter);
+  tagBlocks(); renderChat(); runChecks();
+}
+function leaveEditor() {
+  if (DIRTY && !confirm('You have changes that are not saved to the library. Leave anyway?')) return;
+  VIEW.item = null; render();
+}
+function setDirty(v) { DIRTY = v; const l = document.getElementById('dirtyLbl'); if (l) l.textContent = v ? '· Unsaved changes' : ''; }
+function tagBlocks() {
+  const doc = document.getElementById('doc'); if (!doc) return;
+  Array.from(doc.children).forEach(el => { if (!el.dataset.b) { el.dataset.b = uid(); el.dataset.role = el.dataset.role || 'free'; } });
+  const words = (doc.innerText || '').split(/\s+/).filter(Boolean).length;
+  const wc = document.getElementById('wc'); if (wc) wc.textContent = `${words} words · ${Math.max(1, Math.round(words / 220))} min read`;
+}
+function markEdited() {
+  const sel = window.getSelection(); if (!sel.rangeCount) return;
+  const n = sel.anchorNode && (sel.anchorNode.nodeType === 1 ? sel.anchorNode : sel.anchorNode.parentElement);
+  const b = n && n.closest && n.closest('#doc > *'); if (b) b.dataset.edited = '1';
+}
+function selectBlock(b) {
+  document.querySelectorAll('#doc > .sel').forEach(x => x.classList.remove('sel'));
+  TARGET = b && b.dataset.b ? b.dataset.b : null;
+  if (TARGET) b.classList.add('sel');
+  placeGutter(); renderTarget();
+}
+function targetEl() { return TARGET ? document.querySelector(`#doc > [data-b="${TARGET}"]`) : null; }
+function placeGutter() {
+  const g = document.getElementById('gutter'), b = targetEl(); if (!g) return;
+  if (!b) { g.style.display = 'none'; return; }
+  g.style.display = 'flex'; g.style.top = Math.max(4, b.offsetTop - 28) + 'px'; g.style.right = '56px';
+}
+function blockLabel(b) {
+  const r = b.dataset.role || 'free', t = (b.innerText || '').trim().replace(/\s+/g, ' ');
+  const kind = b.tagName === 'H1' ? 'Title' : b.tagName === 'H2' ? 'Heading' : (b.tagName === 'UL' || b.tagName === 'OL') ? 'List' : 'Paragraph';
+  return `${kind}: “${t.slice(0, 48)}${t.length > 48 ? '…' : ''}”` + (r === 'free' ? '' : '');
+}
+function renderTarget() {
+  const tb = document.getElementById('targetBar'), b = targetEl(); if (!tb) return;
+  tb.innerHTML = b ? `<div class="target"><span>Changing only · ${esc(blockLabel(b))}</span><button onclick="selectBlock(null)" title="Change the whole piece instead">✕</button></div>` : '';
+  renderChips();
+}
+function renderChips() {
+  const c = document.getElementById('chips'); if (!c) return;
+  const it = cur(), b = targetEl();
+  const opts = b ? ['Regenerate this', 'Make it shorter', 'Add more detail', 'Add proof', 'More formal'] :
+    ['Make it shorter', 'Add proof', 'Warmer tone', 'Rewrite the intro', 'Add a section on lifecycle planning'];
+  if (it.type === 'email' && !b) opts.splice(3, 1, 'New subject line');
+  c.innerHTML = opts.map(o => `<button class="chip" onclick="sendChat(${esc(JSON.stringify(o))})">${esc(o)}</button>`).join('') +
+    (UNDO.length ? `<button class="chip" style="background:#fff" onclick="undoAI()">↶ Undo last change</button>` : '');
+}
+function renderChat() {
+  const box = document.getElementById('msgs'), it = cur(); if (!box) return;
+  box.innerHTML = it.chat.map(m => `<div class="msg ${m.who}"><div class="who">${m.who === 'ai' ? 'Writer' : esc(m.by || 'You')}</div>${esc(m.text)}</div>`).join('');
+  box.scrollTop = box.scrollHeight; renderTarget();
+}
+function say(who, text) { cur().chat.push({ who, text, by: who === 'me' ? me() : undefined, at: Date.now() }); saveStore(); renderChat(); }
+function persistDoc() { const it = cur(), doc = document.getElementById('doc'); it.html = doc.innerHTML.replace(/ class="sel"/g, '').replace(/ class=""/g, ''); }
+function snapshot() { const d = document.getElementById('doc'); UNDO.push(d.innerHTML); if (UNDO.length > 20) UNDO.shift(); }
+function undoAI() { if (!UNDO.length) return; document.getElementById('doc').innerHTML = UNDO.pop(); TARGET = null; afterChange(); say('ai', 'Undone. The piece is back to how it was before my last change.'); }
+function undoAny() { if (UNDO.length && !document.activeElement.closest('#doc')) undoAI(); else fmt('undo'); }
+function afterChange(flashEl) {
+  tagBlocks(); persistDoc(); setDirty(true); runChecks(); placeGutter(); renderTarget();
+  if (flashEl) { flashEl.classList.remove('flash'); void flashEl.offsetWidth; flashEl.classList.add('flash'); }
+}
+function fmt(cmd, val) { document.getElementById('doc').focus(); document.execCommand(cmd, false, val || null); tagBlocks(); persistDoc(); setDirty(true); runChecks(); }
+function addLink() { const u = prompt('Link address'); if (u) fmt('createLink', u); }
+
+/* ─── Checks panel: brand rules and claims, live as you type ─── */
+let CHK_OPEN = false;
+function runChecks() {
+  const box = document.getElementById('checks'), doc = document.getElementById('doc'); if (!box || !doc) return;
+  const it = cur(), chk = E.checkContent(blocksText(doc)), n = issuesOf(chk), ver = chk.claims.filter(c => c.verified);
+  const pack = E.brandPack();
+  box.innerHTML = `<div class="chk-row"><b style="font-size:12.5px">Brand checks</b>
+      ${n ? `<span class="tag tag-red">${n} to fix before it can be marked ready</span>` : '<span class="tag tag-green">All checks pass</span>'}
+      <span class="tag tag-grey">Voice: ${esc(it.tone)}</span><span class="tag tag-grey">${pack.negative.length} banned words checked</span>
+      <span class="tag ${ver.length ? 'tag-blue' : 'tag-grey'}">${ver.length} claim${ver.length === 1 ? '' : 's'} verified</span>
+      ${chk.unsupported.length ? `<span class="tag tag-red">${chk.unsupported.length} unsupported claim${chk.unsupported.length > 1 ? 's' : ''}</span>` : ''}
+      <span style="flex:1"></span><a href="#" style="color:var(--brand);font-size:12px" onclick="CHK_OPEN=!CHK_OPEN;runChecks();return false">${CHK_OPEN ? 'Hide details' : 'Show details'}</a></div>
+    ${CHK_OPEN || n ? `<div class="chk-detail">
+      ${chk.flags.map(f => `<div><span class="badc">✕ ${esc(f.rule)}</span> · ${esc(f.detail)}</div>`).join('')}
+      ${chk.unsupported.map(c => `<div><span class="badc">✕ Claim with no approved source</span> · “${esc(c.text)}” <a href="#" style="color:var(--brand)" onclick="fixClaim(${esc(JSON.stringify(c.text))});return false">Remove it</a></div>`).join('')}
+      ${ver.map(c => `<div><span class="okc">✓ Verified claim</span> · “${esc(c.text)}” <span class="sub">— ${esc(c.source)}</span></div>`).join('')}
+      ${CHK_OPEN ? `<div class="sub" style="margin-top:4px">Rules from Brand v${pack.v}: no banned words or competitor names, no exclamation marks, sentences under ${pack.voice.maxSentenceWords} words, no pricing, sensitive topics go to compliance. A claim is verified only when it matches an approved source word for word.</div>` : ''}
+    </div>` : ''}`;
+  return chk;
+}
+function fixClaim(text) {
+  snapshot();
+  const doc = document.getElementById('doc');
+  for (const el of doc.querySelectorAll('p, li, blockquote')) {
+    if (el.textContent.includes(text)) {
+      const re = new RegExp('\\s*' + text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '[.?!]?');
+      el.innerHTML = el.innerHTML.replace(re, '').trim(); afterChange(el); say('ai', `Removed “${text}”. It reads like a product claim and no approved source backs it. If it's true, add the source to the Content library first and I can cite it.`); return;
+    }
+  }
+}
+
+/* ─── Changes: per paragraph or the whole piece ─── */
+function regenEl(el, toneOnly) {
+  const role = el.dataset.role, it = cur(), c = ctxOf(it);
+  if (role && role.startsWith('h:')) { const h = HEAD[role.slice(2)]; const v = (+el.dataset.v + 1) % h.length; el.dataset.v = v; el.textContent = h[v]; return true; }
+  if (!GEN[role] || (PROOF_ROLES.includes(role) && !c.claims.length)) return false;
+  const v = toneOnly ? +el.dataset.v : +el.dataset.v + 1, b = genBlock(c, role, v);
+  el.dataset.v = v; el.innerHTML = blockInner(b); delete el.dataset.edited; return true;
+}
+function regenTarget() { const el = targetEl(); if (!el) return; snapshot(); if (regenEl(el)) { afterChange(el); say('ai', `Regenerated that ${el.tagName === 'H1' ? 'title' : el.tagName === 'H2' ? 'heading' : 'paragraph'}. The rest of the piece is unchanged.`); } else { UNDO.pop(); say('ai', "You wrote that one yourself, so there's no generated version to swap in. Tell me what to change in it and I'll edit it."); } }
+function askTarget() { const i = document.getElementById('chatIn'); i.focus(); i.placeholder = 'What should change in this paragraph?'; }
+function removeTarget() { const el = targetEl(); if (!el) return; snapshot(); el.remove(); TARGET = null; afterChange(); say('ai', 'Removed that part.'); }
+const sentences = t => String(t).split(/(?<=[.?!])\s+(?!\[)/).filter(Boolean);
+function shorten(el) {
+  if (el.tagName === 'UL' || el.tagName === 'OL') { const li = el.querySelectorAll('li'); if (li.length <= 2) return false; li[li.length - 1].remove(); return true; }
+  const s = sentences(el.textContent); if (s.length < 2) return false;
+  const keep = s.filter(x => /\[[^\]]+, \d{4}\]$/.test(x)); // never drop a cited claim
+  const rest = s.filter(x => !keep.includes(x));
+  el.textContent = rest.slice(0, Math.max(1, Math.ceil(rest.length / 2))).concat(keep).join(' '); el.dataset.edited = '1'; return true;
+}
+function lengthen(el) {
+  if (el.tagName === 'UL' || el.tagName === 'OL') { const li = document.createElement('li'); li.textContent = 'Who else needs to be part of the decision?'; el.appendChild(li); return true; }
+  const m = MORE.find(x => !el.textContent.includes(x)); if (!m) return false; el.textContent = el.textContent.trim() + ' ' + m; el.dataset.edited = '1'; return true;
+}
+function retoneEl(el, tone) {
+  if (!el.dataset.edited && GEN[el.dataset.role]) return regenEl(el, true);
+  let h = el.innerHTML; if (tone === 'Formal') for (const [a, b] of CONTRACT) h = h.replace(a, b);
+  el.innerHTML = h; return true;
+}
+function claimFor(q) {
+  const it = cur(), words = String(q).toLowerCase().match(/[a-z]{4,}/g) || [];
+  const pool = E.approvedClaims();
+  const scored = pool.map(c => ({ c, s: words.filter(w => (c.title + ' ' + c.claim).toLowerCase().includes(w)).length })).filter(x => x.s).sort((a, b) => b.s - a.s);
+  if (scored.length) return scored[0].c;
+  if (/proof|example|case|evidence|source/i.test(q)) return pool.find(c => it.sources.includes(c.id)) || pool.find(c => c.segments.includes(it.seg)) || null;
+  return null;
+}
+function addClaim(c, el) {
+  const it = cur(); if (!it.sources.includes(c.id)) it.sources.push(c.id);
+  const doc = document.getElementById('doc');
+  if (el && el.tagName === 'P') { el.textContent = el.textContent.trim() + ' ' + cited(c); el.dataset.edited = '1'; return el; }
+  let proof = doc.querySelector('[data-role="proof"],[data-role="proof1"],[data-role="sproof"]');
+  if (proof) { if (proof.textContent.includes(c.claim)) return proof; proof.textContent = proof.textContent.trim() + ' ' + cited(c); proof.dataset.edited = '1'; return proof; }
+  const anchor = doc.querySelector('[data-role="h:cta"],[data-role="ecta"],[data-role="pcta"],[data-role="h:sask"]') || null;
+  const role = ({ email: 'proof1', post: 'proof1', script: 'sproof' })[it.type] || 'proof';
+  const frag = document.createElement('div');
+  frag.innerHTML = (HEAD[role] && it.type !== 'email' && it.type !== 'post' ? blockHtml({ tag: 'h2', role: 'h:' + role, v: 0, text: HEAD[role][0] }) : '') + `<p data-b="${uid()}" data-role="${role}" data-v="0" data-edited="1">${esc(cited(c))}</p>`;
+  const nodes = Array.from(frag.children); nodes.forEach(n => doc.insertBefore(n, anchor)); return nodes[nodes.length - 1];
+}
+function sendChat(text) {
+  const inp = document.getElementById('chatIn');
+  const q = (text !== undefined ? text : inp.value).trim(); if (!q) return;
+  if (text === undefined) inp.value = ''; inp.placeholder = 'Tell the writer what to change…';
+  say('me', q);
+  const box = document.getElementById('msgs'); const t = document.createElement('div'); t.className = 'msg ai'; t.innerHTML = '<div class="who">Writer</div>Writing…'; box.appendChild(t); box.scrollTop = box.scrollHeight;
+  setTimeout(() => { t.remove(); say('ai', handle(q)); }, 450);
+}
+const CLAIMY = /(\d+\s?%|\b(reduces?|reduced|improves?|improved|increases?|increased|cuts? (downtime|costs?)|savings|uptime|faster|proven|guarantee\w*)\b)/i;
+function handle(q) {
+  const it = cur(), doc = document.getElementById('doc'), el = targetEl(), low = q.toLowerCase();
+  const scope = el ? 'that paragraph' : 'the piece';
+  // A request that would add a product claim is checked against the approved sources first.
+  const said = q.match(/\b(?:say|claim|mention|add|write|include)\b\s+(?:that\s+)?(.+)/i);
+  if (said && CLAIMY.test(said[1]) && !claimFor(said[1])) return `I can't add “${said[1].trim()}”. It reads like a product claim and there's no approved source for it. If it's true, add the source to the Content library and I'll cite it word for word.`;
+  if (/^(regenerate|rewrite|try again|another version|redo)( this| it)?$/i.test(q) && el) { regenTarget(); return 'Done.'; }
+  snapshot();
+  let m;
+  if ((m = q.match(/(?:change|set|make) the (?:title|headline) (?:to|into) (.+)/i)) || (m = q.match(/^(?:title|headline):\s*(.+)/i))) {
+    let h = doc.querySelector('h1'); if (!h) { h = document.createElement('h1'); h.dataset.role = 'title'; h.dataset.v = 0; doc.prepend(h); }
+    h.textContent = m[1].replace(/^["“]|["”]$/g, ''); h.dataset.edited = '1'; it.title = h.textContent; document.getElementById('crumbTitle').textContent = it.title; afterChange(h); return 'Title changed.';
+  }
+  if (/\b(title|headline)\b/.test(low) && !el) { const h = doc.querySelector('h1'); if (h && regenEl(h)) { it.title = h.textContent; document.getElementById('crumbTitle').textContent = it.title; afterChange(h); return `New title: “${h.textContent}”. Ask again for another option.`; } }
+  if (/subject/.test(low)) { const s = doc.querySelector('[data-role="subject"]'); if (s && regenEl(s)) { afterChange(s); return `New ${s.textContent}`; } }
+  if (/\bintro|opening|first paragraph\b/.test(low) && !el) { const p = doc.querySelector('[data-role="intro"],[data-role="summary"],[data-role="ebody"],[data-role="hook"],[data-role="sopener"]'); if (p && regenEl(p)) { afterChange(p); selectBlock(p); return 'Rewrote the opening. It stays selected, so you can ask for another version or a specific change.'; } }
+  if ((m = q.match(/add (?:a )?(?:section|paragraph|part) (?:on|about) (.+)/i))) {
+    const topic = noDot(m[1]); const frag = document.createElement('div');
+    const tone = it.tone === 'Formal' ? 'It is' : "It's";
+    frag.innerHTML = (it.type === 'email' || it.type === 'post' ? '' : blockHtml({ tag: 'h2', role: 'free', text: cap(topic) })) +
+      `<p data-b="${uid()}" data-role="free" data-v="0" data-edited="1">${esc(`${cap(topic)} is worth its own conversation. ${tone} usually where plans differ most from site to site, so start with how your site handles it today and what you would want to change.`)}</p>`;
+    const anchor = doc.querySelector('[data-role="h:cta"],[data-role="ecta"],[data-role="pcta"],[data-role="h:sask"]');
+    const nodes = Array.from(frag.children); nodes.forEach(n => doc.insertBefore(n, anchor)); afterChange(nodes[nodes.length - 1]);
+    return `Added a section on ${topic}${anchor ? ' before the close' : ''}. It makes no product claims; edit it or ask me to add proof from an approved source.`;
+  }
+  if (/proof|case study|example|evidence|source|cite/.test(low) || (m = q.match(/\b(?:mention|include|talk about)\b\s+(?:the\s+)?(.+)/i))) {
+    const c = claimFor(q);
+    if (c) { const at = addClaim(c, el && el.tagName === 'P' ? el : null); afterChange(at); return `Added an approved claim, word for word with its citation: ${c.id} · ${c.title} [${c.type}, ${c.year}].`; }
+    if (m) {
+      const what = noDot(m[1]); const p = el && el.tagName === 'P' ? el : doc.querySelector('[data-role="cta"],[data-role="ecta"],[data-role="pcta"],[data-role="sask"]') || doc.lastElementChild;
+      p.textContent = p.textContent.trim() + ` Is ${lc(what)} part of your plans?`; p.dataset.edited = '1'; afterChange(p);
+      return `There's no approved source on ${what}, so I added it as a question rather than a claim.`;
+    }
+    UNDO.pop(); return "There's no approved source for this audience to cite. Add one in the Content library and I'll use it word for word.";
+  }
+  if (/formal|professional/.test(low)) return applyTone('Formal', el);
+  if (/warm|friendl/.test(low)) return applyTone('Warm', el);
+  if (/direct|crisp|punch/.test(low)) return applyTone('Direct', el);
+  if (/short|concise|cut|trim|tighten/.test(low)) {
+    const els = el ? [el] : Array.from(doc.querySelectorAll('#doc > p, #doc > ul, #doc > ol')); let n = 0;
+    els.forEach(x => { if (shorten(x)) n++; });
+    if (!n) { UNDO.pop(); return el ? "That part is already as short as it can go without losing its point." : 'Everything is already short. Try a shorter length from the toolbar.'; }
+    afterChange(el); return el ? 'Shortened it. Cited claims are kept as they are.' : `Shortened ${n} part${n > 1 ? 's' : ''}. Cited claims are kept as they are.`;
+  }
+  if (/long|detail|expand|elaborate|more/.test(low)) {
+    if (el) { if (lengthen(el)) { afterChange(el); return 'Added a line. No new claims.'; } UNDO.pop(); return "I've added all I can without making claims. Ask me to add proof from an approved source."; }
+    const missing = LAYOUT[it.type].Long.filter(r => !doc.querySelector(`[data-role="${r}"]`) && !(PROOF_ROLES.includes(r) && !ctxOf(it).claims.length));
+    if (!missing.length) { UNDO.pop(); return 'It already has every section for this type. Ask me to add a section on a specific topic.'; }
+    const r = missing[0], c = ctxOf(it), frag = document.createElement('div');
+    frag.innerHTML = (HEAD[r] && it.type !== 'email' && it.type !== 'post' ? blockHtml({ tag: 'h2', role: 'h:' + r, v: 0, text: HEAD[r][0] }) : '') + blockHtml(genBlock(c, r, 0));
+    const anchor = doc.querySelector('[data-role="h:cta"],[data-role="ecta"],[data-role="pcta"],[data-role="h:sask"],[data-role="closing"]');
+    const nodes = Array.from(frag.children); nodes.forEach(n => doc.insertBefore(n, anchor)); afterChange(nodes[nodes.length - 1]);
+    return `Added “${HEAD[r] ? HEAD[r][0] : r}”.`;
+  }
+  if (/regenerate|rewrite|again|another|different/.test(low)) {
+    if (el) { UNDO.pop(); regenTarget(); return 'Here is another version.'; }
+    doc.innerHTML = docHtml(generate(it)); afterChange(); return 'Rewrote the whole piece from the brief. Your earlier version is one Undo away.';
+  }
+  if (/remove|delete|drop/.test(low) && el) { el.remove(); TARGET = null; afterChange(); return 'Removed it.'; }
+  UNDO.pop();
+  return `I can change ${scope}: make it shorter or longer, change the tone (direct, formal, warm), rewrite it, change the title, add a section on a topic, or add proof from an approved source. I won't add claims that aren't in the approved sources.`;
+}
+function applyTone(tone, el) {
+  const it = cur(), doc = document.getElementById('doc');
+  if (el) { const old = it.tone; it.tone = tone; retoneEl(el, tone); it.tone = old; afterChange(el); return `Made that part ${tone.toLowerCase()}. The piece's tone is still ${old}.`; }
+  it.tone = tone; Array.from(doc.children).forEach(x => retoneEl(x, tone)); afterChange();
+  const s = document.querySelector('.doc-tools select'); if (s) s.value = tone;
+  return `Switched the piece to a ${tone.toLowerCase()} tone. Paragraphs you edited yourself keep your wording${tone === 'Formal' ? ', with contractions written out' : ''}.`;
+}
+function setTone(t) { snapshot(); say('me', `Tone: ${t}`); say('ai', applyTone(t)); }
+function setLength(l) {
+  const it = cur();
+  if (Array.from(document.querySelectorAll('#doc > [data-edited]')).length && !confirm(`Rewrite the piece at ${l} length? Your own edits are replaced; Undo brings them back.`)) { document.querySelectorAll('.doc-tools select')[1].value = it.length; return; }
+  snapshot(); it.length = l; document.getElementById('doc').innerHTML = docHtml(generate(it)); afterChange();
+  say('me', `Length: ${l}`); say('ai', `Rewrote it at ${l.toLowerCase()} length: ${LAYOUT[it.type][l].length} parts.`);
+}
+function setCampaign(id) { const it = cur(); persistDoc(); const d = DIRTY; it.campaign = id; saveStore(); showToast(id ? `Attached to ${campOf(id).name}` : 'Removed from the campaign'); render(); setDirty(d); }
+
+/* ─── Save, ready, download ─── */
+function saveDoc(silent) {
+  const it = cur(); persistDoc(); const h = document.querySelector('#doc h1'); if (h && h.textContent.trim()) it.title = h.textContent.trim();
+  it.updated = Date.now(); it.by = me(); it.versions = (it.versions || []).concat([{ at: Date.now(), by: me() }]).slice(-20);
+  saveStore(); setDirty(false); document.getElementById('crumbTitle').textContent = it.title; if (!silent) showToast('Saved to the library');
+}
+function markReady() {
+  const it = cur();
+  if (it.status === 'Ready') { it.status = 'Draft'; saveDoc(true); render(); showToast('Back to draft'); return; }
+  const chk = runChecks();
+  if (issuesOf(chk)) { CHK_OPEN = true; runChecks(); document.getElementById('checks').scrollIntoView({ behavior: 'smooth', block: 'center' }); showToast(`Fix ${issuesOf(chk)} check${issuesOf(chk) > 1 ? 's' : ''} first`); return; }
+  it.status = 'Ready'; saveDoc(true); render(); showToast('Marked ready to use');
+}
+function toggleDD(id, e) { e.stopPropagation(); const d = document.getElementById(id); const open = d.classList.contains('open'); document.querySelectorAll('.ddm.open').forEach(x => x.classList.remove('open')); if (!open) d.classList.add('open'); }
+document.addEventListener('click', () => document.querySelectorAll('.ddm.open').forEach(x => x.classList.remove('open')));
+function toMarkdown(root) {
+  return Array.from(root.children).map(el => {
+    const t = (el.innerText || el.textContent).trim();
+    switch (el.tagName) {
+      case 'H1': return '# ' + t; case 'H2': return '## ' + t; case 'BLOCKQUOTE': return '> ' + t;
+      case 'UL': return Array.from(el.children).map(li => '- ' + li.textContent.trim()).join('\n');
+      case 'OL': return Array.from(el.children).map((li, i) => `${i + 1}. ` + li.textContent.trim()).join('\n');
+      default: return t;
+    }
+  }).join('\n\n') + '\n';
+}
+function dl(kind) {
+  const it = cur(), doc = document.getElementById('doc'); persistDoc();
+  const name = (it.title || 'content').replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-').toLowerCase().slice(0, 60) || 'content';
+  const clean = it.html.replace(/ data-[a-z]+="[^"]*"/g, '');
+  const page = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(it.title)}</title><style>body{font-family:Calibri,Arial,sans-serif;max-width:720px;margin:40px auto;line-height:1.6;color:#1d242c}h1{font-size:26px}h2{font-size:18px;margin-top:24px}</style></head><body>${clean}</body></html>`;
+  if (kind === 'pdf') { window.print(); return; }
+  if (kind === 'copy') { const t = blocksText(doc); (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => showToast('Copied'), () => showToast("This view can't copy")); return; }
+  if (kind === 'md') return download(name + '.md', toMarkdown(doc));
+  if (kind === 'html') return download(name + '.html', page);
+  return download(name + '.doc', page);
+}
+window.addEventListener('beforeunload', e => { if (DIRTY) { e.preventDefault(); e.returnValue = ''; } });
+render();
+
+</script>
+</body>
+</html>
