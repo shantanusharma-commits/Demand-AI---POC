@@ -618,8 +618,8 @@ function openRec(key, keepTimer){
   const live = inQueue(d) && mine(r) && !paused && !(typeof CARD_MODE!=='undefined' && CARD_MODE==='use'), action = chosenAction(r), brief = DemandAI.briefFor(lr, action, {asOf:asOf(), channel:d.channel});
   document.getElementById('detTitle').textContent = c.name;
   document.getElementById('detSub').textContent = [c.jobTitle, r.account.name].filter(Boolean).join(' · ');
-  // 0 · Copilot about this account, then a booked meeting's call script. Opening the script clears the notification.
-  html = typeof Copilot!=='undefined' ? `<button class="btn btn-sec btn-sm" style="width:100%;justify-content:center;margin-bottom:12px;gap:6px" onclick="Copilot.open()"><span style="color:var(--brand)">✦</span> Ask Copilot about ${esc(r.account.name)}</button>` : '';
+  // 0 · A booked meeting's call script first. Opening the script clears the notification.
+  html = '';
   if(d.outcome==='Meeting booked' && !d.meeting){ setDec(key, {meeting:{at:d.at||Date.now(), seen:true, script:meetingScript(r)}}); persist(); }
   const dm = dec(key).meeting;
   if(dm){ html += meetingPanel(key); if(!dm.seen){ setDec(key, {meeting:Object.assign({}, dm, {seen:true})}); persist(); DemandAI.reviewBadge(); } }
@@ -704,6 +704,8 @@ function openRec(key, keepTimer){
   if(hist.length) html += `<details class="panel" style="padding:10px 14px"><summary style="cursor:pointer;font-size:11.5px;font-weight:600;color:var(--i2)">History · ${hist.length}</summary>
     ${hist.map(l=>`<div style="padding:7px 0;border-bottom:1px solid var(--s75);font-size:11.5px"><b style="color:var(--i1)">${esc(l.decision)}</b> <span style="color:var(--i3)">· ${esc(l.who)} · ${fmtDate(l.at)} ${timeOf(l.at)}${l.secs!=null?` · ${l.secs}s`:''}</span>${l.note?`<div style="color:var(--i2);margin-top:2px">${esc(l.note)}</div>`:''}</div>`).join('')}
   </details>`;
+  // Last: Copilot, a chat about this account once all its information has been read.
+  if(typeof Copilot!=='undefined') html += Copilot.inline(RUN.saved.id+'::'+key);
   const body = document.getElementById('detBody'), top = keepTimer ? body.scrollTop : 0;
   body.innerHTML = html; body.scrollTop = top;
   const dr = document.getElementById('detailDrawer'); dr.style.width = '500px'; dr.classList.add('open');

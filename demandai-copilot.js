@@ -7,7 +7,7 @@
 (function(){
   const PAGE = (location.pathname.split('/').pop() || '00-today.html');
   const ON_REVIEW = PAGE === '14-review.html';
-  const S = { msgs: [], plans: {}, runs: {}, seq: 0 };
+  const S = { msgs: [], plans: {}, runs: {}, seq: 0, inline: {} };
 
   const inRun = (run, fn) => { const keep = RUN; RUN = run; try{ return fn(); } finally { RUN = keep; } };
   const runs = () => (typeof ALL_RUNS==='function' ? ALL_RUNS() : (typeof RUN!=='undefined' && RUN ? [RUN] : [])).slice().sort((a,b)=>b.saved.createdAt-a.saved.createdAt);
@@ -215,6 +215,13 @@
   function help(lead){
     return p(lead) + `<div style="display:flex;flex-direction:column;align-items:flex-start;gap:6px;margin-top:10px">${suggestions().map(s=>`<button class="tag tag-grey" style="cursor:pointer;border:none;text-align:left" onclick="Copilot.ask(this.textContent)">${esc(s)}</button>`).join('')}</div>`;
   }
+  function inlineMsgs(id){
+    const msgs = S.inline[id] || [];
+    const chips = `<div style="display:flex;flex-wrap:wrap;gap:6px">${ITEM_QS.map(([,l])=>`<button type="button" class="tag tag-grey" style="cursor:pointer;border:none" onclick="Copilot.askInline(this.textContent)">${esc(l)}</button>`).join('')}</div>`;
+    return chips + msgs.map(m=>m.you
+      ? `<div style="display:flex;justify-content:flex-end;margin:12px 0 6px"><div style="max-width:85%;padding:7px 11px;background:var(--brand-lt);color:var(--i1);border-radius:12px 12px 2px 12px;font-size:12.5px">${esc(m.you)}</div></div>`
+      : `<div style="display:flex;gap:8px"><span style="color:var(--brand)">✦</span><div style="flex:1;min-width:0">${m.html.replace(/^<div style="font-size:11px;color:var\(--i3\);margin-bottom:4px">About [^<]*<\/div>/, '')}</div></div>`).join('');
+  }
   function ensure(){
     let dr = document.getElementById('copilotDrawer'); if(dr) return dr;
     dr = document.createElement('div'); dr.className = 'detail-drawer'; dr.id = 'copilotDrawer'; dr.style.width = '420px'; dr.style.zIndex = '310';
@@ -256,6 +263,24 @@
       S.msgs.push({ you: text });
       let html; try{ html = answer(text); }catch(e){ html = p("Sorry, I couldn't work that out. Try asking another way."); }
       say(html);
+    },
+    // Inside an open account, below its information: suggested questions, the answers, and a box to ask.
+    inline(id){
+      const r = recOf(id.split('::').pop()), name = r ? r.account.name : ''; S.inline[id] = S.inline[id] || [];
+      S.inlineId = id;
+      return `<div class="panel" id="cpInlinePanel" style="margin-top:4px;border-color:var(--brand-mid)"><div class="panel-hdr" style="background:var(--brand-lt)"><span class="panel-ttl" style="color:var(--brand-dk)">✦ Copilot</span><span style="font-size:10.5px;color:var(--i3)">answers only, never changes data</span></div>
+        <div class="panel-body"><div id="cpInline">${inlineMsgs(id)}</div>
+        <form onsubmit="Copilot.askInline(this.q.value);return false" style="display:flex;gap:8px;margin-top:10px">
+          <input name="q" autocomplete="off" placeholder="Ask about ${esc(name || 'this account')}…" style="flex:1;min-width:0;padding:8px 10px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:12.5px;outline:none">
+          <button class="btn btn-primary btn-sm" type="submit">Ask</button></form></div></div>`;
+    },
+    askInline(text){
+      text = String(text||'').trim(); if(!text) return;
+      const id = S.inlineId, msgs = S.inline[id] = S.inline[id] || [];
+      msgs.push({ you: text });
+      let html; try{ html = answer(text); }catch(e){ html = p("Sorry, I couldn't work that out. Try asking another way."); }
+      msgs.push({ html });
+      const el = document.getElementById('cpInline'); if(el){ el.innerHTML = inlineMsgs(id); const f = document.querySelector('#cpInlinePanel input'); if(f){ f.value = ''; f.focus(); } document.getElementById('cpInlinePanel').scrollIntoView({block:'end'}); }
     },
     runPlan, undo,
     cancel(id){ delete S.plans[id]; const el = document.getElementById('plan-'+id); if(el) el.innerHTML = '<span class="tag tag-grey">Cancelled: nothing changed</span>'; },
