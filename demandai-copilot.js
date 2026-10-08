@@ -381,7 +381,9 @@
   // The page moves aside for the panel, so nothing underneath is covered (the wide panel lies over it).
   function push(){
     const open = panelIsOpen() || (P && pEl().classList.contains('open'));
-    document.body.classList.toggle('cp-push', !!(open && P && !P.wide));
+    // Only when the screen is wide enough to keep the page readable beside it; otherwise the panel lies over the page.
+    const main = document.querySelector('.main'), left = main ? main.getBoundingClientRect().left : 0;
+    document.body.classList.toggle('cp-push', !!(open && P && !P.wide && window.innerWidth - left - 420 >= 760));
     document.body.classList.toggle('cp-open', !!(open && P));
   }
   function panelOpen(o){
