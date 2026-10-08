@@ -676,11 +676,11 @@ async function onSegFile(file){
   try{
     const g = pickSheet(await readFileToGrids(file));
     const asOf = todayIso();
-    const off = DemandAI.signalsOff();
-    const r = DemandAI.processScoredProspects(g.grid, {file:file.name, sheet:g.sheet, asOf, off});
+    const off = DemandAI.signalsOff(), custom = DemandAI.customSignals().map(c=>c.name);
+    const r = DemandAI.processScoredProspects(g.grid, {file:file.name, sheet:g.sheet, asOf, off, custom});
     if(r.issues.some(i=>i.severity==='stop')){ showToast(r.issues.find(i=>i.severity==='stop').issue); return; }
     if(!r.stats.prospects){ showToast(`${file.name}: no rows with a usable signal. Check it against the template`); return; }
-    UPLOAD = { csv:true, name:file.name.replace(/\.[^.]+$/,''), listName:file.name.replace(/\.[^.]+$/,''), fileName:file.name, sheet:g.sheet, grid:g.grid, asOf, signalsOff:off, keys:null };
+    UPLOAD = { csv:true, name:file.name.replace(/\.[^.]+$/,''), listName:file.name.replace(/\.[^.]+$/,''), fileName:file.name, sheet:g.sheet, grid:g.grid, asOf, signalsOff:off, signalsCustom:custom, keys:null };
     renderStart('new');
   }catch(e){ showToast(e.message || 'Could not read that file'); }
 }

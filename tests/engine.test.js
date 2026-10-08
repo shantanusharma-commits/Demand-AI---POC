@@ -425,3 +425,22 @@ test('a signal switched off in Setup is not scored in new runs, and the switch i
   assert.equal(audit.find(a => !a.on).reason, 'Legal hold');
   delete global.localStorage;
 });
+
+test('a signal type added in Setup is scored in new runs only', () => {
+  const store = {};
+  global.localStorage = { getItem: k => store[k] ?? null, setItem: (k, v) => { store[k] = String(v); }, removeItem: k => { delete store[k]; } };
+  const L = E.processLeads(S.LEADS, { file: 'l', sheet: 's' }), list = () => ({ accounts: L.accounts, contacts: JSON.parse(JSON.stringify(L.contacts)) });
+  const grid = S.SIGNALS.concat([['Northwind Refining', 'aditi.rao@northwindrefining.com', 'Trade show visit', '2026-09-20', 'Visited the stand', 'Events team', '']]);
+  assert.ok(E.addSignal({ name: 'Trade show visit', segment: 'Nope', full: 30, zero: 120 }).error);
+  assert.ok(E.addSignal({ name: 'Trade show visit', segment: 'Engagement', level: 'Light', full: 30, zero: 120 }, 'Rajiv Nair').ok);
+  assert.ok(E.addSignal({ name: 'trade show visit', segment: 'Engagement', full: 30, zero: 120 }).error);   // no duplicates
+  const old = E.processSignals(grid, list(), { asOf: S.SAMPLE_AS_OF });                                   // a run built before it was added
+  assert.equal(old.signals.find(s => s.type === 'Trade show visit').code, 'D3');
+  const now = E.processSignals(grid, list(), { asOf: S.SAMPLE_AS_OF, custom: E.customSignals().map(c => c.name) });
+  const t = now.signals.find(s => s.type === 'Trade show visit');
+  assert.equal(t.status, 'Qualified'); assert.equal(t.segment, 'Engagement'); assert.equal(t.tier, 30);
+  assert.ok(E.removeSignal('Trade show visit', 'Rajiv Nair'));
+  assert.equal(E.CONFIG.signalTypes['Trade show visit'], undefined);
+  assert.deepEqual(E.signalAudit('Trade show visit').map(a => a.added ? 'added' : a.removed ? 'removed' : '?').sort(), ['added', 'removed']);
+  delete global.localStorage;
+});

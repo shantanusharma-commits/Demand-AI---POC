@@ -759,9 +759,10 @@ function score(listId, fileName, sheet, grid, asOf, sandbox, saved){
   if(sandbox !== !!L.sandbox){ showToast('Sample signals only go with a list built from sample data'); return false; }
   const list = JSON.parse(JSON.stringify({accounts:L.accounts, contacts:L.contacts}));
   const off = saved ? (saved.signalsOff || []) : DemandAI.signalsOff();     // signals switched off in Setup stop here
-  const sig = DemandAI.processSignals(grid, list, {file:fileName, sheet, asOf, off});
+  const custom = saved ? (saved.signalsCustom || []) : DemandAI.customSignals().map(c=>c.name);     // and ones added there count
+  const sig = DemandAI.processSignals(grid, list, {file:fileName, sheet, asOf, off, custom});
   const scored = DemandAI.scoreList(list, sig);
-  RUN = {listId, list:L, fileName, sheet, grid, asOf, sandbox, off, sig, scored, prospects:null, savedId: saved?saved.id:null, name: saved?saved.name:null};
+  RUN = {listId, list:L, fileName, sheet, grid, asOf, sandbox, off, custom, sig, scored, prospects:null, savedId: saved?saved.id:null, name: saved?saved.name:null};
   view='ranked'; filt='all'; q=''; NSEL.clear();
   return true;
 }
@@ -992,7 +993,7 @@ function saveRun(){
   const sc = RUN.scored;
   const prev = RUN.savedId && DemandAI.getScoring(RUN.savedId);
   const run = prev ? Object.assign(prev, {name}) : { id:'run-'+Date.now().toString(36), name, listId:RUN.listId, listName:RUN.list.name,
-    fileName:RUN.fileName, sheet:RUN.sheet, grid:RUN.grid, asOf:RUN.asOf, sandbox:RUN.sandbox, signalsOff:RUN.off||[], createdAt:Date.now(),
+    fileName:RUN.fileName, sheet:RUN.sheet, grid:RUN.grid, asOf:RUN.asOf, sandbox:RUN.sandbox, signalsOff:RUN.off||[], signalsCustom:RUN.custom||[], createdAt:Date.now(),
     stats:{ scored: prospects().filter(x=>x.score!==undefined).length, A: prospects().filter(x=>x.tier==='A').length, B: prospects().filter(x=>x.tier==='B').length, C: prospects().filter(x=>x.tier==='C').length, watch: prospects().filter(x=>x.tier==='Watch list').length } };
   if(!DemandAI.saveScoring(run)){ showToast("This browser blocks storage, so it can't be saved"); return; }
   RUN.savedId = run.id; RUN.name = name;

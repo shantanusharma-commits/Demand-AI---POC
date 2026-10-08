@@ -130,6 +130,31 @@ function setSignal(type, on, by, reason) {
   st.audit = (st.audit || []).concat([{ type, on: !!on, by: by || '', reason: reason || '', at: Date.now() }]);
   return saveSetup(st);
 }
+// Signal types added in Setup: kept with the setup and merged into CONFIG.signalTypes, so files can use them.
+const STRENGTH = { Strong: { tier: 100, strength: 1 }, Medium: { tier: 60, strength: 1 }, Light: { tier: 30, strength: 1 } };
+function customSignals() { return (setupStore().custom || []).slice(); }
+function applyCustomSignals() {
+  Object.keys(CONFIG.signalTypes).forEach(k => { if (CONFIG.signalTypes[k].custom) delete CONFIG.signalTypes[k]; });
+  customSignals().forEach(c => { if (!CONFIG.signalTypes[c.name]) CONFIG.signalTypes[c.name] = Object.assign({ code: 'C', custom: true, name: c.name, segment: c.segment, full: c.full, zero: c.zero }, STRENGTH[c.level] || STRENGTH.Medium); });
+}
+function addSignal(def, by) {
+  const name = clean(def.name), full = +def.full, zero = +def.zero;
+  if (!name) return { error: 'Give the signal a name, as it appears in the signal_type column' };
+  if (Object.keys(CONFIG.signalTypes).some(k => k.toLowerCase() === name.toLowerCase())) return { error: `"${name}" is already a signal type` };
+  if (!CONFIG.segmentLibrary[def.segment]) return { error: 'Pick the micro-segment it feeds' };
+  if (!(full > 0) || !(zero > full)) return { error: 'Full weight needs a number of days, and "gone after" must be longer' };
+  const st = setupStore();
+  st.custom = (st.custom || []).concat([{ name, about: clean(def.about), data: clean(def.data), source: clean(def.source), segment: def.segment, level: STRENGTH[def.level] ? def.level : 'Medium', full, zero, by: by || '', at: Date.now() }]);
+  st.audit = (st.audit || []).concat([{ type: name, on: true, added: true, by: by || '', reason: clean(def.reason) || 'New signal type', at: Date.now() }]);
+  if (!saveSetup(st)) return { error: "This browser blocks storage, so the signal can't be kept" };
+  applyCustomSignals(); return { ok: true };
+}
+function removeSignal(name, by) {
+  const st = setupStore(); if (!(st.custom || []).some(c => c.name === name)) return false;
+  st.custom = st.custom.filter(c => c.name !== name); st.off = (st.off || []).filter(t => t !== name);
+  st.audit = (st.audit || []).concat([{ type: name, on: false, removed: true, by: by || '', reason: 'Removed', at: Date.now() }]);
+  saveSetup(st); applyCustomSignals(); return true;
+}
 function signalAudit(type) { return (setupStore().audit || []).filter(a => !type || a.type === type).sort((a, b) => b.at - a.at); }
 
 const CODES = {
@@ -539,7 +564,7 @@ function decayFactor(type, age) {
   return (type.zero - age) / (type.zero - type.full);
 }
 
-function processSignals(grid, list, { file = 'signal file', sheet = 'Sheet1', asOf, off = [] } = {}) {
+function processSignals(grid, list, { file = 'signal file', sheet = 'Sheet1', asOf, off = [], custom = [] } = {}) {
   const table = readTable(grid, { file, sheet, columns: SIGNAL_COLUMNS, required: SIGNAL_REQUIRED, anchor: 'signal_type' });
   const issues = table.issues.slice();
   const accountsByKey = new Map(list.accounts.map(a => [a.key, a]));
@@ -574,7 +599,8 @@ function processSignals(grid, list, { file = 'signal file', sheet = 'Sheet1', as
     if (!acc) { reject('D4', 'Company is not in the target universe', 'company_name', 'Use the company name exactly as in the lead file, or add the company to the lead file'); continue; }
     s.accountId = acc.id;
     const cs = contactsByAcc.get(acc.id) || [];
-    const typeCfg = CONFIG.signalTypes[s.type] || CONFIG.signalTypes[Object.keys(CONFIG.signalTypes).find(k => k.toLowerCase() === s.type.toLowerCase())];
+    let typeCfg = CONFIG.signalTypes[s.type] || CONFIG.signalTypes[Object.keys(CONFIG.signalTypes).find(k => k.toLowerCase() === s.type.toLowerCase())];
+    if (typeCfg && typeCfg.custom && !custom.includes(typeCfg.name)) typeCfg = null;     // added in Setup after this run was built
     if (typeCfg) s.type = Object.keys(CONFIG.signalTypes).find(k => CONFIG.signalTypes[k] === typeCfg);
     if (typeCfg && off.includes(s.type)) { reject('OFF', `${s.type} is switched off in Setup`, 'signal_type', 'Switch it back on in Setup to score it'); continue; }
 
@@ -727,7 +753,7 @@ const SEGMENT_COLUMNS = ['first_name', 'last_name', 'job_title', 'email', 'email
   'industry', 'country', 'existing_customer', 'consent_basis', 'score', 'signal_type', 'event_date', 'detail', 'source', 'owner_email',
   'annual_revenue_usd', 'employee_count', 'account_type'];
 const SEGMENT_REQUIRED = ['first_name', 'company_name', 'signal_type', 'event_date'];
-function processScoredProspects(grid, { file = 'prospect file', sheet = 'Sheet1', asOf, off = [] } = {}) {
+function processScoredProspects(grid, { file = 'prospect file', sheet = 'Sheet1', asOf, off = [], custom = [] } = {}) {
   const table = readTable(grid, { file, sheet, columns: SEGMENT_COLUMNS, required: SEGMENT_REQUIRED, anchor: 'signal_type' });
   const issues = table.issues.slice();
   const at = (row, field, issue, outcome, code, fix, severity = 'flag') => issues.push({ file, sheet, row, field, issue, outcome, code, fix, severity });
@@ -736,7 +762,8 @@ function processScoredProspects(grid, { file = 'prospect file', sheet = 'Sheet1'
   for (const r0 of table.records) {
     const r = fixRow(r0), row = r.__row, company = clean(r.company_name), first = clean(r.first_name);
     if (!company || !first) { at(row, !company ? 'company_name' : 'first_name', 'Company or first name missing', 'Row not used', 'D3', 'Fill in both'); rejected++; continue; }
-    const type = clean(r.signal_type), cfg = CONFIG.signalTypes[type], date = clean(r.event_date);
+    const type = clean(r.signal_type), date = clean(r.event_date);
+    let cfg = CONFIG.signalTypes[type]; if (cfg && cfg.custom && !custom.includes(type)) cfg = undefined;
     const bad = (field, issue, code, fix) => { at(row, field, issue, 'Signal not used', code, fix); rejected++; };
     if (!cfg) { bad('signal_type', `Signal type "${type}" isn't on the list`, 'D3', 'Choose the type from the template list'); continue; }
     if (cfg.reject || cfg.knockout) { bad('signal_type', `"${type}" isn't used for segments`, 'D1', 'Nothing to fix'); continue; }
@@ -1269,12 +1296,14 @@ function reviewBadge() {
 }
 if (typeof localStorage !== 'undefined') applyConfig(configOverrides());
 
+applyCustomSignals();
+
 return {
   CONFIG, CODES, saveConfig, configOverrides, configVersion, LEAD_COLUMNS, LEAD_REQUIRED, SIGNAL_COLUMNS, SIGNAL_REQUIRED,
   parseCSV, toCSV, readTable, processLeads, classify, personaOf, fitFor, decayFactor,
   processSignals, scoreList, stack, tierFor, daysBetween, round1, buildSegments, segmentRanks, recommendChannel, draftFor, processScoredProspects, SEGMENT_COLUMNS, estimateDealSize,
   briefFor, callScript, checkDraft, checkContent, FRAMEWORKS, confidenceFor, allowedChannels, proofFor, COLLATERAL, PLAYBOOK,
-  VOICE_PRESETS, defaultBrand, brandPack, brandDraft, saveBrandDraft, submitBrand, discardBrandDraft, brandPending, publishBrand, brandVersion, useBrand, approvedClaims, contactFixFor, applyContactFix, saveContactFix, signalsOff, setSignal, signalAudit, setupStore, saveSetup,
+  VOICE_PRESETS, defaultBrand, brandPack, brandDraft, saveBrandDraft, submitBrand, discardBrandDraft, brandPending, publishBrand, brandVersion, useBrand, approvedClaims, contactFixFor, applyContactFix, saveContactFix, signalsOff, setSignal, signalAudit, setupStore, saveSetup, customSignals, addSignal, removeSignal, STRENGTH,
   loadLists, saveList, getList, deleteList, loadScorings, saveScoring, getScoring, deleteScoring,
   loadSegmentations, saveSegmentation, getSegmentation, deleteSegmentation, reviewBadge,
 };

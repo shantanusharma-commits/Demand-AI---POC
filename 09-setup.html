@@ -454,6 +454,13 @@ table.au{width:100%;border-collapse:collapse;margin-top:8px;font-size:12px;}
 .ac-i:first-of-type{border-top:none;}
 .ac-i em{font-style:normal;font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--brand-dk);background:var(--brand-lt);padding:1px 6px;border-radius:999px;margin-right:6px;}
 .btn-danger{background:#C2410C;color:#fff;border:none;}
+.sg-add{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:10px;}
+.sg-sugg{font-size:12px;color:var(--i2);padding:5px 10px;border-radius:8px;background:#FFF7E8;border:1px solid #F3D9A4;}
+button.link{border:none;background:none;color:var(--brand-dk);font-weight:700;cursor:pointer;padding:0;font-size:inherit;font-family:var(--fb);}
+.af{display:flex;flex-direction:column;gap:4px;margin-bottom:10px;flex:1;}
+.af span{font-size:11px;font-weight:600;color:var(--i2);}
+.af input,.af select{width:100%;padding:8px 10px;border:1px solid var(--bdk);border-radius:8px;font-size:12.5px;font-family:var(--fb);background:var(--surf);}
+.af-row{display:flex;gap:10px;}
 @media (max-width:1100px){ .ru{grid-template-columns:1fr;} .ac-grid{grid-template-columns:1fr 1fr;} .kvs{grid-template-columns:1fr;} }
 </style>
 </head>
@@ -593,7 +600,19 @@ const SIG_EX = (()=>{ const out = {}; const rows = (DemandAISample.SIGNALS||[]).
   return out; })();
 const SIG_COLS = DemandAI.SIGNAL_COLUMNS;
 const strength = c => { const w = (c.tier||0) * (c.strength||0); return w >= 80 ? ['Strong', 3] : w >= 45 ? ['Medium', 2] : ['Light', 1]; };
-const signalTypes = () => Object.entries(DemandAI.CONFIG.signalTypes).map(([name, c])=>({ name, c, info: SIG_INFO[name] || { about:'', data:'' }, ex: SIG_EX[name] || {} }));
+const customOf = name => DemandAI.customSignals().find(c=>c.name===name);
+const signalTypes = () => Object.entries(DemandAI.CONFIG.signalTypes).map(([name, c])=>{ const cu = c.custom && customOf(name);
+  return { name, c, cu, info: SIG_INFO[name] || (cu ? { about:cu.about, data:cu.data } : { about:'', data:'' }), ex: SIG_EX[name] || (cu ? { source:cu.source } : {}) }; })
+  .sort((a, b) => ((a.c.knockout ? 1 : a.c.reject ? 2 : 0) - (b.c.knockout ? 1 : b.c.reject ? 2 : 0)));     // scored first, added ones with them
+// Tags that turned up in uploaded signal files but aren't signal types yet: candidates to add.
+function unknownTags(){
+  const known = new Set(Object.keys(DemandAI.CONFIG.signalTypes).map(k=>k.toLowerCase())), out = {};
+  const scan = g => { if(!g) return; const hi = g.findIndex(r=>(r||[]).some(c=>String(c).trim().toLowerCase().replace(/\*/g,'')==='signal_type')); if(hi<0) return;
+    const ti = g[hi].map(c=>String(c).trim().toLowerCase().replace(/\*/g,'')).indexOf('signal_type');
+    g.slice(hi+1).forEach(r=>{ const t = String((r||[])[ti]||'').trim(); if(t && !known.has(t.toLowerCase())) out[t] = (out[t]||0)+1; }); };
+  DemandAI.loadScorings().forEach(r=>scan(r.grid)); DemandAI.loadSegmentations().forEach(r=>{ if(r.src && r.src.csv) scan(r.src.grid); });
+  return Object.entries(out);
+}
 const fmtWhen = t => new Date(t).toLocaleString(undefined,{day:'numeric',month:'short',hour:'numeric',minute:'2-digit'});
 
 function statusBadge(status){
@@ -685,9 +704,11 @@ function renderStep(s){
     body = `<div class="sg-top"><div class="sg-sum"><b>${scored.filter(x=>!off.has(x.name)).length} of ${scored.length}</b> signal types are on. These are the types the client's signal file carries; each row in the file is one event.</div>
         <div class="sg-tools"><input class="sg-q" placeholder="Search signals" value="${esc(SIGQ)}" oninput="SIGQ=this.value;renderSignalsOnly()"><a class="btn btn-sec btn-sm" href="11-scoring.html?tab=monitor" style="text-decoration:none">Signal monitoring →</a></div></div>
       <div id="sgBody">${signalRows(list, off, edit, last)}</div>
+      ${edit ? `<div class="sg-add"><button class="btn btn-sec btn-sm" onclick="addSignalForm()">+ Add a signal</button>
+        ${unknownTags().map(([t,n])=>`<span class="sg-sugg">Seen in a file but not a signal type yet: <b>${esc(t)}</b> (${n} row${n===1?'':'s'}) <button class="link" onclick='addSignalForm(${esc(JSON.stringify(t))})'>Add it</button></span>`).join('')}</div>` : ''}
       <div class="sg-file"><span>Every row in the signal file carries:</span>${SIG_COLS.map(c=>`<code>${esc(c)}</code>`).join('')}</div>
       <div class="sg-audit"><button class="sg-audit-h" onclick="AUDIT_OPEN=!AUDIT_OPEN;renderMain()" aria-expanded="${AUDIT_OPEN}"><span>${AUDIT_OPEN?'▾':'▸'} Audit trail</span><em>${audit.length} change${audit.length===1?'':'s'}</em></button>
-        ${AUDIT_OPEN ? (audit.length ? `<table class="au"><thead><tr><th>When</th><th>Signal</th><th>Change</th><th>Who</th><th>Why</th></tr></thead><tbody>${audit.map(a=>`<tr><td>${esc(fmtWhen(a.at))}</td><td>${esc(a.type)}</td><td><span class="pill ${a.on?'on':'off'}">${a.on?'Switched on':'Switched off'}</span></td><td>${esc(a.by)}</td><td>${esc(a.reason||'—')}</td></tr>`).join('')}</tbody></table>` : '<div class="su-sub" style="padding:8px 2px">No signal has been switched on or off yet.</div>') : ''}</div>`;
+        ${AUDIT_OPEN ? (audit.length ? `<table class="au"><thead><tr><th>When</th><th>Signal</th><th>Change</th><th>Who</th><th>Why</th></tr></thead><tbody>${audit.map(a=>`<tr><td>${esc(fmtWhen(a.at))}</td><td>${esc(a.type)}</td><td><span class="pill ${a.added?'nr':a.removed?'off':a.on?'on':'off'}">${a.added?'Added':a.removed?'Removed':a.on?'Switched on':'Switched off'}</span></td><td>${esc(a.by)}</td><td>${esc(a.reason||'—')}</td></tr>`).join('')}</tbody></table>` : '<div class="su-sub" style="padding:8px 2px">No signal has been switched on or off yet.</div>') : ''}</div>`;
   }
 
   if(s.id==='actions'){
@@ -713,9 +734,9 @@ function signalRows(list, off, edit, last){
       const status = c.knockout ? '<span class="pill ko">Knock-out</span><div class="sg-m">Removes the account before scoring</div>'
         : c.reject ? '<span class="pill nr">Not scored</span><div class="sg-m">Too weak to act on</div>'
         : `${edit ? `<button class="sw ${isOff?'':'on'}" role="switch" aria-checked="${!isOff}" aria-label="${esc(x.name)}" onclick="askToggle(${esc(JSON.stringify(x.name))})"><i></i></button>` : ''}<span class="pill ${isOff?'off':'on'}">${isOff?'Off':'On'}</span>
-           ${l ? `<div class="sg-m">${l.on?'On':'Off'} · ${esc(l.by)} · ${esc(fmtWhen(l.at))}${l.reason?`<br>“${esc(l.reason)}”`:''}</div>` : ''}`;
+           ${l ? `<div class="sg-m">${l.added?'Added':l.on?'On':'Off'} · ${esc(l.by)} · ${esc(fmtWhen(l.at))}${l.reason?`<br>“${esc(l.reason)}”`:''}</div>` : ''}`;
       return `<tr class="${isOff?'is-off':''}">
-        <td><b>${esc(x.name)}</b>${c.segment?`<div class="sg-m">Feeds <span class="seg">${esc(c.segment)}</span></div>`:''}${n?`<div class="sg-st" title="How much it counts">${'<i class="on"></i>'.repeat(n)}${'<i></i>'.repeat(3-n)}<span>${st}</span></div>`:''}</td>
+        <td><b>${esc(x.name)}</b>${x.cu?`<span class="pill nr" style="margin-left:6px">Added</span><div class="sg-m">By ${esc(x.cu.by)} · ${esc(fmtWhen(x.cu.at))}${edit?` · <button class="link" onclick='removeCustom(${esc(JSON.stringify(x.name))})'>Remove</button>`:''}</div>`:''}${c.segment?`<div class="sg-m">Feeds <span class="seg">${esc(c.segment)}</span></div>`:''}${n?`<div class="sg-st" title="How much it counts">${'<i class="on"></i>'.repeat(n)}${'<i></i>'.repeat(3-n)}<span>${st}</span></div>`:''}</td>
         <td>${esc(x.info.about)}<div class="sg-m"><b>Data:</b> ${esc(x.info.data)}</div>${x.ex.detail?`<div class="sg-ex">e.g. “${esc(x.ex.detail)}”</div>`:''}</td>
         <td>${esc(x.ex.source || '—')}</td>
         <td>${c.full ? `Full weight for ${c.full} days<div class="sg-m">Gone after ${c.zero} days</div>` : '<span class="sg-m">—</span>'}</td>
@@ -742,6 +763,35 @@ function doToggle(name){
   if(!isOff && !why){ document.getElementById('sgErr').textContent = 'Say why, so the audit trail explains it.'; return; }
   DemandAI.setSignal(name, isOff, me(), why); closeModal(); AUDIT_OPEN = true;
   showToast(`${name} switched ${isOff?'on':'off'}`); renderMain();
+}
+/* Add a signal type: what it is called in the file, what it means, where it comes from, what it feeds and how much it counts. */
+function addSignalForm(name){
+  if(!canEdit()) return;
+  const segs = Object.keys(DemandAI.CONFIG.segmentLibrary), fld = (id, label, ph, v) => `<label class="af"><span>${label}</span><input id="${id}" placeholder="${esc(ph)}" value="${esc(v||'')}"></label>`;
+  openModal(`<div style="font-family:var(--fd);font-size:15px;font-weight:700;color:var(--i1);margin-bottom:4px">Add a signal</div>
+    <div style="font-size:12px;color:var(--i3);line-height:1.5;margin-bottom:12px">New scoring runs recognise it in the signal file from now on. Lists already scored are not changed.</div>
+    ${fld('nsName', 'Name, exactly as in the signal_type column', 'e.g. Trade show visit', name)}
+    ${fld('nsAbout', 'What it means', 'e.g. Visited the client\'s stand at a trade show')}
+    ${fld('nsData', 'What data comes through', 'e.g. The event, the date, who visited')}
+    ${fld('nsSource', 'Where it comes from', 'e.g. Events team')}
+    <div class="af-row"><label class="af"><span>Feeds micro-segment</span><select id="nsSeg"><option value="">Pick one…</option>${segs.map(x=>`<option>${esc(x)}</option>`).join('')}</select></label>
+      <label class="af"><span>How much it counts</span><select id="nsLevel"><option>Strong</option><option selected>Medium</option><option>Light</option></select></label></div>
+    <div class="af-row"><label class="af"><span>Full weight for (days)</span><input id="nsFull" type="number" min="1" value="30"></label>
+      <label class="af"><span>Gone after (days)</span><input id="nsZero" type="number" min="2" value="120"></label></div>
+    <div id="nsErr" style="font-size:12px;color:var(--neg);min-height:16px"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:6px"><button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button><button class="btn btn-primary btn-sm" onclick="saveSignal()">Add signal</button></div>`);
+  const ov = document.getElementById('setupModalOverlay'); if(ov && ov.firstElementChild) ov.firstElementChild.style.width = '520px';
+}
+function saveSignal(){
+  const v = id => (document.getElementById(id)||{}).value || '';
+  const r = DemandAI.addSignal({ name:v('nsName'), about:v('nsAbout'), data:v('nsData'), source:v('nsSource'), segment:v('nsSeg'), level:v('nsLevel'), full:v('nsFull'), zero:v('nsZero') }, me());
+  if(r.error){ document.getElementById('nsErr').textContent = r.error; return; }
+  const s = STEPS.find(x=>x.id==='signals'); if(s.status==='done'){ s.status = 'review'; ST.steps.signals = 'review'; persistSetup(); }
+  closeModal(); AUDIT_OPEN = true; showToast(`${v('nsName').trim()} added`); renderMain();
+}
+function removeCustom(name){
+  if(!canEdit() || !confirm(`Remove “${name}”? New scoring runs will treat it as an unknown tag again.`)) return;
+  DemandAI.removeSignal(name, me()); showToast(`${name} removed`); renderMain();
 }
 function setWeight(i, v){ RUBRIC[i].weight = Math.max(0, Math.min(100, parseInt(v)||0)); ST.weights = Object.fromEntries(RUBRIC.map(r=>[r.key, r.weight])); persistSetup(); renderMain(); }
 function signOff(id){
