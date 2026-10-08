@@ -860,7 +860,10 @@ function buildSegments(results, opts = {}) {
       const qualifying = [...support.entries()]
         .map(([segment, list]) => ({ segment, list, n: list.length + (formed.get(segment) || []).length,
           w: list.reduce((t, x) => t + x.a.ranks[x.i].signal.weight, 0) }))
-        .filter(q => q.n >= min)
+        // A new micro-segment forms only on accounts' strongest signals; an account falls back to its next signal
+        // only to join one that already formed. A segment is never made entirely of second-best reasons:
+        // accounts left over go to For Review, where a person assigns them.
+        .filter(q => k === 1 ? q.n >= min : formed.has(q.segment))
         .sort((x, y) => y.n - x.n || y.w - x.w);
       if (!qualifying.length) break;
       const q = qualifying[0];
@@ -891,7 +894,7 @@ function buildSegments(results, opts = {}) {
       // The message speaks to this person's own evidence: their strongest signal in the segment, else their strongest.
       const inSeg = p.signals.find(sg => (CONFIG.signalTypes[sg.type] || {}).segment === (segment || prominent.segment));
       const signal = inSeg || p.signals[0];
-      const exception = !segment ? `No micro-segment: fewer than ${min} accounts share any of its signals`
+      const exception = !segment ? `No micro-segment: fewer than ${min} accounts share its strongest signal`
         : r.confidence === 'low' ? 'Low confidence: no contact in the primary persona' : '';
       const ago = signal.age !== undefined ? ` (${signal.age} days ago)` : '';
       recs.push({ key: r.account.id + '|' + p.contact.row, contact: p.contact, account: r.account, result: r, person: p,

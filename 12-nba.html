@@ -748,7 +748,7 @@ const SEG_STEPS = [
   ['read',     'Read the scored accounts',        'The highest-priority prospects, or the ones chosen in Scoring'],
   ['engage',   'Engage-once rule',                 'Accounts already recommended in this pilot are set aside'],
   ['group',    'Group by the strongest signal',    `At least ${DemandAI.CONFIG.minSegmentAccounts} different accounts each; an account is in one only`],
-  ['fallback', 'Fall back to the next signal',     'When too few accounts share the strongest signal'],
+  ['fallback', 'Join on the next signal',          'Only a micro-segment formed on strongest signals; the rest go to a person'],
   ['except',   'Exception check',                  'Accounts that fit no segment go to a person'],
   ['action',   'Next best action and runner-up',   'From the segment\'s approved library, with a reason'],
   ['channel',  'Channel within hard limits',       'Verified email, LinkedIn URL, consent; inquiries and renewals to a person'],

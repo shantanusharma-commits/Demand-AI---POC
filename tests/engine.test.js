@@ -156,20 +156,33 @@ test('micro-segments: three distinct accounts on the strongest signal form a seg
   assert.ok(r.recs.every(x => !x.fallback));
 });
 
-test('micro-segments: fewer than three accounts on a signal → grouped on the next signal, runner-up is the strongest signal offering', () => {
+test('micro-segments: a segment never forms on second-best signals; those accounts go to a person', () => {
+  // a's strongest is an inquiry; b and c are engagement. No signal has 3 accounts as the strongest, so nothing forms,
+  // even though all three share an engagement signal: a would otherwise be pooled away from its inquiry.
   const r = E.buildSegments([
     fake('a', [['Inquiry or RFQ', 100], ['Webinar attended', 40]]),
     fake('b', [['Webinar attended', 60]]),
     fake('c', [['Content download', 50]]),
   ]);
-  assert.deepEqual(r.segments.map(s => [s.name, s.accountIds.sort()]), [['Engagement', ['a', 'b', 'c']]]);
+  assert.deepEqual(r.segments, []);
   const a = r.recs.find(x => x.account.id === 'a');
-  assert.equal(a.prominent, 'Inquiry');
+  assert.equal(a.segment, null);
+  assert.equal(a.action, E.CONFIG.segmentLibrary.Inquiry[0]);   // keeps the action for its strongest signal
+  assert.match(a.exception, /No micro-segment/);
+});
+
+test('micro-segments: an account falls back to its next signal to join a segment formed on strongest signals', () => {
+  const r = E.buildSegments([
+    fake('a', [['Inquiry or RFQ', 100], ['Webinar attended', 40]]),
+    fake('b', [['Webinar attended', 60]]),
+    fake('c', [['Content download', 50]]),
+    fake('d', [['Webinar attended', 55]]),
+  ]);
+  assert.deepEqual(r.segments.map(s => [s.name, s.accountIds.sort()]), [['Engagement', ['a', 'b', 'c', 'd']]]);
+  const a = r.recs.find(x => x.account.id === 'a');
   assert.equal(a.fallback, true);
-  assert.equal(a.groupedOn.type, 'Webinar attended');
   assert.equal(a.runnerUp.action, E.CONFIG.segmentLibrary.Inquiry[0]);
   assert.ok(a.runnerUp.fromStrongest);
-  assert.match(a.runnerUp.reason, /strongest signal is Inquiry or RFQ \(Inquiry\), but fewer than 3 accounts share it/);
 });
 
 test('micro-segments: no account is in two segments, and leftovers are exceptions', () => {
@@ -238,7 +251,7 @@ function sampleRecs(opts) {
 test('drafts cite one approved proof point and pass the brand and claim checks', () => {
   const r = sampleRecs();
   const rec = r.recs.find(x => x.contact.name === 'Aditi Rao');
-  const d = E.draftFor(rec, rec.action, { asOf: S.SAMPLE_AS_OF });
+  const d = E.draftFor(rec, E.CONFIG.segmentLibrary.Engagement[0], { asOf: S.SAMPLE_AS_OF });   // the engagement follow-up, drafted from her webinar
   assert.equal(d.channel, 'Email');
   assert.match(d.body, /\[Webinar recording, 2026\]/);
   const chk = E.checkDraft(d);
@@ -268,7 +281,7 @@ test('LinkedIn is one connection note, no follow-up message', () => {
 test('brand checks and claim verification catch an edited draft', () => {
   const r = sampleRecs();
   const rec = r.recs.find(x => x.contact.name === 'Aditi Rao');
-  const d = E.draftFor(rec, rec.action, { asOf: S.SAMPLE_AS_OF });
+  const d = E.draftFor(rec, E.CONFIG.segmentLibrary.Engagement[0], { asOf: S.SAMPLE_AS_OF });
   const edited = { ...d, body: d.body.replace('Worth a short conversation?', 'We guarantee 30% less downtime at a discount. Worth a short conversation?') };
   const chk = E.checkDraft(edited);
   assert.ok(chk.flags.some(f => f.rule === 'Banned claim'));
@@ -323,9 +336,10 @@ test('deal size: estimated from vertical, size and account type; below the thres
 test('a draft that fails a brand or rule check is regenerated once without the source wording', () => {
   const r = sampleRecs();
   const ap = r.recs.find(x => x.account.name === 'Andaman Petroleum');
-  const first = E.draftFor(ap, ap.action, { asOf: S.SAMPLE_AS_OF });
+  const act = E.CONFIG.segmentLibrary.Engagement[0];   // the engagement follow-up quotes the pricing guide they downloaded
+  const first = E.draftFor(ap, act, { asOf: S.SAMPLE_AS_OF });
   assert.ok(E.checkDraft(first).flags.some(f => f.rule === 'Pricing or commercial terms'));
-  const again = E.draftFor(ap, ap.action, { asOf: S.SAMPLE_AS_OF, variant: 'clean' });
+  const again = E.draftFor(ap, act, { asOf: S.SAMPLE_AS_OF, variant: 'clean' });
   assert.equal(E.checkDraft(again).flags.length, 0);
 });
 
