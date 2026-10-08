@@ -966,13 +966,13 @@ const VOICE_PRESETS = {
 // Messaging frameworks the team writes with: what each is for (the objective), its structure, and how often they use it.
 // What a message can ask the reader to do, and the tool behind each (connected after the pilot).
 const FRAMEWORK_ACTIONS = {
-  meeting: { label: 'Book a meeting', how: 'Calendar link', tools: 'Google Calendar, Calendly' },
-  call:    { label: 'Request a call', how: 'Call-back request', tools: 'Phone, Microsoft Teams' },
-  ticket:  { label: 'Raise a support ticket', how: 'Ticket link', tools: 'Service desk, e.g. ServiceNow, Zendesk' },
-  form:    { label: 'Fill in a short form', how: 'Short web form', tools: 'e.g. HubSpot forms, Microsoft Forms' },
-  content: { label: 'Read or download content', how: 'Tracked link to a guide or case study', tools: 'Content library' },
-  event:   { label: 'Register for a session', how: 'Event sign-up link', tools: 'e.g. Zoom Webinars, ON24' },
-  reply:   { label: 'Reply to the email', how: 'No link needed', tools: '' },
+  meeting: { label: 'Book a meeting', how: 'Calendar link', tools: ['Google Calendar', 'Calendly', 'Microsoft Teams'] },
+  call:    { label: 'Request a call', how: 'Call or video call link', tools: ['Microsoft Teams', 'Zoom', 'Google Meet'] },
+  ticket:  { label: 'Raise a support ticket', how: 'Ticket link', tools: ['Zendesk', 'Jira Service Management'] },
+  form:    { label: 'Fill in a short form', how: 'Short web form', tools: ['HubSpot', 'Google Forms', 'Typeform'] },
+  content: { label: 'Read or download content', how: 'Tracked link to a guide or case study from the Content library', tools: [] },
+  event:   { label: 'Register for a session', how: 'Webinar or event sign-up link', tools: ['Zoom', 'Webex', 'Microsoft Teams'] },
+  reply:   { label: 'Reply to the email', how: 'No link needed', tools: [] },
 };
 const FRAMEWORKS = [
   { objective: 'Book a first meeting', name: 'Trigger, insight, ask', steps: ['Their trigger: the signal that makes it timely', 'One insight or approved proof', 'One clear ask'], use: 'Often', actions: ['meeting', 'reply'] },
@@ -999,11 +999,11 @@ function saveBrandDraft(d) { const st = brandStore() || {}; st.draft = d; st.sub
 function submitBrand(by) { const st = brandStore() || {}; if (!st.draft) return false; st.submitted = { by, at: Date.now() }; return brandSave(st); }
 function discardBrandDraft() { const st = brandStore() || {}; st.draft = null; st.submitted = null; return brandSave(st); }
 function brandPending() { const st = brandStore(); return st && st.draft ? { draft: st.draft, submitted: st.submitted || null } : null; }
-function publishBrand(by, note, sections) {
+function publishBrand(by, note, sections, changes) {
   const st = brandStore() || {}, live = st.live || defaultBrand(), d = st.draft;
   if (!d) return null;
   d.v = (live.v || 1) + 1;
-  d.history = (live.history || []).concat([{ v: d.v, at: Date.now(), by, note: note || '', sections: sections || [] }]);
+  d.history = (live.history || []).concat([{ v: d.v, at: Date.now(), by, note: note || '', sections: sections || [], changes: changes || [] }]);
   // Earlier versions are kept, so a list drafted with one keeps drafting with it.
   st.archive = st.archive || {}; st.archive[live.v || 1] = Object.assign({}, live, { history: undefined });
   st.live = d; st.draft = null; st.submitted = null;

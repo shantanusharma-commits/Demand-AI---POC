@@ -480,6 +480,83 @@ table.cl-t{width:100%;border-collapse:collapse;font-size:12px;}
 .cl-kv{display:flex;flex-direction:column;gap:2px;padding:7px 0;border-top:1px solid var(--s75);font-size:12px;}
 .cl-kv span{font-size:10.5px;color:var(--i3);text-transform:uppercase;letter-spacing:.05em;font-weight:700;}
 .cl-kv b{font-weight:500;color:var(--i1);}
+
+/* ─── Content library v2: fits the screen ─── */
+.cl-canvas{padding:16px 24px 40px;}
+.cl-canvas > .panel, .cl-canvas .panel{max-width:none;}
+.subnav{display:inline-flex;background:var(--s75);border-radius:999px;padding:3px;margin-bottom:14px;}
+.subnav button{border:none;background:none;padding:6px 14px;border-radius:999px;font-size:12.5px;font-weight:600;color:var(--i2);cursor:pointer;font-family:var(--fb);}
+.subnav button.on{background:var(--surf);color:var(--i1);box-shadow:0 1px 3px rgba(20,26,33,.12);}
+.smp{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;}
+.smp-c{border:1px solid var(--border);border-radius:10px;overflow:hidden;display:flex;flex-direction:column;background:var(--surf);}
+.smp-doc{height:150px;overflow:hidden;padding:12px 14px;background:linear-gradient(180deg,#fff 60%,var(--s50));border-bottom:1px solid var(--s75);font-size:9.5px;line-height:1.45;color:var(--i2);position:relative;}
+.smp-doc h3{font-size:12px;margin:0 0 6px;color:var(--i1);border-bottom:2px solid var(--brand);padding-bottom:4px;}
+.smp-doc h4{font-size:10.5px;margin:6px 0 3px;color:var(--i1);text-decoration:underline;}
+.smp-doc p,.smp-doc ul{margin:0 0 4px;} .smp-doc ul{padding-left:14px;}
+.smp-b{padding:10px 14px 12px;font-size:12px;color:var(--i2);line-height:1.45;display:flex;flex-direction:column;gap:4px;flex:1;}
+.smp-b b{font-size:13px;color:var(--i1);}
+.smp-a{display:flex;gap:6px;justify-content:flex-end;margin-top:auto;padding-top:6px;}
+.md{font-size:13px;color:var(--i1);line-height:1.6;}
+.md h3{font-family:var(--fd);font-size:17px;margin:0 0 10px;padding-bottom:6px;border-bottom:2px solid var(--brand);}
+.md h4{font-size:13.5px;margin:14px 0 4px;text-decoration:underline;}
+.md p{margin:0 0 6px;} .md ul{margin:0 0 8px;padding-left:18px;}
+.fw-stats{grid-template-columns:repeat(4,1fr);margin-bottom:12px;}
+.fw-t{margin:-14px -16px -14px;}
+.fw-r{display:grid;grid-template-columns:minmax(140px,1fr) minmax(200px,1.4fr) minmax(260px,2fr) 110px 70px;gap:14px;padding:14px 16px;border-top:1px solid var(--s75);align-items:start;font-size:12.5px;color:var(--i1);}
+.fw-r:first-child{border-top:none;}
+.fw-hd{background:var(--s50);font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--i3);padding:10px 16px;}
+.fw-o{font-weight:700;}
+.fw-n{display:block;margin-bottom:4px;}
+.fw-s{margin:0;padding-left:18px;line-height:1.55;color:var(--i2);}
+.fw-c{display:flex;flex-direction:column;gap:6px;}
+.fw-e{text-align:right;}
+.cta{display:flex;gap:9px;align-items:flex-start;padding:7px 9px;border:1px solid var(--border);border-radius:9px;background:var(--surf);}
+.cta-b{display:flex;flex-direction:column;gap:2px;min-width:0;}
+.cta-b b{font-size:12.5px;color:var(--i1);font-weight:600;}
+.cta-b > span{font-size:11px;color:var(--i3);line-height:1.35;}
+.cta-t{display:flex;flex-wrap:wrap;gap:5px;margin-top:4px;}
+.tool{display:inline-flex;align-items:center;gap:5px;padding:2px 8px 2px 5px;border-radius:999px;background:var(--s50);border:1px solid var(--s75);font-size:11px;color:var(--i2);white-space:nowrap;}
+img.lg{display:block;object-fit:contain;}
+.cta-pick{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.cta-o{display:flex;gap:8px;align-items:flex-start;cursor:pointer;}
+.af .cta-o input,.cta-o input{width:16px !important;height:16px;flex:0 0 16px;margin-top:10px;accent-color:var(--brand);padding:0;}
+.cta-o .cta{flex:1;}
+.cta-o .tool{font-size:0;gap:0;padding:3px;border-radius:6px;}   /* in the picker: logos only, names on hover */
+.cta-o input:checked + .cta{border-color:var(--brand);background:#FCFAFE;}
+.af textarea{width:100%;padding:8px 10px;border:1px solid var(--bdk);border-radius:8px;font-size:12.5px;font-family:var(--fb);line-height:1.5;resize:vertical;}
+.af{display:flex;flex-direction:column;gap:4px;margin-bottom:10px;flex:1;}
+.af > span{font-size:11px;font-weight:600;color:var(--i2);}
+.af input,.af select{width:100%;padding:8px 10px;border:1px solid var(--bdk);border-radius:8px;font-size:12.5px;font-family:var(--fb);background:var(--surf);}
+.af-row{display:flex;gap:10px;}
+.cl-intro{font-size:12.5px;color:var(--i2);margin-bottom:12px;line-height:1.5;}
+.cl-tools{display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap;}
+.cl-q{flex:1;min-width:220px;max-width:380px;}
+.cl-q input{width:100%;}
+.cl-tools input,.cl-tools select{padding:7px 10px;border:1px solid var(--bdk);border-radius:8px;font-size:12.5px;background:var(--surf);font-family:var(--fb);}
+.cnt{display:inline-flex;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--brand);color:#fff;font-size:10.5px;align-items:center;justify-content:center;margin-left:4px;}
+.cl-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,340px);gap:14px;align-items:start;}
+.cl-t tr{cursor:pointer;}
+.cl-t td:nth-child(3),.cl-t td:nth-child(4){white-space:nowrap;} .cl-t tbody tr:hover td{background:var(--s50);}
+.cl-warn{font-size:11px;color:var(--neg);font-weight:600;margin-top:2px;}
+.cl-u{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--i1);padding:4px 0;border-top:1px dashed var(--s75);}
+.cl-u:first-of-type{margin-top:4px;}
+.cl-u span{color:var(--i3);white-space:nowrap;}
+.cl-alert{margin-top:10px;padding:8px 10px;border-radius:8px;background:#FDECEC;color:#9B2C2C;font-size:12px;line-height:1.45;}
+.cl-act{display:flex;gap:10px;align-items:center;margin-top:12px;padding-top:10px;border-top:1px solid var(--s75);font-size:12px;color:var(--i2);flex-wrap:wrap;}
+.cl-act select,.cl-act input{padding:6px 8px;border:1px solid var(--bdk);border-radius:7px;font-size:12px;font-family:var(--fb);}
+.cl-pane{position:sticky;top:0;}
+.rv-c{display:flex;flex-direction:column;gap:6px;padding:10px 0;border-top:1px solid var(--s75);}
+.rv-c button{align-self:flex-start;}
+.vr{border-top:1px solid var(--s75);}
+.vr-h{display:flex;gap:12px;align-items:flex-start;padding:10px 0;font-size:12.5px;}
+.vr-v{width:40px;color:var(--i1);}
+.vr-n{flex:1;color:var(--i2);display:flex;flex-direction:column;gap:5px;}
+.vr-tags{display:flex;flex-wrap:wrap;gap:4px;}
+.vr-m{color:var(--i3);white-space:nowrap;}
+.vr-x{color:var(--brand-dk);font-weight:600;white-space:nowrap;}
+.vr-b{margin:0 0 10px 52px;padding:8px 12px;border-left:2px solid var(--brand-mid);font-size:12px;color:var(--i1);line-height:1.7;background:var(--s50);border-radius:0 8px 8px 0;}
+@media (max-width:1200px){ .cl-grid{grid-template-columns:1fr;} .cl-pane{position:static;} .fw-r{grid-template-columns:1fr 1.3fr 1.8fr 100px 60px;} }
+@media (max-width:1000px){ .fw-r{grid-template-columns:1fr;} .fw-hd{display:none;} .cta-pick{grid-template-columns:1fr;} .fw-stats{grid-template-columns:1fr 1fr;} }
 </style>
 </head>
 <body>
@@ -511,10 +588,6 @@ table.cl-t{width:100%;border-collapse:collapse;font-size:12px;}
     <a class="nav-item active" href="07-content.html">
       <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
       <span class="nav-lbl">Content library</span>
-    </a>
-    <a class="nav-item " href="07-content.html?tab=framework">
-      <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 8h8M8 12h5"/></svg>
-      <span class="nav-lbl">Messaging frameworks</span>
     </a>
     <div class="nav-div"></div>
     <div class="nav-sec">Work</div>
@@ -586,6 +659,7 @@ table.cl-t{width:100%;border-collapse:collapse;font-size:12px;}
 <script src="demandai-engine.js"></script>
 <script src="demandai-sample-data.js"></script>
 <script src="demandai-nba.js"></script>
+<script src="demandai-logos.js"></script>
 <script>
 function showToast(msg){document.querySelectorAll('.toast').forEach(t=>t.remove());const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2600);}
 function initials(n){return String(n).split(' ').filter(Boolean).map(w=>w[0]).join('').slice(0,2).toUpperCase();}
@@ -675,33 +749,71 @@ const label = t => `<div style="font-size:11px;font-weight:600;color:var(--i2);m
 const card = (title, right, body) => `<div class="panel" style="margin-bottom:14px"><div class="panel-hdr"><span class="panel-ttl">${title}</span>${right||''}</div><div class="panel-body">${body}</div></div>`;
 const ro = () => canEdit() ? '' : 'disabled';
 
+let SUB = 'doc';   // Brand guidelines: the guideline document and samples, or the messaging frameworks
 function render(){
-  const live = DemandAI.brandPack(), fw = tab==='framework';
-  // Messaging frameworks is its own item in the main menu; it is still part of the one brand pack.
-  document.querySelectorAll('.nav-item').forEach(a=>{ const h = a.getAttribute('href'); if(h==='07-content.html') a.classList.toggle('active', !fw); if(h==='07-content.html?tab=framework') a.classList.toggle('active', fw); });
-  document.title = (fw ? 'Messaging frameworks' : 'Content library') + ' · DemandAI';
-  const changed = changedSections();
-  const ft = (k,l) => `<div class="ftab ${tab===k?'active':''}" onclick="tab='${k}';history.replaceState(null,'','?tab=${k}');render()">${l}${changed.includes(l)?' <span class="chg-dot" title="Changed in the draft"></span>':''}</div>`;
+  const live = DemandAI.brandPack(), changed = changedSections();
+  const tabOf = k => k==='framework' ? 'guidelines' : k;
+  const ft = (k,l) => `<div class="ftab ${tabOf(tab)===k?'active':''}" onclick="go('${k}')">${l}${changed.some(c=>SECTION_OF[c]===k)?' <span class="chg-dot" title="Changed, not saved yet"></span>':''}</div>`;
+  if(tab==='framework'){ tab = 'guidelines'; SUB = 'frameworks'; }
   document.getElementById('mainArea').innerHTML = `
-    <div class="topbar"><div class="topbar-l"><span class="tb-title">${fw ? 'Messaging frameworks' : 'Content library'}</span><span class="tb-badge badge-neutral">Live: ${esc(DemandAI.brandVersion())}</span></div></div>
-    ${fw ? '' : `<div class="ftabs">${SECTIONS.filter(([k])=>k!=='framework').map(([k,l])=>ft(k,l)).join('')}</div>`}
-    <div class="canvas">
-      ${packageBar(live, changed)}
+    <div class="topbar"><div class="topbar-l"><span class="tb-title">Content library</span><span class="tb-badge badge-neutral">${esc(DemandAI.brandVersion())}</span></div></div>
+    <div class="ftabs">${[['guidelines','Brand guidelines'],['voice','Voice and tone'],['negative','Negative keywords'],['claims','Approved claims'],['versions','Versions']].map(([k,l])=>ft(k,l)).join('')}</div>
+    <div class="canvas cl-canvas">
+      ${saveBar(live, changed)}
       ${!canEdit() ? `<div style="font-size:12px;color:var(--i3);margin-bottom:14px">View only: the admin and the sales manager maintain the brand pack.</div>` : ''}
-      <div style="max-width:${fw?1160:980}px">${({guidelines:guidelinesTab, voice:voiceTab, negative:negativeTab, claims:claimsTab, framework:frameworkTab, versions:versionsTab})[tab]()}</div>
+      ${({guidelines:guidelinesTab, voice:voiceTab, negative:negativeTab, claims:claimsTab, versions:versionsTab})[tab]()}
     </div>`;
 }
-/* ─── One package: every tab edits the same draft, published together as one version ─── */
-function packageBar(live, changed){
+const SECTION_OF = { 'Brand guidelines':'guidelines', 'Messaging frameworks':'guidelines', 'Voice and tone':'voice', 'Negative keywords':'negative', 'Approved claims':'claims' };
+function go(k, sub){ tab = k; if(sub) SUB = sub; history.replaceState(null, '', '?tab=' + (k==='guidelines' && SUB==='frameworks' ? 'framework' : k)); render(); document.querySelector('.canvas').scrollTop = 0; }
+
+/* ─── Save: every change waits here until it is saved, and each save is a new version ─── */
+function saveBar(live, changed){
   const pend = DemandAI.brandPending();
-  if(!(pend && changed.length)) return canEdit() ? `<div class="pk pk-idle"><span class="pk-i">✓</span><div><b>Brand pack ${esc(DemandAI.brandVersion())} is live.</b> Changes on any tab, including Messaging frameworks, go into one draft and are published together as the next version.</div></div>` : '';
+  if(!(pend && changed.length)) return '';
   const n = diffSummary().reduce((a,s)=>a+s.lines.length,0);
   return `<div class="pk"><span class="pk-i">✎</span>
-    <div style="flex:1;min-width:0"><b>Draft of Brand v${live.v+1}</b> · ${n} change${n===1?'':'s'} in ${esc(changed.join(', '))}<div class="pk-s">Drafts keep using ${esc(DemandAI.brandVersion())} until this is published.${pend.submitted?` Submitted for approval by ${esc(pend.submitted.by)} on ${fmtDate(pend.submitted.at)}.`:''}</div></div>
-    <button class="btn btn-sec btn-sm" onclick="reviewChanges()">Review changes</button>
-    ${canPublish() ? `<button class="btn btn-primary btn-sm" onclick="publish()">Publish as v${live.v+1}</button>` : canEdit() && !pend.submitted ? `<button class="btn btn-primary btn-sm" onclick="submitForApproval()">Submit for approval</button>` : ''}
-    ${canEdit() ? `<button class="btn btn-ghost btn-sm" onclick="discard()">Discard</button>` : ''}</div>`;
+    <div style="flex:1;min-width:0"><b>${n} unsaved change${n===1?'':'s'}</b> in ${esc(changed.join(', '))}<div class="pk-s">Saving makes Brand v${live.v+1}. Until then, drafts keep using ${esc(DemandAI.brandVersion())}.</div></div>
+    <button class="btn btn-ghost btn-sm" onclick="reviewChanges()">See changes</button>
+    ${canEdit() ? `<button class="btn btn-ghost btn-sm" onclick="discard()">Discard</button><button class="btn btn-primary btn-sm" onclick="saveVersion()">Save as v${live.v+1}</button>` : ''}</div>`;
 }
+function reviewChanges(){
+  const s = diffSummary(), live = DemandAI.brandPack();
+  overlayHtml(`<div style="font-family:var(--fd);font-size:16px;font-weight:700;color:var(--i1)">What Brand v${live.v+1} changes</div>
+    <div style="font-size:12px;color:var(--i3);margin:4px 0 14px">Saved together as one version. ${esc(DemandAI.brandVersion())} is kept for lists already drafted with it.</div>
+    ${s.map(x=>`<div class="rc"><div class="rc-h">${esc(x.section)}<span>${x.lines.length}</span></div>${x.lines.map(l=>`<div class="rc-l">${esc(l)}</div>`).join('')}</div>`).join('') || '<div style="font-size:12.5px;color:var(--i3)">No changes.</div>'}
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px"><button class="btn btn-ghost btn-sm" onclick="closeOverlayHtml()">Close</button>
+      ${canEdit() ? `<button class="btn btn-primary btn-sm" onclick="closeOverlayHtml();saveVersion()">Save as v${live.v+1}</button>` : ''}</div>`);
+}
+function saveVersion(){
+  if(!canEdit()) return;
+  const d = diffSummary(), secs = d.map(x=>x.section), lines = d.flatMap(x=>x.lines.map(l=>`${x.section}: ${l}`));
+  const v = DemandAI.publishBrand(me().who, secs.join(', '), secs, lines);
+  if(!v){ showToast('Nothing to save'); return; }
+  DRAFT = null; showToast(`Saved as Brand v${v.v}. New drafts follow it`); render();
+}
+function discard(){ if(!confirm('Discard the unsaved changes?')) return; DemandAI.discardBrandDraft(); DRAFT = null; showToast('Discarded'); render(); }
+function overlayHtml(html, w){
+  let ov = document.getElementById('pkOverlay');
+  if(!ov){ ov = document.createElement('div'); ov.id = 'pkOverlay'; ov.style.cssText = 'position:fixed;inset:0;background:rgba(20,26,33,.45);z-index:600;display:flex;align-items:center;justify-content:center;padding:16px'; ov.onclick = e=>{ if(e.target===ov) closeOverlayHtml(); }; document.body.appendChild(ov); }
+  ov.innerHTML = `<div style="background:var(--surf);border-radius:var(--rlg);box-shadow:var(--sh-lg);width:${w||560}px;max-width:100%;max-height:88vh;overflow:auto;padding:22px">${html}</div>`; ov.style.display = 'flex';
+}
+function closeOverlayHtml(){ const ov = document.getElementById('pkOverlay'); if(ov) ov.style.display = 'none'; }
+
+/* ─── Versions: every save, who made it, and exactly what changed ─── */
+let VOPEN = null;
+function versionsTab(){
+  const live = DemandAI.brandPack(), hist = (live.history||[]).slice().reverse();
+  return card('Versions', `<span style="font-size:11px;color:var(--i2)">In use: ${esc(DemandAI.brandVersion())}</span>`,
+    `<div style="font-size:12px;color:var(--i2);margin-bottom:10px">Each save is a new version: guidelines, messaging frameworks, voice, keywords and claims together. Only the latest reaches new drafts; every list records the version it was drafted with, and earlier versions are kept.</div>`
+    + hist.map(h=>{ const ch = h.changes||[], open = VOPEN===h.v;
+      return `<div class="vr"><div class="vr-h" ${ch.length?`onclick="VOPEN=${open?'null':h.v};render()" style="cursor:pointer"`:''}>
+          <b class="vr-v">v${h.v}</b>${h.v===live.v?'<span class="tag tag-green">In use</span>':''}
+          <span class="vr-n">${esc(h.note||'')}${(h.sections||[]).length?`<span class="vr-tags">${h.sections.map(x=>`<span class="tag tag-grey">${esc(x)}</span>`).join('')}</span>`:''}</span>
+          <span class="vr-m">${h.at?`${fmtDate(h.at)} · ${esc(h.by)}`:'Kickoff'}</span>${ch.length?`<span class="vr-x">${open?'▾':'▸'} ${ch.length} change${ch.length===1?'':'s'}</span>`:''}</div>
+        ${open ? `<div class="vr-b">${ch.map(l=>`<div>${esc(l)}</div>`).join('')}</div>` : ''}</div>`; }).join(''));
+}
+
 // What differs between the live pack and the draft, section by section, in words.
 function diffSummary(){
   const live = DemandAI.brandPack(), pend = DemandAI.brandPending(); if(!pend) return [];
@@ -738,29 +850,6 @@ function diffSummary(){
   if(f.length) out.push({ section:'Messaging frameworks', lines:f });
   return out;
 }
-function reviewChanges(){
-  const s = diffSummary(), live = DemandAI.brandPack();
-  overlayHtml(`<div style="font-family:var(--fd);font-size:16px;font-weight:700;color:var(--i1)">What changes in Brand v${live.v+1}</div>
-    <div style="font-size:12px;color:var(--i3);margin:4px 0 14px">Everything below is published together, as one version. ${esc(DemandAI.brandVersion())} stays available for lists already drafted with it.</div>
-    ${s.map(x=>`<div class="rc"><div class="rc-h">${esc(x.section)}<span>${x.lines.length}</span></div>${x.lines.map(l=>`<div class="rc-l">${esc(l)}</div>`).join('')}</div>`).join('') || '<div style="font-size:12.5px;color:var(--i3)">No changes.</div>'}
-    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px"><button class="btn btn-ghost btn-sm" onclick="closeOverlayHtml()">Close</button>
-      ${canPublish() ? `<button class="btn btn-primary btn-sm" onclick="closeOverlayHtml();publish()">Publish as v${live.v+1}</button>` : ''}</div>`);
-}
-function overlayHtml(html){
-  let ov = document.getElementById('pkOverlay');
-  if(!ov){ ov = document.createElement('div'); ov.id = 'pkOverlay'; ov.style.cssText = 'position:fixed;inset:0;background:rgba(20,26,33,.45);z-index:600;display:flex;align-items:center;justify-content:center'; ov.onclick = e=>{ if(e.target===ov) closeOverlayHtml(); }; document.body.appendChild(ov); }
-  ov.innerHTML = `<div style="background:var(--surf);border-radius:var(--rlg);box-shadow:var(--sh-lg);width:560px;max-width:92vw;max-height:84vh;overflow:auto;padding:22px">${html}</div>`; ov.style.display = 'flex';
-}
-function closeOverlayHtml(){ const ov = document.getElementById('pkOverlay'); if(ov) ov.style.display = 'none'; }
-function publish(){
-  const secs = changedSections(), note = prompt('What changed? (recorded with the version)', secs.join(', '));
-  if(note===null) return;
-  const v = DemandAI.publishBrand(me().who, note, secs);
-  if(!v){ showToast('Nothing to publish'); return; }
-  DRAFT = null; showToast(`Published as Brand v${v.v}: new drafts follow it`); render();
-}
-function submitForApproval(){ DemandAI.submitBrand(me().who); showToast('Submitted: the admin publishes it'); render(); }
-function discard(){ if(!confirm('Discard the unpublished changes?')) return; DemandAI.discardBrandDraft(); DRAFT = null; showToast('Discarded'); render(); }
 
 /* ─── A sample brand guideline: what the document should contain. Upload it back and its rules are read. ─── */
 const GUIDE_PARTS = [
@@ -814,16 +903,6 @@ Always sign off as: Client Sales Team
 - Colours: primary purple #7D52A2, dark text #141A21, grey #7A8592.
 - Fonts: a clean sans serif for headings and body text.
 `;
-function downloadSampleGuide(){
-  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([SAMPLE_GUIDE], { type:'text/markdown' })); a.download = 'client-brand-guidelines-sample.md';
-  document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 500);
-  showToast('Sample downloaded. Upload it back above to see its rules read');
-}
-function guideSampleCard(){
-  return card('What a brand guideline should contain', `<button class="btn btn-sec btn-sm" onclick="downloadSampleGuide()">↓ Download a sample (.md)</button>`,
-    `<div class="gp">${GUIDE_PARTS.map(([t,d],i)=>`<div class="gp-i"><span class="gp-n">${i+1}</span><div><b>${esc(t)}</b><div>${esc(d)}</div></div></div>`).join('')}</div>
-     <div class="su-tip">For the demo: download the sample, then upload it back above. Its rules (banned words, competitors, sign-off, length, tone) are read and offered to add to the draft in one click.</div>`);
-}
 
 /* ─── Voice: the same message in each voice, side by side ─── */
 const TONE_SAMPLE = {
@@ -831,28 +910,111 @@ const TONE_SAMPLE = {
   Formal: 'We understand that your control system will reach end of support next year. We recently supported a comparable refinery in completing the migration within a single planned shutdown. Would a short discussion of the options be of interest?',
   Warm: 'I noticed your control system reaches end of support next year, and thought this might help: a refinery much like yours made the move in one planned shutdown. Happy to walk you through how they did it, if useful.',
 };
-function tonesCard(cur){
-  const P = DemandAI.VOICE_PRESETS;
-  return card('The same message in each voice', `<span style="font-size:11px;color:var(--i3)">so the difference is easy to see</span>`,
-    `<div class="tn">${Object.entries(P).map(([k,p])=>`<div class="tn-c ${cur===k?'on':''}"><div class="tn-h">${esc(k)}${cur===k?'<span>In use</span>':''}</div>
-      <div class="tn-b">${esc(p.greeting.replace('{first}','Aditi'))}<br><br>${esc(TONE_SAMPLE[k]||'')}<br><br>${esc(p.closing)}</div></div>`).join('')}</div>`);
-}
 const later = (title, items) => `<div class="later"><div class="later-h">${esc(title)}<span>After the pilot</span></div>${items.map(([t,d])=>`<div class="later-i"><b>${esc(t)}</b> ${esc(d)}</div>`).join('')}</div>`;
+/* ─── Brand guidelines: the document, samples of what one looks like, and the messaging frameworks ─── */
+const SAMPLES = [
+  { id:'full', title:'Full brand guideline', about:'Every section a guideline should have. Its rules are read when you upload it back.', file:'client-brand-guideline-sample.md', reads:true, text: SAMPLE_GUIDE },
+  { id:'email', title:'Email guideline', about:'Header, footer, sign-off, length and the opt-out line on promotional email.', file:'client-email-guideline-sample.md', reads:true, text:
+`# Client email guideline (sample)
+
+## Structure
+- Subject: six words or fewer, about their situation, never a product name.
+- Opening line: their own trigger, in one sentence.
+- One point, one proof, one question.
+
+## Rules
+Keep emails under 120 words.
+Keep sentences under 25 words.
+Always sign off as: Client Sales Team
+Never open with: Just checking in, Hope you are well
+No exclamation marks.
+
+## Header and footer
+- Header: the client logo, left aligned, on white.
+- Footer: company name, registered address, a link to the privacy notice.
+
+## Promotional email
+- Always ends with the opt-out line: "Prefer not to hear from us? Unsubscribe here."
+- Sent only to contacts with a recorded consent basis.
+` },
+  { id:'voice', title:'Voice and tone sheet', about:'How the client sounds, with good and bad examples side by side.', file:'client-voice-and-tone-sample.md', reads:true, text:
+`# Client voice and tone (sample)
+
+Tone: Direct
+
+## We are
+- Specific: we name their site, their system, their timeline.
+- Practical: one useful point, not a list of features.
+- Calm: no hype, no urgency we didn't earn.
+
+## We avoid
+Never use: synergy, cutting-edge, best-in-class, revolutionary
+
+## Examples
+- Good: "Your control system reaches end of support next year. A comparable refinery moved within one planned shutdown. Worth comparing the options?"
+- Not like this: "Exciting news! Our best-in-class platform will revolutionise your plant!"
+` },
+];
+function mdHtml(t){
+  const inline = x => esc(x).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>');
+  let out = '', ul = false;
+  String(t).split('\n').forEach(l=>{
+    const b = l.match(/^\s*[-*]\s+(.*)/);
+    if(b){ if(!ul){ out += '<ul>'; ul = true; } out += `<li>${inline(b[1])}</li>`; return; }
+    if(ul){ out += '</ul>'; ul = false; }
+    if(/^#\s/.test(l)) out += `<h3>${inline(l.slice(2))}</h3>`; else if(/^##\s/.test(l)) out += `<h4>${inline(l.slice(3))}</h4>`; else if(l.trim()) out += `<p>${inline(l)}</p>`;
+  });
+  return out + (ul ? '</ul>' : '');
+}
+async function saveText(name, text){
+  let dl = null;
+  try{ dl = window.claude && window.claude.use ? await window.claude.use('downloads') : null; }catch(e){ dl = null; }
+  if(dl){ try{ await dl.save({ filename:name, data:new Blob([text], { type:'text/markdown' }) }); showToast(name + ' saved'); }catch(e){ if(!(e && e.code==='declined')) showToast("This view can't save files"); } return; }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type:'text/markdown' })); a.download = name; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 500);
+  showToast(name + ' downloaded. Upload it back above to see its rules read');
+}
+function previewSample(id){
+  const s = SAMPLES.find(x=>x.id===id); if(!s) return;
+  overlayHtml(`<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px"><div style="font-family:var(--fd);font-size:16px;font-weight:700;color:var(--i1)">${esc(s.title)}</div>
+      <button class="btn btn-sec btn-sm" onclick="saveText('${s.file}', SAMPLES.find(x=>x.id==='${s.id}').text)">↓ Download</button></div>
+    <div class="md">${mdHtml(s.text)}</div>
+    <div style="display:flex;justify-content:flex-end;margin-top:14px"><button class="btn btn-ghost btn-sm" onclick="closeOverlayHtml()">Close</button></div>`, 680);
+}
+function samplesCard(){
+  return card('Samples', `<span style="font-size:11px;color:var(--i3)">what a good guideline looks like</span>`,
+    `<div class="smp">${SAMPLES.map(s=>`<div class="smp-c"><div class="smp-doc">${mdHtml(s.text.split('\n').slice(0,9).join('\n'))}</div>
+        <div class="smp-b"><b>${esc(s.title)}</b><div>${esc(s.about)}</div>
+          <div class="smp-a"><button class="btn btn-ghost btn-sm" onclick="previewSample('${s.id}')">Preview</button><button class="btn btn-sec btn-sm" onclick="saveText('${s.file}', SAMPLES.find(x=>x.id==='${s.id}').text)">↓ Download</button></div></div></div>`).join('')}</div>
+     <div class="su-tip">For the demo: download a sample, then upload it back with “Upload the brand guideline document”. Its rules (banned words, competitors, sign-off, length, tone) are read and offered to add in one click.</div>
+     <div class="gp" style="margin-top:14px">${GUIDE_PARTS.map(([t,d],i)=>`<div class="gp-i"><span class="gp-n">${i+1}</span><div><b>${esc(t)}</b><div>${esc(d)}</div></div></div>`).join('')}</div>`);
+}
+function subNav(){
+  return `<div class="subnav"><button class="${SUB==='doc'?'on':''}" onclick="go('guidelines','doc')">Guideline document and samples</button><button class="${SUB==='frameworks'?'on':''}" onclick="go('guidelines','frameworks')">Messaging frameworks</button></div>`;
+}
+
+/* ─── Calls to action, with the tools behind them ─── */
+const logo = (name, size) => { const svg = (window.TOOL_LOGOS||{})[name]; return svg ? `<img class="lg" src="data:image/svg+xml;utf8,${encodeURIComponent(svg)}" alt="${esc(name)}" title="${esc(name)}" width="${size||16}" height="${size||16}">` : ''; };
+function ctaChip(k){
+  const a = FA[k]; if(!a) return '';
+  return `<div class="cta"><span class="fa-i">${FA_IC[k]||''}</span><div class="cta-b"><b>${esc(a.label)}</b><span>${esc(a.how)}</span>
+    ${(a.tools||[]).length ? `<div class="cta-t">${a.tools.map(t=>`<span class="tool">${logo(t, 14)}${esc(t)}</span>`).join('')}</div>` : ''}</div></div>`;
+}
 
 /* ─── Brand guidelines: the reference document, and rules read from it ─── */
 function guidelinesTab(){
+  if(SUB==='frameworks') return subNav() + frameworkTab();
   const g = draft().guideline;
-  return card('Brand guideline document', '', `
+  return subNav() + card('Brand guideline document', '', `
       ${g ? `<div style="display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--rsm);margin-bottom:12px">
           <div style="flex:1"><div style="font-size:12.5px;font-weight:600;color:var(--i1)">${esc(g.name)}</div><div style="font-size:11px;color:var(--i3)">${Math.round(g.size/1024)} KB · uploaded by ${esc(g.by)} on ${fmtDate(g.at)}${g.data?'':' · reference only (too large to keep in the browser)'}</div></div>
           ${g.data?`<a class="btn btn-sec btn-sm" href="${g.data}" download="${esc(g.name)}" style="text-decoration:none">Open</a>`:''}
-          ${canEdit()?`<button class="btn btn-ghost btn-sm" onclick="draft().guideline=null;SUGGEST=null;commit('Removed')">Remove</button>`:''}</div>` : ''}
+          ${canEdit()?`<button class="btn btn-ghost btn-sm" onclick="draft().guideline=null;SUGGEST=null;commit('Removed. Save to make it a new version')">Remove</button>`:''}</div>` : ''}
       ${canEdit() ? `<label for="gFile" style="display:block;border:1.5px dashed var(--bdk);border-radius:var(--rmd);padding:20px;cursor:pointer;background:var(--s50);text-align:center">
           <input type="file" id="gFile" accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.md" style="display:none" onchange="onGuideline(this.files[0])">
           <div style="font-size:13px;font-weight:600;color:var(--i1)">${g?'Replace the guideline document':'Upload the brand guideline document'}</div>
           <div style="font-size:11px;color:var(--i3);margin-top:3px">PDF, Word or PowerPoint is kept as the reference. A .txt or .md file is also read for rules you can add in one click.</div></label>` : ''}
       ${label('Key rules from the guidelines, in your words')}
-      <textarea ${ro()} rows="5" style="width:100%;${field};line-height:1.6" onchange="draft().voice.notes=this.value;commit('Saved to the draft')">${esc(draft().voice.notes||'')}</textarea>
+      <textarea ${ro()} rows="5" style="width:100%;${field};line-height:1.6" onchange="draft().voice.notes=this.value;commit('Changed. Save to make it a new version')">${esc(draft().voice.notes||'')}</textarea>
       <div style="font-size:11px;color:var(--i3);margin-top:6px">For the reviewer's reference. What the drafts follow strictly is set on the other tabs: voice and tone, negative keywords, approved claims and the messaging frameworks.</div>`)
 
     + (SUGGEST ? card('Rules found in the document', `<span style="font-size:11px;color:var(--i3)">${esc(SUGGEST.name)}</span>`,
@@ -860,7 +1022,7 @@ function guidelinesTab(){
             <span class="tag tag-grey">${esc(x.kind)}</span><span style="flex:1;color:var(--i1)">${esc(x.value)}</span>
             ${x.added?'<span style="color:var(--pos);font-weight:600">Added</span>':canEdit()?`<button class="btn btn-sec btn-sm" onclick="addSuggestion(${i})">Add to the draft</button>`:''}</div>`).join('')
           : '<div style="font-size:12px;color:var(--i3)">No rules in a form the system can read. Lines like "Never use the word synergy", "Do not mention Acme", "Always sign off as …", "Keep emails under 120 words" or "Tone: formal" are picked up.</div>')) : '')
-    + guideSampleCard();
+    + samplesCard();
 }
 async function onGuideline(file){
   if(!file) return;
@@ -899,39 +1061,38 @@ function addSuggestion(i){
   if(x.kind==='Rule') d.voice.noExclamation = true;
   if(x.kind==='Email length') d.voice.maxWords = +x.value;
   if(x.kind==='Sentence length') d.voice.maxSentenceWords = +x.value;
-  x.added = true; commit('Added to the draft');
+  x.added = true; commit('Added. Save to make it a new version');
 }
 
 /* ─── Voice and tone ─── */
 function voiceTab(){
   const v = draft().voice, P = DemandAI.VOICE_PRESETS, pre = P[v.preset] || P.Direct;
-  const sample = `${pre.greeting.replace('{first}','Aditi')}\n\nSaw you opened "Migration planning guide". A comparable refinery moved its legacy control system to a current platform within one planned shutdown. [Case study, 2025]\n\nWorth comparing the options?\n\n${pre.closing}\n${v.signoff||'Client Team'}`;
+  const sample = `${pre.greeting.replace('{first}','Aditi')}\n\n${TONE_SAMPLE[v.preset] || TONE_SAMPLE.Direct}\n\n${pre.closing}\n${v.signoff||'Client Team'}`;
   return card('Voice', '', `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">${Object.entries(P).map(([k,p])=>`<button ${ro()} onclick="draft().voice.preset='${k}';commit('Voice set to ${k}')" style="text-align:left;padding:12px;border-radius:var(--rsm);border:1px solid ${v.preset===k?'var(--brand)':'var(--border)'};background:${v.preset===k?'var(--brand-lt)':'var(--surf)'}">
         <div style="font-size:13px;font-weight:700;color:var(--i1)">${k}</div><div style="font-size:11.5px;color:var(--i2);margin-top:3px;line-height:1.5">${esc(p.about)}</div>
         <div style="font-size:11px;color:var(--i3);margin-top:6px">${esc(p.greeting.replace('{first}','Aditi'))} … ${esc(p.closing)}</div></button>`).join('')}</div>`)
     + card('Rules every draft must meet', '', `<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 18px">
-        <div>${label('Sign-off')}<input ${ro()} value="${esc(v.signoff||'')}" style="width:100%;${field}" onchange="draft().voice.signoff=this.value.trim();commit('Saved to the draft')"></div>
-        <div>${label('Email length (words, at most)')}<input ${ro()} type="number" value="${v.maxWords}" style="width:100%;${field}" onchange="draft().voice.maxWords=+this.value;commit('Saved to the draft')"></div>
-        <div>${label('Sentence length (words, at most)')}<input ${ro()} type="number" value="${v.maxSentenceWords}" style="width:100%;${field}" onchange="draft().voice.maxSentenceWords=+this.value;commit('Saved to the draft')"></div>
-        <div>${label('Punctuation')}<label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--i1);padding:8px 0"><input ${ro()} type="checkbox" ${v.noExclamation?'checked':''} onchange="draft().voice.noExclamation=this.checked;commit('Saved to the draft')" style="accent-color:var(--brand)">No exclamation marks</label></div>
+        <div>${label('Sign-off')}<input ${ro()} value="${esc(v.signoff||'')}" style="width:100%;${field}" onchange="draft().voice.signoff=this.value.trim();commit('Changed. Save to make it a new version')"></div>
+        <div>${label('Email length (words, at most)')}<input ${ro()} type="number" value="${v.maxWords}" style="width:100%;${field}" onchange="draft().voice.maxWords=+this.value;commit('Changed. Save to make it a new version')"></div>
+        <div>${label('Sentence length (words, at most)')}<input ${ro()} type="number" value="${v.maxSentenceWords}" style="width:100%;${field}" onchange="draft().voice.maxSentenceWords=+this.value;commit('Changed. Save to make it a new version')"></div>
+        <div>${label('Punctuation')}<label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--i1);padding:8px 0"><input ${ro()} type="checkbox" ${v.noExclamation?'checked':''} onchange="draft().voice.noExclamation=this.checked;commit('Changed. Save to make it a new version')" style="accent-color:var(--brand)">No exclamation marks</label></div>
       </div>
       ${label('Openers to avoid')}${chips('bannedOpeners', v.bannedOpeners||[], 'e.g. Just checking in', true)}
       <div style="font-size:11px;color:var(--i3);margin-top:8px">A draft that breaks one of these is rewritten once automatically; if it still breaks it, it goes to a person in For Review.</div>`)
-    + card('Preview', `<span style="font-size:11px;color:var(--i3)">how an email opens and closes</span>`, `<pre style="white-space:pre-wrap;font-family:var(--fb);font-size:12.5px;color:var(--i1);line-height:1.6;margin:0;padding:12px;background:var(--s50);border-radius:var(--rsm)">${esc(sample)}</pre>`)
-    + tonesCard(v.preset)
+    + card('Preview', `<span style="font-size:11px;color:var(--i3)">changes with the voice you pick: ${esc(v.preset)}</span>`, `<pre style="white-space:pre-wrap;font-family:var(--fb);font-size:12.5px;color:var(--i1);line-height:1.6;margin:0;padding:12px;background:var(--s50);border-radius:var(--rsm)">${esc(sample)}</pre>`)
     + later('Being explored', [['Personalities per piece of content.', 'Named voices, such as cheerful for marketing and formal for service updates, attached to each email, post or whitepaper.'], ['Email guidelines.', 'A standard header and footer, and the opt-out line every promotional email must carry.']]);
 }
 // A small list editor: chips with remove, and an input to add.
 function chips(key, list, ph, voice){
   const path = voice ? `draft().voice.${key}` : `draft().${key}`;
-  return `<div class="tags" style="margin-bottom:8px">${list.map((w,i)=>`<span class="tag tag-grey">${esc(w)}${canEdit()?` <button onclick="${path}.splice(${i},1);commit('Removed')" style="margin-left:4px;color:var(--i3)">×</button>`:''}</span>`).join('') || '<span style="font-size:12px;color:var(--i3)">None yet.</span>'}</div>
+  return `<div class="tags" style="margin-bottom:8px">${list.map((w,i)=>`<span class="tag tag-grey">${esc(w)}${canEdit()?` <button onclick="${path}.splice(${i},1);commit('Removed. Save to make it a new version')" style="margin-left:4px;color:var(--i3)">×</button>`:''}</span>`).join('') || '<span style="font-size:12px;color:var(--i3)">None yet.</span>'}</div>
     ${canEdit()?`<div style="display:flex;gap:8px"><input id="add_${key}" placeholder="${esc(ph)}" style="flex:1;${field}" onkeydown="if(event.key==='Enter')addTo('${key}',${!!voice})"><button class="btn btn-sec btn-sm" onclick="addTo('${key}',${!!voice})">Add</button></div>`:''}`;
 }
 function addTo(key, voice){
   const el = document.getElementById('add_'+key), v = (el.value||'').trim(); if(!v) return;
   const list = voice ? (draft().voice[key] = draft().voice[key] || []) : draft()[key];
   v.split(',').map(x=>x.trim()).filter(Boolean).forEach(x=>{ const val = key==='negative' ? x.toLowerCase() : x; if(!list.some(y=>y.toLowerCase()===val.toLowerCase())) list.push(val); });
-  commit('Added to the draft');
+  commit('Added. Save to make it a new version');
 }
 
 /* ─── Negative keywords and competitors ─── */
@@ -946,37 +1107,94 @@ const SEGS = Object.keys(DemandAI.CONFIG.segmentLibrary);
 const CLAIM_TOPICS = [['Modernisation', /migrat|legacy|moderni[sz]|end of support|upgrade|assessment|platform/i], ['Service renewal', /renew|service|support|lifecycle|contract/i],
   ['Project', /project|expansion|design|schedule/i], ['Leadership', /priorit|first 100|new (plant )?(leader|manager)|role/i], ['Inquiry', /inquir|question|quote/i], ['Engagement', /webinar|recording|session|guide/i]];
 function claimFits(text){ const m = CLAIM_TOPICS.filter(([,re])=>re.test(text)).map(([k])=>k); return m.length ? m : SEGS.slice(); }
+/* ─── Approved claims: the only claims a draft may make. Search, filter, where each was used, and its full detail. ─── */
+let CLQ = '', CLT = '', CLS = '', CLSEL = null, CLU = null;
+// Where each claim was cited: every message drafted in the saved micro-segment lists, and whether it went out.
+function claimUsage(){
+  if(CLU) return CLU;
+  const use = {}, fromReview = [];
+  try{
+    DemandAI.loadSegmentations().forEach(saved=>{
+      const c = compute(saved.src, saved.id, saved.createdAt, saved.brandVersion); if(!c) return;
+      RUN = Object.assign({ saved }, c);
+      c.seg.recs.forEach(r=>{ const d = dec(r.key), x = draftOf(r), chk = DemandAI.checkDraft(x), at = d.at || saved.createdAt, out = d.status==='Released';
+        chk.claims.filter(cl=>cl.verified).forEach(cl=>{ const id = cl.source.split(' · ')[0]; (use[id] = use[id] || []).push({ who: liveRec(r).contact.name, account: r.account.name, at, out, list: saved.name }); });
+        // The learning loop: a sentence a person approved in For Review that is not an approved claim yet.
+        if(out && d.draft) chk.unsupported.forEach(u=>{ if(!fromReview.some(f=>f.text===u.text)) fromReview.push({ text:u.text, account:r.account.name, by:d.by||'', at }); }); });
+    });
+  }catch(e){ console.error(e); }
+  RUN = null; DemandAI.useBrand();
+  return CLU = { use, fromReview };
+}
+const isoOf = t => { const d = new Date(t); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
 function claimsTab(){
-  const today = todayIso(), cs = draft().claims, first = cs[0];
-  const topics = [...new Set(cs.flatMap(c=>c.segments||[]))];
-  return `<div class="gr-ban"><b>Not part of the POC.</b> The screen is kept to show where it goes; it is greyed out until after the pilot. Drafts are still checked against these approved claims.</div>
-    <div class="greyed" inert aria-disabled="true">
-      <div class="cl-tools"><div class="sl-srch" style="flex:1;max-width:320px"><input placeholder="Search claims" disabled></div>
-        <select disabled><option>All topics</option>${topics.map(t=>`<option>${esc(t)}</option>`).join('')}</select>
-        <select disabled><option>All statuses</option></select>
-        <span style="flex:1"></span><button class="btn btn-sec btn-sm" disabled>＋ Add from For Review</button><button class="btn btn-primary btn-sm" disabled>Add a claim</button></div>
-      <div class="cl-grid"><div class="panel" style="margin:0"><table class="cl-t"><thead><tr><th style="width:40%">Claim</th><th>Topics</th><th>Expires</th><th>Last used</th><th>Used after expiry</th><th>Status</th></tr></thead><tbody>
-        ${cs.map((c,i)=>{ const expired = c.expiry < today; return `<tr class="${i===0?'sel':''}"><td><div class="cl-c">${esc(c.claim)}</div><div class="cl-s">${esc(c.id)} · ${esc(c.type)}, ${c.year} · ${esc(c.title)}</div></td>
-          <td>${(c.segments||[]).slice(0,2).map(t=>`<span class="tag tag-grey">${esc(t)}</span>`).join(' ')}${(c.segments||[]).length>2?` <span class="cl-s">+${c.segments.length-2}</span>`:''}</td>
-          <td>${esc(c.expiry)}</td><td class="cl-s">—</td><td class="cl-s">—</td>
-          <td><span class="tag ${expired?'tag-red':c.status==='approved'?'tag-green':'tag-grey'}">${expired?'Expired':c.status==='approved'?'Approved':c.status==='retired'?'Retired':'Draft'}</span></td></tr>`; }).join('')}
-      </tbody></table></div>
-      ${first ? `<div class="panel cl-pane" style="margin:0"><div class="panel-hdr"><span class="panel-ttl">Claim detail</span></div><div class="panel-body">
-        <div class="cl-c" style="font-size:13px;margin-bottom:10px">${esc(first.claim)}</div>
-        ${[['Source', `${first.title} (${first.type}, ${first.year})`], ['Topics', (first.segments||[]).join(', ')], ['Owner', first.owner||'Content owner'], ['Expires', first.expiry], ['Where it was used', 'Messages and content citing it, with dates'], ['After expiry', 'Any use after it expired, flagged']].map(([k,v])=>`<div class="cl-kv"><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('')}
-      </div></div>` : ''}</div>
+  const today = todayIso(), cs = draft().claims, U = claimUsage(), ed = canEdit();
+  const topics = [...new Set(cs.flatMap(c=>c.segments||[]))].sort();
+  const stOf = c => c.expiry < today ? 'Expired' : c.status==='approved' ? 'Approved' : c.status==='retired' ? 'Retired' : 'Draft';
+  const q = CLQ.toLowerCase(), list = cs.map((c,i)=>({c,i})).filter(({c})=>(!q || (c.claim+' '+c.title+' '+c.id).toLowerCase().includes(q)) && (!CLT || (c.segments||[]).includes(CLT)) && (!CLS || stOf(c)===CLS));
+  if(CLSEL===null || !cs[CLSEL]) CLSEL = list.length ? list[0].i : null;
+  const usesOf = c => U.use[c.id] || [], last = c => usesOf(c).reduce((a,u)=>Math.max(a,u.at||0),0), after = c => usesOf(c).filter(u=>u.at && isoOf(u.at) > c.expiry).length;
+  const tone = s => s==='Approved'?'tag-green':s==='Expired'?'tag-red':s==='Draft'?'tag-amber':'tag-grey';
+  const sel = CLSEL!==null ? cs[CLSEL] : null;
+  return `<div class="cl-intro">The only claims a draft can make, each with its source. A draft cites an approved, unexpired claim word for word; any other claim sends the item to a person in For Review.</div>
+    <div class="cl-tools">
+      <div class="cl-q"><input id="clq" placeholder="Search claims, sources or IDs" value="${esc(CLQ)}" oninput="CLQ=this.value;CLSEL=null;render();const e=document.getElementById('clq');e.focus();e.setSelectionRange(e.value.length,e.value.length)"></div>
+      <select onchange="CLT=this.value;CLSEL=null;render()"><option value="">All topics</option>${topics.map(t=>`<option ${CLT===t?'selected':''}>${esc(t)}</option>`).join('')}</select>
+      <select onchange="CLS=this.value;CLSEL=null;render()"><option value="">All statuses</option>${['Approved','Expired','Draft','Retired'].map(s=>`<option ${CLS===s?'selected':''}>${s}</option>`).join('')}</select>
+      <span style="flex:1"></span>
+      ${ed ? `<button class="btn btn-sec btn-sm" onclick="fromReviewPick()">From For Review${U.fromReview.length?` <span class="cnt">${U.fromReview.length}</span>`:''}</button><button class="btn btn-primary btn-sm" onclick="claimForm()">Add a claim</button>` : ''}
     </div>
-    <div class="su-tip" style="margin-top:12px">What comes after the pilot: content approved in For Review is added here in one click, so the same thing isn't approved twice; each claim shows when it was last used and whether it is still used after it expires; search and topic filters as the list grows; and a third pane with the claim's full detail.</div>`;
+    <div class="cl-grid">
+      <div class="panel" style="margin:0;overflow:hidden"><table class="cl-t"><thead><tr><th style="width:44%">Claim</th><th style="width:20%">Topics</th><th style="width:12%">Expires</th><th style="width:13%">Last used</th><th style="width:11%">Status</th></tr></thead><tbody>
+        ${list.map(({c,i})=>{ const st = stOf(c), l = last(c), af = after(c); return `<tr class="${i===CLSEL?'sel':''}" onclick="CLSEL=${i};render()">
+          <td><div class="cl-c">${esc(c.claim)}</div><div class="cl-s">${esc(c.id)} · ${esc(c.type)}, ${c.year} · ${esc(c.title)}</div></td>
+          <td>${(c.segments||[]).slice(0,2).map(t=>`<span class="tag tag-grey">${esc(t)}</span>`).join(' ')}${(c.segments||[]).length>2?` <span class="cl-s">+${c.segments.length-2}</span>`:''}</td>
+          <td>${esc(c.expiry)}</td>
+          <td>${l ? `${fmtDate(l)}<div class="cl-s">${usesOf(c).length} message${usesOf(c).length===1?'':'s'}</div>` : '<span class="cl-s">Not used yet</span>'}${af?`<div class="cl-warn">${af} after expiry</div>`:''}</td>
+          <td><span class="tag ${tone(st)}">${st}</span></td></tr>`; }).join('') || `<tr><td colspan="5" class="cl-s" style="padding:18px">No claim matches.</td></tr>`}
+      </tbody></table></div>
+      ${sel ? claimPane(sel, CLSEL, stOf(sel), usesOf(sel), after(sel), ed) : ''}
+    </div>`;
+}
+function claimPane(c, i, st, uses, af, ed){
+  const out = uses.filter(u=>u.out);
+  return `<div class="panel cl-pane" style="margin:0"><div class="panel-hdr"><span class="panel-ttl">${esc(c.id)}</span><span class="tag ${st==='Approved'?'tag-green':st==='Expired'?'tag-red':st==='Draft'?'tag-amber':'tag-grey'}">${st}</span></div><div class="panel-body">
+    <div class="cl-c" style="font-size:13.5px;line-height:1.55;margin-bottom:12px">“${esc(c.claim)}”</div>
+    ${[['Source', `${c.title} · ${c.type}, ${c.year}`], ['Topics it fits', (c.segments||[]).join(', ')], ['Owner', c.owner||'Marketing'], ['Expires', c.expiry]].map(([k,v])=>`<div class="cl-kv"><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('')}
+    <div class="cl-kv"><span>Where it was used</span><b>${uses.length ? `${uses.length} drafted message${uses.length===1?'':'s'}, ${out.length} sent` : 'Not used yet'}</b>
+      ${uses.slice(0,5).map(u=>`<div class="cl-u">${esc(u.who)} · ${esc(u.account)}<span>${fmtDate(u.at)}${u.out?' · sent':''}</span></div>`).join('')}${uses.length>5?`<div class="cl-s">and ${uses.length-5} more</div>`:''}</div>
+    ${af ? `<div class="cl-alert">Used ${af} time${af===1?'':'s'} after it expired on ${esc(c.expiry)}. Renew the source or retire the claim.</div>` : ''}
+    ${ed ? `<div class="cl-act"><select onchange="draft().claims[${i}].status=this.value;commit('Status changed. Save to make it a new version')">${['approved','draft','retired'].map(s=>`<option ${c.status===s?'selected':''} value="${s}">${s[0].toUpperCase()+s.slice(1)}</option>`).join('')}</select>
+      <label>Expires <input type="date" value="${esc(c.expiry)}" onchange="draft().claims[${i}].expiry=this.value;commit('Expiry changed. Save to make it a new version')"></label></div>` : ''}
+  </div></div>`;
+}
+function claimForm(pre){
+  overlayHtml(`<div style="font-family:var(--fd);font-size:16px;font-weight:700;color:var(--i1);margin-bottom:12px">Add a claim</div>
+    <label class="af"><span>The claim, exactly as a draft may say it</span><textarea id="cClaim" rows="3" placeholder="A comparable site … within one planned shutdown.">${esc(pre||'')}</textarea></label>
+    <div class="af-row"><label class="af" style="flex:2"><span>Source title</span><input id="cTitle" placeholder="Case study title"></label>
+      <label class="af"><span>Type</span><select id="cType">${['Case study','One-pager','Brochure','Webinar recording','Peer story','Datasheet'].map(t=>`<option>${t}</option>`).join('')}</select></label></div>
+    <div class="af-row"><label class="af"><span>Year</span><input id="cYear" type="number" value="${new Date().getFullYear()}"></label><label class="af"><span>Expires</span><input id="cExp" type="date"></label></div>
+    <div id="cErr" style="font-size:12px;color:var(--neg);min-height:16px"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn btn-ghost btn-sm" onclick="closeOverlayHtml()">Cancel</button><button class="btn btn-primary btn-sm" onclick="addClaim()">Add as approved</button></div>`, 620);
+}
+function fromReviewPick(){
+  const F = claimUsage().fromReview;
+  overlayHtml(`<div style="font-family:var(--fd);font-size:16px;font-weight:700;color:var(--i1)">Approved in For Review</div>
+    <div style="font-size:12px;color:var(--i3);margin:4px 0 12px;line-height:1.5">Sentences a person approved in a message that are not approved claims yet. Add one here and it is checked as approved from the next version, so it isn't approved again.</div>
+    ${F.length ? F.map((f,k)=>`<div class="rv-c"><div class="cl-c">“${esc(f.text)}”</div><div class="cl-s">${esc(f.account)}${f.by?` · approved by ${esc(f.by)}`:''} · ${fmtDate(f.at)}</div>
+      <button class="btn btn-sec btn-sm" onclick='closeOverlayHtml();claimForm(${esc(JSON.stringify(f.text))})'>Add as a claim</button></div>`).join('')
+      : '<div class="cl-s" style="padding:10px 0">Nothing yet. When someone edits a message in For Review, adds a claim and approves it, the claim shows up here.</div>'}
+    <div style="display:flex;justify-content:flex-end;margin-top:12px"><button class="btn btn-ghost btn-sm" onclick="closeOverlayHtml()">Close</button></div>`, 620);
 }
 function addClaim(){
   const v = id => (document.getElementById(id).value||'').trim();
   const claim = v('cClaim').replace(/\s+/g,' '), title = v('cTitle'), exp = v('cExp');
-  if(!claim || !title || !exp){ showToast('Add the claim, its source and an expiry date'); return; }
+  if(!claim || !title || !exp){ document.getElementById('cErr').textContent = 'Add the claim, its source and an expiry date'; return; }
   // Where the claim can be used is read from its words, not picked by hand; a claim that names no topic can be used anywhere.
   const segs = claimFits(claim+' '+title);
   const ids = draft().claims.map(c=>+String(c.id).replace(/\D/g,'')||0);
   draft().claims.push({ id:'CL-'+String(Math.max(6,...ids)+1).padStart(2,'0'), type:v('cType'), year:+v('cYear')||new Date().getFullYear(), title, segments:segs, expiry:exp, claim:/[.!?]$/.test(claim)?claim:claim+'.', status:'approved', owner:me().who });
-  commit('Claim added to the draft');
+  closeOverlayHtml(); CLSEL = draft().claims.length-1; commit('Claim added. Save to make it a new version');
 }
 
 /* ─── Messaging frameworks: what each one is for, its structure, and how often the team uses it ─── */
@@ -1007,48 +1225,46 @@ function frameworkTab(){
   const list = fws(), byUse = u => list.filter(f=>f.use===u).length, ed = canEdit();
   const order = list.map((f,i)=>({f,i})).filter(o=>!FWF || o.f.use===FWF).sort((a,b)=>USE.indexOf(a.f.use)-USE.indexOf(b.f.use));
   const often = list.filter(f=>f.use==='Often');
-  const td = 'padding:11px 12px;border-top:1px solid var(--s75);vertical-align:top;font-size:12.5px;color:var(--i1)';
-  const th = 'padding:9px 12px;font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--i3);text-align:left;background:var(--s50)';
-  const inp = (i, k, val) => ed ? `<textarea rows="2" style="width:100%;${field};line-height:1.45;resize:vertical;font-weight:inherit" onchange="setFw(${i},'${k}',this.value)">${esc(val)}</textarea>` : esc(val);
-  return `<div style="font-size:12px;color:var(--i2);margin-bottom:12px">The frameworks the team writes with, by objective: what a message is for, the framework that gets there, its structure, and how often the team uses it, so it's clear which frameworks get used most and for what.</div>`
-    + `<div class="stats" style="grid-template-columns:repeat(4,1fr);margin-bottom:12px">${['Often','Sometimes','Rarely','Not used'].map(u=>`<a class="stat stat-link ${FWF===u?'on':''}" href="#" title="Show only these" onclick="FWF=FWF==='${u}'?null:'${u}';render();return false"><div class="stat-lbl">${u==='Not used'?'Not used':'Used '+u.toLowerCase()}</div><div class="stat-val ${u==='Often'?'sv4':u==='Sometimes'?'sv2':u==='Rarely'?'sv3':'sv5'}">${byUse(u)}</div><div class="stat-sub">framework${byUse(u)===1?'':'s'}</div></a>`).join('')}</div>`
-    + (often.length ? `<div style="font-size:12px;color:var(--i2);margin-bottom:10px">Used most: ${often.map(f=>`<b>${esc(f.name)}</b> to ${esc(f.objective.charAt(0).toLowerCase()+f.objective.slice(1))}`).join('; ')}.</div>` : '')
-    + card('Frameworks by objective', `<span style="font-size:11px;color:var(--i3)">${list.length} framework${list.length===1?'':'s'}</span>`, `
-      <div style="margin:-6px -14px -12px;overflow-x:auto"><table style="width:100%;border-collapse:collapse;table-layout:fixed;min-width:980px">
-        <colgroup><col style="width:17%"><col style="width:15%"><col style="width:24%"><col style="width:28%"><col style="width:120px">${ed?'<col style="width:36px">':''}</colgroup>
-        <thead><tr><th style="${th}">Objective</th><th style="${th}">Framework</th><th style="${th}">Structure</th><th style="${th}">Actions it supports</th><th style="${th}">How often used</th>${ed?`<th style="${th}"></th>`:''}</tr></thead>
-        <tbody>${order.map(({f,i})=>`<tr>
-          <td style="${td};font-weight:600">${inp(i,'objective',f.objective)}</td>
-          <td style="${td}">${inp(i,'name',f.name)}</td>
-          <td style="${td}">${ed ? `<textarea rows="${Math.max(2,f.steps.length)}" style="width:100%;${field};line-height:1.5" onchange="setFw(${i},'steps',this.value)">${esc(f.steps.join('\n'))}</textarea>`
-            : `<ol style="margin:0;padding-left:18px;line-height:1.6">${f.steps.map(s=>`<li>${esc(s)}</li>`).join('')}</ol>`}</td>
-          <td style="${td}">${fwActions(i, f, ed)}</td>
-          <td style="${td}">${ed ? `<select onchange="setFw(${i},'use',this.value)" style="${field};padding:4px 6px;font-size:12px">${USE.map(u=>`<option ${f.use===u?'selected':''}>${u}</option>`).join('')}</select>` : `<span class="tag ${USE_TONE[f.use]||'tag-grey'}">${esc(f.use)}</span>`}</td>
-          ${ed?`<td style="${td};text-align:center"><button title="Remove" onclick="removeFw(${i})" style="color:var(--i3);font-size:14px">×</button></td>`:''}</tr>`).join('')}</tbody></table></div>`)
-    + card('What each action means', `<span style="font-size:11px;color:var(--i3)">the reader's next step, and the tool behind it</span>`, `<div class="fal">${Object.entries(FA).map(([k,a])=>`<div class="fal-i"><span class="fa-i">${FA_IC[k]||'•'}</span><div><b>${esc(a.label)}</b><div>${esc(a.how)}${a.tools?` · ${esc(a.tools)}`:''}</div></div></div>`).join('')}</div>
-        <div class="su-tip">In the pilot, links are added by the rep. Connecting the calendar, service desk and form tools comes after the pilot.</div>`)
-    + later('Being explored', [['Customer journey stages.', 'Map each framework to a stage (awareness, consideration, decision, renewal), with Copilot guiding you step by step to the right one.']])
-    + (ed ? card('Add a framework', '', `<div style="display:grid;grid-template-columns:1fr 1fr 140px;gap:10px">
-        <div>${label('Objective: what the message is for')}<input id="fwObj" style="width:100%;${field}" placeholder="e.g. Win back a lost account"></div>
-        <div>${label('Framework')}<input id="fwName" style="width:100%;${field}" placeholder="e.g. Problem, agitate, solve"></div>
-        <div>${label('How often used')}<select id="fwUse" style="width:100%;${field}">${USE.map(u=>`<option>${u}</option>`).join('')}</select></div></div>
-        ${label('Structure, one step per line')}<textarea id="fwSteps" rows="3" style="width:100%;${field};line-height:1.5" placeholder="The problem they face&#10;What waiting costs them&#10;The approach that solves it"></textarea>
-        <div style="display:flex;justify-content:flex-end;margin-top:10px"><button class="btn btn-primary btn-sm" onclick="addFw()">Add framework</button></div>`) : '');
+  return `<div style="font-size:12.5px;color:var(--i2);margin-bottom:12px;line-height:1.55">The frameworks the team writes with, by objective: what a message is for, the framework that gets there, its structure, the call to action it ends with, and how often the team uses it.</div>`
+    + `<div class="stats fw-stats">${USE.map(u=>`<a class="stat stat-link ${FWF===u?'on':''}" href="#" title="Show only these" onclick="FWF=FWF==='${u}'?null:'${u}';render();return false"><div class="stat-lbl">${u==='Not used'?'Not used':'Used '+u.toLowerCase()}</div><div class="stat-val ${u==='Often'?'sv4':u==='Sometimes'?'sv2':u==='Rarely'?'sv3':'sv5'}">${byUse(u)}</div><div class="stat-sub">framework${byUse(u)===1?'':'s'}</div></a>`).join('')}</div>`
+    + (often.length ? `<div style="font-size:12px;color:var(--i2);margin:0 0 10px">Used most: ${often.map(f=>`<b>${esc(f.name)}</b> to ${esc(f.objective.charAt(0).toLowerCase()+f.objective.slice(1))}`).join('; ')}.</div>` : '')
+    + card('Frameworks by objective', `<div style="display:flex;gap:10px;align-items:center"><span style="font-size:11px;color:var(--i3)">${list.length} framework${list.length===1?'':'s'}</span>${ed?'<button class="btn btn-sec btn-sm" onclick="editFw(-1)">+ Add a framework</button>':''}</div>`,
+      `<div class="fw-t"><div class="fw-r fw-hd"><div>Objective</div><div>Framework and structure</div><div>Call to action</div><div>How often used</div><div></div></div>
+      ${order.map(({f,i})=>`<div class="fw-r">
+        <div class="fw-o">${esc(f.objective)}</div>
+        <div><b class="fw-n">${esc(f.name)}</b><ol class="fw-s">${f.steps.map(s=>`<li>${esc(s)}</li>`).join('')}</ol></div>
+        <div class="fw-c">${(f.actions||[]).map(ctaChip).join('') || '<span class="muted">None yet</span>'}</div>
+        <div><span class="tag ${USE_TONE[f.use]||'tag-grey'}">${esc(f.use)}</span></div>
+        <div class="fw-e">${ed?`<button class="btn btn-ghost btn-sm" onclick="editFw(${i})">Edit</button>`:''}</div></div>`).join('')}</div>`)
+    + later('Being explored', [['Customer journey stages.', 'Map each framework to a stage (awareness, consideration, decision, renewal), with Copilot guiding you step by step to the right one.']]);
 }
-function setFw(i, k, val){ const f = fws()[i]; if(!f) return; f[k] = k==='steps' ? val.split('\n').map(x=>x.trim()).filter(Boolean) : val.trim(); commit('Saved to the draft'); }
+// One framework in a pop-up: its objective, structure, calls to action (with the tools) and how often it is used.
+function editFw(i){
+  const f = i>=0 ? fws()[i] : { objective:'', name:'', steps:[], use:'Sometimes', actions:[] };
+  overlayHtml(`<div style="font-family:var(--fd);font-size:16px;font-weight:700;color:var(--i1);margin-bottom:12px">${i>=0?'Edit the framework':'Add a framework'}</div>
+    <div class="af-row"><label class="af"><span>Objective: what the message is for</span><input id="fwObj" value="${esc(f.objective)}" placeholder="e.g. Win back a lost account"></label>
+      <label class="af"><span>Framework</span><input id="fwName" value="${esc(f.name)}" placeholder="e.g. Problem, agitate, solve"></label></div>
+    <label class="af"><span>Structure, one step per line</span><textarea id="fwSteps" rows="4" placeholder="The problem they face&#10;What waiting costs them&#10;The approach that solves it">${esc(f.steps.join('\n'))}</textarea></label>
+    <div class="af"><span>Call to action: what the reader is asked to do</span><div class="cta-pick">${Object.keys(FA).map(k=>`<label class="cta-o"><input type="checkbox" value="${k}" ${(f.actions||[]).includes(k)?'checked':''}>${ctaChip(k)}</label>`).join('')}</div></div>
+    <label class="af" style="max-width:220px"><span>How often used</span><select id="fwUse">${USE.map(u=>`<option ${f.use===u?'selected':''}>${u}</option>`).join('')}</select></label>
+    <div id="fwErr" style="font-size:12px;color:var(--neg);min-height:16px"></div>
+    <div style="display:flex;gap:8px;justify-content:space-between;margin-top:6px">${i>=0?`<button class="btn btn-ghost btn-sm" style="color:var(--neg)" onclick="if(confirm('Remove this framework?')){closeOverlayHtml();removeFw(${i});}">Remove</button>`:'<span></span>'}
+      <span style="display:flex;gap:8px"><button class="btn btn-ghost btn-sm" onclick="closeOverlayHtml()">Cancel</button><button class="btn btn-primary btn-sm" onclick="saveFw(${i})">Done</button></span></div>`, 720);
+}
+function saveFw(i){
+  const v = id => (document.getElementById(id).value||'').trim(), steps = v('fwSteps').split('\n').map(x=>x.trim()).filter(Boolean);
+  if(!v('fwObj') || !v('fwName') || !steps.length){ document.getElementById('fwErr').textContent = 'Add the objective, the framework and its structure'; return; }
+  const actions = [...document.querySelectorAll('.cta-pick input:checked')].map(x=>x.value);
+  const f = { objective:v('fwObj'), name:v('fwName'), steps, use:v('fwUse'), actions };
+  if(i>=0) fws()[i] = f; else fws().push(f);
+  closeOverlayHtml(); commit(i>=0 ? 'Changed. Save to make it a new version' : 'Framework added. Save to make it a new version');
+}
+function setFw(i, k, val){ const f = fws()[i]; if(!f) return; f[k] = k==='steps' ? val.split('\n').map(x=>x.trim()).filter(Boolean) : val.trim(); commit('Changed. Save to make it a new version'); }
 function removeFw(i){ fws().splice(i,1); commit('Removed from the draft'); }
 function addFw(){
   const v = id => (document.getElementById(id).value||'').trim(), steps = v('fwSteps').split('\n').map(x=>x.trim()).filter(Boolean);
   if(!v('fwObj') || !v('fwName') || !steps.length){ showToast('Add the objective, the framework and its structure'); return; }
   fws().push({ objective:v('fwObj'), name:v('fwName'), steps, use:v('fwUse') }); commit('Framework added to the draft');
-}
-
-/* ─── Versions ─── */
-function versionsTab(){
-  const live = DemandAI.brandPack(), hist = (live.history||[]).slice().reverse();
-  return card('Brand pack versions', `<span style="font-size:11px;color:var(--i2)">Live: ${esc(DemandAI.brandVersion())}</span>`,
-    `<div style="font-size:12px;color:var(--i2);margin-bottom:10px">All the tabs (guidelines, voice, keywords, claims and messaging frameworks) are one package: every change goes into one draft and is published together as the next version. Only a published version reaches the drafts, and every segmented list records the version it was drafted with, so results can be compared. Old versions are kept.</div>`
-    + hist.map(h=>`<div style="display:flex;gap:12px;padding:9px 0;border-top:1px solid var(--s75);font-size:12px;align-items:flex-start"><b style="width:70px;color:var(--i1)">v${h.v}${h.v===live.v?' <span class="tag tag-green" style="margin-left:4px">Live</span>':''}</b><span style="flex:1;color:var(--i2)">${esc(h.note||'')}${(h.sections||[]).length?`<div class="tags" style="margin-top:5px">${h.sections.map(x=>`<span class="tag tag-grey">${esc(x)}</span>`).join('')}</div>`:''}</span><span style="color:var(--i3)">${h.at?`${fmtDate(h.at)} · ${esc(h.by)}`:'Kickoff'}</span></div>`).join(''));
 }
 
 /* ═══════════════ BOOT ═══════════════ */
