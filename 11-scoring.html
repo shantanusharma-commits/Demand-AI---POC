@@ -481,6 +481,15 @@ input,textarea,select{background-color:#fff;color:var(--i1);}
 .un{padding:9px 0;border-top:1px solid var(--s75);} .un-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;} .un-h span{font-size:11px;color:var(--i3);}
 .un-t{font-size:12.5px;color:var(--i1);} .un-r{font-size:11.5px;color:var(--i2);margin-top:2px;line-height:1.45;}
 @media (max-width:1100px){ .ti-eq{flex-wrap:wrap;} .ti-mv{grid-template-columns:1fr;} }
+.ev{padding:10px 14px;border-top:1px solid var(--s75);} .ev:first-child{border-top:none;}
+.ev-h{display:flex;align-items:center;gap:6px;margin-bottom:4px;}
+.ev-r{font-family:var(--fm);font-size:10.5px;color:var(--i3);}
+.ev-d{font-size:12px;color:var(--i1);line-height:1.45;}
+.ev-m{font-size:11px;color:var(--i3);margin-top:2px;line-height:1.4;}
+.lt-more{border-top:1px solid var(--s75);padding-top:8px;font-size:12px;color:var(--i2);}
+.lt-more summary{cursor:pointer;font-weight:600;color:var(--i1);font-size:12.5px;}
+.lt-more p{margin:6px 0;line-height:1.5;} .lt-more ul{margin:4px 0;padding-left:18px;line-height:1.6;}
+.lt-note{font-size:11px;color:var(--i3);}
 </style>
 </head>
 <body>
@@ -582,6 +591,7 @@ input,textarea,select{background-color:#fff;color:var(--i1);}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="demandai-engine.js"></script>
 <script src="demandai-sample-data.js"></script>
+<script src="demandai-copilot.js"></script>
 <script>
 function showToast(msg){document.querySelectorAll('.toast').forEach(t=>t.remove());const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2600);}
 function initials(n){return String(n).split(' ').filter(Boolean).map(w=>w[0]).join('').slice(0,2).toUpperCase();}
@@ -926,6 +936,69 @@ function openUnused(){
     + ss.map(s=>`<div class="un"><div class="un-h">${tagChip(s.type)}<span>Row ${s.row}</span></div><div class="un-t">${esc(s.company)}${s.personName||s.personRef?` · ${esc(s.personName||s.personRef)}`:''}</div>
       <div class="un-r"><b>${s.status==='Rejected' ? esc(s.code+' '+DemandAI.CODES[s.code]) : esc(s.status)}</b> · ${esc(s.reason)}</div></div>`).join('');
   const dr = document.getElementById('detailDrawer'); dr.style.width = '460px'; dr.classList.add('open');
+  if(typeof Copilot!=='undefined') Copilot.footBar('Ask Copilot about this list…', 'scoreAsk');
+}
+
+/* ═══════════════ COPILOT: questions about the scored list, or the prospect open in the side panel ═══════════════ */
+const S_CHIPS = ['Which accounts are closest to tier A?', 'Why are the tier A accounts on top?', "Which signals weren't used, and why?", 'How do the tiers work?'];
+const X_CHIPS = ['What feeds this score?', 'What would move it up a tier?', "Which signals didn't count?", 'Who else is at this company?'];
+let CP_KEY = null;   // the prospect open in the side panel
+function scoreAskKey(q){ scoreAsk(q, CP_KEY); }
+function scoreAsk(q, key){
+  if(!RUN || typeof Copilot==='undefined') return;
+  const x = key ? prospects().find(p=>p.key===key) : null, ctx = x ? 'p:' + x.key : 'list:' + (RUN.savedId || RUN.fileName);
+  if(q && Copilot.isOpen() && document.getElementById('cpPanel').dataset.ctx===ctx) return Copilot.ask2(q);
+  Copilot.panelOpen({ ctx, title: x ? `${x.c.name} · ${x.r.account.name}` : (RUN.name || RUN.list.name), sub: x ? x.r.account.name : 'this scored list',
+    answer: qq => x ? prospectAnswer(qq, x) : listAnswer(qq), context: () => x ? prospectText(x) : listText(), chips: x ? X_CHIPS : S_CHIPS, q: q || undefined });
+  document.getElementById('cpPanel').dataset.ctx = ctx;
+}
+const plS = (n, w) => `${n} ${w}${n===1?'':'s'}`;
+const rowOf = x => `<li><b>${esc(x.c.name)}</b> · ${esc(x.r.account.name)} · tier ${esc(x.tier)}${x.score!==undefined?`, score ${fmt1(x.score)}`:''}</li>`;
+function listAnswer(q){
+  const t = String(q).toLowerCase(), ps = prospects(), T = DemandAI.CONFIG.tierThresholds;
+  const named = ps.find(x=>t.includes(x.c.name.toLowerCase().split(' ')[0]) || t.includes(x.r.account.name.toLowerCase().split(' ')[0]));
+  if(named && !/tier a accounts|closest/.test(t)) return prospectAnswer('what feeds this score', named);
+  if(/closest|almost|nearly|next tier|move up|could reach/.test(t)){ const b = ps.filter(x=>(x.tier==='B'||x.tier==='C') && x.score!==undefined).sort((p,q)=>q.score-p.score).slice(0,5);
+    return b.length ? `<p>Closest to the next tier:</p><ul>${b.map(x=>`<li><b>${esc(x.c.name)}</b> · ${esc(x.r.account.name)}: ${fmt1((x.tier==='B'?T.A:T.B)-x.score)} points short of tier ${x.tier==='B'?'A':'B'}</li>`).join('')}</ul>` : '<p>No tier B or C prospects in this list.</p>'; }
+  if(/tier a|top|first|why .*(on top|ranked)/.test(t)){ const a = ps.filter(x=>x.tier==='A');
+    return a.length ? `<p>${plS(a.length,'prospect')} in tier A (score ${T.A}+): a good company fit and strong, recent signals.</p><ul>${a.map(x=>`<li><b>${esc(x.c.name)}</b> · ${esc(x.r.account.name)} · ${fmt1(x.score)}: ${esc((x.p&&x.p.whyNow)||'')}</li>`).join('')}</ul>` : '<p>No prospect reached tier A in this list.</p>'; }
+  if(/not used|weren.t used|unused|reject|didn.t count|ignored/.test(t)){ const u = unusedRows(), g = {}; u.forEach(s=>{ const k = s.status==='Rejected' ? `${s.code} ${DemandAI.CODES[s.code]}` : s.status; (g[k] = g[k] || []).push(s); });
+    return u.length ? `<p>${plS(u.length,'row')} of the signal file didn't count:</p><ul>${Object.entries(g).map(([k,v])=>`<li><b>${esc(k)}</b> (${v.length}): ${esc(v[0].reason)}</li>`).join('')}</ul><p class="cpp-muted">The link under the table lists every row.</p>` : '<p>Every row of the signal file counted.</p>'; }
+  if(/how .*tier|tiers work|score work|how .*scored|formula/.test(t)) return `<p>Score = <b>Fit × Timing ÷ 100</b>, both on 0–100. Fit is how well the company matches the ideal customer; timing is how strong and how recent the person's signals are.</p><ul><li><b>A</b>: ${T.A} and above, acted on first</li><li><b>B</b>: ${T.B}–${T.A-1}</li><li><b>C</b>: below ${T.B}</li><li><b>Watch list</b>: a good fit with no live signal</li></ul>`;
+  if(/watch/.test(t)){ const w = ps.filter(x=>x.tier==='Watch list'); return w.length ? `<p>On the watch list (good fit, no live signal):</p><ul>${w.map(rowOf).join('')}</ul>` : '<p>Nobody is on the watch list.</p>'; }
+  if(/exclud|below|floor|not scored/.test(t)){ const o = ps.filter(x=>x.tier==='Below fit floor'||x.tier==='Excluded'); return o.length ? `<ul>${o.map(x=>`<li><b>${esc(x.r.account.name)}</b>: ${esc(x.r.excluded ? x.r.excludedReason : `fit ${fmt1(x.fit)} is below the floor of ${DemandAI.CONFIG.fitFloor}`)}</li>`).join('')}</ul>` : '<p>Every account was scored.</p>'; }
+  if(/how many|summary|overview|count/.test(t)){ const c = k => ps.filter(x=>x.tier===k).length; return `<p>${ps.length} prospects: <b>${c('A')}</b> in tier A, ${c('B')} in B, ${c('C')} in C, ${c('Watch list')} on the watch list, ${c('Below fit floor')+c('Excluded')} not scored.</p>`; }
+  return null;
+}
+function prospectAnswer(q, x){
+  const t = String(q).toLowerCase(), T = DemandAI.CONFIG.tierThresholds, a = x.r.account;
+  if(/move|tier a|up a tier|higher|improve/.test(t)){ if(x.score===undefined) return `<p>${esc(a.name)} isn't scored: ${esc(x.r.excluded ? x.r.excludedReason : 'its fit is below the floor')}.</p>`;
+    if(x.tier==='A') return '<p>It is already in tier A.</p>';
+    const next = x.tier==='B' ? ['A', T.A] : ['B', T.B]; return `<p>It needs <b>${fmt1(next[1]-x.score)}</b> more points for tier ${next[0]}. A strong, recent signal from ${esc(x.c.firstName||x.c.name)}, such as a question or a request for a quote, would do it; so would news of a project or a system nearing end of support.</p>`; }
+  if(/didn.t count|not count|unused|rejected|ignored/.test(t)){ const u = RUN.sig.signals.filter(s=>s.accountId===a.id && s.contactRow===x.c.row && s.status!=='Qualified');
+    return u.length ? `<ul>${u.map(s=>`<li><b>${esc(s.type)}</b> (row ${s.row}): ${esc(s.reason)}</li>`).join('')}</ul>` : '<p>Every signal about this person counted.</p>'; }
+  if(/who else|other|colleague|contacts/.test(t)){ const o = (x.r.people||[]).filter(p=>p.contact.row!==x.c.row);
+    return o.length ? `<ul>${o.map(p=>`<li><b>${esc(p.contact.name)}</b>, ${esc(p.contact.jobTitle||'')} · ${p.signals.length ? `tier ${esc(p.tier)}` : 'no signals'}</li>`).join('')}</ul>` : `<p>No one else at ${esc(a.name)} is in the list.</p>`; }
+  if(/fit/.test(t) && x.r.breakdown) return `<p>Fit <b>${fmt1(x.fit)}</b> out of 100:</p><ul>${x.r.breakdown.map(b=>`<li>${esc(b.label)}: ${esc(b.levelLabel)} · ${fmt1(b.points)} of ${b.weight}</li>`).join('')}</ul>`;
+  if(/signal|timing|why now/.test(t) && x.p) return `<ul>${x.p.signals.map(s=>`<li><b>${esc(s.type)}</b>, ${sigStrength(s)[0].toLowerCase()} and ${sigFresh(s)}: ${esc(s.detail||'')}</li>`).join('')}</ul>`;
+  if(/feed|why|score|explain/.test(t)) return x.score===undefined ? `<p>Not scored: ${esc(x.r.excluded ? x.r.excludedReason : 'the company fit is below the floor')}.</p>`
+    : `<p>Score <b>${fmt1(x.score)}</b> = fit ${fmt1(x.fit)} × timing ${fmt1(x.timing)} ÷ 100, so tier ${esc(x.tier)}.</p><p>${esc((x.p&&x.p.whyNow||'').replace(/^./,m=>m.toUpperCase()))}</p>`;
+  return null;
+}
+function prospectText(x){
+  const a = x.r.account, ev = RUN.sig.signals.filter(s=>s.accountId===a.id && s.contactRow===x.c.row);
+  return [`Prospect: ${x.c.name}, ${x.c.jobTitle||''}, persona ${x.c.persona}. Company: ${a.name} · ${a.vertical||''} · ${a.country||''}.`,
+    `Tier ${x.tier}. Score ${x.score!==undefined?fmt1(x.score):'not scored'} = fit ${fmt1(x.fit)} × timing ${x.timing!==undefined?fmt1(x.timing):'—'} / 100. Tier thresholds: A ${DemandAI.CONFIG.tierThresholds.A}+, B ${DemandAI.CONFIG.tierThresholds.B}+.`,
+    x.r.excluded ? `Excluded: ${x.r.excludedReason}` : '', x.r.belowFloor ? `Below fit floor ${DemandAI.CONFIG.fitFloor}` : '',
+    x.r.breakdown ? 'Fit breakdown: ' + x.r.breakdown.map(b=>`${b.label} ${b.levelLabel} ${fmt1(b.points)}/${b.weight}`).join('; ') : '',
+    'Signal file rows about this person:', ...ev.map(s=>`- Row ${s.row} ${s.type} ${s.date} "${s.detail||''}" source ${s.source||''}: ${s.status}${s.status==='Qualified'?` weight ${fmt1(s.weight)}`:` (${s.reason})`}`),
+    'Other people at the company: ' + ((x.r.people||[]).filter(p=>p.contact.row!==x.c.row).map(p=>`${p.contact.name} (${p.contact.jobTitle||''})`).join('; ') || 'none')].filter(Boolean).join('\n');
+}
+function listText(){
+  const ps = prospects();
+  return [`Scored list: ${RUN.name||RUN.list.name}, signal file ${RUN.fileName}, as of ${RUN.asOf}. Tiers: A ${DemandAI.CONFIG.tierThresholds.A}+, B ${DemandAI.CONFIG.tierThresholds.B}+. Score = fit x timing / 100.`,
+    ...ps.map(x=>`- ${x.c.name} · ${x.c.jobTitle||''} · ${x.r.account.name} · tier ${x.tier} · score ${x.score!==undefined?fmt1(x.score):'—'} · fit ${fmt1(x.fit)} · timing ${x.timing!==undefined?fmt1(x.timing):'—'} · ${(x.p&&x.p.whyNow)||x.r.excludedReason||''}`),
+    `Signal rows not used: ${unusedRows().map(s=>`row ${s.row} ${s.type}: ${s.reason}`).join('; ')}`].join('\n').slice(0, 20000);
 }
 
 const TIER_ORDER = {A:0,B:1,C:2,'Watch list':3,'Below fit floor':4,Excluded:5};
@@ -949,6 +1022,7 @@ function renderResults(){
       <div class="topbar-l"><span class="tb-title">${esc(RUN.name || RUN.list.name)}</span>
         <span class="tb-badge badge-neutral">${esc(RUN.fileName)} · as of ${RUN.asOf}</span></div>
       <div class="topbar-r">
+        ${typeof Copilot!=='undefined' ? Copilot.plainButton('scoreAsk()') : ''}
         <button class="btn btn-sec btn-sm" onclick="renderStart('new')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>Score a different list</button>
         <button class="btn btn-sec btn-sm" onclick="openSave()">${RUN.savedId?'Saved ✓':'Save'}</button>
         <button class="btn btn-primary btn-sm" onclick="sendToNBA()">Send ${NSEL.size?NSEL.size+' selected':'tier A and B'} to NBA →</button>
@@ -1122,6 +1196,7 @@ function finishRename(id){
 function ago(d){ return d===0?'today':d<14?d+'d ago':d<60?Math.round(d/7)+'w ago':Math.round(d/30)+'mo ago'; }
 function miniStat(label, val, sub){ return `<div style="flex:1;padding:10px 12px;border-right:1px solid var(--border)"><div style="font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--i3)">${label}</div><div style="font-family:var(--fd);font-size:20px;font-weight:700;color:var(--i1);margin-top:2px">${val}</div>${sub?`<div style="font-size:10px;color:var(--i3)">${sub}</div>`:''}</div>`; }
 function openProspect(key){
+  CP_KEY = key;
   const x = prospects().find(p=>p.key===key); if(!x) return;
   const c = x.c, r = x.r, a = r.account;
   const unused = RUN.sig.signals.filter(s=>s.accountId===a.id && s.contactRow===c.row && s.status!=='Qualified');
@@ -1161,7 +1236,14 @@ function openProspect(key){
   if(!r.excluded && !r.belowFloor) html += `<div class="panel later-p" style="margin-bottom:12px"><div class="panel-hdr"><span class="panel-ttl">Your own knowledge ${soonTag}</span></div><div class="panel-body">
       <div class="lt-row"><b>Add a signal you know</b><span>Something heard offline, as a comment, and move the account up a tier.</span><button class="btn btn-sec btn-sm" disabled>Add a signal</button></div>
       <div class="lt-row"><b>Follow up</b><span>Bookmark a promising account that isn't ready for outreach yet.</span><button class="btn btn-sec btn-sm" disabled>Bookmark</button></div>
-      ${x.tier==='B'||x.tier==='C'||x.tier==='Watch list' ? `<div class="lt-row"><b>Getting to tier A</b><span>What a marketer can do: invite them to a webinar, send a relevant case study, or ask the account team for a contact in the primary persona.</span></div>` : ''}
+      ${x.tier==='B'||x.tier==='C'||x.tier==='Watch list' ? `<details class="lt-more"><summary>What would move ${esc(a.name)} to tier A</summary><div>
+        ${x.tier==='Watch list' ? `<p>It has no recent signal yet. The first strong one, such as a question or a request for a quote, puts it in a tier straight away.</p>`
+          : `<p>It is ${fmt1(T.A - x.score)} points short. Any one of these would get it there:</p><ul>
+            ${(()=>{ const has = new Set(((x.p||{}).signals||[]).map(z=>z.type)); return [['Inquiry or RFQ', `${esc(c.firstName||c.name)} asks a question or for a quote`], ['Installed system near end of support', 'News that their control system is nearing end of support'], ['Capital project', 'A new project or expansion announced at the site']].filter(([k])=>!has.has(k)).map(([,l])=>`<li>${l}</li>`).join(''); })()}
+            ${(x.p&&x.p.signals.length) ? `<li>Another signal from ${esc(c.firstName||c.name)}: the second one counts half</li>` : ''}
+            ${c.persona!=='Primary' ? '<li>A contact in an instrumentation, automation or control systems role (a better fit)</li>' : ''}</ul>
+            <p>Signals fade with time, so it can also drop a tier if nothing new comes in.</p>`}
+        <p class="lt-note">Suggested actions to help get it there come after the pilot.</p></div></details>` : ''}
     </div></div>`;
   const kv = (k,v) => `<div style="display:flex;gap:10px;padding:6px 0;border-bottom:1px solid var(--s75);font-size:12px"><span style="color:var(--i3);width:96px;flex-shrink:0">${k}</span><span style="color:var(--i1);min-width:0;overflow:hidden;text-overflow:ellipsis" title="${esc(String(v).replace(/<[^>]+>/g,''))}">${v}</span></div>`;
   html += `<div class="panel" style="margin-bottom:12px"><div class="panel-hdr"><span class="panel-ttl">Contact</span></div><div class="panel-body" style="padding-top:4px;padding-bottom:4px">
@@ -1178,13 +1260,19 @@ function openProspect(key){
       </div>`).join('')}
     </div></div>`;
   }
-  if(unused.length){
-    html += `<div class="panel"><div class="panel-hdr"><span class="panel-ttl">Not counted</span><span style="font-size:10.5px;color:var(--i3)">${unused.length}</span></div><div class="panel-body" style="padding:0">
-      ${unused.map(s=>`<div style="padding:9px 14px;border-bottom:1px solid var(--border)"><div style="margin-bottom:4px">${tagChip(s.type)}</div><div style="font-size:11px;color:var(--i2)"><b>${s.status==='Rejected'?s.code+' '+DemandAI.CODES[s.code]:s.status}</b> · ${esc(s.reason)}</div></div>`).join('')}
+  // Signal evidence: every row of the signal file about this person, counted or not, in file order.
+  const ev = RUN.sig.signals.filter(s=>s.accountId===a.id && (s.contactRow===c.row || (!s.contactRow && s.status!=='Qualified')));
+  if(ev.length){
+    const stTag = s => s.status==='Qualified' ? '<span class="tag tag-green">Counted</span>' : s.status==='Used for a knock-out' ? '<span class="tag tag-amber">Knock-out</span>' : s.status==='Rejected' ? '<span class="tag tag-red">Not counted</span>' : '<span class="tag tag-grey">Not used</span>';
+    html += `<div class="panel" style="margin-bottom:12px"><div class="panel-hdr"><span class="panel-ttl">Signal evidence</span><span style="font-size:10.5px;color:var(--i3)">${ev.length} row${ev.length===1?'':'s'} in ${esc(RUN.fileName)}</span></div><div class="panel-body" style="padding:0">
+      ${ev.map(s=>`<div class="ev"><div class="ev-h"><span class="ev-r">Row ${s.row}</span>${tagChip(s.type)}<span style="flex:1"></span>${stTag(s)}</div>
+        <div class="ev-d">${esc(s.detail||'—')}</div>
+        <div class="ev-m">${s.date?esc(s.date):'No date'}${s.source?` · ${esc(s.source)}`:''}${s.status==='Qualified' ? ` · ${sigStrength(s)[0].toLowerCase()}, ${sigFresh(s)}` : ` · ${s.code?esc(s.code+' '+DemandAI.CODES[s.code])+': ':''}${esc(s.reason)}`}</div></div>`).join('')}
     </div></div>`;
   }
   document.getElementById('detBody').innerHTML = html;
   const dr = document.getElementById('detailDrawer'); dr.style.width = '440px'; dr.classList.add('open');
+  if(typeof Copilot!=='undefined') Copilot.footBar(`Ask Copilot about ${x.c.name}…`, `scoreAskKey`);
 }
 
 /* ═══════════════ BOOT ═══════════════ */

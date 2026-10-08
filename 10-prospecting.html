@@ -454,6 +454,18 @@ input,textarea,select{background-color:#fff;color:var(--i1);}
 .dqp-o{color:var(--i2);font-size:11.5px;margin-top:2px;line-height:1.45;}
 .dqp-ok{font-size:12.5px;color:var(--pos);font-weight:600;padding:10px 0;}
 @media (max-width:1200px){ .dq-g{grid-template-columns:repeat(3,minmax(0,1fr));} }
+.dq2{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 12px;background:var(--surf);border:1px solid var(--border);border-radius:var(--rmd);margin-bottom:14px;font-size:12px;}
+.dq2-v{font-family:var(--fd);font-size:15px;font-weight:700;}
+.dq2-l{color:var(--i3);}
+.dq2-bar{width:80px;height:5px;border-radius:3px;background:var(--s75);overflow:hidden;} .dq2-bar i{display:block;height:100%;border-radius:3px;}
+.dq2-sep{width:1px;height:18px;background:var(--border);margin:0 4px;}
+.dq2-c{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border:1px solid var(--border);border-radius:999px;background:var(--surf);font-size:11.5px;color:var(--i1);cursor:pointer;font-family:var(--fb);}
+.dq2-c:hover{border-color:var(--brand-mid);background:#FCFAFE;}
+.dq2-c b{font-weight:700;color:var(--i2);}
+.dq2-d{width:7px;height:7px;border-radius:50%;} .dq2-d.stop{background:var(--neg);} .dq2-d.warn{background:var(--warn);} .dq2-d.info{background:var(--i4);}
+.dq2-p{color:var(--i3);}
+.dq2-ok{color:var(--pos);font-weight:600;}
+.dq2-all{margin-left:auto;border:none;background:none;color:var(--brand-dk);font-weight:600;font-size:12px;cursor:pointer;font-family:var(--fb);}
 </style>
 </head>
 <body>
@@ -548,6 +560,7 @@ input,textarea,select{background-color:#fff;color:var(--i1);}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="demandai-engine.js"></script>
 <script src="demandai-sample-data.js"></script>
+<script src="demandai-copilot.js"></script>
 <script>
 function showToast(msg){document.querySelectorAll('.toast').forEach(t=>t.remove());const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2600);}
 function initials(n){return n.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();}
@@ -776,9 +789,14 @@ let DQ = null;   // the file the pane is showing: { fileName, issues, rows, by, 
 function dqCard(ctx){
   const by = {}; ctx.issues.forEach(i=>{ (by[checkOf(i)] = by[checkOf(i)] || []).push(i); });
   const sc = dqScore(ctx.issues, ctx.rows), tone = sc>=90?'var(--pos)':sc>=70?'var(--warn)':'var(--neg)';
-  return `<div class="dq"><div class="dq-s"><div class="dq-v" style="color:${tone}">${sc}%</div><div class="dq-l">of rows clean</div><div class="dq-m">${ctx.issues.length} finding${ctx.issues.length===1?'':'s'}${ctx.by?` · uploaded by ${esc(ctx.by)}`:''}</div></div>
-    <div class="dq-g">${CHECKS.map(([k,name])=>{ const is = by[k]||[], sev = is.some(i=>i.severity==='stop')?'stop':is.some(i=>i.severity==='flag')?'warn':is.length?'info':'ok';
-      return `<button class="dq-c dq-${sev}" onclick="openCheckPane('${k}')" title="Open the details"><span class="dq-i">${sev==='ok'?'✓':'!'}</span><span class="dq-n">${esc(name)}</span><span class="dq-k">${is.length?is.length:'Passed'}</span></button>`; }).join('')}</div></div>`;
+  const found = CHECKS.filter(([k])=>(by[k]||[]).length), passed = CHECKS.length - found.length;
+  const sev = k => (by[k]||[]).some(i=>i.severity==='stop') ? 'stop' : (by[k]||[]).some(i=>i.severity==='flag') ? 'warn' : 'info';
+  return `<div class="dq2"><span class="dq2-v" style="color:${tone}">${sc}%</span><span class="dq2-l">rows clean</span>
+      <span class="dq2-bar" title="${sc}% of rows have no issue"><i style="width:${sc}%;background:${tone}"></i></span>
+      <span class="dq2-sep"></span>
+      ${found.length ? found.map(([k,name])=>`<button class="dq2-c" onclick="openCheckPane('${k}')" title="${esc(name)}"><i class="dq2-d ${sev(k)}"></i>${esc(CHECK_SHORT[k]||name)}<b>${by[k].length}</b></button>`).join('') : '<span class="dq2-ok">✓ Every check passed</span>'}
+      ${found.length ? `<span class="dq2-p">${passed} passed</span>` : ''}
+      <button class="dq2-all" onclick="openCheckPane('${(found[0]||CHECKS[0])[0]}')">All checks →</button></div>`;
 }
 function openCheckPane(k, ctx){
   if(ctx) DQ = ctx;
@@ -799,6 +817,7 @@ function openCheckPane(k, ctx){
       ${DQ.live && typeof i.row==='number' && typeof openEdit==='function' ? `<button class="btn btn-sec btn-sm" style="margin-top:6px" onclick="openEdit(${i.row})">Edit row ${i.row}</button>` : ''}</div>`).join('')
       || '<div class="dqp-ok">✓ Every row passed this check.</div>'}`;
   const dr = document.getElementById('detailDrawer'); dr.style.width = '480px'; dr.classList.add('open');
+  if(typeof Copilot!=='undefined'){ if(DQ.live) Copilot.footBar(`Ask Copilot about ${DQ.fileName}…`, 'prospAsk'); else Copilot.removeFoot(); }
 }
 function dqDownload(k){
   const is = DQ.issues.filter(i=>checkOf(i)===k);
@@ -815,6 +834,46 @@ function openListQuality(id){
   openCheckPane(first, ctx);
 }
 
+/* ═══════════════ COPILOT: questions about the file and its list, answered from the checks and the rows ═══════════════ */
+const P_CHIPS = ["What's wrong with this file?", "Who can't be reached?", 'Which accounts were excluded, and why?', 'How do I get a cleaner file next time?'];
+function prospAsk(q){
+  if(!RUN || typeof Copilot==='undefined') return;
+  const ctx = 'file:' + RUN.fileName;
+  if(q && Copilot.isOpen() && document.getElementById('cpPanel').dataset.ctx===ctx) return Copilot.ask2(q);
+  Copilot.panelOpen({ ctx, title: RUN.fileName, sub: RUN.fileName, answer: prospAnswer, context: prospContext, chips: P_CHIPS, q: q || undefined });
+  document.getElementById('cpPanel').dataset.ctx = ctx;
+}
+const pl = (n, w) => `${n} ${w}${n===1?'':'s'}`;
+function prospAnswer(q){
+  const t = String(q).toLowerCase(), r = RUN.result, s = r.stats, by = {};
+  r.issues.forEach(i=>{ (by[checkOf(i)] = by[checkOf(i)] || []).push(i); });
+  const found = CHECKS.filter(([k])=>(by[k]||[]).length);
+  const acc = r.accounts.find(a=>t.includes(a.name.toLowerCase().split(' ')[0]) && a.name.length>3);
+  if(acc){ const cs = r.contacts.filter(c=>c.accountId===acc.id);
+    return `<p><b>${esc(acc.name)}</b>: ${esc(acc.vertical||'')}${acc.country?`, ${esc(acc.country)}`:''}. ${acc.excluded ? `Excluded: ${esc(acc.excludedReason||'a knock-out rule')}.` : 'Passes the knock-outs.'}</p><ul>${cs.map(c=>`<li>${esc(c.name)}, ${esc(c.jobTitle||'no title')} · ${c.email&&c.emailVerified?'verified email':c.linkedin?'LinkedIn only':'no way to reach them'}</li>`).join('')}</ul>`; }
+  if(/next|cleaner|better|template|avoid|prevent/.test(t)) return found.length ? `<p>For the next upload, fix these at the source:</p><ul>${found.map(([k,name])=>`<li><b>${esc(name)}</b>: ${esc((CHECK_HELP[k]||['',''])[1])}</li>`).join('')}</ul>` : '<p>This file is clean. Keep using the lead template as it is.</p>';
+  if(/wrong|issue|problem|quality|\bclean\b|check|finding/.test(t)) return `<p><b>${dqScore(r.issues, s.rowsRead)}%</b> of the ${s.rowsRead} rows are clean. ${found.length ? `${pl(r.issues.length,'finding')} in ${pl(found.length,'check')}:` : 'Every check passed.'}</p>`
+    + (found.length ? `<ul>${found.map(([k,name])=>`<li><b>${esc(name)}</b>: ${by[k].length} (rows ${[...new Set(by[k].map(i=>i.row))].slice(0,6).join(', ')})</li>`).join('')}</ul><p class="cpp-muted">Click a check above the list to see every finding and how to fix it.</p>` : '');
+  if(/reach|no email|linkedin|channel|contact them/.test(t)){ const no = r.contacts.filter(c=>!(c.email&&c.emailVerified) && !c.linkedin);
+    const flagged = (by.channel||[]).concat(by.verified||[], by.emailFormat||[]).filter(i=>!no.some(c=>c.row===i.row));
+    return no.length || flagged.length ? `${no.length ? `<p>${pl(no.length,'contact')} in the list can't be reached by email or LinkedIn:</p><ul>${no.map(c=>`<li>${esc(c.name)} · ${esc(c.company||'')} (row ${c.row})</li>`).join('')}</ul>` : ''}
+      ${flagged.length ? `<p>Flagged by the checks:</p><ul>${flagged.map(i=>`<li>Row ${i.row}: ${esc(i.issue)} · ${esc(i.outcome||'')}</li>`).join('')}</ul>` : ''}<p class="cpp-muted">Add a verified email or a LinkedIn URL; contacts are kept on the account until then.</p>` : '<p>Every contact can be reached by a verified email or LinkedIn.</p>'; }
+  if(/exclud|knock|drop|removed|out of/.test(t)){ const ex = r.accounts.filter(a=>a.excluded);
+    return ex.length ? `<p>${pl(ex.length,'account')} excluded by the knock-out rules:</p><ul>${ex.map(a=>`<li><b>${esc(a.name)}</b>: ${esc(a.excludedReason||'knock-out rule')}</li>`).join('')}</ul>` : '<p>No account was excluded.</p>'; }
+  if(/duplicate|twice|same person/.test(t)) return (by.dupes||[]).length ? `<p>${pl(by.dupes.length,'duplicate')}, merged into the first row:</p><ul>${by.dupes.map(i=>`<li>Row ${i.row}: ${esc(i.issue)}</li>`).join('')}</ul>` : '<p>No duplicates.</p>';
+  if(/how many|summary|overview|total|final list/.test(t)) return `<p>${s.rowsRead} rows read, ${s.notLoaded} not loaded, ${s.merged} merged. ${s.accountsPass} of ${s.accounts} accounts pass the knock-outs; <b>${s.inFinalList}</b> of ${s.contacts} contacts are in the final list.</p>`;
+  if(/persona|primary|role|title/.test(t)){ const g = {}; r.contacts.forEach(c=>{ (g[c.persona||'None'] = g[c.persona||'None'] || []).push(c.name); });
+    return `<ul>${Object.entries(g).map(([k,v])=>`<li><b>${esc(k)}</b> persona: ${v.length} · ${esc(v.slice(0,5).join(', '))}${v.length>5?'…':''}</li>`).join('')}</ul>`; }
+  return null;
+}
+function prospContext(){
+  const r = RUN.result, s = r.stats;
+  return [`File: ${RUN.fileName} (${RUN.sheet}). Rows read ${s.rowsRead}, not loaded ${s.notLoaded}, merged ${s.merged}. Accounts ${s.accounts}, pass knock-outs ${s.accountsPass}. Contacts ${s.contacts}, in final list ${s.inFinalList}. Clean rows ${dqScore(r.issues, s.rowsRead)}%.`,
+    'Findings:', ...r.issues.map(i=>`- Row ${i.row} · ${i.field||''} · ${i.issue} · ${i.outcome||''} · fix: ${i.fix||''}`),
+    'Accounts:', ...r.accounts.map(a=>`- ${a.name} · ${a.vertical||''} · ${a.country||''} · ${a.excluded?'EXCLUDED: '+(a.excludedReason||''):'passes'}`),
+    'Contacts:', ...r.contacts.map(c=>`- ${c.name} · ${c.jobTitle||''} · ${c.company||''} · persona ${c.persona} · email ${c.email?(c.emailVerified?'verified':'not verified'):'none'} · LinkedIn ${c.linkedin?'yes':'no'}`)].join('\n').slice(0, 20000);
+}
+
 /* ═══════════════ RESULTS ═══════════════ */
 function renderRun(){
   const r = RUN.result, s = r.stats;
@@ -825,6 +884,7 @@ function renderRun(){
         <span class="tb-badge badge-neutral">${esc(RUN.sheet)}</span></div>
       <div class="topbar-r">
         ${helpBtn()}
+        ${typeof Copilot!=='undefined' ? Copilot.plainButton('prospAsk()') : ''}
         <button class="btn btn-sec btn-sm" onclick="renderStart('upload')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>Upload a different file</button>
         <button class="btn btn-sec btn-sm" onclick="openSave(false)" ${s.accountsPass?'':'disabled style="opacity:.5;cursor:not-allowed"'}>${RUN.savedId?'Saved ✓':'Save list'}</button>
         <button id="goScoring" class="btn btn-primary btn-sm" onclick="openSave(true, SEL.size>0)" ${s.accountsPass?'':'disabled style="opacity:.5;cursor:not-allowed"'}>${SEL.size?`Send ${SEL.size} selected to Scoring →`:'Save and go to Scoring →'}</button>
@@ -1104,6 +1164,7 @@ const hdrIdx = () => RUN.grid.findIndex(r=>r.includes('company_name') && r.inclu
 const colIdx = f => RUN.grid[hdrIdx()].indexOf(f);
 const rawOf = (row, f) => { const i = colIdx(f); return i<0 ? '' : String((RUN.grid[row-1]||[])[i] ?? ''); };
 function openEdit(row){
+  if(typeof Copilot!=='undefined') Copilot.removeFoot();
   const c = RUN.result.contacts.find(x=>x.row===row); if(!c) return;
   const inp = (f, l) => `<label style="display:block;margin-bottom:9px"><span style="font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--i3)">${l}</span>
     <input data-f="${f}" value="${esc(rawOf(row, f))}" style="width:100%;margin-top:3px;padding:7px 9px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:12.5px"></label>`;

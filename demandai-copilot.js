@@ -13,7 +13,7 @@
   const runs = () => (typeof ALL_RUNS==='function' ? ALL_RUNS() : (typeof RUN!=='undefined' && RUN ? [RUN] : [])).slice().sort((a,b)=>b.saved.createdAt-a.saved.createdAt);
   // The account open in the side panel, if any: Copilot then answers about it first.
   const itemCtx = () => { if(typeof WS!=='undefined' && WS && WS.key && RUN && recOf(WS.key)) return { run: RUN, key: WS.key, r: recOf(WS.key) }; const d = document.getElementById('detailDrawer'); return d && d.classList.contains('open') && typeof openKey!=='undefined' && openKey && RUN && recOf(openKey) ? { run: RUN, key: openKey, r: recOf(openKey) } : null; };
-  const SEGS = Object.keys(SEG_MEANS);
+  const SEGS = typeof SEG_MEANS!=='undefined' ? Object.keys(SEG_MEANS) : [];
   const pl = (n, one, many) => `${n} ${n===1?one:(many||one+'s')}`;
 
   function all(){
@@ -179,7 +179,7 @@
      It rates spot-checks that still pass every check, and accepts an exception only when every reason it is
      here is low-risk (AUTOPILOT_LOW_RISK: below deal size; segment too small needs a person to assign a micro-segment) and you asked for those.
      Sensitive content, unsupported claims, brand or rule checks and low confidence always stay with a person. */
-  const LOW = AUTOPILOT_LOW_RISK, lowNames = LOW.map(c=>REASON_CATS[c].toLowerCase()).join(' or ');
+  const LOW = typeof AUTOPILOT_LOW_RISK!=='undefined' ? AUTOPILOT_LOW_RISK : [], lowNames = LOW.map(c=>(typeof REASON_CATS!=='undefined' ? REASON_CATS[c] : c).toLowerCase()).join(' or ');
   // Would Autopilot take this item now? Returns null when it would, or the reason it leaves it for a person.
   function blockedWhy(x){
     return inRun(x.run, ()=>{
@@ -313,7 +313,7 @@
   const tool = (n, tip, fn, on) => `<button type="button" class="cpp-tool ${on?'on':''}" data-tip="${esc(tip)}" aria-label="${esc(tip)}" onclick="${fn}">${icon(n, 17)}</button>`;
 
   const CHAT_KEY = 'demandai_copilot_chats_v1';
-  const PAGE_NAME = { '00-today.html':'Today', '14-review.html':'For Review', '12-nba.html':'Micro-segments & NBA', '13-analytics.html':'Analytics' }[PAGE] || 'This screen';
+  const PAGE_NAME = { '00-today.html':'Today', '14-review.html':'For Review', '12-nba.html':'Micro-segments & NBA', '13-analytics.html':'Analytics', '10-prospecting.html':'Prospecting', '11-scoring.html':'Account Scoring' }[PAGE] || 'This screen';
   const threads = () => { try{ return JSON.parse(localStorage.getItem(CHAT_KEY)||'[]'); }catch(e){ return []; } };
   const saveThreads = all => { try{ localStorage.setItem(CHAT_KEY, JSON.stringify(all.slice(0,80))); }catch(e){} };
   function keepThread(t){ if(!t || !t.msgs.length) return; const all = threads().filter(x=>x.id!==t.id); all.unshift(t); saveThreads(all); }
@@ -623,6 +623,16 @@ body.cp-push #detailDrawer.open{right:420px;transition:right .24s cubic-bezier(.
     stop(){ if(BUSY) BUSY.abort(); },
     recText: r => recText(r),
     icon,
+    // For screens without the NBA data (Prospecting, Scoring): the same box at the bottom of the open side panel,
+    // and a top-right button. The page passes what to do with the question.
+    plainButton(js){ css(); return `<button class="btn btn-sec btn-sm" onclick="${js}" title="Ask Copilot" style="gap:6px"><span class="cp-spark">${icon('spark', 15)}</span> Copilot</button>`; },
+    footBar(placeholder, js){
+      css(); const dr = document.getElementById('detailDrawer'); if(!dr) return;
+      let foot = dr.querySelector('.det-foot');
+      if(!foot){ foot = document.createElement('div'); foot.className = 'det-foot'; foot.style.cssText = 'position:sticky;bottom:0;z-index:5;flex-shrink:0;padding:10px 14px 12px;border-top:1px solid var(--border);background:var(--surf)'; dr.appendChild(foot); }
+      foot.innerHTML = `<form class="cp-bar" style="max-width:none;margin:0" onsubmit="${js}(this.q.value);this.q.value='';return false"><span class="cp-spark">${icon('spark', 17)}</span><input name="q" autocomplete="off" placeholder="${esc(placeholder)}"><button class="cp-send" type="submit" aria-label="Send">${icon('send', 16)}</button></form>`;
+    },
+    removeFoot(){ const f = document.querySelector('#detailDrawer .det-foot'); if(f) f.remove(); },
     dock, expand(){ const sh = document.getElementById('cpSheet'); if(!sh) return; if(!S.msgs.length) S.msgs.push({ html: help(`Hi ${esc((ROLE_PERSON[getRole()]||getRole()).split(' ')[0])}. Ask me about ${ON_REVIEW?'your queue':PAGE==='12-nba.html'?'your micro-segments and accounts':'your work'}. For example:`) });
       S.sheet = true; sh.style.display = 'flex'; const h = document.querySelector('.cp-hints'); if(h) h.style.display = 'none'; draw(); },
     collapse(){ S.sheet = false; const sh = document.getElementById('cpSheet'); if(sh) sh.style.display = 'none'; const h = document.querySelector('.cp-hints'); if(h) h.style.display = ''; },
