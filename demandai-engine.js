@@ -964,14 +964,24 @@ const VOICE_PRESETS = {
   Warm:   { greeting: 'Hi {first},', closing: 'All the best,', about: 'Friendly and personal, still one point and one ask.' },
 };
 // Messaging frameworks the team writes with: what each is for (the objective), its structure, and how often they use it.
+// What a message can ask the reader to do, and the tool behind each (connected after the pilot).
+const FRAMEWORK_ACTIONS = {
+  meeting: { label: 'Book a meeting', how: 'Calendar link', tools: 'Google Calendar, Calendly' },
+  call:    { label: 'Request a call', how: 'Call-back request', tools: 'Phone, Microsoft Teams' },
+  ticket:  { label: 'Raise a support ticket', how: 'Ticket link', tools: 'Service desk, e.g. ServiceNow, Zendesk' },
+  form:    { label: 'Fill in a short form', how: 'Short web form', tools: 'e.g. HubSpot forms, Microsoft Forms' },
+  content: { label: 'Read or download content', how: 'Tracked link to a guide or case study', tools: 'Content library' },
+  event:   { label: 'Register for a session', how: 'Event sign-up link', tools: 'e.g. Zoom Webinars, ON24' },
+  reply:   { label: 'Reply to the email', how: 'No link needed', tools: '' },
+};
 const FRAMEWORKS = [
-  { objective: 'Book a first meeting', name: 'Trigger, insight, ask', steps: ['Their trigger: the signal that makes it timely', 'One insight or approved proof', 'One clear ask'], use: 'Often' },
-  { objective: 'Answer an inquiry', name: 'Question, answer, next step', steps: ['Restate what they asked', 'Answer it briefly', 'Offer a short call with a specialist'], use: 'Often' },
-  { objective: 'Start a migration conversation', name: 'Problem, agitate, solve', steps: ['The problem they face', 'What waiting costs them', 'The approach that solves it'], use: 'Sometimes' },
-  { objective: 'Review a renewal', name: 'Before, after, bridge', steps: ['Where they are today', 'Where they could be', 'How a short review gets them there'], use: 'Sometimes' },
-  { objective: 'Introduce ourselves to a new leader', name: 'Give, then ask', steps: ['Something useful for their first months', 'A light ask'], use: 'Sometimes' },
-  { objective: 'Re-engage after they read our content', name: 'Attention, interest, desire, action', steps: ['Refer to what they read', 'Why it matters for their site', 'What comparable sites gained', 'One next step'], use: 'Rarely' },
-  { objective: 'Blogs and whitepapers', name: 'Problem, approach, evidence, next step', steps: ['The problem in their words', 'A practical approach', 'Approved evidence', 'One next step'], use: 'Often' },
+  { objective: 'Book a first meeting', name: 'Trigger, insight, ask', steps: ['Their trigger: the signal that makes it timely', 'One insight or approved proof', 'One clear ask'], use: 'Often', actions: ['meeting', 'reply'] },
+  { objective: 'Answer an inquiry', name: 'Question, answer, next step', steps: ['Restate what they asked', 'Answer it briefly', 'Offer a short call with a specialist'], use: 'Often', actions: ['ticket', 'form', 'call'] },
+  { objective: 'Start a migration conversation', name: 'Problem, agitate, solve', steps: ['The problem they face', 'What waiting costs them', 'The approach that solves it'], use: 'Sometimes', actions: ['meeting', 'content'] },
+  { objective: 'Review a renewal', name: 'Before, after, bridge', steps: ['Where they are today', 'Where they could be', 'How a short review gets them there'], use: 'Sometimes', actions: ['meeting', 'form'] },
+  { objective: 'Introduce ourselves to a new leader', name: 'Give, then ask', steps: ['Something useful for their first months', 'A light ask'], use: 'Sometimes', actions: ['content', 'meeting'] },
+  { objective: 'Re-engage after they read our content', name: 'Attention, interest, desire, action', steps: ['Refer to what they read', 'Why it matters for their site', 'What comparable sites gained', 'One next step'], use: 'Rarely', actions: ['content', 'event'] },
+  { objective: 'Blogs and whitepapers', name: 'Problem, approach, evidence, next step', steps: ['The problem in their words', 'A practical approach', 'Approved evidence', 'One next step'], use: 'Often', actions: ['content', 'form'] },
 ];
 const BRAND_KEY = 'demandai_brand_v1';
 function defaultBrand() {
@@ -989,11 +999,11 @@ function saveBrandDraft(d) { const st = brandStore() || {}; st.draft = d; st.sub
 function submitBrand(by) { const st = brandStore() || {}; if (!st.draft) return false; st.submitted = { by, at: Date.now() }; return brandSave(st); }
 function discardBrandDraft() { const st = brandStore() || {}; st.draft = null; st.submitted = null; return brandSave(st); }
 function brandPending() { const st = brandStore(); return st && st.draft ? { draft: st.draft, submitted: st.submitted || null } : null; }
-function publishBrand(by, note) {
+function publishBrand(by, note, sections) {
   const st = brandStore() || {}, live = st.live || defaultBrand(), d = st.draft;
   if (!d) return null;
   d.v = (live.v || 1) + 1;
-  d.history = (live.history || []).concat([{ v: d.v, at: Date.now(), by, note: note || '' }]);
+  d.history = (live.history || []).concat([{ v: d.v, at: Date.now(), by, note: note || '', sections: sections || [] }]);
   // Earlier versions are kept, so a list drafted with one keeps drafting with it.
   st.archive = st.archive || {}; st.archive[live.v || 1] = Object.assign({}, live, { history: undefined });
   st.live = d; st.draft = null; st.submitted = null;
@@ -1302,7 +1312,7 @@ return {
   CONFIG, CODES, saveConfig, configOverrides, configVersion, LEAD_COLUMNS, LEAD_REQUIRED, SIGNAL_COLUMNS, SIGNAL_REQUIRED,
   parseCSV, toCSV, readTable, processLeads, classify, personaOf, fitFor, decayFactor,
   processSignals, scoreList, stack, tierFor, daysBetween, round1, buildSegments, segmentRanks, recommendChannel, draftFor, processScoredProspects, SEGMENT_COLUMNS, estimateDealSize,
-  briefFor, callScript, checkDraft, checkContent, FRAMEWORKS, confidenceFor, allowedChannels, proofFor, COLLATERAL, PLAYBOOK,
+  briefFor, callScript, checkDraft, checkContent, FRAMEWORKS, FRAMEWORK_ACTIONS, confidenceFor, allowedChannels, proofFor, COLLATERAL, PLAYBOOK,
   VOICE_PRESETS, defaultBrand, brandPack, brandDraft, saveBrandDraft, submitBrand, discardBrandDraft, brandPending, publishBrand, brandVersion, useBrand, approvedClaims, contactFixFor, applyContactFix, saveContactFix, signalsOff, setSignal, signalAudit, setupStore, saveSetup, customSignals, addSignal, removeSignal, STRENGTH,
   loadLists, saveList, getList, deleteList, loadScorings, saveScoring, getScoring, deleteScoring,
   loadSegmentations, saveSegmentation, getSegmentation, deleteSegmentation, reviewBadge,
