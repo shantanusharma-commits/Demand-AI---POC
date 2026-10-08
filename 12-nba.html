@@ -855,7 +855,9 @@ function gridTab(){
   const s = RUN.seg, min = DemandAI.CONFIG.minSegmentAccounts;
   const accOf = recs => [...new Map(recs.map(r=>[r.account.id,r])).values()];
   const all = s.recs.map(r=>r.account).concat(s.engagedOnce.map(e=>e.account));
-  const rows = s.segments.map(g=>({name:g.name, recs:g.recs}));
+  // An account a person assigned to a micro-segment in For Review counts in that micro-segment from then on.
+  const rows = s.segments.map(g=>({name:g.name, recs:s.recs.filter(r=>segOf(r)===g.name)}));
+  const unseg = s.recs.filter(r=>!segOf(r));
   const go = seg => `segFilt=${seg?`'${seg}'`:"'__x'"};vertFilt=null;view='list';q='';renderResults()`;
   const th = 'padding:10px 12px;font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--i3);border-bottom:1px solid var(--border);background:var(--s50)';
   const td = 'padding:12px;border-bottom:1px solid var(--border);vertical-align:middle';
@@ -872,16 +874,17 @@ function gridTab(){
             <div style="font-size:12px;color:var(--i2)">${esc(SEG_MEANS[g.name]||'')}</div>
             <div style="font-size:12px;color:var(--i1);font-weight:600;margin-top:4px">→ ${esc(DemandAI.CONFIG.segmentLibrary[g.name][0])}</div>
             ${fb?`<div style="font-size:10.5px;color:var(--i3);margin-top:3px">${fb} of ${byAcc.length} accounts joined on their second signal</div>`:''}
+            ${(()=>{ const as = byAcc.filter(r=>!r.segment); return as.length ? `<div style="font-size:10.5px;color:var(--brand-dk);margin-top:3px">${as.length} assigned by a person in For Review: ${esc(as.map(r=>r.account.name).join(', '))}</div>` : ''; })()}
             ${isManager()?`<button class="btn btn-ghost btn-sm" style="margin-top:6px;padding:0 6px" onclick="event.stopPropagation();${paused?'resumeSegment':'pauseSegment'}('${g.name}')">${paused?'Resume':'Pause this micro-segment'}</button>`:''}</td>
-          ${num(byAcc.length, byAcc.length===1?'account':'accounts', 'var(--brand-dk)')}${num(np, 'ready to use', 'var(--pos)')}${num(g.recs.length-np, 'in For Review', 'var(--warn)')}
+          ${num(byAcc.length, byAcc.length===1?'account':'accounts', 'var(--brand-dk)')}${num(np, 'ready to use', 'var(--pos)')}${num(g.recs.filter(r=>{ const d = dec(r.key); return inQueue(d) || d.status==='Awaiting approval'; }).length, 'in For Review', 'var(--warn)')}
           <td style="${td};text-align:right"><span class="btn btn-sec btn-sm">View →</span></td></tr>`;
       }).join('') : `<tr><td colspan="5" style="${td};text-align:center;color:var(--i3);font-size:12.5px">No micro-segment formed: fewer than ${min} accounts share a signal.</td></tr>`}</tbody>
     </table></div>`;
   const note = (tag, text, n, click) => `<div ${click?`onclick="${click}" `:''}style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surf);border:1px solid var(--border);border-radius:var(--rmd);margin-top:8px;${click?'cursor:pointer':''}">${tag}<span style="flex:1;font-size:12px;color:var(--i2)">${text}</span><span style="font-size:12px;font-weight:600;color:var(--i1)">${n}</span>${click?'<span style="color:var(--i3)">›</span>':''}</div>`;
-  const exAccs = accOf(s.exceptions);
+  const exAccs = accOf(unseg);
   return `${grid}
     <div style="font-size:11px;color:var(--i3);margin:8px 2px 0">A micro-segment is a group of at least ${min} accounts with the same reason to buy now. Click one to see its accounts.</div>
-    ${exAccs.length ? note('<span class="tag tag-grey">No micro-segment</span>', `${esc(exAccs.map(r=>r.account.name).join(', '))}: fewer than ${min} accounts share any of their signals, so each gets its own action.`, `${s.exceptions.length} account${s.exceptions.length===1?'':'s'}`, go(null)) : ''}
+    ${exAccs.length ? note('<span class="tag tag-grey">No micro-segment</span>', `${esc(exAccs.map(r=>r.account.name).join(', '))}: fewer than ${min} accounts share any of their signals, so each gets its own action.`, `${exAccs.length} account${exAccs.length===1?'':'s'}`, go(null)) : ''}
     ${s.engagedOnce.length ? note('<span class="tag tag-grey">Engaged once</span>', `${esc(s.engagedOnce.map(e=>e.account.name).join(', '))}: already recommended in this pilot, so not recommended again.`, `${s.engagedOnce.length} account${s.engagedOnce.length===1?'':'s'}`) : ''}`;
 }
 
@@ -898,7 +901,7 @@ function visibleRecs(){
   return rs.slice().sort((a,b)=>fresh(a)-fresh(b));
 }
 function listTab(){
-  const segs = RUN.seg.segments.map(g=>g.name).concat(RUN.seg.exceptions.length?['__x']:[]);
+  const segs = RUN.seg.segments.map(g=>g.name).concat(RUN.seg.recs.some(r=>!segOf(r))?['__x']:[]);
   const verts = [...new Set(RUN.seg.recs.map(r=>r.account.vertical))].sort();
   const sel = 'padding:6px 9px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:12px';
   return `${showFilt!=='meeting' ? meetingBanner() : ''}<div class="score-list">
