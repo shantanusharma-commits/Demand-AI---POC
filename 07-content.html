@@ -557,6 +557,8 @@ img.lg{display:block;object-fit:contain;}
 .vr-b{margin:0 0 10px 52px;padding:8px 12px;border-left:2px solid var(--brand-mid);font-size:12px;color:var(--i1);line-height:1.7;background:var(--s50);border-radius:0 8px 8px 0;}
 @media (max-width:1200px){ .cl-grid{grid-template-columns:1fr;} .cl-pane{position:static;} .fw-r{grid-template-columns:1fr 1.3fr 1.8fr 100px 60px;} }
 @media (max-width:1000px){ .fw-r{grid-template-columns:1fr;} .fw-hd{display:none;} .cta-pick{grid-template-columns:1fr;} .fw-stats{grid-template-columns:1fr 1fr;} }
+.cta-off{opacity:.5;filter:grayscale(1);pointer-events:none;user-select:none;}
+.soon-pill{display:inline-block;margin-left:6px;font-size:9px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--brand-dk);background:var(--brand-lt);border-radius:999px;padding:1px 7px;vertical-align:middle;}
 </style>
 </head>
 <body>
@@ -749,23 +751,20 @@ const label = t => `<div style="font-size:11px;font-weight:600;color:var(--i2);m
 const card = (title, right, body) => `<div class="panel" style="margin-bottom:14px"><div class="panel-hdr"><span class="panel-ttl">${title}</span>${right||''}</div><div class="panel-body">${body}</div></div>`;
 const ro = () => canEdit() ? '' : 'disabled';
 
-let SUB = 'doc';   // Brand guidelines: the guideline document and samples, or the messaging frameworks
 function render(){
   const live = DemandAI.brandPack(), changed = changedSections();
-  const tabOf = k => k==='framework' ? 'guidelines' : k;
-  const ft = (k,l) => `<div class="ftab ${tabOf(tab)===k?'active':''}" onclick="go('${k}')">${l}${changed.some(c=>SECTION_OF[c]===k)?' <span class="chg-dot" title="Changed, not saved yet"></span>':''}</div>`;
-  if(tab==='framework'){ tab = 'guidelines'; SUB = 'frameworks'; }
+  const ft = (k,l) => `<div class="ftab ${tab===k?'active':''}" onclick="go('${k}')">${l}${changed.some(c=>SECTION_OF[c]===k)?' <span class="chg-dot" title="Changed, not saved yet"></span>':''}</div>`;
   document.getElementById('mainArea').innerHTML = `
     <div class="topbar"><div class="topbar-l"><span class="tb-title">Content library</span><span class="tb-badge badge-neutral">${esc(DemandAI.brandVersion())}</span></div></div>
-    <div class="ftabs">${[['guidelines','Brand guidelines'],['voice','Voice and tone'],['negative','Negative keywords'],['claims','Approved claims'],['versions','Versions']].map(([k,l])=>ft(k,l)).join('')}</div>
+    <div class="ftabs">${[['guidelines','Brand guidelines'],['framework','Messaging frameworks'],['voice','Voice and tone'],['negative','Negative keywords'],['claims','Approved claims'],['versions','Versions']].map(([k,l])=>ft(k,l)).join('')}</div>
     <div class="canvas cl-canvas">
       ${saveBar(live, changed)}
       ${!canEdit() ? `<div style="font-size:12px;color:var(--i3);margin-bottom:14px">View only: the admin and the sales manager maintain the brand pack.</div>` : ''}
-      ${({guidelines:guidelinesTab, voice:voiceTab, negative:negativeTab, claims:claimsTab, versions:versionsTab})[tab]()}
+      ${({guidelines:guidelinesTab, framework:frameworkTab, voice:voiceTab, negative:negativeTab, claims:claimsTab, versions:versionsTab})[tab]()}
     </div>`;
 }
-const SECTION_OF = { 'Brand guidelines':'guidelines', 'Messaging frameworks':'guidelines', 'Voice and tone':'voice', 'Negative keywords':'negative', 'Approved claims':'claims' };
-function go(k, sub){ tab = k; if(sub) SUB = sub; history.replaceState(null, '', '?tab=' + (k==='guidelines' && SUB==='frameworks' ? 'framework' : k)); render(); document.querySelector('.canvas').scrollTop = 0; }
+const SECTION_OF = { 'Brand guidelines':'guidelines', 'Messaging frameworks':'framework', 'Voice and tone':'voice', 'Negative keywords':'negative', 'Approved claims':'claims' };
+function go(k){ tab = k; history.replaceState(null, '', '?tab=' + k); render(); document.querySelector('.canvas').scrollTop = 0; }
 
 /* ─── Save: every change waits here until it is saved, and each save is a new version ─── */
 function saveBar(live, changed){
@@ -988,9 +987,6 @@ function samplesCard(){
      <div class="su-tip">For the demo: download a sample, then upload it back with “Upload the brand guideline document”. Its rules (banned words, competitors, sign-off, length, tone) are read and offered to add in one click.</div>
      <div class="gp" style="margin-top:14px">${GUIDE_PARTS.map(([t,d],i)=>`<div class="gp-i"><span class="gp-n">${i+1}</span><div><b>${esc(t)}</b><div>${esc(d)}</div></div></div>`).join('')}</div>`);
 }
-function subNav(){
-  return `<div class="subnav"><button class="${SUB==='doc'?'on':''}" onclick="go('guidelines','doc')">Guideline document and samples</button><button class="${SUB==='frameworks'?'on':''}" onclick="go('guidelines','frameworks')">Messaging frameworks</button></div>`;
-}
 
 /* ─── Calls to action, with the tools behind them ─── */
 const logo = (name, size) => { const svg = (window.TOOL_LOGOS||{})[name]; return svg ? `<img class="lg" src="data:image/svg+xml;utf8,${encodeURIComponent(svg)}" alt="${esc(name)}" title="${esc(name)}" width="${size||16}" height="${size||16}">` : ''; };
@@ -1002,9 +998,8 @@ function ctaChip(k){
 
 /* ─── Brand guidelines: the reference document, and rules read from it ─── */
 function guidelinesTab(){
-  if(SUB==='frameworks') return subNav() + frameworkTab();
   const g = draft().guideline;
-  return subNav() + card('Brand guideline document', '', `
+  return card('Brand guideline document', '', `
       ${g ? `<div style="display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--rsm);margin-bottom:12px">
           <div style="flex:1"><div style="font-size:12.5px;font-weight:600;color:var(--i1)">${esc(g.name)}</div><div style="font-size:11px;color:var(--i3)">${Math.round(g.size/1024)} KB · uploaded by ${esc(g.by)} on ${fmtDate(g.at)}${g.data?'':' · reference only (too large to keep in the browser)'}</div></div>
           ${g.data?`<a class="btn btn-sec btn-sm" href="${g.data}" download="${esc(g.name)}" style="text-decoration:none">Open</a>`:''}
@@ -1225,15 +1220,15 @@ function frameworkTab(){
   const list = fws(), byUse = u => list.filter(f=>f.use===u).length, ed = canEdit();
   const order = list.map((f,i)=>({f,i})).filter(o=>!FWF || o.f.use===FWF).sort((a,b)=>USE.indexOf(a.f.use)-USE.indexOf(b.f.use));
   const often = list.filter(f=>f.use==='Often');
-  return `<div style="font-size:12.5px;color:var(--i2);margin-bottom:12px;line-height:1.55">The frameworks the team writes with, by objective: what a message is for, the framework that gets there, its structure, the call to action it ends with, and how often the team uses it.</div>`
+  return `<div style="font-size:12.5px;color:var(--i2);margin-bottom:12px;line-height:1.55">The frameworks the team writes with, by objective: what a message is for, the framework that gets there, its structure and how often the team uses it. The call to action each one ends with, and the tools behind it, are connected after the pilot.</div>`
     + `<div class="stats fw-stats">${USE.map(u=>`<a class="stat stat-link ${FWF===u?'on':''}" href="#" title="Show only these" onclick="FWF=FWF==='${u}'?null:'${u}';render();return false"><div class="stat-lbl">${u==='Not used'?'Not used':'Used '+u.toLowerCase()}</div><div class="stat-val ${u==='Often'?'sv4':u==='Sometimes'?'sv2':u==='Rarely'?'sv3':'sv5'}">${byUse(u)}</div><div class="stat-sub">framework${byUse(u)===1?'':'s'}</div></a>`).join('')}</div>`
     + (often.length ? `<div style="font-size:12px;color:var(--i2);margin:0 0 10px">Used most: ${often.map(f=>`<b>${esc(f.name)}</b> to ${esc(f.objective.charAt(0).toLowerCase()+f.objective.slice(1))}`).join('; ')}.</div>` : '')
     + card('Frameworks by objective', `<div style="display:flex;gap:10px;align-items:center"><span style="font-size:11px;color:var(--i3)">${list.length} framework${list.length===1?'':'s'}</span>${ed?'<button class="btn btn-sec btn-sm" onclick="editFw(-1)">+ Add a framework</button>':''}</div>`,
-      `<div class="fw-t"><div class="fw-r fw-hd"><div>Objective</div><div>Framework and structure</div><div>Call to action</div><div>How often used</div><div></div></div>
+      `<div class="fw-t"><div class="fw-r fw-hd"><div>Objective</div><div>Framework and structure</div><div>Call to action <span class="soon-pill">After the pilot</span></div><div>How often used</div><div></div></div>
       ${order.map(({f,i})=>`<div class="fw-r">
         <div class="fw-o">${esc(f.objective)}</div>
         <div><b class="fw-n">${esc(f.name)}</b><ol class="fw-s">${f.steps.map(s=>`<li>${esc(s)}</li>`).join('')}</ol></div>
-        <div class="fw-c">${(f.actions||[]).map(ctaChip).join('') || '<span class="muted">None yet</span>'}</div>
+        <div class="fw-c cta-off" aria-disabled="true" title="After the pilot: the call to action and its tools are connected after the pilot">${(f.actions||[]).map(ctaChip).join('') || '<span class="muted">None yet</span>'}</div>
         <div><span class="tag ${USE_TONE[f.use]||'tag-grey'}">${esc(f.use)}</span></div>
         <div class="fw-e">${ed?`<button class="btn btn-ghost btn-sm" onclick="editFw(${i})">Edit</button>`:''}</div></div>`).join('')}</div>`)
     + later('Being explored', [['Customer journey stages.', 'Map each framework to a stage (awareness, consideration, decision, renewal), with Copilot guiding you step by step to the right one.']]);
@@ -1245,7 +1240,7 @@ function editFw(i){
     <div class="af-row"><label class="af"><span>Objective: what the message is for</span><input id="fwObj" value="${esc(f.objective)}" placeholder="e.g. Win back a lost account"></label>
       <label class="af"><span>Framework</span><input id="fwName" value="${esc(f.name)}" placeholder="e.g. Problem, agitate, solve"></label></div>
     <label class="af"><span>Structure, one step per line</span><textarea id="fwSteps" rows="4" placeholder="The problem they face&#10;What waiting costs them&#10;The approach that solves it">${esc(f.steps.join('\n'))}</textarea></label>
-    <div class="af"><span>Call to action: what the reader is asked to do</span><div class="cta-pick">${Object.keys(FA).map(k=>`<label class="cta-o"><input type="checkbox" value="${k}" ${(f.actions||[]).includes(k)?'checked':''}>${ctaChip(k)}</label>`).join('')}</div></div>
+    <div class="af"><span>Call to action: what the reader is asked to do <span class="soon-pill">After the pilot</span></span><div class="cta-pick cta-off" aria-disabled="true">${Object.keys(FA).map(k=>`<label class="cta-o"><input type="checkbox" value="${k}" disabled ${(f.actions||[]).includes(k)?'checked':''}>${ctaChip(k)}</label>`).join('')}</div></div>
     <label class="af" style="max-width:220px"><span>How often used</span><select id="fwUse">${USE.map(u=>`<option ${f.use===u?'selected':''}>${u}</option>`).join('')}</select></label>
     <div id="fwErr" style="font-size:12px;color:var(--neg);min-height:16px"></div>
     <div style="display:flex;gap:8px;justify-content:space-between;margin-top:6px">${i>=0?`<button class="btn btn-ghost btn-sm" style="color:var(--neg)" onclick="if(confirm('Remove this framework?')){closeOverlayHtml();removeFw(${i});}">Remove</button>`:'<span></span>'}
@@ -1254,7 +1249,7 @@ function editFw(i){
 function saveFw(i){
   const v = id => (document.getElementById(id).value||'').trim(), steps = v('fwSteps').split('\n').map(x=>x.trim()).filter(Boolean);
   if(!v('fwObj') || !v('fwName') || !steps.length){ document.getElementById('fwErr').textContent = 'Add the objective, the framework and its structure'; return; }
-  const actions = [...document.querySelectorAll('.cta-pick input:checked')].map(x=>x.value);
+  const actions = i>=0 ? (fws()[i].actions||[]) : [];     // calls to action are set after the pilot
   const f = { objective:v('fwObj'), name:v('fwName'), steps, use:v('fwUse'), actions };
   if(i>=0) fws()[i] = f; else fws().push(f);
   closeOverlayHtml(); commit(i>=0 ? 'Changed. Save to make it a new version' : 'Framework added. Save to make it a new version');
