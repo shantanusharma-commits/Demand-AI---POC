@@ -427,6 +427,11 @@ input,textarea,select{background-color:#fff;color:var(--i1);}
 .stat-link::after{content:'›';position:absolute;top:10px;right:14px;font-size:17px;color:var(--i4);}
 .stat-link:hover .stat-lbl,.stat-link.on .stat-lbl{color:var(--brand);}
 .tier-mini{font-size:12px;white-space:nowrap;}
+.mon-tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;}
+.mon-tiles .stat{background:var(--surf);border:1px solid var(--border);border-radius:var(--rmd);padding:12px 14px;}
+.mon-tiles .stat-l{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--i3);}
+.mon-tiles .stat-v{font-family:var(--fd);font-size:22px;font-weight:700;color:var(--i1);margin:4px 0 2px;}
+.mon-tiles .stat-s{font-size:11px;color:var(--i3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 </style>
 </head>
 <body>
@@ -609,8 +614,8 @@ function renderStart(t){
   const types = Object.keys(DemandAI.CONFIG.signalTypes).filter(k=>!DemandAI.CONFIG.signalTypes[k].knockout && !DemandAI.CONFIG.signalTypes[k].reject);
   document.getElementById('mainArea').innerHTML = `
     <div class="topbar"><div class="topbar-l"><span class="tb-title">Account Scoring</span><span class="tb-badge badge-neutral">Fit × Timing · rules only</span></div></div>
-    <div class="ftabs">${ft('new','New scoring')}${ft('saved','Scored lists',runs.length)}</div>
-    <div class="canvas">${tab==='new' ? `
+    <div class="ftabs">${ft('new','New scoring')}${ft('saved','Scored lists',runs.length)}${ft('monitor','Signal monitoring')}</div>
+    <div class="canvas">${tab==='monitor' ? monitorView() : tab==='new' ? `
       <div style="max-width:640px;margin:24px auto 0">
         <div style="font-family:var(--fd);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--brand);margin-bottom:8px">Step 2 · Scoring</div>
         <div style="font-family:var(--fd);font-size:22px;font-weight:700;color:var(--i1);margin-bottom:6px">Score a prospect list</div>
@@ -686,6 +691,43 @@ function renderStart(t){
     dz.addEventListener('drop', e=>{e.preventDefault(); dz.style.borderColor='var(--bdk)'; if(e.dataTransfer.files[0]) onFile(e.dataTransfer.files[0]);});
   }
 }
+/* ═══════════════ SIGNAL MONITORING: what has come in, per signal type ═══════════════
+   In the POC signals arrive as files, so this counts the rows in every signal file uploaded here and in Micro-segments. */
+function signalFeed(){
+  const files = [], seen = new Set();
+  const add = (grid, file, at, where) => { if(!grid || !grid.length) return; const key = file + '|' + at; if(seen.has(key)) return; seen.add(key);
+    const hi = grid.findIndex(r=>(r||[]).some(c=>String(c).trim().toLowerCase().replace(/\*/g,'')==='signal_type')); if(hi<0) return;
+    const h = grid[hi].map(c=>String(c).trim().toLowerCase().replace(/\*/g,'')), ti = h.indexOf('signal_type'), di = h.indexOf('event_date');
+    files.push({ file, at, where, rows: grid.slice(hi+1).filter(r=>r && String(r[ti]||'').trim()).map(r=>({ type:String(r[ti]).trim(), date:String(r[di]||'').trim(), bytes: r.map(c=>String(c??'')).join(',').length + 1 })) }); };
+  DemandAI.loadScorings().forEach(r=>add(r.grid, r.fileName, r.createdAt, 'Account Scoring'));
+  DemandAI.loadSegmentations().forEach(r=>{ if(r.src && r.src.csv) add(r.src.grid, r.src.fileName, r.createdAt, 'Micro-segments'); });
+  return files;
+}
+function monitorView(){
+  const files = signalFeed(), types = DemandAI.CONFIG.signalTypes, off = new Set(DemandAI.signalsOff()), by = {};
+  files.forEach(f=>f.rows.forEach(r=>{ const k = types[r.type] ? r.type : Object.keys(types).find(t=>t.toLowerCase()===r.type.toLowerCase()) || r.type;
+    const o = by[k] || (by[k] = { n:0, bytes:0, files:new Set(), last:'', at:0 }); o.n++; o.bytes += r.bytes; o.files.add(f.file); if(/^\d{4}-\d{2}-\d{2}$/.test(r.date) && r.date > o.last) o.last = r.date; o.at = Math.max(o.at, f.at||0); }));
+  const known = Object.keys(types), names = known.concat(Object.keys(by).filter(k=>!types[k]));
+  const total = Object.values(by).reduce((a,o)=>a+o.n,0), size = Object.values(by).reduce((a,o)=>a+o.bytes,0), unknown = Object.keys(by).filter(k=>!types[k]);
+  const kb = b => b < 1024 ? `${b} B` : `${(b/1024).toFixed(1)} KB`, max = Math.max(1, ...Object.values(by).map(o=>o.n));
+  const tile = (k, v, sub) => `<div class="stat"><div class="stat-l">${k}</div><div class="stat-v">${v}</div><div class="stat-s">${sub}</div></div>`;
+  return `<div style="max-width:1100px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin-bottom:14px;flex-wrap:wrap">
+      <div><div style="font-family:var(--fd);font-size:18px;font-weight:700;color:var(--i1)">What has come in, per signal</div>
+        <div style="font-size:12.5px;color:var(--i3);margin-top:3px;line-height:1.5">In the POC the client sends signals as files, so this counts the rows in every signal file uploaded so far. Once the data connectors are in, it shows the live stream.</div></div>
+      <a href="09-setup.html#sec-signals" class="btn btn-sec btn-sm" style="text-decoration:none">Switch signals on or off in Setup →</a></div>
+    <div class="mon-tiles">${tile('Records received', total, `${files.length} file${files.length===1?'':'s'}`)}${tile('Size', kb(size), 'all signal rows')}${tile('Signal types seen', Object.keys(by).filter(k=>types[k]).length + ' of ' + known.length, 'known tags')}${tile('Not a known tag', unknown.reduce((a,k)=>a+by[k].n,0), unknown.length ? esc(unknown.join(', ')) : 'every row uses a known tag')}</div>
+    <div class="score-list">${table([['Signal','26%'],['Records received','22%'],['Size','9%','num'],['Files','8%','num'],['Latest event','12%'],['Last received','12%'],['Status','11%']],
+      names.map(k=>{ const o = by[k], c = types[k];
+        const st = !c ? '<span class="tag tag-amber">Not a known tag</span>' : c.knockout ? '<span class="tag tag-grey">Knock-out</span>' : c.reject ? '<span class="tag tag-grey">Not scored</span>' : off.has(k) ? '<span class="tag tag-red">Off</span>' : '<span class="tag tag-green">On</span>';
+        return `<tr style="${o?'':'opacity:.6'}"><td>${cell(k, c && c.segment ? 'Feeds ' + c.segment : '')}</td>
+          <td>${o ? `<div style="display:flex;align-items:center;gap:8px"><span style="flex:1;height:6px;border-radius:3px;background:var(--s75);overflow:hidden"><i style="display:block;height:100%;width:${o.n/max*100}%;background:var(--brand);border-radius:3px"></i></span><b style="min-width:22px;text-align:right;color:var(--i1)">${o.n}</b></div>` : '<span class="muted">None yet</span>'}</td>
+          <td class="num">${o ? kb(o.bytes) : '—'}</td><td class="num">${o ? o.files.size : '—'}</td>
+          <td>${o && o.last ? cell(fmtDate(o.last)) : '<span class="muted">—</span>'}</td><td>${o && o.at ? cell(fmtDate(o.at)) : '<span class="muted">—</span>'}</td><td>${st}</td></tr>`; }).join(''), 'No signal files yet.')}</div>
+    ${files.length ? `<div style="font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--i3);margin:20px 0 8px">Files received</div>
+      <div class="score-list">${table([['File','34%'],['Used in','20%'],['Rows','10%','num'],['Size','10%','num'],['Received','26%']], files.slice().sort((a,b)=>(b.at||0)-(a.at||0)).map(f=>`<tr><td>${cell(f.file)}</td><td>${cell(f.where)}</td><td class="num">${f.rows.length}</td><td class="num">${kb(f.rows.reduce((a,r)=>a+r.bytes,0))}</td><td>${cell(f.at ? fmtDate(f.at) : '—')}</td></tr>`).join(''), '')}</div>` : ''}
+  </div>`;
+}
 async function onLeadFile(file){
   if(!file) return;
   try{
@@ -716,9 +758,10 @@ function score(listId, fileName, sheet, grid, asOf, sandbox, saved){
   if(!L){ showToast("That prospect list isn't saved any more"); renderStart('new'); return false; }
   if(sandbox !== !!L.sandbox){ showToast('Sample signals only go with a list built from sample data'); return false; }
   const list = JSON.parse(JSON.stringify({accounts:L.accounts, contacts:L.contacts}));
-  const sig = DemandAI.processSignals(grid, list, {file:fileName, sheet, asOf});
+  const off = saved ? (saved.signalsOff || []) : DemandAI.signalsOff();     // signals switched off in Setup stop here
+  const sig = DemandAI.processSignals(grid, list, {file:fileName, sheet, asOf, off});
   const scored = DemandAI.scoreList(list, sig);
-  RUN = {listId, list:L, fileName, sheet, grid, asOf, sandbox, sig, scored, prospects:null, savedId: saved?saved.id:null, name: saved?saved.name:null};
+  RUN = {listId, list:L, fileName, sheet, grid, asOf, sandbox, off, sig, scored, prospects:null, savedId: saved?saved.id:null, name: saved?saved.name:null};
   view='ranked'; filt='all'; q=''; NSEL.clear();
   return true;
 }
@@ -949,7 +992,7 @@ function saveRun(){
   const sc = RUN.scored;
   const prev = RUN.savedId && DemandAI.getScoring(RUN.savedId);
   const run = prev ? Object.assign(prev, {name}) : { id:'run-'+Date.now().toString(36), name, listId:RUN.listId, listName:RUN.list.name,
-    fileName:RUN.fileName, sheet:RUN.sheet, grid:RUN.grid, asOf:RUN.asOf, sandbox:RUN.sandbox, createdAt:Date.now(),
+    fileName:RUN.fileName, sheet:RUN.sheet, grid:RUN.grid, asOf:RUN.asOf, sandbox:RUN.sandbox, signalsOff:RUN.off||[], createdAt:Date.now(),
     stats:{ scored: prospects().filter(x=>x.score!==undefined).length, A: prospects().filter(x=>x.tier==='A').length, B: prospects().filter(x=>x.tier==='B').length, C: prospects().filter(x=>x.tier==='C').length, watch: prospects().filter(x=>x.tier==='Watch list').length } };
   if(!DemandAI.saveScoring(run)){ showToast("This browser blocks storage, so it can't be saved"); return; }
   RUN.savedId = run.id; RUN.name = name;
@@ -1050,7 +1093,7 @@ function openProspect(key){
   const p = new URLSearchParams(location.search), id = p.get('list');
   if(p.get('run') && DemandAI.getScoring(p.get('run'))){ openRun(p.get('run')); return; }
   if(id && DemandAI.getList(id)) selListId = id;
-  renderStart('new');
+  renderStart(p.get('tab')==='monitor' ? 'monitor' : 'new');
 })();
 
 setTimeout(()=>{ try{ DemandAI.reviewBadge(); }catch(e){} }, 0);

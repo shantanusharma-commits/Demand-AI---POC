@@ -407,3 +407,21 @@ test('a published brand pack changes the drafts and the checks', () => {
   assert.equal(E.brandVersion(), 'Brand v2');
   delete global.localStorage;
 });
+
+test('a signal switched off in Setup is not scored in new runs, and the switch is audited', () => {
+  const store = {};
+  global.localStorage = { getItem: k => store[k] ?? null, setItem: (k, v) => { store[k] = String(v); }, removeItem: k => { delete store[k]; } };
+  const L = E.processLeads(S.LEADS, { file: 'l', sheet: 's' }), list = () => ({ accounts: L.accounts, contacts: JSON.parse(JSON.stringify(L.contacts)) });
+  assert.ok(E.setSignal('Leadership change', false, 'Rajiv Nair', 'Legal hold'));
+  assert.deepEqual(E.signalsOff(), ['Leadership change']);
+  const sig = E.processSignals(S.SIGNALS, list(), { asOf: S.SAMPLE_AS_OF, off: E.signalsOff() });
+  const off = sig.signals.filter(s => s.code === 'OFF');
+  assert.ok(off.length > 0 && off.every(s => s.type === 'Leadership change' && s.status === 'Rejected'));
+  assert.ok(sig.issues.some(i => i.code === 'OFF'));
+  E.setSignal('Leadership change', true, 'Rajiv Nair', 'Cleared');
+  assert.deepEqual(E.signalsOff(), []);
+  const audit = E.signalAudit('Leadership change');
+  assert.equal(audit.length, 2);
+  assert.equal(audit.find(a => !a.on).reason, 'Legal hold');
+  delete global.localStorage;
+});

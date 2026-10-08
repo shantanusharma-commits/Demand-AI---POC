@@ -116,7 +116,24 @@ function saveConfig(o, by) {
 }
 function configVersion() { const v = configOverrides()._v || 1; return `Config v${v}${v === 1 ? ' · starting values' : ''} · scoring weights fixed`; }
 
+/* ─── Setup: signals switched on or off, with who did it, when and why ───
+   A switched-off signal stops at the door of every new scoring run: its rows are rejected (OFF) and not scored.
+   Lists already scored keep the signals they were scored with. */
+const SETUP_KEY = 'demandai_setup_v1';
+function setupStore() { try { return typeof localStorage === 'undefined' ? {} : JSON.parse(localStorage.getItem(SETUP_KEY) || '{}'); } catch (e) { return {}; } }
+function saveSetup(st) { try { localStorage.setItem(SETUP_KEY, JSON.stringify(st)); return true; } catch (e) { return false; } }
+function signalsOff() { return (setupStore().off || []).slice(); }
+function setSignal(type, on, by, reason) {
+  const st = setupStore(), off = new Set(st.off || []);
+  if (on) off.delete(type); else off.add(type);
+  st.off = [...off];
+  st.audit = (st.audit || []).concat([{ type, on: !!on, by: by || '', reason: reason || '', at: Date.now() }]);
+  return saveSetup(st);
+}
+function signalAudit(type) { return (setupStore().audit || []).filter(a => !type || a.type === type).sort((a, b) => b.at - a.at); }
+
 const CODES = {
+  OFF: 'Switched off in Setup',
   D1: 'Wrong fit',
   D2: 'Stale',
   D3: 'Incomplete',
@@ -522,7 +539,7 @@ function decayFactor(type, age) {
   return (type.zero - age) / (type.zero - type.full);
 }
 
-function processSignals(grid, list, { file = 'signal file', sheet = 'Sheet1', asOf } = {}) {
+function processSignals(grid, list, { file = 'signal file', sheet = 'Sheet1', asOf, off = [] } = {}) {
   const table = readTable(grid, { file, sheet, columns: SIGNAL_COLUMNS, required: SIGNAL_REQUIRED, anchor: 'signal_type' });
   const issues = table.issues.slice();
   const accountsByKey = new Map(list.accounts.map(a => [a.key, a]));
@@ -559,6 +576,7 @@ function processSignals(grid, list, { file = 'signal file', sheet = 'Sheet1', as
     const cs = contactsByAcc.get(acc.id) || [];
     const typeCfg = CONFIG.signalTypes[s.type] || CONFIG.signalTypes[Object.keys(CONFIG.signalTypes).find(k => k.toLowerCase() === s.type.toLowerCase())];
     if (typeCfg) s.type = Object.keys(CONFIG.signalTypes).find(k => CONFIG.signalTypes[k] === typeCfg);
+    if (typeCfg && off.includes(s.type)) { reject('OFF', `${s.type} is switched off in Setup`, 'signal_type', 'Switch it back on in Setup to score it'); continue; }
 
     // Installed system (current) is company-wide: it knocks the account out, whoever is named.
     if (typeCfg && typeCfg.knockout) {
@@ -709,7 +727,7 @@ const SEGMENT_COLUMNS = ['first_name', 'last_name', 'job_title', 'email', 'email
   'industry', 'country', 'existing_customer', 'consent_basis', 'score', 'signal_type', 'event_date', 'detail', 'source', 'owner_email',
   'annual_revenue_usd', 'employee_count', 'account_type'];
 const SEGMENT_REQUIRED = ['first_name', 'company_name', 'signal_type', 'event_date'];
-function processScoredProspects(grid, { file = 'prospect file', sheet = 'Sheet1', asOf } = {}) {
+function processScoredProspects(grid, { file = 'prospect file', sheet = 'Sheet1', asOf, off = [] } = {}) {
   const table = readTable(grid, { file, sheet, columns: SEGMENT_COLUMNS, required: SEGMENT_REQUIRED, anchor: 'signal_type' });
   const issues = table.issues.slice();
   const at = (row, field, issue, outcome, code, fix, severity = 'flag') => issues.push({ file, sheet, row, field, issue, outcome, code, fix, severity });
@@ -722,6 +740,7 @@ function processScoredProspects(grid, { file = 'prospect file', sheet = 'Sheet1'
     const bad = (field, issue, code, fix) => { at(row, field, issue, 'Signal not used', code, fix); rejected++; };
     if (!cfg) { bad('signal_type', `Signal type "${type}" isn't on the list`, 'D3', 'Choose the type from the template list'); continue; }
     if (cfg.reject || cfg.knockout) { bad('signal_type', `"${type}" isn't used for segments`, 'D1', 'Nothing to fix'); continue; }
+    if (off.includes(type)) { bad('signal_type', `${type} is switched off in Setup`, 'OFF', 'Switch it back on in Setup to use it'); continue; }
     if (parseIsoDate(date) === null) { bad('event_date', `Event date "${date}" isn't YYYY-MM-DD`, 'D3', 'Write the date as YYYY-MM-DD'); continue; }
     const age = daysBetween(date, asOf);
     if (age < 0) { bad('event_date', `Event date ${date} is after ${asOf}`, 'D3', 'Check the date'); continue; }
@@ -1255,7 +1274,7 @@ return {
   parseCSV, toCSV, readTable, processLeads, classify, personaOf, fitFor, decayFactor,
   processSignals, scoreList, stack, tierFor, daysBetween, round1, buildSegments, segmentRanks, recommendChannel, draftFor, processScoredProspects, SEGMENT_COLUMNS, estimateDealSize,
   briefFor, callScript, checkDraft, checkContent, FRAMEWORKS, confidenceFor, allowedChannels, proofFor, COLLATERAL, PLAYBOOK,
-  VOICE_PRESETS, defaultBrand, brandPack, brandDraft, saveBrandDraft, submitBrand, discardBrandDraft, brandPending, publishBrand, brandVersion, useBrand, approvedClaims, contactFixFor, applyContactFix, saveContactFix,
+  VOICE_PRESETS, defaultBrand, brandPack, brandDraft, saveBrandDraft, submitBrand, discardBrandDraft, brandPending, publishBrand, brandVersion, useBrand, approvedClaims, contactFixFor, applyContactFix, saveContactFix, signalsOff, setSignal, signalAudit, setupStore, saveSetup,
   loadLists, saveList, getList, deleteList, loadScorings, saveScoring, getScoring, deleteScoring,
   loadSegmentations, saveSegmentation, getSegmentation, deleteSegmentation, reviewBadge,
 };

@@ -17,13 +17,13 @@ const SEG_MEANS = { Inquiry:'Asked a question or for a quote', Modernisation:'In
 let UPLOAD = null;
 
 function sourceFor(id){
-  if(id==='sample') return { sample:true, name:'Sample prospects', listName:'Sample prospects', fileName:DemandAISample.SIGNAL_FILE, sheet:'Signal template', grid:DemandAISample.SIGNALS, asOf:DemandAISample.SAMPLE_AS_OF, sandbox:true, keys:null };
-  if(id==='scenarios'){ const asOf = todayIso(); return { csv:true, scenarios:true, sample:false, name:'NBA test scenarios', listName:'NBA test scenarios', fileName:DemandAISample.NBA_SCENARIO_FILE, sheet:'(CSV)', grid:DemandAISample.nbaScenarioGrid(asOf), asOf, keys:null }; }
-  if(id==='week'){ const asOf = todayIso(); return { csv:true, scenarios:true, week:true, sample:false, name:'A pilot week in progress', listName:'A pilot week in progress', fileName:'pilot_week.csv', sheet:'(CSV)', grid:DemandAISample.nbaWeekGrid(asOf), asOf, keys:null }; }
+  if(id==='sample') return { sample:true, name:'Sample prospects', listName:'Sample prospects', fileName:DemandAISample.SIGNAL_FILE, sheet:'Signal template', grid:DemandAISample.SIGNALS, asOf:DemandAISample.SAMPLE_AS_OF, sandbox:true, signalsOff:DemandAI.signalsOff(), keys:null };
+  if(id==='scenarios'){ const asOf = todayIso(); return { csv:true, scenarios:true, sample:false, name:'NBA test scenarios', listName:'NBA test scenarios', fileName:DemandAISample.NBA_SCENARIO_FILE, sheet:'(CSV)', grid:DemandAISample.nbaScenarioGrid(asOf), asOf, signalsOff:DemandAI.signalsOff(), keys:null }; }
+  if(id==='week'){ const asOf = todayIso(); return { csv:true, scenarios:true, week:true, sample:false, name:'A pilot week in progress', listName:'A pilot week in progress', fileName:'pilot_week.csv', sheet:'(CSV)', grid:DemandAISample.nbaWeekGrid(asOf), asOf, signalsOff:DemandAI.signalsOff(), keys:null }; }
   if(id==='handoff') return handoff();
   if(id==='upload') return UPLOAD;
   const r = DemandAI.getScoring(id);
-  return r && { scoringId:r.id, name:r.name, listId:r.listId, listName:r.listName, fileName:r.fileName, sheet:r.sheet, grid:r.grid, asOf:r.asOf, sandbox:r.sandbox, keys:null };
+  return r && { scoringId:r.id, name:r.name, listId:r.listId, listName:r.listName, fileName:r.fileName, sheet:r.sheet, grid:r.grid, asOf:r.asOf, sandbox:r.sandbox, signalsOff:r.signalsOff||[], keys:null };
 }
 // 5.9 Engage-once: accounts approved, sent or rejected as "already engaged" in any other segmented list of this pilot.
 function engagedMap(exceptId, before){
@@ -39,14 +39,14 @@ function compute(src, runId, createdAt, brand){
   DemandAI.useBrand(brand);
   let list, scored, sig, fileIssues = 0;
   if(src.csv){
-    const r = DemandAI.processScoredProspects(src.grid, {file:src.fileName, sheet:src.sheet, asOf:src.asOf});
+    const r = DemandAI.processScoredProspects(src.grid, {file:src.fileName, sheet:src.sheet, asOf:src.asOf, off:src.signalsOff||[]});
     scored = r.results; fileIssues = r.stats.rejected;
     sig = { signals: scored.flatMap(x=>x.people.flatMap(p=>p.signals)), issues: r.issues, rejectedRows: r.stats.rejected };
   }
   else if(src.sample){ const r = DemandAI.processLeads(DemandAISample.LEADS, {file:DemandAISample.LEAD_FILE, sheet:'Lead template'}); list = {accounts:r.accounts, contacts:r.contacts}; }
   else { const L = DemandAI.getList(src.listId); if(!L) return null; list = JSON.parse(JSON.stringify({accounts:L.accounts, contacts:L.contacts})); list.contacts.forEach(c=>DemandAI.applyContactFix(c)); }
   if(!src.csv){
-    sig = DemandAI.processSignals(src.grid, list, {file:src.fileName, sheet:src.sheet, asOf:src.asOf});
+    sig = DemandAI.processSignals(src.grid, list, {file:src.fileName, sheet:src.sheet, asOf:src.asOf, off:src.signalsOff||[]});
     scored = DemandAI.scoreList(list, sig);
   }
   // An uploaded file is the list itself: every prospect in it. A scored list: tier A and B, unless chosen in Scoring.

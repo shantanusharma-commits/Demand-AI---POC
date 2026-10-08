@@ -368,6 +368,93 @@ input,textarea,select{background-color:#fff;color:var(--i1);}
 /* Toast */
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--i1);color:#fff;font-size:12.5px;font-weight:500;padding:9px 18px;border-radius:999px;z-index:900;pointer-events:none;animation:fadeUp .2s var(--ease);}
 
+
+/* ─── Setup: view and edit ─── */
+.mode{display:inline-flex;background:var(--s75);border-radius:999px;padding:3px;}
+.mode button{border:none;background:none;padding:5px 14px;border-radius:999px;font-size:12px;font-weight:600;color:var(--i2);cursor:pointer;font-family:var(--fb);}
+.mode button.on{background:var(--surf);color:var(--i1);box-shadow:0 1px 3px rgba(20,26,33,.12);}
+.mode button:disabled{color:var(--i4);cursor:not-allowed;}
+.su-intro{margin-bottom:16px;padding:12px 16px;border-radius:var(--rmd);background:var(--brand-lt);color:var(--brand-dk);font-size:12.5px;line-height:1.6;}
+.su-intro.edit{background:#FFF7E8;color:#7A4B00;border:1px solid #F3D9A4;}
+.su-p{margin-bottom:12px;}
+.su-sub{font-size:12px;color:var(--i3);line-height:1.5;}
+.su-note{margin-top:10px;font-size:11.5px;color:var(--i3);padding:8px 10px;border-radius:8px;background:var(--s50);}
+.kvs{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+.kvs div{display:flex;flex-direction:column;gap:3px;}
+.kvs span{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--i3);}
+.kvs b{font-size:13px;color:var(--i1);font-weight:600;}
+.ru{display:grid;grid-template-columns:230px 1fr;gap:28px;align-items:start;}
+.ru-chart{display:flex;flex-direction:column;align-items:center;gap:14px;}
+.dn{position:relative;}
+.dn-s{transition:opacity .15s;cursor:default;}
+.dn-c{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;pointer-events:none;padding:0 46px;}
+.dn-c b{font-family:var(--fd);font-size:24px;color:var(--i1);line-height:1.1;}
+.dn-c span{font-size:11px;color:var(--i3);margin-top:2px;line-height:1.3;}
+.ru-floor{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:10px;font-size:12px;color:var(--i2);text-align:center;}
+.ru-floor b{font-family:var(--fd);font-size:15px;color:var(--i1);margin-left:4px;}
+.ru-floor span{display:block;font-size:11px;color:var(--i3);margin-top:3px;line-height:1.4;}
+.ru-floor input{width:100%;margin-top:8px;accent-color:var(--brand);}
+.ru-lead{font-size:12.5px;color:var(--i2);line-height:1.55;margin-bottom:10px;}
+.rl{display:flex;gap:10px;padding:8px 10px;border-radius:9px;transition:background .12s;}
+.rl.on,.rl:hover{background:var(--s50);}
+.rl-dot{width:10px;height:10px;border-radius:3px;margin-top:4px;flex-shrink:0;}
+.rl-b{flex:1;min-width:0;}
+.rl-h{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:12.5px;color:var(--i1);}
+.rl-w{font-family:var(--fd);font-weight:700;font-size:13px;color:var(--i1);display:inline-flex;align-items:center;gap:3px;}
+.rl-w input{width:52px;padding:3px 6px;border:1px solid var(--bdk);border-radius:6px;font-size:12px;text-align:right;font-family:var(--fb);}
+.rl-bar{height:6px;border-radius:3px;background:var(--s75);margin:5px 0 4px;overflow:hidden;}
+.rl-bar i{display:block;height:100%;border-radius:3px;}
+.rl-l{font-size:11px;color:var(--i3);}
+.ru-tot{font-size:12px;font-weight:600;margin:8px 10px 0;}
+.ru-tot.ok{color:var(--pos);} .ru-tot.bad{color:var(--neg);}
+.ru-ko{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:12px 10px 0;font-size:11.5px;color:var(--i3);}
+.ru-ko em{font-style:normal;padding:3px 9px;border-radius:999px;background:var(--neg-lt, #FDECEC);color:#9B2C2C;font-size:11px;font-weight:600;}
+.chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:var(--s75);border:1px solid transparent;font-size:12px;color:var(--i1);font-family:var(--fb);cursor:default;}
+button.chip{cursor:pointer;} button.chip:hover{border-color:var(--brand-mid);}
+.chip button{border:none;background:none;color:var(--i3);cursor:pointer;font-size:14px;line-height:1;padding:0;}
+.chip.add{background:var(--surf);border:1px dashed var(--brand-mid);color:var(--brand-dk);font-weight:600;}
+.chips + .su-sub{margin-top:10px;}
+.sg-top{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:12px;flex-wrap:wrap;}
+.sg-sum{font-size:12.5px;color:var(--i2);max-width:560px;line-height:1.5;}
+.sg-sum b{color:var(--i1);}
+.sg-tools{display:flex;gap:8px;align-items:center;}
+.sg-q{height:30px;padding:0 10px;border:1px solid var(--bdk);border-radius:8px;font-size:12px;width:180px;font-family:var(--fb);}
+table.sg{width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed;border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+.sg th{text-align:left;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--i3);background:var(--s50);padding:9px 12px;border-bottom:1px solid var(--border);}
+.sg td{padding:11px 12px;border-bottom:1px solid var(--s75);font-size:12.5px;color:var(--i1);vertical-align:top;line-height:1.45;}
+.sg tr:last-child td{border-bottom:none;}
+.sg tr.is-off td{background:#FAFAFB;color:var(--i3);}
+.sg tr.is-off td b{color:var(--i2);}
+.sg-m{font-size:11px;color:var(--i3);margin-top:3px;line-height:1.4;}
+.sg-ex{font-size:11px;color:var(--i2);margin-top:4px;font-style:italic;}
+.seg{display:inline-block;padding:0 7px;border-radius:999px;background:var(--brand-lt);color:var(--brand-dk);font-weight:600;font-size:10.5px;}
+.sg-st{display:flex;align-items:center;gap:3px;margin-top:6px;}
+.sg-st i{width:14px;height:5px;border-radius:2px;background:var(--s200,#E2E5EA);}
+.sg-st i.on{background:var(--brand);}
+.sg-st span{font-size:10.5px;color:var(--i3);margin-left:5px;}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700;vertical-align:middle;}
+.pill.on{background:#E3F4EC;color:#1F6B4A;} .pill.off{background:#FDECEC;color:#9B2C2C;} .pill.ko{background:#FFF1E0;color:#8A4B00;} .pill.nr{background:var(--s75);color:var(--i2);}
+.sw{width:34px;height:20px;border-radius:999px;border:none;background:#CBD2DA;position:relative;cursor:pointer;vertical-align:middle;margin-right:8px;transition:background .15s;}
+.sw i{position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:left .15s;}
+.sw.on{background:var(--brand);} .sw.on i{left:17px;}
+.sg-file{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:12px;font-size:11.5px;color:var(--i3);}
+.sg-file code{font-family:var(--fm);font-size:11px;background:var(--s75);padding:1px 6px;border-radius:4px;color:var(--i2);}
+.sg-audit{margin-top:14px;border-top:1px solid var(--s75);padding-top:10px;}
+.sg-audit-h{display:flex;align-items:center;justify-content:space-between;width:100%;border:none;background:none;cursor:pointer;font-size:12.5px;font-weight:700;color:var(--i1);padding:4px 2px;font-family:var(--fb);}
+.sg-audit-h em{font-style:normal;font-weight:500;color:var(--i3);font-size:12px;}
+table.au{width:100%;border-collapse:collapse;margin-top:8px;font-size:12px;}
+.au th{text-align:left;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--i3);padding:6px 8px;border-bottom:1px solid var(--border);}
+.au td{padding:8px;border-bottom:1px solid var(--s75);color:var(--i1);}
+.ac-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+.ac{border:1px solid var(--border);border-radius:10px;padding:10px 12px;}
+.ac-h{display:flex;justify-content:space-between;font-size:12.5px;font-weight:700;color:var(--i1);margin-bottom:6px;}
+.ac-h span{font-weight:500;color:var(--i3);font-size:11.5px;}
+.ac-i{font-size:12px;color:var(--i2);padding:4px 0;border-top:1px solid var(--s75);line-height:1.45;}
+.ac-i:first-of-type{border-top:none;}
+.ac-i em{font-style:normal;font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--brand-dk);background:var(--brand-lt);padding:1px 6px;border-radius:999px;margin-right:6px;}
+.btn-danger{background:#C2410C;color:#fff;border:none;}
+@media (max-width:1100px){ .ru{grid-template-columns:1fr;} .ac-grid{grid-template-columns:1fr 1fr;} .kvs{grid-template-columns:1fr;} }
 </style>
 </head>
 <body>
@@ -446,239 +533,227 @@ input,textarea,select{background-color:#fff;color:var(--i1);}
 <main class="main" id="mainArea"></main>
 </div>
 
+<script src="demandai-engine.js"></script>
+<script src="demandai-sample-data.js"></script>
 <script>
 function showToast(msg){document.querySelectorAll('.toast').forEach(t=>t.remove());const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2600);}
 
-/* status: 'todo' | 'review' | 'done' */
-let expandedWorking = new Set(); // section ids currently showing full detail
-function toggleWorking(id){
-  if(expandedWorking.has(id)) expandedWorking.delete(id); else expandedWorking.add(id);
-  renderMain();
-}
+/* ═══════════════ SETUP: one screen, two modes ═══════════════
+   View: what the system runs on, for the people who use the results. Edit: for the admin who sets it up and signs it off.
+   The setup is kept in the browser (DemandAI.setupStore), so it holds across screens and reloads. */
+const ST = Object.assign({ steps:{}, weights:null, fitFloor:null, personas:null }, DemandAI.setupStore());
+const persistSetup = () => { const cur = DemandAI.setupStore(); DemandAI.saveSetup(Object.assign(cur, { steps:ST.steps, weights:ST.weights, fitFloor:ST.fitFloor, personas:ST.personas })); };
+const canEdit = () => ['Admin','Platform admin'].includes(getRole());
+let MODE = 'view', SIGQ = '', AUDIT_OPEN = false;
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const me = () => (typeof ROLE_PERSON!=='undefined' && ROLE_PERSON[getRole()]) || getRole();
+
 const STEPS = [
   {id:'scope', num:1, title:'Scope', status:'done'},
   {id:'rubric', num:2, title:'ICP and rubric', status:'review'},
   {id:'personas', num:3, title:'Personas', status:'done'},
   {id:'signals', num:4, title:'Signals', status:'review'},
-  {id:'actions', num:5, title:'Actions', status:'todo'},
+  {id:'actions', num:5, title:'Actions', status:'review'},
   {id:'brand', num:6, title:'Brand', status:'done'},
   {id:'users', num:7, title:'Users', status:'done'},
 ];
+STEPS.forEach(s=>{ if(ST.steps[s.id]) s.status = ST.steps[s.id]; });
 
-const RUBRIC = [
-  {name:'Vertical', levels:'Core (100) · Adjacent (50) · Other (0)', weight:30},
-  {name:'Company size', levels:'Above target (100) · In target (70) · Below (20)', weight:20},
-  {name:'Site profile', levels:'Suits product (100) · Partly (50) · Unknown (30)', weight:20},
-  {name:'Relationship', levels:'Other-line customer (100) · Past (70) · None (40)', weight:15},
-  {name:'Account type', levels:'Owner-operator (100) · EPC (60) · Distributor (20)', weight:10},
-  {name:'Contact coverage', levels:'Buying role present (100) · Other roles (40) · None (0)', weight:5},
-];
-let fitFloor = 50;
+// The rubric the scoring runs on (DemandAI.CONFIG.rubric), with what each level means.
+const LEVELS = {
+  vertical:'Core (100) · Adjacent (50) · Other (0)', size:'Above target (100) · In target (70) · Below (20)', site:'Suits the product (100) · Partly (50) · Unknown (30)',
+  relationship:'Customer on another line (100) · Past (70) · None (40)', accountType:'Owner-operator (100) · EPC or integrator (60) · Distributor (20)', contacts:'Buying role present (100) · Other roles (40) · None (0)',
+};
+const RUBRIC = DemandAI.CONFIG.rubric.map((r,i)=>({ key:r.key, name:r.label, weight: ST.weights && ST.weights[r.key]!==undefined ? ST.weights[r.key] : r.weight, levels:LEVELS[r.key]||'' }));
+let fitFloor = ST.fitFloor ?? DemandAI.CONFIG.fitFloor;
+// Fixed order, validated for colour-blind separation; every slice also carries a visible label and value.
+const SERIES = ['#2a78d6','#eb6834','#1baf7a','#eda100','#e87ba4','#008300'];
+const KNOCKOUTS = ['Out of the pilot region','Pilot product already installed','Managed separately (strategic account)','No contact left after opt-outs'];
+const PERSONAS = ST.personas || ['Head of Instrumentation / I&C','Automation or DCS manager','Control systems lead','Plant manager','Operations or maintenance lead','Procurement lead'];
 
-const SIGNALS = [
-  {code:'C1a', name:'Financing / project finance', group:'Ready', on:true},
-  {code:'C1b', name:'Hiring surge, control/automation roles', group:'Ready', on:true},
-  {code:'C1c', name:'New executive in a buying role', group:'Ready', on:true},
-  {code:'C1i', name:'Capital project / expansion announcement', group:'Ready', on:true},
-  {code:'C1q', name:'LinkedIn posts from target-account people', group:'Ready', on:true},
-  {code:'C1g', name:'Compliance deadline', group:'Needs data', on:true},
-  {code:'C1n', name:'Champion changes jobs', group:'Needs data', on:true},
-  {code:'C1w', name:'Content download / webinar attendance', group:'Needs data', on:false},
-  {code:'C1j', name:'Competitor contract at the site', group:'Needs enabling', on:true},
-  {code:'C1t / C1v', name:'Researching us / a competitor on G2', group:'Needs enabling', on:false},
-  {code:'C1u', name:'Visited Client\u2019s website', group:'Needs enabling', on:false},
-];
-
-const PERSONAS = ['Plant Manager / Owner-operator','Head of Process Safety','Director of Automation','VP / Director of Operations','Chief Digital Officer'];
-
-const USERS = [
-  {name:'Pavan Kumar', role:'Sales manager', email:'pavan.kumar@client.com', status:'active'},
-  {name:'Sofia Ahlgren', role:'Sales rep', email:'sofia.ahlgren@client.com', status:'active'},
-  {name:'Marcus Webb', role:'Sales rep', email:'marcus.webb@client.com', status:'active'},
-  {name:'Elena Vogel', role:'Viewer', email:'elena.vogel@client.com', status:'invited'},
-  {name:'Rajiv Nair', role:'Admin', email:'rajiv.nair@client.com', status:'active'},
-  {name:'Shantanu Rao', role:'Platform admin', email:'shantanu.rao@partner.com', status:'active'},
-];
-
-const ACTIONS_LIB = {}; // segment -> [actions], starts empty ('todo')
+/* Signals: exactly the types the client's signal file carries (DemandAI.CONFIG.signalTypes). */
+const SIG_INFO = {
+  'Inquiry or RFQ':                       { about:'Someone asked the client for information, a quote or a call.', data:'Who asked, what they asked about, when' },
+  'Installed system near end of support': { about:'A control system at the site reaches end of support.', data:'The installed product and version, the site, the end-of-support date' },
+  'Service contract renewal':             { about:'A service contract with the client is coming up for renewal.', data:'The contract, its end date' },
+  'Capital project':                      { about:'A new unit, expansion or revamp at the site.', data:'The project, its stage, when the control-system decision falls' },
+  'Leadership change':                    { about:'A new person in a buying role.', data:'Who, the role, when they started' },
+  'Webinar attended':                     { about:'Attended one of the client\'s webinars.', data:'The webinar topic, the date' },
+  'Webinar registered':                   { about:'Registered for a webinar (did not attend yet).', data:'The webinar topic, the date' },
+  'Content download':                     { about:'Downloaded a guide, case study or white paper.', data:'The piece downloaded, the date' },
+  'Email clicked':                        { about:'Clicked a link in one of the client\'s emails.', data:'The email and link, the date' },
+  'Installed system (current)':           { about:'The pilot product is already installed.', data:'The product at the site', role:'knockout' },
+  'Newsletter sign-up':                   { about:'Signed up for the newsletter.', data:'The date', role:'reject' },
+};
+// One real example of each from the sample files: the detail and where it came from.
+const SIG_EX = (()=>{ const out = {}; const rows = (DemandAISample.SIGNALS||[]).slice(2);
+  rows.forEach(r=>{ if(r[2] && !out[r[2]]) out[r[2]] = { detail:r[4], source:r[5] }; });
+  try{ const g = DemandAISample.nbaWeekGrid(new Date().toISOString().slice(0,10)), h = g[0].map(x=>String(x).toLowerCase()), ti = h.indexOf('signal_type'), di = h.indexOf('detail'), si = h.indexOf('source');
+    g.slice(1).forEach(r=>{ const t = r[ti]; if(t && !out[t]) out[t] = { detail:r[di], source:r[si] }; }); }catch(e){}
+  return out; })();
+const SIG_COLS = DemandAI.SIGNAL_COLUMNS;
+const strength = c => { const w = (c.tier||0) * (c.strength||0); return w >= 80 ? ['Strong', 3] : w >= 45 ? ['Medium', 2] : ['Light', 1]; };
+const signalTypes = () => Object.entries(DemandAI.CONFIG.signalTypes).map(([name, c])=>({ name, c, info: SIG_INFO[name] || { about:'', data:'' }, ex: SIG_EX[name] || {} }));
+const fmtWhen = t => new Date(t).toLocaleString(undefined,{day:'numeric',month:'short',hour:'numeric',minute:'2-digit'});
 
 function statusBadge(status){
   if(status==='done') return '<span class="sc sc-h">Signed off</span>';
-  if(status==='review') return '<span class="sc sc-m">Draft — needs sign-off</span>';
+  if(status==='review') return '<span class="sc sc-m">Draft · needs sign-off</span>';
   return '<span class="sc sc-l">Not started</span>';
 }
-function progressCount(){ return STEPS.filter(s=>s.status==='done').length; }
+const progressCount = () => STEPS.filter(s=>s.status==='done').length;
 
-function renderMain(){
-  const done = progressCount();
-  document.getElementById('mainArea').innerHTML = `
-    <div class="topbar">
-      <div class="topbar-l">
-        <span class="tb-title">Setup</span>
-        <span class="tb-badge ${done===STEPS.length?'badge-live':'badge-neutral'}">${done} of ${STEPS.length} signed off</span>
-      </div>
-      <div class="topbar-r"><button class="btn btn-sec btn-sm" onclick="showToast('Config v1 exported as JSON')">Export config</button></div>
-    </div>
-    <div class="canvas">
-      <div class="panel" style="margin-bottom:18px;background:var(--brand-lt);border-color:transparent">
-        <div class="panel-body" style="font-size:12.5px;color:var(--brand-dk);line-height:1.6">
-          <b>What to do here:</b> review each section below against what Client has provided. Edit anything that needs adjusting, then sign off. <b>Nothing downstream runs until every section is signed off</b> — Prospecting, Scoring and NBA all read this exact configuration.
-        </div>
-      </div>
-
-      ${STEPS.map(s=>renderStep(s)).join('')}
-
-      <div class="panel" style="border:2px solid ${done===STEPS.length?'var(--pos)':'var(--border)'}">
-        <div class="panel-hdr">
-          <span class="panel-ttl">8 · Config v1</span>
-          ${done===STEPS.length ? '<span class="sc sc-h">Active</span>' : `<span class="sc sc-m">${STEPS.length-done} section${STEPS.length-done>1?'s':''} remaining</span>`}
-        </div>
-        <div class="panel-body" style="font-size:11.5px;color:var(--i2);line-height:1.6">
-          ${done===STEPS.length
-            ? 'All seven sections signed off. Config v1 is active — every score, segment and draft from here names this version. A future change produces v2, with v1 kept for the audit trail.'
-            : `Sign off the remaining ${STEPS.length-done} section${STEPS.length-done>1?'s':''} above to activate Config v1. Nothing can run against an incomplete configuration.`}
-        </div>
-      </div>
-    </div>`;
+/* ─── The donut: weights add up to 100%, so the parts of a whole read at a glance ─── */
+function donut(size){
+  const total = RUBRIC.reduce((a,r)=>a+r.weight,0) || 1, R = size/2, r0 = R*0.62, gap = 0.012;
+  let a0 = -Math.PI/2;
+  const arc = (a1, a2) => { const p = (a, rad) => [R + rad*Math.cos(a), R + rad*Math.sin(a)], large = a2 - a1 > Math.PI ? 1 : 0;
+    const [x1,y1] = p(a1,R-1), [x2,y2] = p(a2,R-1), [x3,y3] = p(a2,r0), [x4,y4] = p(a1,r0);
+    return `M${x1} ${y1} A${R-1} ${R-1} 0 ${large} 1 ${x2} ${y2} L${x3} ${y3} A${r0} ${r0} 0 ${large} 0 ${x4} ${y4}Z`; };
+  const slices = RUBRIC.map((r,i)=>{ const a = r.weight/total*Math.PI*2, s = a0 + gap, e = a0 + a - gap; a0 += a;
+    return r.weight ? `<path d="${arc(s, Math.max(s+0.001, e))}" fill="${SERIES[i]}" class="dn-s" data-i="${i}" onmouseenter="dnHover(${i})" onmouseleave="dnHover(-1)"><title>${esc(r.name)}: ${r.weight}%</title></path>` : ''; }).join('');
+  return `<div class="dn" style="width:${size}px;height:${size}px"><svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" role="img" aria-label="Rubric weights: ${RUBRIC.map(r=>`${r.name} ${r.weight}%`).join(', ')}">${slices}</svg>
+    <div class="dn-c" id="dnC"><b>${total}%</b><span>of the fit score</span></div></div>`;
+}
+function dnHover(i){
+  document.querySelectorAll('.dn-s').forEach(p=>p.style.opacity = i<0 || +p.dataset.i===i ? 1 : .35);
+  document.querySelectorAll('.rl').forEach(el=>el.classList.toggle('on', +el.dataset.i===i));
+  const c = document.getElementById('dnC'); if(!c) return;
+  const total = RUBRIC.reduce((a,r)=>a+r.weight,0);
+  c.innerHTML = i<0 ? `<b>${total}%</b><span>of the fit score</span>` : `<b>${RUBRIC[i].weight}%</b><span>${esc(RUBRIC[i].name)}</span>`;
 }
 
+/* ─── The screen ─── */
+function renderMain(){
+  const done = progressCount(), edit = MODE==='edit';
+  document.getElementById('mainArea').innerHTML = `
+    <div class="topbar">
+      <div class="topbar-l"><span class="tb-title">Setup</span><span class="tb-badge ${done===STEPS.length?'badge-live':'badge-neutral'}">${done} of ${STEPS.length} signed off</span></div>
+      <div class="topbar-r">
+        <div class="mode" role="tablist" aria-label="Mode">
+          <button role="tab" class="${!edit?'on':''}" onclick="setMode('view')">View</button>
+          <button role="tab" class="${edit?'on':''}" ${canEdit()?'':'disabled'} title="${canEdit()?'Change the setup and sign it off':'Only an admin can change the setup'}" onclick="setMode('edit')">Edit</button>
+        </div>
+        <button class="btn btn-sec btn-sm" onclick="showToast('Config exported as JSON')">Export config</button>
+      </div>
+    </div>
+    <div class="canvas">
+      <div class="su-intro ${edit?'edit':''}">${edit
+        ? `<b>Edit mode.</b> Change what needs adjusting, then sign off each section. Prospecting, Scoring and Micro-segments read this configuration; nothing downstream runs on a section that isn't signed off.`
+        : `<b>How DemandAI is set up for this pilot.</b> What it scores on, which signals it listens to and who it targets.${canEdit()?' Switch to Edit to change it.':' Only an admin can change it.'}`}</div>
+      ${STEPS.map(renderStep).join('')}
+      ${edit ? `<div class="panel" style="border:2px solid ${done===STEPS.length?'var(--pos)':'var(--border)'}"><div class="panel-hdr"><span class="panel-ttl">8 · Config v1</span>${done===STEPS.length ? '<span class="sc sc-h">Active</span>' : `<span class="sc sc-m">${STEPS.length-done} section${STEPS.length-done>1?'s':''} remaining</span>`}</div>
+        <div class="panel-body" style="font-size:12px;color:var(--i2);line-height:1.6">${done===STEPS.length ? 'All seven sections signed off. Every score, segment and draft from here names this version. A later change makes v2, and v1 is kept for the audit trail.' : `Sign off the remaining ${STEPS.length-done} section${STEPS.length-done>1?'s':''} to activate Config v1.`}</div></div>` : ''}
+    </div>`;
+}
+function setMode(m){ if(m==='edit' && !canEdit()) return; MODE = m; renderMain(); }
+
 function renderStep(s){
+  const edit = MODE==='edit';
   let body = '';
-  if(s.id==='scope') body = `
-    <div class="dim-row" style="border:none;padding:4px 0"><span style="font-size:11.5px;color:var(--i3)">Pilot product</span><span style="font-size:11.5px;color:var(--i1);margin-left:auto;font-weight:600">Process control DCS platform</span></div>
-    <div class="dim-row" style="border:none;padding:4px 0"><span style="font-size:11.5px;color:var(--i3)">Business unit</span><span style="font-size:11.5px;color:var(--i1);margin-left:auto;font-weight:600">Industrial Automation — EMEA</span></div>
-    <div class="dim-row" style="border:none;padding:4px 0"><span style="font-size:11.5px;color:var(--i3)">Region</span><span style="font-size:11.5px;color:var(--i1);margin-left:auto;font-weight:600">EMEA + North America</span></div>`;
+  if(s.id==='scope') body = `<div class="kvs">
+      <div><span>Pilot product</span><b>Process control DCS platform</b></div>
+      <div><span>Business unit</span><b>Industrial Automation · Asia Pacific</b></div>
+      <div><span>Region</span><b>${esc(DemandAI.CONFIG.pilotCountries.join(', '))}</b></div></div>`;
 
   if(s.id==='rubric'){
     const total = RUBRIC.reduce((a,r)=>a+r.weight,0);
-    const expanded = expandedWorking.has('rubric');
-    body = `
-      <div style="font-size:11.5px;color:var(--i2);margin-bottom:10px">The ICP in plain words: mid-to-large process-industry operators in the pilot region, evaluated against ${RUBRIC.length} weighted criteria (total ${total}/100), a fit floor of ${fitFloor}, and 4 knock-out rules.</div>
-      <button class="btn btn-ghost btn-sm" onclick="toggleWorking('rubric')" style="margin-bottom:${expanded?'12':'0'}px">${expanded?'Hide the working':'Show the working'}</button>
-      ${expanded ? `
-      <div style="font-size:11px;color:var(--i3);margin-bottom:10px">Knock-outs: out of region · pilot product already installed · strategic account · sanctioned country</div>
-      <div class="score-list" style="border:1px solid var(--border);margin-bottom:10px">
-        <div class="sl-head" style="grid-template-columns:1.5fr 2fr 90px;padding:8px 12px"><div class="sl-th">Criterion</div><div class="sl-th">Levels</div><div class="sl-th">Weight</div></div>
-        ${RUBRIC.map((r,i)=>`
-        <div class="sl-row" style="grid-template-columns:1.5fr 2fr 90px;padding:6px 12px">
-          <div style="font-size:11.5px">${r.name}</div>
-          <div style="font-size:10.5px;color:var(--i3)">${r.levels}</div>
-          <div><input type="number" value="${r.weight}" min="0" max="100" style="width:56px;border:1px solid var(--bdk);border-radius:6px;padding:4px 6px;font-size:11.5px;text-align:center" onchange="updateWeight(${i},this.value)"></div>
-        </div>`).join('')}
-      </div>
-      <div style="font-size:11px;color:${total===100?'var(--pos)':'var(--neg)'};font-weight:600;margin-bottom:8px" id="weightTotal">Total: ${total} / 100 ${total===100?'✓':'— must equal 100'}</div>
-      <div style="display:flex;align-items:center;gap:8px">
-        <span style="font-size:11.5px;color:var(--i3)">Fit floor</span>
-        <input type="number" value="${fitFloor}" min="0" max="100" style="width:56px;border:1px solid var(--bdk);border-radius:6px;padding:4px 6px;font-size:11.5px;text-align:center" onchange="fitFloor=parseInt(this.value)">
-        <span style="font-size:10.5px;color:var(--i3)">— accounts below this drop out before scoring</span>
-      </div>` : ''}`;
+    body = `<div class="ru">
+      <div class="ru-chart">${donut(184)}
+        <div class="ru-floor">Fit floor <b>${fitFloor}</b><span>Accounts scoring below it drop out before timing is scored.</span>
+          ${edit ? `<input type="range" min="0" max="100" step="5" value="${fitFloor}" oninput="fitFloor=+this.value;this.previousElementSibling.previousElementSibling.textContent=this.value" onchange="ST.fitFloor=fitFloor;persistSetup();renderMain()" aria-label="Fit floor">` : ''}</div></div>
+      <div class="ru-list">
+        <div class="ru-lead">The <b>fit score</b> says how well an account matches the client's ideal customer. It is built from six parts; the bigger the slice, the more that part counts.</div>
+        ${RUBRIC.map((r,i)=>`<div class="rl" data-i="${i}" onmouseenter="dnHover(${i})" onmouseleave="dnHover(-1)">
+          <span class="rl-dot" style="background:${SERIES[i]}"></span>
+          <div class="rl-b"><div class="rl-h"><b>${esc(r.name)}</b><span class="rl-w">${edit ? `<input type="number" min="0" max="100" value="${r.weight}" onchange="setWeight(${i},this.value)" aria-label="${esc(r.name)} weight">%` : `${r.weight}%`}</span></div>
+            <div class="rl-bar"><i style="width:${r.weight}%;background:${SERIES[i]}"></i></div><div class="rl-l">${esc(r.levels)}</div></div></div>`).join('')}
+        <div class="ru-tot ${total===100?'ok':'bad'}">${total===100 ? '✓ Adds up to 100%' : `Adds up to ${total}%: it must be 100% to sign off`}</div>
+        <div class="ru-ko"><span>Knock-outs, before any scoring:</span>${KNOCKOUTS.map(k=>`<em>${esc(k)}</em>`).join('')}</div>
+        ${edit ? '<div class="su-note">Weight changes apply to the next configuration version. Lists already scored keep the weights they were scored with.</div>' : ''}
+      </div></div>`;
   }
 
-  if(s.id==='personas') body = `
-    <div style="display:flex;flex-wrap:wrap;gap:6px">
-      ${PERSONAS.map((p,i)=>`<span style="background:var(--s75);padding:4px 6px 4px 10px;border-radius:999px;font-size:11px;display:inline-flex;align-items:center;gap:6px">${p}<span onclick="removePersona(${i})" style="cursor:pointer;color:var(--i3);font-weight:700;padding:0 2px" title="Remove">×</span></span>`).join('')}
-      <span style="background:var(--surf);border:1px dashed var(--brand-mid);padding:4px 10px;border-radius:999px;font-size:11px;color:var(--brand-dk);cursor:pointer;font-weight:600" onclick="addPersona()">+ Add persona</span>
-    </div>`;
+  if(s.id==='personas') body = `<div class="chips">${PERSONAS.map((p,i)=>`<span class="chip">${esc(p)}${edit?`<button onclick="removePersona(${i})" title="Remove" aria-label="Remove ${esc(p)}">×</button>`:''}</span>`).join('')}
+      ${edit?'<button class="chip add" onclick="addPersona()">+ Add persona</button>':''}</div>
+      <div class="su-sub">The first contact approached is someone in these roles; anyone else is a fallback and lowers confidence.</div>`;
 
   if(s.id==='signals'){
-    const groups = ['Ready','Needs data','Needs enabling'];
-    const onCount = SIGNALS.filter(x=>x.on).length;
-    const expanded = expandedWorking.has('signals');
-    body = `
-      <div style="font-size:11.5px;color:var(--i2);margin-bottom:10px">${onCount} of ${SIGNALS.length} signal types enabled — only the ones Client's data actually supports, plus a plain note of how long each counts.</div>
-      <button class="btn btn-ghost btn-sm" onclick="toggleWorking('signals')" style="margin-bottom:${expanded?'12':'0'}px">${expanded?'Hide the working':'Show the working'}</button>
-      ${expanded ? groups.map(g=>`
-      <div style="margin-bottom:12px">
-        <div style="font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--i3);margin-bottom:6px">${g}${g==='Ready'?' — works on our sources alone':g==='Needs data'?' — needs a Client export':' — needs a subscription Client owns'}</div>
-        ${SIGNALS.filter(x=>x.group===g).map(x=>`
-          <div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--s75)">
-            <label style="position:relative;display:inline-block;width:32px;height:18px;flex-shrink:0">
-              <input type="checkbox" ${x.on?'checked':''} onchange="toggleSignal('${x.code}')" style="opacity:0;width:0;height:0">
-              <span onclick="toggleSignal('${x.code}')" style="position:absolute;cursor:pointer;inset:0;background:${x.on?'var(--brand)':'var(--s200)'};border-radius:999px;transition:.15s"></span>
-              <span onclick="toggleSignal('${x.code}')" style="position:absolute;height:14px;width:14px;left:${x.on?'16px':'2px'};bottom:2px;background:#fff;border-radius:50%;cursor:pointer;transition:.15s;box-shadow:0 1px 2px rgba(0,0,0,.2)"></span>
-            </label>
-            <span style="font-family:var(--fm);font-size:10px;color:var(--i3);width:60px;flex-shrink:0">${x.code}</span>
-            <span style="font-size:11.5px;color:var(--i2)">${x.name}</span>
-          </div>`).join('')}
-      </div>`).join('') : ''}`;
+    const off = new Set(DemandAI.signalsOff()), all = signalTypes(), scored = all.filter(x=>!x.c.knockout && !x.c.reject), audit = DemandAI.signalAudit();
+    const q = SIGQ.toLowerCase(), list = all.filter(x=>!q || (x.name+' '+x.info.about+' '+(x.ex.source||'')+' '+(x.c.segment||'')).toLowerCase().includes(q));
+    const last = name => DemandAI.signalAudit(name)[0];
+    body = `<div class="sg-top"><div class="sg-sum"><b>${scored.filter(x=>!off.has(x.name)).length} of ${scored.length}</b> signal types are on. These are the types the client's signal file carries; each row in the file is one event.</div>
+        <div class="sg-tools"><input class="sg-q" placeholder="Search signals" value="${esc(SIGQ)}" oninput="SIGQ=this.value;renderSignalsOnly()"><a class="btn btn-sec btn-sm" href="11-scoring.html?tab=monitor" style="text-decoration:none">Signal monitoring →</a></div></div>
+      <div id="sgBody">${signalRows(list, off, edit, last)}</div>
+      <div class="sg-file"><span>Every row in the signal file carries:</span>${SIG_COLS.map(c=>`<code>${esc(c)}</code>`).join('')}</div>
+      <div class="sg-audit"><button class="sg-audit-h" onclick="AUDIT_OPEN=!AUDIT_OPEN;renderMain()" aria-expanded="${AUDIT_OPEN}"><span>${AUDIT_OPEN?'▾':'▸'} Audit trail</span><em>${audit.length} change${audit.length===1?'':'s'}</em></button>
+        ${AUDIT_OPEN ? (audit.length ? `<table class="au"><thead><tr><th>When</th><th>Signal</th><th>Change</th><th>Who</th><th>Why</th></tr></thead><tbody>${audit.map(a=>`<tr><td>${esc(fmtWhen(a.at))}</td><td>${esc(a.type)}</td><td><span class="pill ${a.on?'on':'off'}">${a.on?'Switched on':'Switched off'}</span></td><td>${esc(a.by)}</td><td>${esc(a.reason||'—')}</td></tr>`).join('')}</tbody></table>` : '<div class="su-sub" style="padding:8px 2px">No signal has been switched on or off yet.</div>') : ''}</div>`;
   }
 
   if(s.id==='actions'){
-    const segs = Object.keys(ACTIONS_LIB);
-    body = `
-      <div style="font-size:11.5px;color:var(--i2);margin-bottom:12px">3–5 approved actions per micro-segment — the LLM can only choose from this library. Nothing here yet: Client hasn\u2019t confirmed what their team can actually deliver per segment.</div>
-      ${segs.length ? segs.map(seg=>`
-        <div style="margin-bottom:14px">
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-            <span style="font-size:11px;font-weight:700;color:var(--i1)">${seg}</span>
-            <span style="font-size:10px;color:var(--i3)">${ACTIONS_LIB[seg].length}/5</span>
-            <span onclick="removeSegment('${seg}')" style="cursor:pointer;color:var(--i4);font-size:10px;margin-left:auto">Remove segment</span>
-          </div>
-          ${ACTIONS_LIB[seg].map((a,i)=>`
-            <div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--s50);border-radius:7px;margin-bottom:4px">
-              <span style="font-size:11.5px;color:var(--i2);flex:1">${a}</span>
-              <span onclick="removeAction('${seg}',${i})" style="cursor:pointer;color:var(--i3);font-weight:700;padding:0 2px">×</span>
-            </div>`).join('')}
-          ${ACTIONS_LIB[seg].length<5 ? `<button class="btn btn-ghost btn-sm" style="padding:4px 0;font-size:11px" onclick="addAction('${seg}')">+ Add action to ${seg}</button>` : ''}
-        </div>`).join('') : `<div style="font-size:11px;color:var(--i4);font-style:italic;margin-bottom:10px">No segments defined yet.</div>`}
-      <button class="btn btn-sec btn-sm" onclick="addSegment()">+ Add micro-segment</button>`;
+    const lib = DemandAI.CONFIG.segmentLibrary;
+    body = `<div class="su-sub" style="margin-bottom:10px">The actions the system may recommend, per micro-segment. It only chooses from this list; the first is the usual recommendation.</div>
+      <div class="ac-grid">${Object.entries(lib).map(([seg, acts])=>`<div class="ac"><div class="ac-h">${esc(seg)}<span>${acts.length}</span></div>${acts.map((a,i)=>`<div class="ac-i">${i===0?'<em>Usual</em>':''}${esc(a)}</div>`).join('')}</div>`).join('')}</div>
+      ${edit ? '<div class="su-note">The client approves this list. Changes go to them as a proposal.</div>' : ''}`;
   }
 
-  if(s.id==='brand') body = `
-    <div style="font-size:11.5px;color:var(--i2);margin-bottom:10px">Brand pack, approved claims, and 3 collateral items uploaded, each with an owner. 3 of 8 enabled actions have approved proof.</div>
-    <a href="07-content.html" class="btn btn-sec btn-sm" style="text-decoration:none;display:inline-flex">Open content library →</a>`;
+  if(s.id==='brand') body = `<div class="su-sub" style="margin-bottom:10px">Brand guidelines, approved claims and messaging frameworks live in the Content library.</div><a href="07-content.html" class="btn btn-sec btn-sm" style="text-decoration:none;display:inline-flex">Open Content library →</a>`;
+  if(s.id==='users') body = `<div class="su-sub" style="margin-bottom:10px">Who uses DemandAI and what each role can see.</div><a href="08-users.html" class="btn btn-sec btn-sm" style="text-decoration:none;display:inline-flex">Open Users and roles →</a>`;
 
-  if(s.id==='users'){
-    body = `
-      <div style="font-size:11.5px;color:var(--i2);margin-bottom:10px">${USERS.length} users — ${USERS.filter(u=>u.status==='active').length} active, ${USERS.filter(u=>u.status==='invited').length} invited.</div>
-      <a href="08-users.html" class="btn btn-sec btn-sm" style="text-decoration:none;display:inline-flex">Open users and roles →</a>`;
-  }
-
-  const actionBtn = s.status==='done'
+  const actionBtn = !edit ? '' : s.status==='done'
     ? `<button class="btn btn-ghost btn-sm" onclick="reopenStep('${s.id}')">Reopen to edit</button>`
-    : s.status==='review'
-      ? `<button class="btn btn-primary btn-sm" onclick="signOff('${s.id}')">Sign off this section</button>`
-      : '';
-
-  return `
-    <div class="panel" style="margin-bottom:12px">
-      <div class="panel-hdr">
-        <span class="panel-ttl">${s.num} · ${s.title}</span>
-        <div style="display:flex;align-items:center;gap:8px">${statusBadge(s.status)}${actionBtn}</div>
-      </div>
-      <div class="panel-body">${body}</div>
-    </div>`;
+    : `<button class="btn btn-primary btn-sm" onclick="signOff('${s.id}')">Sign off this section</button>`;
+  return `<div class="panel su-p" id="sec-${s.id}">
+      <div class="panel-hdr"><span class="panel-ttl">${s.num} · ${s.title}</span><div style="display:flex;align-items:center;gap:8px">${statusBadge(s.status)}${actionBtn}</div></div>
+      <div class="panel-body">${body}</div></div>`;
 }
+function signalRows(list, off, edit, last){
+  return `<table class="sg"><thead><tr><th style="width:24%">Signal</th><th style="width:30%">What comes through</th><th style="width:15%">From</th><th style="width:15%">How long it counts</th><th style="width:16%">Status</th></tr></thead><tbody>
+    ${list.map(x=>{ const c = x.c, isOff = off.has(x.name), l = last(x.name), [st, n] = c.knockout||c.reject ? ['',0] : strength(c);
+      const status = c.knockout ? '<span class="pill ko">Knock-out</span><div class="sg-m">Removes the account before scoring</div>'
+        : c.reject ? '<span class="pill nr">Not scored</span><div class="sg-m">Too weak to act on</div>'
+        : `${edit ? `<button class="sw ${isOff?'':'on'}" role="switch" aria-checked="${!isOff}" aria-label="${esc(x.name)}" onclick="askToggle(${esc(JSON.stringify(x.name))})"><i></i></button>` : ''}<span class="pill ${isOff?'off':'on'}">${isOff?'Off':'On'}</span>
+           ${l ? `<div class="sg-m">${l.on?'On':'Off'} · ${esc(l.by)} · ${esc(fmtWhen(l.at))}${l.reason?`<br>“${esc(l.reason)}”`:''}</div>` : ''}`;
+      return `<tr class="${isOff?'is-off':''}">
+        <td><b>${esc(x.name)}</b>${c.segment?`<div class="sg-m">Feeds <span class="seg">${esc(c.segment)}</span></div>`:''}${n?`<div class="sg-st" title="How much it counts">${'<i class="on"></i>'.repeat(n)}${'<i></i>'.repeat(3-n)}<span>${st}</span></div>`:''}</td>
+        <td>${esc(x.info.about)}<div class="sg-m"><b>Data:</b> ${esc(x.info.data)}</div>${x.ex.detail?`<div class="sg-ex">e.g. “${esc(x.ex.detail)}”</div>`:''}</td>
+        <td>${esc(x.ex.source || '—')}</td>
+        <td>${c.full ? `Full weight for ${c.full} days<div class="sg-m">Gone after ${c.zero} days</div>` : '<span class="sg-m">—</span>'}</td>
+        <td>${status}</td></tr>`; }).join('') || '<tr><td colspan="5" class="su-sub" style="padding:14px">No signal matches that search.</td></tr>'}
+    </tbody></table>`;
+}
+function renderSignalsOnly(){ const b = document.getElementById('sgBody'); if(!b) return; const q = SIGQ.toLowerCase();
+  b.innerHTML = signalRows(signalTypes().filter(x=>!q || (x.name+' '+x.info.about+' '+(x.ex.source||'')+' '+(x.c.segment||'')).toLowerCase().includes(q)), new Set(DemandAI.signalsOff()), MODE==='edit', n=>DemandAI.signalAudit(n)[0]); }
 
+// Switching a signal off needs a reason: it is what the audit trail is for.
+function askToggle(name){
+  if(!canEdit()) return;
+  const isOff = DemandAI.signalsOff().includes(name);
+  openModal(`<div style="font-family:var(--fd);font-size:15px;font-weight:700;color:var(--i1);margin-bottom:4px">${isOff?'Switch on':'Switch off'} “${esc(name)}”?</div>
+    <div style="font-size:12.5px;color:var(--i2);line-height:1.55;margin-bottom:14px">${isOff ? 'New scoring runs will use it again. Lists already scored are not changed.' : 'New scoring runs will skip its rows and list them as switched off. Lists already scored keep it.'}</div>
+    <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--i3);margin-bottom:6px">Why${isOff?'':' (required)'}</div>
+    ${isOff ? '' : `<div class="chips" style="margin-bottom:8px">${['Legal hold','Data quality issue','Source not available','Client request'].map(r=>`<button class="chip" onclick="document.getElementById('sgWhy').value=this.textContent">${r}</button>`).join('')}</div>`}
+    <input id="sgWhy" placeholder="${isOff?'Optional, e.g. legal cleared it':'e.g. Legal hold on webinar data'}" style="width:100%;padding:9px 11px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:13px" onkeydown="if(event.key==='Enter')doToggle(${esc(JSON.stringify(name))})">
+    <div id="sgErr" style="font-size:12px;color:var(--neg);min-height:16px;margin-top:4px"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px"><button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button><button class="btn ${isOff?'btn-primary':'btn-danger'} btn-sm" onclick="doToggle(${esc(JSON.stringify(name))})">${isOff?'Switch on':'Switch off'}</button></div>`);
+}
+function doToggle(name){
+  const isOff = DemandAI.signalsOff().includes(name), why = (document.getElementById('sgWhy')||{}).value.trim();
+  if(!isOff && !why){ document.getElementById('sgErr').textContent = 'Say why, so the audit trail explains it.'; return; }
+  DemandAI.setSignal(name, isOff, me(), why); closeModal(); AUDIT_OPEN = true;
+  showToast(`${name} switched ${isOff?'on':'off'}`); renderMain();
+}
+function setWeight(i, v){ RUBRIC[i].weight = Math.max(0, Math.min(100, parseInt(v)||0)); ST.weights = Object.fromEntries(RUBRIC.map(r=>[r.key, r.weight])); persistSetup(); renderMain(); }
 function signOff(id){
   const s = STEPS.find(x=>x.id===id);
-  if(id==='rubric'){
-    const total = RUBRIC.reduce((a,r)=>a+r.weight,0);
-    if(total!==100){ showToast('Weights must total 100 before sign-off'); return; }
-  }
-  s.status='done';
-  showToast(s.title+' signed off');
-  renderMain();
+  if(id==='rubric' && RUBRIC.reduce((a,r)=>a+r.weight,0)!==100){ showToast('The weights must add up to 100% before sign-off'); return; }
+  s.status = 'done'; ST.steps[id] = 'done'; persistSetup(); showToast(s.title+' signed off'); renderMain();
 }
-function reopenStep(id){
-  const s = STEPS.find(x=>x.id===id);
-  s.status='review';
-  renderMain();
-}
-function updateWeight(i, val){ RUBRIC[i].weight = parseInt(val)||0; renderMain(); }
-function toggleSignal(code){
-  const s = SIGNALS.find(x=>x.code===code);
-  s.on = !s.on;
-  renderMain();
-}
-function startActions(){
-  const s = STEPS.find(x=>x.id==='actions');
-  s.status='review';
-  showToast('Draft action library started — add 3–5 actions per segment, then sign off');
-  renderMain();
-}
+function reopenStep(id){ const s = STEPS.find(x=>x.id===id); s.status = 'review'; ST.steps[id] = 'review'; persistSetup(); renderMain(); }
 
-/* Personas */
+const USERS = [];
+const ACTIONS_LIB = {};
+
 /* ═══════════════ MODAL SYSTEM — replaces unreliable prompt() ═══════════════ */
 function openModal(html){
   let ov = document.getElementById('setupModalOverlay');
@@ -720,13 +795,13 @@ function addPersona(){
 function savePersona(){
   const name = document.getElementById('mPersonaName').value.trim();
   if(!name){ showToast('Enter a persona name'); return; }
-  PERSONAS.push(name);
-  const s = STEPS.find(x=>x.id==='personas'); if(s.status==='done') s.status='review';
+  PERSONAS.push(name); ST.personas = PERSONAS.slice();
+  const s = STEPS.find(x=>x.id==='personas'); if(s.status==='done'){ s.status='review'; ST.steps.personas='review'; } persistSetup();
   closeModal(); showToast('Persona added'); renderMain();
 }
 function removePersona(i){
-  PERSONAS.splice(i,1);
-  const s = STEPS.find(x=>x.id==='personas'); if(s.status==='done') s.status='review';
+  PERSONAS.splice(i,1); ST.personas = PERSONAS.slice();
+  const s = STEPS.find(x=>x.id==='personas'); if(s.status==='done'){ s.status='review'; ST.steps.personas='review'; } persistSetup();
   renderMain();
 }
 
@@ -823,7 +898,7 @@ function removeUser(i){
   renderMain();
 }
 
-renderMain();
+setTimeout(renderMain, 0);
 
 const PAGE_ID = '09-setup.html';
 
@@ -853,6 +928,7 @@ function setRole(role){
   const ov = document.getElementById('roleModalOverlay');
   if(ov) ov.style.display = 'none';
   applyRoleToNav();
+  if(typeof renderMain==='function'){ if(!canEdit()) MODE = 'view'; renderMain(); }
 }
 function applyRoleToNav(){
   const role = getRole();
