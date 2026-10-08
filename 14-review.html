@@ -1368,7 +1368,7 @@ function renderWs(){
        <button class="btn btn-sec" onclick="openReject('${key}')">Reject <kbd>R</kbd></button>
        ${noReach ? '' : `<button class="btn btn-primary" onclick="wsAccept('${key}')">${approveLbl} <kbd>A</kbd></button>`}`;
   const dockH = `<div class="ws-dock"><div class="ws-dock-row">
-        <form class="cp-bar" onsubmit="wsAsk(document.getElementById('wsQ').value);return false"><span class="cp-spark">✦</span><input id="wsQ" autocomplete="off" placeholder="Ask Copilot about ${esc(r.account.name)}… (press /)"><button class="cp-send" type="submit" aria-label="Send">↑</button></form>
+        <form class="cp-bar" onsubmit="wsAsk(document.getElementById('wsQ').value);return false"><span class="cp-spark">${Copilot.icon('spark', 17)}</span><input id="wsQ" autocomplete="off" placeholder="Ask Copilot about ${esc(r.account.name)}… (press /)"><button class="cp-send" type="submit" aria-label="Send">${Copilot.icon('send', 16)}</button></form>
         <div class="ws-dec">${buttons}</div>
       </div></div>`;
 
@@ -1396,25 +1396,66 @@ function renderWs(){
   if(WS.own){ const m = document.getElementById('manualAct'); if(m) m.focus(); }
 }
 /* The text box at the bottom of the account opens Copilot beside it; closing Copilot leaves the account as it was. */
+function wsContext(){ const it = wsItem(); RUN = it.run; return Copilot.recText ? Copilot.recText(it.r) : ''; }
 function wsAsk(q){
   q = String(q||'').trim(); if(!q) return;
   const it = wsItem(), r = it.r, d = dec(r.key), s = stuck(r, d), c = liveRec(r).contact;
   document.getElementById('wsQ').value = '';
   if(Copilot.isOpen() && document.getElementById('cpPanel').dataset.ctx===WS.id) return Copilot.ask2(q);
-  Copilot.panelOpen({ ctx: WS.id, title: `${c.name} · ${r.account.name}`, sub: r.account.name, answer: wsAnswer, chips: cpQs(r, s).map(([,l])=>l), q });
+  Copilot.panelOpen({ ctx: WS.id, title: `${c.name} · ${r.account.name}`, sub: r.account.name, answer: wsAnswer, context: wsContext, chips: ['How do I fix it?'].concat(cpQs(r, s).map(([,l])=>l)), q });
   document.getElementById('cpPanel').dataset.ctx = WS.id;
 }
 
-// Copilot's answers about the open account: the question decides which card comes back.
+// Copilot's answers about the open account: the question decides which card comes back. Nothing matched: null,
+// so Copilot can ask Claude (when allowed) or say plainly that it can't answer.
+const WS_INTENTS = [
+  ['spotwhy', /spot.?check|why was it picked/], ['before', /rejected before|manager (say|said|want)|sent back|what did .* say/],
+  ['term', /sensitiv|incident|security|cyber|which (word|part|bit)|what.*(flag|highlight)/], ['claims', /approved claim|claims? (fit|instead)|replace .*claim/],
+  ['claim', /claim|source|unsourced|cite|citation/], ['contact', /e-?mail|linkedin|phone|reach (them|him|her)|contact (detail|info)|how (do|can|should) i (reach|contact)/],
+  ['people', /who else|other (contact|people|person)|someone else|colleague|anyone else|right person|decision maker/],
+  ['fix', /\bfix|correct|resolve|clear (it|this)|what (do|should) i (need to )?do|next step|how do i get/], ['conf', /confiden|how sure|certain|why (low|medium|high)/],
+  ['segs', /segment/], ['deal', /deal|size|worth|revenue|budget|money|value/], ['rules', /rule|brand|tone|length|too long|word count/],
+  ['compare', /runner|differ|alternative|compare|other option|second option/], ['similar', /similar|track record|agree|how did|past|worked before/],
+  ['signals', /signal|why now|when did|trigger|event|happened at/], ['brief', /brief|proof|angle|objection|case study|pitch/],
+  ['history', /history|log|version|changed|who (did|edited|touched)/], ['ifreject', /reject|say no|decline/],
+  ['ifaccept', /approve|accept|what happens|send it|release/], ['due', /due|deadline|by when|how long|urgent/],
+  ['owner', /owner|whose|assigned|which rep|who owns/], ['message', /message|draft|subject|wording|summar|what does it say|email say/],
+  ['account', /account|company|about (them|this|the account)|who (is|are) they|industry|customer|employees|country/],
+  ['why', /why|reason|here|need me|stuck|problem|wrong|issue/],
+];
 function wsAnswer(q){
-  const t = String(q).toLowerCase();
-  const k = /sensitiv|security|incident/.test(t) ? 'term' : /spot/.test(t) ? 'spotwhy' : /rejected before|manager say|sent back/.test(t) ? 'before'
-    : /approved claim|instead/.test(t) ? 'claims' : /claim|source/.test(t) ? 'claim' : /who else|other contact|contact|person/.test(t) ? 'people'
-    : /segment/.test(t) ? 'segs' : /deal|size|worth/.test(t) ? 'deal' : /rule|brand/.test(t) ? 'rules' : /runner|differ|alternative/.test(t) ? 'compare'
-    : /similar|track|agree|how did/.test(t) ? 'similar' : /signal|why now|when/.test(t) ? 'signals' : /brief|proof|angle|objection/.test(t) ? 'brief'
-    : /history|log|before|version/.test(t) ? 'history' : /account|company|know/.test(t) ? 'account' : /approve|accept|happen/.test(t) ? 'ifaccept' : 'why';
-  return cpAnswer(k);
+  const t = String(q).toLowerCase(), hit = WS_INTENTS.find(([,re])=>re.test(t));
+  if(!hit) return null;
+  const k = hit[0]; return WS_EXTRA[k] ? WS_EXTRA[k]() : cpAnswer(k);
 }
+const WS_EXTRA = {
+  conf(){ const it = wsItem(); RUN = it.run; const r = it.r, { chk, conf } = checksOf(r), w = (r.signal||{}).weight || 0, c = liveRec(r).contact;
+    const f = (ok, t) => `<div class="cp-kv"><span style="color:${ok?'var(--pos)':'var(--neg)'};font-weight:700">${ok?'✓':'✗'}</span><div>${t}</div></div>`;
+    return `<p>Confidence is <b>${esc(conf.level)}</b>. It is worked out from four things:</p>` + cpCard('What sets the confidence',
+      f(!chk.unsupported.length, chk.claims.length ? `${chk.claims.length-chk.unsupported.length} of ${chk.claims.length} claims have an approved source` : 'No product claims in the message')
+      + f(!chk.flags.length, chk.flags.length ? `${chk.flags.length} brand or rule flag${chk.flags.length>1?'s':''} open` : 'No brand or rule flags')
+      + f(w >= 30, `${w >= 60 ? 'Strong' : w >= 30 ? 'Moderate' : 'Weak'} signal (weight ${Math.round(w)})`)
+      + f(r.result.confidence!=='low', r.result.confidence==='low' ? `No one in the primary persona at ${esc(r.account.name)}: ${esc(c.name)} is ${esc(c.jobTitle||'in another role')}` : 'Someone in the primary persona'),
+      'Fix the ✗ items in “How to fix it” at the top of the account.'); },
+  fix(){ const it = wsItem(); RUN = it.run; const r = it.r, d = dec(r.key), cats = reasonCats(r, d);
+    if(cats[0]==='fixed') return '<p>Everything that held it back is fixed. Approve it to send it out, or reject it.</p>';
+    const how = { sensitive:'Check the red highlights in the message: keep, edit or remove them. A manager still approves it.', claim:'Swap the amber claim for an approved one, or remove it.',
+      low:`Confirm ${esc(firstOf(liveRec(r).contact))} is the right person, or switch to someone else at the account.`, reach:'Add a verified email or a LinkedIn URL; it is saved everywhere the contact appears.',
+      small:'Pick the micro-segment to release it into.', deal:'Decide whether it is worth it anyway.', brand:'Edit the highlighted words.', spot:'Rate it: approve if you would have sent it, reject if not.',
+      alternative:'Use this alternative, or reject it to close the account for the pilot.', sentback:'Change what the manager asked, then approve again.' };
+    return `<p>Here is what to do, in order:</p><ol>${cats.map(c=>`<li><b>${esc(REASON_CATS[c]||c)}</b>: ${how[c]||'Approve, change or reject it.'}</li>`).join('')}</ol><p class="cpp-muted">Each one has its own fix in “How to fix it” at the top of the account.</p>`; },
+  contact(){ const it = wsItem(); RUN = it.run; const c = liveRec(it.r).contact, x = draftOf(it.r);
+    return cpCard(`How to reach ${esc(c.name)}`, cpKv('Email', c.email ? `${esc(c.email)} ${c.emailVerified?'<span class="tag tag-green">Verified</span>':'<span class="tag tag-amber">Not verified</span>'}` : '<span class="ws-sub">None on file</span>')
+      + cpKv('LinkedIn', c.linkedin ? esc(c.linkedin) : '<span class="ws-sub">None on file</span>') + cpKv('Channel', `${esc(x.channel)}${x.why?` <span class="ws-sub">· ${esc(x.why)}</span>`:''}`),
+      c.email || c.linkedin ? '' : 'Add an email or LinkedIn URL in “How to fix it”.'); },
+  ifreject(){ return `<p>Rejecting asks you for a reason, and the reason decides what comes back:</p><ul>${REJECT.slice(0,8).map(([,l,o])=>`<li><b>${esc(l)}</b>: ${esc(o)}</li>`).join('')}</ul>`; },
+  due(){ const it = wsItem(); RUN = it.run; const d = dec(it.r.key), t = dueOf(it.r, d); return `<p>It is due <b>${esc(dueLabel(t).replace(/^By /,'by '))}</b>${dueBucket(t)==='overdue'?', and it is overdue':''}. The deadline comes from why it is here: the most urgent reason sets it.</p>`; },
+  owner(){ const it = wsItem(); RUN = it.run; return `<p>It belongs to <b>${esc(repName(ownerOf(it.r)))}</b>.${isManager()?' You can reassign it from the Micro-segments & NBA screen.':''}</p>`; },
+  message(){ const it = wsItem(); RUN = it.run; const x = draftFromFields(it.r), chk = DemandAI.checkDraft(x), words = DemandAIDraftText(x).split(/\s+/).filter(Boolean).length;
+    return cpCard(`The ${esc(x.channel==='LinkedIn'?'LinkedIn note':x.channel.toLowerCase())}`, (x.subject?cpKv('Subject', esc(x.subject)):'') + cpKv('Length', `${words} words`)
+      + cpKv('Checks', chk.flags.length || chk.unsupported.length ? chk.flags.map(f=>`<span class="tag tag-red">✗ ${esc(f.rule)}</span>`).concat(chk.unsupported.map(()=>'<span class="tag tag-red">✗ Claim with no source</span>')).join(' ') : '<span class="tag tag-green">✓ Brand and claims pass</span>')
+      + cpKv('Opens with', esc(DemandAIDraftText(x).split(/\n+/).filter(Boolean).slice(x.channel==='Email'?2:0, x.channel==='Email'?3:1).join(' ').slice(0, 180) || '')) ); },
+};
 function wsSheet(on){ WS.sheet = on; const sh = document.getElementById('wsSheet'); if(!sh) return; sh.style.display = on ? 'flex' : 'none';
   if(on){ const b = document.getElementById('wsCp'); if(!WS.chat.length) document.getElementById('wsCpStack').innerHTML = '<div class="cp-p" style="color:var(--i2)">Ask me anything about this account, or pick a question below.</div>'; b.scrollTop = b.scrollHeight; } }
 function wsPick(which){

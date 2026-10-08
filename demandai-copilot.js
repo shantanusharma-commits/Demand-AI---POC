@@ -293,60 +293,198 @@
   }
 
   /* ─── The Copilot side panel: opens from the top-right button, or from the text box at the bottom of an open
-     account. Closing it leaves the screen underneath as it was. Every chat is saved per screen. ─── */
+     account. The screen underneath moves aside, so closing it leaves everything as it was. Chats are saved per screen. ─── */
+  const ICON = {
+    spark:'<path d="M12 3.5l1.8 4.9a2 2 0 0 0 1.2 1.2l4.9 1.8-4.9 1.8a2 2 0 0 0-1.2 1.2L12 19.5l-1.8-4.9a2 2 0 0 0-1.2-1.2L4.1 11.6 9 9.8a2 2 0 0 0 1.2-1.2z"/><path d="M19 3v3M20.5 4.5h-3"/>',
+    history:'<path d="M3 12a9 9 0 1 0 2.6-6.4L3 8"/><path d="M3 3.5V8h4.5"/><path d="M12 7.5V12l3 2"/>',
+    newchat:'<path d="M12 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-6"/><path d="M17.6 3.4a1.9 1.9 0 0 1 2.9 2.9L12.5 14.3 9 15l.7-3.5z"/>',
+    expand:'<path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/>',
+    shrink:'<path d="M4 14h6v6"/><path d="M20 10h-6V4"/><path d="M14 10l7-7"/><path d="M3 21l7-7"/>',
+    close:'<path d="M18 6 6 18"/><path d="M6 6l12 12"/>',
+    send:'<path d="M12 19V5"/><path d="M5.5 11.5 12 5l6.5 6.5"/>',
+    stop:'<rect x="7" y="7" width="10" height="10" rx="2" fill="currentColor" stroke="none"/>',
+    back:'<path d="M19 12H5"/><path d="M11 18l-6-6 6-6"/>',
+    chat:'<path d="M20 15a2 2 0 0 1-2 2H8l-4 4V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2z"/>',
+    trash:'<path d="M4 7h16"/><path d="M9 7V4.5h6V7"/><path d="M18 7l-.8 12.2a2 2 0 0 1-2 1.8H8.8a2 2 0 0 1-2-1.8L6 7"/>',
+    search:'<circle cx="11" cy="11" r="6.5"/><path d="m20 20-4-4"/>',
+    arrow:'<path d="M5 12h14"/><path d="M13 6l6 6-6 6"/>',
+  };
+  const icon = (n, s=16) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[n]||''}</svg>`;
+  const tool = (n, tip, fn, on) => `<button type="button" class="cpp-tool ${on?'on':''}" data-tip="${esc(tip)}" aria-label="${esc(tip)}" onclick="${fn}">${icon(n, 17)}</button>`;
+
   const CHAT_KEY = 'demandai_copilot_chats_v1';
   const PAGE_NAME = { '00-today.html':'Today', '14-review.html':'For Review', '12-nba.html':'Micro-segments & NBA', '13-analytics.html':'Analytics' }[PAGE] || 'This screen';
   const threads = () => { try{ return JSON.parse(localStorage.getItem(CHAT_KEY)||'[]'); }catch(e){ return []; } };
-  function keepThread(t){ if(!t || !t.msgs.length) return; const all = threads().filter(x=>x.id!==t.id); all.unshift(t); try{ localStorage.setItem(CHAT_KEY, JSON.stringify(all.slice(0,80))); }catch(e){} }
-  let P = null;
-  function pEl(){ let el = document.getElementById('cpPanel'); if(el) return el; css(); el = document.createElement('div'); el.id = 'cpPanel'; el.className = 'cp-panel'; document.body.appendChild(el); return el; }
-  const bubble = m => m.you
-    ? `<div class="cpp-me">${esc(m.you)}</div>`
-    : `<div class="cpp-ai"><span class="cpp-av">✦</span><div class="cpp-ai-b">${m.html}</div></div>`;
+  const saveThreads = all => { try{ localStorage.setItem(CHAT_KEY, JSON.stringify(all.slice(0,80))); }catch(e){} };
+  function keepThread(t){ if(!t || !t.msgs.length) return; const all = threads().filter(x=>x.id!==t.id); all.unshift(t); saveThreads(all); }
+  let P = null, BUSY = null;
+
+  // Claude answers free questions when the viewer allows it; otherwise the built-in answers are used.
+  let SAMPLE;
+  if(typeof window!=='undefined' && window.claude && typeof window.claude.use==='function'){ window.claude.use('sample').then(s=>{ SAMPLE = s || null; }, ()=>{ SAMPLE = null; }); } else SAMPLE = null;
+
+  function pEl(){ let el = document.getElementById('cpPanel'); if(el) return el; css(); el = document.createElement('aside'); el.id = 'cpPanel'; el.className = 'cp-panel'; el.setAttribute('aria-label','Copilot'); document.body.appendChild(el); return el; }
   const ago = t => { const m = Math.round((Date.now()-t)/60000); return m < 1 ? 'just now' : m < 60 ? `${m} min ago` : m < 1440 ? `${Math.round(m/60)} h ago` : new Date(t).toLocaleDateString(undefined,{day:'numeric',month:'short'}); };
+  const chipsLeft = () => { const asked = new Set(P.thread.msgs.filter(m=>m.you).map(m=>m.you.toLowerCase())); return P.chips.filter(c=>!asked.has(String(c).toLowerCase())); };
+  const meHtml = q => `<div class="cpp-me">${esc(q)}</div>`;
+  const aiHtml = (html, id) => `<div class="cpp-ai"${id?` id="${id}"`:''}><span class="cpp-logo sm">${icon('spark', 13)}</span><div class="cpp-ai-b">${html}</div></div>`;
+  const followHtml = () => { const c = chipsLeft().slice(0,3); return c.length ? `<div class="cpp-follow">${c.map(x=>`<button type="button" onclick="Copilot.ask2(this.dataset.q)" data-q="${esc(x)}">${icon('arrow', 13)}<span>${esc(x)}</span></button>`).join('')}</div>` : ''; };
+  const typing = () => aiHtml('<span class="cpp-typing"><i></i><i></i><i></i></span>', 'cppPending');
+
+  // A little markdown for Claude's answers: paragraphs, bullets, numbered lists, bold.
+  function md(t){
+    const inline = s => esc(s).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/`([^`]+)`/g,'<code>$1</code>');
+    const out = []; let list = null;
+    String(t||'').split('\n').forEach(line=>{
+      const b = line.match(/^\s*[-*•]\s+(.*)/), n = line.match(/^\s*\d+[.)]\s+(.*)/);
+      if(b || n){ const tag = b ? 'ul' : 'ol'; if(!list || list.tag!==tag){ list = { tag, items: [] }; out.push(list); } list.items.push(inline((b||n)[1])); return; }
+      list = null; if(line.trim()) out.push(`<p>${inline(line.trim())}</p>`);
+    });
+    return out.map(x=>typeof x==='string' ? x : `<${x.tag}>${x.items.map(i=>`<li>${i}</li>`).join('')}</${x.tag}>`).join('');
+  }
+  const plain = html => { const d = document.createElement('div'); d.innerHTML = html; return (d.innerText || d.textContent || '').replace(/\s+\n/g,'\n').trim(); };
+
   function bodyHtml(){
     if(P.view==='history'){
       const ts = threads().filter(t=>t.page===PAGE);
-      return `<div class="cpp-hist-h">Saved chats on ${esc(PAGE_NAME)} <span>${ts.length}</span></div>` + (ts.length ? ts.map(t=>`<button class="cpp-hist" onclick="Copilot.openThread('${t.id}')">
-          <span class="cpp-hist-t">${esc(t.title)}</span><span class="cpp-hist-q">${esc((t.msgs.find(m=>m.you)||{}).you||'')}</span>
-          <span class="cpp-hist-m">${t.msgs.filter(m=>m.you).length} question${t.msgs.filter(m=>m.you).length===1?'':'s'} · ${ago(t.at)}</span></button>`).join('') : '<div class="cpp-empty">No saved chats on this screen yet.</div>');
+      return `<div class="cpp-hist-top"><button type="button" class="cpp-link" onclick="Copilot.backToChat()">${icon('back', 15)} Back to the chat</button><span>${ts.length} saved on ${esc(PAGE_NAME)}</span></div>`
+        + (ts.length ? ts.map(t=>{ const n = t.msgs.filter(m=>m.you).length; return `<div class="cpp-hist ${t.id===P.live.id?'cur':''}">
+            <button type="button" class="cpp-hist-main" onclick="Copilot.openThread('${t.id}')"><span class="cpp-hist-i">${icon('chat', 15)}</span>
+              <span class="cpp-hist-tx"><span class="cpp-hist-t">${esc(t.title)}</span><span class="cpp-hist-q">${esc((t.msgs.find(m=>m.you)||{}).you||'')}</span><span class="cpp-hist-m">${n} question${n===1?'':'s'} · ${ago(t.at)}</span></span></button>
+            <button type="button" class="cpp-tool sm" data-tip="Delete" aria-label="Delete this chat" onclick="Copilot.deleteThread('${t.id}')">${icon('trash', 15)}</button></div>`; }).join('')
+          : `<div class="cpp-none">No saved chats on this screen yet. Every chat you start is kept here.</div>`);
     }
-    if(!P.thread.msgs.length) return `<div class="cpp-empty"><b>Ask me about ${esc(P.sub || P.title)}.</b><br>I answer from the same data you see, and I never change anything unless you confirm. Every chat is saved: find it under History.</div>`;
-    return (P.readonly ? `<div class="cpp-note">A saved chat from ${ago(P.thread.at)}. ${P.thread.ctx===P.liveCtx ? '' : 'Open that account to carry on.'} <a href="#" onclick="Copilot.backToChat();return false">Back to the current chat</a></div>` : '') + P.thread.msgs.map(bubble).join('');
+    if(!P.thread.msgs.length) return `<div class="cpp-hello"><span class="cpp-logo lg">${icon('spark', 22)}</span>
+        <div class="cpp-hello-t">What do you want to know${P.sub ? ` about ${esc(P.sub)}` : ''}?</div>
+        <div class="cpp-hello-s">I answer from the data on this screen. I never change anything unless you confirm.</div>
+        <div class="cpp-sugg">${P.chips.slice(0,4).map(c=>`<button type="button" onclick="Copilot.ask2(this.dataset.q)" data-q="${esc(c)}"><span>${esc(c)}</span>${icon('arrow', 14)}</button>`).join('')}
+          <div class="cpp-sugg-off" title="After the pilot: answers from the client's own documents, CRM notes and past conversations">${icon('search', 14)}<span>Search the client's knowledge base</span><em>After the pilot</em></div></div></div>`;
+    const msgs = P.thread.msgs.map(m=>m.you ? meHtml(m.you) : aiHtml(m.html)).join('');
+    return (P.readonly ? `<div class="cpp-note">A saved chat from ${ago(P.thread.at)}${P.thread.ctx===P.liveCtx ? '' : ' about another account'}. <button type="button" class="cpp-link" onclick="Copilot.backToChat()">Back to the current chat</button></div>` : '') + msgs + (P.readonly ? '' : followHtml());
+  }
+  function composer(){
+    return `<div class="cpp-f"><form class="cpp-comp" onsubmit="Copilot.ask2(this.q.value);return false">
+        <textarea name="q" id="cppInput" rows="1" placeholder="Ask about ${esc(P.sub || P.title)}…" oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,140)+'px'"
+          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();this.form.requestSubmit();}"></textarea>
+        <button class="cpp-send" id="cppSend" type="${BUSY?'button':'submit'}" ${BUSY?'onclick="Copilot.stop()" aria-label="Stop"':'aria-label="Send"'}>${icon(BUSY?'stop':'send', 16)}</button></form>
+      <div class="cpp-foot">Enter to send · Shift + Enter for a new line · Esc to close</div></div>`;
   }
   function drawPanel(){
-    const el = pEl(); el.classList.toggle('wide', !!P.wide);
-    el.innerHTML = `<div class="cpp-h"><span class="cpp-t">✦ Copilot</span><span class="cpp-s" title="${esc(P.title)}">about ${esc(P.title)} · answers only</span>
-        <button class="cpp-ib ${P.view==='history'?'on':''}" title="Chats saved on this screen" onclick="Copilot.history()">🕘 History</button><button class="cpp-ib" title="Start a new chat; this one stays in History" onclick="Copilot.newChat()">＋ New chat</button>
-        <button class="cpp-ib" title="${P.wide?'Make it narrower':'Make it wider'}" onclick="Copilot.toggleWide()">${P.wide?'⇥ Narrow':'⇤ Expand'}</button><button class="cpp-ib cpp-x" title="Close (Esc). The screen underneath stays as it was" onclick="Copilot.closePanel()">⌄ Hide</button></div>
+    const el = pEl(); el.classList.toggle('wide', !!P.wide); push();
+    el.innerHTML = `<div class="cpp-h"><span class="cpp-logo">${icon('spark', 16)}</span>
+        <div class="cpp-ht"><div class="cpp-t">Copilot</div><div class="cpp-s" title="${esc(P.title)}">${esc(P.title)}</div></div>
+        <div class="cpp-tools">${tool('history', 'Saved chats', 'Copilot.history()', P.view==='history')}${tool('newchat', 'New chat', 'Copilot.newChat()')}${tool(P.wide?'shrink':'expand', P.wide?'Make it narrower':'Make it wider', 'Copilot.toggleWide()')}${tool('close', 'Close (Esc)', 'Copilot.closePanel()')}</div></div>
       <div class="cpp-b" id="cppBody">${bodyHtml()}</div>
-      ${P.view==='history' || P.readonly ? '' : `<div class="cpp-f"><div class="cpp-chips">${chipsLeft().map(c=>`<button class="cpp-chip" onclick="Copilot.ask2(this.textContent)">${esc(c)}</button>`).join('')}<span class="cpp-soon" title="After the pilot: answers from the client's own documents, CRM notes and past conversations">🔎 Search the client's knowledge base <b>After the pilot</b></span></div>
-        <form class="cp-bar" onsubmit="Copilot.ask2(this.q.value);return false"><span class="cp-spark">✦</span><input name="q" id="cppInput" autocomplete="off" placeholder="Ask about ${esc(P.sub || P.title)}…"><button class="cp-send" type="submit" aria-label="Send">↑</button></form></div>`}`;
+      ${P.view==='history' || P.readonly ? '' : composer()}`;
     const b = document.getElementById('cppBody'); if(b) b.scrollTop = b.scrollHeight;
   }
-  // Suggested questions, minus the ones already asked in this chat.
-  const chipsLeft = () => { const asked = new Set(P.thread.msgs.filter(m=>m.you).map(m=>m.you.toLowerCase())); return P.chips.filter(c=>!asked.has(String(c).toLowerCase())).slice(0,4); };
+  // The page moves aside for the panel, so nothing underneath is covered (the wide panel lies over it).
+  function push(){
+    const open = panelIsOpen() || (P && pEl().classList.contains('open'));
+    document.body.classList.toggle('cp-push', !!(open && P && !P.wide));
+    document.body.classList.toggle('cp-open', !!(open && P));
+  }
   function panelOpen(o){
     o = o || {};
     const ctx = o.ctx || 'page';
-    P = { ctx, liveCtx: ctx, title: o.title || PAGE_NAME, sub: o.sub || '', answer: o.answer || answer, chips: o.chips || suggestions(), wide: P ? P.wide : false, view: 'chat', readonly: false };
+    P = { ctx, liveCtx: ctx, title: o.title || PAGE_NAME, sub: o.sub || '', answer: o.answer || answer, context: o.context || (()=>contextText()), chips: o.chips || suggestions(), wide: P ? P.wide : false, view: 'chat', readonly: false };
     const prev = !o.fresh && threads().find(t=>t.page===PAGE && t.ctx===ctx);
     P.thread = prev || { id: 't' + Date.now().toString(36), page: PAGE, ctx, title: P.title, at: Date.now(), msgs: [] };
     P.live = P.thread;
-    drawPanel(); pEl().classList.add('open');
-    if(o.q) panelAsk(o.q); else setTimeout(()=>{ const i = document.getElementById('cppInput'); if(i) i.focus(); }, 60);
+    pEl().classList.add('open'); drawPanel();
+    if(o.q) panelAsk(o.q); else setTimeout(()=>{ const i = document.getElementById('cppInput'); if(i) i.focus(); }, 80);
   }
-  function panelAsk(q){
-    q = String(q||'').trim(); if(!q || !P) return;
+  // Built-in answers for the suggested questions; Claude for anything else when it is allowed.
+  async function getAnswer(q, chip){
+    let rule = null; try{ rule = P.answer(q); }catch(e){ console.error(e); }
+    if(chip && rule) return { html: rule };
+    if(SAMPLE){
+      const turns = [], hist = P.thread.msgs.slice(0, -1).slice(-8);
+      for(let i = 0; i < hist.length; i++){ const m = hist[i]; turns.push(m.you ? `Q: ${m.you}` : `A: ${plain(m.html).slice(0, 600)}`); }
+      const prompt = `You are Copilot inside DemandAI, an outreach tool that sales reps and sales managers at an industrial automation supplier ("the client") use to decide which prospects to contact and what to send.
+Answer the question using ONLY the data below. Keep it short: one to four plain sentences, or a short bullet list. Use the same words as the screen. If the data does not answer it, say so plainly and say where in DemandAI they could look. You can only answer: never say you changed, sent or approved anything. Refer to the vendor only as "the client".
+
+SCREEN: ${PAGE_NAME}${P.sub ? ` · ${P.sub}` : ''}
+DATA:
+${String(P.context()||'').slice(0, 24000)}
+${turns.length ? `\nEARLIER IN THIS CHAT:\n${turns.join('\n')}\n` : ''}
+QUESTION: ${q}`;
+      const ctl = new AbortController(); BUSY = ctl; setSend();
+      try{
+        const res = await SAMPLE(prompt, { modelTier:'quick', cache:false, signal: ctl.signal, onText: ({ text }) => { const el = document.querySelector('#cppPending .cpp-ai-b'); if(el){ el.innerHTML = md(text); scrollDown(); } } });
+        return { html: md(res.text) || rule || unknown() };
+      }catch(e){
+        if(e && e.code==='not_granted') SAMPLE = null;
+        if(e && e.code==='cancelled') return { html: (e.text ? md(e.text) : '') + '<p class="cpp-muted">Stopped.</p>' };
+        return { html: rule || unknown() };
+      }finally{ BUSY = null; setSend(); }
+    }
+    await new Promise(res=>setTimeout(res, 380));
+    return { html: rule || unknown() };
+  }
+  const unknown = () => `<p>I can't answer that from the data on this screen yet.</p><p class="cpp-muted">Try one of the questions below, or ask about the reason it's here, the message, the contact, the signals, the confidence or what happens when you approve.</p>`;
+  function setSend(){ const b = document.getElementById('cppSend'); if(!b) return; b.type = BUSY ? 'button' : 'submit'; b.onclick = BUSY ? ()=>Copilot.stop() : null; b.setAttribute('aria-label', BUSY?'Stop':'Send'); b.innerHTML = icon(BUSY?'stop':'send', 16); b.classList.toggle('busy', !!BUSY); }
+  function scrollDown(){ const b = document.getElementById('cppBody'); if(b && b.scrollHeight - b.scrollTop - b.clientHeight < 160) b.scrollTop = b.scrollHeight; }
+  async function panelAsk(q){
+    q = String(q||'').trim(); if(!q || !P || BUSY || P.asking) return;
     if(P.readonly || P.view!=='chat'){ P.thread = P.live; P.readonly = false; P.view = 'chat'; drawPanel(); }
-    P.thread.msgs.push({ you: q });
-    let html; try{ html = P.answer(q); }catch(e){ console.error(e); html = p("Sorry, I couldn't work that out. Try asking another way."); }
+    const chip = P.chips.some(c=>String(c).toLowerCase()===q.toLowerCase());
+    P.thread.msgs.push({ you: q }); P.asking = true;
+    const b = document.getElementById('cppBody'), i = document.getElementById('cppInput');
+    if(i){ i.value = ''; i.style.height = 'auto'; }
+    if(b){ if(P.thread.msgs.length===1) b.innerHTML = ''; b.querySelectorAll('.cpp-follow').forEach(x=>x.remove());
+      b.insertAdjacentHTML('beforeend', meHtml(q) + typing());
+      const me = b.querySelectorAll('.cpp-me'); const last = me[me.length-1]; b.scrollTop = Math.max(0, last.offsetTop - 14); }
+    const { html } = await getAnswer(q, chip);
+    P.asking = false;
     P.thread.msgs.push({ html }); P.thread.at = Date.now(); keepThread(P.thread);
-    const b = document.getElementById('cppBody'); if(b){ if(P.thread.msgs.length===2) b.innerHTML = ''; b.insertAdjacentHTML('beforeend', bubble({you:q}) + bubble({html})); b.scrollTop = b.scrollHeight; }
-    const ch = document.querySelector('#cpPanel .cpp-chips'); if(ch){ const sn = ch.querySelector('.cpp-soon'); ch.innerHTML = chipsLeft().map(c=>`<button class="cpp-chip" onclick="Copilot.ask2(this.textContent)">${esc(c)}</button>`).join(''); if(sn) ch.appendChild(sn); }
-    const i = document.getElementById('cppInput'); if(i){ i.value = ''; i.focus(); }
+    const pend = document.getElementById('cppPending');
+    if(pend){ pend.outerHTML = aiHtml(html) + followHtml(); }
+    const b2 = document.getElementById('cppBody'); if(b2){ const me = b2.querySelectorAll('.cpp-me'); const last = me[me.length-1]; if(last && b2.scrollHeight - last.offsetTop > b2.clientHeight) b2.scrollTop = Math.max(0, last.offsetTop - 14); else b2.scrollTop = b2.scrollHeight; }
+    const i2 = document.getElementById('cppInput'); if(i2) i2.focus();
   }
   const panelIsOpen = () => { const el = document.getElementById('cpPanel'); return !!(el && el.classList.contains('open') && P); };
+  if(typeof document!=='undefined') document.addEventListener('keydown', e=>{ if(e.key==='Escape' && panelIsOpen() && document.getElementById('cpPanel').contains(document.activeElement)){ e.preventDefault(); e.stopPropagation(); Copilot.closePanel(); } }, true);
+
+  /* What Copilot knows, as text: the open account in full, or a summary of the screen. */
+  function recText(r){
+    const d = dec(r.key), lr = liveRec(r), c = lr.contact, x = draftOf(r), { chk, conf } = checksOf(r), sig = r.signal || {};
+    const people = (r.result.people||[]).map(p=>`${p.contact.name} (${p.contact.jobTitle||'no title'}, ${p.contact.persona} persona${p.contact.email?`, email ${p.contact.email}${p.contact.emailVerified?' verified':' not verified'}`:''}${p.contact.linkedin?', LinkedIn':''})`).join('; ');
+    const sigs = ((r.person && r.person.signals) || []).map(s=>`${s.type}, ${s.age} days ago${s.detail?`: ${s.detail}`:''}${s.source?` (source: ${s.source})`:''}`).join('; ');
+    const ds = DemandAI.estimateDealSize(r.account), cats = inQueue(d) ? reasonCats(r, d) : [];
+    return [
+      `Account: ${r.account.name} · ${r.account.vertical||''} · ${r.account.existingCustomer?'existing customer':'net-new'}${r.account.country?` · ${r.account.country}`:''}${r.account.revenue?` · revenue USD ${r.account.revenue}`:''}${r.account.employees?` · ${r.account.employees} employees`:''}`,
+      `Contact: ${c.name}, ${c.jobTitle||'no title'}, ${c.persona} persona. Email: ${c.email ? c.email + (c.emailVerified?' (verified)':' (not verified)') : 'none'}. LinkedIn: ${c.linkedin||'none'}.`,
+      `Other people at the account: ${people || 'none'}`,
+      `Micro-segment: ${segOf(r) || 'none (segment too small)'}. Tier: ${(r.person||{}).tier||'?'}.`,
+      `Why now (main signal): ${sig.type||'?'} ${sig.age!==undefined?sig.age+' days ago':''}. ${r.reason||''}`,
+      `All signals: ${sigs || 'none'}`,
+      `Recommended action: ${r.action}. Why: ${r.reason||''}`,
+      r.runnerUp ? `Runner-up action: ${r.runnerUp.action}. Why: ${r.runnerUp.reason||''}` : 'No runner-up.',
+      d.manual ? `The reviewer wrote their own action: ${d.manual}` : d.useRunner ? 'The reviewer chose the runner-up.' : '',
+      `Status: ${statusLabel(d, r)[0]}. Owner: ${repName(ownerOf(r))}.`,
+      cats.length ? `Why it is in For Review: ${cats.map(k=>REASON_CATS[k]).join(', ')}. Detail: ${(d.reasons||exceptionReasons(r)).join(' · ')}` : '',
+      inQueue(d) ? `Due: ${dueLabel(dueOf(r, d))}.` : '',
+      `Checks: ${fourChecks(r).map(([k,ok])=>`${k} ${ok?'pass':'FAIL'}`).join(', ')}.`,
+      `Confidence: ${conf.reason}.`,
+      ds ? `Estimated deal size: about USD ${Math.round(ds.value/1000)}k (threshold ${Math.round(DemandAI.CONFIG.dealSize.threshold/1000)}k; basis: ${ds.basis}).` : '',
+      `Brand flags: ${chk.flags.map(f=>`${f.rule} ${f.detail}`).join('; ') || 'none'}. Claims: ${chk.claims.map(cl=>`"${cl.text}" ${cl.verified?'approved':'NO SOURCE'}`).join('; ') || 'none'}.`,
+      `Message (${x.channel}): ${x.channel==='Email' ? `Subject: ${x.subject}\n${x.body}` : x.channel==='LinkedIn' ? x.note : (x.task||'')}`,
+      `History: ${(RUN.saved.log||[]).filter(l=>l.key===r.key).map(l=>`${l.decision} by ${l.who}${l.note?` (${l.note})`:''}`).join('; ') || 'none'}`,
+      `What approving does: it releases the message to the owner to send${isSensitive(x)?'; because it is sensitive, a sales manager approves it first':''}. Rejecting asks for a reason, and the reason decides what comes back (another action, contact or draft, or the account is set aside).`,
+    ].filter(Boolean).join('\n');
+  }
+  function contextText(){
+    const ctx = itemCtx(); if(ctx) return inRun(ctx.run, ()=>recText(ctx.r));
+    const q = queue(), ap = approvals();
+    const line = x => `- ${x.who} · ${x.account} · ${x.d.status==='Awaiting approval'?'approval':REASON_CATS[x.cats[0]]||x.d.status} · action: ${x.action}${x.due?` · ${dueLabel(x.due)}`:''} · owner ${repName(x.owner)}`;
+    const byReason = {}; q.forEach(x=>x.cats.forEach(c=>{ byReason[REASON_CATS[c]] = (byReason[REASON_CATS[c]]||0)+1; }));
+    return `Viewer: ${(ROLE_PERSON[getRole()]||getRole())} (${isManager()?'sales manager':'rep'}).
+Queue (${q.length} items needing a decision): by reason ${Object.entries(byReason).map(([k,v])=>`${k} ${v}`).join(', ')||'none'}.
+${q.slice(0,60).map(line).join('\n')}
+${isManager() ? `Approvals waiting (${ap.length}):\n${ap.slice(0,40).map(line).join('\n')}` : ''}
+All prospects: ${all().length}; released: ${all().filter(x=>x.d.status==='Released').length}.`;
+  }
   const msgsHtml = () => S.msgs.map(m=>m.you
       ? `<div style="display:flex;justify-content:flex-end;margin:12px 0 8px"><div style="max-width:85%;padding:8px 12px;background:var(--brand);color:#fff;border-radius:14px 14px 4px 14px;font-size:12.5px">${esc(m.you)}</div></div>`
       : `<div style="display:flex;gap:8px;margin-bottom:6px"><span style="color:var(--brand);font-size:14px;line-height:1.3">✦</span><div style="flex:1;min-width:0;font-size:12.5px">${m.html}</div></div>`).join('');
@@ -356,7 +494,7 @@
     body.parentElement.scrollTop = body.parentElement.scrollHeight;
   }
   function say(html){
-    if(panelIsOpen()){ P.thread.msgs.push({ html }); P.thread.at = Date.now(); keepThread(P.thread); const b = document.getElementById('cppBody'); if(b && P.view==='chat' && !P.readonly){ b.insertAdjacentHTML('beforeend', bubble({html})); b.scrollTop = b.scrollHeight; } return; }
+    if(panelIsOpen()){ P.thread.msgs.push({ html }); P.thread.at = Date.now(); keepThread(P.thread); const b = document.getElementById('cppBody'); if(b && P.view==='chat' && !P.readonly){ b.insertAdjacentHTML("beforeend", aiHtml(html)); b.scrollTop = b.scrollHeight; } return; }
     S.msgs.push({ html }); draw();
   }
   function css(){
@@ -384,40 +522,76 @@
 .cpd-tbl th{text-align:left;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--i3);padding:6px 10px;}
 .cpd-tbl td{padding:7px 10px;border-top:1px solid var(--s75);vertical-align:top;color:var(--i1);}
 .cpd-link{color:var(--brand-dk);font-weight:600;text-decoration:none;}
-.cp-panel{position:fixed;top:0;right:0;bottom:0;width:440px;max-width:100vw;background:var(--surf);border-left:1px solid var(--brand-mid);box-shadow:-12px 0 40px rgba(20,26,33,.16);z-index:650;display:flex;flex-direction:column;transform:translateX(105%);transition:transform .22s cubic-bezier(.4,0,.2,1),width .22s cubic-bezier(.4,0,.2,1);}
+.cp-inline-bar{position:sticky;bottom:0;max-width:none;margin:12px -2px 0;z-index:5;}
+.cp-panel{position:fixed;top:0;right:0;bottom:0;width:420px;max-width:100vw;background:var(--surf);border-left:1px solid var(--border);box-shadow:-8px 0 32px rgba(20,26,33,.10);z-index:650;display:flex;flex-direction:column;transform:translateX(105%);transition:transform .24s cubic-bezier(.4,0,.2,1),width .24s cubic-bezier(.4,0,.2,1);font-family:var(--fb);}
 .cp-panel.open{transform:none;}
-.cp-panel.wide{width:min(860px,70vw);}
-.cpp-h{display:flex;align-items:center;gap:4px;padding:10px 10px 10px 14px;background:var(--brand-lt);border-bottom:1px solid var(--brand-mid);}
-.cpp-t{font-size:12.5px;font-weight:700;color:var(--brand-dk);white-space:nowrap;}
-.cpp-h{flex-wrap:wrap;}
-.cpp-t{flex:1;}
-.cpp-s{order:9;flex-basis:100%;min-width:0;font-size:11.5px;color:var(--i3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px;}
-.cpp-ib{height:28px;padding:0 8px;border-radius:7px;border:1px solid transparent;background:transparent;cursor:pointer;color:var(--i2);font-size:11.5px;font-weight:600;white-space:nowrap;}
-.cpp-x{color:var(--i1);}
-.cpp-ib:hover,.cpp-ib.on{background:var(--surf);border-color:var(--brand-mid);color:var(--brand-dk);}
-.cpp-b{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;}
-.cpp-me{align-self:stretch;padding:7px 12px;background:var(--brand);color:#fff;border-radius:8px;font-size:12.5px;line-height:1.5;}
-.cpp-ai{display:flex;gap:8px;align-items:flex-start;}
-.cpp-av{width:24px;height:24px;border-radius:7px;background:linear-gradient(135deg,var(--brand),var(--brand-dk));color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-.cpp-ai-b{flex:1;min-width:0;font-size:12.5px;color:var(--i1);line-height:1.55;}
-.cpp-empty{margin:auto 0 0;padding:14px;border:1px dashed var(--brand-mid);border-radius:12px;font-size:12.5px;color:var(--i2);line-height:1.6;background:#FCFAFE;}
-.cpp-note{font-size:11.5px;color:var(--i3);padding:8px 10px;background:var(--s50);border-radius:8px;}
-.cpp-note a{color:var(--brand);font-weight:600;}
-.cpp-f{border-top:1px solid var(--border);padding:10px 12px 12px;}
-.cpp-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;}
-.cpp-chip{height:27px;padding:0 10px;border-radius:999px;border:1px solid var(--brand-mid);background:var(--surf);color:var(--brand-dk);font-size:11.5px;font-weight:600;cursor:pointer;}
-.cpp-chip:hover{background:var(--brand-lt);}
-.cpp-chip:first-child{background:var(--brand-lt);}
-.cpp-soon{display:inline-flex;align-items:center;gap:6px;height:27px;padding:0 10px;border:1px dashed var(--bdk);border-radius:999px;background:var(--s50);color:var(--i3);font-size:11.5px;font-weight:600;cursor:help;}
-.cpp-soon b{font-size:9.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--brand-dk);background:var(--brand-lt);border-radius:999px;padding:1px 6px;}
-.cpp-f .cp-bar{max-width:none;margin:0;box-shadow:none;}
-.cpp-hist-h{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--i3);display:flex;justify-content:space-between;}
-.cpp-hist{display:flex;flex-direction:column;gap:2px;text-align:left;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--surf);cursor:pointer;}
-.cpp-hist:hover{border-color:var(--brand-mid);background:#FCFAFE;}
+.cp-panel.wide{width:min(760px,62vw);box-shadow:-16px 0 48px rgba(20,26,33,.18);}
+body .main{transition:margin-right .24s cubic-bezier(.4,0,.2,1);}
+body.cp-push .main{margin-right:420px;}
+body.cp-open .ws-dock .cp-bar,body.cp-open .det-foot{display:none;}
+body.cp-open .ws-dock-row{justify-content:flex-end;}
+body.cp-push #detailDrawer.open{right:420px;transition:right .24s cubic-bezier(.4,0,.2,1);}
+.cpp-h{display:flex;align-items:center;gap:10px;padding:12px 10px 12px 16px;border-bottom:1px solid var(--border);min-height:58px;}
+.cpp-logo{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,#9B6BC6,var(--brand-dk));color:#fff;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 6px rgba(125,82,162,.28);}
+.cpp-logo.sm{width:24px;height:24px;border-radius:7px;box-shadow:none;}
+.cpp-logo.lg{width:44px;height:44px;border-radius:13px;}
+.cpp-ht{flex:1;min-width:0;}
+.cpp-t{font-size:14px;font-weight:700;color:var(--i1);line-height:1.2;}
+.cpp-s{font-size:11.5px;color:var(--i3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px;}
+.cpp-tools{display:flex;gap:2px;}
+.cpp-tool{position:relative;width:32px;height:32px;border-radius:8px;border:none;background:transparent;color:var(--i2);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:background .12s,color .12s;}
+.cpp-tool:hover{background:var(--s75);color:var(--i1);}
+.cpp-tool.on{background:var(--brand-lt);color:var(--brand-dk);}
+.cpp-tool.sm{width:28px;height:28px;}
+.cpp-tool[data-tip]:hover::after{content:attr(data-tip);position:absolute;top:calc(100% + 6px);right:0;white-space:nowrap;background:var(--i1);color:#fff;font-size:11px;font-weight:600;padding:4px 8px;border-radius:6px;pointer-events:none;z-index:2;}
+.cpp-b{flex:1;overflow-y:auto;padding:18px 18px 8px;display:flex;flex-direction:column;gap:14px;scroll-behavior:smooth;}
+.cpp-me{align-self:flex-end;max-width:86%;padding:9px 13px;background:var(--brand-lt);color:var(--i1);border-radius:16px 16px 4px 16px;font-size:13px;line-height:1.5;white-space:pre-wrap;word-break:break-word;}
+.cpp-ai{display:flex;gap:10px;align-items:flex-start;}
+.cpp-ai-b{flex:1;min-width:0;font-size:13px;color:var(--i1);line-height:1.6;padding-top:2px;}
+.cpp-ai-b p{margin:0 0 8px;} .cpp-ai-b p:last-child{margin-bottom:0;}
+.cpp-ai-b ul,.cpp-ai-b ol{margin:4px 0 8px;padding-left:18px;} .cpp-ai-b li{margin:2px 0;}
+.cpp-ai-b code{font-family:var(--fm);font-size:12px;background:var(--s75);padding:1px 4px;border-radius:4px;}
+.cpp-ai-b .cp-card{box-shadow:none;margin-top:4px;}
+.cpp-muted{color:var(--i3);font-size:12px;}
+.cpp-typing{display:inline-flex;gap:4px;padding:8px 0;} .cpp-typing i{width:6px;height:6px;border-radius:50%;background:var(--brand-mid);animation:cppDot 1s infinite ease-in-out;}
+.cpp-typing i:nth-child(2){animation-delay:.15s;} .cpp-typing i:nth-child(3){animation-delay:.3s;}
+@keyframes cppDot{0%,80%,100%{opacity:.3;transform:translateY(0);}40%{opacity:1;transform:translateY(-3px);}}
+.cpp-follow{display:flex;flex-direction:column;gap:6px;margin-left:34px;}
+.cpp-follow button{display:inline-flex;align-items:center;gap:8px;align-self:flex-start;max-width:100%;padding:6px 11px;border:1px solid var(--border);border-radius:999px;background:var(--surf);color:var(--i2);font-size:12px;font-weight:500;cursor:pointer;text-align:left;}
+.cpp-follow button:hover{border-color:var(--brand-mid);color:var(--brand-dk);background:#FCFAFE;}
+.cpp-follow svg{color:var(--brand);flex-shrink:0;}
+.cpp-hello{margin:auto 0;display:flex;flex-direction:column;align-items:flex-start;gap:8px;padding:8px 2px 4px;}
+.cpp-hello-t{font-family:var(--fd);font-size:18px;font-weight:700;color:var(--i1);line-height:1.3;margin-top:6px;letter-spacing:-.01em;}
+.cpp-hello-s{font-size:12.5px;color:var(--i2);line-height:1.5;}
+.cpp-sugg{display:flex;flex-direction:column;width:100%;margin-top:10px;border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+.cpp-sugg button,.cpp-sugg-off{display:flex;align-items:center;gap:10px;padding:11px 14px;border:none;border-top:1px solid var(--s75);background:var(--surf);color:var(--i1);font-size:12.5px;text-align:left;cursor:pointer;}
+.cpp-sugg button:first-child{border-top:none;}
+.cpp-sugg button span{flex:1;} .cpp-sugg button svg{color:var(--i3);}
+.cpp-sugg button:hover{background:#FCFAFE;} .cpp-sugg button:hover svg{color:var(--brand);}
+.cpp-sugg-off{color:var(--i3);cursor:help;background:var(--s50);}
+.cpp-sugg-off span{flex:1;} .cpp-sugg-off em{font-style:normal;font-size:9.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--brand-dk);background:var(--brand-lt);border-radius:999px;padding:2px 7px;}
+.cpp-f{padding:10px 14px 12px;border-top:1px solid var(--border);background:var(--surf);}
+.cpp-comp{display:flex;align-items:flex-end;gap:8px;border:1px solid var(--bdk);border-radius:14px;padding:6px 6px 6px 14px;background:var(--surf);transition:border-color .12s,box-shadow .12s;}
+.cpp-comp:focus-within{border-color:var(--brand-mid);box-shadow:0 0 0 3px var(--brand-lt);}
+.cpp-comp textarea{flex:1;min-width:0;border:none;outline:none;resize:none;font-family:var(--fb);font-size:13px;line-height:1.5;padding:6px 0;max-height:140px;background:transparent;color:var(--i1);}
+.cpp-send{width:32px;height:32px;border-radius:10px;border:none;background:var(--brand);color:#fff;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;}
+.cpp-send:hover{background:var(--brand-dk);} .cpp-send.busy{background:var(--i1);}
+.cpp-foot{font-size:10.5px;color:var(--i3);margin-top:6px;text-align:center;}
+.cpp-note{font-size:12px;color:var(--i2);padding:9px 12px;background:var(--s50);border-radius:10px;}
+.cpp-link{display:inline-flex;align-items:center;gap:6px;border:none;background:none;color:var(--brand-dk);font-weight:600;font-size:12px;cursor:pointer;padding:0;}
+.cpp-hist-top{display:flex;align-items:center;justify-content:space-between;font-size:11.5px;color:var(--i3);}
+.cpp-hist{display:flex;align-items:center;gap:4px;border:1px solid var(--border);border-radius:12px;padding:2px 6px 2px 2px;}
+.cpp-hist.cur{border-color:var(--brand-mid);}
+.cpp-hist:hover{background:#FCFAFE;}
+.cpp-hist-main{flex:1;min-width:0;display:flex;gap:10px;align-items:flex-start;padding:10px;border:none;background:none;text-align:left;cursor:pointer;}
+.cpp-hist-i{color:var(--brand);margin-top:1px;}
+.cpp-hist-tx{display:flex;flex-direction:column;gap:2px;min-width:0;}
 .cpp-hist-t{font-size:12.5px;font-weight:700;color:var(--i1);}
 .cpp-hist-q{font-size:12px;color:var(--i2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .cpp-hist-m{font-size:11px;color:var(--i3);}
-.cp-inline-bar{position:sticky;bottom:0;max-width:none;margin:12px -2px 0;z-index:5;}
+.cpp-none{font-size:12.5px;color:var(--i3);padding:16px;text-align:center;border:1px dashed var(--border);border-radius:12px;}
+.cp-spark{color:var(--brand);display:inline-flex;}
+.cp-bar .cp-send svg{display:block;}
 #cpInline:not(:empty){padding:10px 12px;border:1px solid var(--brand-mid);border-radius:12px;background:var(--surf);margin-top:8px;}`;
     document.head.appendChild(st);
   }
@@ -435,14 +609,18 @@
   }
 
   window.Copilot = {
-    button(){ return `<button class="btn btn-sec btn-sm" onclick="Copilot.open()" title="Ask Copilot" style="gap:6px"><span style="color:var(--brand)">✦</span> Copilot</button>`; },
+    button(){ css(); return `<button class="btn btn-sec btn-sm" onclick="Copilot.open()" title="Ask Copilot" style="gap:6px"><span class="cp-spark">${icon('spark', 15)}</span> Copilot</button>`; },
     panelOpen, ask2: q => panelAsk(q), isOpen: panelIsOpen,
-    closePanel(){ const el = document.getElementById('cpPanel'); if(el) el.classList.remove('open'); },
-    toggleWide(){ if(!P) return; P.wide = !P.wide; pEl().classList.toggle('wide', P.wide); drawPanel(); },
+    closePanel(){ if(BUSY) BUSY.abort(); const el = document.getElementById('cpPanel'); if(el) el.classList.remove('open'); document.body.classList.remove('cp-push', 'cp-open'); },
+    toggleWide(){ if(!P) return; P.wide = !P.wide; drawPanel(); },
     history(){ if(!P) return; P.view = P.view==='history' ? 'chat' : 'history'; if(P.view==='chat'){ P.thread = P.live; P.readonly = false; } drawPanel(); },
-    newChat(){ if(!P) return; P.live = P.thread = { id: 't' + Date.now().toString(36), page: PAGE, ctx: P.ctx, title: P.title, at: Date.now(), msgs: [] }; P.view = 'chat'; P.readonly = false; drawPanel(); },
+    newChat(){ if(!P || BUSY) return; P.live = P.thread = { id: 't' + Date.now().toString(36), page: PAGE, ctx: P.ctx, title: P.title, at: Date.now(), msgs: [] }; P.view = 'chat'; P.readonly = false; drawPanel(); setTimeout(()=>{ const i = document.getElementById('cppInput'); if(i) i.focus(); }, 60); },
     openThread(id){ const t = threads().find(x=>x.id===id); if(!t || !P) return; P.view = 'chat'; if(t.ctx===P.ctx){ P.live = P.thread = t; P.readonly = false; } else { P.thread = t; P.readonly = true; } drawPanel(); },
+    deleteThread(id){ saveThreads(threads().filter(t=>t.id!==id)); if(P && P.live.id===id) P.live = P.thread = { id: 't' + Date.now().toString(36), page: PAGE, ctx: P.ctx, title: P.title, at: Date.now(), msgs: [] }; drawPanel(); },
     backToChat(){ if(!P) return; P.thread = P.live; P.readonly = false; P.view = 'chat'; drawPanel(); },
+    stop(){ if(BUSY) BUSY.abort(); },
+    recText: r => recText(r),
+    icon,
     dock, expand(){ const sh = document.getElementById('cpSheet'); if(!sh) return; if(!S.msgs.length) S.msgs.push({ html: help(`Hi ${esc((ROLE_PERSON[getRole()]||getRole()).split(' ')[0])}. Ask me about ${ON_REVIEW?'your queue':PAGE==='12-nba.html'?'your micro-segments and accounts':'your work'}. For example:`) });
       S.sheet = true; sh.style.display = 'flex'; const h = document.querySelector('.cp-hints'); if(h) h.style.display = 'none'; draw(); },
     collapse(){ S.sheet = false; const sh = document.getElementById('cpSheet'); if(sh) sh.style.display = 'none'; const h = document.querySelector('.cp-hints'); if(h) h.style.display = ''; },
@@ -477,8 +655,8 @@
     inline(id){
       const r = recOf(id.split('::').pop()), name = r ? r.account.name : '', who = r ? liveRec(r).contact.name : ''; css();
       S.inlineId = id; S.inlineTitle = r ? `${who} · ${name}` : 'This account'; S.inlineSub = name;
-      return `<div id="cpInlinePanel"><form class="cp-bar cp-inline-bar" onsubmit="Copilot.askInline(this.q.value);this.q.value='';return false"><span class="cp-spark">✦</span>
-          <input name="q" autocomplete="off" placeholder="Ask Copilot about ${esc(name || 'this account')}…"><button class="cp-send" type="submit" aria-label="Send">↑</button></form></div>`;
+      return `<div id="cpInlinePanel"><form class="cp-bar cp-inline-bar" onsubmit="Copilot.askInline(this.q.value);this.q.value='';return false"><span class="cp-spark">${icon('spark', 17)}</span>
+          <input name="q" autocomplete="off" placeholder="Ask Copilot about ${esc(name || 'this account')}…"><button class="cp-send" type="submit" aria-label="Send">${icon('send', 16)}</button></form></div>`;
     },
     inlineHints(){},
     askInline(text){
