@@ -580,6 +580,19 @@ img.lg{display:block;object-fit:contain;}
 .ct-act{display:flex;gap:6px;justify-content:flex-end;}
 @media (max-width:1200px){ .ct-r{grid-template-columns:2fr 110px 120px 1fr 80px 140px;} .flow-a{display:none;} }
 @media (max-width:1000px){ .ct-r{grid-template-columns:1fr;} .ct-hd{display:none;} .ct-stats{grid-template-columns:1fr 1fr;} }
+.info{position:relative;display:inline-flex;}
+.info-b{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--bdk);background:var(--surf);color:var(--i2);font-family:Georgia,serif;font-style:italic;font-weight:700;font-size:12px;line-height:1;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;}
+.info-b:hover,.info.open .info-b{border-color:var(--brand);color:var(--brand-dk);background:var(--brand-lt);}
+.info-p{display:none;position:absolute;top:calc(100% + 8px);right:0;width:340px;background:var(--surf);border:1px solid var(--border);border-radius:12px;box-shadow:var(--sh-lg);padding:12px;z-index:50;text-transform:none;letter-spacing:0;}
+.info.open .info-p{display:block;}
+.info-h{font-size:12.5px;font-weight:700;color:var(--i1);margin-bottom:8px;}
+.info-p .flow{flex-direction:column;gap:6px;margin:0;}
+.info-p .flow-s{min-width:0;border:none;padding:6px 2px;background:none;border-top:1px solid var(--s75);border-radius:0;}
+.info-p .flow-s:first-child{border-top:none;}
+.info-p .flow-s.off{background:none;}
+.panel:has(.info){overflow:visible;}
+.panel:has(.info) .panel-hdr{position:relative;z-index:30;}
+.info-p .flow-a{display:none;}
 </style>
 </head>
 <body>
@@ -1134,13 +1147,13 @@ function contentTab(){
   const list = CTF==='draft' ? drafts : CTF==='used' ? all.filter(i=>C.usage(i.id)) : inLib;
   const tile = (f, l, v, sub) => `<a class="stat stat-link ${CTF===f?'on':''}" href="#" onclick="CTF=${f?`CTF==='${f}'?null:'${f}'`:'null'};render();return false"><div class="stat-lbl">${l}</div><div class="stat-val">${v}</div><div class="stat-sub">${sub}</div></a>`;
   const step = (n, t, d, off) => `<div class="flow-s ${off?'off':''}"><span class="flow-n">${off?'·':n}</span><div><b>${t}${off?' <span class="soon-pill">After the pilot</span>':''}</b><span>${d}</span></div></div>`;
-  return `<div class="flow">${step(1,'Write it in Content studio','A blog or whitepaper, in the brand voice, citing approved claims')}<span class="flow-a">→</span>
+  const flowHtml = `<div class="flow">${step(1,'Write it in Content studio','A blog or whitepaper, in the brand voice, citing approved claims')}<span class="flow-a">→</span>
       ${step(2,'Brand and claim checks pass','Banned words, tone, length; every claim approved')}<span class="flow-a">→</span>
       ${step('','Marketing and legal sign-off','Maker-checker approval before it goes in', true)}<span class="flow-a">→</span>
       ${step(3,'Add to Content library','It shows here, with the claims it cites')}<span class="flow-a">→</span>
-      ${step(4,'Reps add it to messages','In an email or LinkedIn message, in Micro-segments & NBA')}</div>
-    <div class="stats ct-stats">${tile(null,'In the library', inLib.length, `${inLib.filter(i=>i.type==='blog').length} blogs · ${inLib.filter(i=>i.type==='whitepaper').length} whitepapers`)}${tile('draft','Drafts in Content studio', drafts.length, 'not in the library yet')}${tile('used','In messages', used, 'added by reps')}<div class="stat"><div class="stat-lbl">Cite approved claims</div><div class="stat-val">${citing}</div><div class="stat-sub">of ${inLib.length} in the library</div></div></div>
-    ${card(CTF==='draft' ? 'Drafts in Content studio' : CTF==='used' ? 'Content in messages' : 'Content in the library', `<a class="btn btn-sec btn-sm" href="15-content-studio.html" style="text-decoration:none">✎ Write in Content studio</a>`,
+      ${step(4,'Reps add it to messages','In an email or LinkedIn message, in Micro-segments & NBA')}</div>`;
+  return `<div class="stats ct-stats">${tile(null,'In the library', inLib.length, `${inLib.filter(i=>i.type==='blog').length} blogs · ${inLib.filter(i=>i.type==='whitepaper').length} whitepapers`)}${tile('draft','Drafts in Content studio', drafts.length, 'not in the library yet')}${tile('used','In messages', used, 'added by reps')}<div class="stat"><div class="stat-lbl">Cite approved claims</div><div class="stat-val">${citing}</div><div class="stat-sub">of ${inLib.length} in the library</div></div></div>
+    ${card(CTF==='draft' ? 'Drafts in Content studio' : CTF==='used' ? 'Content in messages' : 'Content in the library', `<div style="display:flex;gap:8px;align-items:center"><span class="info"><button class="info-b" aria-label="How content gets here" onclick="event.stopPropagation();this.parentElement.classList.toggle('open')">i</button><div class="info-p" onclick="event.stopPropagation()"><div class="info-h">How content gets here</div>${flowHtml}</div></span><a class="btn btn-sec btn-sm" href="15-content-studio.html" style="text-decoration:none">✎ Write in Content studio</a></div>`,
       list.length ? `<div class="ct-t"><div class="ct-r ct-hd"><div>Content</div><div>Status</div><div>Sign-off <span class="soon-pill">After the pilot</span></div><div>Claims it cites</div><div>In messages</div><div></div></div>
         ${list.map(it=>{ const cited = C.citedIn(it), chk = C.checksOf(it), n = chk.flags.length + chk.unsupported.length, u = C.usage(it.id);
           return `<div class="ct-r"><div><div class="ct-n"><span class="ct-ic">${it.type==='whitepaper'?'W':'B'}</span><div><b>${esc(it.title)}</b><span>${C.TYPES[it.type].label} · ${esc(C.AUDIENCE[it.seg]||it.seg)} · ${esc(it.by)}, ${fmtDate(it.updated)}</span></div></div></div>
@@ -1314,6 +1327,7 @@ function addFw(){
   fws().push({ objective:v('fwObj'), name:v('fwName'), steps, use:v('fwUse') }); commit('Framework added to the draft');
 }
 
+document.addEventListener('click', ()=>document.querySelectorAll('.info.open').forEach(x=>x.classList.remove('open')));
 /* ═══════════════ BOOT ═══════════════ */
 const PAGE_ID = '07-content.html';
 setTimeout(()=>{
