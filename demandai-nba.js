@@ -219,6 +219,14 @@ function whyHere(d){
 
 /* Run once when a list is built: the exception check. What passes all four goes ahead on its own (path 1);
    anything else waits in the owning rep's exception queue (path 2). */
+// Lists built before sensitive content went straight to approvals: move those items there too.
+function sensitiveToApprovals(saved, recs){
+  let moved = 0;
+  recs.forEach(r=>{ const d = saved.decisions[r.key];
+    if(d && d.status==='Waiting' && d.why==='exception' && d.spot!=='pending' && (d.reasons||[]).some(t=>/^Sensitive/.test(t))){ d.status = 'Awaiting approval'; d.why = 'sensitive'; moved++; } });
+  if(moved) DemandAI.saveSegmentation(saved);
+  return moved;
+}
 function routeRun(){
   const now = Date.now();
   RUN.seg.recs.forEach(r=>{
@@ -231,7 +239,9 @@ function routeRun(){
       sysLog(r, 'Regenerated once after a brand or rule check', `${flags.map(f=>`${f.rule}: ${f.detail}`).join(' · ')}${again.length?' · still failing':' · now passes'}`);
     }
     const rs = exceptionReasons(r);
-    if(rs.length){ setDec(r.key, {status:'Waiting', why:'exception', reasons:rs}); sysLog(r, 'To the exception queue', rs.join(' · ')); }
+    // Sensitive content goes straight to the sales manager's approvals, never through a rep's queue.
+    if(rs.some(t=>/^Sensitive/.test(t))){ setDec(r.key, {status:'Awaiting approval', why:'sensitive', reasons:rs}); sysLog(r, 'To approvals', 'Sensitive content: the sales manager approves it before anything goes out'); }
+    else if(rs.length){ setDec(r.key, {status:'Waiting', why:'exception', reasons:rs}); sysLog(r, 'To the exception queue', rs.join(' · ')); }
     else { setDec(r.key, {status:'Released', released:'auto', passed:true, by:'System', at:now}); sysLog(r, 'Proceeded on its own', 'Passed all four checks; released to the rep, ready to use'); }
   });
   updateRunStats(true);
@@ -691,11 +701,11 @@ function openRec(key, keepTimer){
     <input id="rjNote" placeholder="Comment (needed for Other)" style="width:100%;padding:7px 10px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:12px;margin-bottom:8px">
     <button class="btn btn-sec btn-sm" style="width:100%;justify-content:center" onclick="reject('${key}')">Reject</button>`;
   else if(d.status==='Awaiting approval') decide = isManager()
-    ? `<div style="font-size:12px;color:var(--i1);margin-bottom:10px">Accepted by ${esc(d.acceptedBy||'')}. The draft has sensitive content, so it needs your approval before release.</div>
+    ? `<div style="font-size:12px;color:var(--i1);margin-bottom:10px">${d.acceptedBy?`Accepted by ${esc(d.acceptedBy)}. `:''}The draft has sensitive content, so it needs your approval before release.</div>
        <button class="btn btn-primary btn-sm" style="width:100%;justify-content:center" onclick="managerApprove('${key}')">Approve and release</button>
        ${cap('Or send it back to the rep')}<input id="sbNote" placeholder="Why it goes back" style="width:100%;padding:7px 10px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:12px;margin-bottom:8px">
        <button class="btn btn-sec btn-sm" style="width:100%;justify-content:center" onclick="sendBack('${key}')">Send back</button>`
-    : `<div style="font-size:12px;color:var(--i2)">Accepted by ${esc(d.acceptedBy||'')}; waiting for the sales manager's approval because the draft has sensitive content.</div>`;
+    : `<div style="font-size:12px;color:var(--i2)">Waiting for the sales manager's approval because the draft has sensitive content.</div>`;
   else if(d.status==='Released') decide = `${x.channel!=='Task'?`<button class="btn btn-sec btn-sm" style="margin-bottom:10px" onclick="copyDraft('${key}')">Copy the message</button>`:''}<div style="font-size:12px;color:var(--i1);margin-bottom:10px">${d.released==='auto'?'Went ahead on its own':d.released==='approved'?`Approved by ${by}`:`Accepted by ${by}`}${d.spot==='accepted'?` · spot-check accepted by ${esc(d.spotBy||'')}`:''}. Ready to use: ${x.channel==='Task'?'act on the task':'send it from your own tool'}, then mark what happened. Nothing is sent from the POC.</div>
       ${cap('What happened')}
       <div class="tags">${OUTCOMES.map(o=>`<button class="tag ${d.outcome===o?'tag-violet':'tag-grey'}" style="cursor:pointer" onclick="outcome('${key}','${o}')">${o}</button>`).join('')}</div>

@@ -737,6 +737,7 @@ function openRun(id){
   const saved = DemandAI.getSegmentation(id); if(!saved) return;
   const c = compute(saved.src, saved.id, saved.createdAt, saved.brandVersion);
   if(!c){ showToast("The prospect list behind it isn't saved any more"); return; }
+  sensitiveToApprovals(saved, c.seg.recs);
   RUN = { saved, ...c }; view='grid'; segFilt=null; vertFilt=null; q='';
   renderResults();
 }

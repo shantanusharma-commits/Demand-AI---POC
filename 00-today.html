@@ -600,7 +600,7 @@ const pill = (cur,id,label) => `<div class="seg-pill ${cur===id?'active':''}" on
 let RUNS = [], SPOT = null, MISSING = [];
 function loadRuns(){
   RUNS = []; MISSING = [];
-  DemandAI.loadSegmentations().forEach(saved=>{ const c = compute(saved.src, saved.id, saved.createdAt, saved.brandVersion); if(c) RUNS.push({ saved, ...c }); else MISSING.push(saved); });
+  DemandAI.loadSegmentations().forEach(saved=>{ const c = compute(saved.src, saved.id, saved.createdAt, saved.brandVersion); if(c){ sensitiveToApprovals(saved, c.seg.recs); RUNS.push({ saved, ...c }); } else MISSING.push(saved); });
 }
 function ALL_RUNS(){ return RUNS; }
 function withRun(run, fn){ const keep = RUN; RUN = run; try{ return fn(); } finally { RUN = keep; } }

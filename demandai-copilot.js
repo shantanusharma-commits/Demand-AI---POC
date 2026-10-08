@@ -85,7 +85,7 @@
       if(hit) return inRun(hit.run, ()=>{
         const ch = fourChecks(hit.r);
         return p(`<b>${esc(hit.who)} · ${esc(hit.account)}</b>: ${hit.d.spot==='pending' ? 'it went ahead on its own after passing every check, and was picked at random for this week\'s spot-check.'
-            : hit.d.status==='Awaiting approval' ? 'a rep accepted it, but the draft has sensitive content, so it waits for the sales manager.'
+            : hit.d.status==='Awaiting approval' ? 'the draft has sensitive content, so it waits for the sales manager\'s approval before anything goes out.'
             : hit.queued ? `it failed a check: ${esc((hit.d.reasons||exceptionReasons(hit.r)).join('; ')||whyHere(hit.d))}.` : `it is ${esc(hit.d.status.toLowerCase())}.`}`)
           + `<div class="tags" style="margin-top:8px">${ch.map(([k,ok])=>`<span class="tag ${ok?'tag-green':'tag-red'}">${ok?'✓':'✗'} ${esc(k)}</span>`).join('')}</div>`
           + note(`Why now: ${esc(hit.r.reason)}. ${trackLine(hit.segment)}`) + `<div>${rows([hit])}</div>`;
@@ -104,7 +104,7 @@
         + note('A first-time decision is the first accept or reject on an item. Flagged decisions count only once a manager has checked them; Autopilot approvals never count.');
     }
     if(f.kind==='approvals'){
-      if(!isManager()){ const mineHeld = all().filter(x=>x.mine && x.d.status==='Awaiting approval'); return p(mineHeld.length ? `${pl(mineHeld.length,'message')} you accepted ${mineHeld.length===1?'is':'are'} waiting for the sales manager.` : 'Nothing you accepted is waiting for the sales manager.') + rows(mineHeld); }
+      if(!isManager()){ const mineHeld = all().filter(x=>x.mine && x.d.status==='Awaiting approval'); return p(mineHeld.length ? `${pl(mineHeld.length,'message')} of yours ${mineHeld.length===1?'is':'are'} waiting for the sales manager's approval.` : 'Nothing of yours is waiting for the sales manager.') + rows(mineHeld); }
       const a = match(approvals(), f);
       return p(a.length ? `${pl(a.length,'approval')} waiting for you${f.seg||f.rep?` (${describe(f)})`:''}.` : 'No approvals are waiting for you.') + rows(a) + (a.length ? filterBtn(f) : '');
     }
