@@ -440,6 +440,85 @@ textarea[readonly],input[readonly]{background-color:var(--s50);}
 .dt input[type=checkbox]:checked::after{content:'';width:9px;height:5px;border:2px solid #fff;border-top:0;border-right:0;transform:translateY(-1px) rotate(-45deg);}
 .dt input[type=checkbox]:indeterminate::after{content:'';width:8px;height:2px;background:#fff;border-radius:1px;}
 .dt input[type=checkbox]:focus-visible{outline:2px solid var(--brand-mid);outline-offset:2px;}
+
+/* ─── Queue rows: lead with why it needs you ─── */
+.why{display:flex;flex-direction:column;gap:4px;}
+.why-l{font-size:12px;color:var(--i2);line-height:1.45;}
+.why-l b{color:var(--i1);font-weight:600;}
+tr.held td{opacity:.6;}
+.btn-decide{background:var(--brand-lt);border-color:var(--brand-mid);color:var(--brand-dk);}
+.btn-decide:hover{background:var(--brand);color:#fff;border-color:var(--brand);}
+.btn[disabled]{opacity:.4;cursor:default;}
+/* ─── Workspace: one item, the whole screen ─── */
+.ws{flex:1;min-height:0;display:flex;flex-direction:column;background:var(--bg);}
+.ws-crumb{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--i3);min-width:0;}
+.ws-crumb a{color:var(--i3);text-decoration:none;white-space:nowrap;}
+.ws-crumb a:hover{color:var(--brand);}
+.ws-crumb b{color:var(--i1);font-family:var(--fd);font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ws-hero{margin:14px 20px 0;padding:14px 18px;border-radius:var(--rmd);background:var(--surf);border:1px solid var(--border);border-left:5px solid var(--warn);box-shadow:var(--sh);}
+.ws-hero.t-neg{border-left-color:var(--neg);background:linear-gradient(90deg,var(--neg-lt),var(--surf) 55%);}
+.ws-hero.t-warn{border-left-color:var(--warn);background:linear-gradient(90deg,var(--warn-lt),var(--surf) 55%);}
+.ws-hero.t-sec{border-left-color:var(--sec);background:linear-gradient(90deg,var(--sec-lt),var(--surf) 55%);}
+.ws-hero.t-brand{border-left-color:var(--brand);background:linear-gradient(90deg,var(--brand-lt),var(--surf) 55%);}
+.ws-hero.t-pos{border-left-color:var(--pos);background:linear-gradient(90deg,var(--pos-lt),var(--surf) 55%);}
+.ws-hero-tags{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px;}
+.ws-hero-line{font-family:var(--fd);font-size:17px;font-weight:600;color:var(--i1);line-height:1.4;letter-spacing:-.01em;}
+.ws-hero-call{font-size:13.5px;color:var(--i1);margin-top:4px;font-weight:500;}
+.ws-missing{margin-top:10px;padding:8px 10px;border-radius:var(--rsm);background:rgba(255,255,255,.7);border:1px dashed var(--warn);font-size:12.5px;color:var(--i1);display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.ws-missing select{padding:5px 8px;border:1px solid var(--bdk);border-radius:6px;font-size:12.5px;}
+.ws-impact{margin-top:10px;font-size:12px;color:var(--i2);}
+.ws-grid{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1.45fr) minmax(320px,1fr);gap:14px;padding:14px 20px;}
+.ws-col{min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:12px;padding-bottom:4px;}
+.ws-card{background:var(--surf);border:1px solid var(--border);border-radius:var(--rmd);padding:12px 14px;}
+.ws-card-h{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11px;font-weight:600;color:var(--i2);letter-spacing:.04em;text-transform:uppercase;margin-bottom:8px;}
+.ws-card-h .btn,.ws-card-h .ws-sub,.ws-card-h .tag{text-transform:none;letter-spacing:0;}
+.ws-action{font-size:14px;color:var(--i1);line-height:1.45;}
+.ws-sub{font-size:11.5px;color:var(--i3);font-weight:400;}
+.ws-manual{margin-top:10px;font-size:12px;}
+.ws-manual summary{cursor:pointer;color:var(--brand);font-weight:600;}
+.ws-manual input{padding:7px 10px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:12.5px;}
+.ws-to{display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--s50);border-radius:var(--rsm);margin-bottom:10px;font-size:12.5px;color:var(--i1);}
+.ws-lbl{display:flex;justify-content:space-between;font-size:11px;font-weight:600;color:var(--i2);margin:10px 0 5px;}
+.ws-lbl span{font-weight:400;color:var(--i3);}
+.ws-in{width:100%;padding:8px 10px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:13px;color:var(--i1);font-family:var(--fb);line-height:1.55;resize:vertical;outline:none;}
+.ws-in:focus{border-color:var(--brand-mid);box-shadow:0 0 0 3px var(--brand-lt);}
+.ws-in[readonly]{background:var(--s50);}
+.ws-body{min-height:190px;}
+.ws-checks{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px;}
+.ws-fact{display:grid;grid-template-columns:96px 1fr;gap:10px;padding:7px 0;border-top:1px solid var(--s75);font-size:12.5px;color:var(--i1);line-height:1.45;}
+.ws-fact:first-of-type{border-top:none;}
+.ws-fk{font-size:11.5px;color:var(--i3);}
+.ws-cp{display:flex;flex-direction:column;border-color:var(--brand-mid);min-height:260px;}
+.ws-cp .ws-card-h{color:var(--brand-dk);}
+.ws-cp-body{flex:1;overflow-y:auto;font-size:12.5px;color:var(--i1);line-height:1.5;}
+.ws-cp-qs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;}
+.ws-cp-you{margin:10px 0 6px auto;max-width:85%;width:fit-content;padding:6px 10px;background:var(--brand-lt);border-radius:12px 12px 2px 12px;}
+.ws-cp-a{display:flex;gap:8px;}
+.ws-cp-a > div{flex:1;min-width:0;}
+.ws-quote{margin:6px 0;padding:6px 10px;border-left:3px solid var(--brand-mid);background:var(--s50);border-radius:0 6px 6px 0;font-size:12px;}
+.ws-quote mark{background:#FBE3B8;padding:0 2px;border-radius:2px;}
+.ws-cp-f{display:flex;gap:8px;margin-top:10px;}
+.ws-cp-f input{flex:1;min-width:0;padding:8px 10px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:12.5px;outline:none;}
+.ws-teach{border-style:dashed;border-color:var(--brand-mid);background:#FCFAFE;}
+.ws-locked{display:flex;flex-direction:column;gap:4px;margin-top:8px;font-size:12px;color:var(--i3);}
+.ws-locked label{display:flex;gap:6px;align-items:center;}
+.ws-bar{display:flex;align-items:center;gap:8px;padding:10px 20px;background:var(--surf);border-top:1px solid var(--border);box-shadow:0 -4px 14px rgba(20,26,33,.05);}
+.ws-bar input{width:260px;max-width:30vw;padding:7px 10px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:12.5px;}
+.ws-teach-in{flex:1;min-width:0;display:flex;align-items:center;gap:8px;padding:0 4px 0 10px;border:1px dashed var(--brand-mid);border-radius:var(--rsm);background:#FCFAFE;height:34px;}
+.ws-teach-in input{flex:1;min-width:0;width:auto;max-width:none;border:none;background:transparent;outline:none;padding:0;}
+.ws-teach-k{font-size:11.5px;font-weight:700;color:var(--brand-dk);white-space:nowrap;}
+.ws-bar .btn{height:34px;padding:0 14px;}
+.ws-modal{background:var(--surf);border-radius:var(--rlg);box-shadow:var(--sh-lg);width:100%;max-width:440px;padding:18px 20px;max-height:90vh;overflow-y:auto;}
+.ws-modal-h{font-family:var(--fd);font-size:15px;font-weight:700;color:var(--i1);margin-bottom:6px;}
+.ws-modal-f{display:flex;justify-content:flex-end;gap:8px;margin-top:14px;}
+.ws-radio{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--i1);padding:6px 0;}
+.ws-rj{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+.ws-rjb{text-align:left;padding:8px 10px;border:1px solid var(--border);border-radius:var(--rsm);background:var(--surf);display:flex;flex-direction:column;gap:2px;}
+.ws-rjb b{font-size:12.5px;color:var(--i1);}
+.ws-rjb span{font-size:11px;color:var(--i3);}
+.ws-rjb:hover{border-color:var(--brand-mid);}
+.ws-rjb.on{border-color:var(--brand);background:var(--brand-lt);}
+@media (max-width:1100px){ .ws-grid{display:block;overflow-y:auto;} .ws-col{overflow:visible;margin-bottom:12px;} .ws-hero-line{font-size:15.5px;} }
 </style>
 </head>
 <body>
@@ -687,17 +766,6 @@ function setFilt(patch, preset){
 }
 const pausedCount = () => items().filter(it=>withRun(it, ()=>(inQueue(dec(it.r.key)) || dec(it.r.key).status==='Awaiting approval') && mine(it.r) && pausedInfo(it.r))).length;
 function queuePos(key){ const i = myQueue().findIndex(it=>it.run===RUN && it.r.key===key); return i<0 ? null : i+1; }
-function openItem(id){
-  const it = items().find(x=>x.id===id); if(!it) return;
-  RUN = it.run; openRec(it.r.key);
-}
-const hasNext = () => myQueue().length > 0;
-function nextItem(){
-  const f = filtered(myQueue()), w = f.length ? f : myQueue();
-  if(!w.length){ closeDrawer(); showToast('Your queue is clear'); render(); return; }
-  openItem(w[0].id);
-}
-function onDecision(){ render(); }
 // One click from the row: accept (or rate a spot-check) as it is, or approve a held message. Rejecting needs a
 // reason, so that still opens the item. The time counted is from when the list was shown.
 let ROWS_AT = Date.now();
@@ -710,6 +778,7 @@ function quickDecide(id){
 }
 
 function render(){
+  WS = null;
   const mgr = isManager(), all = items();
   const queue = myQueue();
   const approvals = all.filter(it=>decOf(it).status==='Awaiting approval' && withRun(it, ()=>mine(it.r) && !pausedInfo(it.r)));
@@ -752,52 +821,420 @@ function render(){
         ${tile('Flagged', m.flagged, `fast or repetitive, to check · ${m.interventions} intervention${m.interventions===1?'':'s'}`, "LOGF='flagged';view='log';render()", 'Show the flagged decisions in the log', m.flagged?'var(--warn)':'')}
       </div>` : ''}
       <div class="score-list">
-        <div class="sl-toolbar">${search(view==='log'?'drawLog':'draw', view==='log'?'Search the log…':'Search prospects, companies or actions…')}${view!=='log'?'<div id="filtSum" style="display:flex;align-items:center;gap:6px;flex:1;flex-wrap:wrap"></div>':LOGF?`<span class="seg-pill active" onclick="LOGF=null;render()">Flagged, to check ✕</span>`:''}</div>
+        <div class="sl-toolbar">${search(view==='log'?'drawLog':'draw', view==='log'?'Search the log…':'Search prospects, companies or actions…')}${view!=='log'?'<div id="filtSum" style="display:flex;align-items:center;gap:6px;flex:1;flex-wrap:wrap"></div><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();colsMenu(this)" title="Choose the columns">⚙ Columns</button>':LOGF?`<span class="seg-pill active" onclick="LOGF=null;render()">Flagged, to check ✕</span>`:''}</div>
         <div id="rows"></div>
       </div>
       ${MISSING.length?`<div style="font-size:11px;color:var(--i3);margin-top:10px">Not shown: ${esc(MISSING.join(', '))} (the prospect list behind it was deleted).</div>`:''}
     </div>`;
   if(view==='log') drawLog(); else draw();
 }
+/* ═══════════════ THE QUEUE: lead with why the system needs you, then the action ═══════════════
+   Each row says in plain words where the system is stuck and what it wants to do. "Decide →" opens the item in a
+   full-screen workspace with everything needed to decide; other columns are the reviewer's choice. */
+const COLS_KEY = 'demandai_review_cols_v1';
+const OPT_COLS = [['channel','Channel'],['seg','Micro-segment'],['due','Due'],['owner','Owner'],['list','List']];
+function colsOn(){ try{ const s = JSON.parse(localStorage.getItem(COLS_KEY)||'null'); if(s) return s; }catch(e){} return { due:true, owner:true }; }
+function setCol(k, on){ const s = colsOn(); s[k] = on; try{ localStorage.setItem(COLS_KEY, JSON.stringify(s)); }catch(e){} draw(); }
+function colsMenu(btn){
+  document.querySelectorAll('.col-menu').forEach(m=>m.remove());
+  const s = colsOn(), m = document.createElement('div'); m.className = 'col-menu';
+  m.innerHTML = `<div style="padding:4px 10px 6px;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--i3)">Columns</div>
+    <div style="padding:2px 10px 6px;font-size:11px;color:var(--i3)">Why it needs you, the action and the prospect always show.</div>`
+    + OPT_COLS.filter(([k])=>k!=='owner' || isManager()).map(([k,l])=>`<label style="display:flex;align-items:center;gap:8px;padding:7px 10px;font-size:12.5px;cursor:pointer"><input type="checkbox" ${s[k]?'checked':''} onchange="setCol('${k}',this.checked)" style="accent-color:var(--brand)">${esc(l)}</label>`).join('');
+  document.body.appendChild(m);
+  const r = btn.getBoundingClientRect(); m.style.top = (r.bottom + 6) + 'px'; m.style.left = Math.max(8, r.right - m.offsetWidth) + 'px';
+  setTimeout(()=>document.addEventListener('click', function c(e){ if(!m.contains(e.target)){ m.remove(); document.removeEventListener('click', c); } }), 0);
+}
+
+/* Why it needs you, in plain words: what is stuck, and the call the reviewer has to make. */
+const SENSITIVE_RE = /\b(incident|accident|explosion|fatalit\w*|injur\w*|lawsuit|security|cyber|breach\w*|vulnerab\w*|regulat\w*|compliance|emission\w*)\b/i;
+const firstOf = c => (c.firstName || String(c.name||'').split(' ')[0] || 'them');
+function stuck(r, d){
+  const lr = liveRec(r), c = lr.contact, x = draftOf(r), cats = reasonCats(r, d), { chk } = checksOf(r), cat = cats[0];
+  const term = (DemandAIDraftText(x).match(SENSITIVE_RE)||[])[0];
+  const L = {
+    sensitive: [`The message mentions “${term||'a sensitive topic'}”, a sensitive topic.`, `Should this go to ${firstOf(c)} as it is, or change first?`],
+    claim: [`The message makes a claim with no approved source: “${(chk.unsupported[0]||{}).text||'a claim'}”.`, 'Remove or replace the claim, or reject the draft.'],
+    low: [`No contact in the primary persona. ${c.name} is ${c.jobTitle||'in another role'}.`, `Is ${firstOf(c)} the right person to approach at ${r.account.name}?`],
+    small: [`No micro-segment: fewer than ${DemandAI.CONFIG.minSegmentAccounts} accounts share its signal.`, 'Pick the micro-segment to release it into, then accept.'],
+    deal: [(()=>{ const ds = DemandAI.estimateDealSize(r.account); return ds ? `The deal looks small: about USD ${Math.round(ds.value/1000)}k against a ${Math.round(DemandAI.CONFIG.dealSize.threshold/1000)}k threshold.` : 'The deal looks below the size threshold.'; })(), `Is ${r.account.name} worth this outreach anyway?`],
+    brand: [`The message breaks a brand rule: ${chk.flags.filter(f=>f.rule!=='Sensitive term').map(f=>f.rule.toLowerCase()+' ('+f.detail+')').join(', ')||'brand rules'}.`, 'Edit the message, or reject it for a new one.'],
+    reach: [`No way to reach ${firstOf(c)}: ${(t=>t.charAt(0).toLowerCase()+t.slice(1))(String(x.why||'No verified email or LinkedIn').split(':')[0].replace(/\.$/,''))}.`, 'Find a way to reach them, or put it on hold until the data is fixed.'],
+    spot: ['It passed every check and went ahead on its own. It was picked for this week\'s spot-check.', 'Would you have sent this? Rate it.'],
+    alternative: [`You rejected “${d.alternativeOf||'the first recommendation'}”. This is the one alternative.`, 'Use this alternative, or reject it to close the account for the pilot.'],
+    sentback: [`Sent back by the sales manager: “${d.sentBackNote||''}”.`, 'Change what they asked, then accept again.'],
+    intervention: ['You stepped in after it went ahead on its own.', 'Edit it, or reject it.'],
+    other: [(d.reasons||exceptionReasons(r))[0] || 'The system could not decide it alone.', 'Accept, change or reject it.'],
+  }[cat] || ['The system could not decide it alone.', 'Accept, change or reject it.'];
+  const missing = cats.includes('reach') ? 'A way to reach the contact' : cats.includes('small') ? 'A micro-segment' : '';
+  return { cat, label: REASON_CATS[cat] || whyHere(d), line: L[0], call: L[1], also: cats.slice(1).map(k=>REASON_CATS[k]).filter(Boolean), missing };
+}
+const CAT_TONE = { sensitive:'neg', claim:'neg', brand:'warn', low:'warn', small:'warn', deal:'warn', reach:'neg', spot:'sec', alternative:'brand', sentback:'warn', intervention:'brand', other:'warn' };
+const toneTag = t => ({neg:'tag-red', warn:'tag-amber', sec:'tag-blue', brand:'tag-violet'})[t] || 'tag-grey';
+const onHold = d => !!(d && d.hold);
+function segAccounts(seg){ const g = RUN && RUN.seg.segments.find(s=>s.name===seg); return g ? new Set(g.recs.map(x=>x.account.id)).size : 0; }
+
 function draw(){
   const el = document.getElementById('rows'); if(!el) return;
-  const mgr = isManager();
+  const mgr = isManager(), on = colsOn();
   const base = view==='queue' ? myQueue() : view==='approvals' ? items().filter(it=>decOf(it).status==='Awaiting approval' && withRun(it, ()=>mine(it.r) && !pausedInfo(it.r))) : null;
   let its = view==='queue' ? filtered(base)
     : view==='approvals' ? base.filter(it=>(!FILT.rep || withRun(it, ()=>ownerOf(it.r))===FILT.rep) && (!FILT.ch || withRun(it, ()=>draftOf(it.r).channel)===FILT.ch))
     : items().filter(it=>decOf(it).status==='Released' && withRun(it, ()=>mine(it.r)));
   if(q) its = its.filter(it=>withRun(it, ()=>(liveRec(it.r).contact.name+' '+it.r.account.name+' '+chosenAction(it.r)).toLowerCase().includes(q)));
-  const quick = view==='queue' || view==='approvals';
+  if(view==='queue') its = its.filter(it=>!onHold(decOf(it))).concat(its.filter(it=>onHold(decOf(it))));     // on hold goes last
+  WS_LIST = its.map(it=>it.id);
   const src = base || [], cats = {}; src.forEach(it=>catsOfIt(it).forEach(c=>{ cats[c] = 1; }));
   const whyOpts = [['k:exception','Exceptions'],['k:spot','Spot-checks'], ...Object.keys(REASON_CATS).filter(c=>cats[c] && c!=='spot').map(c=>['r:'+c, REASON_CATS[c]])];
   const chOpts = [...new Set(src.map(it=>withRun(it, ()=>draftOf(it.r).channel)))].map(c=>[c,c]);
   const repOpts = Object.keys(REPS).map(e=>[e, repName(e)]);
-  const W = view==='queue' ? [14,12,16,15,9,13,11] : [15,14,17,21,10,0,13];   // prospect, company, why, action, channel, due, owner; plus 10% for the buttons
-  const cols = [['Prospect',W[0]+'%'],['Company',W[1]+'%'],[view==='queue' ? colFilter('Why it\'s here','why',whyOpts) : view==='released'?'Released':'Why it\'s here',W[2]+'%'],['Action',W[3]+'%'],[base ? colFilter('Channel','ch',chOpts) : 'Channel',W[4]+'%']];
-  if(view==='queue') cols.push([colFilter('Due','due',DUE_OPTS),W[5]+'%']);
-  if(mgr) cols.push([base ? colFilter('Owner','rep',repOpts) : 'Owner',(W[6]+(quick?0:10))+'%']); else cols.push([view==='released'?'Outcome':'',(W[6]+(quick?0:10))+'%']);
+  const show = { channel:on.channel, seg:on.seg, due:on.due && view==='queue', owner:on.owner && mgr, list:on.list };
+  const cols = [[view==='queue' ? colFilter('Why it needs you','why',whyOpts) : view==='approvals' ? 'Why it needs you' : 'Released','30%'], ['Recommended action','22%'], ['Prospect','15%']];
+  if(show.channel) cols.push([base ? colFilter('Channel','ch',chOpts) : 'Channel','8%']);
+  if(show.seg) cols.push(['Micro-segment','10%']);
+  if(show.due) cols.push([colFilter('Due','due',DUE_OPTS),'10%']);
+  if(show.owner) cols.push([base ? colFilter('Owner','rep',repOpts) : 'Owner','10%']);
+  if(show.list) cols.push(['List','12%']);
+  cols.push(['','13%']);
   const sum = document.getElementById('filtSum'); if(sum) sum.innerHTML = base ? filterSummary(base.length, its.length) : '';
-  if(quick) cols.push(['','10%']);
   ROWS_AT = Date.now();
   el.innerHTML = table(cols, its.map(it=>withRun(it, ()=>{
-      const r = it.r, d = dec(r.key), lr = liveRec(r), x = draftOf(r);
+      const r = it.r, d = dec(r.key), lr = liveRec(r), x = draftOf(r), s = stuck(r, d), tone = CAT_TONE[s.cat];
       const why = view==='released' ? `<span class="tag tag-green">${d.released==='auto'?'On its own':d.released==='approved'?'Approved':'Accepted'}</span>${d.outcome?`<span class="sub">${esc(d.outcome)}</span>`:''}`
-        : view==='approvals' ? `<span class="tag tag-violet">Sensitive content</span><span class="sub">Accepted by ${esc(d.acceptedBy||'')}</span>`
-        : `<span class="tag ${d.spot==='pending'?'tag-blue':d.why==='alternative'?'tag-violet':'tag-amber'}" style="cursor:pointer" title="Show only these" onclick='event.stopPropagation();setFilt(${JSON.stringify(d.spot==='pending'?{kind:'spot',reason:null}:{reason:reasonCats(r,d)[0],kind:null})})'>${esc(whyHere(d))}</span><span class="sub" title="${esc((d.reasons||[]).join(' · '))}">${esc(d.spot==='pending'?'Rate it':d.why==='alternative'?'Offered once':d.why==='exception'?(d.reasons||[]).join(' · '):d.sentBackNote||'')}</span>`;
-      return `<tr class="click" onclick="openItem('${it.id}')">
-        <td><div class="person"><div class="co-av" style="background:${avColor(lr.contact.name)}">${initials(lr.contact.name)}</div><div>${cell(lr.contact.name, esc(lr.contact.jobTitle||''), 'dt-main')}</div></div></td>
-        <td>${cell(r.account.name, esc(it.run.saved.name))}</td>
+        : view==='approvals' ? `<div class="why"><span class="tag tag-violet">Sensitive content</span><span class="why-l">Accepted by ${esc(d.acceptedBy||'a rep')}. ${esc(s.line)}</span></div>`
+        : `<div class="why"><div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center"><span class="tag ${toneTag(tone)}" style="cursor:pointer" title="Show only these" onclick='event.stopPropagation();setFilt(${JSON.stringify(d.spot==='pending'?{kind:'spot',reason:null}:{reason:s.cat,kind:null})})'>${esc(s.label)}</span>${s.also.map(a=>`<span class="tag tag-grey">${esc(a)}</span>`).join('')}${onHold(d)?'<span class="tag tag-grey">On hold</span>':''}</div>
+            <span class="why-l clamp2" title="${esc(s.line+' '+s.call)}">${esc(s.line)} <b>${esc(s.call)}</b></span></div>`;
+      const ownerCell = `<span style="cursor:pointer" title="Show only ${esc(repName(ownerOf(r)))}" onclick='event.stopPropagation();setFilt(${JSON.stringify({rep:ownerOf(r)||null})})'>${cell(repName(ownerOf(r)))}</span>`;
+      return `<tr class="click ${onHold(d)?'held':''}" onclick="openItem('${it.id}')">
         <td>${why}</td>
-        <td class="wrap"><span class="clamp2" style="font-size:12px;color:var(--i1)" title="${esc(chosenAction(r))}">${esc(chosenAction(r))}</span></td>
-        <td><span style="cursor:pointer" title="Show only ${esc(x.channel)}" onclick='event.stopPropagation();setFilt(${JSON.stringify({ch:x.channel})})'>${cell(x.channel)}</span></td>
-        ${view==='queue' ? (()=>{ const t = dueOf(r, d), b = dueBucket(t); return `<td><span style="cursor:pointer;font-size:12px;font-weight:600;color:${b==='overdue'||b==='today'?'var(--neg)':b==='tomorrow'?'var(--warn)':'var(--i2)'}" title="Show only these" onclick='event.stopPropagation();setFilt(${JSON.stringify({due: b==='2days'?'soon':b})})'>${esc(dueLabel(t))}</span>${b==='overdue'?' <span class="tag tag-red">Overdue</span>':''}</td>`; })() : ''}
-        <td>${mgr ? `<span style="cursor:pointer" title="Show only ${esc(repName(ownerOf(r)))}" onclick='event.stopPropagation();setFilt(${JSON.stringify({rep:ownerOf(r)||null})})'>${cell(repName(ownerOf(r)))}</span>` : view==='released' ? (d.outcome?esc(d.outcome):'<span class="muted">—</span>') : ''}</td>
-        ${quick ? `<td style="text-align:right">${view==='approvals' ? (mgr ? `<button class="btn btn-sec btn-sm" title="Approve and release without opening it" onclick="event.stopPropagation();quickDecide('${it.id}')">✓ Approve</button>` : '')
-          : !mine(r) ? '' : !r.segment && d.spot!=='pending' ? `<button class="btn btn-sec btn-sm" title="It has no micro-segment: open it to assign one, then accept" onclick="event.stopPropagation();openItem('${it.id}')">Assign →</button>`
-          : `<button class="btn btn-sec btn-sm" title="${d.spot==='pending'?'Rate it as accepted':'Accept it as it is'} without opening it; open the row to edit or reject" onclick="event.stopPropagation();quickDecide('${it.id}')">✓ ${d.spot==='pending'?'Rate OK':'Accept'}</button>`}</td>` : ''}
+        <td class="wrap"><span class="clamp2" style="font-size:12.5px;font-weight:600;color:var(--i1)" title="${esc(chosenAction(r))}">${esc(chosenAction(r))}</span><span class="sub">${esc(x.channel==='Task'?'A task for the team':x.channel+' to '+firstOf(lr.contact))}${segOf(r)?' · '+esc(segOf(r)):''}</span></td>
+        <td><div class="person"><div class="co-av" style="background:${avColor(lr.contact.name)}">${initials(lr.contact.name)}</div><div>${cell(lr.contact.name, esc(r.account.name), 'dt-main')}</div></div></td>
+        ${show.channel ? `<td><span style="cursor:pointer" title="Show only ${esc(x.channel)}" onclick='event.stopPropagation();setFilt(${JSON.stringify({ch:x.channel})})'>${cell(x.channel)}</span></td>` : ''}
+        ${show.seg ? `<td>${segTag(segOf(r))}</td>` : ''}
+        ${show.due ? (()=>{ const t = dueOf(r, d), b = dueBucket(t); return `<td><span style="cursor:pointer;font-size:12px;font-weight:600;color:${b==='overdue'||b==='today'?'var(--neg)':b==='tomorrow'?'var(--warn)':'var(--i2)'}" title="Show only these" onclick='event.stopPropagation();setFilt(${JSON.stringify({due: b==='2days'?'soon':b})})'>${esc(dueLabel(t))}</span>${b==='overdue'?' <span class="tag tag-red">Overdue</span>':''}</td>`; })() : ''}
+        ${show.owner ? `<td>${ownerCell}</td>` : ''}
+        ${show.list ? `<td>${cell(it.run.saved.name)}</td>` : ''}
+        <td style="text-align:right;white-space:nowrap">${view==='released' ? `<button class="btn btn-sec btn-sm" onclick="event.stopPropagation();openItem('${it.id}')">Open</button>`
+          : `${view==='approvals' && mgr ? `<button class="btn btn-ghost btn-sm" title="Approve and release without opening it" onclick="event.stopPropagation();quickDecide('${it.id}')">✓</button>`
+              : view==='queue' && mine(r) && (r.segment || d.spot==='pending') && !s.missing ? `<button class="btn btn-ghost btn-sm" title="${d.spot==='pending'?'Rate it as accepted':'Accept it as it is'} without opening it" onclick="event.stopPropagation();quickDecide('${it.id}')">✓</button>` : ''}
+            <button class="btn btn-decide btn-sm" onclick="event.stopPropagation();openItem('${it.id}')">${view==='approvals'?'Review':'Decide'} →</button>`}</td>
       </tr>`;})).join(''),
     view==='queue' ? 'Nothing needs you right now.' : view==='approvals' ? 'No sensitive items waiting for approval.' : 'Nothing released yet.');
 }
+
+/* ═══════════════ THE WORKSPACE: one item, the whole screen, everything needed to decide ═══════════════
+   L1 · Why it needs you and the call to make (top). L2 · The action and the exact message that would go out, the
+   contact, and the facts that back it (one screen, no scroll at 1440×900). L3 · Show the working, on demand.
+   The decision bar stays put. Corrections are captured to teach the system. */
+let WS = null, WS_LIST = [];
+function openItem(id){
+  const it = items().find(x=>x.id===id); if(!it) return;
+  closeDrawer(); document.querySelectorAll('.col-menu').forEach(m=>m.remove());
+  if(!WS_LIST.includes(id)){ const q = myQueue().filter(x=>!onHold(decOf(x))).map(x=>x.id); WS_LIST = q.includes(id) ? q : [id]; }
+  RUN = it.run; openedAt = Date.now(); pickTags = new Set(); pickCode = null;
+  WS = { id, key: it.r.key, run: it.run, from: view, teach: '', asked: [] };
+  renderWs();
+}
+function wsItem(){ return WS && items().find(x=>x.id===WS.id); }
+function wsMode(d){ return inQueue(d) ? 'decide' : d.status==='Awaiting approval' ? 'approve' : 'view'; }
+function wsGo(step){
+  const i = WS_LIST.indexOf(WS.id), j = i + step;
+  if(j < 0 || j >= WS_LIST.length) return;
+  saveTeach(); openItem(WS_LIST[j]);
+}
+function leaveWs(){ saveTeach(); WS = null; closeDrawer(); render(); }
+function saveTeach(){ const t = document.getElementById('wsTeach'); if(WS && t) WS.teach = t.value; }
+const hasNext = () => myQueue().some(it=>!onHold(decOf(it)));
+function nextItem(){
+  const f = filtered(myQueue()).filter(it=>!onHold(decOf(it))), w = f.length ? f : myQueue().filter(it=>!onHold(decOf(it)));
+  if(!w.length){ WS = null; showToast('Your queue is clear'); render(); return; }
+  WS_LIST = w.map(it=>it.id); openItem(w[0].id);
+}
+// After any change: stay on the item while it still needs this reviewer in the same way, otherwise go to the next one.
+function onDecision(){
+  if(!WS){ render(); return; }
+  const it = wsItem(); if(!it){ leaveWs(); return; }
+  RUN = it.run; const d = dec(it.r.key), decided = WS.decided; WS.decided = false;
+  if(decided && WS.mode==='decide' && inQueue(d) && !onHold(d)){ renderWs(); showToast('An alternative came back: it is the next thing to decide'); return; }
+  if(!decided && wsMode(d)===WS.mode){ renderWs(); return; }
+  const mode = WS.mode, i = WS_LIST.indexOf(WS.id);
+  const rest = WS_LIST.filter(id=>{ if(id===WS.id) return false; const x = items().find(y=>y.id===id); if(!x) return false; const dd = decOf(x); return mode==='approve' ? dd.status==='Awaiting approval' : inQueue(dd) && !onHold(dd); });
+  const nextId = rest.find(id=>WS_LIST.indexOf(id) > i) || rest[0];
+  if(nextId){ WS_LIST = WS_LIST.filter(id=>id===nextId || rest.includes(id)); openItem(nextId); }
+  else { WS = null; render(); showToast(mode==='approve' ? 'No more approvals waiting' : 'Done: nothing else in this list needs you right now'); }
+}
+// Content added in the message box re-draws the workspace, not the side panel.
+function wsReopen(key){ if(WS && WS.key===key){ renderWs(); return true; } return false; }
+
+function renderWs(){
+  const it = wsItem(); if(!it){ leaveWs(); return; }
+  RUN = it.run;
+  const r = it.r, key = r.key, d = dec(key), lr = liveRec(r), c = lr.contact, x = draftOf(r), s = stuck(r, d), tone = CAT_TONE[s.cat];
+  const mode = wsMode(d), live = mode==='decide' && mine(r) && !pausedInfo(r);
+  WS.mode = mode; WS.decided = false;
+  const i = WS_LIST.indexOf(WS.id), n = WS_LIST.length;
+  const seg = segOf(r), segN = seg ? segAccounts(seg) : 0;
+  const { chk, conf } = checksOf(r), tr = seg ? trackRecord(seg) : trackRecord();
+  const sig = r.signal || {}, sigs = (r.person && r.person.signals) || [];
+  const fromLbl = { queue: isManager() ? 'Queue' : 'My queue', approvals: 'Approvals', released: 'Released', log: 'Decision log' }[WS.from] || 'Queue';
+
+  // L1 · Why it needs you
+  const hero = mode==='approve'
+    ? `<div class="ws-hero t-brand"><div class="ws-hero-tags"><span class="tag tag-violet">Approval</span><span class="tag tag-red">Sensitive content</span></div>
+        <div class="ws-hero-line">${esc(d.acceptedBy||'A rep')} accepted this. ${esc(s.line)}</div>
+        <div class="ws-hero-call">Your call: approve it so it can go out, or send it back with what to change.</div></div>`
+    : mode==='view'
+    ? `<div class="ws-hero t-pos"><div class="ws-hero-tags">${statusPill(d, r)}</div><div class="ws-hero-line">Nothing to decide: ${esc(statusLabel(d, r)[0].toLowerCase())}${d.by?` by ${esc(d.by)}`:''}.</div></div>`
+    : `<div class="ws-hero t-${tone}">
+        <div class="ws-hero-tags"><span class="tag ${toneTag(tone)}">${esc(s.label)}</span>${s.also.map(a=>`<span class="tag tag-grey">Also: ${esc(a)}</span>`).join('')}
+          ${(()=>{ const t = dueOf(r, d), b = dueBucket(t); return `<span class="tag ${b==='overdue'||b==='today'?'tag-red':b==='tomorrow'?'tag-amber':'tag-grey'}">${esc(dueLabel(t))}</span>`; })()}
+          ${onHold(d)?`<span class="tag tag-grey">On hold: ${esc(d.hold.why)}</span>`:''}</div>
+        <div class="ws-hero-line">${esc(s.line)}</div>
+        <div class="ws-hero-call">Your call: ${esc(s.call)}</div>
+        ${s.missing ? `<div class="ws-missing"><b>Missing:</b> ${esc(s.missing)}. ${s.missing==='A micro-segment' ? `<select id="assignSeg" ${live?'':'disabled'}><option value="">Pick a micro-segment…</option>${segChoices().map(nm=>`<option ${d.assignedSeg===nm?'selected':''}>${esc(nm)}</option>`).join('')}</select> Suggested: <b>${esc(r.prominent||'')}</b>, its strongest signal.` : 'If the data is on its way, put it on hold.'}</div>` : ''}
+        <div class="ws-impact">${seg ? `<b>${segN}</b> account${segN===1?'':'s'} in <b>${esc(seg)}</b> get this same recommended action. Your decision goes into its track record${tr.n?` (reps agreed ${tr.a} of ${tr.n} times so far)`:''}.` : `Only ${esc(r.account.name)}: it has no micro-segment yet.`}</div>
+      </div>`;
+
+  // L2 · The action, and the message that would go out
+  const runner = r.runnerUp && !d.manual;
+  const actionBlock = `<div class="ws-card">
+      <div class="ws-card-h"><span>The action</span>${runner ? `<button class="btn btn-ghost btn-sm" onclick="wsCompare()">${WS.compare?'Hide the runner-up':'Compare with the runner-up'}</button>` : ''}</div>
+      <div class="ws-action">${d.manual ? '<span class="tag tag-violet">Manual</span> ' : d.useRunner ? '<span class="tag tag-grey">Runner-up</span> ' : '<span class="tag tag-violet">Recommended</span> '}<b>${esc(chosenAction(r))}</b></div>
+      <div class="ws-sub">${esc(d.manual ? 'Added by a reviewer' : d.useRunner ? r.runnerUp.reason : r.reason)}</div>
+      ${WS.compare && runner ? `<div style="margin-top:10px">${compareActions(r, key, live)}</div>` : ''}
+      ${live ? `<details class="ws-manual"><summary>Neither is right? Add your own action</summary><div style="display:flex;gap:6px;margin-top:8px"><input id="manualAct" placeholder="e.g. Invite them to the site visit in May" style="flex:1;min-width:0"><button class="btn btn-sec btn-sm" onclick="saveTeach();addManual('${key}')">Use this action</button></div>
+        <div class="ws-sub" style="margin-top:6px">It replaces the action for this account now. Teaching it for similar accounts is below.</div></details>` : ''}
+    </div>`;
+  const ro = live ? '' : 'readonly';
+  const fieldsHtml = x.channel==='Email'
+    ? `<label class="ws-lbl">Subject</label><input id="dSubj" class="ws-in" value="${esc(x.subject)}" ${ro} oninput="wsLiveCheck()">
+       <label class="ws-lbl">Message <span id="wsWords">${x.body.split(/\s+/).filter(Boolean).length} words</span></label><textarea id="dBody" class="ws-in ws-body" ${ro} oninput="wsLiveCheck()">${esc(x.body)}</textarea>`
+    : x.channel==='LinkedIn'
+    ? `<label class="ws-lbl">Connection note, the only message <span id="wsWords">${x.note.length}/200</span></label><textarea id="dNote" class="ws-in" style="min-height:96px" ${ro} oninput="wsLiveCheck()">${esc(x.note)}</textarea>`
+    : `<label class="ws-lbl">Task</label><textarea id="dTask" class="ws-in" ${ro}>${esc(x.task||'')}</textarea>`;
+  const msgBlock = `<div class="ws-card ws-msg">
+      <div class="ws-card-h"><span>What would go out</span><span class="ws-sub">${live ? 'Edit it here. Accepting saves your edit.' : 'Read only'}</span></div>
+      <div class="ws-to"><div class="co-av" style="background:${avColor(c.name)}">${initials(c.name)}</div>
+        <div style="min-width:0"><div><b>${esc(c.name)}</b> <span class="ws-sub">· ${esc(c.jobTitle||'')}${c.persona?` · ${esc(c.persona)} persona`:''}</span></div>
+          <div class="ws-sub">${esc(r.account.name)} · ${x.channel==='Email' ? (c.email ? `${esc(c.email)} ${c.emailVerified ? '· verified' : '<span style="color:var(--warn)">· not verified</span>'}` : '<span style="color:var(--neg)">no email on file</span>') : x.channel==='LinkedIn' ? 'LinkedIn connection note' : 'A task for the team'}${x.why && !x.unreachable ? ` · ${esc(x.why)}` : ''}</div></div>
+        <span class="tag tag-blue" style="margin-left:auto">${esc(x.channel)}</span></div>
+      ${typeof ContentLink!=='undefined' && (x.channel==='Email'||x.channel==='LinkedIn') ? ContentLink.messageBar(key, d.content, x.channel, live) : ''}
+      ${fieldsHtml}
+      <div class="ws-checks" id="wsChecks"></div>
+    </div>`;
+
+  // The facts that back it, and Copilot
+  const fact = (k, v) => `<div class="ws-fact"><div class="ws-fk">${k}</div><div class="ws-fv">${v}</div></div>`;
+  const facts = `<div class="ws-card">
+      <div class="ws-card-h"><span>Why the system recommends it</span><button class="btn btn-ghost btn-sm" onclick="wsWorking()">Show the working</button></div>
+      ${fact('Why now', `${esc(sig.type||'Signal')}${sig.age!==undefined?` <span class="ws-sub">· ${sig.age} days ago</span>`:''}<div class="ws-sub" style="margin-top:2px">${esc(r.reason.replace(/^[^:]+:\s*/,''))}</div>${sigs.length>1?`<div class="ws-sub" style="margin-top:2px">+ ${sigs.length-1} more signal${sigs.length>2?'s':''} on this contact</div>`:''}`)}
+      ${fact('Checks', `<span class="tags" style="display:inline-flex;flex-wrap:wrap;gap:4px">${fourChecks(r).map(([k,ok])=>`<span class="tag ${ok?'tag-green':'tag-red'}">${ok?'✓':'✗'} ${esc(k)}</span>`).join('')}</span>`)}
+      ${fact('Confidence', `<span class="tag ${conf.level==='High'?'tag-green':conf.level==='Medium'?'tag-amber':'tag-red'}">${esc(conf.level)}</span> <span class="ws-sub">${esc(conf.reason.replace(/^\w+:\s*/,''))}</span>`)}
+      ${fact('Track record', tr.n ? `Reps agreed with the first recommendation <b>${tr.a} of ${tr.n}</b> times${seg?` in ${esc(seg)}`:''}${tr.early?' <span class="ws-sub">· early days</span>':''}` : '<span class="ws-sub">No decisions yet</span>')}
+      ${fact('Account', `${esc(r.account.name)} <span class="ws-sub">· ${esc(r.account.vertical||'')} · ${esc(r.status)}${seg?` · ${esc(seg)}`:''}</span>`)}
+      ${isManager() && live ? fact('Owner', `<select onchange="reassign('${key}',this.value)" style="padding:3px 6px;border:1px solid var(--bdk);border-radius:6px;font-size:12px">${['',...Object.keys(REPS)].map(e=>`<option value="${e}" ${ownerOf(r)===e?'selected':''}>${esc(repName(e))}</option>`).join('')}</select>`) : fact('Owner', esc(repName(ownerOf(r))))}
+    </div>`;
+  const copilot = `<div class="ws-card ws-cp"><div class="ws-card-h"><span><span style="color:var(--brand)">✦</span> Ask about this account</span><span class="ws-sub">answers only</span></div>
+      <div class="ws-cp-body" id="wsCp">${cpHtml(r, d, s)}</div>
+      <form class="ws-cp-f" onsubmit="cpAsk(this.q.value);return false"><input name="q" autocomplete="off" placeholder="Ask anything about ${esc(r.account.name)}…"><button class="btn btn-primary btn-sm" type="submit">Ask</button></form></div>`;
+
+  // Teach the system: what it got right, what it should do next time (captured now; acting on it comes after the pilot)
+  const teach = live ? `<div class="ws-card ws-teach">
+      <div class="ws-card-h"><span>Teach the system</span><span class="tag tag-grey">Learning loop · after the pilot</span></div>
+      <div class="ws-lbl" style="margin-top:0">What did it get right? <span class="ws-sub">(optional)</span></div>
+      <div class="tags">${ACCEPT_TAGS.map(t=>`<button class="tag ${pickTags.has(t)?'tag-green':'tag-grey'}" style="cursor:pointer;border:none" onclick="wsTag(this,'${esc(t)}')">${esc(t)}</button>`).join('')}</div>
+      <div class="ws-lbl">What should it do differently? <span>Write it in the bar at the bottom; it is saved with your decision.</span></div>
+      <div class="ws-locked"><label><input type="checkbox" disabled> Apply this to the ${Math.max(0,segN-1)} other account${segN-1===1?'':'s'} in ${esc(seg||'its micro-segment')}</label><label><input type="checkbox" disabled> Use it for future recommendations</label>
+        <span class="ws-sub">Saved with your decision now. Acting on it on its own comes after the pilot.</span></div>
+    </div>` : '';
+
+  // The decision bar: always visible
+  const sensitive = isSensitive(draftOf(r));
+  const bar = mode==='approve' ? (isManager() ? `<input id="sbNote" placeholder="What should change? (needed to send it back)">
+        <button class="btn btn-sec" onclick="sendBack('${key}')">Send back to ${esc((d.acceptedBy||'the rep').split(' ')[0])}</button>
+        <button class="btn btn-primary" onclick="managerApprove('${key}')">Approve and release</button>` : `<span class="ws-sub" style="flex:1">Waiting for the sales manager's approval.</span>`)
+    : mode==='view' ? `<span class="ws-sub" style="flex:1">Nothing to decide on this one.</span><button class="btn btn-sec" onclick="leaveWs()">Back to the list</button>`
+    : !live ? `<span class="ws-sub" style="flex:1">${pausedInfo(r) ? `The ${esc(r.segment||'')} micro-segment is paused; nothing can be decided until it is resumed.` : `In ${esc(repName(ownerOf(r)))}'s queue.`}</span>`
+    : `<div class="ws-teach-in"><span class="ws-teach-k">✦ Teach the system</span><input id="wsTeach" value="${esc(WS.teach||'')}" placeholder="What should it do differently for accounts like this? (optional)"></div>
+       ${onHold(d) ? `<button class="btn btn-ghost" onclick="takeOffHold('${key}')">Take off hold</button>` : `<button class="btn ${s.missing==='A way to reach the contact'?'btn-primary':'btn-ghost'}" onclick="openHold('${key}')">Put on hold</button>`}
+       <button class="btn btn-sec" onclick="openReject('${key}')">Reject…</button>
+       ${runner && !d.useRunner ? `<button class="btn btn-sec" onclick="saveTeach();swapAction('${key}')">Use the runner-up</button>` : ''}
+       ${s.missing==='A way to reach the contact' ? '' : `<button class="btn btn-primary" onclick="wsAccept('${key}')">${d.spot==='pending' ? 'Rate: I would send this' : sensitive && !isManager() ? 'Accept, send for approval' : 'Accept and release'}</button>`}`;
+
+  document.getElementById('mainArea').innerHTML = `
+    <div class="topbar">
+      <div class="topbar-l"><nav class="ws-crumb"><a href="#" onclick="leaveWs();return false">For Review</a><span>›</span><a href="#" onclick="leaveWs();return false">${esc(fromLbl)}</a><span>›</span><b>${esc(c.name)} · ${esc(r.account.name)}</b></nav></div>
+      <div class="topbar-r">
+        <span class="ws-sub">${n>1 ? `${i+1} of ${n}` : ''}</span>
+        <button class="btn btn-sec btn-sm" ${i<=0?'disabled':''} onclick="wsGo(-1)" title="Previous (←)">‹</button>
+        <button class="btn btn-sec btn-sm" ${i>=n-1?'disabled':''} onclick="wsGo(1)" title="Next (→)">›</button>
+        <button class="btn btn-ghost btn-sm" onclick="leaveWs()" title="Back to the list (Esc)">✕ Close</button>
+      </div>
+    </div>
+    <div class="ws">
+      ${hero}
+      <div class="ws-grid">
+        <div class="ws-col">${actionBlock}${msgBlock}${teach}</div>
+        <div class="ws-col">${facts}${copilot}</div>
+      </div>
+      <div class="ws-bar">${bar}</div>
+    </div>`;
+  wsLiveCheck();
+}
+function wsTag(btn, t){ pickTags.has(t) ? pickTags.delete(t) : pickTags.add(t); btn.className = 'tag ' + (pickTags.has(t) ? 'tag-green' : 'tag-grey'); }
+function wsCompare(){ saveTeach(); WS.compare = !WS.compare; renderWs(); }
+// The brand and claim checks re-run as the reviewer edits the message.
+function wsLiveCheck(){
+  const it = wsItem(), box = document.getElementById('wsChecks'); if(!it || !box) return;
+  RUN = it.run; const x = draftFromFields(it.r), chk = DemandAI.checkDraft(x);
+  const w = document.getElementById('wsWords');
+  if(w) w.textContent = x.channel==='Email' ? `${x.body.split(/\s+/).filter(Boolean).length} words` : x.channel==='LinkedIn' ? `${x.note.length}/200` : '';
+  const ver = chk.claims.filter(c=>c.verified).length;
+  box.innerHTML = (chk.flags.length ? chk.flags.map(f=>`<span class="tag ${f.rule==='Sensitive term'?'tag-red':'tag-amber'}">✗ ${esc(f.rule)}: ${esc(f.detail)}</span>`).join('') : '<span class="tag tag-green">✓ Brand rules</span>')
+    + (chk.unsupported.length ? chk.unsupported.map(u=>`<span class="tag tag-red" title="${esc(u.text)}">✗ Claim with no source</span>`).join('') : `<span class="tag tag-green">✓ ${ver ? `${ver} claim${ver>1?'s':''} verified` : 'No claims'}</span>`);
+}
+function wsAccept(key){
+  saveTeach(); const it = wsItem(), before = JSON.stringify(it.run.saved.decisions[key]||{});
+  if(!it.r.segment && dec(key).spot!=='pending' && !((document.getElementById('assignSeg')||{}).value || dec(key).assignedSeg)){ accept(key); return; }   // accept() asks for the segment
+  logTeach(); WS.decided = true; accept(key);
+  if(WS && WS.id===it.id && JSON.stringify(it.run.saved.decisions[key]||{})===before) WS.decided = false;
+}
+function logTeach(){ const it = wsItem(); const t = (WS && WS.teach||'').trim(); if(it && t){ RUN = it.run; logIt(it.r, 'Taught the system', {note:t}); persist(); WS.teach = ''; } }
+
+/* Put on hold: data is missing or someone else has to answer first. It stays in the queue, at the end. */
+const HOLD_WHY = ['Missing contact details','Missing account data','Waiting for someone to confirm','Other'];
+function openHold(key){
+  saveTeach();
+  const ov = overlay('holdOverlay');
+  ov.innerHTML = `<div class="ws-modal"><div class="ws-modal-h">Put on hold</div>
+    <div class="ws-sub" style="margin-bottom:10px">It stays in your queue, at the end, until you take it off hold. Nothing is sent.</div>
+    ${HOLD_WHY.map((w,i)=>`<label class="ws-radio"><input type="radio" name="holdWhy" value="${esc(w)}" ${i===0?'checked':''}> ${esc(w)}</label>`).join('')}
+    <input id="holdNote" class="ws-in" placeholder="What are you waiting for? (optional)" style="margin-top:8px">
+    <div class="ws-modal-f"><button class="btn btn-ghost" onclick="hide('holdOverlay')">Cancel</button><button class="btn btn-primary" onclick="doHold('${key}')">Put on hold</button></div></div>`;
+}
+function doHold(key){
+  const why = (document.querySelector('input[name=holdWhy]:checked')||{}).value || 'Other', note = (document.getElementById('holdNote').value||'').trim();
+  const r = recOf(key); setDec(key, {hold:{why, note, by:me().who, at:Date.now()}});
+  logTeach(); logIt(r, 'Put on hold', {note:[why, note].filter(Boolean).join(' · ')}); persist(); hide('holdOverlay');
+  WS.decided = true; showToast('On hold: it waits at the end of your queue'); refresh();
+}
+function takeOffHold(key){ const r = recOf(key); setDec(key, {hold:null}); logIt(r, 'Taken off hold', {}); persist(); showToast('Back in the queue'); renderWs(); }
+
+/* Reject: the reason decides what comes back. What to do next time is captured for the learning loop. */
+function openReject(key){
+  saveTeach(); pickCode = null;
+  const r = recOf(key), d = dec(key), seg = segOf(r);
+  const ov = overlay('rejectOverlay');
+  ov.innerHTML = `<div class="ws-modal" style="max-width:620px"><div class="ws-modal-h">Why reject it?</div>
+    <div class="ws-sub" style="margin-bottom:10px">The reason decides what happens next.${d.alternativeUsed?' This is already the alternative, so a rejection closes the account for the pilot.':''}</div>
+    <div class="ws-rj">${REJECT.map(([code,l,w])=>`<button class="ws-rjb" onclick="pickRj(this,'${code}')"><b>${esc(l)}</b><span>${esc(w)}</span></button>`).join('')}</div>
+    <input id="rjNote" class="ws-in" placeholder="Comment (needed for Other)" style="margin-top:10px">
+    <div class="ws-lbl">Teach the system: what should it do instead for accounts like this? <span class="tag tag-grey" style="margin-left:4px">after the pilot</span></div>
+    <textarea id="rjTeach" class="ws-in" style="min-height:48px" placeholder="e.g. Don't send case studies to new leaders in their first month">${esc(WS.teach||'')}</textarea>
+    <label class="ws-radio" style="opacity:.55"><input type="checkbox" disabled> Apply to similar accounts in ${esc(seg||'its micro-segment')} (after the pilot)</label>
+    <div class="ws-modal-f"><button class="btn btn-ghost" onclick="hide('rejectOverlay')">Cancel</button><button class="btn btn-primary" onclick="doReject('${key}')">Reject</button></div></div>`;
+}
+function pickRj(btn, code){ pickCode = code; document.querySelectorAll('.ws-rjb').forEach(b=>b.classList.toggle('on', b===btn)); }
+function doReject(key){
+  if(!pickCode){ showToast('Pick a reason'); return; }
+  WS.teach = (document.getElementById('rjTeach').value||'').trim();
+  const note = document.getElementById('rjNote').value;
+  if(pickCode==='R12' && !note.trim()){ showToast('"Other" needs a comment'); return; }
+  hide('rejectOverlay');
+  // reject() reads the comment from #rjNote: keep a copy where it looks once the overlay is hidden.
+  logTeach(); WS.decided = true; reject(key);
+}
+
+/* Show the working (L3): everything behind the recommendation, on demand. */
+function wsWorking(){
+  const it = wsItem(); if(!it) return; RUN = it.run;
+  const r = it.r, key = r.key, d = dec(key), lr = liveRec(r), x = draftOf(r), { chk, conf } = checksOf(r);
+  const brief = DemandAI.briefFor(lr, chosenAction(r), {asOf:asOf(), channel:d.channel});
+  const kvs = (k, v) => `<div style="display:grid;grid-template-columns:110px 1fr;gap:10px;padding:7px 0;border-top:1px solid var(--s75);font-size:12px"><div style="color:var(--i3)">${k}</div><div style="color:var(--i1);line-height:1.5">${v}</div></div>`;
+  const sigs = (r.person && r.person.signals) || [];
+  const hist = RUN.saved.log.filter(l=>l.key===key), vs = versions(r);
+  document.getElementById('detTitle').textContent = 'Show the working';
+  document.getElementById('detSub').textContent = `${lr.contact.name} · ${r.account.name}`;
+  document.getElementById('detBody').innerHTML = `
+    <div class="panel" style="margin-bottom:12px"><div class="panel-hdr"><span class="panel-ttl">Why it needs a person</span></div><div class="panel-body">
+      ${(d.reasons||exceptionReasons(r)).map(t=>`<div style="font-size:12px;padding:3px 0">• ${esc(t)}</div>`).join('') || '<div class="ws-sub">No exception: it went ahead on its own.</div>'}</div></div>
+    <div class="panel" style="margin-bottom:12px"><div class="panel-hdr"><span class="panel-ttl">Signals on this contact</span></div><div class="panel-body">
+      ${sigs.map(sg=>`<div style="font-size:12px;padding:5px 0;border-top:1px solid var(--s75)"><b>${esc(sg.type)}</b> <span class="ws-sub">${sg.age!==undefined?sg.age+' days ago':''}${sg.source?' · '+esc(sg.source):''}</span><div class="ws-sub">${esc(sg.detail||'')}</div></div>`).join('') || '<div class="ws-sub">No signals listed.</div>'}
+      ${r.fallback?`<div class="ws-sub" style="margin-top:6px">Grouped on its second signal: fewer than ${DemandAI.CONFIG.minSegmentAccounts} accounts shared the strongest one.</div>`:''}</div></div>
+    <div class="panel" style="margin-bottom:12px"><div class="panel-hdr"><span class="panel-ttl">The brief</span></div><div class="panel-body">
+      ${kvs('Angle', esc(brief.angle))}${kvs('Proof', brief.proof ? `${esc(brief.proof.title)} <span class="ws-sub">· ${esc(brief.proof.type)}, ${brief.proof.year}</span>` : '<span class="ws-sub">No approved proof for this case</span>')}
+      ${kvs('Objection', esc(brief.objection))}${kvs('Channel', `${esc(x.channel)} <span class="ws-sub">· ${esc(x.why||'')}</span>`)}</div></div>
+    <div class="panel" style="margin-bottom:12px"><div class="panel-hdr"><span class="panel-ttl">Brand, claims and confidence</span></div><div class="panel-body">
+      ${kvs('Brand rules', chk.flags.length ? chk.flags.map(f=>`<span style="color:var(--neg)">${esc(f.rule)}: ${esc(f.detail)}</span>`).join('<br>') : '<span style="color:var(--pos)">All pass</span>')}
+      ${kvs('Claims', chk.claims.length ? chk.claims.map(cl=>`<span style="color:${cl.verified?'var(--pos)':'var(--neg)'}">${cl.verified?'✓':'✗'}</span> ${esc(cl.text)}${cl.source?` <span class="ws-sub">· ${esc(cl.source)}</span>`:''}`).join('<br>') : '<span class="ws-sub">No claims</span>')}
+      ${kvs('Confidence', esc(conf.reason))}</div></div>
+    ${vs.length>1 || hist.length ? `<div class="panel"><div class="panel-hdr"><span class="panel-ttl">Versions and history</span></div><div class="panel-body">
+      ${vs.slice().reverse().map(v=>`<div style="font-size:11.5px;padding:3px 0">v${v.v} · ${esc(v.why)} · ${esc(v.by)}</div>`).join('')}
+      ${hist.map(l=>`<div style="font-size:11.5px;padding:5px 0;border-top:1px solid var(--s75)"><b>${esc(l.decision)}</b> <span class="ws-sub">· ${esc(l.who)} · ${fmtDate(l.at)}</span>${l.note?`<div class="ws-sub">${esc(l.note)}</div>`:''}</div>`).join('')}</div></div>` : ''}`;
+  const dr = document.getElementById('detailDrawer'); dr.style.width = '460px'; dr.classList.add('open');
+}
+
+/* Copilot in the workspace: it already knows the account and why it is stuck, so its first questions are the ones
+   that reason raises. Rule-based answers from the same data; it never changes anything. */
+const CP_Q = {
+  sensitive: [['term','What exactly is sensitive?'],['ifaccept','What happens if I accept?']],
+  claim: [['claim','Which claim has no source?'],['claims','Which approved claims fit instead?']],
+  low: [['people','Who else could we contact there?']],
+  small: [['segs','Which micro-segment fits best?']],
+  deal: [['deal','How is the deal size worked out?']],
+  brand: [['rules','Which rule does it break?']],
+  reach: [['people','Who else could we contact there?']],
+  spot: [['spotwhy','Why was it picked for a spot-check?']],
+  alternative: [['before','What was rejected before?']],
+  sentback: [['before','What did the manager say?']],
+};
+const CP_COMMON = [['why','Why now?'],['compare','How does the runner-up differ?'],['similar','How did similar items go?'],['account','What do we know about this account?']];
+function cpQs(r, s){ return (CP_Q[s.cat]||[]).concat(CP_COMMON.filter(([k])=>k!=='compare' || r.runnerUp)); }
+function cpHtml(r, d, s){
+  const msgs = WS.asked || [];
+  return `<div class="ws-cp-qs">${cpQs(r, s).map(([k,l])=>`<button class="tag tag-grey" style="cursor:pointer;border:none" onclick="cpAsk(null,'${k}','${esc(l)}')">${esc(l)}</button>`).join('')}</div>`
+    + msgs.map(m=>`<div class="ws-cp-you">${esc(m.q)}</div><div class="ws-cp-a"><span style="color:var(--brand)">✦</span><div>${m.a}</div></div>`).join('');
+}
+function cpAnswer(k){
+  const it = wsItem(); RUN = it.run;
+  const r = it.r, key = r.key, d = dec(key), lr = liveRec(r), x = draftOf(r), { chk } = checksOf(r), p = t => `<div>${t}</div>`;
+  switch(k){
+    case 'term': { const t = DemandAIDraftText(x), ss = t.split(/(?<=[.?!])\s+|\n+/).filter(z=>SENSITIVE_RE.test(z));
+      return ss.length ? p('These lines mention a sensitive topic:') + ss.map(z=>`<div class="ws-quote">${esc(z).replace(SENSITIVE_RE, m=>`<mark>${m}</mark>`)}</div>`).join('') + p('<span class="ws-sub">A plant incident, security or regulation needs a person, so it never goes out on its own.</span>') : p('The signal behind it touches a sensitive topic, even if the message does not name it.'); }
+    case 'ifaccept': return p(isManager() ? 'As the sales manager, accepting releases it straight away.' : 'Accepting sends it to the sales manager for approval first. It goes out only once they approve it.');
+    case 'claim': return chk.unsupported.length ? chk.unsupported.map(u=>`<div class="ws-quote">${esc(u.text)}</div>`).join('') + p('<span class="ws-sub">It reads like a product claim and does not match an approved source word for word.</span>') : p('No unsupported claim in the message now.');
+    case 'claims': { const seg = segOf(r) || r.prominent; const cs = DemandAI.approvedClaims().filter(c=>(c.segments||[]).includes(seg));
+      return cs.length ? p(`Approved for ${esc(seg)}:`) + cs.map(c=>`<div class="ws-quote">${esc(c.claim)} <span class="ws-sub">[${esc(c.type)}, ${c.year}]</span></div>`).join('') : p('No approved claim for this micro-segment.'); }
+    case 'people': { const ppl = ((r.result && r.result.people) || []).map(pp=>pp.contact).filter(cc=>cc.row!==lr.contact.row);
+      return ppl.length ? p(`Other contacts at ${esc(r.account.name)}:`) + ppl.map(cc=>`<div class="ws-quote"><b>${esc(cc.name)}</b> · ${esc(cc.jobTitle||'')}${cc.persona?` · ${esc(cc.persona)}`:''}${cc.email&&cc.emailVerified?' · verified email':cc.linkedin?' · LinkedIn':''}</div>`).join('') + p('<span class="ws-sub">Reject with "Wrong contact" to get the next one.</span>') : p(`No other contact at ${esc(r.account.name)} in the list.`); }
+    case 'segs': { const segs = ((r.person && r.person.signals) || []).map(sg=>(DemandAI.CONFIG.signalTypes[sg.type]||{}).segment).filter(Boolean);
+      return p(`Its signals point to <b>${esc([...new Set(segs)].join(', ')||r.prominent||'—')}</b>. The strongest is ${esc(r.prominent||'—')}, so that is the suggested one.`); }
+    case 'deal': { const ds = DemandAI.estimateDealSize(r.account); return ds ? p(`Estimated at about USD ${Math.round(ds.value/1000)}k from the account's size and type, against a ${Math.round(DemandAI.CONFIG.dealSize.threshold/1000)}k threshold set in Setup.`) : p('No estimate for this account.'); }
+    case 'rules': return chk.flags.length ? chk.flags.map(f=>`<div class="ws-quote"><b>${esc(f.rule)}</b>: ${esc(f.detail)}</div>`).join('') : p('It passes every brand rule now.');
+    case 'spotwhy': return p('Each week a random share of what went ahead on its own goes to each rep to rate. It keeps the system honest: if reps would not have sent these, the checks need tightening.');
+    case 'before': return d.sentBackNote ? p(`“${esc(d.sentBackNote)}”`) : (d.rejections||[]).length ? (d.rejections||[]).map(x=>`<div class="ws-quote">${esc(x.label)}${x.note?': '+esc(x.note):''}</div>`).join('') : p(`The first recommendation was ${esc(d.alternativeOf||'rejected')}.`);
+    default: return itemAnswer(key, k);
+  }
+}
+function cpAsk(text, k, label){
+  const it = wsItem(); if(!it) return;
+  let q = label || String(text||'').trim(); if(!q) return;
+  if(!k){ const t = q.toLowerCase();
+    k = /sensitiv|security|incident/.test(t) ? 'term' : /claim|source|proof/.test(t) ? 'claim' : /who else|other contact|contact|person/.test(t) ? 'people'
+      : /segment/.test(t) ? 'segs' : /deal|size|worth/.test(t) ? 'deal' : /rule|brand/.test(t) ? 'rules' : /runner|differ|instead|alternative/.test(t) ? 'compare'
+      : /similar|track|agree|how did/.test(t) ? 'similar' : /why now|signal|when/.test(t) ? 'why' : /account|company|know/.test(t) ? 'account' : /accept|happen/.test(t) ? 'ifaccept' : 'why'; }
+  let a; try{ a = cpAnswer(k); }catch(e){ a = 'Sorry, I could not work that out.'; }
+  WS.asked = (WS.asked||[]).concat([{ q, a }]);
+  const box = document.getElementById('wsCp'); const r = it.r, d = dec(r.key);
+  if(box){ box.innerHTML = cpHtml(r, d, stuck(r, d)); box.scrollTop = box.scrollHeight; const f = document.querySelector('.ws-cp-f input'); if(f) f.value = ''; }
+}
+document.addEventListener('keydown', e=>{
+  if(!WS) return; const tag = (e.target.tagName||'').toLowerCase();
+  if(e.key==='Escape'){ const ov = [...document.querySelectorAll('#holdOverlay,#rejectOverlay')].find(o=>o.style.display!=='none'); if(ov){ ov.style.display='none'; return; } if(document.getElementById('detailDrawer').classList.contains('open')){ closeDrawer(); return; } leaveWs(); return; }
+  if(['input','textarea','select'].includes(tag)) return;
+  if(e.key==='ArrowRight') wsGo(1); if(e.key==='ArrowLeft') wsGo(-1);
+});
+
 function drawLog(){
   const el = document.getElementById('rows'); if(!el) return;
   const mgr = isManager();

@@ -305,6 +305,7 @@ function fourChecks(r){
   const out = [['Segment size', !has(/^Segment too small/)], ['Confidence', !has(/^Low confidence/)], ['Sensitive content', !has(/^Sensitive/)], ['Claims', !has(/claim/)]];
   if(has(/deal-size/)) out.push(['Deal size', false]);
   if(has(/^Brand/)) out.push(['Brand and rules', false]);
+  if(has(/^Can't reach/)) out.push(['Reachable', false]);
   return out;
 }
 
@@ -735,7 +736,7 @@ function g2(logs){
 }
 
 function setContent(key, ids){
-  setDec(key, {content:ids}); persist(); openRec(key, true);
+  setDec(key, {content:ids}); persist(); if(!(typeof wsReopen==='function' && wsReopen(key))) openRec(key, true);
   showToast(ids.length ? `${ids.length} piece${ids.length>1?'s':''} of content in the message` : 'No content in the message');
 }
 function removeContent(key, id){ setContent(key, (dec(key).content||[]).filter(x=>x!==id)); }

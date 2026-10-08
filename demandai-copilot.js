@@ -12,7 +12,7 @@
   const inRun = (run, fn) => { const keep = RUN; RUN = run; try{ return fn(); } finally { RUN = keep; } };
   const runs = () => (typeof ALL_RUNS==='function' ? ALL_RUNS() : (typeof RUN!=='undefined' && RUN ? [RUN] : [])).slice().sort((a,b)=>b.saved.createdAt-a.saved.createdAt);
   // The account open in the side panel, if any: Copilot then answers about it first.
-  const itemCtx = () => { const d = document.getElementById('detailDrawer'); return d && d.classList.contains('open') && typeof openKey!=='undefined' && openKey && RUN && recOf(openKey) ? { run: RUN, key: openKey, r: recOf(openKey) } : null; };
+  const itemCtx = () => { if(typeof WS!=='undefined' && WS && WS.key && RUN && recOf(WS.key)) return { run: RUN, key: WS.key, r: recOf(WS.key) }; const d = document.getElementById('detailDrawer'); return d && d.classList.contains('open') && typeof openKey!=='undefined' && openKey && RUN && recOf(openKey) ? { run: RUN, key: openKey, r: recOf(openKey) } : null; };
   const SEGS = Object.keys(SEG_MEANS);
   const pl = (n, one, many) => `${n} ${n===1?one:(many||one+'s')}`;
 
