@@ -2,7 +2,7 @@
    One writer (a router) picks the instructions for the content type; the brand pack from the Content library applies
    to every piece, and the outreach drafts' brand and claim checks run on it. Rules only in the POC: production swaps
    the templates for the model; the checks and the approved sources stay. Nothing is published: content is saved,
-   attached to a micro-segment or an account for the reps to use, and downloaded. */
+   added by the reps to an email or LinkedIn message in Micro-segments & NBA, and downloaded. */
 (function (root) {
   const E = root.DemandAI;
   const KEY = 'demandai_studio_v2';
@@ -153,7 +153,7 @@
   function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); return true; } catch (e) { return false; } }
   function newItem(o) {
     const it = Object.assign({ id: uid(), type: 'blog', title: '', topic: '', seg: 'Modernisation', tone: brandTone(), length: 'Medium', sources: null,
-      status: 'Draft', brandV: E.brandPack().v, created: Date.now(), updated: Date.now(), by: who(), attached: [] }, o);
+      status: 'Draft', brandV: E.brandPack().v, created: Date.now(), updated: Date.now(), by: who() }, o);
     if (!it.sources) it.sources = E.approvedClaims().filter(c => c.segments.includes(it.seg)).map(c => c.id);
     if (!it.title) it.title = cap(it.topic);
     if (!it.html) it.html = docHtml(generate(it));
@@ -170,7 +170,7 @@
     return `Done. I used the ${TYPES[it.type].skill} instructions and Brand v${it.brandV} (${it.tone} voice). ` +
       (used.length ? `It cites ${used.join(', ')} word for word from the approved sources. ` : 'It makes no product claims. ') +
       (n ? `${n} brand check${n > 1 ? 's' : ''} need a look.` : 'All brand checks pass.') +
-      `\n\nTell me what to change, or click a paragraph in the canvas to change just that one. When it's right, attach it to a micro-segment or an account so the reps can use it.`;
+      `\n\nTell me what to change, or click a paragraph in the canvas to change just that one. Mark it ready when it's right; reps can then add it to an email or LinkedIn message in Micro-segments & NBA.`;
   }
   function seed() {
     const d = n => Date.now() - n * 864e5;
@@ -179,12 +179,10 @@
         msgs: [{ who: 'me', text: ask, by: it.by, at }, { who: 'ai', card: it.id, at }, { who: 'ai', text: summaryFor(it), at }] };
       it.conv = conv.id; return { it, conv };
     };
-    const a = mk({ type: 'blog', title: 'Plan the migration before end of support sets the date', topic: 'control system migration', seg: 'Modernisation', status: 'Ready', by: 'Pavan Kumar',
-      attached: [{ kind: 'segment', id: 'Modernisation', name: 'Modernisation' }] }, 'Write a blog on control system migration for plant managers with legacy systems', d(4));
+    const a = mk({ type: 'blog', title: 'Plan the migration before end of support sets the date', topic: 'control system migration', seg: 'Modernisation', status: 'Ready', by: 'Pavan Kumar' }, 'Write a blog on control system migration for plant managers with legacy systems', d(4));
     const b = mk({ type: 'whitepaper', title: 'Modernising legacy control systems: a planning guide', topic: 'legacy control system modernisation', seg: 'Modernisation', length: 'Long', by: 'Pavan Kumar',
-      sources: ['CS-01', 'OP-02', 'BR-03'], attached: [{ kind: 'segment', id: 'Modernisation', name: 'Modernisation' }] }, 'A detailed whitepaper about legacy control system modernisation for plant managers', d(2));
-    const c = mk({ type: 'blog', title: 'Renewal season: check the cover still fits', topic: 'service contract renewal', seg: 'Service renewal', length: 'Short', by: 'Sofia Ahlgren', status: 'Ready',
-      attached: [{ kind: 'segment', id: 'Service renewal', name: 'Service renewal' }] }, 'Short blog on service contract renewal for customers with a renewal coming up', d(1));
+      sources: ['CS-01', 'OP-02', 'BR-03'] }, 'A detailed whitepaper about legacy control system modernisation for plant managers', d(2));
+    const c = mk({ type: 'blog', title: 'Renewal season: check the cover still fits', topic: 'service contract renewal', seg: 'Service renewal', length: 'Short', by: 'Sofia Ahlgren', status: 'Ready' }, 'Short blog on service contract renewal for customers with a renewal coming up', d(1));
     S = { v: 2, items: [a.it, b.it, c.it], convs: [a.conv, b.conv, c.conv] };
     save();
   }
@@ -192,25 +190,6 @@
   function ensure() { if (!S) load(); if (!S || !S.items) seed(); return S; }
   const items = () => ensure().items;
   const itemOf = id => items().find(i => i.id === id);
-
-  /* ─── Attaching content to a micro-segment or an account ─── */
-  const segments = () => Object.keys(E.CONFIG.segmentLibrary || AUDIENCE);
-  function accounts() {
-    const seen = new Map();
-    (E.loadSegmentations() || []).slice().sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).forEach(r => {
-      Object.entries(r.accountNames || {}).forEach(([id, name]) => { if (!seen.has(id)) seen.set(id, { id, name }); });
-    });
-    return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name));
-  }
-  const isAttached = (it, kind, id) => (it.attached || []).some(a => a.kind === kind && a.id === id);
-  function setAttached(itemId, kind, id, name, on) {
-    ensure(); const it = itemOf(itemId); if (!it) return;
-    it.attached = (it.attached || []).filter(a => !(a.kind === kind && a.id === id));
-    if (on) it.attached.push({ kind, id, name, at: Date.now(), by: who() });
-    save();
-  }
-  const attachedTo = (kind, id) => items().filter(it => isAttached(it, kind, id));
-  const attachLabel = a => a.kind === 'segment' ? a.name + ' (micro-segment)' : a.name;
 
   /* ─── A small picker, styled inline so it works on any screen ─── */
   function modal(title, body, onSave, saveLabel) {
@@ -232,36 +211,6 @@
   }
   const row = (val, checked, title, sub, extra) => `<label style="display:flex;gap:10px;align-items:flex-start;padding:9px 10px;border:1px solid #E5E9EE;border-radius:8px;margin-bottom:6px;cursor:pointer;font-size:12.5px;color:#141A21">
       <input type="checkbox" value="${esc(val)}" ${checked ? 'checked' : ''} style="margin-top:2px"><div style="flex:1;min-width:0"><div style="font-weight:600">${title}</div>${sub ? `<div style="font-size:11.5px;color:#9DA8B5;margin-top:2px">${sub}</div>` : ''}</div>${extra || ''}</label>`;
-  const statusChip = s => s === 'Ready' ? '<span class="tag tag-green">Ready to use</span>' : '<span class="tag tag-grey">Draft</span>';
-  // From a piece of content: pick the micro-segments and accounts it is for.
-  function pickTargets(itemId, after) {
-    const it = itemOf(itemId), accs = accounts();
-    const body = `<div style="font-size:12px;color:#4A5664;margin-bottom:10px">The reps see attached content on the micro-segment and in each account's panel in Micro-segments &amp; NBA. Attaching to a micro-segment covers every account in it.</div>
-      <div style="font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#9DA8B5;margin:6px 0">Micro-segments</div>
-      <div id="clSegs">${segments().map(s => row('segment|' + s, isAttached(it, 'segment', s), esc(s), esc(AUDIENCE[s] || ''))).join('')}</div>
-      <div style="font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#9DA8B5;margin:12px 0 6px">Accounts</div>
-      ${accs.length ? `<input id="clQ" placeholder="Search accounts" style="width:100%;padding:7px 10px;border:1px solid #D1D7DE;border-radius:8px;font-size:12.5px;margin-bottom:8px">
-        <div id="clAccs">${accs.map(a => row('account|' + a.id + '|' + a.name, isAttached(it, 'account', a.id), esc(a.name))).join('')}</div>`
-        : '<div style="font-size:12px;color:#9DA8B5">No accounts yet. Build micro-segments in Micro-segments &amp; NBA first, then attach to an account.</div>'}`;
-    const ov = modal(`Attach “${esc(it.title)}”`, body, ov => {
-      ov.querySelectorAll('input[type=checkbox]').forEach(cb => { const [kind, id, name] = cb.value.split('|'); setAttached(itemId, kind, id, name || id, cb.checked); });
-      if (after) after();
-    }, 'Save');
-    const q = ov.querySelector('#clQ');
-    if (q) q.oninput = () => ov.querySelectorAll('#clAccs label').forEach(l => { l.style.display = l.textContent.toLowerCase().includes(q.value.toLowerCase()) ? '' : 'none'; });
-  }
-  // From a micro-segment or an account: pick the content for it.
-  function pickContent(kind, id, name, after) {
-    const list = items().slice().sort((a, b) => b.updated - a.updated);
-    const body = list.length ? `<div style="font-size:12px;color:#4A5664;margin-bottom:10px">Blogs and whitepapers from Content studio. Only content marked ready should go to the reps; drafts are shown so you can see what's coming.</div>` +
-      list.map(it => row(it.id, isAttached(it, kind, id), `${TYPES[it.type].ic} ${esc(it.title)}`, `${TYPES[it.type].label} · ${esc(AUDIENCE[it.seg] || it.seg)} · by ${esc(it.by)}`, statusChip(it.status))).join('')
-      : `<div style="font-size:12.5px;color:#4A5664">No content yet. <a href="15-content-studio.html" style="color:#7D52A2">Write a blog or whitepaper in Content studio</a>.</div>`;
-    modal(`Attach content to ${esc(name)}`, body, list.length ? ov => {
-      ov.querySelectorAll('input[type=checkbox]').forEach(cb => setAttached(cb.value, kind, id, name, cb.checked));
-      if (after) after();
-    } : null, 'Save');
-  }
-
   /* ─── Word (.docx) with minimal branding: a rule under the title, underlined headings, the client name in the header ─── */
   const xmlEsc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   function runs(node, fmt, out) {
@@ -336,28 +285,42 @@
     try { await saveFile(fileName(it, 'docx'), await docxBlob(it, html), toast); } catch (e) { if (toast) toast(e.message || "Couldn't build the Word file"); }
   }
 
-  /* ─── In Micro-segments & NBA ─── */
-  function segChip(name) {
-    const n = attachedTo('segment', name).length;
-    return `<button class="btn btn-ghost btn-sm" style="margin-top:6px;padding:0 6px" onclick="event.stopPropagation();ContentLink.pickContent('segment','${esc(name)}','${esc(name)}',()=>renderResults())">📎 ${n ? `${n} piece${n > 1 ? 's' : ''} of content` : 'Attach content'}</button>`;
+  /* ─── In the email or LinkedIn message (Micro-segments & NBA, For Review) ─── */
+  // How many outreach messages a piece has been added to, across the saved micro-segment runs.
+  function usage(id) {
+    let n = 0;
+    (E.loadSegmentations() || []).forEach(r => Object.values(r.decisions || {}).forEach(d => { if ((d.content || []).includes(id)) n++; }));
+    return n;
   }
-  function accountPanel(acc, seg, panel, after) {
-    const direct = attachedTo('account', acc.id), viaSeg = seg ? attachedTo('segment', seg).filter(it => !direct.includes(it)) : [];
-    const line = (it, via) => `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--s75)">
-        <span style="font-size:16px">${TYPES[it.type].ic}</span>
-        <div style="flex:1;min-width:0"><a href="15-content-studio.html?item=${it.id}" style="font-size:12.5px;font-weight:600;color:var(--i1);text-decoration:none">${esc(it.title)}</a>
-          <div style="font-size:11px;color:var(--i3)">${TYPES[it.type].label} · ${via ? `via the ${esc(seg)} micro-segment` : 'attached to this account'}</div></div>
-        ${statusChip(it.status)}<button class="btn btn-ghost btn-sm" title="Download as Word" onclick="ContentLink.downloadDocx('${it.id}',null,typeof showToast==='function'?showToast:null)">.docx</button></div>`;
-    const list = direct.map(it => line(it, false)).concat(viaSeg.map(it => line(it, true))).join('');
-    return panel('Content for this account', `<button class="btn btn-ghost btn-sm" onclick="ContentLink.pickContent('account','${esc(acc.id)}','${esc(acc.name).replace(/'/g, '&#39;')}',${after || 'null'})">📎 Attach</button>`,
-      list || `<div style="font-size:12px;color:var(--i3)">No blog or whitepaper attached yet. Attach one here, or from <a href="15-content-studio.html" style="color:var(--brand)">Content studio</a>.</div>`);
+  // The bar at the top of the message box: one button, and the content already added.
+  function messageBar(key, ids, channel, canEdit) {
+    const list = (ids || []).map(itemOf).filter(Boolean);
+    const chip = it => `<span style="display:inline-flex;align-items:center;gap:6px;max-width:100%;padding:4px 6px 4px 9px;border:1px solid var(--brand-mid);background:var(--brand-lt);border-radius:8px;font-size:11.5px;color:var(--brand-dk)">
+        <span>${channel === 'LinkedIn' ? '🔗' : '📎'}</span><a href="15-content-studio.html?item=${it.id}" target="_blank" style="color:var(--brand-dk);font-weight:600;text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(channel === 'LinkedIn' ? it.title : fileName(it, 'docx'))}</a>
+        <span style="color:var(--i3)">${TYPES[it.type].label}</span>${canEdit ? `<button title="Remove" onclick="removeContent('${key}','${it.id}')" style="border:none;background:none;cursor:pointer;color:var(--i3);font-size:12px">✕</button>` : ''}</span>`;
+    return `<div style="display:flex;align-items:center;gap:8px;margin:-2px 0 8px">
+        <span style="font-size:11px;color:var(--i3);flex:1">${list.length ? (channel === 'LinkedIn' ? 'Shared as a link in the note' : 'Attached to the email') : 'No content added'}</span>
+        ${canEdit ? `<button class="btn btn-sec btn-sm" onclick="ContentLink.pickForMessage('${key}')">📎 Add content</button>` : ''}</div>
+      ${list.length ? `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">${list.map(chip).join('')}</div>` : ''}`;
+  }
+  // Ready content only: a draft can't go out in a message.
+  function pickForMessage(key) {
+    if (typeof dec !== 'function') return;
+    const cur = dec(key).content || [], list = items().slice().sort((a, b) => (a.status === 'Ready' ? 0 : 1) - (b.status === 'Ready' ? 0 : 1) || b.updated - a.updated);
+    const body = list.length ? `<div style="font-size:12px;color:#4A5664;margin-bottom:10px">Blogs and whitepapers from Content studio. Only content marked ready can go in a message.</div>` +
+      list.map(it => it.status === 'Ready' ? row(it.id, cur.includes(it.id), `${TYPES[it.type].ic} ${esc(it.title)}`, `${TYPES[it.type].label} · ${esc(AUDIENCE[it.seg] || it.seg)} · by ${esc(it.by)}`)
+        : `<div style="display:flex;gap:10px;align-items:flex-start;padding:9px 10px;border:1px dashed #E5E9EE;border-radius:8px;margin-bottom:6px;font-size:12.5px;color:#9DA8B5"><input type="checkbox" disabled style="margin-top:2px"><div><div style="font-weight:600">${TYPES[it.type].ic} ${esc(it.title)}</div><div style="font-size:11.5px">Draft: mark it ready in Content studio first</div></div></div>`).join('')
+      : `<div style="font-size:12.5px;color:#4A5664">No content yet. <a href="15-content-studio.html" style="color:#7D52A2">Write a blog or whitepaper in Content studio</a>.</div>`;
+    modal('Add content to the message', body, list.length ? ov => {
+      const ids = Array.from(ov.querySelectorAll('input[type=checkbox]:checked')).map(cb => cb.value);
+      if (typeof setContent === 'function') setContent(key, ids);
+    } : null, 'Add to the message');
   }
 
   root.ContentLink = {
     KEY, TYPES, TONES, LENGTHS, AUDIENCE, PERSONA, LAYOUT, HEAD, GEN, MORE, CONTRACT, LIST_ROLES,
     uid, esc, cap, lc, noDot, cited, who, brandTone, toneize, ctxOf, genBlock, generate, blockInner, blockHtml, docHtml, parseBrief,
     ensure, save, items, itemOf, newItem, textOfHtml, checksOf, citedIn, summaryFor, store: () => ensure(),
-    segments, accounts, isAttached, setAttached, attachedTo, attachLabel, pickTargets, pickContent,
-    docxXml, docxBlob, downloadDocx, saveFile, fileName, segChip, accountPanel,
+    docxXml, docxBlob, downloadDocx, saveFile, fileName, usage, messageBar, pickForMessage,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

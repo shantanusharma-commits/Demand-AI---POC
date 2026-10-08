@@ -654,6 +654,8 @@ function openRec(key, keepTimer){
   if(x.channel==='Email') draft = lbl('Subject')+fld('dSubj',x.subject,0,ro)+lbl('Body', `${x.body.split(/\s+/).filter(Boolean).length} words`)+fld('dBody',x.body,9,ro);
   else if(x.channel==='LinkedIn') draft = lbl('Connection note · the only message, no follow-up', `${x.note.length}/200`)+fld('dNote',x.note,3,ro);
   else draft = lbl('Task')+fld('dTask',x.task,3,ro);
+  // Blogs and whitepapers from Content studio go in the message itself: one button at the top of the message box.
+  if(typeof ContentLink!=='undefined' && (x.channel==='Email' || x.channel==='LinkedIn')) draft = ContentLink.messageBar(key, d.content, x.channel, mine(r) && !paused) + draft;
   if(sc) draft += lbl('Call script · opener')+fld('sOpen',sc.opener,3,ro)+lbl('Discovery questions')+fld('sQs',sc.questions.join('\n'),3,ro)
     +lbl('Objection')+fld('sObj',sc.objection,0,ro)+lbl('Response')+fld('sResp',sc.response,2,ro)+lbl('The ask')+fld('sAsk',sc.ask,0,ro);
   const vs = versions(r);
@@ -700,8 +702,6 @@ function openRec(key, keepTimer){
   else decide = `<div style="font-size:12px;color:var(--i1)">${esc((REJECT.find(x=>x[0]===d.code)||[])[1]||'Rejected')} · ${by}<div style="color:var(--i2);margin-top:3px">${esc(d.status)}</div></div>`;
   if(!inQueue(d) && typeof nextItem==='function' && typeof hasNext==='function' && hasNext()) decide += `<button class="btn btn-primary btn-sm" style="width:100%;justify-content:center;margin-top:12px" onclick="nextItem()">Next →</button>`;
   html += panel(inQueue(d) && !useMode && !paused ? 'Your decision' : 'Status', inQueue(d) && !useMode && !paused ? statusTag('Waiting') : statusPill(d, r), decide);
-  // Blogs and whitepapers from Content studio for this account: attached to it, or to its micro-segment (Micro-segments & NBA only).
-  if(typeof ContentLink!=='undefined' && typeof gridTab==='function') html += ContentLink.accountPanel(r.account, segOf(r), panel, `()=>openRec('${key}')`);
   const hist = RUN.saved.log.filter(l=>l.key===key);
   if(hist.length) html += `<details class="panel" style="padding:10px 14px"><summary style="cursor:pointer;font-size:11.5px;font-weight:600;color:var(--i2)">History · ${hist.length}</summary>
     ${hist.map(l=>`<div style="padding:7px 0;border-bottom:1px solid var(--s75);font-size:11.5px"><b style="color:var(--i1)">${esc(l.decision)}</b> <span style="color:var(--i3)">· ${esc(l.who)} · ${fmtDate(l.at)} ${timeOf(l.at)}${l.secs!=null?` · ${l.secs}s`:''}</span>${l.note?`<div style="color:var(--i2);margin-top:2px">${esc(l.note)}</div>`:''}</div>`).join('')}
@@ -734,8 +734,15 @@ function g2(logs){
   };
 }
 
+function setContent(key, ids){
+  setDec(key, {content:ids}); persist(); openRec(key, true);
+  showToast(ids.length ? `${ids.length} piece${ids.length>1?'s':''} of content in the message` : 'No content in the message');
+}
+function removeContent(key, id){ setContent(key, (dec(key).content||[]).filter(x=>x!==id)); }
 function copyDraft(key){
-  const x = draftOf(recOf(key)), t = x.channel==='Email' ? `${x.subject}\n\n${x.body}` : x.channel==='LinkedIn' ? x.note : DemandAIDraftText(x);
+  const x = draftOf(recOf(key)), att = typeof ContentLink!=='undefined' ? (dec(key).content||[]).map(ContentLink.itemOf).filter(Boolean) : [];
+  const t = (x.channel==='Email' ? `${x.subject}\n\n${x.body}` : x.channel==='LinkedIn' ? x.note : DemandAIDraftText(x))
+    + (att.length && x.channel==='Email' ? '\n\nAttached: ' + att.map(it=>ContentLink.fileName(it,'docx')).join(', ') : '');
   const done = () => showToast('Copied');
   try{ navigator.clipboard.writeText(t).then(done, ()=>fallbackCopy(t)); }catch(e){ fallbackCopy(t); }
 }

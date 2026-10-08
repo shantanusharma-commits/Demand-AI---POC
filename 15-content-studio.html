@@ -448,7 +448,7 @@ if(document.readyState !== 'loading'){ applyRoleToNav(); renderRoleSwitcher(); }
 /* ═══════════════ CONTENT STUDIO ═══════════════
    Ask for a blog or a whitepaper in the chat; it is written in a canvas beside the chat, in the client's brand voice.
    Change it by chatting, or click one paragraph to change just that one. Attach it to a micro-segment or an account
-   so the reps see it in Micro-segments & NBA. Download it as Word, PDF or Markdown. Nothing is published. */
+   Once it's ready, reps add it to an email or LinkedIn message in Micro-segments & NBA. Download it as Word, PDF or Markdown. Nothing is published. */
 const E = DemandAI, C = ContentLink;
 const { TYPES, AUDIENCE, LAYOUT, HEAD, GEN, MORE, CONTRACT, uid, cap, lc, noDot, cited } = C;
 let S = C.ensure();
@@ -460,7 +460,7 @@ let CONV = null, CANVAS = false, KIND = 'blog', BUSY = false;
 const cur = () => CONV && CONV.active ? itemOf(CONV.active) : null;
 const issuesOf = chk => chk.flags.length + chk.unsupported.length;
 const statusTag = s => s === 'Ready' ? '<span class="tag tag-green">Ready to use</span>' : '<span class="tag tag-grey">Draft</span>';
-const attTags = it => (it.attached || []).map(a => `<span class="tag ${a.kind === 'segment' ? 'tag-violet' : 'tag-blue'}">${esc(a.name)}</span>`).join('');
+const usageTag = it => { const n = C.usage(it.id); return n ? `<span class="tag tag-blue">In ${n} message${n > 1 ? 's' : ''}</span>` : ''; };
 
 /* ─── Home: one chat box, and the content written so far ─── */
 const SUGG = { blog: ['A blog on planning a control system migration for plant managers', 'A short blog for customers with a service renewal coming up', 'A blog on settling control scope early in a new project'],
@@ -484,7 +484,7 @@ function renderHome() {
         ${items.length ? items.map(it => { const chk = C.checksOf(it), n = issuesOf(chk); return `<div class="lib-row" onclick="openItem('${it.id}')">
           <div class="lib-ic">${TYPES[it.type].ic}</div>
           <div style="flex:1;min-width:0"><div class="lib-t">${esc(it.title)}</div><div class="lib-s">${TYPES[it.type].label} · ${esc(it.by)} · ${fmtWhen(it.updated)}${n ? ` · <span style="color:var(--neg)">${n} check${n > 1 ? 's' : ''} to fix</span>` : ''}</div></div>
-          <div class="tags-inline">${attTags(it) || '<span class="sub">Not attached</span>'}</div>${statusTag(it.status)}</div>`; }).join('')
+          <div class="tags-inline">${usageTag(it)}</div>${statusTag(it.status)}</div>`; }).join('')
           : '<div class="sub" style="text-align:center;padding:20px">Nothing yet. Ask for a blog or a whitepaper above.</div>'}</div>
     </div></div></div>`;
   setTimeout(() => { const i = document.getElementById('homeIn'); if (i) i.focus(); }, 30);
@@ -614,7 +614,6 @@ function canvasHtml(it) {
   const chk = C.checksOf(it), n = issuesOf(chk);
   return `<div class="canvas2">
     <div class="cv-h"><span style="font-size:16px">${TYPES[it.type].ic}</span><span class="cv-t" id="cvTitle">${esc(it.title)}</span><span id="stTag">${statusTag(it.status)}</span><span class="saved" id="savedLbl">Saved</span><span class="sp"></span>
-      <button class="btn btn-sec btn-sm" onclick="attach()">📎 Attach</button>
       <div class="dd"><button class="btn btn-sec btn-sm" onclick="toggleDD('ddDl',event)">Download ▾</button>
         <div class="ddm" id="ddDl"><div class="h">Download</div><button onclick="dl('docx')">Word document (.docx)</button><button onclick="dl('pdf')">PDF (print)</button><button onclick="dl('md')">Markdown (.md)</button><button onclick="dl('copy')">Copy text</button></div></div>
       <button class="btn btn-primary btn-sm" id="readyBtn" onclick="markReady()">${it.status === 'Ready' ? 'Back to draft' : 'Mark ready'}</button>
@@ -654,9 +653,8 @@ function mountCanvas(it) {
 }
 function renderAtt() {
   const el = document.getElementById('att'), it = cur(); if (!el || !it) return;
-  el.innerHTML = `<span class="tag tag-grey">${esc(AUDIENCE[it.seg] || it.seg)}</span><span class="tag tag-blue">Brand v${it.brandV}</span><span style="margin-left:6px">Attached to:</span>${attTags(it) || '<a href="#" style="color:var(--brand)" onclick="attach();return false">nothing yet, attach it</a>'}`;
+  el.innerHTML = `<span class="tag tag-grey">${esc(AUDIENCE[it.seg] || it.seg)}</span><span class="tag tag-blue">Brand v${it.brandV}</span>${usageTag(it)}`;
 }
-function attach() { const it = cur(); C.pickTargets(it.id, () => { S = C.store(); CONV = convOf(CONV.id); renderAtt(); const i = cur(); addMsg({ who: 'ai', text: i.attached.length ? `Attached to ${i.attached.map(C.attachLabel).join(', ')}. The reps will see it in Micro-segments & NBA.` : 'It is not attached to anything now.' }); }); }
 
 let TARGET = null, UNDO = [];
 function autosave() { const l = document.getElementById('savedLbl'); if (l) l.textContent = 'Saving…'; clearTimeout(window._as); window._as = setTimeout(() => { persistDoc(); const it = cur(); if (it) { it.updated = Date.now(); it.by = C.who(); } saveStore(); if (l) l.textContent = 'Saved'; }, 500); }
@@ -702,7 +700,7 @@ function renderChips() {
   const it = cur(), b = targetEl();
   if (!it || BUSY) { c.innerHTML = ''; return; }
   const opts = b ? ['Regenerate this', 'Make it shorter', 'Add more detail', 'Add proof', 'More formal'] :
-    ['Make it shorter', 'Add proof', 'More formal', 'Rewrite the intro', 'Add a section on lifecycle planning', 'Attach to a micro-segment'];
+    ['Make it shorter', 'Add proof', 'More formal', 'Rewrite the intro', 'Add a section on lifecycle planning'];
   c.innerHTML = opts.map(o => `<button class="chip" onclick="send(${esc(JSON.stringify(o))})">${esc(o)}</button>`).join('') +
     (UNDO.length ? `<button class="chip" style="background:#fff" onclick="undoAI()">↶ Undo last change</button>` : '');
 }
@@ -806,14 +804,6 @@ const CLAIMY = /(\d+\s?%|\b(reduces?|reduced|improves?|improved|increases?|incre
 function handle(q) {
   const it = cur(), doc = document.getElementById('doc'), el = targetEl(), low = q.toLowerCase();
   if (!doc) { CANVAS = true; renderConv(); return handle(q); }
-  // Attaching, by chat.
-  if (/\b(attach|link|assign|share)\b/.test(low)) {
-    const segs = C.segments().filter(s => low.includes(s.toLowerCase())), accs = C.accounts().filter(a => low.includes(a.name.toLowerCase()));
-    if (!segs.length && !accs.length) { setTimeout(attach, 50); return 'Pick the micro-segments or accounts it is for.'; }
-    segs.forEach(s => C.setAttached(it.id, 'segment', s, s, true)); accs.forEach(a => C.setAttached(it.id, 'account', a.id, a.name, true));
-    S = C.store(); CONV = convOf(CONV.id); renderAtt();
-    return `Attached to ${segs.map(s => s + ' (micro-segment)').concat(accs.map(a => a.name)).join(', ')}. The reps will see it in Micro-segments & NBA.`;
-  }
   // A request that would add a product claim is checked against the approved sources first.
   const said = q.match(/\b(?:say|claim|mention|add|write|include)\b\s+(?:that\s+)?(.+)/i);
   if (said && CLAIMY.test(said[1]) && !claimFor(said[1])) return `I can't add “${said[1].trim()}”. It reads like a product claim and there's no approved source for it. If it's true, add the source to the Content library and I'll cite it word for word.`;
@@ -864,7 +854,7 @@ function handle(q) {
   }
   if (/remove|delete|drop/.test(low) && el) { el.remove(); TARGET = null; afterChange(); return 'Removed it.'; }
   UNDO.pop();
-  return `I can change ${el ? 'that part' : 'the piece'}: make it shorter or longer, change the tone (direct, formal, warm), rewrite it, change the title, add a section on a topic, add proof from an approved source, or attach it to a micro-segment or an account. To start something new, ask for another blog or whitepaper. I won't add claims that aren't in the approved sources.`;
+  return `I can change ${el ? 'that part' : 'the piece'}: make it shorter or longer, change the tone (direct, formal, warm), rewrite it, change the title, add a section on a topic, or add proof from an approved source. To start something new, ask for another blog or whitepaper. I won't add claims that aren't in the approved sources.`;
 }
 function applyTone(tone, el) {
   const it = cur(), doc = document.getElementById('doc');
@@ -889,7 +879,7 @@ function markReady() {
   if (issuesOf(chk)) { CHK_OPEN = true; runChecks(); document.getElementById('checks').scrollIntoView({ behavior: 'smooth', block: 'center' }); showToast(`Fix ${issuesOf(chk)} check${issuesOf(chk) > 1 ? 's' : ''} first`); return; }
   it.status = 'Ready'; it.updated = Date.now(); saveStore();
   document.getElementById('stTag').innerHTML = statusTag('Ready'); document.getElementById('readyBtn').textContent = 'Back to draft';
-  addMsg({ who: 'ai', text: `Marked ready to use.${it.attached.length ? '' : ' Attach it to a micro-segment or an account so the reps can find it in Micro-segments & NBA.'}` });
+  addMsg({ who: 'ai', text: 'Marked ready to use. Reps can now add it to an email or LinkedIn message in Micro-segments & NBA.' });
 }
 function toggleDD(id, e) { e.stopPropagation(); const d = document.getElementById(id); const open = d.classList.contains('open'); document.querySelectorAll('.ddm.open').forEach(x => x.classList.remove('open')); if (!open) d.classList.add('open'); }
 document.addEventListener('click', () => document.querySelectorAll('.ddm.open').forEach(x => x.classList.remove('open')));
