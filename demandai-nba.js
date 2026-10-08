@@ -700,6 +700,8 @@ function openRec(key, keepTimer){
   else decide = `<div style="font-size:12px;color:var(--i1)">${esc((REJECT.find(x=>x[0]===d.code)||[])[1]||'Rejected')} · ${by}<div style="color:var(--i2);margin-top:3px">${esc(d.status)}</div></div>`;
   if(!inQueue(d) && typeof nextItem==='function' && typeof hasNext==='function' && hasNext()) decide += `<button class="btn btn-primary btn-sm" style="width:100%;justify-content:center;margin-top:12px" onclick="nextItem()">Next →</button>`;
   html += panel(inQueue(d) && !useMode && !paused ? 'Your decision' : 'Status', inQueue(d) && !useMode && !paused ? statusTag('Waiting') : statusPill(d, r), decide);
+  // Blogs and whitepapers from Content studio for this account: attached to it, or to its micro-segment (Micro-segments & NBA only).
+  if(typeof ContentLink!=='undefined' && typeof gridTab==='function') html += ContentLink.accountPanel(r.account, segOf(r), panel, `()=>openRec('${key}')`);
   const hist = RUN.saved.log.filter(l=>l.key===key);
   if(hist.length) html += `<details class="panel" style="padding:10px 14px"><summary style="cursor:pointer;font-size:11.5px;font-weight:600;color:var(--i2)">History · ${hist.length}</summary>
     ${hist.map(l=>`<div style="padding:7px 0;border-bottom:1px solid var(--s75);font-size:11.5px"><b style="color:var(--i1)">${esc(l.decision)}</b> <span style="color:var(--i3)">· ${esc(l.who)} · ${fmtDate(l.at)} ${timeOf(l.at)}${l.secs!=null?` · ${l.secs}s`:''}</span>${l.note?`<div style="color:var(--i2);margin-top:2px">${esc(l.note)}</div>`:''}</div>`).join('')}

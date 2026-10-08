@@ -136,128 +136,117 @@ textarea[readonly],input[readonly]{background-color:var(--s50);}
 .tag-grey{background:#EEF1F4;color:#5B6774;}
 .tags{display:flex;flex-wrap:wrap;gap:6px;}
 
-/* ─── CONTENT STUDIO ─────────────────────── */
-.tb-crumb{font-size:12.5px;color:var(--i3);display:flex;align-items:center;gap:6px;min-width:0;}
-.tb-crumb a{color:var(--i3);cursor:pointer;text-decoration:none;}
-.tb-crumb a:hover{color:var(--brand);}
-.tb-crumb b{color:var(--i1);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+/* ─── CONTENT STUDIO: a chat, and a canvas that opens beside it ─────────── */
 .sub{font-size:12px;color:var(--i3);line-height:1.55;}
-.panel{background:var(--surf);border:1px solid var(--border);border-radius:var(--rmd);}
-.filters{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
-.fchip{height:28px;padding:0 12px;border-radius:999px;border:1px solid var(--bdk);background:var(--surf);font-size:12px;font-weight:500;color:var(--i2);}
-.fchip.on{background:var(--brand-lt);border-color:var(--brand-mid);color:var(--brand-dk);font-weight:600;}
-.fchip .n{font-family:var(--fm);font-size:10.5px;color:var(--i3);margin-left:4px;}
-.search{height:30px;border:1px solid var(--bdk);border-radius:var(--rsm);padding:0 10px;font-size:12.5px;width:220px;}
-.ltbl{width:100%;border-collapse:collapse;font-size:12.5px;}
-.ltbl th{text-align:left;font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--i3);font-weight:600;padding:9px 12px;border-bottom:1px solid var(--border);background:var(--s50);white-space:nowrap;}
-.ltbl td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle;}
-.ltbl tr.row{cursor:pointer;}
-.ltbl tr.row:hover td{background:var(--s50);}
-.ltbl tr:last-child td{border-bottom:none;}
-.t-title{font-weight:600;color:var(--i1);}
-.t-sub{font-size:11px;color:var(--i3);margin-top:2px;}
-.empty{padding:40px 20px;text-align:center;color:var(--i3);font-size:12.5px;}
-.camp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;}
-.camp{background:var(--surf);border:1px solid var(--border);border-radius:var(--rmd);padding:14px 16px;cursor:pointer;transition:border-color var(--fast) var(--ease),box-shadow var(--fast) var(--ease);}
-.camp:hover{border-color:var(--brand-mid);box-shadow:var(--sh);}
-.camp-nm{font-family:var(--fd);font-size:14px;font-weight:600;margin-bottom:4px;}
-.camp-meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;}
-.camp-new{border-style:dashed;display:flex;align-items:center;justify-content:center;color:var(--brand);font-weight:600;min-height:120px;}
-.chead{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px;}
-.chead h2{font-family:var(--fd);font-size:17px;margin:0 0 4px;}
-.kv{display:flex;gap:18px;flex-wrap:wrap;font-size:12px;color:var(--i2);margin-top:6px;}
-.kv b{font-weight:600;color:var(--i1);}
-
-/* Modal (Flowbite modal pattern) */
-.mov{position:fixed;inset:0;background:rgba(20,26,33,.42);display:flex;align-items:flex-start;justify-content:center;padding:6vh 16px;z-index:500;overflow-y:auto;}
-.mdl{background:var(--surf);border-radius:var(--rlg);box-shadow:var(--sh-lg);width:100%;max-width:620px;animation:fadeUp .18s var(--ease);}
-.mdl-h{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid var(--border);}
-.mdl-h h3{margin:0;font-family:var(--fd);font-size:15px;}
-.mdl-b{padding:16px 20px;display:flex;flex-direction:column;gap:14px;max-height:66vh;overflow-y:auto;}
-.mdl-f{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:12px 20px;border-top:1px solid var(--border);}
-.lbl{font-size:11.5px;font-weight:600;color:var(--i2);margin-bottom:6px;display:block;}
-.inp,.sel,.ta{width:100%;border:1px solid var(--bdk);border-radius:var(--rsm);padding:7px 10px;font-size:13px;}
-.ta{min-height:64px;resize:vertical;}
-.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
-.types{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;}
-.type{border:1px solid var(--bdk);border-radius:var(--rsm);padding:10px 8px;text-align:center;font-size:12px;font-weight:600;color:var(--i2);background:var(--surf);}
-.type .ic{font-size:18px;display:block;margin-bottom:4px;}
-.type.on{border-color:var(--brand);background:var(--brand-lt);color:var(--brand-dk);}
-.seg{display:inline-flex;border:1px solid var(--bdk);border-radius:var(--rsm);overflow:hidden;}
-.seg button{height:30px;padding:0 12px;font-size:12px;font-weight:500;color:var(--i2);border-right:1px solid var(--bdk);}
-.seg button:last-child{border-right:none;}
-.seg button.on{background:var(--brand);color:#fff;}
-.brandbox{background:var(--brand-lt);border:1px solid var(--brand-mid);border-radius:var(--rsm);padding:10px 12px;font-size:12px;color:var(--brand-dk);line-height:1.55;}
-.srcs{display:flex;flex-direction:column;gap:6px;}
-.src{display:flex;gap:8px;align-items:flex-start;font-size:12px;color:var(--i2);padding:7px 9px;border:1px solid var(--border);border-radius:var(--rsm);}
-.src input{margin-top:2px;}
-.src b{color:var(--i1);font-weight:600;}
-
-/* Split view: chat left, document right */
-.studio{display:grid;grid-template-columns:clamp(300px,27vw,380px) minmax(0,1fr);height:100%;min-height:0;}
-.chat{display:flex;flex-direction:column;border-right:1px solid var(--border);background:var(--surf);min-height:0;}
-.chat-h{padding:12px 14px;border-bottom:1px solid var(--border);}
-.chat-h .t{font-family:var(--fd);font-size:13px;font-weight:600;}
-.msgs{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;}
-.msg{max-width:92%;font-size:12.5px;line-height:1.55;padding:9px 12px;border-radius:12px;animation:msgIn .15s var(--ease);white-space:pre-wrap;}
-.msg.ai{background:var(--s75);color:var(--i1);border-top-left-radius:4px;align-self:flex-start;}
-.msg.me{background:var(--brand);color:#fff;border-top-right-radius:4px;align-self:flex-end;}
-.msg .who{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;opacity:.6;margin-bottom:3px;}
-.chips{display:flex;flex-wrap:wrap;gap:6px;padding:0 14px 10px;}
+.cs{flex:1;min-height:0;display:flex;}
+/* Home: one chat box */
+.home{flex:1;overflow-y:auto;padding:9vh 20px 40px;}
+.home-in{max-width:760px;margin:0 auto;}
+.home h1{font-family:var(--fd);font-size:28px;letter-spacing:-.02em;margin:0 0 6px;text-align:center;}
+.home .lead{text-align:center;color:var(--i2);font-size:13.5px;margin:0 0 22px;}
+.composer-big{background:var(--surf);border:1px solid var(--bdk);border-radius:18px;box-shadow:var(--sh);padding:12px 12px 10px 16px;}
+.composer-big:focus-within{border-color:var(--brand-mid);box-shadow:0 0 0 3px var(--brand-lt);}
+.composer-big textarea{width:100%;border:none;outline:none;resize:none;font-size:15px;min-height:56px;max-height:200px;background:transparent;}
+.cb-row{display:flex;align-items:center;gap:8px;}
+.kind{display:inline-flex;border:1px solid var(--bdk);border-radius:999px;overflow:hidden;}
+.kind button{height:28px;padding:0 12px;font-size:12px;font-weight:600;color:var(--i2);}
+.kind button.on{background:var(--brand-lt);color:var(--brand-dk);}
+.send{width:34px;height:34px;border-radius:50%;background:var(--brand);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:16px;}
+.send:hover{background:var(--brand-dk);}
+.send:disabled{background:var(--s200);cursor:default;}
+.sugg{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:14px 0 0;}
+.sugg button{height:30px;padding:0 12px;border-radius:999px;border:1px solid var(--border);background:var(--surf);font-size:12px;color:var(--i2);}
+.sugg button:hover{border-color:var(--brand-mid);color:var(--brand-dk);}
+.brandnote{text-align:center;font-size:11.5px;color:var(--i3);margin-top:12px;}
+.lib{margin-top:40px;}
+.lib-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.lib-h b{font-family:var(--fd);font-size:13px;}
+.lib-row{display:flex;align-items:center;gap:12px;padding:11px 14px;background:var(--surf);border:1px solid var(--border);border-radius:var(--rmd);margin-bottom:6px;cursor:pointer;}
+.lib-row:hover{border-color:var(--brand-mid);}
+.lib-ic{width:34px;height:34px;border-radius:8px;background:var(--brand-lt);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.lib-t{font-weight:600;font-size:13px;color:var(--i1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.lib-s{font-size:11.5px;color:var(--i3);margin-top:2px;}
+.tags-inline{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;max-width:46%;}
+/* Conversation */
+.conv{flex:1;display:grid;grid-template-columns:1fr;min-height:0;}
+.conv.split{grid-template-columns:minmax(320px,38%) minmax(0,1fr);}
+.chat{display:flex;flex-direction:column;min-height:0;background:var(--surf);}
+.conv.split .chat{border-right:1px solid var(--border);}
+.thread{flex:1;overflow-y:auto;padding:22px 20px 10px;}
+.thread-in{max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:14px;}
+.m-me{align-self:flex-end;max-width:85%;background:var(--s75);color:var(--i1);padding:10px 14px;border-radius:16px 16px 4px 16px;font-size:13.5px;line-height:1.55;white-space:pre-wrap;animation:msgIn .15s var(--ease);}
+.m-ai{display:flex;gap:10px;font-size:13.5px;line-height:1.6;color:var(--i1);white-space:pre-wrap;animation:msgIn .15s var(--ease);}
+.m-ai .av{width:24px;height:24px;border-radius:7px;background:linear-gradient(135deg,var(--brand),var(--brand-dk));color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;}
+.m-ai .tx{flex:1;min-width:0;}
+.card{display:flex;align-items:center;gap:12px;border:1px solid var(--border);border-radius:12px;padding:12px 14px;background:var(--surf);cursor:pointer;margin-left:34px;transition:border-color var(--fast) var(--ease);}
+.card:hover,.card.on{border-color:var(--brand-mid);box-shadow:var(--sh);}
+.card .ci{width:36px;height:36px;border-radius:8px;background:var(--brand-lt);display:flex;align-items:center;justify-content:center;font-size:17px;}
+.card .ct{font-weight:600;font-size:13px;}
+.card .cs2{font-size:11.5px;color:var(--i3);margin-top:2px;}
+.spin{width:12px;height:12px;border-radius:50%;border:2px solid var(--brand-mid);border-top-color:var(--brand);display:inline-block;animation:spin .8s linear infinite;vertical-align:-2px;margin-right:4px;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.dots::after{content:'…';animation:pulse 1s infinite;}
+.chips{display:flex;flex-wrap:wrap;gap:6px;max-width:720px;margin:0 auto;padding:0 20px 8px;width:100%;}
 .chip{height:26px;padding:0 10px;border-radius:999px;border:1px solid var(--brand-mid);background:var(--brand-lt);color:var(--brand-dk);font-size:11.5px;font-weight:600;}
 .chip:hover{background:var(--brand-mid);}
-.target{margin:0 14px 8px;font-size:11.5px;background:var(--ter-lt);color:var(--ter-dk);border-radius:var(--rsm);padding:6px 10px;display:flex;justify-content:space-between;align-items:center;gap:8px;}
+.target{max-width:720px;margin:0 auto 8px;width:calc(100% - 40px);font-size:11.5px;background:var(--ter-lt);color:var(--ter-dk);border-radius:var(--rsm);padding:6px 10px;display:flex;justify-content:space-between;align-items:center;gap:8px;}
 .target button{font-weight:700;color:var(--ter-dk);}
-.composer{display:flex;gap:8px;padding:10px 14px 14px;border-top:1px solid var(--border);}
-.composer textarea{flex:1;border:1px solid var(--bdk);border-radius:var(--rsm);padding:8px 10px;font-size:12.5px;resize:none;height:40px;}
-.docside{display:flex;flex-direction:column;min-height:0;background:var(--bg);}
-.doc-tools{display:flex;align-items:center;gap:6px;flex-wrap:nowrap;overflow-x:auto;white-space:nowrap;padding:8px 16px;background:var(--surf);border-bottom:1px solid var(--border);}
-.doc-tools .sp{flex:1;}
-.doc-tools .lab{font-size:11px;color:var(--i3);font-weight:600;}
-.tbtn{width:28px;height:28px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;color:var(--i2);font-size:13px;}
+.composer{max-width:720px;margin:0 auto;width:100%;padding:0 20px 16px;}
+.composer .box{display:flex;align-items:flex-end;gap:8px;border:1px solid var(--bdk);border-radius:16px;padding:8px 8px 8px 14px;background:var(--surf);}
+.composer .box:focus-within{border-color:var(--brand-mid);box-shadow:0 0 0 3px var(--brand-lt);}
+.composer textarea{flex:1;border:none;outline:none;resize:none;font-size:13.5px;min-height:24px;max-height:160px;padding:6px 0;background:transparent;}
+/* Canvas */
+.canvas2{display:flex;flex-direction:column;min-height:0;background:var(--bg);animation:slideLeft .22s var(--ease);}
+.cv-h{display:flex;align-items:center;gap:8px;padding:10px 16px;background:var(--surf);border-bottom:1px solid var(--border);}
+.cv-t{font-family:var(--fd);font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;}
+.cv-h .sp{flex:1;}
+.saved{font-size:11px;color:var(--i3);white-space:nowrap;}
+.cv-tools{display:flex;align-items:center;gap:4px;padding:6px 16px;background:var(--surf);border-bottom:1px solid var(--border);overflow-x:auto;white-space:nowrap;}
+.tbtn{width:28px;height:28px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;color:var(--i2);font-size:13px;flex-shrink:0;}
 .tbtn:hover{background:var(--s75);color:var(--i1);}
-.tsep{width:1px;height:18px;background:var(--border);}
-.doc-scroll{flex:1;overflow-y:auto;padding:24px 20px 60px;}
-.paper{max-width:760px;margin:0 auto;background:#fff;border:1px solid var(--border);border-radius:var(--rmd);box-shadow:var(--sh);padding:40px 56px 48px;}
-.paper-meta{max-width:760px;margin:0 auto 10px;display:flex;gap:6px;flex-wrap:nowrap;align-items:center;white-space:nowrap;overflow:hidden;}
+.tsep{width:1px;height:18px;background:var(--border);margin:0 4px;flex-shrink:0;}
+.cv-tools .lab{font-size:11px;color:var(--i3);font-weight:600;margin-left:6px;}
+.cv-tools select{height:26px;border:1px solid var(--bdk);border-radius:6px;font-size:12px;padding:0 4px;}
+.cv-scroll{flex:1;overflow-y:auto;padding:22px 20px 50px;}
+.paper{max-width:760px;margin:0 auto;background:#fff;border:1px solid var(--border);border-radius:var(--rmd);box-shadow:var(--sh);padding:40px 52px 44px;position:relative;}
+.att{max-width:760px;margin:0 auto 10px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:11.5px;color:var(--i3);}
 #doc{outline:none;font-size:15px;line-height:1.7;color:#1d242c;font-family:var(--fb);}
-#doc h1{font-family:var(--fd);font-size:26px;line-height:1.25;margin:0 0 16px;letter-spacing:-.02em;}
+#doc h1{font-family:var(--fd);font-size:26px;line-height:1.25;margin:0 0 16px;letter-spacing:-.02em;padding-bottom:10px;border-bottom:2px solid var(--brand-mid);}
 #doc h2{font-family:var(--fd);font-size:18px;margin:26px 0 8px;}
 #doc p{margin:0 0 12px;}
 #doc ul,#doc ol{margin:0 0 12px;padding-left:22px;}
 #doc blockquote{margin:0 0 12px;padding:8px 14px;border-left:3px solid var(--brand-mid);color:var(--i2);background:var(--s50);}
-#doc [data-b]{position:relative;border-radius:4px;transition:background var(--fast) var(--ease);}
-#doc [data-b]:hover{background:#FAF8FD;}
+#doc.streaming > :last-child::after{content:'';display:inline-block;width:8px;height:16px;background:var(--brand);margin-left:2px;vertical-align:-2px;animation:pulse 1s infinite;}
+#doc [data-b]{border-radius:4px;transition:background var(--fast) var(--ease);}
+#doc:not(.streaming) [data-b]:hover{background:#FAF8FD;cursor:text;}
 #doc [data-b].sel{background:#FFF6EC;box-shadow:-10px 0 0 #FFF6EC,10px 0 0 #FFF6EC;}
 #doc [data-b].flash{animation:flash 1.1s var(--ease);}
 @keyframes flash{0%{background:#EAF5F0}100%{background:transparent}}
 .gutter{position:absolute;display:none;gap:4px;z-index:5;}
 .gutter button{height:24px;padding:0 8px;border-radius:6px;background:var(--surf);border:1px solid var(--bdk);font-size:11px;font-weight:600;color:var(--i2);box-shadow:var(--sh);}
 .gutter button:hover{border-color:var(--brand);color:var(--brand);}
-.checks{max-width:760px;margin:12px auto 0;}
-.chk-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:12px;}
+.checks{max-width:760px;margin:12px auto 0;background:var(--surf);border:1px solid var(--border);border-radius:var(--rmd);padding:12px 14px;}
+.chk-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:12px;}
 .chk-detail{margin-top:8px;font-size:12px;color:var(--i2);line-height:1.6;}
-.chk-detail div{padding:3px 0;}
 .okc{color:var(--pos);font-weight:600;}
 .badc{color:var(--neg);font-weight:600;}
-.savebar{display:flex;align-items:center;gap:8px;}
 .dd{position:relative;display:inline-block;}
-.ddm{position:absolute;top:calc(100% + 5px);right:0;min-width:200px;background:var(--surf);border:1px solid var(--border);border-radius:var(--rmd);box-shadow:var(--sh-lg);z-index:200;overflow:hidden;display:none;}
+.ddm{position:absolute;top:calc(100% + 5px);right:0;min-width:210px;background:var(--surf);border:1px solid var(--border);border-radius:var(--rmd);box-shadow:var(--sh-lg);z-index:200;overflow:hidden;display:none;}
 .ddm.open{display:block;}
 .ddm button{display:block;width:100%;text-align:left;padding:9px 14px;font-size:12.5px;color:var(--i1);}
 .ddm button:hover{background:var(--s50);}
 .ddm .h{font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--i3);font-weight:600;padding:8px 14px 4px;}
-.skill{font-family:var(--fm);font-size:10.5px;background:var(--s75);color:var(--i2);padding:2px 6px;border-radius:4px;}
-
+.skill{font-family:var(--fm);font-size:10.5px;background:var(--s75);color:var(--i2);padding:1px 6px;border-radius:4px;}
+@media (max-width:900px){ .conv.split{grid-template-columns:1fr;grid-template-rows:45% 55%;} .conv.split .chat{border-right:none;border-bottom:1px solid var(--border);} .paper{padding:28px 22px;} }
 @media print{
   body{overflow:visible;height:auto;background:#fff;}
-  .nav,.chat,.doc-tools,.topbar,.paper-meta,.checks,.gutter,#roleSwitchBtn{display:none !important;}
-  .shell,.studio{display:block;height:auto;}
-  .main,.docside,.doc-scroll{height:auto;overflow:visible;background:#fff;padding:0;}
+  .nav,.chat,.cv-h,.cv-tools,.topbar,.att,.checks,.gutter,#roleSwitchBtn{display:none !important;}
+  .shell,.conv,.cs{display:block;height:auto;}
+  .main,.canvas2,.cv-scroll{height:auto;overflow:visible;background:#fff;padding:0;}
   .paper{border:none;box-shadow:none;padding:0;max-width:none;}
   #doc [data-b]{background:none !important;box-shadow:none !important;}
 }
-
 </style>
 </head>
 <body>
@@ -338,8 +327,9 @@ textarea[readonly],input[readonly]{background-color:var(--s50);}
 <main class="main" id="mainArea"></main>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="demandai-engine.js"></script>
-<script src="demandai-sample-data.js"></script>
+<script src="demandai-content.js"></script>
 <script>
 const PAGE_ID = '15-content-studio.html';
 function showToast(msg){document.querySelectorAll('.toast').forEach(t=>t.remove());const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2600);}
@@ -456,448 +446,227 @@ if(document.readyState !== 'loading'){ applyRoleToNav(); renderRoleSwitcher(); }
 
 
 /* ═══════════════ CONTENT STUDIO ═══════════════
-   Generative content: blogs, whitepapers, emails, social posts and call scripts, written in the client's brand voice.
-   One writer (a router) picks the instructions for the content type; the brand pack from the Content library applies
-   to every piece, and the same brand and claim checks as the outreach drafts run on every change.
-   Rules only in the POC: production swaps the templates for the model, the checks and the approved sources stay.
-   Nothing is published from here: content is saved to the library, attached to a campaign, and downloaded. */
-const E = DemandAI;
-const ST_KEY = 'demandai_studio_v1';
-const TYPES = {
-  blog:       { label: 'Blog',        ic: '📝', skill: 'blog-post',   about: 'A headline, short sections and one call to action' },
-  whitepaper: { label: 'Whitepaper',  ic: '📄', skill: 'whitepaper',  about: 'Executive summary, the problem, a sequence, evidence and next steps' },
-  email:      { label: 'Email',       ic: '✉️', skill: 'email',       about: 'A subject line, one point and one ask' },
-  post:       { label: 'Social post', ic: '💬', skill: 'social-post', about: 'A hook, a short line or two and one ask' },
-  script:     { label: 'Call script', ic: '📞', skill: 'call-script', about: 'Opener, questions, the likely objection and the ask' },
-};
-const TONES = ['Direct', 'Formal', 'Warm'];
-const LENGTHS = ['Short', 'Medium', 'Long'];
-const AUDIENCE = {
-  Modernisation: 'Sites planning a control system migration', Inquiry: 'Accounts that asked us a question',
-  'Service renewal': 'Customers with a renewal coming up', Project: 'Teams starting a new project',
-  Leadership: 'Newly appointed plant leaders', Engagement: 'Accounts reading our content',
-};
-const PERSONA = { Modernisation: 'plant and automation managers', Inquiry: 'engineering teams', 'Service renewal': 'site maintenance leads',
-  Project: 'project and design leads', Leadership: 'new plant leaders', Engagement: 'operations teams' };
-
-const uid = () => Math.random().toString(36).slice(2, 9);
-const cap = s => { s = String(s || '').trim(); return s.charAt(0).toUpperCase() + s.slice(1); };
-const lc = s => { s = String(s || '').trim(); return /^[A-Z][a-z]/.test(s) ? s.charAt(0).toLowerCase() + s.slice(1) : s; };
-const noDot = s => String(s || '').trim().replace(/[.?!]+$/, '');
-const cited = c => `${c.claim} [${c.type}, ${c.year}]`;
-const me = () => (typeof ROLE_PERSON !== 'undefined' ? ROLE_PERSON[getRole()] : '') || 'Pavan Kumar';
-const brandTone = () => (E.brandPack().voice || {}).preset || 'Direct';
+   Ask for a blog or a whitepaper in the chat; it is written in a canvas beside the chat, in the client's brand voice.
+   Change it by chatting, or click one paragraph to change just that one. Attach it to a micro-segment or an account
+   so the reps see it in Micro-segments & NBA. Download it as Word, PDF or Markdown. Nothing is published. */
+const E = DemandAI, C = ContentLink;
+const { TYPES, AUDIENCE, LAYOUT, HEAD, GEN, MORE, CONTRACT, uid, cap, lc, noDot, cited } = C;
+let S = C.ensure();
+const saveStore = () => C.save();
 const fmtWhen = t => { if (!t) return '—'; const d = Math.round((Date.now() - t) / 864e5); return d <= 0 ? 'Today' : d === 1 ? 'Yesterday' : d < 7 ? d + ' days ago' : fmtDate(t); };
-
-/* ─── Store ─── */
-function loadStore() { try { return JSON.parse(localStorage.getItem(ST_KEY) || 'null'); } catch (e) { return null; } }
-function saveStore() { try { localStorage.setItem(ST_KEY, JSON.stringify(S)); } catch (e) {} }
-let S = loadStore();
-
-/* ─── The writer: one router, one set of instructions per content type ─── */
-const LAYOUT = {
-  blog:       { Short: ['title', 'intro', 'why', 'proof', 'cta'], Medium: ['title', 'intro', 'why', 'questions', 'proof', 'objection', 'cta'],
-                Long: ['title', 'intro', 'why', 'steps', 'questions', 'proof', 'objection', 'pitfalls', 'cta'] },
-  whitepaper: { Short: ['title', 'summary', 'challenge', 'steps', 'proof', 'cta'], Medium: ['title', 'summary', 'challenge', 'good', 'steps', 'proof', 'questions', 'cta'],
-                Long: ['title', 'summary', 'challenge', 'good', 'steps', 'pitfalls', 'proof', 'questions', 'objection', 'cta'] },
-  email:      { Short: ['subject', 'greeting', 'ebody', 'ecta', 'closing'], Medium: ['subject', 'greeting', 'ebody', 'proof1', 'ecta', 'closing'],
-                Long: ['subject', 'greeting', 'ebody', 'ebody2', 'proof1', 'ecta', 'closing'] },
-  post:       { Short: ['hook', 'pcta'], Medium: ['hook', 'pline', 'pcta'], Long: ['hook', 'pline', 'proof1', 'pcta'] },
-  script:     { Short: ['title', 'sopener', 'squestions', 'sask'], Medium: ['title', 'sopener', 'squestions', 'sobjection', 'sask'],
-                Long: ['title', 'sopener', 'squestions', 'sproof', 'sobjection', 'sask'] },
-};
-const HEAD = {
-  why: ['Why it matters now', 'Why now, not later'], questions: ['Questions worth asking', 'Questions for your team'],
-  proof: ['What comparable sites did', 'Evidence from comparable sites'], objection: ['A common concern', 'What we often hear'],
-  cta: ['Next step', 'Where to start'], steps: ['A practical sequence', 'How to sequence the work'], pitfalls: ['Where plans slip', 'What to watch for'],
-  summary: ['Executive summary', 'In brief'], challenge: ['The challenge', 'What makes it hard'], good: ['What good looks like', 'The outcome to aim for'],
-  sopener: ['Opener', 'Opening'], squestions: ['Questions to ask', 'Discovery questions'], sproof: ['If they ask for proof', 'Proof to mention'],
-  sobjection: ['If they push back', 'The likely objection'], sask: ['The ask', 'Close'],
-};
-const LIST_ROLES = { questions: 'ul', squestions: 'ul', steps: 'ol' };
-const PROOF_ROLES = ['proof', 'proof1', 'sproof'];
-const GEN = {
-  title: (c, v) => [c.it.title, `${cap(c.topic)}: what to settle first`, `What comparable sites learned about ${lc(c.topic)}`][v % 3],
-  intro: (c, v) => [
-    `Most ${c.persona} we work with know the moment is coming. The question is whether they set the timing, or the timing is set for them. This post covers what to settle first, and what comparable sites did.`,
-    `${cap(c.topic)} rarely starts as a project. It starts as a question someone on site asks, and it's easier to answer while there's still time to plan. Here is how we'd approach it.`,
-    `If ${lc(c.topic)} is on your list this year, you're not alone. The sites that handled it well made a few decisions early. This post walks through them.`][v % 3],
-  why: (c, v) => [
-    `Timing is the hidden cost. ${noDot(c.fw.angle)}, and the decision stays in your hands: the work fits a window you choose, the people you need are booked, and nothing is rushed.`,
-    `Waiting rarely makes the decision easier. The options narrow as dates get closer, and the work ends up scheduled around constraints rather than around the plant.`,
-    `The earlier the question is asked, the more options there are. Planning early turns a forced change into a planned one.`][v % 3],
-  questions: (c, v) => [c.fw.questions.slice(), c.fw.questions.concat(['Who else needs to be part of the decision?']),
-    ['What has changed on site in the last two years?'].concat(c.fw.questions.slice(0, 2))][v % 3],
-  proof: (c, v) => {
-    const cl = c.claims.map(cited);
-    return [cl.join(' '), 'One example says more than a list of features. ' + cl.join(' '),
-      cl.slice().reverse().join(' ') + ' Your account team can share the full story.'][v % 3];
-  },
-  objection: (c, v) => [`"${noDot(c.fw.objection)}." ${c.fw.response}`, `We often hear: "${noDot(c.fw.objection)}." ${c.fw.response}`,
-    `It's fair to ask whether now is the time. ${c.fw.response}`][v % 3],
-  cta: (c, v) => [
-    'If this is on your list, a short conversation is a good place to start. We can share how comparable sites sequenced the work, and what they would do differently.',
-    'Start with one question: what would we need to know to plan this properly? If it helps, we can walk through it with your team.',
-    'Talk to your account team about where to start. A short call is usually enough to see whether it is worth planning now.'][v % 3],
-  steps: (c, v) => [
-    ['Agree the window you want to work in.', 'List what has to keep running, and what can stop.', 'Settle the scope with the people who will run it.', 'Plan the cutover, and the way back if something goes wrong.'],
-    ['Write down the date you cannot move.', 'Work back from it to the decisions you need.', 'Name one owner for each decision.'],
-    ['Start with what the site needs to keep doing.', 'Agree the scope before the design is fixed.', 'Book the people who know the current system.', 'Choose the window, then plan backwards.']][v % 3],
-  pitfalls: (c, v) => [
-    'Plans slip in predictable places. The scope grows after the design is fixed, the people who know the old system are not in the room, or the window is agreed before the work is understood. Naming these early is most of the cure.',
-    'Most delays trace back to one of three things: a scope that keeps moving, missing knowledge of the current system, or a window agreed too late.'][v % 2],
-  summary: (c, v) => [
-    `${cap(c.topic)} is a decision most ${c.persona} will face. This paper sets out what to decide first, a practical sequence, and what comparable sites did.`,
-    `This paper is for ${c.persona} looking at ${lc(c.topic)}. ${noDot(c.fw.angle)}: it covers the decisions to make early and how comparable sites approached them.`][v % 2],
-  challenge: (c, v) => [
-    "The difficulty is rarely technical. It's timing, scope and people: deciding before the date is forced, agreeing what is in and out, and keeping the people who know the site involved.",
-    'Every site has a version of the same problem. The current setup still runs, the people who know it are busy, and the next window is closer than it looks.'][v % 2],
-  good: (c, v) => [
-    'A good outcome looks ordinary. The work fits a window the site chose, the team knows the plan, and nothing surprises operations.',
-    'The aim is a change that operations barely notice: planned, scoped with the people who run the plant, and finished inside the window.'][v % 2],
-  subject: (c, v) => 'Subject: ' + [cap(c.topic.split(/\s+/).slice(0, 5).join(' ')), 'A question about your timing', 'Planning ahead, briefly'][v % 3],
-  greeting: c => c.voice.greeting.replace('{first}', '{first name}'),
-  ebody: (c, v) => [
-    `A quick thought on ${lc(c.topic)}: it's easier when it starts early, before the date is set for you. I'm writing to share how comparable sites approached it.`,
-    `A quick note on ${lc(c.topic)}. The sites that handled it well made a few decisions early, and I thought the sequence might be useful to you.`][v % 2],
-  ebody2: c => `${c.fw.questions[0]} If the answer is still open, that's usually the right moment to talk.`,
-  proof1: (c, v) => cited(c.claims[v % c.claims.length]),
-  ecta: (c, v) => ['Would a 20-minute call next week be useful?', "Is this on your list for this year? If so, I can share what comparable sites did."][v % 2],
-  closing: c => `${c.voice.closing}\n${c.signoff}`,
-  hook: (c, v) => [`${cap(c.topic)} is rarely decided by technology. It's decided by the calendar.`,
-    `One question we hear from ${c.persona} every week: ${c.fw.questions[0]}`, 'The best time to plan is before the date is set for you.'][v % 3],
-  pline: (c, v) => ['The sites that handled it well settled scope and timing early, kept the people who know the plant involved, and planned the way back as well as the way forward.',
-    "Three things we see again and again: decide the window first, agree the scope early, and don't lose the people who know the current system."][v % 2],
-  pcta: (c, v) => ["What's the one decision you'd want settled first?", 'If this is on your list, our team is happy to compare notes.'][v % 2],
-  sopener: (c, v) => [`Hi {first name}, this is {your name} from Client. I'm calling about ${lc(c.topic)}. Do you have two minutes?`,
-    `Hi {first name}, {your name} from Client. A quick one about ${lc(c.topic)}: is now a bad time?`][v % 2],
-  squestions: (c, v) => [c.fw.questions.slice(), c.fw.questions.concat(['What would make this worth a second conversation?'])][v % 2],
-  sproof: c => c.claims.map(cited).join(' '),
-  sobjection: c => `If they say "${noDot(c.fw.objection)}": ${c.fw.response}`,
-  sask: (c, v) => ['Would it be worth a short follow-up with the people who own the decision?', 'Can we put 30 minutes in the diary to go through it properly?'][v % 2],
-};
-// Extra sentences the writer can add when asked for more detail (no product claims).
-const MORE = ['That is usually where the real decisions sit.', 'It helps to write the answer down and share it with the people who run the plant.',
-  'Comparable sites found it easier once one person owned the plan.', 'None of this needs a decision today, only a date to decide by.'];
-
-const CONTRACT = [[/\bI'm\b/g, 'I am'], [/\bit's\b/g, 'it is'], [/\bIt's\b/g, 'It is'], [/\byou're\b/g, 'you are'], [/\bYou're\b/g, 'You are'],
-  [/\bdon't\b/g, 'do not'], [/\bcan't\b/g, 'cannot'], [/\bwon't\b/g, 'will not'], [/\bwe'll\b/g, 'we will'], [/\bwe'd\b/g, 'we would'],
-  [/\byou'd\b/g, 'you would'], [/\bWhat's\b/g, 'What is'], [/\bthat's\b/g, 'that is'], [/\bthere's\b/g, 'there is'], [/\bwe're\b/g, 'we are'],
-  [/\baren't\b/g, 'are not'], [/\bisn't\b/g, 'is not'], [/\bThey're\b/g, 'They are'], [/\bthey're\b/g, 'they are']];
-function toneize(text, tone, role) {
-  if (Array.isArray(text)) return text.map(t => toneize(t, tone, role));
-  let t = String(text);
-  if (tone === 'Formal') { for (const [a, b] of CONTRACT) t = t.replace(a, b); t = t.replace(/^Hi \{/, 'Dear {').replace(/^Hi\b/, 'Dear'); }
-  if (tone === 'Warm') {
-    if (role === 'intro' || role === 'summary') t += ' We hope it helps.';
-    if (role === 'cta' || role === 'ecta' || role === 'pcta') t += ' We would be glad to help.';
-  }
-  return t;
-}
-function ctxOf(it) {
-  const pack = E.brandPack();
-  const fw = (pack.framework && pack.framework[it.seg]) || E.PLAYBOOK[it.seg] || E.PLAYBOOK.Engagement;
-  return { it, fw, claims: E.approvedClaims().filter(c => (it.sources || []).includes(c.id)), topic: it.topic || it.title,
-    persona: PERSONA[it.seg] || 'teams', voice: E.VOICE_PRESETS[it.tone] || E.VOICE_PRESETS.Direct, signoff: (pack.voice && pack.voice.signoff) || 'Client Team' };
-}
-function genBlock(c, role, v) {
-  const text = toneize(GEN[role](c, v), c.it.tone, role);
-  const tag = role === 'title' ? 'h1' : LIST_ROLES[role] || 'p';
-  return { tag, role, v, text };
-}
-// The plan for a whole document: the sections for this type and length, with headings.
-function generate(it) {
-  const c = ctxOf(it), out = [];
-  for (const role of LAYOUT[it.type][it.length]) {
-    if (PROOF_ROLES.includes(role) && !c.claims.length) continue;     // no approved source, no proof section
-    if (HEAD[role] && it.type !== 'email' && it.type !== 'post') out.push({ tag: 'h2', role: 'h:' + role, v: 0, text: HEAD[role][0] });
-    out.push(genBlock(c, role, 0));
-  }
-  return out;
-}
-function blockInner(b) {
-  if (b.tag === 'ul' || b.tag === 'ol') return b.text.map(i => `<li>${esc(i)}</li>`).join('');
-  return esc(b.text).replace(/\n/g, '<br>');
-}
-const blockHtml = b => `<${b.tag} data-b="${uid()}" data-role="${b.role}" data-v="${b.v || 0}">${blockInner(b)}</${b.tag}>`;
-const docHtml = blocks => blocks.map(blockHtml).join('');
-
-/* ─── Seed: two campaigns and a few pieces, so the library isn't empty on first open ─── */
-// The approved sources a piece actually cites, read back through the claim check.
-const citedIn = it => E.checkContent(textOfHtml(it.html)).claims.filter(c => c.verified).map(c => c.source.split(' · ')[0]);
-function newItem(o) {
-  const it = Object.assign({ id: uid(), type: 'blog', title: '', topic: '', campaign: '', seg: 'Modernisation', tone: brandTone(), length: 'Medium',
-    sources: [], notes: '', status: 'Draft', brandV: E.brandPack().v, created: Date.now(), updated: Date.now(), by: me(), chat: [], versions: [] }, o);
-  if (!it.title) it.title = it.topic;
-  it.html = docHtml(generate(it));
-  if (!it.chat.length) { const used = citedIn(it);
-    it.chat = [{ who: 'ai', text: `Drafted with the ${TYPES[it.type].skill} instructions and Brand v${it.brandV}: ${it.tone} voice, ${it.length.toLowerCase()} length. ` +
-      (used.length ? `Cites ${used.join(', ')} word for word.` : 'It makes no product claims.') + '\n\nClick any paragraph to change just that one, or tell me what to change in the whole piece.' }]; }
-  return it;
-}
-function seed() {
-  const d = n => Date.now() - n * 864e5;
-  const c1 = { id: 'c1', name: 'Legacy modernisation, Q4', seg: 'Modernisation', goal: 'Book site assessments with sites running end-of-support control systems', dates: 'Oct – Dec 2026', created: d(12), by: 'Pavan Kumar' };
-  const c2 = { id: 'c2', name: 'Service renewal check-ins', seg: 'Service renewal', goal: 'Review cover with customers whose contract renews in the next 90 days', dates: 'Nov 2026 – Jan 2027', created: d(6), by: 'Pavan Kumar' };
-  const items = [
-    newItem({ type: 'blog', title: 'Plan the migration before end of support sets the date', topic: 'control system migration', campaign: 'c1', seg: 'Modernisation', sources: ['CS-01', 'OP-02'], status: 'Ready', created: d(10), updated: d(3), by: 'Pavan Kumar' }),
-    newItem({ type: 'email', title: 'Migration planning: first-touch email', topic: 'planning your control system migration', campaign: 'c1', seg: 'Modernisation', sources: ['CS-01'], length: 'Medium', created: d(4), updated: d(2), by: 'Sofia Ahlgren' }),
-    newItem({ type: 'whitepaper', title: 'Modernising legacy control systems: a planning guide', topic: 'legacy control system modernisation', campaign: 'c1', seg: 'Modernisation', sources: ['CS-01', 'OP-02', 'BR-03'], length: 'Long', created: d(9), updated: d(1), by: 'Pavan Kumar' }),
-    newItem({ type: 'post', title: 'Renewal season: check the cover still fits', topic: 'service contract renewal', campaign: 'c2', seg: 'Service renewal', sources: ['BR-03'], length: 'Long', status: 'Ready', created: d(5), updated: d(5), by: 'Sofia Ahlgren' }),
-    newItem({ type: 'script', title: 'Renewal review call', topic: 'your service renewal', campaign: 'c2', seg: 'Service renewal', sources: ['BR-03'], created: d(2), updated: d(2), by: 'Sofia Ahlgren' }),
-  ];
-  // One piece with an edit that the checks catch, so the library shows what a flagged piece looks like.
-  items[1].html = items[1].html.replace('Would a 20-minute call next week be useful?', 'Our approach is guaranteed to cut downtime. Would a 20-minute call next week be useful?');
-  return { v: 1, campaigns: [c1, c2], items };
-}
-if (!S || !S.items) { S = seed(); saveStore(); }
-
-/* ─── Checks: the same brand and claim checks the outreach drafts get ─── */
-function textOfHtml(html) { const d = document.createElement('div'); d.innerHTML = html; return blocksText(d); }
-function blocksText(root) {
-  return Array.from(root.children).map(el => (el.tagName === 'UL' || el.tagName === 'OL') ? Array.from(el.children).map(li => li.textContent).join('\n') : el.innerText || el.textContent).join('\n');
-}
-function checksOf(it) { return E.checkContent(textOfHtml(it.html)); }
-const issuesOf = chk => chk.flags.length + chk.unsupported.length;
-function checkTag(chk) {
-  const n = issuesOf(chk);
-  return n ? `<span class="tag tag-red">${n} to fix</span>` : `<span class="tag tag-green">Checks pass</span>`;
-}
-const statusTag = s => s === 'Ready' ? '<span class="tag tag-green">Ready to use</span>' : '<span class="tag tag-grey">Draft</span>';
-const typeTag = t => `<span class="tag tag-violet">${TYPES[t].label}</span>`;
-const campOf = id => S.campaigns.find(c => c.id === id);
+const convOf = id => S.convs.find(c => c.id === id);
 const itemOf = id => S.items.find(i => i.id === id);
+let CONV = null, CANVAS = false, KIND = 'blog', BUSY = false;
+const cur = () => CONV && CONV.active ? itemOf(CONV.active) : null;
+const issuesOf = chk => chk.flags.length + chk.unsupported.length;
+const statusTag = s => s === 'Ready' ? '<span class="tag tag-green">Ready to use</span>' : '<span class="tag tag-grey">Draft</span>';
+const attTags = it => (it.attached || []).map(a => `<span class="tag ${a.kind === 'segment' ? 'tag-violet' : 'tag-blue'}">${esc(a.name)}</span>`).join('');
 
-/* ─── Views ─── */
-let VIEW = { tab: 'library', camp: null, item: null };
-let LF = { type: '', status: '', camp: '', q: '' };
-function render() {
-  const main = document.getElementById('mainArea');
-  if (VIEW.item && itemOf(VIEW.item)) { renderEditor(main); return; }
-  VIEW.item = null;
-  const tabs = `<div class="ftabs">
-    <div class="ftab ${VIEW.tab === 'library' ? 'active' : ''}" onclick="go('library')">Library <span class="ftab-cnt">${S.items.length}</span></div>
-    <div class="ftab ${VIEW.tab === 'campaigns' ? 'active' : ''}" onclick="go('campaigns')">Campaigns <span class="ftab-cnt">${S.campaigns.length}</span></div></div>`;
-  const top = `<div class="topbar"><div class="topbar-l"><span class="tb-title">Content studio</span>
-      <span class="sub">Blogs, whitepapers, emails, posts and call scripts in the client's brand voice</span></div>
-    <div class="topbar-r"><button class="btn btn-primary" onclick="openNew()">+ New content</button></div></div>`;
-  main.innerHTML = top + tabs + `<div class="canvas" id="canvas">${VIEW.tab === 'campaigns' ? (VIEW.camp ? campaignDetail() : campaignsView()) : libraryView()}</div>`;
+/* ─── Home: one chat box, and the content written so far ─── */
+const SUGG = { blog: ['A blog on planning a control system migration for plant managers', 'A short blog for customers with a service renewal coming up', 'A blog on settling control scope early in a new project'],
+  whitepaper: ['A whitepaper on legacy control system modernisation for plant managers', 'A detailed whitepaper on lifecycle planning for site maintenance leads', 'A whitepaper on front-end design decisions for project leads'] };
+function renderHome() {
+  CONV = null; CANVAS = false; history.replaceState(null, '', location.pathname);
+  const items = S.items.slice().sort((a, b) => b.updated - a.updated), pack = E.brandPack();
+  document.getElementById('mainArea').innerHTML = `
+    <div class="topbar"><div class="topbar-l"><span class="tb-title">Content studio</span><span class="sub">Blogs and whitepapers in the client's brand voice</span></div></div>
+    <div class="cs"><div class="home"><div class="home-in">
+      <h1>What should we write?</h1>
+      <p class="lead">Describe it in your own words. It's written in a canvas beside the chat, and you change it by talking to it.</p>
+      <div class="composer-big">
+        <textarea id="homeIn" placeholder="e.g. A whitepaper on legacy control system modernisation for plant managers" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();startFromHome();}"></textarea>
+        <div class="cb-row"><div class="kind">${Object.keys(TYPES).map(t => `<button class="${KIND === t ? 'on' : ''}" onclick="KIND='${t}';renderHome()">${TYPES[t].ic} ${TYPES[t].label}</button>`).join('')}</div>
+          <span style="flex:1"></span><button class="send" onclick="startFromHome()" aria-label="Send">↑</button></div>
+      </div>
+      <div class="sugg">${SUGG[KIND].map(s => `<button onclick="startChat(${esc(JSON.stringify(s))})">${esc(s)}</button>`).join('')}</div>
+      <div class="brandnote">Brand v${pack.v} applies automatically: ${esc(pack.voice.preset)} voice, ${pack.negative.length} banned words, only approved sources cited. Maintained in the <a href="07-content.html" style="color:var(--brand)">Content library</a>.</div>
+      <div class="lib"><div class="lib-h"><b>Your content</b><span class="sub">${items.length} piece${items.length === 1 ? '' : 's'}</span></div>
+        ${items.length ? items.map(it => { const chk = C.checksOf(it), n = issuesOf(chk); return `<div class="lib-row" onclick="openItem('${it.id}')">
+          <div class="lib-ic">${TYPES[it.type].ic}</div>
+          <div style="flex:1;min-width:0"><div class="lib-t">${esc(it.title)}</div><div class="lib-s">${TYPES[it.type].label} · ${esc(it.by)} · ${fmtWhen(it.updated)}${n ? ` · <span style="color:var(--neg)">${n} check${n > 1 ? 's' : ''} to fix</span>` : ''}</div></div>
+          <div class="tags-inline">${attTags(it) || '<span class="sub">Not attached</span>'}</div>${statusTag(it.status)}</div>`; }).join('')
+          : '<div class="sub" style="text-align:center;padding:20px">Nothing yet. Ask for a blog or a whitepaper above.</div>'}</div>
+    </div></div></div>`;
+  setTimeout(() => { const i = document.getElementById('homeIn'); if (i) i.focus(); }, 30);
 }
-function go(tab) { VIEW = { tab, camp: null, item: null }; render(); }
-
-function libraryView() {
-  const all = S.items.slice().sort((a, b) => b.updated - a.updated);
-  const withChk = all.map(it => ({ it, chk: checksOf(it) }));
-  const ready = withChk.filter(x => x.it.status === 'Ready').length, fix = withChk.filter(x => issuesOf(x.chk)).length;
-  const tile = (lbl, val, sub, cls, on, click) => `<div class="stat stat-link" style="cursor:pointer;${on ? 'background:var(--brand-lt)' : ''}" onclick="${click}">
-      <div class="stat-lbl">${lbl}</div><div class="stat-val ${cls}">${val}</div><div class="stat-sub">${sub}</div></div>`;
-  const stats = `<div class="stats" style="grid-template-columns:repeat(4,1fr)">
-    ${tile('Content pieces', all.length, 'In the library', 'sv5', !LF.status && !LF.fix, "setLF({status:'',fix:false})")}
-    ${tile('Ready to use', ready, 'Checks pass, marked ready', 'sv4', LF.status === 'Ready', "setLF({status:'Ready',fix:false})")}
-    ${tile('Need a fix', fix, 'A brand or claim check failed', 'sv3', LF.fix, "setLF({fix:true,status:''})")}
-    ${tile('Campaigns', S.campaigns.length, 'Content grouped by campaign', 'sv1', false, "go('campaigns')")}</div>`;
-  const counts = t => all.filter(i => i.type === t).length;
-  const chips = `<button class="fchip ${!LF.type ? 'on' : ''}" onclick="setLF({type:''})">All types</button>` +
-    Object.keys(TYPES).map(t => `<button class="fchip ${LF.type === t ? 'on' : ''}" onclick="setLF({type:'${t}'})">${TYPES[t].label}<span class="n">${counts(t)}</span></button>`).join('');
-  const campSel = `<select class="sel" style="width:auto;height:30px;padding:0 8px" onchange="setLF({camp:this.value})">
-      <option value="">All campaigns</option><option value="none" ${LF.camp === 'none' ? 'selected' : ''}>No campaign</option>
-      ${S.campaigns.map(c => `<option value="${c.id}" ${LF.camp === c.id ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select>`;
-  let rows = withChk.filter(({ it, chk }) => (!LF.type || it.type === LF.type) && (!LF.status || it.status === LF.status) && (!LF.fix || issuesOf(chk))
-    && (!LF.camp || (LF.camp === 'none' ? !it.campaign : it.campaign === LF.camp))
-    && (!LF.q || (it.title + ' ' + it.topic).toLowerCase().includes(LF.q.toLowerCase())));
-  return stats + `<div class="filters">${chips}<span style="flex:1"></span>${campSel}
-      <input class="search" placeholder="Search titles" value="${esc(LF.q)}" oninput="LF.q=this.value;clearTimeout(window._sq);window._sq=setTimeout(()=>{render();const s=document.querySelector('.search');s.focus();s.setSelectionRange(s.value.length,s.value.length);},250)"></div>
-    <div class="panel">${itemsTable(rows, true)}</div>`;
+function startFromHome() { const v = document.getElementById('homeIn').value.trim(); if (v) startChat(v); }
+function startChat(text) {
+  CONV = { id: uid(), msgs: [], items: [], active: null, updated: Date.now(), kind: KIND };
+  S.convs.push(CONV); renderConv(); send(text);
 }
-function setLF(o) { Object.assign(LF, o); render(); }
-function itemsTable(rows, showCamp) {
-  if (!rows.length) return `<div class="empty">Nothing here yet. <a href="#" onclick="openNew();return false" style="color:var(--brand)">Create content</a></div>`;
-  return `<table class="ltbl"><thead><tr><th>Title</th><th>Type</th>${showCamp ? '<th>Campaign</th>' : ''}<th>Tone · length</th><th>Brand checks</th><th>Status</th><th>Updated</th><th></th></tr></thead><tbody>
-    ${rows.map(({ it, chk }) => { const cp = campOf(it.campaign); return `<tr class="row" onclick="openItem('${it.id}')">
-      <td><div class="t-title">${esc(it.title)}</div><div class="t-sub">${esc(AUDIENCE[it.seg] || it.seg)} · Brand v${it.brandV}</div></td>
-      <td>${typeTag(it.type)}</td>
-      ${showCamp ? `<td>${cp ? `<a href="#" onclick="event.stopPropagation();openCamp('${cp.id}');return false" style="color:var(--i1)">${esc(cp.name)}</a>` : '<span class="sub">None</span>'}</td>` : ''}
-      <td class="sub">${it.tone} · ${it.length}</td><td>${checkTag(chk)}</td><td>${statusTag(it.status)}</td>
-      <td><div>${fmtWhen(it.updated)}</div><div class="t-sub">${esc(it.by)}</div></td>
-      <td style="white-space:nowrap;text-align:right"><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();dupItem('${it.id}')">Duplicate</button>
-        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();delItem('${it.id}')">Delete</button></td></tr>`; }).join('')}
-    </tbody></table>`;
-}
-function dupItem(id) { const s = itemOf(id), c = JSON.parse(JSON.stringify(s)); Object.assign(c, { id: uid(), title: s.title + ' (copy)', status: 'Draft', created: Date.now(), updated: Date.now(), by: me(), chat: [], versions: [] }); S.items.push(c); saveStore(); render(); showToast('Duplicated as a draft'); }
-function delItem(id) { const s = itemOf(id); if (!confirm(`Delete "${s.title}" from the library?`)) return; S.items = S.items.filter(i => i.id !== id); saveStore(); render(); showToast('Deleted'); }
-
-function campaignsView() {
-  return `<p class="sub" style="margin:0 0 12px">A campaign groups the content for one push: a blog, the emails, the posts and the call script that go with it. Create content from inside a campaign, or attach a piece you already have.</p>
-  <div class="camp-grid">${S.campaigns.map(c => {
-    const its = S.items.filter(i => i.campaign === c.id);
-    const by = Object.keys(TYPES).map(t => [t, its.filter(i => i.type === t).length]).filter(x => x[1]);
-    const ready = its.filter(i => i.status === 'Ready').length;
-    return `<div class="camp" onclick="openCamp('${c.id}')"><div class="camp-nm">${esc(c.name)}</div><div class="sub">${esc(c.goal)}</div>
-      <div class="camp-meta">${by.map(([t, n]) => `<span class="tag tag-violet">${n} ${TYPES[t].label.toLowerCase()}${n > 1 ? 's' : ''}</span>`).join('') || '<span class="tag tag-grey">No content yet</span>'}</div>
-      <div class="kv"><span>Audience <b>${esc(AUDIENCE[c.seg] || c.seg)}</b></span><span>${esc(c.dates || '')}</span><span><b>${ready}</b> of ${its.length} ready</span></div></div>`;
-  }).join('')}<div class="camp camp-new" onclick="openNewCampaign()">+ New campaign</div></div>`;
-}
-function openCamp(id) { VIEW = { tab: 'campaigns', camp: id, item: null }; render(); }
-function campaignDetail() {
-  const c = campOf(VIEW.camp); if (!c) { VIEW.camp = null; return campaignsView(); }
-  const its = S.items.filter(i => i.campaign === c.id).sort((a, b) => b.updated - a.updated);
-  const missing = Object.keys(TYPES).filter(t => !its.some(i => i.type === t));
-  return `<div class="tb-crumb" style="margin-bottom:10px"><a onclick="go('campaigns')">Campaigns</a> / <b>${esc(c.name)}</b></div>
-    <div class="chead"><div><h2>${esc(c.name)}</h2><div class="sub">${esc(c.goal)}</div>
-      <div class="kv"><span>Audience <b>${esc(AUDIENCE[c.seg] || c.seg)}</b></span><span>Dates <b>${esc(c.dates || '—')}</b></span><span>Created by <b>${esc(c.by)}</b></span></div></div>
-      <div style="display:flex;gap:8px"><button class="btn btn-sec" onclick="openAttach('${c.id}')">Add existing content</button>
-      <button class="btn btn-primary" onclick="openNew({campaign:'${c.id}'})">+ New content in this campaign</button></div></div>
-    ${missing.length && its.length ? `<div class="sub" style="margin-bottom:10px">Not in this campaign yet: ${missing.map(t => `<a href="#" style="color:var(--brand)" onclick="openNew({campaign:'${c.id}',type:'${t}'});return false">${TYPES[t].label.toLowerCase()}</a>`).join(', ')}</div>` : ''}
-    <div class="panel">${itemsTable(its.map(it => ({ it, chk: checksOf(it) })), false)}</div>`;
-}
-function openAttach(cid) {
-  const free = S.items.filter(i => i.campaign !== cid);
-  modal(`Add content to ${esc(campOf(cid).name)}`, free.length ? `<div class="srcs">${free.map(i => `<label class="src"><input type="checkbox" value="${i.id}">
-      <div><b>${esc(i.title)}</b><div>${TYPES[i.type].label} · ${i.campaign ? 'now in ' + esc(campOf(i.campaign).name) : 'no campaign'}</div></div></label>`).join('')}</div>` : '<div class="sub">Everything in the library is already in this campaign.</div>',
-    `<span></span><div style="display:flex;gap:8px"><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="doAttach('${cid}')">Add to campaign</button></div>`);
-}
-function doAttach(cid) {
-  const ids = Array.from(document.querySelectorAll('.mdl .src input:checked')).map(x => x.value);
-  ids.forEach(id => { itemOf(id).campaign = cid; }); saveStore(); closeModal(); render(); if (ids.length) showToast(`${ids.length} added to the campaign`);
-}
-function openNewCampaign(after) {
-  modal('New campaign', `<div><label class="lbl">Name</label><input class="inp" id="ncName" placeholder="e.g. Project season, spring"></div>
-    <div><label class="lbl">Goal</label><input class="inp" id="ncGoal" placeholder="What this campaign should achieve"></div>
-    <div class="row2"><div><label class="lbl">Audience</label><select class="sel" id="ncSeg">${Object.keys(AUDIENCE).map(k => `<option value="${k}">${AUDIENCE[k]}</option>`).join('')}</select></div>
-    <div><label class="lbl">Dates</label><input class="inp" id="ncDates" placeholder="e.g. Jan – Mar 2027"></div></div>`,
-    `<span></span><div style="display:flex;gap:8px"><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="saveCampaign(${after ? 'true' : 'false'})">Create campaign</button></div>`);
-  setTimeout(() => document.getElementById('ncName').focus(), 30);
-}
-function saveCampaign(backToNew) {
-  const name = document.getElementById('ncName').value.trim();
-  if (!name) { showToast('Give the campaign a name'); return; }
-  const c = { id: uid(), name, goal: document.getElementById('ncGoal').value.trim() || '—', seg: document.getElementById('ncSeg').value, dates: document.getElementById('ncDates').value.trim(), created: Date.now(), by: me() };
-  S.campaigns.push(c); saveStore(); closeModal();
-  if (backToNew) { NEWF.campaign = c.id; NEWF.seg = c.seg; openNew(); } else openCamp(c.id);
+function openItem(id) {
+  const it = itemOf(id); if (!it) { renderHome(); return; }
+  let cv = convOf(it.conv);
+  if (!cv) { cv = { id: uid(), msgs: [{ who: 'ai', card: it.id, at: it.created }], items: [it.id], active: it.id, updated: it.updated }; S.convs.push(cv); it.conv = cv.id; saveStore(); }
+  CONV = cv; CONV.active = id; CANVAS = true; renderConv();
 }
 
-/* ─── Modal helper (Flowbite modal pattern) ─── */
-function modal(title, body, foot, wide) {
-  closeModal();
-  const ov = document.createElement('div'); ov.className = 'mov'; ov.id = 'mov';
-  ov.innerHTML = `<div class="mdl" style="${wide ? 'max-width:720px' : ''}"><div class="mdl-h"><h3>${title}</h3><button class="tbtn" onclick="closeModal()" aria-label="Close">✕</button></div>
-    <div class="mdl-b">${body}</div><div class="mdl-f">${foot}</div></div>`;
-  ov.addEventListener('mousedown', e => { if (e.target === ov) closeModal(); });
-  document.body.appendChild(ov);
+/* ─── Conversation: chat on the left, canvas on the right once something is written ─── */
+function renderConv() {
+  const it = cur();
+  if (it) history.replaceState(null, '', '?item=' + it.id);
+  document.getElementById('mainArea').innerHTML = `
+    <div class="topbar"><div class="topbar-l"><a class="btn btn-ghost btn-sm" onclick="leave()">← Content studio</a><span class="tb-title" id="convTitle">${esc(it ? it.title : 'New chat')}</span></div>
+      <div class="topbar-r"><button class="btn btn-sec btn-sm" onclick="KIND='blog';leave()">+ New chat</button></div></div>
+    <div class="cs"><div class="conv ${CANVAS && it ? 'split' : ''}" id="conv">
+      <div class="chat"><div class="thread" id="thread"><div class="thread-in" id="msgs"></div></div>
+        <div id="targetBar"></div><div class="chips" id="chips"></div>
+        <div class="composer"><div class="box"><textarea id="chatIn" rows="1" placeholder="${it ? 'Ask for a change…' : 'Reply…'}" oninput="this.style.height='auto';this.style.height=Math.min(160,this.scrollHeight)+'px'" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();send();}"></textarea>
+          <button class="send" id="sendBtn" onclick="send()" aria-label="Send">↑</button></div>
+          <div class="sub" style="text-align:center;margin-top:6px;font-size:11px">Only approved sources are cited. Every change runs the brand checks.</div></div></div>
+      ${CANVAS && it ? canvasHtml(it) : ''}
+    </div></div>`;
+  renderMsgs();
+  if (CANVAS && it) mountCanvas(it);
 }
-function closeModal() { const m = document.getElementById('mov'); if (m) m.remove(); }
+function leave() { if (CONV) { persistDoc(); saveStore(); } renderHome(); }
+function renderMsgs() {
+  const box = document.getElementById('msgs'); if (!box) return;
+  box.innerHTML = CONV.msgs.map((m, i) => {
+    if (m.card) { const it = itemOf(m.card); if (!it) return '';
+      const live = BUSY && m.streaming;
+      return `<div class="card ${CANVAS && CONV.active === it.id ? 'on' : ''}" onclick="showCanvas('${it.id}')"><div class="ci">${TYPES[it.type].ic}</div>
+        <div style="flex:1;min-width:0"><div class="ct">${esc(it.title)}</div><div class="cs2">${live ? '<span class="spin"></span>Writing in the canvas' : `${TYPES[it.type].label} · ${CANVAS && CONV.active === it.id ? 'Open in the canvas' : 'Click to open'}`}</div></div></div>`; }
+    if (m.who === 'me') return `<div class="m-me">${esc(m.text)}</div>`;
+    return `<div class="m-ai"><div class="av">AI</div><div class="tx">${m.typing ? '<span class="dots">Thinking</span>' : fmtMsg(m.text)}</div></div>`;
+  }).join('');
+  const th = document.getElementById('thread'); th.scrollTop = th.scrollHeight;
+  renderChips();
+}
+const fmtMsg = t => esc(t).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+function addMsg(m) { m.at = Date.now(); CONV.msgs.push(m); CONV.updated = Date.now(); saveStore(); renderMsgs(); return m; }
+function showCanvas(id) { if (BUSY) return; persistDoc(); CONV.active = id; CANVAS = true; renderConv(); }
+function closeCanvas() { persistDoc(); CANVAS = false; renderConv(); }
 
-/* ─── New content: type, topic, campaign, audience, tone, length, approved sources ─── */
-let NEWF = null;
-function openNew(pre) {
-  if (pre || !NEWF) {
-    const cp = pre && pre.campaign ? campOf(pre.campaign) : null;
-    NEWF = Object.assign({ type: 'blog', topic: '', campaign: '', seg: cp ? cp.seg : 'Modernisation', tone: brandTone(), length: 'Medium', notes: '' }, pre || {});
-    NEWF.sources = E.approvedClaims().filter(c => c.segments.includes(NEWF.seg)).map(c => c.id);
+/* ─── Sending: a new piece, a question back, or a change to the piece in the canvas ─── */
+const NEW_RE = /\b(write|draft|create|generate|produce|give me|need|want)\b[^.?!]*?\b(a|an|another|new|one more)\s+(\w+\s+){0,3}?(blog|white\s?-?paper|article)\b|^\s*(a|an|another)\s+(short |long |detailed |new )?(blog|white\s?-?paper)\b/i;
+function send(text) {
+  if (BUSY) return;
+  const inp = document.getElementById('chatIn');
+  const q = (text !== undefined ? text : inp.value).trim(); if (!q) return;
+  if (inp && text === undefined) { inp.value = ''; inp.style.height = 'auto'; }
+  addMsg({ who: 'me', text: q, by: C.who() });
+  const it = cur();
+  if (CONV.pending || !it || NEW_RE.test(q)) {
+    const typeHint = CONV.pending ? CONV.pending.type : (/white\s?-?paper/i.test(q) ? 'whitepaper' : /blog|article/i.test(q) ? 'blog' : CONV.kind || 'blog');
+    const brief = C.parseBrief(CONV.pending ? CONV.pending.text + ' about ' + q : q, typeHint);
+    if (!brief.ok) {
+      CONV.pending = { type: brief.type, text: q };
+      return reply(`Happy to write a ${TYPES[brief.type].label.toLowerCase()}. What should it be about, and who is it for? For example: “${SUGG[brief.type][0].replace(/^A (short |detailed )?(blog|whitepaper) /i, '')}”.`);
+    }
+    CONV.pending = null;
+    // "on the same topic", "about this": carry over the piece in the canvas.
+    if (it && /^(the )?(same|this|that|it)( topic| one| piece| subject)?$/i.test(brief.topic)) { brief.topic = it.topic; if (!brief.audienceText) brief.seg = it.seg; }
+    return writeNew(brief);
   }
-  const f = NEWF, pack = E.brandPack(), vc = pack.voice, bt = brandTone();
-  const claims = E.approvedClaims(), mine = claims.filter(c => c.segments.includes(f.seg)), other = claims.filter(c => !c.segments.includes(f.seg));
-  const src = c => `<label class="src"><input type="checkbox" value="${c.id}" ${f.sources.includes(c.id) ? 'checked' : ''} onchange="NEWF.sources=Array.from(document.querySelectorAll('#nfSrc input:checked')).map(x=>x.value)">
-      <div><b>${c.id} · ${esc(c.title)}</b> <span class="sub">${c.type}, ${c.year}</span><div>${esc(c.claim)}</div></div></label>`;
-  modal('New content', `
-    <div><label class="lbl">What are you writing?</label><div class="types">${Object.keys(TYPES).map(t => `<button class="type ${f.type === t ? 'on' : ''}" onclick="nf({type:'${t}'})"><span class="ic">${TYPES[t].ic}</span>${TYPES[t].label}</button>`).join('')}</div>
-      <div class="sub" style="margin-top:6px">${TYPES[f.type].about}.</div></div>
-    <div><label class="lbl">Topic or working title</label><input class="inp" id="nfTopic" value="${esc(f.topic)}" oninput="NEWF.topic=this.value" placeholder="${f.type === 'email' ? 'e.g. planning your control system migration' : 'e.g. Plan the migration before end of support sets the date'}"></div>
-    <div class="row2">
-      <div><label class="lbl">Campaign</label><select class="sel" onchange="if(this.value==='+'){openNewCampaign(true);return;} const c=campOf(this.value); nf({campaign:this.value, seg:c?c.seg:NEWF.seg, resetSrc:!!c})">
-        <option value="">No campaign</option>${S.campaigns.map(c => `<option value="${c.id}" ${f.campaign === c.id ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}<option value="+">+ New campaign…</option></select></div>
-      <div><label class="lbl">Audience</label><select class="sel" onchange="nf({seg:this.value,resetSrc:true})">${Object.keys(AUDIENCE).map(k => `<option value="${k}" ${f.seg === k ? 'selected' : ''}>${AUDIENCE[k]}</option>`).join('')}</select></div>
-    </div>
-    <div class="row2">
-      <div><label class="lbl">Tone</label><div class="seg">${TONES.map(t => `<button class="${f.tone === t ? 'on' : ''}" onclick="nf({tone:'${t}'})">${t}${t === bt ? ' ★' : ''}</button>`).join('')}</div>
-        <div class="sub" style="margin-top:5px">★ Brand default. ${esc(E.VOICE_PRESETS[f.tone].about)}</div></div>
-      <div><label class="lbl">Length</label><div class="seg">${LENGTHS.map(l => `<button class="${f.length === l ? 'on' : ''}" onclick="nf({length:'${l}'})">${l}</button>`).join('')}</div>
-        <div class="sub" style="margin-top:5px">${LAYOUT[f.type][f.length].length} parts: ${LAYOUT[f.type][f.length].map(r => r === 'title' ? 'title' : (HEAD[r] ? HEAD[r][0] : r.replace(/^[ep]/, '')).toLowerCase()).join(', ')}</div></div>
-    </div>
-    <div><label class="lbl">Approved sources it may cite</label>
-      <div class="srcs" id="nfSrc">${mine.map(src).join('')}${other.length ? `<details><summary class="sub" style="cursor:pointer;margin:4px 0">Other approved sources (${other.length})</summary><div class="srcs">${other.map(src).join('')}</div></details>` : ''}</div>
-      <div class="sub" style="margin-top:6px">Only these can be cited, word for word. Anything else that reads like a product claim is flagged before the piece can be marked ready.</div></div>
-    <div><label class="lbl">Anything else the writer should know? <span class="sub">(optional)</span></label><textarea class="ta" id="nfNotes" oninput="NEWF.notes=this.value" placeholder="e.g. mention the two-day site assessment">${esc(f.notes)}</textarea></div>
-    <div class="brandbox"><b>Brand v${pack.v} applies automatically.</b> ${esc(vc.preset)} voice${f.tone !== bt ? ` (adjusted to ${f.tone} for this piece)` : ''}, ${pack.negative.length} banned words checked, sentences under ${vc.maxSentenceWords} words${vc.noExclamation ? ', no exclamation marks' : ''}, signed "${esc(vc.signoff)}". Maintained in the <a href="07-content.html" style="color:var(--brand-dk)">Content library</a>.</div>`,
-    `<span class="sub">Writer → <span class="skill">${TYPES[f.type].skill}</span> instructions</span>
-     <div style="display:flex;gap:8px"><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="createItem()">Generate draft</button></div>`, true);
+  const t = reply(null);
+  setTimeout(() => { t.typing = false; t.text = handle(q); saveStore(); renderMsgs(); }, 450);
 }
-function nf(o) {
-  const reset = o.resetSrc; delete o.resetSrc; Object.assign(NEWF, o);
-  if (reset) NEWF.sources = E.approvedClaims().filter(c => c.segments.includes(NEWF.seg)).map(c => c.id);
-  const sc = document.querySelector('.mdl-b') ? document.querySelector('.mdl-b').scrollTop : 0;
-  openNew(); const b = document.querySelector('.mdl-b'); if (b) b.scrollTop = sc;
+function reply(text) { const m = addMsg({ who: 'ai', text: text || '', typing: text === null }); return m; }
+function writeNew(b) {
+  const plan = reply(null);
+  setTimeout(() => {
+    const it = C.newItem({ type: b.type, topic: b.topic, seg: b.seg, tone: b.tone, length: b.length, conv: CONV.id });
+    S.items.push(it); CONV.items.push(it.id); CONV.active = it.id;
+    const srcs = E.approvedClaims().filter(c => it.sources.includes(c.id)).map(c => c.id);
+    plan.typing = false;
+    plan.text = `I'll write a ${it.length.toLowerCase()} ${TYPES[it.type].label.toLowerCase()} on **${it.topic}** for ${lc(AUDIENCE[it.seg])}, in a ${it.tone.toLowerCase()} voice, using the ${TYPES[it.type].skill} instructions and Brand v${it.brandV}.` +
+      (srcs.length ? ` It can cite ${srcs.join(', ')}, the approved sources for this audience.` : ' There is no approved source for this audience, so it will make no product claims.');
+    const card = addMsg({ who: 'ai', card: it.id, streaming: true });
+    CANVAS = true; BUSY = true; renderConv();
+    const blocks = C.generate(it);
+    stream(document.getElementById('doc'), blocks, () => {
+      BUSY = false; card.streaming = false; persistDoc(); it.updated = Date.now(); saveStore();
+      reply(C.summaryFor(it)); runChecks(); tagBlocks();
+    });
+  }, 600);
 }
-function createItem() {
-  const f = NEWF, topic = f.topic.trim();
-  if (!topic) { showToast('Add a topic or working title'); document.getElementById('nfTopic').focus(); return; }
-  const it = newItem({ type: f.type, title: topic, topic, campaign: f.campaign, seg: f.seg, tone: f.tone, length: f.length, sources: f.sources.slice(), notes: f.notes.trim() });
-  const used = citedIn(it);
-  it.chat = [{ who: 'me', text: `Write a ${TYPES[f.type].label.toLowerCase()} on "${topic}" for ${lc(AUDIENCE[f.seg])}. ${f.tone}, ${f.length.toLowerCase()}.` },
-    { who: 'ai', text: `Here's a first draft, written with the ${TYPES[f.type].skill} instructions and Brand v${it.brandV}: ${f.tone} voice, banned words and sentence length checked. ` +
-      (used.length ? `It cites ${used.length} approved source${used.length > 1 ? 's' : ''} word for word (${used.join(', ')}).` : f.sources.length ? 'This length has no proof section, so it makes no product claims. Ask me to add proof.' : 'No approved source was selected, so it makes no product claims.') +
-      `\n\nClick any paragraph to change just that one, or tell me what to change in the whole piece.` }];
-  S.items.push(it); saveStore(); NEWF = null; closeModal();
-  VIEW = { tab: VIEW.tab, camp: VIEW.camp, item: it.id }; render();
-  if (it.notes) setTimeout(() => sendChat(it.notes), 300);
+// Writes the blocks into the canvas a few characters at a time, the way a reply appears.
+function stream(doc, blocks, done) {
+  doc.classList.add('streaming'); doc.contentEditable = 'false';
+  const total = blocks.reduce((n, b) => n + (Array.isArray(b.text) ? b.text.join('').length : b.text.length), 0);
+  const step = Math.max(5, Math.round(total / 260));
+  const sc = document.getElementById('cvScroll');
+  let bi = 0, li = 0, ci = 0, el = null, target = null;
+  const tick = () => {
+    if (!document.body.contains(doc)) { doc = document.getElementById('doc'); if (!doc) { finish(); return; } }
+    const b = blocks[bi];
+    if (!b) { finish(); return; }
+    const isList = Array.isArray(b.text);
+    if (!el) { el = document.createElement(b.tag); el.dataset.b = uid(); el.dataset.role = b.role; el.dataset.v = b.v || 0; doc.appendChild(el); }
+    if (isList && !target) { target = document.createElement('li'); el.appendChild(target); }
+    const text = isList ? b.text[li] : b.text, node = isList ? target : el;
+    ci = Math.min(text.length, ci + step); node.textContent = text.slice(0, ci);
+    if (ci >= text.length) {
+      ci = 0;
+      if (isList && li < b.text.length - 1) { li++; target = null; }
+      else { if (!isList) el.innerHTML = C.blockInner(b); bi++; li = 0; el = null; target = null; }
+    }
+    if (sc) sc.scrollTop = sc.scrollHeight;
+    setTimeout(tick, 16);
+  };
+  const finish = () => { const d = document.getElementById('doc'); if (d) { d.classList.remove('streaming'); d.contentEditable = 'true'; } done(); };
+  tick();
 }
-function openItem(id) { VIEW = { tab: VIEW.tab, camp: VIEW.camp, item: id }; render(); }
 
-/* ─── Editor: chat on the left, the document on the right ─── */
-let TARGET = null, DIRTY = false, UNDO = [];
-function cur() { return itemOf(VIEW.item); }
-function renderEditor(main) {
-  const it = cur(), cp = campOf(it.campaign);
-  TARGET = null; DIRTY = false; UNDO = [];
-  const back = VIEW.camp ? `<a onclick="leaveEditor()">${esc(cp ? cp.name : 'Campaign')}</a>` : `<a onclick="leaveEditor()">Content studio</a>`;
-  main.innerHTML = `<div class="topbar"><div class="topbar-l"><div class="tb-crumb">${back} / <b id="crumbTitle">${esc(it.title)}</b></div>
-      ${typeTag(it.type)} <span id="stTag">${statusTag(it.status)}</span><span class="sub" id="dirtyLbl"></span></div>
-    <div class="topbar-r savebar">
-      <div class="dd"><button class="btn btn-sec" onclick="toggleDD('ddDl',event)">Download ▾</button>
-        <div class="ddm" id="ddDl"><div class="h">Download</div><button onclick="dl('doc')">Word document (.doc)</button><button onclick="dl('pdf')">PDF (print)</button><button onclick="dl('md')">Markdown (.md)</button><button onclick="dl('html')">Web page (.html)</button><button onclick="dl('copy')">Copy text</button></div></div>
-      <button class="btn btn-sec" onclick="saveDoc()">Save to library</button>
-      <button class="btn btn-primary" id="readyBtn" onclick="markReady()">${it.status === 'Ready' ? 'Back to draft' : 'Mark ready'}</button></div></div>
-    <div class="studio" style="flex:1;min-height:0">
-      <div class="chat"><div class="chat-h"><div class="t">Writer</div><div class="sub">Uses the <span class="skill">${TYPES[it.type].skill}</span> instructions and Brand v${it.brandV}. It only cites approved sources.</div></div>
-        <div class="msgs" id="msgs"></div><div id="targetBar"></div><div class="chips" id="chips"></div>
-        <div class="composer"><textarea id="chatIn" placeholder="Tell the writer what to change…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat();}"></textarea>
-          <button class="btn btn-primary" style="height:40px" onclick="sendChat()">Send</button></div></div>
-      <div class="docside">
-        <div class="doc-tools">
-          <button class="tbtn" title="Bold" onmousedown="event.preventDefault()" onclick="fmt('bold')"><b>B</b></button>
-          <button class="tbtn" title="Italic" onmousedown="event.preventDefault()" onclick="fmt('italic')"><i>I</i></button>
-          <button class="tbtn" title="Underline" onmousedown="event.preventDefault()" onclick="fmt('underline')"><u>U</u></button>
-          <span class="tsep"></span>
-          <button class="tbtn" title="Heading" onmousedown="event.preventDefault()" onclick="fmt('formatBlock','H2')">H</button>
-          <button class="tbtn" title="Paragraph" onmousedown="event.preventDefault()" onclick="fmt('formatBlock','P')">¶</button>
-          <button class="tbtn" title="Bulleted list" onmousedown="event.preventDefault()" onclick="fmt('insertUnorderedList')">•</button>
-          <button class="tbtn" title="Numbered list" onmousedown="event.preventDefault()" onclick="fmt('insertOrderedList')">1.</button>
-          <button class="tbtn" title="Quote" onmousedown="event.preventDefault()" onclick="fmt('formatBlock','BLOCKQUOTE')">❝</button>
-          <button class="tbtn" title="Link" onmousedown="event.preventDefault()" onclick="addLink()">🔗</button>
-          <span class="tsep"></span>
-          <button class="tbtn" title="Undo" onmousedown="event.preventDefault()" onclick="undoAny()">↶</button>
-          <button class="tbtn" title="Redo" onmousedown="event.preventDefault()" onclick="fmt('redo')">↷</button>
-          <span class="tsep"></span>
-          <span class="lab">Tone</span><select class="sel" style="width:auto;height:28px;padding:0 6px" onchange="setTone(this.value)">${TONES.map(t => `<option ${it.tone === t ? 'selected' : ''}>${t}</option>`).join('')}</select>
-          <span class="lab">Length</span><select class="sel" style="width:auto;height:28px;padding:0 6px" onchange="setLength(this.value)">${LENGTHS.map(l => `<option ${it.length === l ? 'selected' : ''}>${l}</option>`).join('')}</select>
-          <span class="sp"></span><span class="sub" id="wc"></span></div>
-        <div class="doc-scroll" id="docScroll">
-          <div class="paper-meta">${typeTag(it.type)}<span class="tag tag-grey">${esc(AUDIENCE[it.seg] || it.seg)}</span><span class="tag tag-blue">Brand v${it.brandV}</span><span style="flex:1"></span><span class="sub">Campaign</span><select class="sel" style="width:auto;max-width:220px;height:26px;padding:0 6px;font-size:12px" onchange="setCampaign(this.value)"><option value="">None</option>${S.campaigns.map(c => `<option value="${c.id}" ${it.campaign === c.id ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select></div>
-          <div class="paper" style="position:relative"><div id="doc" contenteditable="true" spellcheck="true">${it.html}</div>
-            <div class="gutter" id="gutter"><button onclick="regenTarget()">↻ Regenerate</button><button onclick="askTarget()">✎ Ask to change</button><button onclick="removeTarget()">✕</button></div></div>
-          <div class="checks panel" style="padding:12px 14px" id="checks"></div>
-        </div></div></div>`;
+/* ─── Canvas ─── */
+function canvasHtml(it) {
+  const chk = C.checksOf(it), n = issuesOf(chk);
+  return `<div class="canvas2">
+    <div class="cv-h"><span style="font-size:16px">${TYPES[it.type].ic}</span><span class="cv-t" id="cvTitle">${esc(it.title)}</span><span id="stTag">${statusTag(it.status)}</span><span class="saved" id="savedLbl">Saved</span><span class="sp"></span>
+      <button class="btn btn-sec btn-sm" onclick="attach()">📎 Attach</button>
+      <div class="dd"><button class="btn btn-sec btn-sm" onclick="toggleDD('ddDl',event)">Download ▾</button>
+        <div class="ddm" id="ddDl"><div class="h">Download</div><button onclick="dl('docx')">Word document (.docx)</button><button onclick="dl('pdf')">PDF (print)</button><button onclick="dl('md')">Markdown (.md)</button><button onclick="dl('copy')">Copy text</button></div></div>
+      <button class="btn btn-primary btn-sm" id="readyBtn" onclick="markReady()">${it.status === 'Ready' ? 'Back to draft' : 'Mark ready'}</button>
+      <button class="tbtn" title="Close the canvas" onclick="closeCanvas()">✕</button></div>
+    <div class="cv-tools">
+      <button class="tbtn" title="Bold" onmousedown="event.preventDefault()" onclick="fmt('bold')"><b>B</b></button>
+      <button class="tbtn" title="Italic" onmousedown="event.preventDefault()" onclick="fmt('italic')"><i>I</i></button>
+      <button class="tbtn" title="Underline" onmousedown="event.preventDefault()" onclick="fmt('underline')"><u>U</u></button>
+      <span class="tsep"></span>
+      <button class="tbtn" title="Heading" onmousedown="event.preventDefault()" onclick="fmt('formatBlock','H2')">H</button>
+      <button class="tbtn" title="Paragraph" onmousedown="event.preventDefault()" onclick="fmt('formatBlock','P')">¶</button>
+      <button class="tbtn" title="Bulleted list" onmousedown="event.preventDefault()" onclick="fmt('insertUnorderedList')">•</button>
+      <button class="tbtn" title="Numbered list" onmousedown="event.preventDefault()" onclick="fmt('insertOrderedList')">1.</button>
+      <button class="tbtn" title="Quote" onmousedown="event.preventDefault()" onclick="fmt('formatBlock','BLOCKQUOTE')">❝</button>
+      <button class="tbtn" title="Link" onmousedown="event.preventDefault()" onclick="addLink()">🔗</button>
+      <span class="tsep"></span>
+      <button class="tbtn" title="Undo" onmousedown="event.preventDefault()" onclick="undoAny()">↶</button>
+      <button class="tbtn" title="Redo" onmousedown="event.preventDefault()" onclick="fmt('redo')">↷</button>
+      <span class="tsep"></span>
+      <span class="lab">Tone</span><select onchange="setTone(this.value)">${C.TONES.map(t => `<option ${it.tone === t ? 'selected' : ''}>${t}</option>`).join('')}</select>
+      <span class="lab">Length</span><select onchange="setLength(this.value)">${C.LENGTHS.map(l => `<option ${it.length === l ? 'selected' : ''}>${l}</option>`).join('')}</select>
+      <span style="flex:1"></span><span class="sub" id="wc"></span></div>
+    <div class="cv-scroll" id="cvScroll">
+      <div class="att" id="att"></div>
+      <div class="paper"><div id="doc" contenteditable="true" spellcheck="true"></div>
+        <div class="gutter" id="gutter"><button onclick="regenTarget()">↻ Regenerate</button><button onclick="askTarget()">✎ Ask to change</button><button onclick="removeTarget()">✕</button></div></div>
+      <div class="checks" id="checks"></div>
+    </div></div>`;
+}
+function mountCanvas(it) {
   const doc = document.getElementById('doc');
-  doc.addEventListener('click', e => { const b = e.target.closest('#doc > *'); selectBlock(b); });
-  doc.addEventListener('input', () => { markEdited(); tagBlocks(); setDirty(true); clearTimeout(window._ck); window._ck = setTimeout(runChecks, 350); });
-  document.getElementById('docScroll').addEventListener('scroll', placeGutter);
-  tagBlocks(); renderChat(); runChecks();
+  if (!BUSY) doc.innerHTML = it.html;
+  doc.addEventListener('click', e => { if (BUSY) return; selectBlock(e.target.closest('#doc > *')); });
+  doc.addEventListener('input', () => { markEdited(); tagBlocks(); autosave(); clearTimeout(window._ck); window._ck = setTimeout(runChecks, 350); });
+  document.getElementById('cvScroll').addEventListener('scroll', placeGutter);
+  renderAtt(); if (!BUSY) { tagBlocks(); runChecks(); } else document.getElementById('checks').innerHTML = '<span class="sub">Brand checks run as soon as the draft is written.</span>';
 }
-function leaveEditor() {
-  if (DIRTY && !confirm('You have changes that are not saved to the library. Leave anyway?')) return;
-  VIEW.item = null; render();
+function renderAtt() {
+  const el = document.getElementById('att'), it = cur(); if (!el || !it) return;
+  el.innerHTML = `<span class="tag tag-grey">${esc(AUDIENCE[it.seg] || it.seg)}</span><span class="tag tag-blue">Brand v${it.brandV}</span><span style="margin-left:6px">Attached to:</span>${attTags(it) || '<a href="#" style="color:var(--brand)" onclick="attach();return false">nothing yet, attach it</a>'}`;
 }
-function setDirty(v) { DIRTY = v; const l = document.getElementById('dirtyLbl'); if (l) l.textContent = v ? '· Unsaved changes' : ''; }
+function attach() { const it = cur(); C.pickTargets(it.id, () => { S = C.store(); CONV = convOf(CONV.id); renderAtt(); const i = cur(); addMsg({ who: 'ai', text: i.attached.length ? `Attached to ${i.attached.map(C.attachLabel).join(', ')}. The reps will see it in Micro-segments & NBA.` : 'It is not attached to anything now.' }); }); }
+
+let TARGET = null, UNDO = [];
+function autosave() { const l = document.getElementById('savedLbl'); if (l) l.textContent = 'Saving…'; clearTimeout(window._as); window._as = setTimeout(() => { persistDoc(); const it = cur(); if (it) { it.updated = Date.now(); it.by = C.who(); } saveStore(); if (l) l.textContent = 'Saved'; }, 500); }
+function persistDoc() {
+  const it = cur(), doc = document.getElementById('doc'); if (!it || !doc || BUSY) return;
+  it.html = doc.innerHTML.replace(/ class="sel"/g, '').replace(/ class="flash"/g, '').replace(/ class=""/g, '');
+  const h = doc.querySelector('h1'); if (h && h.textContent.trim()) it.title = h.textContent.trim();
+  const t = document.getElementById('cvTitle'); if (t) t.textContent = it.title;
+  const ct = document.getElementById('convTitle'); if (ct) ct.textContent = it.title;
+}
 function tagBlocks() {
   const doc = document.getElementById('doc'); if (!doc) return;
   Array.from(doc.children).forEach(el => { if (!el.dataset.b) { el.dataset.b = uid(); el.dataset.role = el.dataset.role || 'free'; } });
@@ -915,60 +684,49 @@ function selectBlock(b) {
   if (TARGET) b.classList.add('sel');
   placeGutter(); renderTarget();
 }
-function targetEl() { return TARGET ? document.querySelector(`#doc > [data-b="${TARGET}"]`) : null; }
+const targetEl = () => TARGET ? document.querySelector(`#doc > [data-b="${TARGET}"]`) : null;
 function placeGutter() {
   const g = document.getElementById('gutter'), b = targetEl(); if (!g) return;
   if (!b) { g.style.display = 'none'; return; }
-  g.style.display = 'flex'; g.style.top = Math.max(4, b.offsetTop - 28) + 'px'; g.style.right = '56px';
-}
-function blockLabel(b) {
-  const r = b.dataset.role || 'free', t = (b.innerText || '').trim().replace(/\s+/g, ' ');
-  const kind = b.tagName === 'H1' ? 'Title' : b.tagName === 'H2' ? 'Heading' : (b.tagName === 'UL' || b.tagName === 'OL') ? 'List' : 'Paragraph';
-  return `${kind}: “${t.slice(0, 48)}${t.length > 48 ? '…' : ''}”` + (r === 'free' ? '' : '');
+  g.style.display = 'flex'; g.style.top = Math.max(4, b.offsetTop - 28) + 'px'; g.style.right = '52px';
 }
 function renderTarget() {
   const tb = document.getElementById('targetBar'), b = targetEl(); if (!tb) return;
-  tb.innerHTML = b ? `<div class="target"><span>Changing only · ${esc(blockLabel(b))}</span><button onclick="selectBlock(null)" title="Change the whole piece instead">✕</button></div>` : '';
+  const t = b ? (b.innerText || '').trim().replace(/\s+/g, ' ') : '';
+  const kind = b ? (b.tagName === 'H1' ? 'Title' : b.tagName === 'H2' ? 'Heading' : (b.tagName === 'UL' || b.tagName === 'OL') ? 'List' : 'Paragraph') : '';
+  tb.innerHTML = b ? `<div class="target"><span>Changing only this ${kind.toLowerCase()}: “${esc(t.slice(0, 50))}${t.length > 50 ? '…' : ''}”</span><button onclick="selectBlock(null)" title="Change the whole piece instead">✕</button></div>` : '';
   renderChips();
 }
 function renderChips() {
   const c = document.getElementById('chips'); if (!c) return;
   const it = cur(), b = targetEl();
+  if (!it || BUSY) { c.innerHTML = ''; return; }
   const opts = b ? ['Regenerate this', 'Make it shorter', 'Add more detail', 'Add proof', 'More formal'] :
-    ['Make it shorter', 'Add proof', 'Warmer tone', 'Rewrite the intro', 'Add a section on lifecycle planning'];
-  if (it.type === 'email' && !b) opts.splice(3, 1, 'New subject line');
-  c.innerHTML = opts.map(o => `<button class="chip" onclick="sendChat(${esc(JSON.stringify(o))})">${esc(o)}</button>`).join('') +
+    ['Make it shorter', 'Add proof', 'More formal', 'Rewrite the intro', 'Add a section on lifecycle planning', 'Attach to a micro-segment'];
+  c.innerHTML = opts.map(o => `<button class="chip" onclick="send(${esc(JSON.stringify(o))})">${esc(o)}</button>`).join('') +
     (UNDO.length ? `<button class="chip" style="background:#fff" onclick="undoAI()">↶ Undo last change</button>` : '');
 }
-function renderChat() {
-  const box = document.getElementById('msgs'), it = cur(); if (!box) return;
-  box.innerHTML = it.chat.map(m => `<div class="msg ${m.who}"><div class="who">${m.who === 'ai' ? 'Writer' : esc(m.by || 'You')}</div>${esc(m.text)}</div>`).join('');
-  box.scrollTop = box.scrollHeight; renderTarget();
-}
-function say(who, text) { cur().chat.push({ who, text, by: who === 'me' ? me() : undefined, at: Date.now() }); saveStore(); renderChat(); }
-function persistDoc() { const it = cur(), doc = document.getElementById('doc'); it.html = doc.innerHTML.replace(/ class="sel"/g, '').replace(/ class=""/g, ''); }
 function snapshot() { const d = document.getElementById('doc'); UNDO.push(d.innerHTML); if (UNDO.length > 20) UNDO.shift(); }
-function undoAI() { if (!UNDO.length) return; document.getElementById('doc').innerHTML = UNDO.pop(); TARGET = null; afterChange(); say('ai', 'Undone. The piece is back to how it was before my last change.'); }
-function undoAny() { if (UNDO.length && !document.activeElement.closest('#doc')) undoAI(); else fmt('undo'); }
+function undoAI() { if (!UNDO.length) return; document.getElementById('doc').innerHTML = UNDO.pop(); TARGET = null; afterChange(); addMsg({ who: 'ai', text: 'Undone. The piece is back to how it was before my last change.' }); }
+function undoAny() { if (UNDO.length && !(document.activeElement && document.activeElement.closest && document.activeElement.closest('#doc'))) undoAI(); else fmt('undo'); }
 function afterChange(flashEl) {
-  tagBlocks(); persistDoc(); setDirty(true); runChecks(); placeGutter(); renderTarget();
-  if (flashEl) { flashEl.classList.remove('flash'); void flashEl.offsetWidth; flashEl.classList.add('flash'); }
+  tagBlocks(); persistDoc(); autosave(); runChecks(); placeGutter(); renderTarget();
+  if (flashEl) { flashEl.classList.remove('flash'); void flashEl.offsetWidth; flashEl.classList.add('flash'); flashEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
 }
-function fmt(cmd, val) { document.getElementById('doc').focus(); document.execCommand(cmd, false, val || null); tagBlocks(); persistDoc(); setDirty(true); runChecks(); }
+function fmt(cmd, val) { const d = document.getElementById('doc'); if (!d) return; d.focus(); document.execCommand(cmd, false, val || null); tagBlocks(); autosave(); runChecks(); }
 function addLink() { const u = prompt('Link address'); if (u) fmt('createLink', u); }
 
-/* ─── Checks panel: brand rules and claims, live as you type ─── */
+/* ─── Brand checks, live ─── */
 let CHK_OPEN = false;
+function blocksText(root) { return Array.from(root.children).map(el => (el.tagName === 'UL' || el.tagName === 'OL') ? Array.from(el.children).map(li => li.textContent).join('\n') : el.textContent).join('\n'); }
 function runChecks() {
   const box = document.getElementById('checks'), doc = document.getElementById('doc'); if (!box || !doc) return;
-  const it = cur(), chk = E.checkContent(blocksText(doc)), n = issuesOf(chk), ver = chk.claims.filter(c => c.verified);
-  const pack = E.brandPack();
-  box.innerHTML = `<div class="chk-row"><b style="font-size:12.5px">Brand checks</b>
+  const it = cur(), chk = E.checkContent(blocksText(doc)), n = issuesOf(chk), ver = chk.claims.filter(c => c.verified), pack = E.brandPack();
+  box.innerHTML = `<div class="chk-row"><b style="font-size:12.5px;margin-right:4px">Brand checks</b>
       ${n ? `<span class="tag tag-red">${n} to fix before it can be marked ready</span>` : '<span class="tag tag-green">All checks pass</span>'}
       <span class="tag tag-grey">Voice: ${esc(it.tone)}</span><span class="tag tag-grey">${pack.negative.length} banned words checked</span>
       <span class="tag ${ver.length ? 'tag-blue' : 'tag-grey'}">${ver.length} claim${ver.length === 1 ? '' : 's'} verified</span>
-      ${chk.unsupported.length ? `<span class="tag tag-red">${chk.unsupported.length} unsupported claim${chk.unsupported.length > 1 ? 's' : ''}</span>` : ''}
-      <span style="flex:1"></span><a href="#" style="color:var(--brand);font-size:12px" onclick="CHK_OPEN=!CHK_OPEN;runChecks();return false">${CHK_OPEN ? 'Hide details' : 'Show details'}</a></div>
+      <span style="flex:1"></span><a href="#" style="color:var(--brand);font-size:12px" onclick="CHK_OPEN=!CHK_OPEN;runChecks();return false">${CHK_OPEN ? 'Hide details' : 'Details'}</a></div>
     ${CHK_OPEN || n ? `<div class="chk-detail">
       ${chk.flags.map(f => `<div><span class="badc">✕ ${esc(f.rule)}</span> · ${esc(f.detail)}</div>`).join('')}
       ${chk.unsupported.map(c => `<div><span class="badc">✕ Claim with no approved source</span> · “${esc(c.text)}” <a href="#" style="color:var(--brand)" onclick="fixClaim(${esc(JSON.stringify(c.text))});return false">Remove it</a></div>`).join('')}
@@ -979,32 +737,36 @@ function runChecks() {
 }
 function fixClaim(text) {
   snapshot();
-  const doc = document.getElementById('doc');
-  for (const el of doc.querySelectorAll('p, li, blockquote')) {
+  for (const el of document.querySelectorAll('#doc p, #doc li, #doc blockquote')) {
     if (el.textContent.includes(text)) {
       const re = new RegExp('\\s*' + text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '[.?!]?');
-      el.innerHTML = el.innerHTML.replace(re, '').trim(); afterChange(el); say('ai', `Removed “${text}”. It reads like a product claim and no approved source backs it. If it's true, add the source to the Content library first and I can cite it.`); return;
+      el.innerHTML = el.innerHTML.replace(re, '').trim(); afterChange(el);
+      addMsg({ who: 'ai', text: `Removed “${text}”. It reads like a product claim and no approved source backs it. If it's true, add the source to the Content library first and I can cite it.` }); return;
     }
   }
 }
 
-/* ─── Changes: per paragraph or the whole piece ─── */
+/* ─── Changes: one paragraph or the whole piece ─── */
 function regenEl(el, toneOnly) {
-  const role = el.dataset.role, it = cur(), c = ctxOf(it);
-  if (role && role.startsWith('h:')) { const h = HEAD[role.slice(2)]; const v = (+el.dataset.v + 1) % h.length; el.dataset.v = v; el.textContent = h[v]; return true; }
-  if (!GEN[role] || (PROOF_ROLES.includes(role) && !c.claims.length)) return false;
-  const v = toneOnly ? +el.dataset.v : +el.dataset.v + 1, b = genBlock(c, role, v);
-  el.dataset.v = v; el.innerHTML = blockInner(b); delete el.dataset.edited; return true;
+  const role = el.dataset.role, it = cur(), c = C.ctxOf(it);
+  if (role && role.startsWith('h:')) { const h = HEAD[role.slice(2)]; if (!h) return false; const v = (+el.dataset.v + 1) % h.length; el.dataset.v = v; el.textContent = h[v]; return true; }
+  if (!GEN[role] || (role === 'proof' && !c.claims.length)) return false;
+  const v = toneOnly ? +el.dataset.v : +el.dataset.v + 1, b = C.genBlock(c, role, v);
+  el.dataset.v = v; el.innerHTML = C.blockInner(b); delete el.dataset.edited; return true;
 }
-function regenTarget() { const el = targetEl(); if (!el) return; snapshot(); if (regenEl(el)) { afterChange(el); say('ai', `Regenerated that ${el.tagName === 'H1' ? 'title' : el.tagName === 'H2' ? 'heading' : 'paragraph'}. The rest of the piece is unchanged.`); } else { UNDO.pop(); say('ai', "You wrote that one yourself, so there's no generated version to swap in. Tell me what to change in it and I'll edit it."); } }
-function askTarget() { const i = document.getElementById('chatIn'); i.focus(); i.placeholder = 'What should change in this paragraph?'; }
-function removeTarget() { const el = targetEl(); if (!el) return; snapshot(); el.remove(); TARGET = null; afterChange(); say('ai', 'Removed that part.'); }
+const kindOf = el => el.tagName === 'H1' ? 'title' : el.tagName === 'H2' ? 'heading' : 'paragraph';
+function regenTarget() {
+  const el = targetEl(); if (!el) return; snapshot();
+  if (regenEl(el)) { afterChange(el); addMsg({ who: 'ai', text: `Rewrote that ${kindOf(el)}. Nothing else changed.` }); }
+  else { UNDO.pop(); addMsg({ who: 'ai', text: "You wrote that one yourself, so there's no generated version to swap in. Tell me what to change in it." }); }
+}
+function askTarget() { const i = document.getElementById('chatIn'); i.focus(); i.placeholder = 'What should change in this part?'; }
+function removeTarget() { const el = targetEl(); if (!el) return; snapshot(); el.remove(); TARGET = null; afterChange(); addMsg({ who: 'ai', text: 'Removed that part.' }); }
 const sentences = t => String(t).split(/(?<=[.?!])\s+(?!\[)/).filter(Boolean);
 function shorten(el) {
   if (el.tagName === 'UL' || el.tagName === 'OL') { const li = el.querySelectorAll('li'); if (li.length <= 2) return false; li[li.length - 1].remove(); return true; }
   const s = sentences(el.textContent); if (s.length < 2) return false;
-  const keep = s.filter(x => /\[[^\]]+, \d{4}\]$/.test(x)); // never drop a cited claim
-  const rest = s.filter(x => !keep.includes(x));
+  const keep = s.filter(x => /\[[^\]]+, \d{4}\]$/.test(x)), rest = s.filter(x => !keep.includes(x));   // never drop a cited claim
   el.textContent = rest.slice(0, Math.max(1, Math.ceil(rest.length / 2))).concat(keep).join(' '); el.dataset.edited = '1'; return true;
 }
 function lengthen(el) {
@@ -1018,123 +780,116 @@ function retoneEl(el, tone) {
 }
 function claimFor(q) {
   const it = cur(), words = String(q).toLowerCase().match(/[a-z]{4,}/g) || [];
+  const stop = new Set(['mention', 'include', 'talk', 'about', 'with', 'that', 'this', 'from', 'proof', 'source', 'example', 'evidence', 'case', 'study', 'some', 'more', 'please']);
   const pool = E.approvedClaims();
-  const scored = pool.map(c => ({ c, s: words.filter(w => (c.title + ' ' + c.claim).toLowerCase().includes(w)).length })).filter(x => x.s).sort((a, b) => b.s - a.s);
+  const scored = pool.map(c => ({ c, s: words.filter(w => !stop.has(w) && (c.title + ' ' + c.claim).toLowerCase().includes(w)).length })).filter(x => x.s).sort((a, b) => b.s - a.s);
   if (scored.length) return scored[0].c;
-  if (/proof|example|case|evidence|source/i.test(q)) return pool.find(c => it.sources.includes(c.id)) || pool.find(c => c.segments.includes(it.seg)) || null;
+  if (/proof|example|case|evidence|source/i.test(q)) {
+    const used = document.getElementById('doc').textContent;
+    return pool.find(c => it.sources.includes(c.id) && !used.includes(c.claim)) || pool.find(c => c.segments.includes(it.seg) && !used.includes(c.claim)) || null;
+  }
   return null;
+}
+const CLOSE_SEL = '[data-role="h:cta"]';
+function insertBeforeClose(html) {
+  const doc = document.getElementById('doc'), frag = document.createElement('div'); frag.innerHTML = html;
+  const anchor = doc.querySelector(CLOSE_SEL), nodes = Array.from(frag.children); nodes.forEach(n => doc.insertBefore(n, anchor)); return nodes[nodes.length - 1];
 }
 function addClaim(c, el) {
   const it = cur(); if (!it.sources.includes(c.id)) it.sources.push(c.id);
-  const doc = document.getElementById('doc');
   if (el && el.tagName === 'P') { el.textContent = el.textContent.trim() + ' ' + cited(c); el.dataset.edited = '1'; return el; }
-  let proof = doc.querySelector('[data-role="proof"],[data-role="proof1"],[data-role="sproof"]');
-  if (proof) { if (proof.textContent.includes(c.claim)) return proof; proof.textContent = proof.textContent.trim() + ' ' + cited(c); proof.dataset.edited = '1'; return proof; }
-  const anchor = doc.querySelector('[data-role="h:cta"],[data-role="ecta"],[data-role="pcta"],[data-role="h:sask"]') || null;
-  const role = ({ email: 'proof1', post: 'proof1', script: 'sproof' })[it.type] || 'proof';
-  const frag = document.createElement('div');
-  frag.innerHTML = (HEAD[role] && it.type !== 'email' && it.type !== 'post' ? blockHtml({ tag: 'h2', role: 'h:' + role, v: 0, text: HEAD[role][0] }) : '') + `<p data-b="${uid()}" data-role="${role}" data-v="0" data-edited="1">${esc(cited(c))}</p>`;
-  const nodes = Array.from(frag.children); nodes.forEach(n => doc.insertBefore(n, anchor)); return nodes[nodes.length - 1];
-}
-function sendChat(text) {
-  const inp = document.getElementById('chatIn');
-  const q = (text !== undefined ? text : inp.value).trim(); if (!q) return;
-  if (text === undefined) inp.value = ''; inp.placeholder = 'Tell the writer what to change…';
-  say('me', q);
-  const box = document.getElementById('msgs'); const t = document.createElement('div'); t.className = 'msg ai'; t.innerHTML = '<div class="who">Writer</div>Writing…'; box.appendChild(t); box.scrollTop = box.scrollHeight;
-  setTimeout(() => { t.remove(); say('ai', handle(q)); }, 450);
+  const proof = document.querySelector('#doc [data-role="proof"]');
+  if (proof) { if (!proof.textContent.includes(c.claim)) { proof.textContent = proof.textContent.trim() + ' ' + cited(c); proof.dataset.edited = '1'; } return proof; }
+  return insertBeforeClose(C.blockHtml({ tag: 'h2', role: 'h:proof', v: 0, text: HEAD.proof[0] }) + `<p data-b="${uid()}" data-role="proof" data-v="0" data-edited="1">${esc(cited(c))}</p>`);
 }
 const CLAIMY = /(\d+\s?%|\b(reduces?|reduced|improves?|improved|increases?|increased|cuts? (downtime|costs?)|savings|uptime|faster|proven|guarantee\w*)\b)/i;
 function handle(q) {
   const it = cur(), doc = document.getElementById('doc'), el = targetEl(), low = q.toLowerCase();
-  const scope = el ? 'that paragraph' : 'the piece';
+  if (!doc) { CANVAS = true; renderConv(); return handle(q); }
+  // Attaching, by chat.
+  if (/\b(attach|link|assign|share)\b/.test(low)) {
+    const segs = C.segments().filter(s => low.includes(s.toLowerCase())), accs = C.accounts().filter(a => low.includes(a.name.toLowerCase()));
+    if (!segs.length && !accs.length) { setTimeout(attach, 50); return 'Pick the micro-segments or accounts it is for.'; }
+    segs.forEach(s => C.setAttached(it.id, 'segment', s, s, true)); accs.forEach(a => C.setAttached(it.id, 'account', a.id, a.name, true));
+    S = C.store(); CONV = convOf(CONV.id); renderAtt();
+    return `Attached to ${segs.map(s => s + ' (micro-segment)').concat(accs.map(a => a.name)).join(', ')}. The reps will see it in Micro-segments & NBA.`;
+  }
   // A request that would add a product claim is checked against the approved sources first.
   const said = q.match(/\b(?:say|claim|mention|add|write|include)\b\s+(?:that\s+)?(.+)/i);
   if (said && CLAIMY.test(said[1]) && !claimFor(said[1])) return `I can't add “${said[1].trim()}”. It reads like a product claim and there's no approved source for it. If it's true, add the source to the Content library and I'll cite it word for word.`;
   if (/^(regenerate|rewrite|try again|another version|redo)( this| it)?$/i.test(q) && el) { regenTarget(); return 'Done.'; }
   snapshot();
   let m;
-  if ((m = q.match(/(?:change|set|make) the (?:title|headline) (?:to|into) (.+)/i)) || (m = q.match(/^(?:title|headline):\s*(.+)/i))) {
+  if ((m = q.match(/(?:change|set|make|call) (?:the )?(?:title|headline)(?: to| into)? (.+)/i)) || (m = q.match(/^(?:title|headline):\s*(.+)/i))) {
     let h = doc.querySelector('h1'); if (!h) { h = document.createElement('h1'); h.dataset.role = 'title'; h.dataset.v = 0; doc.prepend(h); }
-    h.textContent = m[1].replace(/^["“]|["”]$/g, ''); h.dataset.edited = '1'; it.title = h.textContent; document.getElementById('crumbTitle').textContent = it.title; afterChange(h); return 'Title changed.';
+    h.textContent = m[1].replace(/^["“]|["”]$/g, ''); h.dataset.edited = '1'; afterChange(h); return 'Title changed.';
   }
-  if (/\b(title|headline)\b/.test(low) && !el) { const h = doc.querySelector('h1'); if (h && regenEl(h)) { it.title = h.textContent; document.getElementById('crumbTitle').textContent = it.title; afterChange(h); return `New title: “${h.textContent}”. Ask again for another option.`; } }
-  if (/subject/.test(low)) { const s = doc.querySelector('[data-role="subject"]'); if (s && regenEl(s)) { afterChange(s); return `New ${s.textContent}`; } }
-  if (/\bintro|opening|first paragraph\b/.test(low) && !el) { const p = doc.querySelector('[data-role="intro"],[data-role="summary"],[data-role="ebody"],[data-role="hook"],[data-role="sopener"]'); if (p && regenEl(p)) { afterChange(p); selectBlock(p); return 'Rewrote the opening. It stays selected, so you can ask for another version or a specific change.'; } }
-  if ((m = q.match(/add (?:a )?(?:section|paragraph|part) (?:on|about) (.+)/i))) {
-    const topic = noDot(m[1]); const frag = document.createElement('div');
-    const tone = it.tone === 'Formal' ? 'It is' : "It's";
-    frag.innerHTML = (it.type === 'email' || it.type === 'post' ? '' : blockHtml({ tag: 'h2', role: 'free', text: cap(topic) })) +
-      `<p data-b="${uid()}" data-role="free" data-v="0" data-edited="1">${esc(`${cap(topic)} is worth its own conversation. ${tone} usually where plans differ most from site to site, so start with how your site handles it today and what you would want to change.`)}</p>`;
-    const anchor = doc.querySelector('[data-role="h:cta"],[data-role="ecta"],[data-role="pcta"],[data-role="h:sask"]');
-    const nodes = Array.from(frag.children); nodes.forEach(n => doc.insertBefore(n, anchor)); afterChange(nodes[nodes.length - 1]);
-    return `Added a section on ${topic}${anchor ? ' before the close' : ''}. It makes no product claims; edit it or ask me to add proof from an approved source.`;
+  if (/\b(title|headline)\b/.test(low) && !el) { const h = doc.querySelector('h1'); if (h && regenEl(h)) { afterChange(h); return `New title: “${h.textContent}”. Ask again for another option.`; } }
+  if (/\b(intro|opening|first paragraph|summary)\b/.test(low) && !el) { const p = doc.querySelector('[data-role="intro"],[data-role="summary"]'); if (p && regenEl(p)) { afterChange(p); selectBlock(p); return 'Rewrote the opening. It stays selected, so you can ask for another version or a specific change.'; } }
+  if ((m = q.match(/add (?:a )?(?:section|paragraph|part|chapter) (?:on|about) (.+)/i))) {
+    const topic = noDot(m[1]), formal = it.tone === 'Formal';
+    const last = insertBeforeClose(C.blockHtml({ tag: 'h2', role: 'free', text: cap(topic) }) +
+      `<p data-b="${uid()}" data-role="free" data-v="0" data-edited="1">${esc(`${cap(topic)} is worth its own conversation. ${formal ? 'It is' : "It's"} usually where plans differ most from site to site, so start with how your site handles it today and what you would want to change.`)}</p>`);
+    afterChange(last); return `Added a section on ${topic} before the close. It makes no product claims; edit it, or ask me to add proof from an approved source.`;
   }
   if (/proof|case study|example|evidence|source|cite/.test(low) || (m = q.match(/\b(?:mention|include|talk about)\b\s+(?:the\s+)?(.+)/i))) {
     const c = claimFor(q);
     if (c) { const at = addClaim(c, el && el.tagName === 'P' ? el : null); afterChange(at); return `Added an approved claim, word for word with its citation: ${c.id} · ${c.title} [${c.type}, ${c.year}].`; }
     if (m) {
-      const what = noDot(m[1]); const p = el && el.tagName === 'P' ? el : doc.querySelector('[data-role="cta"],[data-role="ecta"],[data-role="pcta"],[data-role="sask"]') || doc.lastElementChild;
+      const what = noDot(m[1]), p = el && el.tagName === 'P' ? el : doc.querySelector('[data-role="cta"]') || doc.lastElementChild;
       p.textContent = p.textContent.trim() + ` Is ${lc(what)} part of your plans?`; p.dataset.edited = '1'; afterChange(p);
       return `There's no approved source on ${what}, so I added it as a question rather than a claim.`;
     }
-    UNDO.pop(); return "There's no approved source for this audience to cite. Add one in the Content library and I'll use it word for word.";
+    UNDO.pop(); return "Every approved source for this audience is already cited. Add another one in the Content library and I'll use it word for word.";
   }
   if (/formal|professional/.test(low)) return applyTone('Formal', el);
   if (/warm|friendl/.test(low)) return applyTone('Warm', el);
-  if (/direct|crisp|punch/.test(low)) return applyTone('Direct', el);
-  if (/short|concise|cut|trim|tighten/.test(low)) {
+  if (/\b(direct|crisp|punch)/.test(low)) return applyTone('Direct', el);
+  if (/short|concise|\bcut\b|trim|tighten/.test(low)) {
     const els = el ? [el] : Array.from(doc.querySelectorAll('#doc > p, #doc > ul, #doc > ol')); let n = 0;
     els.forEach(x => { if (shorten(x)) n++; });
-    if (!n) { UNDO.pop(); return el ? "That part is already as short as it can go without losing its point." : 'Everything is already short. Try a shorter length from the toolbar.'; }
+    if (!n) { UNDO.pop(); return el ? 'That part is already as short as it can go without losing its point.' : 'Everything is already short. Try a shorter length from the canvas toolbar.'; }
     afterChange(el); return el ? 'Shortened it. Cited claims are kept as they are.' : `Shortened ${n} part${n > 1 ? 's' : ''}. Cited claims are kept as they are.`;
   }
-  if (/long|detail|expand|elaborate|more/.test(low)) {
+  if (/long|detail|expand|elaborate|\bmore\b/.test(low)) {
     if (el) { if (lengthen(el)) { afterChange(el); return 'Added a line. No new claims.'; } UNDO.pop(); return "I've added all I can without making claims. Ask me to add proof from an approved source."; }
-    const missing = LAYOUT[it.type].Long.filter(r => !doc.querySelector(`[data-role="${r}"]`) && !(PROOF_ROLES.includes(r) && !ctxOf(it).claims.length));
+    const missing = LAYOUT[it.type].Long.filter(r => !doc.querySelector(`[data-role="${r}"]`) && !(r === 'proof' && !C.ctxOf(it).claims.length));
     if (!missing.length) { UNDO.pop(); return 'It already has every section for this type. Ask me to add a section on a specific topic.'; }
-    const r = missing[0], c = ctxOf(it), frag = document.createElement('div');
-    frag.innerHTML = (HEAD[r] && it.type !== 'email' && it.type !== 'post' ? blockHtml({ tag: 'h2', role: 'h:' + r, v: 0, text: HEAD[r][0] }) : '') + blockHtml(genBlock(c, r, 0));
-    const anchor = doc.querySelector('[data-role="h:cta"],[data-role="ecta"],[data-role="pcta"],[data-role="h:sask"],[data-role="closing"]');
-    const nodes = Array.from(frag.children); nodes.forEach(n => doc.insertBefore(n, anchor)); afterChange(nodes[nodes.length - 1]);
-    return `Added “${HEAD[r] ? HEAD[r][0] : r}”.`;
+    const r = missing[0], last = insertBeforeClose((HEAD[r] ? C.blockHtml({ tag: 'h2', role: 'h:' + r, v: 0, text: HEAD[r][0] }) : '') + C.blockHtml(C.genBlock(C.ctxOf(it), r, 0)));
+    afterChange(last); return `Added “${HEAD[r] ? HEAD[r][0] : r}”.`;
   }
   if (/regenerate|rewrite|again|another|different/.test(low)) {
     if (el) { UNDO.pop(); regenTarget(); return 'Here is another version.'; }
-    doc.innerHTML = docHtml(generate(it)); afterChange(); return 'Rewrote the whole piece from the brief. Your earlier version is one Undo away.';
+    doc.innerHTML = C.docHtml(C.generate(it)); afterChange(); return 'Rewrote the whole piece from the brief. Your earlier version is one Undo away.';
   }
   if (/remove|delete|drop/.test(low) && el) { el.remove(); TARGET = null; afterChange(); return 'Removed it.'; }
   UNDO.pop();
-  return `I can change ${scope}: make it shorter or longer, change the tone (direct, formal, warm), rewrite it, change the title, add a section on a topic, or add proof from an approved source. I won't add claims that aren't in the approved sources.`;
+  return `I can change ${el ? 'that part' : 'the piece'}: make it shorter or longer, change the tone (direct, formal, warm), rewrite it, change the title, add a section on a topic, add proof from an approved source, or attach it to a micro-segment or an account. To start something new, ask for another blog or whitepaper. I won't add claims that aren't in the approved sources.`;
 }
 function applyTone(tone, el) {
   const it = cur(), doc = document.getElementById('doc');
-  if (el) { const old = it.tone; it.tone = tone; retoneEl(el, tone); it.tone = old; afterChange(el); return `Made that part ${tone.toLowerCase()}. The piece's tone is still ${old}.`; }
+  if (el) { const old = it.tone; it.tone = tone; retoneEl(el, tone); it.tone = old; afterChange(el); return `Made that part ${tone.toLowerCase()}. The rest is still ${old.toLowerCase()}.`; }
   it.tone = tone; Array.from(doc.children).forEach(x => retoneEl(x, tone)); afterChange();
-  const s = document.querySelector('.doc-tools select'); if (s) s.value = tone;
+  const s = document.querySelector('.cv-tools select'); if (s) s.value = tone;
   return `Switched the piece to a ${tone.toLowerCase()} tone. Paragraphs you edited yourself keep your wording${tone === 'Formal' ? ', with contractions written out' : ''}.`;
 }
-function setTone(t) { snapshot(); say('me', `Tone: ${t}`); say('ai', applyTone(t)); }
+function setTone(t) { snapshot(); addMsg({ who: 'me', text: `Tone: ${t}` }); addMsg({ who: 'ai', text: applyTone(t) }); }
 function setLength(l) {
   const it = cur();
-  if (Array.from(document.querySelectorAll('#doc > [data-edited]')).length && !confirm(`Rewrite the piece at ${l} length? Your own edits are replaced; Undo brings them back.`)) { document.querySelectorAll('.doc-tools select')[1].value = it.length; return; }
-  snapshot(); it.length = l; document.getElementById('doc').innerHTML = docHtml(generate(it)); afterChange();
-  say('me', `Length: ${l}`); say('ai', `Rewrote it at ${l.toLowerCase()} length: ${LAYOUT[it.type][l].length} parts.`);
+  if (document.querySelectorAll('#doc > [data-edited]').length && !confirm(`Rewrite the piece at ${l} length? Your own edits are replaced; Undo brings them back.`)) { document.querySelectorAll('.cv-tools select')[1].value = it.length; return; }
+  snapshot(); it.length = l; document.getElementById('doc').innerHTML = C.docHtml(C.generate(it)); afterChange();
+  addMsg({ who: 'me', text: `Length: ${l}` }); addMsg({ who: 'ai', text: `Rewrote it at ${l.toLowerCase()} length: ${LAYOUT[it.type][l].length} parts.` });
 }
-function setCampaign(id) { const it = cur(); persistDoc(); const d = DIRTY; it.campaign = id; saveStore(); showToast(id ? `Attached to ${campOf(id).name}` : 'Removed from the campaign'); render(); setDirty(d); }
 
-/* ─── Save, ready, download ─── */
-function saveDoc(silent) {
-  const it = cur(); persistDoc(); const h = document.querySelector('#doc h1'); if (h && h.textContent.trim()) it.title = h.textContent.trim();
-  it.updated = Date.now(); it.by = me(); it.versions = (it.versions || []).concat([{ at: Date.now(), by: me() }]).slice(-20);
-  saveStore(); setDirty(false); document.getElementById('crumbTitle').textContent = it.title; if (!silent) showToast('Saved to the library');
-}
+/* ─── Ready, download ─── */
 function markReady() {
-  const it = cur();
-  if (it.status === 'Ready') { it.status = 'Draft'; saveDoc(true); render(); showToast('Back to draft'); return; }
+  const it = cur(); persistDoc();
+  if (it.status === 'Ready') { it.status = 'Draft'; saveStore(); document.getElementById('stTag').innerHTML = statusTag('Draft'); document.getElementById('readyBtn').textContent = 'Mark ready'; showToast('Back to draft'); return; }
   const chk = runChecks();
   if (issuesOf(chk)) { CHK_OPEN = true; runChecks(); document.getElementById('checks').scrollIntoView({ behavior: 'smooth', block: 'center' }); showToast(`Fix ${issuesOf(chk)} check${issuesOf(chk) > 1 ? 's' : ''} first`); return; }
-  it.status = 'Ready'; saveDoc(true); render(); showToast('Marked ready to use');
+  it.status = 'Ready'; it.updated = Date.now(); saveStore();
+  document.getElementById('stTag').innerHTML = statusTag('Ready'); document.getElementById('readyBtn').textContent = 'Back to draft';
+  addMsg({ who: 'ai', text: `Marked ready to use.${it.attached.length ? '' : ' Attach it to a micro-segment or an account so the reps can find it in Micro-segments & NBA.'}` });
 }
 function toggleDD(id, e) { e.stopPropagation(); const d = document.getElementById(id); const open = d.classList.contains('open'); document.querySelectorAll('.ddm.open').forEach(x => x.classList.remove('open')); if (!open) d.classList.add('open'); }
 document.addEventListener('click', () => document.querySelectorAll('.ddm.open').forEach(x => x.classList.remove('open')));
@@ -1150,18 +905,19 @@ function toMarkdown(root) {
   }).join('\n\n') + '\n';
 }
 function dl(kind) {
-  const it = cur(), doc = document.getElementById('doc'); persistDoc();
-  const name = (it.title || 'content').replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-').toLowerCase().slice(0, 60) || 'content';
-  const clean = it.html.replace(/ data-[a-z]+="[^"]*"/g, '');
-  const page = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(it.title)}</title><style>body{font-family:Calibri,Arial,sans-serif;max-width:720px;margin:40px auto;line-height:1.6;color:#1d242c}h1{font-size:26px}h2{font-size:18px;margin-top:24px}</style></head><body>${clean}</body></html>`;
+  const it = cur(), doc = document.getElementById('doc'); persistDoc(); saveStore();
   if (kind === 'pdf') { window.print(); return; }
   if (kind === 'copy') { const t = blocksText(doc); (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => showToast('Copied'), () => showToast("This view can't copy")); return; }
-  if (kind === 'md') return download(name + '.md', toMarkdown(doc));
-  if (kind === 'html') return download(name + '.html', page);
-  return download(name + '.doc', page);
+  if (kind === 'md') return C.saveFile(C.fileName(it, 'md'), toMarkdown(doc), showToast);
+  return C.downloadDocx(it.id, it.html, showToast);
 }
-window.addEventListener('beforeunload', e => { if (DIRTY) { e.preventDefault(); e.returnValue = ''; } });
-render();
+window.addEventListener('beforeunload', () => { persistDoc(); saveStore(); });
+
+/* ─── Boot ─── */
+(function () {
+  const id = new URLSearchParams(location.search).get('item');
+  if (id && itemOf(id)) openItem(id); else renderHome();
+})();
 
 </script>
 </body>

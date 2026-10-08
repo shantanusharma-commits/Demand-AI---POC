@@ -525,6 +525,8 @@ textarea[readonly],input[readonly]{background-color:var(--s50);}
 <script src="demandai-engine.js"></script>
 <script src="demandai-sample-data.js"></script>
 <script src="demandai-nba.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="demandai-content.js"></script>
 <script src="demandai-copilot.js"></script>
 <script>
 function showToast(msg){document.querySelectorAll('.toast').forEach(t=>t.remove());const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2600);}
@@ -868,7 +870,7 @@ function gridTab(){
             <div style="font-size:12px;color:var(--i2)">${esc(SEG_MEANS[g.name]||'')}</div>
             <div style="font-size:12px;color:var(--i1);font-weight:600;margin-top:4px">→ ${esc(DemandAI.CONFIG.segmentLibrary[g.name][0])}</div>
             ${fb?`<div style="font-size:10.5px;color:var(--i3);margin-top:3px">${fb} of ${byAcc.length} accounts joined on their second signal</div>`:''}
-            ${isManager()?`<button class="btn btn-ghost btn-sm" style="margin-top:6px;padding:0 6px" onclick="event.stopPropagation();${paused?'resumeSegment':'pauseSegment'}('${g.name}')">${paused?'Resume':'Pause this micro-segment'}</button>`:''}</td>
+            ${isManager()?`<button class="btn btn-ghost btn-sm" style="margin-top:6px;padding:0 6px" onclick="event.stopPropagation();${paused?'resumeSegment':'pauseSegment'}('${g.name}')">${paused?'Resume':'Pause this micro-segment'}</button>`:''}${typeof ContentLink!=='undefined'?ContentLink.segChip(g.name):''}</td>
           ${num(byAcc.length, byAcc.length===1?'account':'accounts', 'var(--brand-dk)')}${num(np, 'ready to use', 'var(--pos)')}${num(g.recs.length-np, 'in For Review', 'var(--warn)')}
           <td style="${td};text-align:right"><span class="btn btn-sec btn-sm">View →</span></td></tr>`;
       }).join('') : `<tr><td colspan="5" style="${td};text-align:center;color:var(--i3);font-size:12.5px">No micro-segment formed: fewer than ${min} accounts share a signal.</td></tr>`}</tbody>
