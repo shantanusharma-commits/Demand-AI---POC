@@ -595,8 +595,8 @@ let tab = (t => ['guidelines','voice','negative','claims','framework','versions'
 const canEdit = () => ['Admin','Sales manager'].includes(getRole());
 const canPublish = () => getRole()==='Admin';
 function me(){ const r = getRole(); return { who: ROLE_PERSON[r] || r, role: r }; }
-const SECTIONS = [['guidelines','Brand guidelines'],['voice','Voice and tone'],['negative','Negative keywords'],['claims','Approved claims'],['framework','Messaging framework'],['versions','Versions']];
-const SECTION_KEYS = { guidelines:['guideline'], voice:['voice'], negative:['negative','competitors'], claims:['claims'], framework:['framework'] };
+const SECTIONS = [['guidelines','Brand guidelines'],['voice','Voice and tone'],['negative','Negative keywords'],['claims','Approved claims'],['framework','Messaging frameworks'],['versions','Versions']];
+const SECTION_KEYS = { guidelines:['guideline'], voice:['voice'], negative:['negative','competitors'], claims:['claims'], framework:['frameworks'] };
 function draft(){ if(!DRAFT) DRAFT = DemandAI.brandDraft(); return DRAFT; }
 function changedSections(){
   const live = DemandAI.brandPack(), d = DemandAI.brandPending();
@@ -654,7 +654,7 @@ function guidelinesTab(){
           <div style="font-size:11px;color:var(--i3);margin-top:3px">PDF, Word or PowerPoint is kept as the reference. A .txt or .md file is also read for rules you can add in one click.</div></label>` : ''}
       ${label('Key rules from the guidelines, in your words')}
       <textarea ${ro()} rows="5" style="width:100%;${field};line-height:1.6" onchange="draft().voice.notes=this.value;commit('Saved to the draft')">${esc(draft().voice.notes||'')}</textarea>
-      <div style="font-size:11px;color:var(--i3);margin-top:6px">For the reviewer's reference. What the drafts follow strictly is set on the other tabs: voice and tone, negative keywords, approved claims and the messaging framework.</div>`)
+      <div style="font-size:11px;color:var(--i3);margin-top:6px">For the reviewer's reference. What the drafts follow strictly is set on the other tabs: voice and tone, negative keywords, approved claims and the messaging frameworks.</div>`)
     + (SUGGEST ? card('Rules found in the document', `<span style="font-size:11px;color:var(--i3)">${esc(SUGGEST.name)}</span>`,
         (SUGGEST.items.length ? SUGGEST.items.map((x,i)=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--s75);font-size:12px">
             <span class="tag tag-grey">${esc(x.kind)}</span><span style="flex:1;color:var(--i1)">${esc(x.value)}</span>
@@ -740,6 +740,9 @@ function negativeTab(){
 
 /* ─── Approved claims ─── */
 const SEGS = Object.keys(DemandAI.CONFIG.segmentLibrary);
+const CLAIM_TOPICS = [['Modernisation', /migrat|legacy|moderni[sz]|end of support|upgrade|assessment|platform/i], ['Service renewal', /renew|service|support|lifecycle|contract/i],
+  ['Project', /project|expansion|design|schedule/i], ['Leadership', /priorit|first 100|new (plant )?(leader|manager)|role/i], ['Inquiry', /inquir|question|quote/i], ['Engagement', /webinar|recording|session|guide/i]];
+function claimFits(text){ const m = CLAIM_TOPICS.filter(([,re])=>re.test(text)).map(([k])=>k); return m.length ? m : SEGS.slice(); }
 function claimsTab(){
   const today = todayIso(), cs = draft().claims;
   return card('Approved claims', `<span style="font-size:11px;color:var(--i3)">${cs.filter(c=>c.status==='approved' && c.expiry>=today).length} usable now</span>`,
@@ -748,7 +751,7 @@ function claimsTab(){
       return `<div style="padding:12px 0;border-top:1px solid var(--s75)">
         <div style="display:flex;gap:10px;align-items:flex-start">
           <div style="flex:1"><div style="font-size:12.5px;color:var(--i1);line-height:1.5">${esc(c.claim)}</div>
-            <div style="font-size:11px;color:var(--i3);margin-top:3px">${esc(c.id)} · ${esc(c.type)}, ${c.year} · ${esc(c.title)} · expires ${esc(c.expiry)} · for ${esc((c.segments||[]).join(', ')||'no micro-segment')}</div></div>
+            <div style="font-size:11px;color:var(--i3);margin-top:3px">${esc(c.id)} · ${esc(c.type)}, ${c.year} · ${esc(c.title)} · expires ${esc(c.expiry)}</div></div>
           <span class="tag ${expired?'tag-red':c.status==='approved'?'tag-green':c.status==='retired'?'tag-grey':'tag-amber'}">${expired?'Expired':c.status==='approved'?'Approved':c.status==='retired'?'Retired':'Draft'}</span>
           ${canEdit()?`<select onchange="draft().claims[${i}].status=this.value;commit('Saved to the draft')" style="${field};padding:4px 6px;font-size:11.5px">${['approved','draft','retired'].map(s=>`<option ${c.status===s?'selected':''} value="${s}">${s[0].toUpperCase()+s.slice(1)}</option>`).join('')}</select>`:''}
         </div></div>`; }).join('')
@@ -761,31 +764,58 @@ function claimsTab(){
           <div>${label('Year')}<input id="cYear" type="number" value="${new Date().getFullYear()}" style="width:100%;${field}"></div>
           <div>${label('Expires')}<input id="cExp" type="date" style="width:100%;${field}"></div>
         </div>
-        ${label('Micro-segments it supports')}<div style="display:flex;gap:14px;flex-wrap:wrap">${SEGS.map(s=>`<label style="font-size:12px;color:var(--i1);display:flex;gap:5px;align-items:center"><input type="checkbox" class="cSeg" value="${esc(s)}" style="accent-color:var(--brand)">${esc(s)}</label>`).join('')}</div>
         <div style="display:flex;justify-content:flex-end;margin-top:12px"><button class="btn btn-primary btn-sm" onclick="addClaim()">Add as approved</button></div></div>` : ''));
 }
 function addClaim(){
   const v = id => (document.getElementById(id).value||'').trim();
-  const claim = v('cClaim').replace(/\s+/g,' '), title = v('cTitle'), exp = v('cExp'), segs = [...document.querySelectorAll('.cSeg:checked')].map(x=>x.value);
-  if(!claim || !title || !exp || !segs.length){ showToast('Add the claim, its source, an expiry date and at least one micro-segment'); return; }
+  const claim = v('cClaim').replace(/\s+/g,' '), title = v('cTitle'), exp = v('cExp');
+  if(!claim || !title || !exp){ showToast('Add the claim, its source and an expiry date'); return; }
+  // Where the claim can be used is read from its words, not picked by hand; a claim that names no topic can be used anywhere.
+  const segs = claimFits(claim+' '+title);
   const ids = draft().claims.map(c=>+String(c.id).replace(/\D/g,'')||0);
   draft().claims.push({ id:'CL-'+String(Math.max(6,...ids)+1).padStart(2,'0'), type:v('cType'), year:+v('cYear')||new Date().getFullYear(), title, segments:segs, expiry:exp, claim:/[.!?]$/.test(claim)?claim:claim+'.', status:'approved', owner:me().who });
   commit('Claim added to the draft');
 }
 
-/* ─── Messaging framework ─── */
+/* ─── Messaging frameworks: what each one is for, its structure, and how often the team uses it ─── */
+const USE = ['Often','Sometimes','Rarely','Not used'];
+const USE_TONE = { Often:'tag-green', Sometimes:'tag-blue', Rarely:'tag-amber', 'Not used':'tag-grey' };
+const fws = () => { const d = draft(); if(!d.frameworks) d.frameworks = JSON.parse(JSON.stringify(DemandAI.FRAMEWORKS)); return d.frameworks; };
 function frameworkTab(){
-  const f = draft().framework;
-  return `<div style="font-size:12px;color:var(--i2);margin-bottom:12px">For each micro-segment: the angle a message takes, the objection to pre-empt and how to answer it, and the discovery questions for calls. Used in every brief, draft and call script.</div>`
-    + SEGS.map(s=>{ const x = f[s] || {angle:'',objection:'',response:'',questions:[]};
-      const inp = (k, val, rows) => rows ? `<textarea ${ro()} rows="${rows}" style="width:100%;${field};line-height:1.5" onchange="setFw('${s}','${k}',this.value)">${esc(val)}</textarea>` : `<input ${ro()} value="${esc(val)}" style="width:100%;${field}" onchange="setFw('${s}','${k}',this.value)">`;
-      return card(`<span class="tag ${({Inquiry:'tag-blue',Modernisation:'tag-violet','Service renewal':'tag-teal',Project:'tag-amber',Leadership:'tag-pink',Engagement:'tag-green'})[s]||'tag-grey'}">${esc(s)}</span>`, '', `
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 16px">
-          <div>${label('Angle')}${inp('angle', x.angle)}</div><div>${label('Objection to pre-empt')}${inp('objection', x.objection)}</div>
-          <div>${label('How to answer it')}${inp('response', x.response, 2)}</div><div>${label('Discovery questions, one per line')}${inp('questions', (x.questions||[]).join('\n'), 3)}</div>
-        </div>`); }).join('');
+  const list = fws(), byUse = u => list.filter(f=>f.use===u).length, ed = canEdit();
+  const order = list.map((f,i)=>({f,i})).sort((a,b)=>USE.indexOf(a.f.use)-USE.indexOf(b.f.use));
+  const often = list.filter(f=>f.use==='Often');
+  const td = 'padding:11px 12px;border-top:1px solid var(--s75);vertical-align:top;font-size:12.5px;color:var(--i1)';
+  const th = 'padding:9px 12px;font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--i3);text-align:left;background:var(--s50)';
+  const inp = (i, k, val) => ed ? `<textarea rows="2" style="width:100%;${field};line-height:1.45;resize:vertical;font-weight:inherit" onchange="setFw(${i},'${k}',this.value)">${esc(val)}</textarea>` : esc(val);
+  return `<div style="font-size:12px;color:var(--i2);margin-bottom:12px">The frameworks the team writes with, by objective: what a message is for, the framework that gets there, its structure, and how often the team uses it, so it's clear which frameworks get used most and for what.</div>`
+    + `<div class="stats" style="grid-template-columns:repeat(4,1fr);margin-bottom:12px">${['Often','Sometimes','Rarely','Not used'].map(u=>`<div class="stat"><div class="stat-lbl">${u==='Not used'?'Not used':'Used '+u.toLowerCase()}</div><div class="stat-val ${u==='Often'?'sv4':u==='Sometimes'?'sv2':u==='Rarely'?'sv3':'sv5'}">${byUse(u)}</div><div class="stat-sub">framework${byUse(u)===1?'':'s'}</div></div>`).join('')}</div>`
+    + (often.length ? `<div style="font-size:12px;color:var(--i2);margin-bottom:10px">Used most: ${often.map(f=>`<b>${esc(f.name)}</b> to ${esc(f.objective.charAt(0).toLowerCase()+f.objective.slice(1))}`).join('; ')}.</div>` : '')
+    + card('Frameworks by objective', `<span style="font-size:11px;color:var(--i3)">${list.length} framework${list.length===1?'':'s'}</span>`, `
+      <div style="margin:-6px -14px -12px;overflow-x:auto"><table style="width:100%;border-collapse:collapse;table-layout:fixed;min-width:760px">
+        <colgroup><col style="width:24%"><col style="width:22%"><col><col style="width:130px">${ed?'<col style="width:40px">':''}</colgroup>
+        <thead><tr><th style="${th}">Objective</th><th style="${th}">Framework</th><th style="${th}">Structure</th><th style="${th}">How often used</th>${ed?`<th style="${th}"></th>`:''}</tr></thead>
+        <tbody>${order.map(({f,i})=>`<tr>
+          <td style="${td};font-weight:600">${inp(i,'objective',f.objective)}</td>
+          <td style="${td}">${inp(i,'name',f.name)}</td>
+          <td style="${td}">${ed ? `<textarea rows="${Math.max(2,f.steps.length)}" style="width:100%;${field};line-height:1.5" onchange="setFw(${i},'steps',this.value)">${esc(f.steps.join('\n'))}</textarea>`
+            : `<ol style="margin:0;padding-left:18px;line-height:1.6">${f.steps.map(s=>`<li>${esc(s)}</li>`).join('')}</ol>`}</td>
+          <td style="${td}">${ed ? `<select onchange="setFw(${i},'use',this.value)" style="${field};padding:4px 6px;font-size:12px">${USE.map(u=>`<option ${f.use===u?'selected':''}>${u}</option>`).join('')}</select>` : `<span class="tag ${USE_TONE[f.use]||'tag-grey'}">${esc(f.use)}</span>`}</td>
+          ${ed?`<td style="${td};text-align:center"><button title="Remove" onclick="removeFw(${i})" style="color:var(--i3);font-size:14px">×</button></td>`:''}</tr>`).join('')}</tbody></table></div>`)
+    + (ed ? card('Add a framework', '', `<div style="display:grid;grid-template-columns:1fr 1fr 140px;gap:10px">
+        <div>${label('Objective: what the message is for')}<input id="fwObj" style="width:100%;${field}" placeholder="e.g. Win back a lost account"></div>
+        <div>${label('Framework')}<input id="fwName" style="width:100%;${field}" placeholder="e.g. Problem, agitate, solve"></div>
+        <div>${label('How often used')}<select id="fwUse" style="width:100%;${field}">${USE.map(u=>`<option>${u}</option>`).join('')}</select></div></div>
+        ${label('Structure, one step per line')}<textarea id="fwSteps" rows="3" style="width:100%;${field};line-height:1.5" placeholder="The problem they face&#10;What waiting costs them&#10;The approach that solves it"></textarea>
+        <div style="display:flex;justify-content:flex-end;margin-top:10px"><button class="btn btn-primary btn-sm" onclick="addFw()">Add framework</button></div>`) : '');
 }
-function setFw(seg, k, val){ const f = draft().framework; f[seg] = f[seg] || {angle:'',objection:'',response:'',questions:[]}; f[seg][k] = k==='questions' ? val.split('\n').map(x=>x.trim()).filter(Boolean) : val.trim(); commit('Saved to the draft'); }
+function setFw(i, k, val){ const f = fws()[i]; if(!f) return; f[k] = k==='steps' ? val.split('\n').map(x=>x.trim()).filter(Boolean) : val.trim(); commit('Saved to the draft'); }
+function removeFw(i){ fws().splice(i,1); commit('Removed from the draft'); }
+function addFw(){
+  const v = id => (document.getElementById(id).value||'').trim(), steps = v('fwSteps').split('\n').map(x=>x.trim()).filter(Boolean);
+  if(!v('fwObj') || !v('fwName') || !steps.length){ showToast('Add the objective, the framework and its structure'); return; }
+  fws().push({ objective:v('fwObj'), name:v('fwName'), steps, use:v('fwUse') }); commit('Framework added to the draft');
+}
 
 /* ─── Versions ─── */
 function versionsTab(){

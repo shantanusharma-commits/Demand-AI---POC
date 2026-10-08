@@ -917,12 +917,22 @@ const VOICE_PRESETS = {
   Formal: { greeting: 'Dear {first},', closing: 'Kind regards,', about: 'Complete sentences, a courteous ask, no slang or contractions.' },
   Warm:   { greeting: 'Hi {first},', closing: 'All the best,', about: 'Friendly and personal, still one point and one ask.' },
 };
+// Messaging frameworks the team writes with: what each is for (the objective), its structure, and how often they use it.
+const FRAMEWORKS = [
+  { objective: 'Book a first meeting', name: 'Trigger, insight, ask', steps: ['Their trigger: the signal that makes it timely', 'One insight or approved proof', 'One clear ask'], use: 'Often' },
+  { objective: 'Answer an inquiry', name: 'Question, answer, next step', steps: ['Restate what they asked', 'Answer it briefly', 'Offer a short call with a specialist'], use: 'Often' },
+  { objective: 'Start a migration conversation', name: 'Problem, agitate, solve', steps: ['The problem they face', 'What waiting costs them', 'The approach that solves it'], use: 'Sometimes' },
+  { objective: 'Review a renewal', name: 'Before, after, bridge', steps: ['Where they are today', 'Where they could be', 'How a short review gets them there'], use: 'Sometimes' },
+  { objective: 'Introduce ourselves to a new leader', name: 'Give, then ask', steps: ['Something useful for their first months', 'A light ask'], use: 'Sometimes' },
+  { objective: 'Re-engage after they read our content', name: 'Attention, interest, desire, action', steps: ['Refer to what they read', 'Why it matters for their site', 'What comparable sites gained', 'One next step'], use: 'Rarely' },
+  { objective: 'Blogs and whitepapers', name: 'Problem, approach, evidence, next step', steps: ['The problem in their words', 'A practical approach', 'Approved evidence', 'One next step'], use: 'Often' },
+];
 const BRAND_KEY = 'demandai_brand_v1';
 function defaultBrand() {
   return { v: 1, voice: { preset: 'Direct', signoff: 'Client Team', maxWords: BRAND.maxWords, maxSentenceWords: 35, noExclamation: true,
       bannedOpeners: ['I hope this email finds you well', 'Just checking in', 'Hope you are well'], notes: 'Direct, specific, no hype. Lead with the account\'s own signal, not a generic pitch.' },
     negative: BRAND.banned.slice(), competitors: [], claims: COLLATERAL.map(c => ({ ...c, status: 'approved', owner: 'Marketing' })),
-    framework: JSON.parse(JSON.stringify(PLAYBOOK)), guideline: null, history: [{ v: 1, at: null, by: '', note: 'Starting brand pack' }] };
+    framework: JSON.parse(JSON.stringify(PLAYBOOK)), frameworks: JSON.parse(JSON.stringify(FRAMEWORKS)), guideline: null, history: [{ v: 1, at: null, by: '', note: 'Starting brand pack' }] };
 }
 function brandStore() { try { return JSON.parse(localStorage.getItem(BRAND_KEY) || 'null'); } catch (e) { return null; } }
 function brandSave(st) { try { localStorage.setItem(BRAND_KEY, JSON.stringify(st)); return true; } catch (e) { return false; } }
@@ -1196,7 +1206,7 @@ return {
   CONFIG, CODES, saveConfig, configOverrides, configVersion, LEAD_COLUMNS, LEAD_REQUIRED, SIGNAL_COLUMNS, SIGNAL_REQUIRED,
   parseCSV, toCSV, readTable, processLeads, classify, personaOf, fitFor, decayFactor,
   processSignals, scoreList, stack, tierFor, daysBetween, round1, buildSegments, segmentRanks, recommendChannel, draftFor, processScoredProspects, SEGMENT_COLUMNS, estimateDealSize,
-  briefFor, callScript, checkDraft, checkContent, confidenceFor, allowedChannels, proofFor, COLLATERAL, PLAYBOOK,
+  briefFor, callScript, checkDraft, checkContent, FRAMEWORKS, confidenceFor, allowedChannels, proofFor, COLLATERAL, PLAYBOOK,
   VOICE_PRESETS, defaultBrand, brandPack, brandDraft, saveBrandDraft, submitBrand, discardBrandDraft, brandPending, publishBrand, brandVersion, useBrand, approvedClaims,
   loadLists, saveList, getList, deleteList, loadScorings, saveScoring, getScoring, deleteScoring,
   loadSegmentations, saveSegmentation, getSegmentation, deleteSegmentation, reviewBadge,
