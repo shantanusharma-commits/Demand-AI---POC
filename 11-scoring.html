@@ -422,6 +422,11 @@ input,textarea,select{background-color:#fff;color:var(--i1);}
 .dt input[type=checkbox]:checked::after{content:'';width:9px;height:5px;border:2px solid #fff;border-top:0;border-right:0;transform:translateY(-1px) rotate(-45deg);}
 .dt input[type=checkbox]:indeterminate::after{content:'';width:8px;height:2px;background:#fff;border-radius:1px;}
 .dt input[type=checkbox]:focus-visible{outline:2px solid var(--brand-mid);outline-offset:2px;}
+.stat-link{position:relative;cursor:pointer;display:block;text-decoration:none;color:inherit;transition:background var(--fast) var(--ease);}
+.stat-link:hover,.stat-link.on{background:var(--brand-lt);}
+.stat-link::after{content:'›';position:absolute;top:10px;right:14px;font-size:17px;color:var(--i4);}
+.stat-link:hover .stat-lbl,.stat-link.on .stat-lbl{color:var(--brand);}
+.tier-mini{font-size:12px;white-space:nowrap;}
 </style>
 </head>
 <body>
@@ -653,7 +658,7 @@ function renderStart(t){
           </div>
         </div>
       </div>` : `
-      <div class="score-list">${table([['Name','26%'],['Prospect list','18%'],['Signal file','14%'],['Scored','8%','num'],['Tier A','7%','num'],['Saved','11%'],['','16%']],
+      ${scoredStrip(runs)}<div class="score-list">${table([['Name','20%'],['Prospect list','13%'],['Signal file','11%'],['Scored','8%','num'],['Tiers','12%'],['What it led to','17%'],['Saved','9%'],['','10%']],
         runs.map(r=>`<tr>
           <td><div class="person"><div class="co-av" style="background:${avColor(r.id)}">${initials(r.name)}</div><div style="flex:1;min-width:0">${renamingId===r.id
             ? `<div style="display:flex;gap:6px;align-items:center"><input id="renameInput" value="${esc(r.name)}" style="flex:1;min-width:0;padding:6px 9px;border:1px solid var(--brand-mid);border-radius:var(--rsm);font-size:12.5px" onkeydown="if(event.key==='Enter')finishRename('${r.id}');if(event.key==='Escape'){renamingId=null;renderStart('saved')}"><button class="btn btn-primary btn-sm" onclick="finishRename('${r.id}')">Save</button></div>`
@@ -661,9 +666,10 @@ function renderStart(t){
           <td>${cell((DemandAI.getList(r.listId)||{}).name || r.listName, DemandAI.getList(r.listId)?'':'<span style="color:var(--neg)">List deleted</span>')}</td>
           <td>${cell(r.fileName)}</td>
           <td class="num">${r.stats.scored}<span class="sub">prospects</span></td>
-          <td class="num">${r.stats.A}</td>
+          <td><span class="tier-mini"><b style="color:var(--pos)">A ${r.stats.A}</b>${r.stats.B!==undefined?` · <b style="color:var(--warn)">B ${r.stats.B}</b> · <b style="color:var(--brand)">C ${r.stats.C}</b>`:''}</span>${r.stats.watch!==undefined?`<span class="sub">${r.stats.watch} on the watch list</span>`:''}</td>
+          <td>${(()=>{ const d = ledToRun(r); return !d.segs ? '<span class="muted">Not sent to NBA yet</span>' : `<span class="val">${d.recs} recommended · ${d.released} released</span><span class="sub">${d.meetings} meeting${d.meetings===1?'':'s'} booked · <a href="12-nba.html?run=${encodeURIComponent(d.segId)}" style="color:var(--brand);font-weight:600;text-decoration:none">Open in NBA →</a></span>`; })()}</td>
           <td>${cell(fmtDate(r.createdAt), new Date(r.createdAt).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}))}</td>
-          <td style="text-align:right"><button class="btn btn-sec btn-sm" onclick="openRun('${r.id}')">Open</button> <button class="btn btn-ghost btn-sm" onclick="removeRun('${r.id}')">Delete</button></td>
+          <td style="text-align:right;white-space:nowrap"><button class="btn btn-sec btn-sm" onclick="openRun('${r.id}')">Open</button> <button class="btn btn-ghost btn-sm" title="Delete" onclick="removeRun('${r.id}')">✕</button></td>
         </tr>`).join(''), `No scored lists yet. <a href="#" onclick="renderStart('new');return false" style="color:var(--brand);font-weight:600">Score a prospect list</a> and save it.`)}
       </div>`}
     </div>`;
@@ -826,11 +832,9 @@ function renderResults(){
     <div class="ftabs">${ft('ranked','Ranked prospects',sc.length)}${ft('evidence','Signal evidence',sig.signals.length)}</div>
     <div class="canvas">
       <div class="stats">
-        <div class="stat"><div class="stat-lbl">Tier A</div><div class="stat-val" style="color:var(--pos)">${count('A')}</div><div class="stat-sub">score ${T.A} and above</div></div>
-        <div class="stat"><div class="stat-lbl">Tier B</div><div class="stat-val" style="color:var(--warn)">${count('B')}</div><div class="stat-sub">score ${T.B}–${T.A-1}</div></div>
-        <div class="stat"><div class="stat-lbl">Tier C</div><div class="stat-val sv1">${count('C')}</div><div class="stat-sub">below ${T.B}</div></div>
-        <div class="stat"><div class="stat-lbl">Watch list</div><div class="stat-val sv5">${count('Watch list')}</div><div class="stat-sub">good fit, no live signal</div></div>
-        <div class="stat"><div class="stat-lbl">Not scored</div><div class="stat-val sv3">${count('Below fit floor')+count('Excluded')}</div><div class="stat-sub">${count('Below fit floor')} below fit floor · ${count('Excluded')} excluded</div></div>
+        ${[['A','Tier A','color:var(--pos)',count('A'),`score ${T.A} and above`],['B','Tier B','color:var(--warn)',count('B'),`score ${T.B}–${T.A-1}`],['C','Tier C','color:var(--brand)',count('C'),`below ${T.B}`],
+           ['Watch list','Watch list','color:var(--i1)',count('Watch list'),'good fit, no live signal'],['out','Not scored','color:var(--ter-dk)',count('Below fit floor')+count('Excluded'),`${count('Below fit floor')} below fit floor · ${count('Excluded')} excluded`]]
+          .map(([f,l,c,v,sub])=>`<a class="stat stat-link ${view==='ranked'&&filt===f?'on':''}" href="#" title="Show only these" onclick="view='ranked';filt=filt==='${f}'?'all':'${f}';q='';renderResults();return false"><div class="stat-lbl">${l}</div><div class="stat-val" style="${c}">${v}</div><div class="stat-sub">${sub}</div></a>`).join('')}
       </div>
       ${view==='ranked'?rankedTab():evidenceTab()}
     </div>`;
@@ -946,7 +950,7 @@ function saveRun(){
   const prev = RUN.savedId && DemandAI.getScoring(RUN.savedId);
   const run = prev ? Object.assign(prev, {name}) : { id:'run-'+Date.now().toString(36), name, listId:RUN.listId, listName:RUN.list.name,
     fileName:RUN.fileName, sheet:RUN.sheet, grid:RUN.grid, asOf:RUN.asOf, sandbox:RUN.sandbox, createdAt:Date.now(),
-    stats:{ scored: prospects().filter(x=>x.score!==undefined).length, A: prospects().filter(x=>x.tier==='A').length } };
+    stats:{ scored: prospects().filter(x=>x.score!==undefined).length, A: prospects().filter(x=>x.tier==='A').length, B: prospects().filter(x=>x.tier==='B').length, C: prospects().filter(x=>x.tier==='C').length, watch: prospects().filter(x=>x.tier==='Watch list').length } };
   if(!DemandAI.saveScoring(run)){ showToast("This browser blocks storage, so it can't be saved"); return; }
   RUN.savedId = run.id; RUN.name = name;
   hide('saveOverlay'); showToast(`Saved as "${name}"`); renderResults();
@@ -957,6 +961,28 @@ function openRun(id){
   const ok = _score(r.listId, r.fileName, r.sheet, r.grid, r.asOf, r.sandbox, r);
   if(ok) renderResults();
 }
+/* What a scored list led to: the micro-segments built from it, their recommendations, releases and meetings. */
+function ledToRun(r){
+  const segs = DemandAI.loadSegmentations().filter(s=>s.src && (s.src.scoringId===r.id || (s.src.name===r.name && s.src.listId===r.listId)));
+  const dec = segs.flatMap(s=>Object.values(s.decisions||{}));
+  return { segs: segs.length, segId: segs[0] && segs[0].id, recs: segs.reduce((t,s)=>t+((s.stats&&s.stats.prospects)||0),0),
+    released: dec.filter(d=>d && d.status==='Released').length, meetings: dec.filter(d=>d && d.outcome==='Meeting booked').length };
+}
+function scoredStrip(runs){
+  if(!runs.length) return '';
+  const t = runs.map(ledToRun).reduce((a,b)=>({recs:a.recs+b.recs, released:a.released+b.released, meetings:a.meetings+b.meetings, segs:a.segs+b.segs}), {recs:0,released:0,meetings:0,segs:0});
+  const scored = runs.reduce((n,r)=>n+((r.stats&&r.stats.scored)||0),0), A = runs.reduce((n,r)=>n+((r.stats&&r.stats.A)||0),0);
+  const step = (lbl, v, sub, href, tone) => `<a class="stat stat-link" href="${href}"><div class="stat-lbl">${lbl}</div><div class="stat-val" style="color:${tone||'var(--i1)'}">${v}</div><div class="stat-sub">${sub}</div></a>`;
+  return `<div style="font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--i3);margin-bottom:6px">What your scored lists led to</div>
+    <div class="stats" style="grid-template-columns:repeat(5,1fr);margin-bottom:18px">
+      ${step('Prospects scored', scored, `${runs.length} scored list${runs.length===1?'':'s'}`, '#" onclick="renderStart(\'saved\');return false')}
+      ${step('Tier A', A, 'act on these now', '#" onclick="runs0A();return false', 'var(--pos)')}
+      ${step('Recommendations', t.recs, `${t.segs} micro-segment run${t.segs===1?'':'s'} in NBA`, '12-nba.html')}
+      ${step('Released', t.released, 'ready to use', '12-nba.html')}
+      ${step('Meetings booked', t.meetings, 'marked by the reps', '13-analytics.html?tab=loop')}
+    </div>`;
+}
+function runs0A(){ const r = DemandAI.loadScorings()[0]; if(!r) return; openRun(r.id); setTimeout(()=>{ filt = 'A'; renderResults(); }, 0); }
 function removeRun(id){ DemandAI.deleteScoring(id); showToast('Scored list deleted'); renderStart('saved'); }
 function startRename(id){ renamingId = id; renderStart('saved'); const el=document.getElementById('renameInput'); if(el){ el.focus(); el.select(); } }
 function finishRename(id){

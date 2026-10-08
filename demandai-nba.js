@@ -23,7 +23,7 @@ function sourceFor(id){
   if(id==='handoff') return handoff();
   if(id==='upload') return UPLOAD;
   const r = DemandAI.getScoring(id);
-  return r && { name:r.name, listId:r.listId, listName:r.listName, fileName:r.fileName, sheet:r.sheet, grid:r.grid, asOf:r.asOf, sandbox:r.sandbox, keys:null };
+  return r && { scoringId:r.id, name:r.name, listId:r.listId, listName:r.listName, fileName:r.fileName, sheet:r.sheet, grid:r.grid, asOf:r.asOf, sandbox:r.sandbox, keys:null };
 }
 // 5.9 Engage-once: accounts approved, sent or rejected as "already engaged" in any other segmented list of this pilot.
 function engagedMap(exceptId, before){

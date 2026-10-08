@@ -746,11 +746,12 @@ function renderRun(){
     <div class="ftabs">${tab('list','Final list',r.contacts.length)}${tab('accounts','Accounts',r.accounts.length)}${tab('corrections','Corrections',loadCorrections().filter(x=>x.file===RUN.fileName).length)}</div>
     <div class="canvas">
       <div class="stats">
-        <div class="stat"><div class="stat-lbl">Rows read</div><div class="stat-val sv1">${s.rowsRead}</div><div class="stat-sub">${s.notLoaded} not loaded · ${s.merged} merged duplicate${s.merged===1?'':'s'}</div></div>
-        <div class="stat"><div class="stat-lbl">Issues</div><div class="stat-val sv3">${s.issues}</div><div class="stat-sub">${s.issuesBySeverity.stop} stop · ${s.issuesBySeverity.flag} flagged · ${s.issuesBySeverity.info} info</div></div>
-        <div class="stat"><div class="stat-lbl">Accounts</div><div class="stat-val sv2">${s.accounts}</div><div class="stat-sub">${s.accountsPass} pass the knock-outs</div></div>
-        <div class="stat"><div class="stat-lbl">Excluded</div><div class="stat-val sv5">${s.accounts-s.accountsPass}</div><div class="stat-sub">knock-out rule, logged</div></div>
-        <div class="stat"><div class="stat-lbl">In the final list</div><div class="stat-val sv4">${s.inFinalList}</div><div class="stat-sub">of ${s.contacts} contacts</div></div>
+        ${[['Rows read','sv1',s.rowsRead,`${s.notLoaded} not loaded · ${s.merged} merged duplicate${s.merged===1?'':'s'}`,"view='list';filt='all'",'Show every contact'],
+           ['Issues','sv3',s.issues,`${s.issuesBySeverity.stop} stop · ${s.issuesBySeverity.flag} flagged · ${s.issuesBySeverity.info} info`,'openChecks()','Open the checks and the issues they found'],
+           ['Accounts','sv2',s.accounts,`${s.accountsPass} pass the knock-outs`,"view='accounts';filt='pass'",'Show the accounts that pass'],
+           ['Excluded','sv5',s.accounts-s.accountsPass,'knock-out rule, logged',"view='accounts';filt='excluded'",'Show the excluded accounts and why'],
+           ['In the final list','sv4',s.inFinalList,`of ${s.contacts} contacts`,"view='list';filt='in'",'Show the contacts in the final list']]
+          .map(([l,c,v,sub,go,tip])=>`<a class="stat stat-link" href="#" title="${tip}" onclick="${go.replace(/"/g,'&quot;')};${go==='openChecks()'?'':'q=\'\';renderRun();'}return false"><div class="stat-lbl">${l}</div><div class="stat-val ${c}">${v}</div><div class="stat-sub">${sub}</div></a>`).join('')}
       </div>
       ${view==='list'?renderListTab():view==='corrections'?correctionsTable(loadCorrections().filter(x=>x.file===RUN.fileName)):renderAccountsTab()}
     </div>`;
@@ -1067,18 +1068,23 @@ function recheck(){
   RUN.result = r;
 }
 const correctedRows = () => new Set(loadCorrections().filter(x=>x.file===RUN.fileName).map(x=>x.row));
+let CORRF = null;
+// Re-draws whichever screen shows the corrections log.
+function renderCorr(){ if(typeof RUN!=='undefined' && RUN && view==='corrections') renderRun(); else renderStart('corrections'); }
 function correctionsTable(rows){
   const tone = s => s==='major' ? 'tag-red' : 'tag-amber';
   const n = rows.length, major = rows.filter(x=>x.severity==='major').length;
   const top = Object.entries(rows.reduce((o,x)=>{ o[x.reason]=(o[x.reason]||0)+1; return o; },{})).sort((a,b)=>b[1]-a[1])[0];
+  const allRows = rows; rows = CORRF ? rows.filter(x=>(!CORRF.severity || x.severity===CORRF.severity) && (!CORRF.reason || x.reason===CORRF.reason)) : rows;
   return `<div style="display:flex;gap:10px;align-items:flex-start;padding:12px 14px;margin-bottom:12px;background:var(--brand-lt);border:1px solid var(--brand-mid);border-radius:var(--rmd)">
       <span class="tag tag-violet">Pilot</span><div style="font-size:12.5px;color:var(--i1);line-height:1.55"><b>Captured in the pilot, used in production.</b> Every correction is kept with what changed, why and how you know. In the pilot nothing is sent back; in production they show which data sources and rules to fix, so the lists get better the more you use the tool.</div></div>
     <div class="stats" style="grid-template-columns:repeat(4,1fr)">
-      <div class="stat"><div class="stat-lbl">Corrections</div><div class="stat-val" style="color:var(--i1)">${n}</div><div class="stat-sub">${new Set(rows.map(x=>x.file+x.row)).size} people</div></div>
-      <div class="stat"><div class="stat-lbl">Major</div><div class="stat-val" style="color:var(--neg)">${major}</div><div class="stat-sub">wrong email, moved company, wrong person</div></div>
-      <div class="stat"><div class="stat-lbl">Minor</div><div class="stat-val" style="color:var(--warn)">${n-major}</div><div class="stat-sub">title, headcount, location</div></div>
-      <div class="stat"><div class="stat-lbl">Most common</div><div class="stat-val" style="color:var(--i1);font-size:15px;line-height:1.3">${top?esc(top[0]):'—'}</div><div class="stat-sub">${top?top[1]+' time'+(top[1]===1?'':'s'):'No corrections yet'}</div></div>
+      <a class="stat stat-link" href="#" onclick="CORRF=null;renderCorr();return false"><div class="stat-lbl">Corrections</div><div class="stat-val" style="color:var(--i1)">${n}</div><div class="stat-sub">${new Set(rows.map(x=>x.file+x.row)).size} people</div></a>
+      <a class="stat stat-link" href="#" onclick="CORRF={severity:'major'};renderCorr();return false"><div class="stat-lbl">Major</div><div class="stat-val" style="color:var(--neg)">${major}</div><div class="stat-sub">wrong email, moved company, wrong person</div></a>
+      <a class="stat stat-link" href="#" onclick="CORRF={severity:'minor'};renderCorr();return false"><div class="stat-lbl">Minor</div><div class="stat-val" style="color:var(--warn)">${n-major}</div><div class="stat-sub">title, headcount, location</div></a>
+      <a class="stat stat-link" href="#" onclick="CORRF=${top?`{reason:${esc(JSON.stringify(top[0]))}}`:'null'};renderCorr();return false"><div class="stat-lbl">Most common</div><div class="stat-val" style="color:var(--i1);font-size:15px;line-height:1.3">${top?esc(top[0]):'—'}</div><div class="stat-sub">${top?top[1]+' time'+(top[1]===1?'':'s'):'No corrections yet'}</div></a>
     </div>
+    ${CORRF ? `<div style="display:flex;gap:8px;align-items:center;margin:0 0 10px;font-size:12px;color:var(--i2)">Showing <span class="seg-pill active" onclick="CORRF=null;renderCorr()">${esc(CORRF.severity ? CORRF.severity[0].toUpperCase()+CORRF.severity.slice(1) : CORRF.reason)} ✕</span></div>` : ''}
     <div class="score-list">${table([['Corrected on',140],['Corrected by',160],['Person corrected',230],['Field changed',180],['Before',220],['After',220],['Severity',100],['Reason',210],['Verified by',220]],
       rows.map(x=>`<tr><td>${cell(new Date(x.at).toLocaleDateString(undefined,{day:'numeric',month:'short'}), new Date(x.at).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}))}</td>
         <td>${cell(x.who, esc(x.role))}</td><td>${cell(x.contact, esc(x.company+' · '+x.file))}</td><td>${cell(x.field)}</td>
