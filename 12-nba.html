@@ -834,7 +834,7 @@ function renderResults(){
   document.getElementById('mainArea').innerHTML = `
     <div class="topbar">
       <div class="topbar-l"><span class="tb-title">${esc(RUN.saved.name)}</span></div>
-      <div class="topbar-r"><button class="btn btn-sec btn-sm" onclick="renderStart('new')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>Group another list</button></div>
+      <div class="topbar-r">${typeof Copilot!=='undefined'?Copilot.button():''}<button class="btn btn-sec btn-sm" onclick="renderStart('new')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>Group another list</button></div>
     </div>
     <div class="ftabs">${ft('grid','Micro-segments',s.segments.length)}${ft('list','Recommendations',recs.filter(mine).length)}</div>
     <div class="canvas">
@@ -848,7 +848,6 @@ function renderResults(){
       ${view==='grid'?gridTab():listTab()}
     </div>`;
   if(view==='list') drawList();
-  if(typeof Copilot!=='undefined') document.getElementById('mainArea').insertAdjacentHTML('beforeend', Copilot.dock({ placeholder:'Ask Copilot about your micro-segments and accounts…', hints:['Summarise my micro-segments','Group what is waiting by reason','Show the runner-ups'] }));
 }
 /* 5.2 Segment grid: micro-segments against verticals, with counts and share at tier A. 5.3 Drill-down from a cell. */
 function gridTab(){

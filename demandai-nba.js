@@ -625,108 +625,91 @@ function openRec(key, keepTimer){
   if(!keepTimer || openKey!==key){ openedAt = Date.now(); pickTags = new Set(); pickCode = null; }
   openKey = key;
   const d = dec(key), lr = liveRec(r), c = lr.contact, x = draftOf(r), { chk, conf } = checksOf(r);
-  const paused = pausedInfo(r);
-  const live = inQueue(d) && mine(r) && !paused && !(typeof CARD_MODE!=='undefined' && CARD_MODE==='use'), action = chosenAction(r), brief = DemandAI.briefFor(lr, action, {asOf:asOf(), channel:d.channel});
+  const paused = pausedInfo(r), action = chosenAction(r), brief = DemandAI.briefFor(lr, action, {asOf:asOf(), channel:d.channel});
+  const canSwap = canSwapReleased(r) && mine(r), sig = r.signal || {}, seg = segOf(r);
   document.getElementById('detTitle').textContent = c.name;
   document.getElementById('detSub').textContent = [c.jobTitle, r.account.name].filter(Boolean).join(' · ');
-  // 0 · A booked meeting's call script first. Opening the script clears the notification.
   html = '';
+  // 1 · Who and where it stands, at a glance
+  html += `<div class="ar-chips" style="margin:0 0 12px">${segTag(seg)}${statusPill(d, r)}${c.persona?`<span class="tag tag-grey">${esc(c.persona)} persona</span>`:''}</div>`;
+  // A booked meeting's call script first. Opening it clears the notification.
   if(d.outcome==='Meeting booked' && !d.meeting){ setDec(key, {meeting:{at:d.at||Date.now(), seen:true, script:meetingScript(r)}}); persist(); }
   const dm = dec(key).meeting;
   if(dm){ html += meetingPanel(key); if(!dm.seen){ setDec(key, {meeting:Object.assign({}, dm, {seen:true})}); persist(); DemandAI.reviewBadge(); } }
-  // 1 · Why it's here, and why now
-  const why = d.spot==='pending' ? `It went ahead on its own after passing all four checks, and was picked at random for a spot-check. Rate it as if it had come to you.`
-    : d.why==='alternative' ? `The alternative after a rejection of <b>${esc(d.alternativeOf||'the first recommendation')}</b>. It's offered once: a second rejection closes the account for the pilot.`
-    : d.why==='sent back' ? `Sent back by the sales manager: ${esc(d.sentBackNote||'')}`
-    : d.why==='stepped in' ? 'It proceeded on its own; the rep stepped in to edit or reject it. Recorded as an intervention.'
-    : d.status==='Released' && d.released==='auto' ? 'Passed all four exception checks, so it went ahead on its own.'
-    : (d.reasons||exceptionReasons(r)).map(esc).join('<br>') || 'Exception';
-  html += panel("Why it's here", `<span class="tag ${d.spot==='pending'?'tag-blue':d.why==='alternative'?'tag-violet':'tag-amber'}">${inQueue(d)?whyHere(d):d.status==='Released'&&d.released==='auto'?'Went ahead':'Exception'}</span>`, `
-    <div style="font-size:12.5px;color:var(--i1);line-height:1.55;margin-bottom:8px">${why}</div>
-    ${kv('Why now', esc(r.reason.replace(/^./,m=>m.toUpperCase())))}
-    ${kv('Checks', `<span class="tags" style="display:inline-flex;flex-wrap:wrap;gap:4px">${fourChecks(r).map(([k,ok])=>`<span class="tag ${ok?'tag-green':'tag-red'}">${ok?'✓':'✗'} ${esc(k)}</span>`).join('')}</span>`)}
-    ${(()=>{ const s = r.segment ? trackRecord(r.segment) : null, a = trackRecord();
-      return kv('Track record', a.n ? `${s && s.n ? `In ${esc(r.segment)}, reps agreed with the first recommendation <b>${s.a} of ${s.n}</b> times (${s.pct}%)` : `No decisions in ${esc(r.segment||'this group')} yet`}<span style="color:var(--i3)"> · ${a.a} of ${a.n} (${a.pct}%) across all${a.early?'; early days, so read it as a hint':''}</span>` : '<span style="color:var(--i3)">No decisions yet, so no track record</span>'); })()}
-    ${kv('Micro-segment', `${segTag(segOf(r))} <span style="color:var(--i3)">${segOf(r)?esc(SEG_MEANS[segOf(r)]||''):'none yet: assign one to release it'}${!r.segment&&segOf(r)?' · assigned by a reviewer':''}${segSince(r)?` · in it since ${fmtDate(segSince(r))}`:''}</span>`)}
-    ${kv('Owner', isManager() ? `<select onchange="reassign('${key}',this.value)" style="padding:3px 6px;border:1px solid var(--bdk);border-radius:6px;font-size:12px">${['',...Object.keys(REPS)].map(e=>`<option value="${e}" ${ownerOf(r)===e?'selected':''}>${esc(repName(e))}</option>`).join('')}</select>` : esc(repName(ownerOf(r))))}`);
-  // 2 · The action
-  html += panel(r.runnerUp && !d.manual ? 'The action: compare and pick' : 'The action', '', `
-    ${compareActions(r, key, live || canSwapReleased(r))}${!live && inQueue(d) && mine(r) && !paused && r.runnerUp ? `<div style="font-size:11px;color:var(--i3);margin-top:6px">Waiting for a decision: pick the action in <a href="14-review.html?item=${encodeURIComponent(RUN.saved.id+'::'+key)}" style="color:var(--brand);font-weight:600;text-decoration:none">For Review →</a></div>` : ''}
-    ${d.manual ? `<div style="padding:10px 12px;border:1px solid var(--brand-mid);background:var(--brand-lt);border-radius:var(--rsm);margin-top:8px"><div style="font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--brand-dk);margin-bottom:4px">Manual action · chosen</div><div style="font-size:12.5px;font-weight:600;color:var(--i1)">${esc(d.manual)}</div></div>` : ''}
-    ${live ? `<div style="display:flex;gap:6px;margin-top:8px"><input id="manualAct" placeholder="Neither? Add a manual action…" style="flex:1;min-width:0;padding:7px 10px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:12px"><button class="btn btn-sec btn-sm" onclick="addManual('${key}')">Add</button></div>` : ''}`);
-  // 3 · Contact and channel
-  html += panel('Contact and channel', '', kv('Contact', `${esc(c.name)} <span style="color:var(--i3)">· ${esc(c.jobTitle||'')} · ${esc(c.persona||'')} persona</span>`)
-    + kv('Reach', [c.email?esc(c.email)+(c.emailVerified?'':' <span style="color:var(--warn)">(not verified)</span>'):'', c.linkedin?'LinkedIn':''].filter(Boolean).join(' · ') || '<span style="color:var(--i3)">No email or LinkedIn</span>')
-    + kv('Channel', `<b>${esc(x.channel==='Task'?'Task for the team':x.channel)}</b> <span style="color:var(--i3)">${esc(x.why)}</span>`));
-  // 4 · The editable draft
-  const ro = !live;
-  let draft = '';
-  const sc = x.script;
-  if(x.channel==='Email') draft = lbl('Subject')+fld('dSubj',x.subject,0,ro)+lbl('Body', `${x.body.split(/\s+/).filter(Boolean).length} words`)+fld('dBody',x.body,9,ro);
-  else if(x.channel==='LinkedIn') draft = lbl('Connection note · the only message, no follow-up', `${x.note.length}/200`)+fld('dNote',x.note,3,ro);
-  else draft = lbl('Task')+fld('dTask',x.task,3,ro);
-  // Blogs and whitepapers from Content studio go in the message itself: one button at the top of the message box.
+  // 2 · The next best action, why now, and the runner-up
+  html += panel('Next best action', d.manual ? '<span class="tag tag-violet">Your own</span>' : d.useRunner ? '<span class="tag tag-grey">Runner-up chosen</span>' : '<span class="tag tag-violet">Recommended</span>', `
+    <div class="ar-act">${esc(action)}</div>
+    <div class="ar-why"><span class="ar-k">Why now</span><b>${esc(sig.type||'Signal')}</b>${sig.age!==undefined?` · ${sig.age} days ago`:''}<div>${esc(String(r.reason).replace(/^[^:]{3,40}:\s*/,'').replace(/^./,m=>m.toUpperCase()))}</div></div>
+    ${r.runnerUp && !d.manual ? `<div class="ar-ru"><span class="ar-k">${d.useRunner?'Recommended':'Runner-up'}</span><b>${esc(d.useRunner ? r.action : r.runnerUp.action)}</b>${canSwap ? `<button class="btn btn-sec btn-sm" onclick="swapAction('${key}')">Use this instead</button>` : ''}</div>` : ''}
+    ${r.runnerUp && !d.manual ? `<details class="ar-more"><summary>Compare them side by side</summary><div style="margin-top:8px">${compareActions(r, key, canSwap)}</div></details>` : ''}`);
+  // 3 · The message: to whom, and exactly what it says
+  const ro = true; let draft = '';
+  if(x.channel==='Email') draft = fld('dSubj',x.subject,0,ro)+fld('dBody',x.body,8,ro);
+  else if(x.channel==='LinkedIn') draft = fld('dNote',x.note,3,ro);
+  else draft = fld('dTask',x.task,3,ro);
   if(typeof ContentLink!=='undefined' && (x.channel==='Email' || x.channel==='LinkedIn')) draft = ContentLink.messageBar(key, d.content, x.channel, mine(r) && !paused) + draft;
-  if(sc) draft += lbl('Call script · opener')+fld('sOpen',sc.opener,3,ro)+lbl('Discovery questions')+fld('sQs',sc.questions.join('\n'),3,ro)
-    +lbl('Objection')+fld('sObj',sc.objection,0,ro)+lbl('Response')+fld('sResp',sc.response,2,ro)+lbl('The ask')+fld('sAsk',sc.ask,0,ro);
   const vs = versions(r);
-  html += panel(x.channel==='Task' ? 'Task' : 'Draft', `<span style="display:flex;gap:6px">${d.edited?`<span class="tag tag-violet">Edited · ${esc(d.editRating||'')}</span>`:''}<span class="tag tag-grey">v${vs.length}</span></span>`, `
-    ${live?'<div style="font-size:11px;color:var(--i3);margin-top:-4px">Edit here if you need to; accepting saves it, and the edit is rated minor or major automatically.</div>':''}
-    <div style="margin-top:-4px">${draft}</div>
-    <details style="margin-top:12px"><summary style="cursor:pointer;font-size:11.5px;font-weight:600;color:var(--i2)">Brief, proof and checks · <span class="tag ${conf.level==='High'?'tag-green':conf.level==='Medium'?'tag-amber':'tag-red'}" style="margin-left:2px">${conf.level} confidence</span></summary>
-      <div style="margin-top:8px">${kv('Angle', esc(brief.angle))}${kv('Proof', brief.proof ? `${esc(brief.proof.title)} <span style="color:var(--i3)">· ${esc(brief.proof.type)}, ${brief.proof.year}</span>` : '<span style="color:var(--warn)">No approved proof: a task instead of a draft</span>')}
-      ${kv('Objection', esc(brief.objection))}${kv('Checks', chk.flags.length ? chk.flags.map(f=>`<span style="color:var(--neg)">${esc(f.rule)}: ${esc(f.detail)}</span>`).join('<br>') : '<span style="color:var(--pos)">Brand and rule checks pass</span>')}
-      ${kv('Claims', chk.claims.length ? chk.claims.map(cl=>`<span style="color:${cl.verified?'var(--pos)':'var(--neg)'}">${cl.verified?'✓':'✗'}</span> ${esc(cl.text)}`).join('<br>') : '<span style="color:var(--i3)">No product claims</span>')}
-      ${kv('Confidence', esc(conf.reason))}
-      ${vs.length>1 ? kv('Versions', vs.slice().reverse().map(v=>`v${v.v} · ${esc(v.why)} · ${esc(v.by)}`).join('<br>')) : ''}</div>
-    </details>`);
-  // 5 · The decision
+  html += panel(x.channel==='Task' ? 'Task for the team' : x.channel==='LinkedIn' ? 'LinkedIn note' : 'Email', `<span style="display:flex;gap:6px">${d.edited?`<span class="tag tag-violet">Edited</span>`:''}${vs.length>1?`<span class="tag tag-grey">v${vs.length}</span>`:''}</span>`, `
+    <div class="ar-to">${x.channel==='Email' ? (c.email ? `To <b>${esc(c.email)}</b> ${c.emailVerified?'<span class="tag tag-green">Verified</span>':'<span class="tag tag-amber">Not verified</span>'}` : '<span class="tag tag-red">No email on file</span>') : x.channel==='LinkedIn' ? `To <b>${esc(c.name)}</b> on LinkedIn` : 'Owned by a person'}</div>
+    ${draft}
+    <div class="ar-row">${d.status==='Released' && x.channel!=='Task' ? `<button class="btn btn-primary btn-sm" onclick="copyDraft('${key}')">Copy the message</button>` : ''}${chk.flags.length||chk.unsupported.length ? `<span class="tag tag-red">✗ ${esc((chk.flags[0]||{}).rule||'Claim with no source')}</span>` : '<span class="ar-ok">✓ Brand and claims pass</span>'}</div>`);
+  // 4 · What happened, or where it waits
   const by = d.by ? `${esc(d.by)} · ${fmtDate(d.at)} ${timeOf(d.at)}` : '';
+  const rev = `14-review.html?item=${encodeURIComponent(RUN.saved.id+'::'+key)}`;
   let decide = '';
-  const useMode = typeof CARD_MODE!=='undefined' && CARD_MODE==='use';
-  if(paused) decide = `<div style="font-size:12px;color:var(--i1);margin-bottom:8px">The ${esc(r.segment||'no-micro-segment')} group was paused by ${esc(paused.by)} on ${fmtDate(paused.at)}. Don't use or decide it until it's resumed.</div>${isManager()?`<button class="btn btn-sec btn-sm" onclick="resumeSegment('${segKey(r)}')">Resume the micro-segment</button>`:''}`;
-  else   if(useMode && (inQueue(d) || d.status==='Awaiting approval')) decide = `<div style="font-size:12px;color:var(--i1);margin-bottom:10px">${d.status==='Awaiting approval' ? 'Accepted, and waiting for the sales manager because the content is sensitive.' : d.spot==='pending' ? 'It proceeded and is ready to use. It was also picked for this week\'s spot-check in For Review.' : 'It can\'t be used until it\'s decided in the exception queue.'}</div>
-      <a class="btn btn-primary btn-sm" style="width:100%;justify-content:center;text-decoration:none" href="14-review.html?item=${encodeURIComponent(RUN.saved.id+'::'+key)}">Open in For Review →</a>`;
-  else if(inQueue(d) && !mine(r)) decide = `<div style="font-size:12px;color:var(--i2)">In ${esc(repName(ownerOf(r)))}'s queue.</div>`;
-  else if(inQueue(d)) decide = `
-    <div class="tags" style="margin-bottom:8px">${ACCEPT_TAGS.map(t=>`<button class="tag ${pickTags.has(t)?'tag-green':'tag-grey'}" style="cursor:pointer" onclick="pickTags.has('${t}')?pickTags.delete('${t}'):pickTags.add('${t}');this.className='tag '+(pickTags.has('${t}')?'tag-green':'tag-grey')">${t}</button>`).join('')}</div>
- ${!r.segment && d.spot!=='pending' ? `<div style="padding:10px 12px;margin-bottom:8px;background:var(--warn-lt, #FFF6E5);border-radius:var(--rsm)"><div style="font-size:12px;font-weight:700;color:var(--i1);margin-bottom:6px">Assign a micro-segment to release it</div>
-      <select id="assignSeg" style="width:100%;padding:7px 9px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:12px"><option value="">Pick a micro-segment…</option>${segChoices().map(n=>`<option ${d.assignedSeg===n?'selected':''}>${esc(n)}</option>`).join('')}</select>
-      <div style="font-size:11px;color:var(--i3);margin-top:5px">No other account shared its signal, so it has no micro-segment of its own. Accepting releases it into the one you pick.</div></div>` : ''}
-    <input id="acNote" placeholder="Comment (optional)" style="width:100%;padding:7px 10px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:12px;margin-bottom:8px">
-    <button class="btn btn-primary btn-sm" style="width:100%;justify-content:center" onclick="accept('${key}')">${d.spot==='pending'?'Rate: accept':'Accept'}</button>
-    ${cap('Or reject · why?')}
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:8px">${REJECT.filter(([c])=>!(d.alternativeUsed&&false)).map(([c,l,w])=>`<button title="${esc(w)}" class="rj" onclick="pickCode='${c}';document.querySelectorAll('.rj').forEach(b=>b.style.cssText=b.dataset.base);this.style.cssText=this.dataset.base+';border-color:var(--neg);background:var(--neg-lt)';document.getElementById('rjWhat').textContent='${esc(d.alternativeUsed&&['R6','R7','R8','R9','R10','R11'].includes(c)?'Second rejection: the account is closed for the pilot':w)}'" data-base="text-align:left;padding:7px 9px;border:1px solid var(--border);border-radius:6px;font-size:12px;color:var(--i1)" style="text-align:left;padding:7px 9px;border:1px solid var(--border);border-radius:6px;font-size:12px;color:var(--i1)">${l}</button>`).join('')}</div>
-    <div id="rjWhat" style="font-size:11px;color:var(--i3);min-height:15px;margin-bottom:6px"></div>
-    <input id="rjNote" placeholder="Comment (needed for Other)" style="width:100%;padding:7px 10px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:12px;margin-bottom:8px">
-    <button class="btn btn-sec btn-sm" style="width:100%;justify-content:center" onclick="reject('${key}')">Reject</button>`;
-  else if(d.status==='Awaiting approval') decide = isManager()
-    ? `<div style="font-size:12px;color:var(--i1);margin-bottom:10px">${d.acceptedBy?`Accepted by ${esc(d.acceptedBy)}. `:''}The draft has sensitive content, so it needs your approval before release.</div>
-       <button class="btn btn-primary btn-sm" style="width:100%;justify-content:center" onclick="managerApprove('${key}')">Approve and release</button>
-       ${cap('Or send it back to the rep')}<input id="sbNote" placeholder="Why it goes back" style="width:100%;padding:7px 10px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:12px;margin-bottom:8px">
-       <button class="btn btn-sec btn-sm" style="width:100%;justify-content:center" onclick="sendBack('${key}')">Send back</button>`
-    : `<div style="font-size:12px;color:var(--i2)">Waiting for the sales manager's approval because the draft has sensitive content.</div>`;
-  else if(d.status==='Released') decide = `${x.channel!=='Task'?`<button class="btn btn-sec btn-sm" style="margin-bottom:10px" onclick="copyDraft('${key}')">Copy the message</button>`:''}<div style="font-size:12px;color:var(--i1);margin-bottom:10px">${d.released==='auto'?'Went ahead on its own':d.released==='approved'?`Approved by ${by}`:`Accepted by ${by}`}${d.spot==='accepted'?` · spot-check accepted by ${esc(d.spotBy||'')}`:''}. Ready to use: ${x.channel==='Task'?'act on the task':'send it from your own tool'}, then mark what happened. Nothing is sent from the POC.</div>
-      ${cap('What happened')}
+  if(paused) decide = `<div class="ar-txt">The ${esc(r.segment||'no-micro-segment')} group was paused by ${esc(paused.by)} on ${fmtDate(paused.at)}. Don't use it until it's resumed.</div>${isManager()?`<button class="btn btn-sec btn-sm" onclick="resumeSegment('${segKey(r)}')">Resume it</button>`:''}`;
+  else if(inQueue(d) || d.status==='Awaiting approval') decide = `<div class="ar-txt">${d.status==='Awaiting approval' ? 'Sensitive content: waiting for the sales manager\'s approval.' : d.spot==='pending' ? 'Ready to use. It was also picked for this week\'s spot-check.' : 'Not ready yet: it waits for a decision in For Review.'}</div>
+      <a class="btn btn-sec btn-sm" style="text-decoration:none" href="${rev}">Open in For Review →</a>`;
+  else if(d.status==='Released') decide = `<div class="ar-txt">${d.released==='auto'?'Went ahead on its own':d.released==='approved'?`Approved by ${esc(d.approvedBy||d.by||'')}`:`Accepted by ${esc(d.by||'')}`}. Send it from your own mailbox or LinkedIn, then mark what happened.</div>
       <div class="tags">${OUTCOMES.map(o=>`<button class="tag ${d.outcome===o?'tag-violet':'tag-grey'}" style="cursor:pointer" onclick="outcome('${key}','${o}')">${o}</button>`).join('')}</div>
-      ${d.released==='auto' && d.spot!=='pending' && mine(r) ? `<button class="btn btn-ghost btn-sm" style="margin-top:12px" onclick="stepIn('${key}')">Step in: edit or reject it</button>` : ''}`;
-  else decide = `<div style="font-size:12px;color:var(--i1)">${esc((REJECT.find(x=>x[0]===d.code)||[])[1]||'Rejected')} · ${by}<div style="color:var(--i2);margin-top:3px">${esc(d.status)}</div></div>`;
-  if(!inQueue(d) && typeof nextItem==='function' && typeof hasNext==='function' && hasNext()) decide += `<button class="btn btn-primary btn-sm" style="width:100%;justify-content:center;margin-top:12px" onclick="nextItem()">Next →</button>`;
-  html += panel(inQueue(d) && !useMode && !paused ? 'Your decision' : 'Status', inQueue(d) && !useMode && !paused ? statusTag('Waiting') : statusPill(d, r), decide);
-  const hist = RUN.saved.log.filter(l=>l.key===key);
-  if(hist.length) html += `<details class="panel" style="padding:10px 14px"><summary style="cursor:pointer;font-size:11.5px;font-weight:600;color:var(--i2)">History · ${hist.length}</summary>
-    ${hist.map(l=>`<div style="padding:7px 0;border-bottom:1px solid var(--s75);font-size:11.5px"><b style="color:var(--i1)">${esc(l.decision)}</b> <span style="color:var(--i3)">· ${esc(l.who)} · ${fmtDate(l.at)} ${timeOf(l.at)}${l.secs!=null?` · ${l.secs}s`:''}</span>${l.note?`<div style="color:var(--i2);margin-top:2px">${esc(l.note)}</div>`:''}</div>`).join('')}
-  </details>`;
-  // Last: Copilot, a chat about this account once all its information has been read.
+      ${d.released==='auto' && d.spot!=='pending' && mine(r) ? `<button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="stepIn('${key}')">Step in: edit or reject it</button>` : ''}`;
+  else decide = `<div class="ar-txt">${esc((REJECT.find(z=>z[0]===d.code)||[])[1]||'Rejected')} · ${by}<div class="ws-sub">${esc(d.status)}</div></div>`;
+  html += panel(d.status==='Released' ? 'What happened' : 'Status', statusPill(d, r), decide);
+  // 5 · Everything else, on demand
+  const s1 = r.segment ? trackRecord(r.segment) : null, a1 = trackRecord(), hist = RUN.saved.log.filter(l=>l.key===key);
+  html += `<details class="panel ar-details"><summary>Details <span>checks, track record, brief, owner and history</span></summary><div class="panel-body">
+    ${kv('Checks', `<span class="tags" style="display:inline-flex;flex-wrap:wrap;gap:4px">${fourChecks(r).map(([k,ok])=>`<span class="tag ${ok?'tag-green':'tag-red'}">${ok?'✓':'✗'} ${esc(k)}</span>`).join('')}</span>`)}
+    ${kv('Confidence', `<span class="tag ${conf.level==='High'?'tag-green':conf.level==='Medium'?'tag-amber':'tag-red'}">${esc(conf.level)}</span> <span style="color:var(--i3)">${esc(conf.reason.replace(/^\w+:\s*/,''))}</span>`)}
+    ${kv('Track record', a1.n ? (s1 && s1.n ? `Reps agreed <b>${s1.a} of ${s1.n}</b> times in ${esc(r.segment)}` : `${a1.a} of ${a1.n} across all`) : '<span style="color:var(--i3)">No decisions yet</span>')}
+    ${kv('Micro-segment', `${segTag(seg)} <span style="color:var(--i3)">${seg?esc(SEG_MEANS[seg]||''):''}${segSince(r)?` · since ${fmtDate(segSince(r))}`:''}</span>`)}
+    ${kv('Proof', brief.proof ? `${esc(brief.proof.title)} <span style="color:var(--i3)">· ${esc(brief.proof.type)}, ${brief.proof.year}</span>` : '<span style="color:var(--i3)">No approved proof</span>')}
+    ${kv('Angle', esc(brief.angle))}
+    ${kv('Owner', isManager() ? `<select onchange="reassign('${key}',this.value)" style="padding:3px 6px;border:1px solid var(--bdk);border-radius:6px;font-size:12px">${['',...Object.keys(REPS)].map(e=>`<option value="${e}" ${ownerOf(r)===e?'selected':''}>${esc(repName(e))}</option>`).join('')}</select>` : esc(repName(ownerOf(r))))}
+    ${hist.length ? `<div class="ar-k" style="margin-top:10px">History</div>${hist.map(l=>`<div style="padding:6px 0;border-bottom:1px solid var(--s75);font-size:11.5px"><b style="color:var(--i1)">${esc(l.decision)}</b> <span style="color:var(--i3)">· ${esc(l.who)} · ${fmtDate(l.at)}</span>${l.note?`<div style="color:var(--i2)">${esc(l.note)}</div>`:''}</div>`).join('')}` : ''}
+  </div></details>`;
+  // Copilot: a text box pinned to the bottom of the panel; answers open in the Copilot panel.
   if(typeof Copilot!=='undefined') html += Copilot.inline(RUN.saved.id+'::'+key);
   const body = document.getElementById('detBody'), top = keepTimer ? body.scrollTop : 0;
   body.innerHTML = html; body.scrollTop = top;
-  const dr = document.getElementById('detailDrawer'); dr.style.width = '500px'; dr.classList.add('open');
-  // Copilot's text box sits at the bottom of the panel, always in view; its answers appear above it.
+  const dr = document.getElementById('detailDrawer'); dr.style.width = '520px'; dr.classList.add('open');
   let foot = dr.querySelector('.det-foot'); const bar = body.querySelector('.cp-inline-bar');
   if(bar){ if(!foot){ foot = document.createElement('div'); foot.className = 'det-foot'; foot.style.cssText = 'position:sticky;bottom:0;z-index:5;flex-shrink:0;padding:10px 14px 12px;border-top:1px solid var(--border);background:var(--surf)'; dr.appendChild(foot); } foot.innerHTML = ''; bar.style.position = 'static'; bar.style.margin = '0'; foot.appendChild(bar); }
   else if(foot) foot.remove();
-  const cp = document.getElementById('copilotDrawer'); if(cp) cp.classList.remove('open');
+  arCss();
+}
+function arCss(){
+  if(document.getElementById('arCss')) return;
+  const st = document.createElement('style'); st.id = 'arCss';
+  st.textContent = `.ar-head{display:flex;gap:12px;align-items:flex-start;padding:4px 2px 14px;}
+.ar-name{font-family:var(--fd);font-size:15px;font-weight:700;color:var(--i1);}
+.ar-sub{font-size:12px;color:var(--i2);margin-top:1px;}
+.ar-chips{display:flex;gap:5px;flex-wrap:wrap;margin-top:7px;}
+.ar-act{font-size:14.5px;font-weight:700;color:var(--i1);line-height:1.4;}
+.ar-k{display:block;font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--i3);margin-bottom:3px;}
+.ar-why{margin-top:10px;padding:9px 11px;background:var(--s50);border-radius:var(--rsm);font-size:12.5px;color:var(--i1);line-height:1.5;}
+.ar-why div{color:var(--i2);}
+.ar-ru{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px;padding:9px 11px;border:1px dashed var(--bdk);border-radius:var(--rsm);font-size:12.5px;color:var(--i1);}
+.ar-ru .ar-k{margin:0;width:100%;}
+.ar-ru b{flex:1;}
+.ar-more{margin-top:8px;font-size:12px;} .ar-more summary{cursor:pointer;color:var(--brand);font-weight:600;}
+.ar-to{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:12.5px;color:var(--i2);margin:-2px 0 8px;}
+.ar-to b{color:var(--i1);}
+.ar-row{display:flex;align-items:center;gap:8px;margin-top:10px;}
+.ar-ok{font-size:11.5px;color:var(--pos);font-weight:600;}
+.ar-txt{font-size:12.5px;color:var(--i1);line-height:1.5;margin-bottom:8px;}
+.ar-details summary{cursor:pointer;padding:11px 14px;font-size:11px;font-weight:600;color:var(--i2);letter-spacing:.04em;text-transform:uppercase;}
+.ar-details summary span{text-transform:none;letter-spacing:0;font-weight:400;color:var(--i3);margin-left:6px;}`;
+  document.head.appendChild(st);
 }
 function DemandAIDraftText(x){
   if(x.channel==='Email') return `Subject: ${x.subject}\n\n${x.body}`;

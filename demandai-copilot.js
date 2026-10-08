@@ -291,6 +291,59 @@
     document.body.appendChild(dr);
     return dr;
   }
+
+  /* ─── The Copilot side panel: opens from the top-right button, or from the text box at the bottom of an open
+     account. Closing it leaves the screen underneath as it was. Every chat is saved per screen. ─── */
+  const CHAT_KEY = 'demandai_copilot_chats_v1';
+  const PAGE_NAME = { '00-today.html':'Today', '14-review.html':'For Review', '12-nba.html':'Micro-segments & NBA', '13-analytics.html':'Analytics' }[PAGE] || 'This screen';
+  const threads = () => { try{ return JSON.parse(localStorage.getItem(CHAT_KEY)||'[]'); }catch(e){ return []; } };
+  function keepThread(t){ if(!t || !t.msgs.length) return; const all = threads().filter(x=>x.id!==t.id); all.unshift(t); try{ localStorage.setItem(CHAT_KEY, JSON.stringify(all.slice(0,80))); }catch(e){} }
+  let P = null;
+  function pEl(){ let el = document.getElementById('cpPanel'); if(el) return el; css(); el = document.createElement('div'); el.id = 'cpPanel'; el.className = 'cp-panel'; document.body.appendChild(el); return el; }
+  const bubble = m => m.you
+    ? `<div class="cpp-me">${esc(m.you)}</div>`
+    : `<div class="cpp-ai"><span class="cpp-av">✦</span><div class="cpp-ai-b">${m.html}</div></div>`;
+  const ago = t => { const m = Math.round((Date.now()-t)/60000); return m < 1 ? 'just now' : m < 60 ? `${m} min ago` : m < 1440 ? `${Math.round(m/60)} h ago` : new Date(t).toLocaleDateString(undefined,{day:'numeric',month:'short'}); };
+  function bodyHtml(){
+    if(P.view==='history'){
+      const ts = threads().filter(t=>t.page===PAGE);
+      return `<div class="cpp-hist-h">Saved chats on ${esc(PAGE_NAME)} <span>${ts.length}</span></div>` + (ts.length ? ts.map(t=>`<button class="cpp-hist" onclick="Copilot.openThread('${t.id}')">
+          <span class="cpp-hist-t">${esc(t.title)}</span><span class="cpp-hist-q">${esc((t.msgs.find(m=>m.you)||{}).you||'')}</span>
+          <span class="cpp-hist-m">${t.msgs.filter(m=>m.you).length} question${t.msgs.filter(m=>m.you).length===1?'':'s'} · ${ago(t.at)}</span></button>`).join('') : '<div class="cpp-empty">No saved chats on this screen yet.</div>');
+    }
+    if(!P.thread.msgs.length) return `<div class="cpp-empty"><b>Ask me about ${esc(P.sub || P.title)}.</b><br>I answer from the same data you see, and I never change anything unless you confirm. Chats are saved: find them under 🕘.</div>`;
+    return (P.readonly ? `<div class="cpp-note">A saved chat from ${ago(P.thread.at)}. ${P.thread.ctx===P.liveCtx ? '' : 'Open that account to carry on.'} <a href="#" onclick="Copilot.backToChat();return false">Back to the current chat</a></div>` : '') + P.thread.msgs.map(bubble).join('');
+  }
+  function drawPanel(){
+    const el = pEl(); el.classList.toggle('wide', !!P.wide);
+    el.innerHTML = `<div class="cpp-h"><span class="cpp-t">✦ Copilot</span><span class="cpp-s" title="${esc(P.title)}">${esc(P.title)}</span>
+        <button class="cpp-ib ${P.view==='history'?'on':''}" title="Saved chats on this screen" onclick="Copilot.history()">🕘</button><button class="cpp-ib" title="New chat" onclick="Copilot.newChat()">＋</button>
+        <button class="cpp-ib" title="${P.wide?'Make it narrower':'Expand'}" onclick="Copilot.toggleWide()">${P.wide?'⇥':'⇤'}</button><button class="cpp-ib" title="Close" onclick="Copilot.closePanel()">✕</button></div>
+      <div class="cpp-b" id="cppBody">${bodyHtml()}</div>
+      ${P.view==='history' || P.readonly ? '' : `<div class="cpp-f">${P.chips.length ? `<div class="cpp-chips">${P.chips.slice(0,4).map(c=>`<button class="cp-hint" onclick="Copilot.ask2(this.textContent)">${esc(c)}</button>`).join('')}</div>` : ''}
+        <form class="cp-bar" onsubmit="Copilot.ask2(this.q.value);return false"><span class="cp-spark">✦</span><input name="q" id="cppInput" autocomplete="off" placeholder="Ask about ${esc(P.sub || P.title)}…"><button class="cp-send" type="submit" aria-label="Send">↑</button></form></div>`}`;
+    const b = document.getElementById('cppBody'); if(b) b.scrollTop = b.scrollHeight;
+  }
+  function panelOpen(o){
+    o = o || {};
+    const ctx = o.ctx || 'page';
+    P = { ctx, liveCtx: ctx, title: o.title || PAGE_NAME, sub: o.sub || '', answer: o.answer || answer, chips: o.chips || suggestions(), wide: P ? P.wide : false, view: 'chat', readonly: false };
+    const prev = !o.fresh && threads().find(t=>t.page===PAGE && t.ctx===ctx);
+    P.thread = prev || { id: 't' + Date.now().toString(36), page: PAGE, ctx, title: P.title, at: Date.now(), msgs: [] };
+    P.live = P.thread;
+    drawPanel(); pEl().classList.add('open');
+    if(o.q) panelAsk(o.q); else setTimeout(()=>{ const i = document.getElementById('cppInput'); if(i) i.focus(); }, 60);
+  }
+  function panelAsk(q){
+    q = String(q||'').trim(); if(!q || !P) return;
+    if(P.readonly || P.view!=='chat'){ P.thread = P.live; P.readonly = false; P.view = 'chat'; drawPanel(); }
+    P.thread.msgs.push({ you: q });
+    let html; try{ html = P.answer(q); }catch(e){ console.error(e); html = p("Sorry, I couldn't work that out. Try asking another way."); }
+    P.thread.msgs.push({ html }); P.thread.at = Date.now(); keepThread(P.thread);
+    const b = document.getElementById('cppBody'); if(b){ if(P.thread.msgs.length===2) b.innerHTML = ''; b.insertAdjacentHTML('beforeend', bubble({you:q}) + bubble({html})); b.scrollTop = b.scrollHeight; }
+    const i = document.getElementById('cppInput'); if(i){ i.value = ''; i.focus(); }
+  }
+  const panelIsOpen = () => { const el = document.getElementById('cpPanel'); return !!(el && el.classList.contains('open') && P); };
   const msgsHtml = () => S.msgs.map(m=>m.you
       ? `<div style="display:flex;justify-content:flex-end;margin:12px 0 8px"><div style="max-width:85%;padding:8px 12px;background:var(--brand);color:#fff;border-radius:14px 14px 4px 14px;font-size:12.5px">${esc(m.you)}</div></div>`
       : `<div style="display:flex;gap:8px;margin-bottom:6px"><span style="color:var(--brand);font-size:14px;line-height:1.3">✦</span><div style="flex:1;min-width:0;font-size:12.5px">${m.html}</div></div>`).join('');
@@ -299,7 +352,10 @@
     body.innerHTML = msgsHtml();
     body.parentElement.scrollTop = body.parentElement.scrollHeight;
   }
-  function say(html){ S.msgs.push({ html }); draw(); }
+  function say(html){
+    if(panelIsOpen()){ P.thread.msgs.push({ html }); P.thread.at = Date.now(); keepThread(P.thread); const b = document.getElementById('cppBody'); if(b && P.view==='chat' && !P.readonly){ b.insertAdjacentHTML('beforeend', bubble({html})); b.scrollTop = b.scrollHeight; } return; }
+    S.msgs.push({ html }); draw();
+  }
   function css(){
     if(document.getElementById('cpDockCss')) return;
     const st = document.createElement('style'); st.id = 'cpDockCss';
@@ -325,6 +381,31 @@
 .cpd-tbl th{text-align:left;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--i3);padding:6px 10px;}
 .cpd-tbl td{padding:7px 10px;border-top:1px solid var(--s75);vertical-align:top;color:var(--i1);}
 .cpd-link{color:var(--brand-dk);font-weight:600;text-decoration:none;}
+.cp-panel{position:fixed;top:0;right:0;bottom:0;width:440px;max-width:100vw;background:var(--surf);border-left:1px solid var(--brand-mid);box-shadow:-12px 0 40px rgba(20,26,33,.16);z-index:650;display:flex;flex-direction:column;transform:translateX(105%);transition:transform .22s cubic-bezier(.4,0,.2,1),width .22s cubic-bezier(.4,0,.2,1);}
+.cp-panel.open{transform:none;}
+.cp-panel.wide{width:min(860px,70vw);}
+.cpp-h{display:flex;align-items:center;gap:6px;padding:12px 12px 12px 16px;background:var(--brand-lt);border-bottom:1px solid var(--brand-mid);}
+.cpp-t{font-family:var(--fd);font-size:14px;font-weight:700;color:var(--brand-dk);white-space:nowrap;}
+.cpp-s{flex:1;min-width:0;font-size:12px;color:var(--i2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.cpp-ib{width:30px;height:30px;border-radius:8px;border:1px solid transparent;background:transparent;cursor:pointer;color:var(--i2);font-size:13px;}
+.cpp-ib:hover,.cpp-ib.on{background:var(--surf);border-color:var(--brand-mid);color:var(--brand-dk);}
+.cpp-b{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;}
+.cpp-me{align-self:flex-end;max-width:85%;padding:9px 13px;background:var(--brand);color:#fff;border-radius:14px 14px 4px 14px;font-size:12.5px;line-height:1.5;}
+.cpp-ai{display:flex;gap:8px;align-items:flex-start;}
+.cpp-av{width:24px;height:24px;border-radius:7px;background:linear-gradient(135deg,var(--brand),var(--brand-dk));color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.cpp-ai-b{flex:1;min-width:0;font-size:12.5px;color:var(--i1);line-height:1.55;}
+.cpp-empty{margin:auto 0 0;padding:14px;border:1px dashed var(--brand-mid);border-radius:12px;font-size:12.5px;color:var(--i2);line-height:1.6;background:#FCFAFE;}
+.cpp-note{font-size:11.5px;color:var(--i3);padding:8px 10px;background:var(--s50);border-radius:8px;}
+.cpp-note a{color:var(--brand);font-weight:600;}
+.cpp-f{border-top:1px solid var(--border);padding:10px 12px 12px;}
+.cpp-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;}
+.cpp-f .cp-bar{max-width:none;margin:0;box-shadow:none;}
+.cpp-hist-h{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--i3);display:flex;justify-content:space-between;}
+.cpp-hist{display:flex;flex-direction:column;gap:2px;text-align:left;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--surf);cursor:pointer;}
+.cpp-hist:hover{border-color:var(--brand-mid);background:#FCFAFE;}
+.cpp-hist-t{font-size:12.5px;font-weight:700;color:var(--i1);}
+.cpp-hist-q{font-size:12px;color:var(--i2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.cpp-hist-m{font-size:11px;color:var(--i3);}
 .cp-inline-bar{position:sticky;bottom:0;max-width:none;margin:12px -2px 0;z-index:5;}
 #cpInline:not(:empty){padding:10px 12px;border:1px solid var(--brand-mid);border-radius:12px;background:var(--surf);margin-top:8px;}`;
     document.head.appendChild(st);
@@ -342,6 +423,13 @@
 
   window.Copilot = {
     button(){ return `<button class="btn btn-sec btn-sm" onclick="Copilot.open()" title="Ask Copilot" style="gap:6px"><span style="color:var(--brand)">✦</span> Copilot</button>`; },
+    panelOpen, ask2: q => panelAsk(q), isOpen: panelIsOpen,
+    closePanel(){ const el = document.getElementById('cpPanel'); if(el) el.classList.remove('open'); },
+    toggleWide(){ if(!P) return; P.wide = !P.wide; pEl().classList.toggle('wide', P.wide); drawPanel(); },
+    history(){ if(!P) return; P.view = P.view==='history' ? 'chat' : 'history'; if(P.view==='chat'){ P.thread = P.live; P.readonly = false; } drawPanel(); },
+    newChat(){ if(!P) return; P.live = P.thread = { id: 't' + Date.now().toString(36), page: PAGE, ctx: P.ctx, title: P.title, at: Date.now(), msgs: [] }; P.view = 'chat'; P.readonly = false; drawPanel(); },
+    openThread(id){ const t = threads().find(x=>x.id===id); if(!t || !P) return; P.view = 'chat'; if(t.ctx===P.ctx){ P.live = P.thread = t; P.readonly = false; } else { P.thread = t; P.readonly = true; } drawPanel(); },
+    backToChat(){ if(!P) return; P.thread = P.live; P.readonly = false; P.view = 'chat'; drawPanel(); },
     dock, expand(){ const sh = document.getElementById('cpSheet'); if(!sh) return; if(!S.msgs.length) S.msgs.push({ html: help(`Hi ${esc((ROLE_PERSON[getRole()]||getRole()).split(' ')[0])}. Ask me about ${ON_REVIEW?'your queue':PAGE==='12-nba.html'?'your micro-segments and accounts':'your work'}. For example:`) });
       S.sheet = true; sh.style.display = 'flex'; const h = document.querySelector('.cp-hints'); if(h) h.style.display = 'none'; draw(); },
     collapse(){ S.sheet = false; const sh = document.getElementById('cpSheet'); if(sh) sh.style.display = 'none'; const h = document.querySelector('.cp-hints'); if(h) h.style.display = ''; },
@@ -352,7 +440,7 @@
       const el = document.getElementById('plan-'+id); if(el) el.innerHTML = `<span class="tag tag-green">Your action is in</span> <a href="${href(x)}" ${ON_REVIEW?`onclick="Copilot.openItem('${esc(x.id)}');return false"`:''} class="cpd-link">Open it to approve →</a>`;
       refreshPage(); },
     open(){
-      if(document.getElementById('cpDock')){ this.expand(); const i = document.getElementById('cpInput'); if(i) i.focus(); return; }
+      return panelOpen({});
       // With an account open, Copilot sits beside it and starts with that account; otherwise it covers your work.
       const ctx = itemCtx(), dr = ensure(), det = document.getElementById('detailDrawer');
       dr.style.right = ctx ? (det.offsetWidth || 500) + 'px' : '0';
@@ -365,6 +453,7 @@
     close(){ const dr = document.getElementById('copilotDrawer'); if(dr) dr.classList.remove('open'); },
     ask(text){
       text = String(text||'').trim(); if(!text) return;
+      if(!document.getElementById('cpDock')){ if(panelIsOpen()) return panelAsk(text); return panelOpen({ q: text }); }
       const i = document.getElementById('cpInput'); if(i) i.value = '';
       S.msgs.push({ you: text });
       if(document.getElementById('cpDock')) this.expand();
@@ -373,24 +462,21 @@
     },
     // Inside an open account, below its information: suggested questions, the answers, and a box to ask.
     inline(id){
-      const r = recOf(id.split('::').pop()), name = r ? r.account.name : ''; S.inline[id] = S.inline[id] || [];
-      S.inlineId = id; css();
-      return `<div id="cpInlinePanel"><div id="cpInline">${S.inline[id].length ? inlineMsgs(id) : ''}</div>
-        <form class="cp-bar cp-inline-bar" onsubmit="Copilot.askInline(this.q.value);return false"><span class="cp-spark">✦</span>
-          <input name="q" autocomplete="off" placeholder="Ask Copilot about ${esc(name || 'this account')}…" onfocus="Copilot.inlineHints()"><button class="cp-send" type="submit" aria-label="Send">↑</button></form></div>`;
+      const r = recOf(id.split('::').pop()), name = r ? r.account.name : '', who = r ? liveRec(r).contact.name : ''; css();
+      S.inlineId = id; S.inlineTitle = r ? `${who} · ${name}` : 'This account'; S.inlineSub = name;
+      return `<div id="cpInlinePanel"><form class="cp-bar cp-inline-bar" onsubmit="Copilot.askInline(this.q.value);this.q.value='';return false"><span class="cp-spark">✦</span>
+          <input name="q" autocomplete="off" placeholder="Ask Copilot about ${esc(name || 'this account')}…"><button class="cp-send" type="submit" aria-label="Send">↑</button></form></div>`;
     },
-    inlineHints(){ const el = document.getElementById('cpInline'); if(el && !el.innerHTML.trim()) el.innerHTML = inlineMsgs(S.inlineId); },
+    inlineHints(){},
     askInline(text){
       text = String(text||'').trim(); if(!text) return;
-      const id = S.inlineId, msgs = S.inline[id] = S.inline[id] || [];
-      msgs.push({ you: text });
-      let html; try{ html = answer(text); }catch(e){ html = p("Sorry, I couldn't work that out. Try asking another way."); }
-      msgs.push({ html });
-      const el = document.getElementById('cpInline'); if(el){ el.innerHTML = inlineMsgs(id); const f = document.querySelector('#cpInlinePanel input'); if(f){ f.value = ''; f.focus(); } const b = document.getElementById('detBody'); if(b) b.scrollTop = b.scrollHeight; }
+      if(panelIsOpen() && P.ctx===S.inlineId) return panelAsk(text);
+      panelOpen({ ctx: S.inlineId, title: S.inlineTitle, sub: S.inlineSub, chips: ITEM_QS.map(([,l])=>l), q: text });
     },
+
     runPlan, undo,
     cancel(id){ delete S.plans[id]; const el = document.getElementById('plan-'+id); if(el) el.innerHTML = '<span class="tag tag-grey">Cancelled: nothing changed</span>'; },
-    openItem(id){ this.close(); if(typeof openItem==='function') openItem(id); },
+    openItem(id){ this.close(); this.closePanel(); if(typeof openItem==='function') openItem(id); },
     // For Review only: apply a filter or switch view on the page underneath.
     show(o){
       if(typeof FILT==='undefined') return;
