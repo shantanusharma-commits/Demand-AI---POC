@@ -559,6 +559,27 @@ img.lg{display:block;object-fit:contain;}
 @media (max-width:1000px){ .fw-r{grid-template-columns:1fr;} .fw-hd{display:none;} .cta-pick{grid-template-columns:1fr;} .fw-stats{grid-template-columns:1fr 1fr;} }
 .cta-off{opacity:.5;filter:grayscale(1);pointer-events:none;user-select:none;}
 .soon-pill{display:inline-block;margin-left:6px;font-size:9px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--brand-dk);background:var(--brand-lt);border-radius:999px;padding:1px 7px;vertical-align:middle;}
+.flow{display:flex;align-items:stretch;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
+.flow-s{flex:1;min-width:160px;display:flex;gap:9px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--surf);font-size:11.5px;color:var(--i3);line-height:1.4;}
+.flow-s b{display:block;font-size:12.5px;color:var(--i1);margin-bottom:2px;}
+.flow-s.off{border-style:dashed;background:var(--s50);opacity:.75;}
+.flow-n{width:22px;height:22px;border-radius:6px;background:var(--brand-lt);color:var(--brand-dk);font-weight:700;font-size:11px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;}
+.flow-a{align-self:center;color:var(--i4);}
+.ct-stats{grid-template-columns:repeat(4,1fr);margin-bottom:12px;}
+.ct-t{margin:-14px -16px -14px;}
+.ct-r{display:grid;grid-template-columns:minmax(240px,2.4fr) 130px 150px minmax(120px,1fr) 100px 150px;gap:12px;padding:12px 16px;border-top:1px solid var(--s75);align-items:center;font-size:12.5px;color:var(--i1);}
+.ct-r:first-child{border-top:none;}
+.ct-hd{background:var(--s50);font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--i3);padding:10px 16px;}
+.ct-n{display:flex;gap:10px;align-items:flex-start;}
+.ct-n b{display:block;font-size:13px;line-height:1.35;}
+.ct-n span{font-size:11px;color:var(--i3);}
+.ct-ic{width:28px;height:28px;border-radius:7px;background:var(--brand-lt);color:var(--brand-dk);font-weight:700;font-size:12px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;}
+.ct-so{display:flex;gap:5px;flex-wrap:wrap;}
+.ct-so span{font-size:10.5px;padding:2px 7px;border-radius:999px;border:1px dashed var(--bdk);color:var(--i3);}
+.ct-cl{display:inline-block;font-family:var(--fm);font-size:11px;padding:2px 7px;border-radius:5px;background:var(--brand-lt);color:var(--brand-dk);text-decoration:none;font-weight:600;margin:1px 0;}
+.ct-act{display:flex;gap:6px;justify-content:flex-end;}
+@media (max-width:1200px){ .ct-r{grid-template-columns:2fr 110px 120px 1fr 80px 140px;} .flow-a{display:none;} }
+@media (max-width:1000px){ .ct-r{grid-template-columns:1fr;} .ct-hd{display:none;} .ct-stats{grid-template-columns:1fr 1fr;} }
 </style>
 </head>
 <body>
@@ -662,6 +683,8 @@ img.lg{display:block;object-fit:contain;}
 <script src="demandai-sample-data.js"></script>
 <script src="demandai-nba.js"></script>
 <script src="demandai-logos.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="demandai-content.js"></script>
 <script>
 function showToast(msg){document.querySelectorAll('.toast').forEach(t=>t.remove());const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2600);}
 function initials(n){return String(n).split(' ').filter(Boolean).map(w=>w[0]).join('').slice(0,2).toUpperCase();}
@@ -728,7 +751,7 @@ function search(fn, ph){ return `<div class="sl-srch"><svg width="12" height="12
 const pill = (cur,id,label) => `<div class="seg-pill ${cur===id?'active':''}" onclick="filt='${id}';renderResults()">${label}</div>`;
 
 /* ═══════════════ CONTENT LIBRARY: the brand pack the drafts follow ═══════════════ */
-let tab = (t => ['guidelines','voice','negative','claims','framework','versions'].includes(t) ? t : 'guidelines')(new URLSearchParams(location.search).get('tab')), DRAFT = null, SUGGEST = null;
+let tab = (t => ['guidelines','voice','negative','claims','framework','content','versions'].includes(t) ? t : 'guidelines')(new URLSearchParams(location.search).get('tab')), DRAFT = null, SUGGEST = null;
 const canEdit = () => ['Admin','Sales manager'].includes(getRole());
 const canPublish = () => getRole()==='Admin';
 function me(){ const r = getRole(); return { who: ROLE_PERSON[r] || r, role: r }; }
@@ -756,11 +779,11 @@ function render(){
   const ft = (k,l) => `<div class="ftab ${tab===k?'active':''}" onclick="go('${k}')">${l}${changed.some(c=>SECTION_OF[c]===k)?' <span class="chg-dot" title="Changed, not saved yet"></span>':''}</div>`;
   document.getElementById('mainArea').innerHTML = `
     <div class="topbar"><div class="topbar-l"><span class="tb-title">Content library</span><span class="tb-badge badge-neutral">${esc(DemandAI.brandVersion())}</span></div></div>
-    <div class="ftabs">${[['guidelines','Brand guidelines'],['framework','Messaging frameworks'],['voice','Voice and tone'],['negative','Negative keywords'],['claims','Approved claims'],['versions','Versions']].map(([k,l])=>ft(k,l)).join('')}</div>
+    <div class="ftabs">${[['guidelines','Brand guidelines'],['framework','Messaging frameworks'],['voice','Voice and tone'],['negative','Negative keywords'],['claims','Approved claims'],['content','Content'],['versions','Versions']].map(([k,l])=>ft(k,l)).join('')}</div>
     <div class="canvas cl-canvas">
       ${saveBar(live, changed)}
       ${!canEdit() ? `<div style="font-size:12px;color:var(--i3);margin-bottom:14px">View only: the admin and the sales manager maintain the brand pack.</div>` : ''}
-      ${({guidelines:guidelinesTab, framework:frameworkTab, voice:voiceTab, negative:negativeTab, claims:claimsTab, versions:versionsTab})[tab]()}
+      ${({guidelines:guidelinesTab, framework:frameworkTab, voice:voiceTab, negative:negativeTab, claims:claimsTab, content:contentTab, versions:versionsTab})[tab]()}
     </div>`;
 }
 const SECTION_OF = { 'Brand guidelines':'guidelines', 'Messaging frameworks':'framework', 'Voice and tone':'voice', 'Negative keywords':'negative', 'Approved claims':'claims' };
@@ -1102,6 +1125,34 @@ const SEGS = Object.keys(DemandAI.CONFIG.segmentLibrary);
 const CLAIM_TOPICS = [['Modernisation', /migrat|legacy|moderni[sz]|end of support|upgrade|assessment|platform/i], ['Service renewal', /renew|service|support|lifecycle|contract/i],
   ['Project', /project|expansion|design|schedule/i], ['Leadership', /priorit|first 100|new (plant )?(leader|manager)|role/i], ['Inquiry', /inquir|question|quote/i], ['Engagement', /webinar|recording|session|guide/i]];
 function claimFits(text){ const m = CLAIM_TOPICS.filter(([,re])=>re.test(text)).map(([k])=>k); return m.length ? m : SEGS.slice(); }
+/* ─── Content: what Content studio writes, once added to the library. Reps add these to messages. ─── */
+let CTF = null;
+function contentTab(){
+  const C = window.ContentLink; if(!C) return '<div class="cl-intro">Content studio is not loaded.</div>';
+  const all = C.items().slice().sort((a,b)=>b.updated-a.updated), inLib = all.filter(i=>i.status==='Ready'), drafts = all.filter(i=>i.status!=='Ready');
+  const used = all.reduce((n,i)=>n+C.usage(i.id),0), citing = inLib.filter(i=>C.citedIn(i).length).length;
+  const list = CTF==='draft' ? drafts : CTF==='used' ? all.filter(i=>C.usage(i.id)) : inLib;
+  const tile = (f, l, v, sub) => `<a class="stat stat-link ${CTF===f?'on':''}" href="#" onclick="CTF=${f?`CTF==='${f}'?null:'${f}'`:'null'};render();return false"><div class="stat-lbl">${l}</div><div class="stat-val">${v}</div><div class="stat-sub">${sub}</div></a>`;
+  const step = (n, t, d, off) => `<div class="flow-s ${off?'off':''}"><span class="flow-n">${off?'·':n}</span><div><b>${t}${off?' <span class="soon-pill">After the pilot</span>':''}</b><span>${d}</span></div></div>`;
+  return `<div class="flow">${step(1,'Write it in Content studio','A blog or whitepaper, in the brand voice, citing approved claims')}<span class="flow-a">→</span>
+      ${step(2,'Brand and claim checks pass','Banned words, tone, length; every claim approved')}<span class="flow-a">→</span>
+      ${step('','Marketing and legal sign-off','Maker-checker approval before it goes in', true)}<span class="flow-a">→</span>
+      ${step(3,'Add to Content library','It shows here, with the claims it cites')}<span class="flow-a">→</span>
+      ${step(4,'Reps add it to messages','In an email or LinkedIn message, in Micro-segments & NBA')}</div>
+    <div class="stats ct-stats">${tile(null,'In the library', inLib.length, `${inLib.filter(i=>i.type==='blog').length} blogs · ${inLib.filter(i=>i.type==='whitepaper').length} whitepapers`)}${tile('draft','Drafts in Content studio', drafts.length, 'not in the library yet')}${tile('used','In messages', used, 'added by reps')}<div class="stat"><div class="stat-lbl">Cite approved claims</div><div class="stat-val">${citing}</div><div class="stat-sub">of ${inLib.length} in the library</div></div></div>
+    ${card(CTF==='draft' ? 'Drafts in Content studio' : CTF==='used' ? 'Content in messages' : 'Content in the library', `<a class="btn btn-sec btn-sm" href="15-content-studio.html" style="text-decoration:none">✎ Write in Content studio</a>`,
+      list.length ? `<div class="ct-t"><div class="ct-r ct-hd"><div>Content</div><div>Status</div><div>Sign-off <span class="soon-pill">After the pilot</span></div><div>Claims it cites</div><div>In messages</div><div></div></div>
+        ${list.map(it=>{ const cited = C.citedIn(it), chk = C.checksOf(it), n = chk.flags.length + chk.unsupported.length, u = C.usage(it.id);
+          return `<div class="ct-r"><div><div class="ct-n"><span class="ct-ic">${it.type==='whitepaper'?'W':'B'}</span><div><b>${esc(it.title)}</b><span>${C.TYPES[it.type].label} · ${esc(C.AUDIENCE[it.seg]||it.seg)} · ${esc(it.by)}, ${fmtDate(it.updated)}</span></div></div></div>
+            <div>${it.status==='Ready' ? '<span class="tag tag-green">In the library</span>' : '<span class="tag tag-grey">Draft</span>'}${n?`<div class="cl-warn">${n} check${n>1?'s':''} to fix</div>`:''}<div class="cl-s">Brand v${it.brandV}</div></div>
+            <div class="ct-so cta-off"><span>Marketing</span><span>Legal</span></div>
+            <div>${cited.length ? cited.map(id=>`<a href="#" class="ct-cl" onclick="openClaim('${id}');return false">${esc(id)}</a>`).join(' ') : '<span class="cl-s">No product claims</span>'}</div>
+            <div>${u ? `<b>${u}</b> <span class="cl-s">message${u===1?'':'s'}</span>` : '<span class="cl-s">Not yet</span>'}</div>
+            <div class="ct-act"><a class="btn btn-ghost btn-sm" href="15-content-studio.html?item=${it.id}" style="text-decoration:none">Open</a><button class="btn btn-sec btn-sm" onclick="ContentLink.downloadDocx('${it.id}', null, showToast)">↓ Word</button></div></div>`; }).join('')}</div>`
+      : `<div class="cl-s" style="padding:6px 0">${CTF==='draft' ? 'No drafts.' : CTF==='used' ? 'No content in messages yet.' : 'Nothing in the library yet. Write a piece in Content studio and add it to the library when its checks pass.'}</div>`)}`;
+}
+function openClaim(id){ const i = draft().claims.findIndex(c=>c.id===id); CLQ = ''; CLT = ''; CLS = ''; CLSEL = i>=0 ? i : null; go('claims'); }
+
 /* ─── Approved claims: the only claims a draft may make. Search, filter, where each was used, and its full detail. ─── */
 let CLQ = '', CLT = '', CLS = '', CLSEL = null, CLU = null;
 // Where each claim was cited: every message drafted in the saved micro-segment lists, and whether it went out.
@@ -1158,6 +1209,7 @@ function claimPane(c, i, st, uses, af, ed){
     ${[['Source', `${c.title} · ${c.type}, ${c.year}`], ['Topics it fits', (c.segments||[]).join(', ')], ['Owner', c.owner||'Marketing'], ['Expires', c.expiry]].map(([k,v])=>`<div class="cl-kv"><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('')}
     <div class="cl-kv"><span>Where it was used</span><b>${uses.length ? `${uses.length} drafted message${uses.length===1?'':'s'}, ${out.length} sent` : 'Not used yet'}</b>
       ${uses.slice(0,5).map(u=>`<div class="cl-u">${esc(u.who)} · ${esc(u.account)}<span>${fmtDate(u.at)}${u.out?' · sent':''}</span></div>`).join('')}${uses.length>5?`<div class="cl-s">and ${uses.length-5} more</div>`:''}</div>
+    ${(()=>{ const C = window.ContentLink; if(!C) return ''; const pcs = C.items().filter(it=>C.citedIn(it).includes(c.id)); return `<div class="cl-kv"><span>In content</span><b>${pcs.length ? `${pcs.length} piece${pcs.length===1?'':'s'}` : 'None yet'}</b>${pcs.map(it=>`<div class="cl-u"><a href="15-content-studio.html?item=${it.id}" style="color:var(--brand-dk);text-decoration:none">${esc(it.title)}</a><span>${it.status==='Ready'?'in the library':'draft'}</span></div>`).join('')}</div>`; })()}
     ${af ? `<div class="cl-alert">Used ${af} time${af===1?'':'s'} after it expired on ${esc(c.expiry)}. Renew the source or retire the claim.</div>` : ''}
     ${ed ? `<div class="cl-act"><select onchange="draft().claims[${i}].status=this.value;commit('Status changed. Save to make it a new version')">${['approved','draft','retired'].map(s=>`<option ${c.status===s?'selected':''} value="${s}">${s[0].toUpperCase()+s.slice(1)}</option>`).join('')}</select>
       <label>Expires <input type="date" value="${esc(c.expiry)}" onchange="draft().claims[${i}].expiry=this.value;commit('Expiry changed. Save to make it a new version')"></label></div>` : ''}

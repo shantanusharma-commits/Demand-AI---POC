@@ -170,7 +170,7 @@
     return `Done. I used the ${TYPES[it.type].skill} instructions and Brand v${it.brandV} (${it.tone} voice). ` +
       (used.length ? `It cites ${used.join(', ')} word for word from the approved sources. ` : 'It makes no product claims. ') +
       (n ? `${n} brand check${n > 1 ? 's' : ''} need a look.` : 'All brand checks pass.') +
-      `\n\nTell me what to change, or click a paragraph in the canvas to change just that one. Mark it ready when it's right; reps can then add it to an email or LinkedIn message in Micro-segments & NBA.`;
+      `\n\nTell me what to change, or click a paragraph in the canvas to change just that one. Add it to the Content library when it's right; reps can then add it to an email or LinkedIn message in Micro-segments & NBA.`;
   }
   function seed() {
     const d = n => Date.now() - n * 864e5;
@@ -307,9 +307,9 @@
   function pickForMessage(key) {
     if (typeof dec !== 'function') return;
     const cur = dec(key).content || [], list = items().slice().sort((a, b) => (a.status === 'Ready' ? 0 : 1) - (b.status === 'Ready' ? 0 : 1) || b.updated - a.updated);
-    const body = list.length ? `<div style="font-size:12px;color:#4A5664;margin-bottom:10px">Blogs and whitepapers from Content studio. Only content marked ready can go in a message.</div>` +
+    const body = list.length ? `<div style="font-size:12px;color:#4A5664;margin-bottom:10px">Blogs and whitepapers in the Content library. Only pieces added to the library can go in a message.</div>` +
       list.map(it => it.status === 'Ready' ? row(it.id, cur.includes(it.id), `${TYPES[it.type].ic} ${esc(it.title)}`, `${TYPES[it.type].label} · ${esc(AUDIENCE[it.seg] || it.seg)} · by ${esc(it.by)}`)
-        : `<div style="display:flex;gap:10px;align-items:flex-start;padding:9px 10px;border:1px dashed #E5E9EE;border-radius:8px;margin-bottom:6px;font-size:12.5px;color:#9DA8B5"><input type="checkbox" disabled style="margin-top:2px"><div><div style="font-weight:600">${TYPES[it.type].ic} ${esc(it.title)}</div><div style="font-size:11.5px">Draft: mark it ready in Content studio first</div></div></div>`).join('')
+        : `<div style="display:flex;gap:10px;align-items:flex-start;padding:9px 10px;border:1px dashed #E5E9EE;border-radius:8px;margin-bottom:6px;font-size:12.5px;color:#9DA8B5"><input type="checkbox" disabled style="margin-top:2px"><div><div style="font-weight:600">${TYPES[it.type].ic} ${esc(it.title)}</div><div style="font-size:11.5px">Draft: add it to the Content library first, from Content studio</div></div></div>`).join('')
       : `<div style="font-size:12.5px;color:#4A5664">No content yet. <a href="15-content-studio.html" style="color:#7D52A2">Write a blog or whitepaper in Content studio</a>.</div>`;
     modal('Add content to the message', body, list.length ? ov => {
       const ids = Array.from(ov.querySelectorAll('input[type=checkbox]:checked')).map(cb => cb.value);

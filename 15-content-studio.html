@@ -271,6 +271,8 @@ textarea[readonly],input[readonly]{background-color:var(--s50);}
 .sv-v{color:var(--i1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .sv-link{color:var(--i1);cursor:pointer;} .sv-link:hover{color:var(--brand);}
 .sv-empty{text-align:center;padding:28px;color:var(--i3);}
+.soon-btn{opacity:.6;cursor:not-allowed;gap:6px;}
+.soon-b{font-size:9px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--brand-dk);background:var(--brand-lt);border-radius:999px;padding:1px 6px;}
 </style>
 </head>
 <body>
@@ -472,7 +474,7 @@ if(document.readyState !== 'loading'){ applyRoleToNav(); renderRoleSwitcher(); }
 /* ═══════════════ CONTENT STUDIO ═══════════════
    Ask for a blog or a whitepaper in the chat; it is written in a canvas beside the chat, in the client's brand voice.
    Change it by chatting, or click one paragraph to change just that one. Attach it to a micro-segment or an account
-   Once it's ready, reps add it to an email or LinkedIn message in Micro-segments & NBA. Download it as Word, PDF or Markdown. Nothing is published. */
+   Once it's ready, reps add it to an email or LinkedIn message in Micro-segments & NBA. Whitepapers download as Word; blogs as Word or Markdown. Nothing is published. */
 const E = DemandAI, C = ContentLink;
 const { TYPES, AUDIENCE, LAYOUT, HEAD, GEN, MORE, CONTRACT, uid, cap, lc, noDot, cited } = C;
 let S = C.ensure();
@@ -483,7 +485,7 @@ const itemOf = id => S.items.find(i => i.id === id);
 let CONV = null, CANVAS = false, KIND = 'blog', BUSY = false;
 const cur = () => CONV && CONV.active ? itemOf(CONV.active) : null;
 const issuesOf = chk => chk.flags.length + chk.unsupported.length;
-const statusTag = s => s === 'Ready' ? '<span class="tag tag-green">Ready to use</span>' : '<span class="tag tag-grey">Draft</span>';
+const statusTag = s => s === 'Ready' ? '<span class="tag tag-green">In Content library</span>' : '<span class="tag tag-grey">Draft</span>';
 const usageTag = it => { const n = C.usage(it.id); return n ? `<span class="tag tag-blue">In ${n} message${n > 1 ? 's' : ''}</span>` : ''; };
 
 /* ─── Home: one chat box, and the content written so far ─── */
@@ -524,12 +526,12 @@ function savedView(items){
     <div class="sv-k">What your content led to</div>
     <div class="stats" style="grid-template-columns:repeat(5,1fr)">
       ${tile('', 'Pieces', items.length, `${items.filter(i=>i.type==='blog').length} blogs · ${items.filter(i=>i.type==='whitepaper').length} whitepapers`, 'var(--i1)')}
-      ${tile('ready', 'Ready to use', ready, 'checks pass, marked ready', 'var(--pos)')}
+      ${tile('ready', 'In Content library', ready, 'checks pass, added to the library', 'var(--pos)')}
       ${tile('draft', 'Drafts', drafts, 'not ready for reps yet', 'var(--i2)')}
       ${tile('fix', 'Checks to fix', fix, 'a brand or claim check failed', fix ? 'var(--neg)' : 'var(--i1)')}
       ${tile('used', 'In messages', used, 'added by reps to email or LinkedIn', 'var(--brand)')}
     </div>
-    ${LIBF ? `<div style="display:flex;gap:8px;align-items:center;margin:0 0 10px;font-size:12px;color:var(--i2)">Showing <span class="seg-pill-a" onclick="LIBF=null;renderHome('saved')">${esc({ready:'Ready to use',draft:'Drafts',fix:'Checks to fix',used:'In messages',blog:'Blogs',whitepaper:'Whitepapers'}[LIBF]||LIBF)} ✕</span></div>` : ''}
+    ${LIBF ? `<div style="display:flex;gap:8px;align-items:center;margin:0 0 10px;font-size:12px;color:var(--i2)">Showing <span class="seg-pill-a" onclick="LIBF=null;renderHome('saved')">${esc({ready:'In Content library',draft:'Drafts',fix:'Checks to fix',used:'In messages',blog:'Blogs',whitepaper:'Whitepapers'}[LIBF]||LIBF)} ✕</span></div>` : ''}
     <div class="sv-list"><table class="sv-tbl"><colgroup><col style="width:28%"><col style="width:10%"><col style="width:16%"><col style="width:11%"><col style="width:9%"><col style="width:11%"><col style="width:15%"></colgroup>
       <thead><tr><th>Content</th><th>Type</th><th>Audience</th><th>Brand checks</th><th>In messages</th><th>Saved</th><th></th></tr></thead>
       <tbody>${rows.length ? rows.map(({ it, chk, used: u }) => { const n = issuesOf(chk); return `<tr onclick="openItem('${it.id}')">
@@ -667,9 +669,10 @@ function canvasHtml(it) {
   const chk = C.checksOf(it), n = issuesOf(chk);
   return `<div class="canvas2">
     <div class="cv-h"><span style="font-size:16px">${TYPES[it.type].ic}</span><span class="cv-t" id="cvTitle">${esc(it.title)}</span><span id="stTag">${statusTag(it.status)}</span><span class="saved" id="savedLbl">Saved</span><span class="sp"></span>
-      <div class="dd"><button class="btn btn-sec btn-sm" onclick="toggleDD('ddDl',event)">Download ▾</button>
-        <div class="ddm" id="ddDl"><div class="h">Download</div><button onclick="dl('docx')">Word document (.docx)</button><button onclick="dl('pdf')">PDF (print)</button><button onclick="dl('md')">Markdown (.md)</button><button onclick="dl('copy')">Copy text</button></div></div>
-      <button class="btn btn-primary btn-sm" id="readyBtn" onclick="markReady()">${it.status === 'Ready' ? 'Back to draft' : 'Mark ready'}</button>
+      ${it.type === 'whitepaper' ? `<button class="btn btn-sec btn-sm" onclick="dl('docx')" title="Whitepapers download as Word">↓ Word</button>` : `<div class="dd"><button class="btn btn-sec btn-sm" onclick="toggleDD('ddDl',event)">Download ▾</button>
+        <div class="ddm" id="ddDl"><div class="h">Download</div><button onclick="dl('docx')">Word document (.docx)</button><button onclick="dl('md')">Markdown (.md), for the website</button><button onclick="dl('copy')">Copy text</button></div></div>`}
+      <button class="btn btn-sec btn-sm soon-btn" disabled title="After the pilot: marketing and legal sign-off before a piece goes into the library">Send for sign-off <span class="soon-b">After the pilot</span></button>
+      <button class="btn btn-primary btn-sm" id="readyBtn" onclick="markReady()">${it.status === 'Ready' ? 'Take out of the library' : 'Add to Content library'}</button>
       <button class="tbtn" title="Close the canvas" onclick="closeCanvas()">✕</button></div>
     <div class="cv-tools">
       <button class="tbtn" title="Bold" onmousedown="event.preventDefault()" onclick="fmt('bold')"><b>B</b></button>
@@ -774,7 +777,7 @@ function runChecks() {
   const box = document.getElementById('checks'), doc = document.getElementById('doc'); if (!box || !doc) return;
   const it = cur(), chk = E.checkContent(blocksText(doc)), n = issuesOf(chk), ver = chk.claims.filter(c => c.verified), pack = E.brandPack();
   box.innerHTML = `<div class="chk-row"><b style="font-size:12.5px;margin-right:4px">Brand checks</b>
-      ${n ? `<span class="tag tag-red">${n} to fix before it can be marked ready</span>` : '<span class="tag tag-green">All checks pass</span>'}
+      ${n ? `<span class="tag tag-red">${n} to fix before it can go in the library</span>` : '<span class="tag tag-green">All checks pass</span>'}
       <span class="tag tag-grey">Voice: ${esc(it.tone)}</span><span class="tag tag-grey">${pack.negative.length} banned words checked</span>
       <span class="tag ${ver.length ? 'tag-blue' : 'tag-grey'}">${ver.length} claim${ver.length === 1 ? '' : 's'} verified</span>
       <span style="flex:1"></span><a href="#" style="color:var(--brand);font-size:12px" onclick="CHK_OPEN=!CHK_OPEN;runChecks();return false">${CHK_OPEN ? 'Hide details' : 'Details'}</a></div>
@@ -927,12 +930,13 @@ function setLength(l) {
 /* ─── Ready, download ─── */
 function markReady() {
   const it = cur(); persistDoc();
-  if (it.status === 'Ready') { it.status = 'Draft'; saveStore(); document.getElementById('stTag').innerHTML = statusTag('Draft'); document.getElementById('readyBtn').textContent = 'Mark ready'; showToast('Back to draft'); return; }
+  if (it.status === 'Ready') { it.status = 'Draft'; saveStore(); document.getElementById('stTag').innerHTML = statusTag('Draft'); document.getElementById('readyBtn').textContent = 'Add to Content library'; showToast('Taken out of the Content library: back to draft'); return; }
   const chk = runChecks();
   if (issuesOf(chk)) { CHK_OPEN = true; runChecks(); document.getElementById('checks').scrollIntoView({ behavior: 'smooth', block: 'center' }); showToast(`Fix ${issuesOf(chk)} check${issuesOf(chk) > 1 ? 's' : ''} first`); return; }
   it.status = 'Ready'; it.updated = Date.now(); saveStore();
-  document.getElementById('stTag').innerHTML = statusTag('Ready'); document.getElementById('readyBtn').textContent = 'Back to draft';
-  addMsg({ who: 'ai', text: 'Marked ready to use. Reps can now add it to an email or LinkedIn message in Micro-segments & NBA.' });
+  document.getElementById('stTag').innerHTML = statusTag('Ready'); document.getElementById('readyBtn').textContent = 'Take out of the library';
+  showToast('Added to the Content library');
+  addMsg({ who: 'ai', text: 'Added to the Content library, under Content. Reps can now add it to an email or LinkedIn message in Micro-segments & NBA, and it shows which approved claims it cites.' });
 }
 function toggleDD(id, e) { e.stopPropagation(); const d = document.getElementById(id); const open = d.classList.contains('open'); document.querySelectorAll('.ddm.open').forEach(x => x.classList.remove('open')); if (!open) d.classList.add('open'); }
 document.addEventListener('click', () => document.querySelectorAll('.ddm.open').forEach(x => x.classList.remove('open')));
@@ -949,8 +953,7 @@ function toMarkdown(root) {
 }
 function dl(kind) {
   const it = cur(), doc = document.getElementById('doc'); persistDoc(); saveStore();
-  if (kind === 'pdf') { window.print(); return; }
-  if (kind === 'copy') { const t = blocksText(doc); (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => showToast('Copied'), () => showToast("This view can't copy")); return; }
+    if (kind === 'copy') { const t = blocksText(doc); (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => showToast('Copied'), () => showToast("This view can't copy")); return; }
   if (kind === 'md') return C.saveFile(C.fileName(it, 'md'), toMarkdown(doc), showToast);
   return C.downloadDocx(it.id, it.html, showToast);
 }
