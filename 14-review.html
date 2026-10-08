@@ -665,6 +665,33 @@ tr:hover .row-acts,tr:focus-within .row-acts{opacity:1;}
 .own-on{padding:10px 12px;border:1.5px solid var(--brand);background:var(--brand-lt);}
 .own-b{flex:1;min-width:0;}
 .own-a{font-size:13.5px;font-weight:700;color:var(--i1);margin-top:2px;}
+.fxs{margin-top:12px;border-top:1px dashed var(--bdk);padding-top:10px;display:flex;flex-direction:column;gap:8px;}
+.fxs-h{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--i3);display:flex;gap:10px;align-items:center;}
+.fxs-done{letter-spacing:0;text-transform:none;font-weight:600;color:var(--pos);font-size:11.5px;}
+.fx{background:rgba(255,255,255,.85);border:1px solid var(--border);border-radius:var(--rsm);padding:9px 12px;}
+.fx-h{display:flex;align-items:center;gap:10px;}
+.fx-t{font-size:13px;font-weight:700;color:var(--i1);}
+.fx-st{margin-left:auto;font-size:11.5px;}
+.fx-n{color:var(--neg);font-weight:600;} .fx-ok{color:var(--pos);font-weight:600;}
+.fx-d{font-size:12.5px;color:var(--i2);margin-top:3px;line-height:1.5;display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;}
+.fx-a{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px;}
+.fx-f{font-size:12px;font-weight:600;} .fx-f.ok{color:var(--pos);} .fx-f.no{color:var(--neg);}
+.fx-sel{height:27px;padding:0 8px;border:1px solid var(--bdk);border-radius:6px;font-size:12px;max-width:340px;background:var(--surf);}
+.fx-form{display:flex;flex-wrap:wrap;gap:6px;align-items:center;width:100%;}
+.fx-in{height:29px;padding:0 9px;border:1px solid var(--bdk);border-radius:6px;font-size:12.5px;min-width:220px;flex:1;outline:none;}
+.fx-in:focus{border-color:var(--brand-mid);box-shadow:0 0 0 3px var(--brand-lt);}
+.fx-ck{font-size:12px;color:var(--i2);display:inline-flex;gap:4px;align-items:center;}
+.fx-err{font-size:12px;color:var(--neg);margin-top:4px;}
+mark.k-sensitive{background:#FBD5D5;color:inherit;border-radius:3px;box-shadow:0 0 0 1px #F2A7A7;}
+mark.k-claim{background:#FDE7B8;color:inherit;border-radius:3px;box-shadow:0 0 0 1px #F3C969;}
+mark.k-brand{background:#E8DDF4;color:inherit;border-radius:3px;box-shadow:0 0 0 1px #CDB6E6;}
+.hl{position:relative;}
+.ws-msg > .hl{padding:0 !important;}
+.hl-back{position:absolute;inset:0;white-space:pre-wrap;overflow-wrap:break-word;word-break:normal;color:transparent;pointer-events:none;overflow:hidden;background:var(--surf);}
+.hl-back mark{color:transparent;}
+.hl-back mark.flash{animation:hlflash 1.4s ease;}
+@keyframes hlflash{0%,60%{box-shadow:0 0 0 3px var(--neg);}100%{}}
+.hl-ta{position:relative;background:transparent !important;resize:none;overflow:hidden;}
 .ws-msg{padding:0;overflow:hidden;}
 .wm-to{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--s75);}
 .wm-who{flex:1;min-width:0;display:flex;flex-direction:column;}
@@ -1033,12 +1060,13 @@ function stuck(r, d){
     alternative: [`You rejected “${d.alternativeOf||'the first recommendation'}”. This is the one alternative.`, 'Use this alternative, or reject it to close the account for the pilot.'],
     sentback: [`Sent back by the sales manager: “${d.sentBackNote||''}”.`, 'Change what they asked, then accept again.'],
     intervention: ['You stepped in after it went ahead on its own.', 'Edit it, or reject it.'],
+    fixed: ['Every reason it was here is fixed.', 'Approve it to send it out, or reject it.'],
     other: [(d.reasons||exceptionReasons(r))[0] || 'The system could not decide it alone.', 'Accept, change or reject it.'],
   }[cat] || ['The system could not decide it alone.', 'Accept, change or reject it.'];
   const missing = cats.includes('reach') ? 'A way to reach the contact' : cats.includes('small') ? 'A micro-segment' : '';
   return { cat, label: REASON_CATS[cat] || whyHere(d), line: L[0], call: L[1], also: cats.slice(1).map(k=>REASON_CATS[k]).filter(Boolean), missing };
 }
-const CAT_TONE = { sensitive:'neg', claim:'neg', brand:'warn', low:'warn', small:'warn', deal:'warn', reach:'neg', spot:'sec', alternative:'brand', sentback:'warn', intervention:'brand', other:'warn' };
+const CAT_TONE = { fixed:'pos', sensitive:'neg', claim:'neg', brand:'warn', low:'warn', small:'warn', deal:'warn', reach:'neg', spot:'sec', alternative:'brand', sentback:'warn', intervention:'brand', other:'warn' };
 const toneTag = t => ({neg:'tag-red', warn:'tag-amber', sec:'tag-blue', brand:'tag-violet'})[t] || 'tag-grey';
 const onHold = d => !!(d && d.hold);
 function segAccounts(seg){ const g = RUN && RUN.seg.segments.find(s=>s.name===seg); return g ? new Set(g.recs.map(x=>x.account.id)).size : 0; }
@@ -1141,6 +1169,119 @@ function onDecision(){
 // Content added in the message box re-draws the workspace, not the side panel.
 function wsReopen(key){ if(WS && WS.key===key){ renderWs(); return true; } return false; }
 
+/* ═══════════════ FIX THE REASON: each reason the item is here, with the way to fix it right on the account ═══════════════ */
+const MARK_KINDS = { sensitive:'Sensitive', claim:'No source', brand:'Brand rule' };
+// Where each problem sits in the message text: [start, end, kind].
+function marksIn(text, x){
+  const out = [], add = (re, kind) => { let m; while((m = re.exec(text))){ out.push([m.index, m.index + m[0].length, kind]); if(!m[0].length) re.lastIndex++; } };
+  add(new RegExp(SENSITIVE_RE.source, 'gi'), 'sensitive');
+  const chk = DemandAI.checkDraft(x);
+  chk.unsupported.forEach(u=>{ const i = text.indexOf(u.text); if(i>=0) out.push([i, i+u.text.length, 'claim']); });
+  chk.flags.filter(f=>f.rule!=='Sensitive term').forEach(f=>{ const w = (String(f.detail).match(/^"(.+)"$/)||[])[1]; if(!w) return;
+    let i = text.toLowerCase().indexOf(w.toLowerCase()); while(i>=0){ out.push([i, i+w.length, 'brand']); i = text.toLowerCase().indexOf(w.toLowerCase(), i+1); } });
+  out.sort((a,b)=>a[0]-b[0] || b[1]-a[1]);
+  return out.filter((m, i) => !out.slice(0, i).some(p => m[0] < p[1]));          // no overlaps: the first one wins
+}
+function hlHtml(text, marks){
+  let h = '', at = 0;
+  marks.forEach(([s, e, k])=>{ h += esc(text.slice(at, s)) + `<mark class="k-${k}">${esc(text.slice(s, e))}</mark>`; at = e; });
+  return h + esc(text.slice(at)) + '\n ';
+}
+const mainField = () => document.getElementById('dBody') || document.getElementById('dNote');
+function paintMarks(){
+  const it = wsItem(), ta = mainField(), back = document.getElementById('hlBack'); if(!it || !ta || !back) return [];
+  RUN = it.run; const x = draftFromFields(it.r), marks = marksIn(ta.value, x);
+  back.innerHTML = hlHtml(ta.value, marks);
+  ta.style.height = 'auto'; ta.style.height = Math.max(ta.scrollHeight, 160) + 'px';
+  return marks;
+}
+// "Show me": scrolls to the first highlighted part and selects it.
+function wsShow(kind){
+  const ta = mainField(); if(!ta) return; const m = marksIn(ta.value, draftFromFields(wsItem().r)).find(z=>z[2]===kind); if(!m) return;
+  const el = document.querySelector(`#hlBack mark.k-${kind}`); if(el) el.scrollIntoView({ block:'center', behavior:'smooth' });
+  ta.focus({ preventScroll:true }); ta.setSelectionRange(m[0], m[1]);
+  if(el){ el.classList.add('flash'); setTimeout(()=>el.classList.remove('flash'), 1400); }
+}
+// Takes out the whole sentence around the first highlighted part of this kind.
+function wsCut(kind){
+  const ta = mainField(); if(!ta) return; const t = ta.value, m = marksIn(t, draftFromFields(wsItem().r)).find(z=>z[2]===kind); if(!m) return;
+  let s = m[0]; while(s > 0 && !/[.?!\n]/.test(t[s-1])) s--;
+  let e = m[1]; while(e < t.length && !/[.?!\n]/.test(t[e])) e++;
+  if(/[.?!]/.test(t[e]||'')) e++;
+  const cite = t.slice(e).match(/^\s*\[[^\]]+, \d{4}\]/); if(cite) e += cite[0].length;
+  while(e < t.length && t[e]===' ') e++;
+  ta.value = (t.slice(0, s).replace(/[ ]+$/,'') + (s && t[s-1]!=='\n' && t[e] && t[e]!=='\n' ? ' ' : '') + t.slice(e)).replace(/\n{3,}/g, '\n\n');
+  wsLiveCheck(); showToast('Sentence removed. It is saved when you approve.');
+}
+// Swaps the unsourced claim for an approved one, with its citation.
+function wsReplaceClaim(id){
+  const ta = mainField(), c = DemandAI.approvedClaims().find(z=>z.id===id); if(!ta || !c) return;
+  const u = DemandAI.checkDraft(draftFromFields(wsItem().r)).unsupported[0]; if(!u) return;
+  const t = ta.value, i = t.indexOf(u.text); if(i < 0) return;
+  let e = i + u.text.length; const cite = t.slice(e).match(/^\s*\[[^\]]+, \d{4}\]/); if(cite) e += cite[0].length;
+  ta.value = t.slice(0, i) + `${c.claim} [${c.type}, ${c.year}]` + t.slice(e);
+  wsLiveCheck(); showToast('Claim replaced with an approved one');
+}
+// A reason fixed by a person's call (the contact is right, the deal is worth it, the micro-segment is set).
+function wsFix(cat, note){
+  const it = wsItem(); RUN = it.run; const key = it.r.key, d = dec(key);
+  setDec(key, { fixed: [...new Set((d.fixed||[]).concat(cat))] }); logIt(it.r, 'Fixed: ' + (REASON_CATS[cat]||cat), { note: note||'' }); persist(); renderWs();
+}
+function wsAssignSeg(v){ const it = wsItem(); RUN = it.run; if(!v) return; setDec(it.r.key, { assignedSeg: v }); wsFix('small', 'Micro-segment: ' + v); }
+function wsSwitchContact(row){
+  const it = wsItem(); RUN = it.run; const p = it.r.result.people.find(z=>z.contact.row===row); if(!p) return;
+  setDec(it.r.key, { contactRow: row, draft: null, edited: false, channel: null }); wsFix('low', 'Switched to ' + p.contact.name);
+}
+// The contact's email or LinkedIn: saved once, used everywhere the contact appears.
+function wsSaveContact(){
+  const it = wsItem(); RUN = it.run; const c = liveRec(it.r).contact, v = id => (document.getElementById(id)||{}).value || '';
+  const res = DemandAI.saveContactFix(it.r.account.name, c.name, { email: v('fxEmail').trim(), verified: (document.getElementById('fxVer')||{}).checked, linkedin: v('fxLi').trim(), by: me().who });
+  const er = document.getElementById('fxErr'); if(res.error){ if(er) er.textContent = res.error; return; }
+  // Every list that holds this contact drafts again with the new channel.
+  const id = WS.id; loadRuns();
+  Object.values(RUNS).forEach(run=>{ const keep = RUN; RUN = run; run.seg.recs.forEach(x=>{ const lc = liveRec(x).contact;
+    if(x.account.name===it.r.account.name && lc.name===c.name){ const dx = dec(x.key); if(dx.draft && dx.draft.unreachable) setDec(x.key, { draft:null, channel:null }); logIt(x, 'Contact added', { note: [v('fxEmail'), v('fxLi')].filter(Boolean).join(' · ') }); persist(); } }); RUN = keep; });
+  WS.id = id; showToast(`Saved for ${c.name}: Prospecting, Scoring, Micro-segments and For Review now use it`); renderWs();
+}
+function fixBlock(r, d, mode, can){
+  if(mode==='view') return '';
+  const cats = mode==='approve' ? ['sensitive'] : reasonCats(r, d);
+  const c = liveRec(r).contact, first = firstOf(c), x = draftOf(r), chk = DemandAI.checkDraft(x), { conf } = checksOf(r);
+  const showBtn = k => `<button class="btn btn-ghost btn-sm" onclick="wsShow('${k}')">Show me ↓</button>`;
+  const row = (k, title, body, acts) => `<div class="fx" data-k="${k}"><div class="fx-h"><span class="fx-t">${title}</span><span class="fx-st" id="fxSt-${k}"></span></div>${body?`<div class="fx-d">${body}</div>`:''}${acts?`<div class="fx-a">${acts}</div>`:''}</div>`;
+  const rows = cats.map(k=>{
+    if(k==='sensitive') return row(k, 'Sensitive content', `${[...new Set((DemandAIDraftText(x).match(new RegExp(SENSITIVE_RE.source,'gi'))||[]).map(w=>w.toLowerCase()))].map(w=>`<mark class="k-sensitive">${esc(w)}</mark>`).join(' ') || '<mark class="k-sensitive">Highlighted</mark>'} — highlighted in red in the message. ${mode==='approve' ? 'Keep it, edit it, or send it back.' : 'You can edit it; anything sensitive still goes to the sales manager.'}`,
+      showBtn(k) + (can ? `<button class="btn btn-ghost btn-sm" onclick="wsCut('sensitive')">Remove that sentence</button>` : ''));
+    if(k==='claim'){ const u = chk.unsupported[0], fits = DemandAI.approvedClaims();
+      return row(k, 'Claim with no source', `<mark class="k-claim">“${esc((u||{}).text||'A claim')}”</mark> isn't an approved claim. Swap it for one that is, or take it out.`,
+        showBtn(k) + (can ? `<select class="fx-sel" onchange="if(this.value)wsReplaceClaim(this.value)"><option value="">Replace with an approved claim…</option>${fits.map(z=>`<option value="${esc(z.id)}">${esc(z.title)} (${esc(z.type)}, ${z.year})</option>`).join('')}</select><button class="btn btn-ghost btn-sm" onclick="wsCut('claim')">Remove it</button>` : '')); }
+    if(k==='brand') return row(k, 'Brand or rule check', `${esc(chk.flags.filter(f=>f.rule!=='Sensitive term').map(f=>f.rule+': '+String(f.detail).replace(/"/g,'')).join(' · ')||'A brand rule')}. <mark class="k-brand">Highlighted</mark> where it is in the text.`, showBtn(k));
+    if(k==='reach') return row(k, `A way to reach ${esc(first)}`, `No verified email and no LinkedIn URL on file. Add one: it is saved for ${esc(c.name)} everywhere they appear.`,
+      can ? `<div class="fx-form"><input id="fxEmail" class="fx-in" placeholder="Work email, e.g. ${esc(first.toLowerCase())}@${esc(r.account.name.toLowerCase().split(' ')[0])}.example" value="${esc(c.emailRaw||'')}">
+        <label class="fx-ck"><input type="checkbox" id="fxVer"> Verified</label>
+        <input id="fxLi" class="fx-in" placeholder="or LinkedIn URL" value="${esc(c.linkedinRaw||'')}">
+        <button class="btn btn-primary btn-sm" onclick="wsSaveContact()">Save contact</button></div><div class="fx-err" id="fxErr"></div>` : '');
+    if(k==='low'){ const lr = liveRec(r), sg = (r.signal||{}), others = r.result.people.filter(p=>p.contact.row!==c.row && !p.contact.optOut);
+      const factor = (ok, t) => `<span class="fx-f ${ok?'ok':'no'}">${ok?'✓':'✗'} ${t}</span>`;
+      return row(k, 'Low confidence', `${factor(!chk.unsupported.length, chk.claims.length ? `${chk.claims.length-chk.unsupported.length} of ${chk.claims.length} claims verified` : 'No product claims')}${factor(!chk.flags.length, chk.flags.length ? `${chk.flags.length} open flag${chk.flags.length>1?'s':''}` : 'No open flags')}${factor((sg.weight||0) >= 30, `${(sg.weight||0) >= 60 ? 'Strong' : (sg.weight||0) >= 30 ? 'Moderate' : 'Weak'} signal`)}${factor(r.result.confidence!=='low', r.result.confidence==='low' ? `No one in the primary persona: ${esc(first)} is ${esc(c.jobTitle||'in another role')}` : 'Contact in the primary persona')}`,
+        can ? `<button class="btn btn-sec btn-sm" onclick="wsFix('low','${esc(first)} is the right person')">Yes, ${esc(first)} is the right person</button>${others.slice(0,3).map(p=>`<button class="btn btn-ghost btn-sm" onclick="wsSwitchContact(${p.contact.row})">Switch to ${esc(p.contact.name)} <span class="ws-sub">· ${esc(p.contact.jobTitle||p.contact.persona)}</span></button>`).join('')}` : ''); }
+    if(k==='small') return row(k, 'No micro-segment', `Fewer than ${DemandAI.CONFIG.minSegmentAccounts} accounts share its signal. Pick the one to release it into.`,
+      can ? `<select id="assignSeg" class="fx-sel" onchange="wsAssignSeg(this.value)"><option value="">Pick a micro-segment…</option>${segChoices().map(nm=>`<option ${(d.assignedSeg)===nm?'selected':''}>${esc(nm)}</option>`).join('')}</select><span class="ws-sub">Suggested: ${esc(r.prominent||'')}</span>` : '');
+    if(k==='deal'){ const ds = DemandAI.estimateDealSize(r.account);
+      return row(k, 'Below deal size', ds ? `About USD ${Math.round(ds.value/1000)}k against a ${Math.round(DemandAI.CONFIG.dealSize.threshold/1000)}k threshold (${esc(ds.basis)}).` : '', can ? `<button class="btn btn-sec btn-sm" onclick="wsFix('deal','Worth it anyway')">It's worth it anyway</button>` : ''); }
+    if(k==='fixed') return '';
+    return '';
+  }).filter(Boolean);
+  const done = (d.fixed||[]).filter(k=>REASON_CATS[k]).concat(mode==='decide' && (d.reasons||[]).some(t=>/^Can't reach/.test(t)) && !cats.includes('reach') ? ['reach'] : []);
+  if(!rows.length && !done.length) return '';
+  return `<div class="fxs"><div class="fxs-h">${rows.length ? 'How to fix it' : 'Fixed'} ${done.length ? `<span class="fxs-done">${done.map(k=>`✓ ${k==='reach' ? 'Contact added' : esc(REASON_CATS[k])}`).join(' · ')}</span>` : ''}</div>${rows.join('')}</div>`;
+}
+// Live: a text problem shows as fixed the moment it is gone from the message.
+function fixStatus(marks){
+  ['sensitive','claim','brand'].forEach(k=>{ const el = document.getElementById('fxSt-'+k); if(!el) return; const n = marks.filter(m=>m[2]===k).length;
+    el.innerHTML = n ? `<span class="fx-n">${n} in the message</span>` : '<span class="fx-ok">✓ Gone from the message</span>'; });
+}
+
 function renderWs(){
   const it = wsItem(); if(!it){ leaveWs(); return; }
   RUN = it.run;
@@ -1160,7 +1301,7 @@ function renderWs(){
         <div class="ws-hero-tags">${mode==='approve' ? '<span class="tag tag-violet">Approval</span><span class="tag tag-red">Sensitive content</span>' : `<span class="tag ${toneTag(tone)}">${esc(s.label)}</span>`}${s.also.map(a=>`<span class="tag tag-grey">+ ${esc(a)}</span>`).join('')}${due}${onHold(d)?`<span class="tag tag-grey">On hold: ${esc(d.hold.why)}</span>`:''}</div>
         <div class="ws-hero-line">${esc(s.line)}</div>
         <div class="ws-hero-call">${mode==='approve' ? `Approve it, edit it first, send it back to ${esc(repName(ownerOf(r)).split(' ')[0])}, or reject it.` : esc(s.call)}</div>
-        ${s.missing && mode==='decide' ? `<div class="ws-missing"><b>Missing:</b> ${esc(s.missing)}. ${s.missing==='A micro-segment' ? `<select id="assignSeg" ${live?'':'disabled'}><option value="">Pick a micro-segment…</option>${segChoices().map(nm=>`<option ${(d.assignedSeg||r.prominent)===nm?'selected':''}>${esc(nm)}</option>`).join('')}</select> <span class="ws-sub">Suggested: ${esc(r.prominent||'')}.</span>` : 'Put it on hold until the data arrives.'}</div>` : ''}
+        ${fixBlock(r, d, mode, canEdit)}
       </div>`;
 
   // 2 · The action: recommended and runner-up side by side, and your own below them.
@@ -1187,13 +1328,13 @@ function renderWs(){
   const ro = canEdit ? '' : 'readonly';
   const fieldsHtml = x.channel==='Email'
     ? `<input id="dSubj" class="ws-in ws-subj" value="${esc(x.subject)}" ${ro} oninput="wsLiveCheck()" aria-label="Subject">
-       <textarea id="dBody" class="ws-in ws-body" ${ro} oninput="wsLiveCheck()" aria-label="Message">${esc(x.body)}</textarea>`
+       <div class="hl"><div class="hl-back ws-in ws-body" id="hlBack" aria-hidden="true"></div><textarea id="dBody" class="ws-in ws-body hl-ta" ${ro} oninput="wsLiveCheck()" aria-label="Message">${esc(x.body)}</textarea></div>`
     : x.channel==='LinkedIn'
-    ? `<textarea id="dNote" class="ws-in" style="min-height:96px" ${ro} oninput="wsLiveCheck()" aria-label="Connection note">${esc(x.note)}</textarea>`
+    ? `<div class="hl"><div class="hl-back ws-in" id="hlBack" aria-hidden="true"></div><textarea id="dNote" class="ws-in hl-ta" style="min-height:96px" ${ro} oninput="wsLiveCheck()" aria-label="Connection note">${esc(x.note)}</textarea></div>`
     : `<textarea id="dTask" class="ws-in" ${ro} aria-label="Task">${esc(x.task||'')}</textarea>`;
   const reach = x.channel==='Email'
     ? (c.email ? `${esc(c.email)} ${c.emailVerified ? '<span class="tag tag-green">Verified</span>' : '<span class="tag tag-amber">Not verified</span>'}` : '<span class="tag tag-red">No email on file</span>')
-    : x.channel==='LinkedIn' ? 'LinkedIn connection note' : 'A task for the team';
+    : x.channel==='LinkedIn' ? (c.linkedin ? `<span class="ws-sub">LinkedIn ·</span> ${esc(c.linkedin.replace(/^https?:\/\/(www\.)?/,''))}` : 'LinkedIn connection note') : 'A task for the team';
   const msgBlock = `<div class="ws-card ws-msg">
       <div class="wm-to"><div class="co-av" style="background:${avColor(c.name)}">${initials(c.name)}</div>
         <div class="wm-who"><b>${esc(c.name)}</b><span>${esc(c.jobTitle||'')}${c.persona?` · ${esc(c.persona)} persona`:''}</span></div>
@@ -1363,6 +1504,7 @@ function wsLiveCheck(){
   if(w) w.textContent = x.channel==='Email' ? `${x.body.split(/\s+/).filter(Boolean).length} words` : x.channel==='LinkedIn' ? `${x.note.length}/200` : '';
   const bad = chk.flags.map(f=>`<span class="tag ${f.rule==='Sensitive term'?'tag-red':'tag-amber'}" title="${esc(f.detail)}">✗ ${esc(f.rule)}</span>`).concat(chk.unsupported.map(u=>`<span class="tag tag-red" title="${esc(u.text)}">✗ Claim with no source</span>`));
   box.innerHTML = bad.length ? bad.join('') : '<span class="wm-ok">✓ Brand and claims pass</span>';
+  fixStatus(paintMarks());
 }
 function wsAccept(key){
   saveTeach(); const it = wsItem(), before = JSON.stringify(it.run.saved.decisions[key]||{});

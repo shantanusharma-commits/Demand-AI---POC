@@ -311,19 +311,21 @@
           <span class="cpp-hist-t">${esc(t.title)}</span><span class="cpp-hist-q">${esc((t.msgs.find(m=>m.you)||{}).you||'')}</span>
           <span class="cpp-hist-m">${t.msgs.filter(m=>m.you).length} question${t.msgs.filter(m=>m.you).length===1?'':'s'} · ${ago(t.at)}</span></button>`).join('') : '<div class="cpp-empty">No saved chats on this screen yet.</div>');
     }
-    if(!P.thread.msgs.length) return `<div class="cpp-empty"><b>Ask me about ${esc(P.sub || P.title)}.</b><br>I answer from the same data you see, and I never change anything unless you confirm. Chats are saved: find them under 🕘.</div>`;
+    if(!P.thread.msgs.length) return `<div class="cpp-empty"><b>Ask me about ${esc(P.sub || P.title)}.</b><br>I answer from the same data you see, and I never change anything unless you confirm. Every chat is saved: find it under History.</div>`;
     return (P.readonly ? `<div class="cpp-note">A saved chat from ${ago(P.thread.at)}. ${P.thread.ctx===P.liveCtx ? '' : 'Open that account to carry on.'} <a href="#" onclick="Copilot.backToChat();return false">Back to the current chat</a></div>` : '') + P.thread.msgs.map(bubble).join('');
   }
   function drawPanel(){
     const el = pEl(); el.classList.toggle('wide', !!P.wide);
-    el.innerHTML = `<div class="cpp-h"><span class="cpp-t">✦ Copilot</span><span class="cpp-s" title="${esc(P.title)}">${esc(P.title)}</span>
-        <button class="cpp-ib ${P.view==='history'?'on':''}" title="Saved chats on this screen" onclick="Copilot.history()">🕘</button><button class="cpp-ib" title="New chat" onclick="Copilot.newChat()">＋</button>
-        <button class="cpp-ib" title="${P.wide?'Make it narrower':'Expand'}" onclick="Copilot.toggleWide()">${P.wide?'⇥':'⇤'}</button><button class="cpp-ib" title="Close" onclick="Copilot.closePanel()">✕</button></div>
+    el.innerHTML = `<div class="cpp-h"><span class="cpp-t">✦ Copilot</span><span class="cpp-s" title="${esc(P.title)}">about ${esc(P.title)} · answers only</span>
+        <button class="cpp-ib ${P.view==='history'?'on':''}" title="Chats saved on this screen" onclick="Copilot.history()">🕘 History</button><button class="cpp-ib" title="Start a new chat; this one stays in History" onclick="Copilot.newChat()">＋ New chat</button>
+        <button class="cpp-ib" title="${P.wide?'Make it narrower':'Make it wider'}" onclick="Copilot.toggleWide()">${P.wide?'⇥ Narrow':'⇤ Expand'}</button><button class="cpp-ib cpp-x" title="Close (Esc). The screen underneath stays as it was" onclick="Copilot.closePanel()">⌄ Hide</button></div>
       <div class="cpp-b" id="cppBody">${bodyHtml()}</div>
-      ${P.view==='history' || P.readonly ? '' : `<div class="cpp-f">${P.chips.length ? `<div class="cpp-chips">${P.chips.slice(0,4).map(c=>`<button class="cp-hint" onclick="Copilot.ask2(this.textContent)">${esc(c)}</button>`).join('')}</div>` : ''}
+      ${P.view==='history' || P.readonly ? '' : `<div class="cpp-f"><div class="cpp-chips">${chipsLeft().map(c=>`<button class="cpp-chip" onclick="Copilot.ask2(this.textContent)">${esc(c)}</button>`).join('')}<span class="cpp-soon" title="After the pilot: answers from the client's own documents, CRM notes and past conversations">🔎 Search the client's knowledge base <b>After the pilot</b></span></div>
         <form class="cp-bar" onsubmit="Copilot.ask2(this.q.value);return false"><span class="cp-spark">✦</span><input name="q" id="cppInput" autocomplete="off" placeholder="Ask about ${esc(P.sub || P.title)}…"><button class="cp-send" type="submit" aria-label="Send">↑</button></form></div>`}`;
     const b = document.getElementById('cppBody'); if(b) b.scrollTop = b.scrollHeight;
   }
+  // Suggested questions, minus the ones already asked in this chat.
+  const chipsLeft = () => { const asked = new Set(P.thread.msgs.filter(m=>m.you).map(m=>m.you.toLowerCase())); return P.chips.filter(c=>!asked.has(String(c).toLowerCase())).slice(0,4); };
   function panelOpen(o){
     o = o || {};
     const ctx = o.ctx || 'page';
@@ -341,6 +343,7 @@
     let html; try{ html = P.answer(q); }catch(e){ console.error(e); html = p("Sorry, I couldn't work that out. Try asking another way."); }
     P.thread.msgs.push({ html }); P.thread.at = Date.now(); keepThread(P.thread);
     const b = document.getElementById('cppBody'); if(b){ if(P.thread.msgs.length===2) b.innerHTML = ''; b.insertAdjacentHTML('beforeend', bubble({you:q}) + bubble({html})); b.scrollTop = b.scrollHeight; }
+    const ch = document.querySelector('#cpPanel .cpp-chips'); if(ch){ const sn = ch.querySelector('.cpp-soon'); ch.innerHTML = chipsLeft().map(c=>`<button class="cpp-chip" onclick="Copilot.ask2(this.textContent)">${esc(c)}</button>`).join(''); if(sn) ch.appendChild(sn); }
     const i = document.getElementById('cppInput'); if(i){ i.value = ''; i.focus(); }
   }
   const panelIsOpen = () => { const el = document.getElementById('cpPanel'); return !!(el && el.classList.contains('open') && P); };
@@ -384,13 +387,16 @@
 .cp-panel{position:fixed;top:0;right:0;bottom:0;width:440px;max-width:100vw;background:var(--surf);border-left:1px solid var(--brand-mid);box-shadow:-12px 0 40px rgba(20,26,33,.16);z-index:650;display:flex;flex-direction:column;transform:translateX(105%);transition:transform .22s cubic-bezier(.4,0,.2,1),width .22s cubic-bezier(.4,0,.2,1);}
 .cp-panel.open{transform:none;}
 .cp-panel.wide{width:min(860px,70vw);}
-.cpp-h{display:flex;align-items:center;gap:6px;padding:12px 12px 12px 16px;background:var(--brand-lt);border-bottom:1px solid var(--brand-mid);}
-.cpp-t{font-family:var(--fd);font-size:14px;font-weight:700;color:var(--brand-dk);white-space:nowrap;}
-.cpp-s{flex:1;min-width:0;font-size:12px;color:var(--i2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.cpp-ib{width:30px;height:30px;border-radius:8px;border:1px solid transparent;background:transparent;cursor:pointer;color:var(--i2);font-size:13px;}
+.cpp-h{display:flex;align-items:center;gap:4px;padding:10px 10px 10px 14px;background:var(--brand-lt);border-bottom:1px solid var(--brand-mid);}
+.cpp-t{font-size:12.5px;font-weight:700;color:var(--brand-dk);white-space:nowrap;}
+.cpp-h{flex-wrap:wrap;}
+.cpp-t{flex:1;}
+.cpp-s{order:9;flex-basis:100%;min-width:0;font-size:11.5px;color:var(--i3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px;}
+.cpp-ib{height:28px;padding:0 8px;border-radius:7px;border:1px solid transparent;background:transparent;cursor:pointer;color:var(--i2);font-size:11.5px;font-weight:600;white-space:nowrap;}
+.cpp-x{color:var(--i1);}
 .cpp-ib:hover,.cpp-ib.on{background:var(--surf);border-color:var(--brand-mid);color:var(--brand-dk);}
 .cpp-b{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;}
-.cpp-me{align-self:flex-end;max-width:85%;padding:9px 13px;background:var(--brand);color:#fff;border-radius:14px 14px 4px 14px;font-size:12.5px;line-height:1.5;}
+.cpp-me{align-self:stretch;padding:7px 12px;background:var(--brand);color:#fff;border-radius:8px;font-size:12.5px;line-height:1.5;}
 .cpp-ai{display:flex;gap:8px;align-items:flex-start;}
 .cpp-av{width:24px;height:24px;border-radius:7px;background:linear-gradient(135deg,var(--brand),var(--brand-dk));color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .cpp-ai-b{flex:1;min-width:0;font-size:12.5px;color:var(--i1);line-height:1.55;}
@@ -399,6 +405,11 @@
 .cpp-note a{color:var(--brand);font-weight:600;}
 .cpp-f{border-top:1px solid var(--border);padding:10px 12px 12px;}
 .cpp-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;}
+.cpp-chip{height:27px;padding:0 10px;border-radius:999px;border:1px solid var(--brand-mid);background:var(--surf);color:var(--brand-dk);font-size:11.5px;font-weight:600;cursor:pointer;}
+.cpp-chip:hover{background:var(--brand-lt);}
+.cpp-chip:first-child{background:var(--brand-lt);}
+.cpp-soon{display:inline-flex;align-items:center;gap:6px;height:27px;padding:0 10px;border:1px dashed var(--bdk);border-radius:999px;background:var(--s50);color:var(--i3);font-size:11.5px;font-weight:600;cursor:help;}
+.cpp-soon b{font-size:9.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--brand-dk);background:var(--brand-lt);border-radius:999px;padding:1px 6px;}
 .cpp-f .cp-bar{max-width:none;margin:0;box-shadow:none;}
 .cpp-hist-h{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--i3);display:flex;justify-content:space-between;}
 .cpp-hist{display:flex;flex-direction:column;gap:2px;text-align:left;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--surf);cursor:pointer;}
@@ -410,6 +421,8 @@
 #cpInline:not(:empty){padding:10px 12px;border:1px solid var(--brand-mid);border-radius:12px;background:var(--surf);margin-top:8px;}`;
     document.head.appendChild(st);
   }
+  // The text box and panel styles load with the page, so the box looks right before Copilot is first opened.
+  if(typeof document!=='undefined'){ if(document.head) css(); else document.addEventListener('DOMContentLoaded', css); }
   // The text box at the bottom of the page. Answers open in a sheet above it.
   function dock(opts){
     css(); opts = opts || {};

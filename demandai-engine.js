@@ -269,8 +269,8 @@ function processLeads(grid, { file = 'lead file', sheet = 'Sheet1' } = {}) {
   const byEmail = new Map(), byLinkedIn = new Map();
   let notLoaded = 0, merged = 0;
 
-  for (const r of table.records) {
-    const row = r.__row;
+  for (const r0 of table.records) {
+    const r = fixRow(r0), row = r.__row;
     const req = (f, issue, outcome, fix, severity = 'flag') => {
       if (!clean(r[f]) && !missingCols.has(f)) { at(row, f, issue, outcome, 'D3', fix, severity); return true; }
       return false;
@@ -715,8 +715,8 @@ function processScoredProspects(grid, { file = 'prospect file', sheet = 'Sheet1'
   const at = (row, field, issue, outcome, code, fix, severity = 'flag') => issues.push({ file, sheet, row, field, issue, outcome, code, fix, severity });
   const accounts = new Map(), people = new Map(), seen = new Set();
   let rejected = 0;
-  for (const r of table.records) {
-    const row = r.__row, company = clean(r.company_name), first = clean(r.first_name);
+  for (const r0 of table.records) {
+    const r = fixRow(r0), row = r.__row, company = clean(r.company_name), first = clean(r.first_name);
     if (!company || !first) { at(row, !company ? 'company_name' : 'first_name', 'Company or first name missing', 'Row not used', 'D3', 'Fill in both'); rejected++; continue; }
     const type = clean(r.signal_type), cfg = CONFIG.signalTypes[type], date = clean(r.event_date);
     const bad = (field, issue, code, fix) => { at(row, field, issue, 'Signal not used', code, fix); rejected++; };
@@ -1147,6 +1147,54 @@ function confidenceFor(rec, d, chk, action) {
   return { level, reason: `${level}: ${grounding}, ${flags}, ${strength} signal${extra}` };
 }
 
+/* ─── Contact fixes: an email or LinkedIn URL added by a person, kept per company and contact name ───
+   Applied wherever a file row or a saved list is read, so Prospecting, Scoring, Micro-segments, Today and
+   For Review all see the same contact. */
+const CONTACT_FIX_KEY = 'demandai_contact_fixes_v1';
+const contactFixKey = (company, name) => normKey(company) + '|' + normKey(name);
+function contactFixes() { try { return typeof localStorage === 'undefined' ? {} : JSON.parse(localStorage.getItem(CONTACT_FIX_KEY) || '{}'); } catch (e) { return {}; } }
+function contactFixFor(company, name) { return contactFixes()[contactFixKey(company, name)] || null; }
+// A file row with the fix written in, as if the file had held it.
+function fixRow(r) {
+  const f = contactFixFor(r.company_name, [clean(r.first_name), clean(r.last_name)].filter(Boolean).join(' '));
+  if (!f) return r;
+  const o = Object.assign({}, r);
+  if (f.email) { o.email = f.email; o.email_verified = f.verified ? 'Y' : 'N'; }
+  if (f.linkedin) o.linkedin_url = f.linkedin;
+  return o;
+}
+function applyContactFix(c, company) {
+  const f = contactFixFor(company || c.company, c.name || [c.firstName, c.lastName].filter(Boolean).join(' '));
+  if (!f) return c;
+  if (f.email) { c.email = normEmail(f.email); c.emailRaw = f.email; c.emailVerified = !!f.verified; }
+  if (f.linkedin) { c.linkedin = normLinkedIn(f.linkedin); c.linkedinRaw = f.linkedin; }
+  c.fixedBy = f.by; c.fixedAt = f.at;
+  return c;
+}
+// Saves the fix and writes it into every saved list that holds the contact. Returns how many lists changed.
+function saveContactFix(company, name, fix) {
+  const email = clean(fix.email), li = clean(fix.linkedin);
+  if (email && !EMAIL_RE.test(email)) return { error: "That email isn't in the form name@company.com" };
+  if (li && !LINKEDIN_RE.test(li)) return { error: "That isn't a LinkedIn profile URL, e.g. https://www.linkedin.com/in/name" };
+  if (!email && !li) return { error: 'Add an email or a LinkedIn URL' };
+  const all = contactFixes();
+  all[contactFixKey(company, name)] = { email, verified: !!email && !!fix.verified, linkedin: li, by: fix.by || '', at: Date.now() };
+  try { localStorage.setItem(CONTACT_FIX_KEY, JSON.stringify(all)); } catch (e) { return { error: "This browser blocks storage, so the contact can't be kept" }; }
+  let lists = 0;
+  const L = loadLists();
+  L.forEach(l => {
+    let hit = false;
+    (l.contacts || []).forEach(c => {
+      if (contactFixKey(c.company, c.name) !== contactFixKey(company, name)) return;
+      applyContactFix(c, company); hit = true;
+      if (l.issues) l.issues = l.issues.filter(i => !(i.row === c.row && /email|linkedin/.test(i.field || '')));
+    });
+    if (hit) lists++;
+  });
+  if (lists) saveLists(L);
+  return { ok: true, lists };
+}
+
 /* ─── Lists hand-off between Prospecting and Scoring (browser only) ─── */
 const LIST_KEY = 'demandai_lists_v1';
 let memoryLists = null;
@@ -1207,7 +1255,7 @@ return {
   parseCSV, toCSV, readTable, processLeads, classify, personaOf, fitFor, decayFactor,
   processSignals, scoreList, stack, tierFor, daysBetween, round1, buildSegments, segmentRanks, recommendChannel, draftFor, processScoredProspects, SEGMENT_COLUMNS, estimateDealSize,
   briefFor, callScript, checkDraft, checkContent, FRAMEWORKS, confidenceFor, allowedChannels, proofFor, COLLATERAL, PLAYBOOK,
-  VOICE_PRESETS, defaultBrand, brandPack, brandDraft, saveBrandDraft, submitBrand, discardBrandDraft, brandPending, publishBrand, brandVersion, useBrand, approvedClaims,
+  VOICE_PRESETS, defaultBrand, brandPack, brandDraft, saveBrandDraft, submitBrand, discardBrandDraft, brandPending, publishBrand, brandVersion, useBrand, approvedClaims, contactFixFor, applyContactFix, saveContactFix,
   loadLists, saveList, getList, deleteList, loadScorings, saveScoring, getScoring, deleteScoring,
   loadSegmentations, saveSegmentation, getSegmentation, deleteSegmentation, reviewBadge,
 };

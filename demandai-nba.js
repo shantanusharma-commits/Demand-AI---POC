@@ -44,7 +44,7 @@ function compute(src, runId, createdAt, brand){
     sig = { signals: scored.flatMap(x=>x.people.flatMap(p=>p.signals)), issues: r.issues, rejectedRows: r.stats.rejected };
   }
   else if(src.sample){ const r = DemandAI.processLeads(DemandAISample.LEADS, {file:DemandAISample.LEAD_FILE, sheet:'Lead template'}); list = {accounts:r.accounts, contacts:r.contacts}; }
-  else { const L = DemandAI.getList(src.listId); if(!L) return null; list = JSON.parse(JSON.stringify({accounts:L.accounts, contacts:L.contacts})); }
+  else { const L = DemandAI.getList(src.listId); if(!L) return null; list = JSON.parse(JSON.stringify({accounts:L.accounts, contacts:L.contacts})); list.contacts.forEach(c=>DemandAI.applyContactFix(c)); }
   if(!src.csv){
     sig = DemandAI.processSignals(src.grid, list, {file:src.fileName, sheet:src.sheet, asOf:src.asOf});
     scored = DemandAI.scoreList(list, sig);
@@ -101,7 +101,7 @@ const exceptionOf = r => exceptionReasons(r).join(' · ');
 // Segment too small is not on it: a person assigns the micro-segment before the item is released.
 const AUTOPILOT_LOW_RISK = ['deal'];
 const REASON_CATS = { sensitive:'Sensitive content', claim:'Unsupported claim', low:'Low confidence', small:'Segment too small',
-  deal:'Below deal size', brand:'Brand or rule check', reach:"Can't reach them", spot:'Spot-check', alternative:'Alternative offered', sentback:'Sent back', intervention:'Stepped in', other:'Other' };
+  deal:'Below deal size', brand:'Brand or rule check', reach:"Can't reach them", fixed:'Reasons fixed', spot:'Spot-check', alternative:'Alternative offered', sentback:'Sent back', intervention:'Stepped in', other:'Other' };
 function reasonCats(r, d){
   if(d.spot==='pending') return ['spot'];
   if(d.why==='alternative') return ['alternative'];
@@ -113,7 +113,10 @@ function reasonCats(r, d){
       : /^Segment too small/.test(t) ? 'small' : /deal-size/.test(t) ? 'deal' : /^Brand/.test(t) ? 'brand' : /^Can't reach/.test(t) ? 'reach' : 'other';
     if(!out.includes(c)) out.push(c);
   });
-  return out.length ? out : ['other'];
+  if(!out.length) return ['other'];
+  // Reasons a person fixed on the account: a confirmed contact, a way to reach them, a micro-segment.
+  const left = out.filter(c=>!(d.fixed||[]).includes(c) && !(c==='reach' && !draftOf(r).unreachable));
+  return left.length ? left : ['fixed'];
 }
 const dayStart = t => { const d = new Date(t); d.setHours(0,0,0,0); return +d; };
 function addWorkDays(t, n){ const d = new Date(dayStart(t)); while(n > 0){ d.setDate(d.getDate()+1); if(d.getDay()%6) n--; } while(!(d.getDay()%6)) d.setDate(d.getDate()+1); return +d; }
