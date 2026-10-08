@@ -426,6 +426,34 @@ input,textarea,select{background-color:#fff;color:var(--i1);}
 .stat-link:hover{background:var(--brand-lt);}
 .stat-link::after{content:'›';position:absolute;top:10px;right:14px;font-size:17px;color:var(--i4);}
 .stat-link:hover .stat-lbl{color:var(--brand);}
+.dq{display:flex;gap:16px;align-items:stretch;background:var(--surf);border:1px solid var(--border);border-radius:var(--rmd);padding:12px 14px;margin-bottom:14px;}
+.dq-s{min-width:120px;padding-right:14px;border-right:1px solid var(--s75);display:flex;flex-direction:column;justify-content:center;}
+.dq-v{font-family:var(--fd);font-size:24px;font-weight:700;line-height:1;}
+.dq-l{font-size:11.5px;color:var(--i2);margin-top:3px;}
+.dq-m{font-size:11px;color:var(--i3);margin-top:4px;}
+.dq-g{flex:1;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;}
+.dq-c{display:flex;align-items:center;gap:7px;padding:7px 9px;border:1px solid var(--border);border-radius:8px;background:var(--surf);cursor:pointer;text-align:left;font-family:var(--fb);min-width:0;}
+.dq-c:hover{border-color:var(--brand-mid);background:#FCFAFE;}
+.dq-i{width:18px;height:18px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0;color:#fff;}
+.dq-ok .dq-i{background:var(--pos);} .dq-stop .dq-i{background:var(--neg);} .dq-warn .dq-i{background:var(--warn);} .dq-info .dq-i{background:var(--i3);}
+.dq-n{flex:1;min-width:0;font-size:11.5px;color:var(--i1);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.dq-k{font-size:11px;color:var(--i3);white-space:nowrap;}
+.dq-stop .dq-k{color:var(--neg);font-weight:700;} .dq-warn .dq-k{color:var(--warn);font-weight:700;}
+.dq-link{text-decoration:none;color:var(--i1);display:block;}
+.dqp-nav{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px;}
+.dqp-nav button{padding:3px 8px;border:1px solid var(--border);border-radius:999px;background:var(--surf);font-size:11px;color:var(--i2);cursor:pointer;font-family:var(--fb);}
+.dqp-nav button.on{border-color:var(--brand);background:var(--brand-lt);color:var(--brand-dk);font-weight:600;}
+.dqp-nav b{color:var(--neg);}
+.dqp-b{font-size:12.5px;color:var(--i1);line-height:1.5;padding:8px 0;border-top:1px solid var(--s75);}
+.dqp-tip{background:var(--sec-lt);border:none;border-radius:8px;padding:9px 11px;margin-top:4px;color:var(--sec-dk);}
+.dqp-k{font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--i3);margin-bottom:3px;}
+.dqp-i{padding:9px 11px;border:1px solid var(--border);border-radius:9px;margin-bottom:7px;font-size:12px;}
+.dqp-ih{display:flex;gap:8px;align-items:center;margin-bottom:3px;}
+.dqp-f{flex:1;font-family:var(--fm);font-size:11px;color:var(--i3);}
+.dqp-t{color:var(--i1);font-weight:600;line-height:1.45;}
+.dqp-o{color:var(--i2);font-size:11.5px;margin-top:2px;line-height:1.45;}
+.dqp-ok{font-size:12.5px;color:var(--pos);font-weight:600;padding:10px 0;}
+@media (max-width:1200px){ .dq-g{grid-template-columns:repeat(3,minmax(0,1fr));} }
 </style>
 </head>
 <body>
@@ -596,12 +624,13 @@ function renderStart(tab){
           This prototype reads the file in your browser. The production build runs it as a background job.
         </div>
       </div>` : `
-      ${funnelStrip()}<div class="score-list">${table([['List',280],['Source file',200],['Accounts',110,'num'],['In the list',120,'num'],['What it led to',300],['Saved',170],['',180]],
+      ${funnelStrip()}<div class="score-list">${table([['List',260],['Source file',180],['Data quality',150],['Accounts',100,'num'],['In the list',110,'num'],['What it led to',280],['Saved',150],['',170]],
         lists.map(l=>`<tr>
           <td><div class="person"><div class="co-av" style="background:${avColor(l.id)}">${initials(l.name)}</div><div style="flex:1">${renamingId===l.id
             ? `<div style="display:flex;gap:6px;align-items:center"><input id="renameInput" value="${esc(l.name)}" style="flex:1;min-width:0;padding:6px 9px;border:1px solid var(--brand-mid);border-radius:var(--rsm);font-size:12.5px" onkeydown="if(event.key==='Enter')finishRename('${l.id}');if(event.key==='Escape'){renamingId=null;renderStart('saved')}"><button class="btn btn-primary btn-sm" onclick="finishRename('${l.id}')">Save</button></div>`
             : `<div style="display:flex;align-items:center;gap:6px;min-width:0"><span class="dt-main" title="${esc(l.name)}">${esc(l.name)}</span><button title="Rename" onclick="startRename('${l.id}')" style="flex-shrink:0;color:var(--i3);display:flex;padding:2px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button></div><span class="sub">${l.scoring?'Scored':'Not scored yet'}</span>`}</div></div></td>
-          <td>${cell(l.sourceFile)}</td>
+          <td>${cell(l.sourceFile, l.uploadedBy?'uploaded by '+esc(l.uploadedBy):'')}</td>
+          <td>${l.issues ? (()=>{ const sc = dqScore(l.issues, l.rowsRead||l.stats.rowsRead); return `<a href="#" class="dq-link" onclick="openListQuality('${l.id}');return false" title="Open the checks"><b style="color:${sc>=90?'var(--pos)':sc>=70?'var(--warn)':'var(--neg)'}">${sc}%</b> clean<span class="sub">${l.issues.length} finding${l.issues.length===1?'':'s'} · open →</span></a>`; })() : '<span class="muted">Not kept</span>'}</td>
           <td class="num">${l.stats.accountsPass}<span class="sub">of ${l.stats.accounts}</span></td>
           <td class="num">${l.stats.inFinalList}<span class="sub">contacts</span></td>
           <td>${(()=>{ const d = ledTo(l.id); return !d.runs ? '<span class="muted">Not scored yet</span>' : `<span class="val">${d.scored} scored · ${d.recs} recommended</span><span class="sub">${d.released} released · ${d.meetings} meeting${d.meetings===1?'':'s'} booked${d.segId?` · <a href="12-nba.html?run=${encodeURIComponent(d.segId)}" style="color:var(--brand);font-weight:600;text-decoration:none">Open in NBA →</a>`:''}</span>`; })()}</td>
@@ -728,6 +757,64 @@ function openChecks(){
   tick();
 }
 
+/* ═══════════════ DATA QUALITY: every check, its findings in a side pane, for this upload and every saved list ═══════════════ */
+const CHECK_HELP = {
+  columns:     ['A missing or renamed column means a whole field is lost for every row.', 'Start from the lead template and keep its header row as it is. Extra columns are fine; renamed ones are not.'],
+  required:    ['Without the basics a contact can\'t be grouped, scored or owned.', 'Fill in name, title, company, domain, country, industry, size and owner on every row before export.'],
+  emailFormat: ['A malformed address bounces, and bounces hurt the sender\'s reputation.', 'Export emails straight from the CRM; don\'t retype them. Watch for spaces and missing domains.'],
+  verified:    ['Only verified emails are used, so unverified ones reduce who can be reached.', 'Run the export through the email verification tool and set email_verified to Y or N.'],
+  liFormat:    ['A link that isn\'t a profile can\'t be used for a connection note.', 'Use the full profile URL, like https://www.linkedin.com/in/name, not a search or company page.'],
+  channel:     ['A contact with no email and no LinkedIn URL can\'t be reached at all.', 'Add at least one: a verified work email, or the LinkedIn profile URL.'],
+  dupes:       ['The same person twice would get two messages.', 'De-duplicate on email and LinkedIn URL in the CRM before export. Repeats are merged here, keeping the first row.'],
+  formats:     ['Inconsistent values (Y/N, numbers, account types) break scoring and grouping.', 'Use Y or N, plain numbers without commas, and the account types from the template list.'],
+  consent:     ['No recognised consent basis means the contact can only be called, not emailed.', 'Record legitimate interest, existing customer or opted in for each contact.'],
+  optout:      ['Opted-out contacts are never contacted: that is the law, and the brand.', 'Keep opt-outs in the file so they stay suppressed; they are removed from the list automatically.'],
+};
+const CHECK_SHORT = { columns:'Columns', required:'Required', emailFormat:'Email format', verified:'Verified', liFormat:'LinkedIn', channel:'Reachable', dupes:'Duplicates', formats:'Values', consent:'Consent', optout:'Opt-outs' };
+const dqScore = (issues, rows) => { const bad = new Set(issues.filter(i=>i.severity!=='info' && typeof i.row==='number').map(i=>i.row)); return rows ? Math.max(0, Math.round((rows - bad.size) / rows * 100)) : 0; };
+let DQ = null;   // the file the pane is showing: { fileName, issues, rows, by, at, live }
+function dqCard(ctx){
+  const by = {}; ctx.issues.forEach(i=>{ (by[checkOf(i)] = by[checkOf(i)] || []).push(i); });
+  const sc = dqScore(ctx.issues, ctx.rows), tone = sc>=90?'var(--pos)':sc>=70?'var(--warn)':'var(--neg)';
+  return `<div class="dq"><div class="dq-s"><div class="dq-v" style="color:${tone}">${sc}%</div><div class="dq-l">of rows clean</div><div class="dq-m">${ctx.issues.length} finding${ctx.issues.length===1?'':'s'}${ctx.by?` · uploaded by ${esc(ctx.by)}`:''}</div></div>
+    <div class="dq-g">${CHECKS.map(([k,name])=>{ const is = by[k]||[], sev = is.some(i=>i.severity==='stop')?'stop':is.some(i=>i.severity==='flag')?'warn':is.length?'info':'ok';
+      return `<button class="dq-c dq-${sev}" onclick="openCheckPane('${k}')" title="Open the details"><span class="dq-i">${sev==='ok'?'✓':'!'}</span><span class="dq-n">${esc(name)}</span><span class="dq-k">${is.length?is.length:'Passed'}</span></button>`; }).join('')}</div></div>`;
+}
+function openCheckPane(k, ctx){
+  if(ctx) DQ = ctx;
+  if(!DQ) return;
+  const all = DQ.issues.filter(i=>checkOf(i)===k), [, name, what] = CHECKS.find(c=>c[0]===k), [why, tip] = CHECK_HELP[k] || ['',''];
+  const sevTag = s => s==='stop' ? '<span class="tag tag-red">Stops the row</span>' : s==='flag' ? '<span class="tag tag-amber">Flagged</span>' : '<span class="tag tag-grey">For information</span>';
+  document.getElementById('detTitle').textContent = name;
+  document.getElementById('detSub').textContent = `${DQ.fileName} · ${all.length ? `${all.length} found` : 'passed'}`;
+  document.getElementById('detBody').innerHTML = `
+    <div class="dqp-nav">${CHECKS.map(([kk,nm])=>{ const n = DQ.issues.filter(i=>checkOf(i)===kk).length; return `<button class="${kk===k?'on':''}" onclick="openCheckPane('${kk}')" title="${esc(nm)}">${esc(CHECK_SHORT[kk]||nm)}${n?` <b>${n}</b>`:''}</button>`; }).join('')}</div>
+    <div class="dqp-b"><div class="dqp-k">What it checks</div><div>${esc(what)}</div></div>
+    <div class="dqp-b"><div class="dqp-k">Why it matters</div><div>${esc(why)}</div></div>
+    <div class="dqp-b dqp-tip"><div class="dqp-k">For the next upload</div><div>${esc(tip)}</div></div>
+    <div class="dqp-k" style="margin:14px 0 6px;display:flex;justify-content:space-between;align-items:center">${all.length ? `Found in this file · ${all.length}` : 'Nothing found in this file'}
+      ${all.length ? `<button class="btn btn-ghost btn-sm" onclick="dqDownload('${k}')">↓ CSV</button>` : ''}</div>
+    ${all.map(i=>`<div class="dqp-i"><div class="dqp-ih"><b>${i.row==='—'?'Whole file':'Row '+i.row}</b><span class="dqp-f">${esc(i.field||'')}</span>${sevTag(i.severity)}</div>
+      <div class="dqp-t">${esc(i.issue)}</div><div class="dqp-o">What happens: ${esc(i.outcome||'')}</div>${i.fix?`<div class="dqp-o">How to fix: ${esc(i.fix)}</div>`:''}
+      ${DQ.live && typeof i.row==='number' && typeof openEdit==='function' ? `<button class="btn btn-sec btn-sm" style="margin-top:6px" onclick="openEdit(${i.row})">Edit row ${i.row}</button>` : ''}</div>`).join('')
+      || '<div class="dqp-ok">✓ Every row passed this check.</div>'}`;
+  const dr = document.getElementById('detailDrawer'); dr.style.width = '480px'; dr.classList.add('open');
+}
+function dqDownload(k){
+  const is = DQ.issues.filter(i=>checkOf(i)===k);
+  download(`${DQ.fileName.replace(/\.[^.]+$/,'')}-${k}-issues.csv`, DemandAI.toCSV([['Row','Field','Issue','What happens','How to fix','Severity']].concat(is.map(i=>[i.row, i.field||'', i.issue, i.outcome||'', i.fix||'', i.severity]))));
+}
+const liveDQ = () => ({ fileName: RUN.fileName, issues: RUN.result.issues, rows: RUN.result.stats.rowsRead, by: ROLE_PERSON[getRole()] || '', at: Date.now(), live: true });
+function openListFirstCheck(){ const ctx = liveDQ(); openCheckPane(CHECKS.map(c=>c[0]).find(k=>ctx.issues.some(i=>checkOf(i)===k)) || 'columns', ctx); }
+function openListQuality(id){
+  const l = DemandAI.getList(id); if(!l) return;
+  if(!l.issues){ showToast('This list was saved before data quality was kept with it'); return; }
+  const ctx = { fileName: l.sourceFile, issues: l.issues, rows: l.rowsRead || (l.stats && l.stats.rowsRead) || 0, by: l.uploadedBy, at: l.createdAt, live: false };
+  DQ = ctx;
+  const first = CHECKS.map(c=>c[0]).find(k=>l.issues.some(i=>checkOf(i)===k)) || 'columns';
+  openCheckPane(first, ctx);
+}
+
 /* ═══════════════ RESULTS ═══════════════ */
 function renderRun(){
   const r = RUN.result, s = r.stats;
@@ -747,12 +834,13 @@ function renderRun(){
     <div class="canvas">
       <div class="stats">
         ${[['Rows read','sv1',s.rowsRead,`${s.notLoaded} not loaded · ${s.merged} merged duplicate${s.merged===1?'':'s'}`,"view='list';filt='all'",'Show every contact'],
-           ['Issues','sv3',s.issues,`${s.issuesBySeverity.stop} stop · ${s.issuesBySeverity.flag} flagged · ${s.issuesBySeverity.info} info`,'openChecks()','Open the checks and the issues they found'],
+           ['Issues','sv3',s.issues,`${s.issuesBySeverity.stop} stop · ${s.issuesBySeverity.flag} flagged · ${s.issuesBySeverity.info} info`,'openListFirstCheck()','Open the checks and what they found'],
            ['Accounts','sv2',s.accounts,`${s.accountsPass} pass the knock-outs`,"view='accounts';filt='pass'",'Show the accounts that pass'],
            ['Excluded','sv5',s.accounts-s.accountsPass,'knock-out rule, logged',"view='accounts';filt='excluded'",'Show the excluded accounts and why'],
            ['In the final list','sv4',s.inFinalList,`of ${s.contacts} contacts`,"view='list';filt='in'",'Show the contacts in the final list']]
-          .map(([l,c,v,sub,go,tip])=>`<a class="stat stat-link" href="#" title="${tip}" onclick="${go.replace(/"/g,'&quot;')};${go==='openChecks()'?'':'q=\'\';renderRun();'}return false"><div class="stat-lbl">${l}</div><div class="stat-val ${c}">${v}</div><div class="stat-sub">${sub}</div></a>`).join('')}
+          .map(([l,c,v,sub,go,tip])=>`<a class="stat stat-link" href="#" title="${tip}" onclick="${go.replace(/"/g,'&quot;')};${go==='openListFirstCheck()'?'':'q=\'\';renderRun();'}return false"><div class="stat-lbl">${l}</div><div class="stat-val ${c}">${v}</div><div class="stat-sub">${sub}</div></a>`).join('')}
       </div>
+      ${dqCard(DQ = liveDQ())}
       ${view==='list'?renderListTab():view==='corrections'?correctionsTable(loadCorrections().filter(x=>x.file===RUN.fileName)):renderAccountsTab()}
     </div>`;
   if(view==='list') drawListRows(); else if(view==='accounts') drawAccRows();
@@ -946,7 +1034,8 @@ function saveList(go){
   const r = selectionList();
   const prev = !RUN.selOnly && RUN.savedId && DemandAI.getList(RUN.savedId);
   const list = prev ? Object.assign(prev, {name}) : { id:'list-'+Date.now().toString(36), name, createdAt:Date.now(), sourceFile:RUN.fileName, sheet:RUN.sheet,
-    sandbox:RUN.sandbox, stats:r.stats, accounts:r.accounts, contacts:r.contacts };
+    sandbox:RUN.sandbox, stats:r.stats, accounts:r.accounts, contacts:r.contacts,
+    issues:RUN.result.issues, rowsRead:RUN.result.stats.rowsRead, uploadedBy:ROLE_PERSON[getRole()]||'' };   // data quality stays with the list
   if(!DemandAI.saveList(list)){ showToast("This browser blocks storage, so the list can't be saved. Allow site data and try again"); return; }
   if(!RUN.selOnly) RUN.savedId = list.id;
   // Corrections made before saving belong to this list from now on.
