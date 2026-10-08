@@ -848,6 +848,7 @@ function renderResults(){
       ${view==='grid'?gridTab():listTab()}
     </div>`;
   if(view==='list') drawList();
+  if(typeof Copilot!=='undefined') document.getElementById('mainArea').insertAdjacentHTML('beforeend', Copilot.dock({ placeholder:'Ask Copilot about your micro-segments and accounts…', hints:['Summarise my micro-segments','Group what is waiting by reason','Show the runner-ups'] }));
 }
 /* 5.2 Segment grid: micro-segments against verticals, with counts and share at tier A. 5.3 Drill-down from a cell. */
 function gridTab(){

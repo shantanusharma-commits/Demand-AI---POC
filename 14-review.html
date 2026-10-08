@@ -569,6 +569,86 @@ tr.held td{opacity:.6;}
 .cp-tl{display:flex;flex-direction:column;}
 .cp-tl-i{display:flex;gap:10px;padding:6px 0;position:relative;}
 .cp-dot{width:8px;height:8px;border-radius:50%;background:var(--brand-mid);margin-top:5px;flex-shrink:0;box-shadow:0 0 0 3px var(--brand-lt);}
+/* ─── Purpose, grouping, row actions ─── */
+.purpose{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:18px;align-items:start;margin-bottom:14px;padding:14px 18px;background:var(--surf);border:1px solid var(--border);border-radius:var(--rmd);}
+.pp-t{font-family:var(--fd);font-size:15px;font-weight:700;color:var(--i1);margin-bottom:4px;}
+.pp-d{font-size:12.5px;color:var(--i2);line-height:1.55;}
+.pp-k{font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--i3);margin-bottom:6px;}
+.pp-a{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--i2);padding:3px 0;}
+.pp-a b{color:var(--i1);min-width:100px;}
+.pp-i{width:22px;height:22px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;}
+.pp-i.ok{background:var(--pos-lt);color:var(--pos);} .pp-i.no{background:var(--neg-lt);color:var(--neg);} .pp-i.own{background:var(--brand-lt);color:var(--brand-dk);}
+.pp-tip{font-size:11px;color:var(--i3);margin-top:6px;}
+.grp-tg{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--i2);cursor:pointer;white-space:nowrap;}
+.grp-tg input{accent-color:var(--brand);}
+tr.grp td{background:var(--s50) !important;padding:10px 16px !important;border-bottom:1px solid var(--border);}
+.grp-in{display:flex;align-items:center;gap:10px;}
+.grp-n{font-size:12px;font-weight:700;color:var(--i1);}
+.grp-d{flex:1;font-size:12px;color:var(--i3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.dt td:last-child{overflow:visible;}
+.row-acts{display:inline-flex;gap:4px;margin-right:6px;opacity:0;transition:opacity var(--fast);}
+tr:hover .row-acts,tr:focus-within .row-acts{opacity:1;}
+.ra{width:30px;height:30px;border-radius:8px;border:1px solid var(--border);background:var(--surf);font-size:13px;font-weight:700;cursor:pointer;}
+.ra.ok{color:var(--pos);} .ra.ok:hover{background:var(--pos);color:#fff;border-color:var(--pos);}
+.ra.no{color:var(--neg);} .ra.no:hover{background:var(--neg);color:#fff;border-color:var(--neg);}
+.ra.own{color:var(--brand-dk);} .ra.own:hover{background:var(--brand);color:#fff;border-color:var(--brand);}
+/* ─── Workspace v3 ─── */
+.ws-scroll{flex:1;min-height:0;overflow-y:auto;}
+.ws-scroll .ws-grid{flex:none;display:grid;grid-template-columns:minmax(0,1.55fr) minmax(300px,1fr);align-items:start;}
+.ws-scroll .ws-col{overflow:visible;}
+.ws-sec-h{font-size:11px;font-weight:600;color:var(--i2);letter-spacing:.04em;text-transform:uppercase;margin:2px 0 -4px;}
+.opts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;}
+.opt{background:var(--surf);border:1.5px solid var(--border);border-radius:var(--rmd);padding:11px 12px;display:flex;flex-direction:column;gap:4px;min-width:0;}
+.opt.pickable{cursor:pointer;} .opt.pickable:hover{border-color:var(--brand-mid);box-shadow:var(--sh);}
+.opt.on{border-color:var(--brand);background:var(--brand-lt);}
+.opt-h{display:flex;justify-content:space-between;align-items:center;font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--i3);}
+.opt.on .opt-h{color:var(--brand-dk);}
+.opt-ck{color:var(--brand-dk);letter-spacing:0;text-transform:none;font-size:11.5px;}
+.opt-use{color:var(--brand);letter-spacing:0;text-transform:none;font-size:11.5px;}
+.opt-a{font-size:13.5px;font-weight:700;color:var(--i1);line-height:1.35;}
+.opt-w{font-size:11.5px;color:var(--i2);line-height:1.45;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
+.opt-m{display:flex;gap:4px;flex-wrap:wrap;align-items:center;margin-top:4px;font-size:11px;color:var(--i3);}
+.opt-m span:first-child{margin-right:2px;}
+.opt-own{border-style:dashed;}
+.opt-none{background:var(--s50);}
+.ws-person{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px;border:1px solid var(--border);border-radius:var(--rmd);margin-bottom:12px;}
+.wp-av{width:40px;height:40px;font-size:13px;border-radius:10px;}
+.wp-name{font-family:var(--fd);font-size:14px;font-weight:700;color:var(--i1);}
+.wp-title{font-size:12px;color:var(--i2);margin-top:1px;}
+.wp-chips{display:flex;gap:5px;flex-wrap:wrap;margin-top:6px;}
+.wp-reach{text-align:right;}
+.wp-row{display:flex;gap:6px;align-items:center;justify-content:flex-end;flex-wrap:wrap;}
+.wp-mail{font-size:12.5px;color:var(--i1);}
+.ws-facts{padding:0;overflow:hidden;}
+.ws-facts .cp-card{border:none;box-shadow:none;}
+.ws-dock{background:var(--surf);border-top:1px solid var(--border);padding:10px 20px 12px;box-shadow:0 -4px 14px rgba(20,26,33,.05);}
+.ws-dock-row{display:flex;gap:12px;align-items:center;}
+.ws-dock .cp-bar{flex:1;max-width:none;margin:0;}
+.ws-dec{display:flex;gap:8px;align-items:center;flex-shrink:0;}
+.ws-dec .btn{height:40px;padding:0 16px;}
+.ws-dec kbd{font-family:var(--fm);font-size:10px;padding:1px 5px;border-radius:4px;background:rgba(255,255,255,.25);border:1px solid rgba(0,0,0,.08);margin-left:4px;}
+.ws-dec .btn-sec kbd{background:var(--s75);}
+.ws-dock .cp-sheet{left:20px;right:20px;max-width:none;}
+.ws-dock #wsCpStack{display:flex;flex-direction:column;gap:10px;}
+.ws-dock .ws-cp-qs{display:flex;flex-wrap:wrap;gap:6px;padding:8px 14px 10px;border-top:1px solid var(--s75);}
+/* ─── Teach the system pop-up ─── */
+.teach-pop{position:fixed;right:24px;bottom:96px;width:380px;max-width:calc(100vw - 32px);background:var(--surf);border:1px solid var(--brand-mid);border-radius:14px;box-shadow:var(--sh-lg);z-index:700;animation:fadeUp .2s var(--ease);overflow:hidden;}
+.tp-h{display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--brand-lt);font-size:12.5px;font-weight:700;color:var(--brand-dk);}
+.tp-sub{flex:1;font-weight:400;color:var(--i2);font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tp-h button{border:none;background:none;cursor:pointer;color:var(--i2);}
+.tp-l{font-size:11.5px;font-weight:600;color:var(--i2);padding:10px 12px 6px;}
+.tp-tags{display:flex;flex-wrap:wrap;gap:6px;padding:0 12px;}
+.tp-tag{height:26px;padding:0 10px;border-radius:999px;border:1px solid var(--border);background:var(--surf);font-size:11.5px;color:var(--i2);cursor:pointer;}
+.tp-tag.on{background:var(--pos-lt);border-color:var(--pos);color:var(--pos);font-weight:600;}
+.teach-pop input{display:block;width:calc(100% - 24px);margin:10px 12px 0;padding:8px 10px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:12.5px;outline:none;}
+.tp-soon{display:flex;gap:6px;flex-wrap:wrap;padding:8px 12px 0;}
+.tp-soon .soon{height:24px;font-size:11px;white-space:nowrap;}
+.tp-f{display:flex;align-items:center;gap:6px;padding:10px 12px;}
+.tp-bar{flex:1;height:3px;background:var(--s75);border-radius:2px;overflow:hidden;}
+.tp-bar i{display:block;height:100%;background:var(--brand-mid);animation:tpbar 12s linear forwards;}
+.teach-pop.held .tp-bar i{animation-play-state:paused;}
+@keyframes tpbar{from{width:100%}to{width:0}}
+@media (max-width:1100px){ .opts{grid-template-columns:1fr;} .ws-scroll .ws-grid{grid-template-columns:1fr;} .ws-dock-row{flex-wrap:wrap;} .purpose{grid-template-columns:1fr;} }
 </style>
 </head>
 <body>
@@ -845,8 +925,6 @@ function render(){
     <div class="topbar">
       <div class="topbar-l"><span class="tb-title">For Review</span><span class="tb-badge badge-neutral">${mgr?'Everyone\'s items':'Your items · '+esc(repName(myEmail()))}</span></div>
       <div class="topbar-r">
-        ${Copilot.button()}
-        ${queue.length?`<button class="btn btn-primary btn-sm" onclick="nextItem()">Start reviewing →</button>`:''}
         <div style="position:relative">
           <button class="btn btn-sec btn-sm" onclick="event.stopPropagation();toggleExport()">Export <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg></button>
           <div id="exportMenu" style="display:none;position:absolute;right:0;top:34px;width:270px;background:var(--surf);border:1px solid var(--border);border-radius:var(--rmd);box-shadow:var(--sh-lg);padding:6px;z-index:250">
@@ -861,10 +939,17 @@ function render(){
     </div>
     <div class="ftabs">${mgr?ft('approvals','Approvals',approvals.length):''}${ft('queue',mgr?'Queue':'My queue',queue.length)}${ft('log','Decision log',logs.length)}</div>
     <div class="canvas">
-      ${all.length ? `<div class="tab-why">${view==='approvals'
-          ? '<b>Approvals</b> are messages with sensitive content: a plant incident, security or regulation. They come here straight from the system and nothing goes out until you approve it. You can edit, approve, send back to the rep or reject.'
-          : view==='log' ? '<b>Decision log</b>: who decided what, when and why.'
-          : `<b>${mgr?'The queue':'Your queue'}</b> is what the system couldn't decide on its own: exceptions, this week's spot-checks and alternatives. The owner accepts, changes or rejects each one.${mgr?' Sensitive content skips the queue and goes to Approvals.':''} <b>${auto}</b> passed every check and went ahead on its own.`}</div>` :
+      ${all.length ? (view==='log' ? `<div class="tab-why"><b>Decision log</b>: who decided what, when and why.</div>` : `<div class="purpose">
+          <div class="pp-main"><div class="pp-t">${view==='approvals' ? 'Approvals: sensitive messages wait for you' : 'For Review: what the system could not decide'}</div>
+            <div class="pp-d">${view==='approvals'
+              ? 'These messages mention a plant incident, security or regulation, so nothing goes out until the sales manager approves it. They come here straight from the system.'
+              : `The system sends most outreach on its own (<b>${auto}</b> went ahead without anyone). These ${queue.length} need a person because something is missing or risky. Each row says why.`}</div></div>
+          <div class="pp-acts"><div class="pp-k">For each one</div>
+            <div class="pp-a"><span class="pp-i ok">✓</span><b>Approve</b><span>it goes out as it is, or as you edited it</span></div>
+            <div class="pp-a"><span class="pp-i no">✕</span><b>Reject</b><span>pick a reason; it decides what comes back</span></div>
+            <div class="pp-a"><span class="pp-i own">✎</span><b>${view==='approvals'?'Send back':'Write your own'}</b><span>${view==='approvals'?'to the rep, with what to change':'your own action or message'}</span></div>
+            <div class="pp-tip">Hover a row to decide from the list, or open one to see everything; it moves to the next when you decide. Keys: A approve · R reject · W write your own · ← →</div></div>
+        </div>`) :
         `<div style="font-size:12.5px;color:var(--i2);margin-bottom:12px">Nothing yet. Items arrive here when you build micro-segments. <a href="12-nba.html" style="color:var(--brand);font-weight:600;text-decoration:none">Go to Micro-segments &amp; NBA →</a></div>`}
       ${all.length ? `<div class="stats" style="grid-template-columns:repeat(5,1fr);margin-bottom:14px">
         ${tile('G2 · first pass', m.weighted===null?'—':Math.round(m.weighted)+'%', `weighted by path${m.partial&&m.weighted!==null?' · one path so far':''}`, "location.href='13-analytics.html?tab=gates'", 'Open the success gates in Analytics')}
@@ -874,11 +959,13 @@ function render(){
         ${tile('Flagged', m.flagged, `fast or repetitive, to check · ${m.interventions} intervention${m.interventions===1?'':'s'}`, "LOGF='flagged';view='log';render()", 'Show the flagged decisions in the log', m.flagged?'var(--warn)':'')}
       </div>` : ''}
       <div class="score-list">
-        <div class="sl-toolbar">${search(view==='log'?'drawLog':'draw', view==='log'?'Search the log…':'Search prospects, companies or actions…')}${view!=='log'?'<div id="filtSum" style="display:flex;align-items:center;gap:6px;flex:1;flex-wrap:wrap"></div><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();colsMenu(this)" title="Choose the columns">⚙ Columns</button>':LOGF?`<span class="seg-pill active" onclick="LOGF=null;render()">Flagged, to check ✕</span>`:''}</div>
+        <div class="sl-toolbar">${search(view==='log'?'drawLog':'draw', view==='log'?'Search the log…':'Search prospects, companies or actions…')}${view!=='log'?'<div id="filtSum" style="display:flex;align-items:center;gap:6px;flex:1;flex-wrap:wrap"></div><label class="grp-tg"><input type="checkbox" '+(GROUP?'checked':'')+' onchange="GROUP=this.checked;draw()"> Group by reason</label><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();colsMenu(this)" title="Choose the columns">⚙ Columns</button>':LOGF?`<span class="seg-pill active" onclick="LOGF=null;render()">Flagged, to check ✕</span>`:''}</div>
         <div id="rows"></div>
       </div>
       ${MISSING.length?`<div style="font-size:11px;color:var(--i3);margin-top:10px">Not shown: ${esc(MISSING.join(', '))} (the prospect list behind it was deleted).</div>`:''}
     </div>`;
+  document.getElementById('mainArea').insertAdjacentHTML('beforeend', Copilot.dock({ placeholder: view==='approvals' ? 'Ask Copilot about the approvals…' : 'Ask Copilot about your queue, e.g. group it by the most common reason…',
+    hints: ['Group my queue by the most common reason', 'Show the runner-ups', 'What should I do first?'] }));
   if(view==='log') drawLog(); else draw();
 }
 /* ═══════════════ THE QUEUE: lead with why the system needs you, then the action ═══════════════
@@ -942,16 +1029,26 @@ function draw(){
   const chOpts = [...new Set(src.map(it=>withRun(it, ()=>draftOf(it.r).channel)))].map(c=>[c,c]);
   const repOpts = Object.keys(REPS).map(e=>[e, repName(e)]);
   const show = { channel:on.channel, seg:on.seg, due:on.due && view!=='released', owner:on.owner && mgr, list:on.list };
-  const cols = [['Prospect','19%'], [view==='queue' ? colFilter('Why it needs you','why',whyOpts) : view==='approvals' ? 'Why it needs you' : 'Released','31%'], ['Recommended action','21%']];
+  const cols = [['Prospect','18%'], [view==='queue' ? colFilter('Why it needs you','why',whyOpts) : view==='approvals' ? 'Why it needs you' : 'Released','28%'], ['Recommended action','18%']];
   if(show.channel) cols.push([base ? colFilter('Channel','ch',chOpts) : 'Channel','8%']);
   if(show.seg) cols.push(['Micro-segment','11%']);
-  if(show.due) cols.push([view==='queue' ? colFilter('Due','due',DUE_OPTS) : 'Due','14%']);
-  if(show.owner) cols.push([base ? colFilter('Owner','rep',repOpts) : 'Owner','11%']);
+  if(show.due) cols.push([view==='queue' ? colFilter('Due','due',DUE_OPTS) : 'Due','11%']);
+  if(show.owner) cols.push([base ? colFilter('Owner','rep',repOpts) : 'Owner','10%']);
   if(show.list) cols.push(['List','12%']);
-  cols.push(['','12%']);
+  cols.push(['','17%']);
   const sum = document.getElementById('filtSum'); if(sum) sum.innerHTML = base ? filterSummary(base.length, its.length) : '';
   ROWS_AT = Date.now();
-  el.innerHTML = table(cols, its.map(it=>withRun(it, ()=>{
+  // Group by reason: the most common first, so similar items are decided one after another.
+  if(GROUP && view==='queue' && its.length){
+    const cnt = {}; its.forEach(it=>{ const c = catsOfIt(it)[0]; cnt[c] = (cnt[c]||0)+1; });
+    its = its.slice().sort((a,b)=>(cnt[catsOfIt(b)[0]]-cnt[catsOfIt(a)[0]]) || String(catsOfIt(a)[0]).localeCompare(catsOfIt(b)[0]) || (onHold(decOf(a))-onHold(decOf(b))));
+    WS_LIST = its.map(it=>it.id);
+  }
+  let lastCat = null;
+  const grpRow = it => { if(!(GROUP && view==='queue')) return ''; const c = catsOfIt(it)[0]; if(c===lastCat) return ''; lastCat = c;
+    const n = its.filter(x=>catsOfIt(x)[0]===c).length;
+    return `<tr class="grp"><td colspan="${cols.length}"><div class="grp-in"><span class="tag ${toneTag(CAT_TONE[c])}">${esc(REASON_CATS[c]||c)}</span><span class="grp-n">${n} item${n===1?'':'s'}</span><span class="grp-d">${esc(GROUP_WHY[c]||'')}</span>${n>1?`<button class="btn btn-sec btn-sm" onclick="reviewGroup('${c}')">Review these ${n} →</button>`:''}</div></td></tr>`; };
+  el.innerHTML = table(cols, its.map(it=>grpRow(it) + withRun(it, ()=>{
       const r = it.r, d = dec(r.key), lr = liveRec(r), x = draftOf(r), s = stuck(r, d), tone = CAT_TONE[s.cat];
       const why = view==='released' ? `<span class="tag tag-green">${d.released==='auto'?'On its own':d.released==='approved'?'Approved':'Accepted'}</span>${d.outcome?`<span class="sub">${esc(d.outcome)}</span>`:''}`
         : `<div class="why"><div class="why-t"><span class="tag ${view==='approvals'?'tag-red':toneTag(tone)}" ${view==='queue'?`style="cursor:pointer" title="Show only these" onclick='event.stopPropagation();setFilt(${JSON.stringify(d.spot==='pending'?{kind:'spot',reason:null}:{reason:s.cat,kind:null})})'`:''}>${esc(view==='approvals'?'Sensitive content':s.label)}</span>${s.also.length?`<span class="why-more" title="${esc(s.also.join(', '))}">+${s.also.length}</span>`:''}${onHold(d)?'<span class="tag tag-grey">On hold</span>':''}</div>
@@ -962,11 +1059,11 @@ function draw(){
         <td class="wrap"><span class="clamp2 act" title="${esc(chosenAction(r))}">${esc(chosenAction(r))}</span></td>
         ${show.channel ? `<td><span style="cursor:pointer" title="Show only ${esc(x.channel)}" onclick='event.stopPropagation();setFilt(${JSON.stringify({ch:x.channel})})'>${cell(x.channel)}</span></td>` : ''}
         ${show.seg ? `<td>${segTag(segOf(r))}</td>` : ''}
-        ${show.due ? (()=>{ const t = dueOf(r, d), b = dueBucket(t); return `<td><span style="${view==='queue'?'cursor:pointer;':''}font-size:12.5px;font-weight:600;color:${b==='overdue'||b==='today'?'var(--neg)':b==='tomorrow'?'var(--warn)':'var(--i2)'}" ${view==='queue'?`title="Show only these" onclick='event.stopPropagation();setFilt(${JSON.stringify({due: b==='2days'?'soon':b})})'`:''}>${esc(dueLabel(t).replace(/^By /,''))}</span>${b==='overdue'?'<span class="sub" style="color:var(--neg)">Overdue</span>':''}</td>`; })() : ''}
+        ${show.due ? (()=>{ const t = dueOf(r, d), b = dueBucket(t); return `<td><span style="${view==='queue'?'cursor:pointer;':''}font-size:12.5px;font-weight:600;color:${b==='overdue'||b==='today'?'var(--neg)':b==='tomorrow'?'var(--warn)':'var(--i2)'}" ${view==='queue'?`title="Show only these" onclick='event.stopPropagation();setFilt(${JSON.stringify({due: b==='2days'?'soon':b})})'`:''}>${esc(dueLabel(t).replace(/^By /,'').replace(/ tomorrow$/,', tomorrow').replace(/ today$/,', today'))}</span>${b==='overdue'?'<span class="sub" style="color:var(--neg)">Overdue</span>':''}</td>`; })() : ''}
         ${show.owner ? `<td><span style="cursor:pointer" title="Show only ${esc(repName(ownerOf(r)))}" onclick='event.stopPropagation();setFilt(${JSON.stringify({rep:ownerOf(r)||null})})'>${cell(repName(ownerOf(r)))}</span></td>` : ''}
         ${show.list ? `<td>${cell(it.run.saved.name)}</td>` : ''}
-        <td style="text-align:right">${view==='released' ? `<button class="btn btn-sec btn-sm" onclick="event.stopPropagation();openItem('${it.id}')">Open</button>`
-          : `<button class="btn btn-decide btn-sm" onclick="event.stopPropagation();openItem('${it.id}')">${view==='approvals'?'Review':'Decide'} →</button>`}</td>
+        <td style="text-align:right;white-space:nowrap">${view==='released' ? `<button class="btn btn-sec btn-sm" onclick="event.stopPropagation();openItem('${it.id}')">Open</button>`
+          : `<span class="row-acts">${(view==='approvals' ? isManager() : mine(r) && !s.missing && (r.segment || d.spot==='pending')) ? `<button class="ra ok" title="Approve as it is" onclick="event.stopPropagation();rowApprove('${it.id}')">✓</button>` : ''}${view==='approvals' ? (isManager() ? `<button class="ra no" title="Reject" onclick="event.stopPropagation();openItem('${it.id}');openReject(WS.key)">✕</button>` : '') : mine(r) ? `<button class="ra no" title="Reject: pick a reason" onclick="event.stopPropagation();rowReject('${it.id}',this)">✕</button><button class="ra own" title="Write your own" onclick="event.stopPropagation();rowOwn('${it.id}')">✎</button>` : ''}</span><button class="btn btn-decide btn-sm" onclick="event.stopPropagation();openItem('${it.id}')">${view==='approvals'?'Review':'Open'} →</button>`}</td>
       </tr>`;})).join(''),
     view==='queue' ? 'Nothing needs you right now.' : view==='approvals' ? 'No sensitive items waiting for approval.' : 'Nothing released yet.');
 }
@@ -1022,39 +1119,40 @@ function renderWs(){
   const mode = wsMode(d), live = mode==='decide' && mine(r) && !pausedInfo(r), canEdit = live || (mode==='approve' && isManager());
   WS.mode = mode; WS.decided = false;
   const i = WS_LIST.indexOf(WS.id), n = WS_LIST.length;
-  const seg = segOf(r), segN = seg ? segAccounts(seg) : 0;
-  const { chk, conf } = checksOf(r), tr = seg ? trackRecord(seg) : trackRecord();
-  const sig = r.signal || {}, sigs = (r.person && r.person.signals) || [];
+  const seg = segOf(r), segN = seg ? segAccounts(seg) : 0, tr = seg ? trackRecord(seg) : trackRecord();
   const fromLbl = { queue: isManager() ? 'Queue' : 'My queue', approvals: 'Approvals', released: 'Released', log: 'Decision log' }[WS.from] || 'Queue';
+  const noReach = s.missing==='A way to reach the contact';
 
-  // L1 · Why it needs you
-  const hero = mode==='approve'
-    ? `<div class="ws-hero t-brand"><div class="ws-hero-tags"><span class="tag tag-violet">Approval</span><span class="tag tag-red">Sensitive content</span></div>
-        <div class="ws-hero-line">${esc(s.line)}</div>
-        <div class="ws-hero-call">Your call: approve it so it can go out, edit it first, send it back to ${esc(repName(ownerOf(r)).split(' ')[0])} with what to change, or reject it.</div>
-        <div class="ws-impact">${d.acceptedBy ? `${esc(d.acceptedBy)} accepted it and it came to you for approval.` : 'Sensitive content comes straight here from the system; it never waits in a rep\'s queue.'}${s.also.length ? ` It also has: ${esc(s.also.join(', ').toLowerCase())}.` : ''}</div></div>`
-    : mode==='view'
+  // 1 · Why it needs you
+  const due = (()=>{ const t = dueOf(r, d), b = dueBucket(t); return `<span class="tag ${b==='overdue'||b==='today'?'tag-red':b==='tomorrow'?'tag-amber':'tag-grey'}">${esc(dueLabel(t))}</span>`; })();
+  const hero = mode==='view'
     ? `<div class="ws-hero t-pos"><div class="ws-hero-tags">${statusPill(d, r)}</div><div class="ws-hero-line">Nothing to decide: ${esc(statusLabel(d, r)[0].toLowerCase())}${d.by?` by ${esc(d.by)}`:''}.</div></div>`
-    : `<div class="ws-hero t-${tone}">
-        <div class="ws-hero-tags"><span class="tag ${toneTag(tone)}">${esc(s.label)}</span>${s.also.map(a=>`<span class="tag tag-grey">Also: ${esc(a)}</span>`).join('')}
-          ${(()=>{ const t = dueOf(r, d), b = dueBucket(t); return `<span class="tag ${b==='overdue'||b==='today'?'tag-red':b==='tomorrow'?'tag-amber':'tag-grey'}">${esc(dueLabel(t))}</span>`; })()}
-          ${onHold(d)?`<span class="tag tag-grey">On hold: ${esc(d.hold.why)}</span>`:''}</div>
+    : `<div class="ws-hero t-${mode==='approve'?'neg':tone}">
+        <div class="ws-hero-tags">${mode==='approve' ? '<span class="tag tag-violet">Approval</span><span class="tag tag-red">Sensitive content</span>' : `<span class="tag ${toneTag(tone)}">${esc(s.label)}</span>`}${s.also.map(a=>`<span class="tag tag-grey">Also: ${esc(a)}</span>`).join('')}${due}${onHold(d)?`<span class="tag tag-grey">On hold: ${esc(d.hold.why)}</span>`:''}</div>
         <div class="ws-hero-line">${esc(s.line)}</div>
-        <div class="ws-hero-call">Your call: ${esc(s.call)}</div>
-        ${s.missing ? `<div class="ws-missing"><b>Missing:</b> ${esc(s.missing)}. ${s.missing==='A micro-segment' ? `<select id="assignSeg" ${live?'':'disabled'}><option value="">Pick a micro-segment…</option>${segChoices().map(nm=>`<option ${d.assignedSeg===nm?'selected':''}>${esc(nm)}</option>`).join('')}</select> Suggested: <b>${esc(r.prominent||'')}</b>, its strongest signal.` : 'If the data is on its way, put it on hold.'}</div>` : ''}
-        <div class="ws-impact">${seg ? `<b>${segN}</b> account${segN===1?'':'s'} in <b>${esc(seg)}</b> get this same recommended action. Your decision goes into its track record${tr.n?` (reps agreed ${tr.a} of ${tr.n} times so far)`:''}.` : `Only ${esc(r.account.name)}: it has no micro-segment yet.`}</div>
+        <div class="ws-hero-call">${mode==='approve' ? `Your call: approve it, edit it first, send it back to ${esc(repName(ownerOf(r)).split(' ')[0])}, or reject it.` : `Your call: ${esc(s.call)}`}</div>
+        ${s.missing && mode==='decide' ? `<div class="ws-missing"><b>Missing:</b> ${esc(s.missing)}. ${s.missing==='A micro-segment' ? `<select id="assignSeg" ${live?'':'disabled'}><option value="">Pick a micro-segment…</option>${segChoices().map(nm=>`<option ${(d.assignedSeg||r.prominent)===nm?'selected':''}>${esc(nm)}</option>`).join('')}</select> <span class="ws-sub">Suggested: ${esc(r.prominent||'')}, its strongest signal.</span>` : 'If the data is on its way, put it on hold.'}</div>` : ''}
+        <div class="ws-impact">${seg ? `<b>${segN}</b> account${segN===1?'':'s'} in <b>${esc(seg)}</b> get this same action.${tr.n?` Reps agreed with the system ${tr.a} of ${tr.n} times there.`:''}` : `Only ${esc(r.account.name)}: it has no micro-segment yet.`}</div>
       </div>`;
 
-  // L2 · The action, and the message that would go out
-  const runner = r.runnerUp && !d.manual;
-  const actionBlock = `<div class="ws-card">
-      <div class="ws-card-h"><span>The action</span>${runner ? `<button class="btn btn-ghost btn-sm" onclick="wsCompare()">${WS.compare?'Hide the runner-up':'Compare with the runner-up'}</button>` : ''}</div>
-      <div class="ws-action">${d.manual ? '<span class="tag tag-violet">Manual</span> ' : d.useRunner ? '<span class="tag tag-grey">Runner-up</span> ' : '<span class="tag tag-violet">Recommended</span> '}<b>${esc(chosenAction(r))}</b></div>
-      <div class="ws-sub">${esc(d.manual ? 'Added by a reviewer' : d.useRunner ? r.runnerUp.reason : r.reason)}</div>
-      ${WS.compare && runner ? `<div style="margin-top:10px">${compareActions(r, key, live)}</div>` : ''}
-      ${live ? `<details class="ws-manual"><summary>Neither is right? Add your own action</summary><div style="display:flex;gap:6px;margin-top:8px"><input id="manualAct" placeholder="e.g. Invite them to the site visit in May" style="flex:1;min-width:0"><button class="btn btn-sec btn-sm" onclick="saveTeach();addManual('${key}')">Use this action</button></div>
-        <div class="ws-sub" style="margin-top:6px">It replaces the action for this account now. Teaching it for similar accounts is below.</div></details>` : ''}
-    </div>`;
+  // 2 · Pick the action: recommended, runner-up, or your own. All three are in view.
+  const opt = (kind, title, action, why, f, chosen, click) => `<div class="opt ${chosen?'on':''} ${click&&!chosen?'pickable':''}" ${click&&!chosen?`onclick="${click}"`:''}>
+      <div class="opt-h"><span>${title}</span>${chosen ? '<span class="opt-ck">✓ Chosen</span>' : click ? '<span class="opt-use">Use this</span>' : ''}</div>
+      <div class="opt-a">${esc(action)}</div><div class="opt-w">${esc(why)}</div>
+      ${f ? `<div class="opt-m"><span>${esc(f.channel)}</span><span class="tag ${f.conf==='High'?'tag-green':f.conf==='Medium'?'tag-amber':'tag-red'}">${esc(f.conf)} confidence</span>${f.ok?'<span class="tag tag-green">✓ Checks</span>':`<span class="tag tag-red">✗ ${esc(f.flags[0]||'Check')}</span>`}</div>` : ''}</div>`;
+  const A = optionFacts(r, r.action), B = r.runnerUp ? optionFacts(r, r.runnerUp.action) : null;
+  const can = live || (mode==='approve' && isManager());
+  const options = `<div class="ws-sec-h">Pick the action</div><div class="opts">
+      ${opt('rec', 'Recommended', r.action, r.reason, A, !d.manual && !d.useRunner, can ? `wsPick('rec')` : '')}
+      ${r.runnerUp ? opt('run', 'Runner-up', r.runnerUp.action, r.runnerUp.reason, B, !d.manual && d.useRunner, can ? `wsPick('run')` : '') : '<div class="opt opt-none"><div class="opt-h"><span>Runner-up</span></div><div class="opt-w">No runner-up for this one.</div></div>'}
+      <div class="opt opt-own ${d.manual?'on':''} ${can&&!d.manual?'pickable':''}" ${can&&!d.manual&&!WS.own?`onclick="wsOwn()"`:''}>
+        <div class="opt-h"><span>✎ Write my own</span>${d.manual ? '<span class="opt-ck">✓ Chosen</span>' : ''}</div>
+        ${d.manual ? `<div class="opt-a">${esc(d.manual)}</div><div class="opt-w">Your action. The message below was redrafted for it.</div>`
+          : WS.own ? `<input id="manualAct" class="ws-in" placeholder="e.g. Invite them to the site visit in May" onkeydown="if(event.key==='Enter')wsUseOwn()"><div style="display:flex;gap:6px;margin-top:6px"><button class="btn btn-primary btn-sm" onclick="event.stopPropagation();wsUseOwn()">Use my action</button><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();WS.own=false;renderWs()">Cancel</button></div>`
+          : `<div class="opt-w">Neither fits? Write the action you would take. You can also just edit the message below.</div>`}
+      </div></div>`;
+
+  // 3 · Who it goes to, and the exact message
   const ro = canEdit ? '' : 'readonly';
   const fieldsHtml = x.channel==='Email'
     ? `<label class="ws-lbl">Subject</label><input id="dSubj" class="ws-in" value="${esc(x.subject)}" ${ro} oninput="wsLiveCheck()">
@@ -1062,72 +1160,148 @@ function renderWs(){
     : x.channel==='LinkedIn'
     ? `<label class="ws-lbl">Connection note, the only message <span id="wsWords">${x.note.length}/200</span></label><textarea id="dNote" class="ws-in" style="min-height:96px" ${ro} oninput="wsLiveCheck()">${esc(x.note)}</textarea>`
     : `<label class="ws-lbl">Task</label><textarea id="dTask" class="ws-in" ${ro}>${esc(x.task||'')}</textarea>`;
+  const reach = x.channel==='Email'
+    ? (c.email ? `<span class="wp-mail">✉ ${esc(c.email)}</span>${c.emailVerified ? '<span class="tag tag-green">Verified</span>' : '<span class="tag tag-amber">Not verified</span>'}` : '<span class="tag tag-red">No email on file</span>')
+    : x.channel==='LinkedIn' ? '<span class="wp-mail">in LinkedIn connection note</span>' : '<span class="wp-mail">A task for the team</span>';
+  const person = `<div class="ws-person">
+      <div class="co-av wp-av" style="background:${avColor(c.name)}">${initials(c.name)}</div>
+      <div class="wp-who"><div class="wp-name">${esc(c.name)}</div><div class="wp-title">${esc(c.jobTitle||'')}</div>
+        <div class="wp-chips">${c.persona?`<span class="tag tag-violet">${esc(c.persona)} persona</span>`:''}<span class="tag tag-grey">${esc(r.account.name)}</span></div></div>
+      <div class="wp-reach"><div class="wp-row">${reach}</div><div class="ws-sub">${esc(x.channel==='Task' ? 'No message goes out' : x.unreachable ? 'No way to reach them yet' : c.linkedin && x.channel==='Email' ? 'By email · LinkedIn as the fallback' : 'By ' + x.channel)}</div></div>
+    </div>`;
   const msgBlock = `<div class="ws-card ws-msg">
-      <div class="ws-card-h"><span>What would go out</span><span class="ws-sub">${canEdit ? (mode==='approve' ? 'Edit it here. Approving saves your edit.' : 'Edit it here. Accepting saves your edit.') : 'Read only'}</span></div>
-      <div class="ws-to"><div class="co-av" style="background:${avColor(c.name)}">${initials(c.name)}</div>
-        <div style="min-width:0"><div><b>${esc(c.name)}</b> <span class="ws-sub">· ${esc(c.jobTitle||'')}${c.persona?` · ${esc(c.persona)} persona`:''}</span></div>
-          <div class="ws-sub">${esc(r.account.name)} · ${x.channel==='Email' ? (c.email ? `${esc(c.email)} ${c.emailVerified ? '· verified' : '<span style="color:var(--warn)">· not verified</span>'}` : '<span style="color:var(--neg)">no email on file</span>') : x.channel==='LinkedIn' ? 'LinkedIn connection note' : 'A task for the team'}${x.why && !x.unreachable ? ` · ${esc(x.why)}` : ''}</div></div>
-        <span class="tag tag-blue" style="margin-left:auto">${esc(x.channel)}</span></div>
-      ${typeof ContentLink!=='undefined' && (x.channel==='Email'||x.channel==='LinkedIn') ? ContentLink.messageBar(key, d.content, x.channel, live) : ''}
+      <div class="ws-card-h"><span>What goes out</span><span class="ws-sub">${canEdit ? 'Edit it here; your edit is saved when you approve.' : 'Read only'}</span></div>
+      ${person}
+      ${typeof ContentLink!=='undefined' && (x.channel==='Email'||x.channel==='LinkedIn') ? ContentLink.messageBar(key, d.content, x.channel, canEdit) : ''}
       ${fieldsHtml}
       <div class="ws-checks" id="wsChecks"></div>
-      ${x.channel==='Email' ? `<div class="ws-soon-row">${soon('📅 Insert a booking link', 'Picks free slots from the rep\'s calendar and adds a booking link to the message')}${soon('✉ Send from DemandAI', 'Sends from the rep\'s mailbox. In the pilot you copy the message and send it yourself')}${soon('⏱ Schedule', 'Sends at the best time for this contact')}</div>` : x.channel==='LinkedIn' ? `<div class="ws-soon-row">${soon('🔗 Send the connection request', 'Sends through the rep\'s LinkedIn. In the pilot you copy the note')}</div>` : ''}
+      ${x.channel==='Email' ? `<div class="ws-soon-row">${soon('✉ Send from DemandAI', 'Sends from the rep\'s mailbox. In the pilot you copy the message and send it yourself')}${soon('⏱ Schedule', 'Sends at the best time for this contact')}</div>` : x.channel==='LinkedIn' ? `<div class="ws-soon-row">${soon('🔗 Send the connection request', 'Sends through the rep\'s LinkedIn. In the pilot you copy the note')}</div>` : ''}
     </div>`;
+  const facts = `<div class="ws-card ws-facts">${factsCard()}</div>`;
 
-  // Right: Copilot, a chat that opens with the facts behind the recommendation and answers below them
-  if(!WS.chat || WS.chatFor!==WS.id){ WS.chat = [{ who:'ai', kind:'facts' }]; WS.chatFor = WS.id; }
-  const copilot = `<div class="ws-chat">
-      <div class="ws-chat-h"><span><span style="color:var(--brand)">✦</span> Copilot</span><span class="ws-sub">knows this account · answers only</span></div>
-      <div class="ws-chat-body" id="wsCp"><div class="ws-chat-stack" id="wsCpStack">${chatHtml()}</div></div>
-      <div class="ws-chat-foot"><div class="ws-cp-qs" id="wsCpQs">${chipsHtml(r, s)}</div>
-        <form class="ws-cp-f" onsubmit="cpAsk(this.q.value);return false"><input name="q" autocomplete="off" placeholder="Ask about ${esc(r.account.name)}…"><button class="btn btn-primary btn-sm" type="submit" aria-label="Send">↑</button></form></div></div>`;
-
-  // Teach the system: what it got right, what it should do next time (captured now; acting on it comes after the pilot)
-  const teach = live ? `<div class="ws-card ws-teach">
-      <div class="ws-card-h"><span>Teach the system</span><span class="tag tag-grey">Learning loop · after the pilot</span></div>
-      <div class="ws-lbl" style="margin-top:0">What did it get right? <span class="ws-sub">(optional)</span></div>
-      <div class="tags">${ACCEPT_TAGS.map(t=>`<button class="tag ${pickTags.has(t)?'tag-green':'tag-grey'}" style="cursor:pointer;border:none" onclick="wsTag(this,'${esc(t)}')">${esc(t)}</button>`).join('')}</div>
-      <div class="ws-lbl">What should it do differently? <span>Write it in the bar at the bottom; it is saved with your decision.</span></div>
-      <div class="ws-locked"><label><input type="checkbox" disabled> Apply this to the ${Math.max(0,segN-1)} other account${segN-1===1?'':'s'} in ${esc(seg||'its micro-segment')}</label><label><input type="checkbox" disabled> Use it for future recommendations</label><label><input type="checkbox" disabled> Let Autopilot decide cases like this once reps agree often enough</label>
-        <span class="ws-sub">Saved with your decision now. Acting on it on its own comes after the pilot.</span></div>
-    </div>` : '';
-
-  // The decision bar: always visible
+  // 4 · The bottom: ask Copilot, and decide
+  if(!WS.chat || WS.chatFor!==WS.id){ WS.chat = []; WS.chatFor = WS.id; WS.sheet = false; }
   const sensitive = isSensitive(draftOf(r));
-  const bar = mode==='approve' ? (isManager() ? `<input id="sbNote" placeholder="What should change? (needed to send it back)">
-        <button class="btn btn-sec" onclick="sendBack('${key}')">Send back to ${esc(repName(ownerOf(r)).split(' ')[0])}</button>
-        <button class="btn btn-sec" onclick="openReject('${key}')">Reject…</button>
-        <button class="btn btn-primary" onclick="wsApprove('${key}')">Approve and release</button>` : `<span class="ws-sub" style="flex:1">Waiting for the sales manager's approval.</span>`)
-    : mode==='view' ? `<span class="ws-sub" style="flex:1">Nothing to decide on this one.</span><button class="btn btn-sec" onclick="leaveWs()">Back to the list</button>`
-    : !live ? `<span class="ws-sub" style="flex:1">${pausedInfo(r) ? `The ${esc(r.segment||'')} micro-segment is paused; nothing can be decided until it is resumed.` : `In ${esc(repName(ownerOf(r)))}'s queue.`}</span>`
-    : `<div class="ws-teach-in"><span class="ws-teach-k">✦ Teach the system</span><input id="wsTeach" value="${esc(WS.teach||'')}" placeholder="What should it do differently for accounts like this? (optional)"></div>
-       ${onHold(d) ? `<button class="btn btn-ghost" onclick="takeOffHold('${key}')">Take off hold</button>` : `<button class="btn ${s.missing==='A way to reach the contact'?'btn-primary':'btn-ghost'}" onclick="openHold('${key}')">Put on hold</button>`}
-       <button class="btn btn-sec" onclick="openReject('${key}')">Reject…</button>
-       ${runner && !d.useRunner ? `<button class="btn btn-sec" onclick="saveTeach();swapAction('${key}')">Use the runner-up</button>` : ''}
-       ${s.missing==='A way to reach the contact' ? '' : `<button class="btn btn-primary" onclick="wsAccept('${key}')">${d.spot==='pending' ? 'Rate: I would send this' : sensitive && !isManager() ? 'Accept, send for approval' : 'Accept and release'}</button>`}`;
+  const approveLbl = mode==='approve' ? 'Approve' : d.spot==='pending' ? 'Approve' : sensitive && !isManager() ? 'Approve, send to manager' : 'Approve';
+  const buttons = mode==='approve' ? (isManager() ? `<button class="btn btn-sec" onclick="openSendBack('${key}')">Send back</button><button class="btn btn-sec" onclick="openReject('${key}')">Reject <kbd>R</kbd></button><button class="btn btn-primary" onclick="wsApprove('${key}')">${approveLbl} <kbd>A</kbd></button>` : '<span class="ws-sub">Waiting for the sales manager.</span>')
+    : mode==='view' ? `<button class="btn btn-sec" onclick="leaveWs()">Back to the list</button>`
+    : !live ? `<span class="ws-sub">${pausedInfo(r) ? 'Its micro-segment is paused.' : `In ${esc(repName(ownerOf(r)))}'s queue.`}</span>`
+    : `${onHold(d) ? `<button class="btn btn-ghost" onclick="takeOffHold('${key}')">Take off hold</button>` : `<button class="btn ${noReach?'btn-primary':'btn-ghost'}" onclick="openHold('${key}')">Put on hold</button>`}
+       <button class="btn btn-sec" onclick="openReject('${key}')">Reject <kbd>R</kbd></button>
+       ${noReach ? '' : `<button class="btn btn-primary" onclick="wsAccept('${key}')">${approveLbl} <kbd>A</kbd></button>`}`;
+  const dockH = `<div class="cp-dock ws-dock">
+      <div class="cp-sheet" id="wsSheet" style="display:${WS.sheet?'flex':'none'}"><div class="cp-sheet-h">✦ Copilot <span>about ${esc(c.name)} · ${esc(r.account.name)} · answers only</span><button onclick="wsSheet(false)">⌄ Hide</button></div>
+        <div class="cp-sheet-b" id="wsCp"><div id="wsCpStack">${chatHtml()}</div></div>
+        <div class="ws-cp-qs" id="wsCpQs">${chipsHtml(r, s)}</div></div>
+      <div class="ws-dock-row">
+        <form class="cp-bar" onsubmit="cpAsk(document.getElementById('wsQ').value);return false"><span class="cp-spark">✦</span><input id="wsQ" autocomplete="off" placeholder="Ask Copilot about ${esc(r.account.name)}… (press / )" onfocus="wsSheet(true)"><button class="cp-send" type="submit" aria-label="Send">↑</button></form>
+        <div class="ws-dec">${buttons}</div>
+      </div></div>`;
 
   document.getElementById('mainArea').innerHTML = `
     <div class="topbar">
       <div class="topbar-l"><nav class="ws-crumb"><a href="#" onclick="leaveWs();return false">For Review</a><span>›</span><a href="#" onclick="leaveWs();return false">${esc(fromLbl)}</a><span>›</span><b>${esc(c.name)} · ${esc(r.account.name)}</b></nav></div>
       <div class="topbar-r">
-        <span class="ws-sub">${n>1 ? `${i+1} of ${n}` : ''}</span>
+        <span class="ws-sub">${n>1 ? `${i+1} of ${n} · ← → to move` : ''}</span>
         <button class="btn btn-sec btn-sm" ${i<=0?'disabled':''} onclick="wsGo(-1)" title="Previous (←)">‹</button>
         <button class="btn btn-sec btn-sm" ${i>=n-1?'disabled':''} onclick="wsGo(1)" title="Next (→)">›</button>
         <button class="btn btn-ghost btn-sm" onclick="leaveWs()" title="Back to the list (Esc)">✕ Close</button>
       </div>
     </div>
     <div class="ws">
-      ${hero}
-      <div class="ws-grid">
-        <div class="ws-col">${actionBlock}${msgBlock}${teach}</div>
-        <div class="ws-col ws-col-chat">${copilot}</div>
+      <div class="ws-scroll">
+        ${hero}
+        <div class="ws-grid">
+          <div class="ws-col">${mode==='view' ? '' : options}${msgBlock}</div>
+          <div class="ws-col">${facts}</div>
+        </div>
       </div>
-      <div class="ws-bar">${bar}</div>
+      ${dockH}
     </div>`;
   wsLiveCheck();
-  const cpb = document.getElementById('wsCp'); if(cpb) cpb.scrollTop = cpb.scrollHeight;
+  if(WS.sheet){ const b = document.getElementById('wsCp'); if(b) b.scrollTop = b.scrollHeight; }
+  if(WS.own){ const m = document.getElementById('manualAct'); if(m) m.focus(); }
 }
-function wsTag(btn, t){ pickTags.has(t) ? pickTags.delete(t) : pickTags.add(t); btn.className = 'tag ' + (pickTags.has(t) ? 'tag-green' : 'tag-grey'); }
+function wsSheet(on){ WS.sheet = on; const sh = document.getElementById('wsSheet'); if(!sh) return; sh.style.display = on ? 'flex' : 'none';
+  if(on){ const b = document.getElementById('wsCp'); if(!WS.chat.length) document.getElementById('wsCpStack').innerHTML = '<div class="cp-p" style="color:var(--i2)">Ask me anything about this account, or pick a question below.</div>'; b.scrollTop = b.scrollHeight; } }
+function wsPick(which){
+  const it = wsItem(); RUN = it.run; const key = it.r.key, d = dec(key);
+  if(which==='rec' && d.manual){ change(key, 'Back to the recommended action', ()=>setDec(key, {manual:null, useRunner:false, draft:null, edited:false})); persist(); refresh(); return; }
+  if(which==='run' && d.manual){ change(key, 'Switched to the runner-up', ()=>setDec(key, {manual:null, useRunner:true, draft:null, edited:false})); persist(); refresh(); return; }
+  if((which==='run') !== !!d.useRunner) swapAction(key);
+}
+function wsOwn(){ WS.own = true; renderWs(); }
+function wsUseOwn(){ WS.own = false; addManual(wsItem().r.key); }
+
+/* Teach the system: a short card after each decision. Optional, it goes away on its own, and it is
+   logged against the item just decided (the workspace has already moved on). */
+const WRONG_TAGS = ['Wrong action','Wrong person','Wrong channel','Message off','Bad timing'];
+let TEACH = null;
+function teachAfter(it, decision, rejected){
+  if(!it) return;
+  const old = document.getElementById('teachPop'); if(old) old.remove();
+  clearTimeout(window._tp);
+  const r = it.r, who = withRun(it, ()=>liveRec(r).contact.name), seg = withRun(it, ()=>segOf(r));
+  TEACH = { it, tags: new Set(), decision };
+  const el = document.createElement('div'); el.id = 'teachPop'; el.className = 'teach-pop';
+  el.innerHTML = `<div class="tp-h"><span>✦ Teach the system</span><span class="tp-sub">${esc(decision)} · ${esc(who)}</span><button onclick="teachClose()" title="Skip">✕</button></div>
+    <div class="tp-l">${rejected ? 'What was wrong?' : 'What did it get right?'}</div>
+    <div class="tp-tags">${(rejected ? WRONG_TAGS : ACCEPT_TAGS).map(t=>`<button class="tp-tag" onclick="this.classList.toggle('on');TEACH.tags.has('${esc(t)}')?TEACH.tags.delete('${esc(t)}'):TEACH.tags.add('${esc(t)}')">${esc(t)}</button>`).join('')}</div>
+    <input id="tpNote" placeholder="What should it do next time for accounts like this?" onkeydown="if(event.key==='Enter')teachSave()">
+    <div class="tp-soon">${soon('Apply to similar accounts', 'Uses your note on the other accounts' + (seg ? ' in ' + seg : '') + ' like this one')}${soon('Autopilot for these', 'Lets Autopilot decide cases like this once reps agree with the system often enough')}</div>
+    <div class="tp-f"><span class="tp-bar"><i></i></span><button class="btn btn-ghost btn-sm" onclick="teachClose()">Skip</button><button class="btn btn-primary btn-sm" onclick="teachSave()">Save</button></div>`;
+  document.body.appendChild(el);
+  const stop = () => { clearTimeout(window._tp); el.classList.add('held'); };
+  el.addEventListener('mouseenter', stop); el.addEventListener('focusin', stop);
+  window._tp = setTimeout(teachClose, 12000);
+}
+function teachSave(){
+  if(!TEACH) return; const note = (document.getElementById('tpNote')||{}).value || '', tags = [...TEACH.tags];
+  if(note.trim() || tags.length){ const it = TEACH.it; withRun(it, ()=>{ logIt(it.r, 'Taught the system', {note:[tags.join(', '), note.trim()].filter(Boolean).join(' · '), tags}); persist(); }); showToast('Thanks: saved for the learning loop'); }
+  teachClose();
+}
+function teachClose(){ clearTimeout(window._tp); const el = document.getElementById('teachPop'); if(el) el.remove(); TEACH = null; }
+
+/* Send back (approvals): what should change, in a small form. */
+function openSendBack(key){
+  const ov = overlay('sendOverlay');
+  ov.innerHTML = `<div class="ws-modal"><div class="ws-modal-h">Send it back</div><div class="ws-sub" style="margin-bottom:8px">It goes back to ${esc(repName(ownerOf(recOf(key))))}'s queue with your note.</div>
+    <textarea id="sbNote" class="ws-in" style="min-height:70px" placeholder="What should change?"></textarea>
+    <div class="ws-modal-f"><button class="btn btn-ghost" onclick="hide('sendOverlay')">Cancel</button><button class="btn btn-primary" onclick="doSendBack('${key}')">Send back</button></div></div>`;
+  setTimeout(()=>document.getElementById('sbNote').focus(), 30);
+}
+function doSendBack(key){ if(!(document.getElementById('sbNote').value||'').trim()){ showToast('Say what should change'); return; } const it = wsItem(); hide('sendOverlay'); WS.decided = true; sendBack(key); teachAfter(it, 'Sent back', true); }
+
+/* From the list: approve, reject or write your own without opening the item; or work through one reason at a time. */
+function rowApprove(id){ const it = items().find(x=>x.id===id); quickDecide(id); teachAfter(it, 'Approved'); }
+function rowReject(id, btn){
+  document.querySelectorAll('.col-menu').forEach(m=>m.remove());
+  const m = document.createElement('div'); m.className = 'col-menu';
+  m.innerHTML = `<div style="padding:4px 10px 6px;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--i3)">Reject: why?</div>`
+    + REJECT.filter(([c])=>c!=='R12').map(([c,l,w])=>`<button onclick="rowRejectDo('${id}','${c}')" title="${esc(w)}"><span class="ck"></span>${esc(l)}<span class="n" style="font-size:10.5px">${esc(w)}</span></button>`).join('')
+    + `<button onclick="document.querySelectorAll('.col-menu').forEach(m=>m.remove());openItem('${id}');openReject(WS.key)"><span class="ck"></span>Other… (opens it)</button>`;
+  document.body.appendChild(m);
+  const rc = btn.getBoundingClientRect(); m.style.top = Math.min(rc.bottom + 6, window.innerHeight - m.offsetHeight - 10) + 'px'; m.style.left = Math.max(8, rc.right - m.offsetWidth) + 'px';
+  setTimeout(()=>document.addEventListener('click', function c(e){ if(!m.contains(e.target)){ m.remove(); document.removeEventListener('click', c); } }), 0);
+}
+function rowRejectDo(id, code){
+  document.querySelectorAll('.col-menu').forEach(m=>m.remove());
+  const it = items().find(x=>x.id===id); if(!it) return;
+  RUN = it.run; openedAt = ROWS_AT; pickCode = code;
+  const ov = document.getElementById('rejectOverlay'); if(ov) ov.remove();
+  const tmp = document.createElement('input'); tmp.id = 'rjNote'; tmp.type = 'hidden'; document.body.appendChild(tmp);
+  reject(it.r.key); tmp.remove();
+  teachAfter(it, 'Rejected: ' + REJECT.find(x=>x[0]===code)[1], true);
+}
+function rowOwn(id){ openItem(id); WS.own = true; renderWs(); }
+function reviewGroup(cat){
+  const ids = filtered(myQueue()).filter(it=>!onHold(decOf(it)) && catsOfIt(it)[0]===cat).map(it=>it.id);
+  if(!ids.length) return; WS_LIST = ids; view = 'queue'; openItem(ids[0]);
+}
+let GROUP = true;
+const GROUP_WHY = { sensitive:'The message mentions a sensitive topic', claim:'A claim has no approved source', low:'No contact in the primary persona', small:'No micro-segment yet',
+  deal:'The deal looks below the size threshold', brand:'A brand rule is broken', reach:'No way to reach the contact', spot:'Went ahead on its own; rate it', alternative:'The one alternative after a rejection',
+  sentback:'Sent back by the sales manager', intervention:'Stepped in after it went ahead', other:'' };
 function wsCompare(){ saveTeach(); WS.compare = !WS.compare; renderWs(); }
 // The brand and claim checks re-run as the reviewer edits the message.
 function wsLiveCheck(){
@@ -1142,8 +1316,9 @@ function wsLiveCheck(){
 function wsAccept(key){
   saveTeach(); const it = wsItem(), before = JSON.stringify(it.run.saved.decisions[key]||{});
   if(!it.r.segment && dec(key).spot!=='pending' && !((document.getElementById('assignSeg')||{}).value || dec(key).assignedSeg)){ accept(key); return; }   // accept() asks for the segment
-  logTeach(); WS.decided = true; accept(key);
-  if(WS && WS.id===it.id && JSON.stringify(it.run.saved.decisions[key]||{})===before) WS.decided = false;
+  WS.decided = true; accept(key);
+  if(WS && WS.id===it.id && JSON.stringify(it.run.saved.decisions[key]||{})===before){ WS.decided = false; return; }
+  teachAfter(it, it.run.saved.decisions[key] && it.run.saved.decisions[key].status==='Awaiting approval' ? 'Approved, sent to the manager' : 'Approved');
 }
 function logTeach(){ const it = wsItem(); const t = (WS && WS.teach||'').trim(); if(it && t){ RUN = it.run; logIt(it.r, 'Taught the system', {note:t}); persist(); WS.teach = ''; } }
 
@@ -1175,20 +1350,17 @@ function openReject(key){
     <div class="ws-sub" style="margin-bottom:10px">The reason decides what happens next.${d.alternativeUsed?' This is already the alternative, so a rejection closes the account for the pilot.':''}</div>
     <div class="ws-rj">${REJECT.map(([code,l,w])=>`<button class="ws-rjb" onclick="pickRj(this,'${code}')"><b>${esc(l)}</b><span>${esc(w)}</span></button>`).join('')}</div>
     <input id="rjNote" class="ws-in" placeholder="Comment (needed for Other)" style="margin-top:10px">
-    <div class="ws-lbl">Teach the system: what should it do instead for accounts like this? <span class="tag tag-grey" style="margin-left:4px">after the pilot</span></div>
-    <textarea id="rjTeach" class="ws-in" style="min-height:48px" placeholder="e.g. Don't send case studies to new leaders in their first month">${esc(WS.teach||'')}</textarea>
-    <label class="ws-radio" style="opacity:.55"><input type="checkbox" disabled> Apply to similar accounts in ${esc(seg||'its micro-segment')} (after the pilot)</label>
     <div class="ws-modal-f"><button class="btn btn-ghost" onclick="hide('rejectOverlay')">Cancel</button><button class="btn btn-primary" onclick="doReject('${key}')">Reject</button></div></div>`;
 }
 function pickRj(btn, code){ pickCode = code; document.querySelectorAll('.ws-rjb').forEach(b=>b.classList.toggle('on', b===btn)); }
 function doReject(key){
   if(!pickCode){ showToast('Pick a reason'); return; }
-  WS.teach = (document.getElementById('rjTeach').value||'').trim();
   const note = document.getElementById('rjNote').value;
   if(pickCode==='R12' && !note.trim()){ showToast('"Other" needs a comment'); return; }
   hide('rejectOverlay');
   // reject() reads the comment from #rjNote: keep a copy where it looks once the overlay is hidden.
-  logTeach(); WS.decided = true; reject(key);
+  const it = wsItem(), label = (REJECT.find(x=>x[0]===pickCode)||[])[1];
+  WS.decided = true; reject(key); teachAfter(it, 'Rejected: ' + label, true);
 }
 
 /* Features that come after the pilot are shown, switched off, so people can see what the product will do. */
@@ -1200,7 +1372,7 @@ function wsApprove(key){
   const r = recOf(key), before = draftOf(r), after = draftFromFields(r);
   if(JSON.stringify(before)!==JSON.stringify(after)){ const rt = editRating(before, after);
     change(key, `Edited by the sales manager before approving (${rt.rating}: ${rt.why})`, ()=>setDec(key, {draft:after, edited:true, editRating:rt.rating})); }
-  logTeach(); managerApprove(key);
+  const it = wsItem(); managerApprove(key); teachAfter(it, 'Approved');
 }
 
 /* ═══ Copilot in the workspace: a chat that grows from the bottom. It opens with the facts behind the
@@ -1285,7 +1457,7 @@ function cpAsk(text, k, label){
       : /similar|track|agree|how did/.test(t) ? 'similar' : /signal|why now|when/.test(t) ? 'signals' : /brief|proof|angle|objection/.test(t) ? 'brief'
       : /history|log|before|version/.test(t) ? 'history' : /account|company|know/.test(t) ? 'account' : /approve|accept|happen/.test(t) ? 'ifaccept' : 'why'; }
   let a; try{ a = cpAnswer(k); }catch(e){ a = '<div class="cp-p">Sorry, I could not work that out.</div>'; }
-  WS.chat.push({ who:'me', q }, { who:'ai', k, a });
+  WS.chat.push({ who:'me', q }, { who:'ai', k, a }); wsSheet(true); const qi = document.getElementById('wsQ'); if(qi) qi.value = '';
   const st = document.getElementById('wsCpStack'), qs = document.getElementById('wsCpQs'), r = it.r, d = dec(r.key);
   if(st){ st.innerHTML = chatHtml(); const b = document.getElementById('wsCp'); b.scrollTop = b.scrollHeight; }
   if(qs) qs.innerHTML = chipsHtml(r, stuck(r, d));
@@ -1294,9 +1466,16 @@ function cpAsk(text, k, label){
 
 document.addEventListener('keydown', e=>{
   if(!WS) return; const tag = (e.target.tagName||'').toLowerCase();
-  if(e.key==='Escape'){ const ov = [...document.querySelectorAll('#holdOverlay,#rejectOverlay')].find(o=>o.style.display!=='none'); if(ov){ ov.style.display='none'; return; } if(document.getElementById('detailDrawer').classList.contains('open')){ closeDrawer(); return; } leaveWs(); return; }
+  if(e.key==='Escape'){ if(document.getElementById('teachPop')){ teachClose(); return; } if(WS.sheet){ wsSheet(false); if(document.activeElement) document.activeElement.blur(); return; } const ov = [...document.querySelectorAll('#holdOverlay,#rejectOverlay,#sendOverlay')].find(o=>o.style.display!=='none'); if(ov){ ov.style.display='none'; return; } if(document.getElementById('detailDrawer').classList.contains('open')){ closeDrawer(); return; } leaveWs(); return; }
   if(['input','textarea','select'].includes(tag)) return;
   if(e.key==='ArrowRight') wsGo(1); if(e.key==='ArrowLeft') wsGo(-1);
+  if(e.metaKey || e.ctrlKey || e.altKey || document.querySelector('[id$=Overlay][style*="flex"]')) return;
+  const k = e.key.toLowerCase(), bar = document.querySelector('.ws-dec');
+  if(k==='/'){ e.preventDefault(); const q = document.getElementById('wsQ'); if(q) q.focus(); }
+  else if(k==='a' && bar){ const b = [...bar.querySelectorAll('.btn-primary')].find(x=>/Approve/.test(x.textContent)); if(b){ e.preventDefault(); b.click(); } }
+  else if(k==='r' && bar){ const b = [...bar.querySelectorAll('.btn')].find(x=>/^Reject/.test(x.textContent.trim())); if(b){ e.preventDefault(); b.click(); } }
+  else if(k==='w' && WS.mode==='decide'){ e.preventDefault(); wsOwn(); }
+  else if(k==='h' && bar){ const b = [...bar.querySelectorAll('.btn')].find(x=>/hold/i.test(x.textContent)); if(b){ e.preventDefault(); b.click(); } }
 });
 
 function drawLog(){

@@ -722,6 +722,10 @@ function openRec(key, keepTimer){
   const body = document.getElementById('detBody'), top = keepTimer ? body.scrollTop : 0;
   body.innerHTML = html; body.scrollTop = top;
   const dr = document.getElementById('detailDrawer'); dr.style.width = '500px'; dr.classList.add('open');
+  // Copilot's text box sits at the bottom of the panel, always in view; its answers appear above it.
+  let foot = dr.querySelector('.det-foot'); const bar = body.querySelector('.cp-inline-bar');
+  if(bar){ if(!foot){ foot = document.createElement('div'); foot.className = 'det-foot'; foot.style.cssText = 'position:sticky;bottom:0;z-index:5;flex-shrink:0;padding:10px 14px 12px;border-top:1px solid var(--border);background:var(--surf)'; dr.appendChild(foot); } foot.innerHTML = ''; bar.style.position = 'static'; bar.style.margin = '0'; foot.appendChild(bar); }
+  else if(foot) foot.remove();
   const cp = document.getElementById('copilotDrawer'); if(cp) cp.classList.remove('open');
 }
 function DemandAIDraftText(x){
