@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Today — DemandAI Pilot</title>
+<title>Today — DemandAI</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -35,6 +35,9 @@ html{font-size:16px;-webkit-font-smoothing:antialiased;}
 body{margin:0;font-family:var(--fb);font-size:14px;background:var(--bg);color:var(--i1);overflow:hidden;height:100vh;}
 button{font:inherit;cursor:pointer;border:none;background:none;color:inherit;padding:0;}
 input,textarea,select{font:inherit;}
+:root{color-scheme:light;}
+input,textarea,select{background-color:#fff;color:var(--i1);}
+textarea[readonly],input[readonly]{background-color:var(--s50);}
 ::-webkit-scrollbar{width:4px;}
 ::-webkit-scrollbar-thumb{background:var(--s200);border-radius:2px;}
 @keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.55;transform:scale(1.3);}}
@@ -56,7 +59,7 @@ input,textarea,select{font:inherit;}
 .nav-body::-webkit-scrollbar{width:3px;}
 .nav-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.07);}
 .nav-sec{padding:8px 14px 3px;font-size:9px;letter-spacing:.09em;text-transform:uppercase;color:var(--r4);font-weight:600;}
-.nav-item{display:flex;align-items:center;gap:9px;height:32px;padding:0 10px;margin:1px 6px;border-radius:7px;color:var(--r3);font-size:12.5px;font-weight:500;cursor:pointer;position:relative;transition:background var(--fast) var(--ease),color var(--fast) var(--ease);}
+.nav-item{display:flex;text-decoration:none;align-items:center;gap:9px;height:32px;padding:0 10px;margin:1px 6px;border-radius:7px;color:var(--r3);font-size:12.5px;font-weight:500;cursor:pointer;position:relative;transition:background var(--fast) var(--ease),color var(--fast) var(--ease);}
 .nav-item:hover{background:var(--rhov);color:var(--r2);}
 .nav-item.active{background:var(--ract);color:var(--r1);}
 .nav-item.active::before{content:'';position:absolute;left:0;top:7px;bottom:7px;width:2.5px;background:var(--brand-mid);border-radius:0 2px 2px 0;}
@@ -366,6 +369,65 @@ input,textarea,select{font:inherit;}
 /* Toast */
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--i1);color:#fff;font-size:12.5px;font-weight:500;padding:9px 18px;border-radius:999px;z-index:900;pointer-events:none;animation:fadeUp .2s var(--ease);}
 
+
+/* ─── Data tables and tags (Prospecting, Scoring) ─── */
+.dt-wrap{overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none;}
+.dt-wrap::-webkit-scrollbar{display:none;}
+.dt{width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed;font-size:12.5px;}
+.dt th{padding:11px 16px;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--i3);text-align:left;background:var(--s50);border-bottom:1px solid var(--border);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.dt td{padding:13px 16px;color:var(--i2);border-bottom:1px solid var(--s75);vertical-align:middle;line-height:1.45;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dt tr:last-child td{border-bottom:none;}
+.dt tbody tr{transition:background var(--fast);}
+.dt tbody tr:hover td{background:#FAFBFC;}
+.dt tbody tr.click{cursor:pointer;}
+.dt th.num,.dt td.num{text-align:right;}
+.dt td.num{font-family:var(--fm);font-variant-numeric:tabular-nums;}
+.dt td.wrap{white-space:normal;}
+.dt .dt-main{color:var(--i1);font-weight:600;overflow:hidden;text-overflow:ellipsis;}
+.dt .val{color:var(--i1);overflow:hidden;text-overflow:ellipsis;}
+.dt .sub{display:block;font-size:11px;color:var(--i3);margin-top:2px;overflow:hidden;text-overflow:ellipsis;}
+.dt .muted{color:var(--i4);}
+.dt .person{display:flex;align-items:center;gap:10px;min-width:0;}
+.dt .person > div:last-child{min-width:0;}
+.clamp2{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;white-space:normal;}
+.dt-empty{padding:28px;text-align:center;font-size:12.5px;color:var(--i3);}
+.tag{display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 10px;border-radius:999px;font-family:var(--fb);font-size:11px;font-weight:600;letter-spacing:0;text-transform:none;white-space:nowrap;background:var(--s75);color:var(--i2);vertical-align:middle;}
+.tag::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0;}
+.tag-green{background:#E8F5EE;color:#24704F;}
+.tag-amber{background:#FDF2E1;color:#A8620F;}
+.tag-red{background:#FBEAEA;color:#A83A3A;}
+.tag-blue{background:#E4F2FB;color:#00659A;}
+.tag-violet{background:#F0EAF8;color:#6A4290;}
+.tag-teal{background:#E3F4F2;color:#1B7369;}
+.tag-pink{background:#FBE9F1;color:#A1386A;}
+.tag-grey{background:#EEF1F4;color:#5B6774;}
+.tags{display:flex;flex-wrap:wrap;gap:6px;}
+
+/* ─── Checks pop-up ─── */
+@keyframes ckspin{to{transform:rotate(360deg);}}
+@keyframes ckpop{from{transform:scale(.6);opacity:0;}to{transform:scale(1);opacity:1;}}
+.ck{width:22px;height:22px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;}
+.ck-wait{border:2px solid var(--s100);}
+.ck-run{border:2.5px solid var(--brand-lt);border-top-color:var(--brand);animation:ckspin .7s linear infinite;}
+.ck-ok{background:var(--pos);color:#fff;animation:ckpop .2s var(--ease);}
+.ck-warn{background:var(--warn);color:#fff;animation:ckpop .2s var(--ease);}
+.ck-stop{background:var(--neg);color:#fff;animation:ckpop .2s var(--ease);}
+.ck-info{background:var(--s300);color:#fff;animation:ckpop .2s var(--ease);}
+.ck-row{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--s75);transition:opacity var(--base);}
+.ck-row.pending{opacity:.45;}
+
+/* ─── Checkboxes: grey when empty, brand colour when ticked ─── */
+.dt input[type=checkbox]{-webkit-appearance:none;appearance:none;width:16px;height:16px;margin:0;border-radius:4px;border:1.5px solid var(--s200);background:var(--s75);cursor:pointer;vertical-align:middle;display:inline-grid;place-content:center;transition:background var(--fast),border-color var(--fast);}
+.dt input[type=checkbox]:hover{border-color:var(--s300);}
+.dt input[type=checkbox]:checked,.dt input[type=checkbox]:indeterminate{background:var(--brand);border-color:var(--brand);}
+.dt input[type=checkbox]:checked::after{content:'';width:9px;height:5px;border:2px solid #fff;border-top:0;border-right:0;transform:translateY(-1px) rotate(-45deg);}
+.dt input[type=checkbox]:indeterminate::after{content:'';width:8px;height:2px;background:#fff;border-radius:1px;}
+.dt input[type=checkbox]:focus-visible{outline:2px solid var(--brand-mid);outline-offset:2px;}
+.stat-link{position:relative;cursor:pointer;display:block;text-decoration:none;transition:background var(--fast) var(--ease);}
+.stat-link:hover{background:var(--brand-lt);}
+.stat-link::after{content:'›';position:absolute;top:10px;right:14px;font-size:17px;color:var(--i4);transition:color var(--fast) var(--ease),transform var(--fast) var(--ease);}
+.stat-link:hover::after{color:var(--brand);transform:translateX(2px);}
+.stat-link:hover .stat-lbl{color:var(--brand);}
 </style>
 </head>
 <body>
@@ -422,6 +484,10 @@ input,textarea,select{font:inherit;}
       <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
       <span class="nav-lbl">Micro-segments &amp; NBA</span>
     </a>
+    <a class="nav-item " href="15-content-studio.html">
+      <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+      <span class="nav-lbl">Content studio</span>
+    </a>
     <div class="nav-div"></div>
     <div class="nav-sec">Measure</div>
     <a class="nav-item " href="13-analytics.html">
@@ -437,145 +503,465 @@ input,textarea,select{font:inherit;}
   </div>
 </nav>
 
-<main class="main">
-  <div class="topbar">
-    <div class="topbar-l">
-      <span class="tb-title">Today</span>
-      <span class="tb-badge badge-neutral">Wednesday, 30 September</span>
+<!-- ════ MAIN ════ -->
+<main class="main" id="mainArea"></main>
+
+<!-- Detail drawer -->
+<div class="detail-drawer" id="detailDrawer">
+  <div class="drawer-hdr">
+    <div>
+      <div class="drawer-title" id="detTitle">Recommendation</div>
+      <div class="drawer-sub" id="detSub">—</div>
+    </div>
+    <div class="drawer-close" onclick="closeDrawer()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
     </div>
   </div>
-  <div class="canvas">
-
-    <div style="margin-bottom:20px">
-      <div style="font-family:var(--fd);font-size:20px;font-weight:700;color:var(--i1)">Good morning, Pavan</div>
-      <div style="font-size:12.5px;color:var(--i3);margin-top:2px">Overnight run finished 3:12 AM. Here's what needs you today.</div>
+  <div class="drawer-body" id="detBody">
+    <div class="detail-empty" style="padding:40px 0">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--i4)" stroke-width="1.5" stroke-linecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      <div style="font-size:11.5px;color:var(--i4);line-height:1.5;text-align:center">Click any row<br>to see the breakdown</div>
     </div>
-
-    <div class="stats" style="margin-bottom:20px">
-      <a href="14-review.html" class="stat" style="cursor:pointer;text-decoration:none;color:inherit"><div class="stat-lbl">Exceptions waiting</div><div class="stat-val sv1">4</div><div class="stat-sub">click to open the queue</div></a>
-      <div class="stat"><div class="stat-lbl">Proceeded on their own</div><div class="stat-val sv4">470</div><div class="stat-sub">overnight</div></div>
-      <a href="12-nba.html" class="stat" style="cursor:pointer;text-decoration:none;color:inherit"><div class="stat-lbl">🎉 Meetings booked</div><div class="stat-val" style="color:var(--pos)">1</div><div class="stat-sub">this week — click to see it</div></a>
-      <div class="stat" style="cursor:pointer" onclick="document.getElementById('outcomePanel').scrollIntoView({behavior:'smooth'})"><div class="stat-lbl">⏱ Outcomes overdue</div><div class="stat-val" style="color:var(--warn)">2</div><div class="stat-sub">not observed automatically</div></div>
-      <div class="stat" title="Of what we recommend, how much is accepted as-is or with a minor edit"><div class="stat-lbl">My first-pass acceptance</div><div class="stat-val sv3">78%</div><div class="stat-sub">threshold agreed at kickoff</div></div>
-    </div>
-
-    <div class="panel" id="outcomePanel" style="margin-bottom:16px;border-color:var(--warn)">
-      <div class="panel-hdr"><span class="panel-ttl">⏱ Awaiting your outcome update</span><span class="sc sc-m">2 waiting</span></div>
-      <div class="panel-body" style="padding:0">
-        <div style="padding:10px 16px;font-size:11px;color:var(--i3);border-bottom:1px solid var(--s75)">No CRM or calendar sync in this pilot — outcomes are reported, not observed. These went out and haven't been updated yet.</div>
-        <div style="display:flex;align-items:center;gap:10px;padding:11px 16px;border-bottom:1px solid var(--s75)">
-          <div class="co-av" style="background:#7D52A2">KW</div>
-          <div style="flex:1"><div style="font-size:12.5px;font-weight:600;color:var(--i1)">Karen Whitfield · Meridian Chemical Corp</div><div style="font-size:10.5px;color:var(--i3)">Email sent 3 days ago</div></div>
-          <span class="sc sc-m" style="margin-right:10px">3D</span>
-          <a href="12-nba.html?openAccount=l1" class="btn btn-sec btn-sm" style="text-decoration:none">Open →</a>
-        </div>
-        <div style="display:flex;align-items:center;gap:10px;padding:11px 16px">
-          <div class="co-av" style="background:#0094DA">RA</div>
-          <div style="flex:1"><div style="font-size:12.5px;font-weight:600;color:var(--i1)">Robert Achebe · Trident Refining</div><div style="font-size:10.5px;color:var(--i3)">LinkedIn DM sent 9 days ago — overdue</div></div>
-          <span class="sc sc-l" style="margin-right:10px">9D</span>
-          <a href="12-nba.html?openAccount=l12" class="btn btn-sec btn-sm" style="text-decoration:none">Open →</a>
-        </div>
-      </div>
-    </div>
-
-    <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:16px;margin-bottom:16px">
-      <div class="panel">
-        <div class="panel-hdr"><span class="panel-ttl">Exceptions needing you</span><span class="sc sc-m">4 waiting</span></div>
-        <div class="panel-body" style="padding:0">
-          <a href="14-review.html" style="display:flex;align-items:center;gap:10px;padding:11px 16px;border-bottom:1px solid var(--s75);cursor:pointer;text-decoration:none;color:inherit">
-            <div class="co-av" style="background:#0094DA">RL</div>
-            <div style="flex:1"><div style="font-size:12.5px;font-weight:600;color:var(--i1)">Rebecca Lindqvist · Ridgeline Utilities</div><div style="font-size:10.5px;color:var(--i3)">Low confidence — no primary-persona contact</div></div>
-            <span class="sc sc-m">TIER B</span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--i4)" stroke-width="2" stroke-linecap="round" style="flex-shrink:0;margin-left:8px"><polyline points="9 18 15 12 9 6"/></svg>
-          </a>
-          <a href="14-review.html" style="display:flex;align-items:center;gap:10px;padding:11px 16px;border-bottom:1px solid var(--s75);cursor:pointer;text-decoration:none;color:inherit">
-            <div class="co-av" style="background:#FF8820">TO</div>
-            <div style="flex:1"><div style="font-size:12.5px;font-weight:600;color:var(--i1)">Thomas Okafor · Altair Petrochemicals</div><div style="font-size:10.5px;color:var(--i3)">Low confidence — single uncorroborated signal</div></div>
-            <span class="sc sc-m">TIER B</span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--i4)" stroke-width="2" stroke-linecap="round" style="flex-shrink:0;margin-left:8px"><polyline points="9 18 15 12 9 6"/></svg>
-          </a>
-          <a href="14-review.html" style="display:flex;align-items:center;gap:10px;padding:11px 16px;border-bottom:1px solid var(--s75);cursor:pointer;text-decoration:none;color:inherit">
-            <div class="co-av" style="background:#2E7D5A">GA</div>
-            <div style="flex:1"><div style="font-size:12.5px;font-weight:600;color:var(--i1)">Grace Adeyemi · Vantage Oil &amp; Gas</div><div style="font-size:10.5px;color:var(--i3)">Compliance gate — references a regional incident</div></div>
-            <span class="sc sc-l">TIER C</span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--i4)" stroke-width="2" stroke-linecap="round" style="flex-shrink:0;margin-left:8px"><polyline points="9 18 15 12 9 6"/></svg>
-          </a>
-          <a href="14-review.html" style="display:flex;align-items:center;gap:10px;padding:11px 16px;cursor:pointer;text-decoration:none;color:inherit">
-            <div class="co-av" style="background:#7D52A2">NK</div>
-            <div style="flex:1"><div style="font-size:12.5px;font-weight:600;color:var(--i1)">Nadia Kowalski · Meadowbrook Power</div><div style="font-size:10.5px;color:var(--i3)">Proceed criteria not met — only 2 in segment</div></div>
-            <span class="sc sc-l">TIER C</span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--i4)" stroke-width="2" stroke-linecap="round" style="flex-shrink:0;margin-left:8px"><polyline points="9 18 15 12 9 6"/></svg>
-          </a>
-        </div>
-        <div style="padding:10px 16px;border-top:1px solid var(--border)"><a href="14-review.html" class="btn btn-primary btn-sm" style="width:100%;justify-content:center;text-decoration:none">Open Review</a></div>
-      </div>
-
-      <div class="panel">
-        <div class="panel-hdr"><span class="panel-ttl">Work done overnight</span></div>
-        <div class="panel-body">
-          <div class="dim-row" style="border:none;padding:5px 0"><span style="font-size:11.5px;color:var(--i3)">Records read</span><span style="font-size:11.5px;color:var(--i1);margin-left:auto;font-weight:600">11,900</span></div>
-          <div class="dim-row" style="border:none;padding:5px 0"><span style="font-size:11.5px;color:var(--i3)">Accounts in scope</span><span style="font-size:11.5px;color:var(--i1);margin-left:auto;font-weight:600">3,200</span></div>
-          <div class="dim-row" style="border:none;padding:5px 0"><span style="font-size:11.5px;color:var(--i3)">Signals qualified</span><span style="font-size:11.5px;color:var(--i1);margin-left:auto;font-weight:600">2,100</span></div>
-          <div class="dim-row" style="border:none;padding:5px 0"><span style="font-size:11.5px;color:var(--i3)">Accounts with a live signal</span><span style="font-size:11.5px;color:var(--i1);margin-left:auto;font-weight:600">1,860</span></div>
-          <div class="dim-row" style="border:none;padding:5px 0"><span style="font-size:11.5px;color:var(--i3)">Segments formed</span><span style="font-size:11.5px;color:var(--i1);margin-left:auto;font-weight:600">34</span></div>
-          <div class="dim-row" style="border:none;padding:5px 0"><span style="font-size:11.5px;color:var(--i3)">Drafts generated</span><span style="font-size:11.5px;color:var(--i1);margin-left:auto;font-weight:600">610</span></div>
-          <div class="dim-row" style="border:none;padding:5px 0"><span style="font-size:11.5px;color:var(--i3)">Drafts that passed every check</span><span style="font-size:11.5px;color:var(--i1);margin-left:auto;font-weight:600">540</span></div>
-          <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--s75)"><a href="13-analytics.html" style="font-size:11px;color:var(--brand)">See the full funnel in Analytics →</a></div>
-        </div>
-      </div>
-    </div>
-
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
-      <div class="panel">
-        <div class="panel-hdr"><span class="panel-ttl">Scoring snapshot</span><a href="11-scoring.html" style="font-size:10.5px;color:var(--brand)">Open →</a></div>
-        <div class="panel-body">
-          <div class="dim-row"><span class="dim-lbl">Tier A — act now</span><div class="dim-track"><div class="dim-fill" style="width:13%;background:var(--pos)"></div></div><span class="dim-val">240</span></div>
-          <div class="dim-row"><span class="dim-lbl">Tier B — act this cycle</span><div class="dim-track"><div class="dim-fill" style="width:33%;background:var(--warn)"></div></div><span class="dim-val">610</span></div>
-          <div class="dim-row"><span class="dim-lbl">Tier C — nurture</span><div class="dim-track"><div class="dim-fill" style="width:54%;background:var(--s300)"></div></div><span class="dim-val">1,010</span></div>
-          <div style="font-size:10.5px;color:var(--i3);margin-top:8px;padding-top:8px;border-top:1px solid var(--s75)">58% of the universe carries at least one live signal. Strongest on modernisation and renewal timing.</div>
-        </div>
-      </div>
-      <div class="panel">
-        <div class="panel-hdr"><span class="panel-ttl">NBA snapshot</span><a href="12-nba.html" style="font-size:10.5px;color:var(--brand)">Open →</a></div>
-        <div class="panel-body">
-          <div class="dim-row" style="border:none;padding:5px 0"><span style="font-size:11.5px;color:var(--i3)">Segments live</span><span style="font-size:11.5px;color:var(--i1);margin-left:auto;font-weight:600">21 of 34</span></div>
-          <div class="dim-row" style="border:none;padding:5px 0"><span style="font-size:11.5px;color:var(--i3)">Recommendations this week</span><span style="font-size:11.5px;color:var(--i1);margin-left:auto;font-weight:600">850</span></div>
-          <div class="dim-row" style="border:none;padding:5px 0"><span style="font-size:11.5px;color:var(--i3)">Manual swaps to the runner-up</span><span style="font-size:11.5px;color:var(--i1);margin-left:auto;font-weight:600">18</span></div>
-          <div style="font-size:10.5px;color:var(--i3);margin-top:8px;padding-top:8px;border-top:1px solid var(--s75)">Channel mix: 64% email · 24% LinkedIn · 12% call. Top segment this week: Modernisation (12 accounts, 5 at Tier A).</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="panel">
-      <div class="panel-hdr"><span class="panel-ttl">Where things stand</span></div>
-      <div class="panel-body" style="display:grid;grid-template-columns:repeat(5,1fr);text-align:center;gap:4px">
-        <a href="09-setup.html" style="text-decoration:none;color:inherit">
-          <div style="font-size:11px;font-weight:700;color:var(--i1)">Setup</div>
-          <div style="font-size:10px;color:var(--pos);margin-top:2px">5 of 7 signed off</div>
-        </a>
-        <a href="10-prospecting.html" style="text-decoration:none;color:inherit">
-          <div style="font-size:11px;font-weight:700;color:var(--i1)">Lead discovery</div>
-          <div style="font-size:10px;color:var(--i3);margin-top:2px">Universe ready</div>
-        </a>
-        <a href="11-scoring.html" style="text-decoration:none;color:inherit">
-          <div style="font-size:11px;font-weight:700;color:var(--i1)">Scoring</div>
-          <div style="font-size:10px;color:var(--i3);margin-top:2px">240 at Tier A</div>
-        </a>
-        <a href="12-nba.html" style="text-decoration:none;color:inherit">
-          <div style="font-size:11px;font-weight:700;color:var(--i1)">Next best action</div>
-          <div style="font-size:10px;color:var(--i3);margin-top:2px">21 segments live</div>
-        </a>
-        <a href="13-analytics.html" style="text-decoration:none;color:inherit">
-          <div style="font-size:11px;font-weight:700;color:var(--i1)">Analytics</div>
-          <div style="font-size:10px;color:var(--i3);margin-top:2px">Week 3 summary</div>
-        </a>
-      </div>
-    </div>
-
   </div>
-</main>
 </div>
+</div><!-- /shell -->
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="demandai-engine.js"></script>
+<script src="demandai-sample-data.js"></script>
+<script src="demandai-nba.js"></script>
+<script src="demandai-copilot.js"></script>
 <script>
 function showToast(msg){document.querySelectorAll('.toast').forEach(t=>t.remove());const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2600);}
+function initials(n){return String(n).split(' ').filter(Boolean).map(w=>w[0]).join('').slice(0,2).toUpperCase();}
+function avColor(id){const c=['#7D52A2','#0094DA','#FF8820','#2E7D5A','#B23F3F'];let h=0;for(const ch of String(id))h+=ch.charCodeAt(0);return c[h%c.length];}
+function closeDrawer(){ document.getElementById('detailDrawer').classList.remove('open'); }
+function esc(s){return String(s===undefined||s===null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function fallbackDownload(name, text){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'text/csv'}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},0);}
+// On claude.ai the page can't start a download itself: the viewer confirms a save. Opened as a plain file, it downloads directly.
+async function download(name, text){
+  let dl = null;
+  try{ dl = window.claude && window.claude.use ? await window.claude.use('downloads') : null; }catch(e){ dl = null; }
+  if(!dl){ fallbackDownload(name, text); return; }
+  try{ await dl.save({filename:name, data:text}); showToast(name+' saved'); }
+  catch(e){ if(e && e.code==='declined') return; showToast(e && e.code==='rate_limited' ? 'A save is already open' : "This view can't save files"); }
+}
+function todayIso(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+const fmt1 = n => n===undefined||n===null ? '—' : (Math.round(n*10)/10).toLocaleString('en-US',{minimumFractionDigits:n%1?1:0,maximumFractionDigits:1});
+const fmtDate = t => new Date(t).toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'});
 
+function readFileToGrids(file){
+  return new Promise((resolve,reject)=>{
+    const isCsv = /\.csv$/i.test(file.name), isXlsx = /\.(xlsx|xls)$/i.test(file.name);
+    if(!isCsv && !isXlsx){ reject(new Error('Use a .csv or .xlsx file')); return; }
+    const reader = new FileReader();
+    reader.onerror = ()=>reject(new Error('Could not read the file'));
+    reader.onload = ev=>{
+      try{
+        if(isCsv){ resolve([{sheet:'(CSV)', grid:DemandAI.parseCSV(ev.target.result)}]); return; }
+        if(typeof XLSX==='undefined'){ reject(new Error('The Excel reader did not load. Save the sheet as CSV and upload that instead')); return; }
+        const wb = XLSX.read(new Uint8Array(ev.target.result),{type:'array',cellDates:true});
+        resolve(wb.SheetNames.map(n=>({sheet:n, grid:XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true,defval:''})})));
+      }catch(e){ reject(e); }
+    };
+    if(isCsv) reader.readAsText(file); else reader.readAsArrayBuffer(file);
+  });
+}
+function pickSheet(grids){
+  const has = g => g.grid.slice(0,10).some(r=>(r||[]).some(c=>String(c).trim().toLowerCase().replace(/\*/g,'').replace(/\s+/g,'_')==='signal_type'));
+  return grids.find(g=>/signal template/i.test(g.sheet) && has(g)) || grids.find(has) || grids[0];
+}
+
+/* ═══════════════ SHARED PIECES: tables, tags, pop-ups ═══════════════ */
+function table(cols, rows, empty){
+  return `<div class="dt-wrap"><table class="dt">
+    <colgroup>${cols.map(c=>`<col style="width:${c[1]}">`).join('')}</colgroup>
+    <thead><tr>${cols.map(c=>`<th class="${c[2]||''}">${c[0]}</th>`).join('')}</tr></thead>
+    <tbody>${rows || `<tr><td colspan="${cols.length}" class="dt-empty">${empty}</td></tr>`}</tbody>
+  </table></div>`;
+}
+const cell = (v, sub, cls='val') => `<span class="${cls}" title="${esc(v||'')}">${v?esc(v):'<span class="muted">—</span>'}</span>${sub?`<span class="sub" title="${esc(String(sub).replace(/<[^>]+>/g,''))}">${sub}</span>`:''}`;
+const SEG_TONE = {Inquiry:'tag-blue',Modernisation:'tag-violet','Service renewal':'tag-teal',Project:'tag-amber',Leadership:'tag-pink',Engagement:'tag-green'};
+function tagChip(t){ const c = DemandAI.CONFIG.signalTypes[t]; return `<span class="tag ${(c&&SEG_TONE[c.segment])||'tag-grey'}">${esc(t)}</span>`; }
+function tierPill(t){
+  const m = {A:['tag-green','Tier A'],B:['tag-amber','Tier B'],C:['tag-blue','Tier C'],'Watch list':['tag-grey','Watch list'],'Below fit floor':['tag-grey','Below floor'],Excluded:['tag-red','Excluded']}[t];
+  return `<span class="tag ${m[0]}">${m[1]}</span>`;
+}
+function overlay(id){
+  let ov = document.getElementById(id);
+  if(!ov){ ov=document.createElement('div'); ov.id=id; ov.style.cssText='position:fixed;inset:0;background:rgba(20,26,33,.45);z-index:600;display:flex;align-items:center;justify-content:center;padding:16px'; document.body.appendChild(ov); }
+  ov.style.display='flex'; return ov;
+}
+const hide = id => { const el=document.getElementById(id); if(el) el.style.display='none'; };
+function search(fn, ph){ return `<div class="sl-srch"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="color:var(--i3);flex-shrink:0"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><input type="text" placeholder="${ph}" value="${esc(q)}" oninput="q=this.value.toLowerCase();${fn}()"></div>`; }
+const pill = (cur,id,label) => `<div class="seg-pill ${cur===id?'active':''}" onclick="filt='${id}';renderResults()">${label}</div>`;
+
+/* ═══════════════ TODAY: land on your work. Blockers first, then what waits on you and by when, then what the system did ═══════════════ */
+let RUNS = [], SPOT = null, MISSING = [];
+function loadRuns(){
+  RUNS = []; MISSING = [];
+  DemandAI.loadSegmentations().forEach(saved=>{ const c = compute(saved.src, saved.id, saved.createdAt, saved.brandVersion); if(c){ sensitiveToApprovals(saved, c.seg.recs); RUNS.push({ saved, ...c }); } else MISSING.push(saved); });
+}
+function ALL_RUNS(){ return RUNS; }
+function withRun(run, fn){ const keep = RUN; RUN = run; try{ return fn(); } finally { RUN = keep; } }
+// Every recommendation with its decision, newest list first.
+function allItems(){
+  return RUNS.slice().sort((a,b)=>b.saved.createdAt-a.saved.createdAt).flatMap(run=>withRun(run, ()=>run.seg.recs.map(r=>{
+    const d = dec(r.key), lr = liveRec(r), q = inQueue(d) && !pausedInfo(r);
+    return { id: run.saved.id+'::'+r.key, run, r, d, mine: mine(r), paused: !!pausedInfo(r), owner: ownerOf(r), queued: q,
+      due: q ? dueOf(r, d) : null, cats: q ? reasonCats(r, d) : [],
+      who: lr.contact.name, account: r.account.name, action: chosenAction(r), channel: draftOf(r).channel, segment: r.segment };
+  })));
+}
+const ago = t => { if(!t) return ''; const h = (Date.now()-t)/36e5; return h<1 ? 'just now' : h<24 ? Math.round(h)+'h ago' : Math.round(h/24)+'d ago'; };
+const firstName = () => (ROLE_PERSON[getRole()] || getRole()).split(' ')[0];
+const greeting = () => { const h = new Date().getHours(); return h<12 ? 'Good morning' : h<18 ? 'Good afternoon' : 'Good evening'; };
+const link = (href, text) => `<a href="${href}" style="font-size:11.5px;color:var(--brand);font-weight:600;text-decoration:none;white-space:nowrap">${text}</a>`;
+const box = (title, right, body, id) => `<div class="panel" ${id?`id="${id}"`:''} style="margin-bottom:20px"><div class="panel-hdr"><span class="panel-ttl">${title}</span>${right||''}</div><div class="panel-body" style="padding:0">${body}</div></div>`;
+const empty = t => `<div style="padding:14px;font-size:12px;color:var(--i3)">${t}</div>`;
+const line = (main, sub, right, href) => `<a href="${href}" style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--s75);text-decoration:none;color:inherit">
+    <div style="flex:1;min-width:0"><div style="font-size:12.5px;font-weight:600;color:var(--i1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${main}</div>
+    <div style="font-size:11px;color:var(--i3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${sub}</div></div>${right||''}<span style="color:var(--i3);font-size:13px">›</span></a>`;
+const nbaLink = (run, show) => run ? `12-nba.html?run=${encodeURIComponent(run.saved.id)}${show?`&show=${show}`:''}` : '12-nba.html';
+const pl = (n, one, many) => `${n} ${n===1?one:(many||one+'s')}`;
+
+/* ─── 2 · Blockers: anything stopping work, with what's wrong and where it's fixed ─── */
+function blockers(ctx){
+  const { mgr, scope, lists, scorings, segs } = ctx, out = [], now = Date.now();
+  // Approvals: for a manager they sit at the very top (approvalsCard); a rep sees their own held items here.
+  if(!mgr){
+    const held = scope.filter(x=>x.d.status==='Awaiting approval');
+    if(held.length) out.push({ title:`${pl(held.length,'message')} held for the sales manager's approval`, detail:`Sensitive content: nothing is released until the sales manager approves (${held.map(x=>esc(x.account)).join(', ')}).`, href:nbaLink(held[0].run,'waiting'), cta:'See them', who:'Sales manager' });
+  }
+  // A run that failed: its prospect list was deleted, so the recommendations can't be opened or decided.
+  MISSING.forEach(s=>out.push({ title:`Run failed: "${esc(s.name)}" can't be opened`, detail:'The prospect list behind it was deleted, so its recommendations can\'t be shown or decided.', href:'12-nba.html', cta:'Rebuild from a saved list', who:'Sales manager' }));
+  // A scheduled run that didn't run on time.
+  DemandAI.CONFIG.schedule.forEach(s=>{
+    const last = Math.max(0, ...(s.id==='nba' ? segs : scorings).map(x=>x.createdAt||0));
+    if(last && now - last > s.everyDays*864e5 + 4*36e5)
+      out.push({ title:`Scheduled run didn't run: ${s.name}`, detail:`Last ran ${ago(last)}; it's expected ${s.everyDays===1?'every day':`every ${s.everyDays} days`}. Until it runs, new signals don't reach the reps.`, href:s.page, cta:'Run it now', who:s.owner });
+  });
+  if(mgr){
+    // An upload where rows failed hard stops and weren't loaded.
+    lists.filter(l=>now-(l.createdAt||0) < 14*864e5).forEach(l=>{
+      const st = l.stats||{}, n = st.notLoaded || (st.issuesBySeverity||{}).stop || 0;
+      if(n) out.push({ title:`Upload partly rejected: ${pl(n,'row')} of "${esc(l.name)}" failed hard stops`, detail:'Those rows weren\'t loaded, so their contacts can\'t be scored or recommended. Fix the file and upload it again.', href:'10-prospecting.html', cta:'See the rejected rows', who:'Sales manager' });
+    });
+    // Not enough data to measure the pilot.
+    const gaps = RUNS.length ? readiness(RUNS).filter(x=>!x.ok && x.k!=='Collateral') : [];
+    if(gaps.length) out.push({ title:'Not enough data to measure the pilot yet', detail:gaps.map(x=>`<b>${esc(x.k)}</b>: ${esc(x.show)}, needs ${esc(x.need.replace(/^A /,'a '))}`).join(' · '), href:'13-analytics.html?tab=validation', cta:'See the readiness checks', who:'Sales manager with the client' });
+  }
+  // An approved claim that has expired while an open action needs it.
+  const today = todayIso();
+  DemandAI.brandPack().claims.filter(c=>c.status==='approved' && c.expiry && c.expiry < today).forEach(c=>{
+    const hit = scope.filter(x=>x.segment && c.segments.includes(x.segment) && !['Closed','Set aside'].includes(x.d.status));
+    if(hit.length) out.push({ title:`Proof expired: "${esc(c.title)}" (${esc(c.id)})`, detail:`Expired ${fmtDate(c.expiry)}. ${pl(hit.length,'action')} in ${esc([...new Set(hit.map(x=>x.segment))].join(', '))} can't cite it, so their drafts go out without approved proof.`, href:'07-content.html?tab=claims', cta:'Renew or replace the claim', who:'Admin' });
+  });
+  return out;
+}
+function blockerRow(b){
+  return `<div style="display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border-top:1px solid var(--s75)">
+    <span style="width:8px;height:8px;border-radius:50%;background:var(--neg);margin-top:6px;flex-shrink:0"></span>
+    <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700;color:var(--i1)">${b.title}</div>
+      <div style="font-size:12px;color:var(--i2);margin-top:3px;line-height:1.5">${b.detail}</div>
+      <div style="font-size:11px;color:var(--i3);margin-top:3px">Fixed by: ${esc(b.who)}</div></div>
+    <a class="btn btn-sec btn-sm" href="${b.href}" style="text-decoration:none;white-space:nowrap">${b.cta} →</a></div>`;
+}
+
+/* ─── 3 · Waiting for my review, grouped by when it's due ─── */
+function reviewSection(queue, mgr){
+  if(!queue.length) return box('Waiting for your review', '', empty('Nothing is waiting for your review. New items arrive when micro-segments are built.'), 'review');
+  const sorted = queue.slice().sort((a,b)=>a.due-b.due), first = sorted[0];
+  const groups = DUE_BUCKETS.map(([k,l])=>({ k, l, its: sorted.filter(x=>dueBucket(x.due)===k) })).filter(g=>g.its.length);
+  const tone = k => k==='overdue'||k==='today' ? 'var(--neg)' : k==='tomorrow' ? 'var(--warn)' : 'var(--i2)';
+  const body = `<div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--brand-lt)">
+      <div style="flex:1;font-size:12.5px;color:var(--i1)"><b>Recommended:</b> start with ${esc(first.who)} · ${esc(first.account)}, ${esc(dueLabel(first.due).replace(/^./, c=>c.toLowerCase()))}. The queue is in the order things are due; you can filter it any way you like.</div>
+      <a class="btn btn-primary btn-sm" href="14-review.html?item=${encodeURIComponent(first.id)}" style="text-decoration:none">Start reviewing →</a></div>
+    ${groups.map(g=>{
+      const counts = {}; g.its.forEach(x=>x.cats.forEach(c=>{ counts[c] = (counts[c]||0)+1; }));
+      return `<div style="padding:12px 14px;border-top:1px solid var(--s75)">
+        <div style="display:flex;align-items:baseline;gap:10px">
+          <a href="14-review.html?due=${g.k}" style="font-size:13px;font-weight:700;color:${tone(g.k)};text-decoration:none">${g.l} · ${g.its.length}</a>
+          <span style="font-size:11.5px;color:var(--i3)">${esc(dueLabel(g.its[0].due))}</span>
+          <span style="margin-left:auto">${link(`14-review.html?due=${g.k}`, 'Open these →')}</span></div>
+        <div class="tags" style="margin:7px 0 4px">${Object.entries(counts).sort((a,b)=>b[1]-a[1]).map(([c,n])=>`<a class="tag ${c==='spot'?'tag-blue':c==='sensitive'?'tag-violet':'tag-amber'}" href="14-review.html?due=${g.k}&reason=${c}" style="text-decoration:none">${esc(REASON_CATS[c])} · ${n}</a>`).join('')}</div>
+        ${g.its.slice(0,3).map(x=>`<a href="14-review.html?item=${encodeURIComponent(x.id)}" style="display:flex;gap:10px;align-items:center;padding:5px 0;text-decoration:none;color:inherit">
+          <span style="flex:1;min-width:0;font-size:12px;color:var(--i1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><b>${esc(x.who)}</b> · ${esc(x.account)} <span style="color:var(--i3)">· ${esc(x.action)}${mgr?` · ${esc(repName(x.owner))}`:''}</span></span>
+          <span style="font-size:11px;color:var(--i3);white-space:nowrap">${esc(REASON_CATS[x.cats[0]])}</span><span style="color:var(--i3)">›</span></a>`).join('')}
+        ${g.its.length>3 ? `<div style="padding-top:2px">${link(`14-review.html?due=${g.k}`, `+ ${g.its.length-3} more`)}</div>` : ''}
+      </div>`; }).join('')}`;
+  return box(`Waiting for your review · ${queue.length}`, link('14-review.html','Open the queue →'), body, 'review');
+}
+
+/* ─── Manager only: approvals at the very top, and the set-up and data card ─── */
+function approvalsCard(approvals){
+  if(!approvals.length) return '';
+  return `<div class="panel" style="margin-bottom:16px;border-color:var(--brand-mid)"><div class="panel-hdr" style="background:var(--brand-lt)"><span class="panel-ttl" style="color:var(--brand-dk)">Waiting on you: ${pl(approvals.length,'approval')}</span>${link('14-review.html?view=approvals','Review them →')}</div><div class="panel-body" style="padding:0">
+    <div style="padding:10px 14px;font-size:12px;color:var(--i2)">Reps accepted these messages, but they contain sensitive content, so nothing is released until you approve or send them back.</div>
+    ${approvals.slice(0,5).map(x=>`<a href="14-review.html?item=${encodeURIComponent(x.id)}" style="display:flex;gap:10px;align-items:center;padding:9px 14px;border-top:1px solid var(--s75);text-decoration:none;color:inherit">
+      <span style="flex:1;font-size:12.5px;color:var(--i1)"><b>${esc(x.who)}</b> · ${esc(x.account)} <span style="color:var(--i3)">· accepted by ${esc(repName(x.owner))} · ${esc(x.action)}</span></span><span class="tag tag-violet">Approval</span><span style="color:var(--i3)">›</span></a>`).join('')}
+  </div></div>`;
+}
+function setupCard(lists, scorings, segs){
+  const rd = RUNS.length ? readiness(RUNS) : [], ok = rd.filter(x=>x.ok).length, pend = DemandAI.brandPending();
+  const row = (k, tag, href) => `<a href="${href}" style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--s75);text-decoration:none;color:inherit">
+      <span style="flex:1;font-size:12.5px;color:var(--i1)">${k}</span>${tag}<span style="color:var(--i3);font-size:13px">›</span></a>`;
+  return box('Set-up and data', link('09-setup.html','Setup →'),
+    row('Configuration', `<span class="tag tag-green">${esc(DemandAI.configVersion().split(' · ')[0])}</span>`, '13-analytics.html?tab=validation') +
+    row('Brand pack', `<span class="tag ${pend?'tag-amber':'tag-green'}">${esc(DemandAI.brandVersion())}${pend?' · draft waiting':''}</span>`, '07-content.html') +
+    row('Data readiness', rd.length ? `<span class="tag ${ok===rd.length?'tag-green':'tag-amber'}">${ok} of ${rd.length} checks pass</span>` : '<span class="tag tag-grey">No data yet</span>', '13-analytics.html?tab=validation') +
+    row('Saved lists', `<span class="tag tag-grey">${lists.length + scorings.length + segs.length} list${lists.length + scorings.length + segs.length===1?'':'s'}</span>`, '10-prospecting.html'));
+}
+
+/* ─── 4 · What the system did, from the latest run ─── */
+function systemDid(scope){
+  const latest = RUNS.slice().sort((a,b)=>b.saved.createdAt-a.saved.createdAt)[0];
+  if(!latest) return '';
+  const its = scope.filter(x=>x.run===latest), went = its.filter(x=>x.d.released==='auto'), need = its.filter(x=>x.d.released!=='auto');
+  const accepted = need.filter(x=>x.d.status==='Released').length, rejected = need.filter(x=>['Closed','Set aside'].includes(x.d.status)).length;
+  const waiting = need.filter(x=>inQueue(x.d) || x.d.status==='Awaiting approval').length;
+  const big = (n, l, href, c) => `<a href="${href}" style="text-decoration:none;display:block;padding:12px 16px;border-right:1px solid var(--s75)"><div style="font-family:var(--fd);font-size:24px;font-weight:700;color:${c}">${n}</div><div style="font-size:11.5px;color:var(--i2)">${l} →</div></a>`;
+  return box('What the system did', `<span style="font-size:11px;color:var(--i3)">Latest run: ${esc(latest.saved.name)} · ${ago(latest.saved.createdAt)}</span>`,
+    `<div style="display:grid;grid-template-columns:repeat(4,1fr)">
+      ${big(went.length, 'went ahead on their own', nbaLink(latest,'proceeded'), 'var(--pos)')}
+      ${big(need.length, 'needed a person', nbaLink(latest,'waiting'), 'var(--ter-dk)')}
+      ${big(accepted, 'of those accepted', '14-review.html?view=log', 'var(--i1)')}
+      ${big(rejected, 'rejected or closed', '14-review.html?view=log', 'var(--i1)')}
+    </div>
+    <div style="padding:9px 14px;border-top:1px solid var(--s75);font-size:11.5px;color:var(--i3)">Went ahead = passed all four checks (segment size, confidence, sensitive content, claims) and was released to the rep. ${waiting ? `${waiting} of those that needed a person are still waiting.` : 'Everything that needed a person has been decided.'}</div>`);
+}
+
+/* ─── 7 · Work done: the funnel strip for the latest run ─── */
+function workDone(scope){
+  const latest = RUNS.slice().sort((a,b)=>b.saved.createdAt-a.saved.createdAt)[0];
+  if(!latest) return '';
+  const its = scope.filter(x=>x.run===latest), accts = new Set((latest.keys||[]).map(k=>k.split('|')[0])).size;
+  const steps = [
+    [ (latest.keys||[]).length, 'prospects read', nbaLink(latest) ],
+    [ accts, 'accounts', nbaLink(latest) ],
+    [ its.filter(x=>x.segment).length, 'in micro-segments', nbaLink(latest) ],
+    [ its.length, 'recommendations', nbaLink(latest) ],
+    [ its.filter(x=>x.d.released==='auto').length, 'went ahead', nbaLink(latest,'proceeded') ],
+    [ its.filter(x=>x.d.released!=='auto').length, 'needed a person', nbaLink(latest,'waiting') ],
+    [ its.filter(x=>x.d.status==='Released').length, 'released', nbaLink(latest) ],
+    [ its.filter(x=>x.d.outcome).length, 'outcome marked', '#outcomes' ],
+    [ its.filter(x=>x.d.outcome==='Meeting booked').length, 'meetings booked', nbaLink(latest,'meeting') ],
+  ];
+  return box('Work done', `<span style="font-size:11px;color:var(--i3)">${esc(latest.saved.name)} · ${link('13-analytics.html?tab=funnel','Full funnel →')}</span>`,
+    `<div style="display:flex;overflow-x:auto">${steps.map(([n,l,h],i)=>`<a href="${h}" style="flex:1;min-width:92px;text-decoration:none;padding:12px 10px;text-align:center;border-left:${i?'1px solid var(--s75)':'none'}"><div style="font-family:var(--fd);font-size:20px;font-weight:700;color:var(--i1)">${n}</div><div style="font-size:11px;color:var(--i3);line-height:1.3">${l}</div></a>`).join('')}</div>`);
+}
+
+function gateStatus(m){
+  const C = DemandAI.CONFIG, decided = m.pooled.n;
+  const g2 = m.weighted===null ? null : Math.round(m.weighted), g1 = m.saved===null || !decided ? null : Math.round(m.saved);
+  const enough = decided >= C.minDecisions;
+  const tone = (v, t) => v===null || !enough ? 'var(--i3)' : v>=t ? 'var(--pos)' : 'var(--neg)';
+  const word = (v, t) => v===null ? 'No decisions yet' : !enough ? `${decided} of ${C.minDecisions} decisions needed to judge` : v>=t ? `On track · target ${t}%` : `Below the ${t}% target`;
+  return { g2, g1, g2Tone: tone(g2, C.g2Threshold), g1Tone: tone(g1, C.g1Threshold), g2Word: word(g2, C.g2Threshold), g1Word: word(g1, C.g1Threshold) };
+}
+
+/* ─── Side panel: blockers, and the getting-started guide ─── */
+function openPanel(title, sub, html){
+  document.getElementById('detTitle').textContent = title;
+  document.getElementById('detSub').textContent = sub;
+  document.getElementById('detBody').innerHTML = html;
+  document.getElementById('detailDrawer').classList.add('open');
+}
+function openBlockers(){
+  const bl = window.__BLOCKERS || [];
+  openPanel(bl.length ? `${pl(bl.length,'blocker')}` : 'No blockers', bl.length ? 'Work is stuck until these are cleared' : 'Your work is running',
+    bl.length ? bl.map(b=>`<div class="panel" style="margin-bottom:12px;border-color:var(--neg-lt)"><div class="panel-body">
+        <div style="display:flex;gap:8px;align-items:flex-start"><span style="width:8px;height:8px;border-radius:50%;background:var(--neg);margin-top:6px;flex-shrink:0"></span>
+        <div><div style="font-size:13px;font-weight:700;color:var(--i1)">${b.title}</div>
+        <div style="font-size:12px;color:var(--i2);margin-top:4px;line-height:1.55">${b.detail}</div>
+        <div style="font-size:11px;color:var(--i3);margin-top:6px">Fixed by: ${esc(b.who)}</div></div></div>
+        <a class="btn btn-primary btn-sm" href="${b.href}" style="text-decoration:none;margin-top:10px;display:inline-flex">${b.cta} →</a></div></div>`).join('')
+      + `<div style="font-size:11px;color:var(--i3);line-height:1.5">A blocker is anything that stops work from moving: a scheduled run that failed or didn't run, an upload rejected by hard stops, data that's missing, an expired claim an action needs, or approvals holding up release. Something that's only due soon isn't a blocker; it's under Waiting in For Review, by when it's due.</div>`
+    : `<div style="font-size:12.5px;color:var(--i2)">Nothing is stopping work. Scheduled runs are on time, uploads loaded, and nothing is held for approval.</div>`);
+}
+const GUIDE_KEY = 'demandai_today_intro_v1';
+function openGuide(){
+  try{ localStorage.setItem(GUIDE_KEY, 'closed'); }catch(e){}
+  const term = (t, d) => `<div style="padding:10px 0;border-bottom:1px solid var(--s75)"><div style="font-size:12.5px;font-weight:700;color:var(--i1)">${t}</div><div style="font-size:12px;color:var(--i2);line-height:1.55;margin-top:3px">${d}</div></div>`;
+  openPanel('How Today works', 'Your work, in the order to do it',
+    `<div style="font-size:12.5px;color:var(--i2);line-height:1.6;margin-bottom:6px">The system does most of the work on its own. Today shows what it needs from you so work keeps moving. Do it in this order:</div>`
+    + term('1 · Clear blockers', 'The red notice above the tiles. Anything that stops work: a run that failed, an upload rejected by hard stops, missing data, an expired claim, approvals holding up release. Click it to see each one and where it\'s fixed.')
+    + term('2 · Review what\'s waiting, by when it\'s due', 'Items the system couldn\'t decide on its own, earliest due first. Click one to open it in For Review.')
+    + term('Copilot and Autopilot', 'Copilot, top right, answers questions and filters your work; it never changes your data. Ask it for a change, like approving a batch of spot-checks, and it hands that to Autopilot, which shows what will change, runs only when you confirm, and can be undone.')
+    + term('Tiles open the detail', 'Every tile at the top is clickable: it opens the items behind the number, already filtered. Panel titles with an arrow do the same; Start reviewing → opens the first item due.')
+    + term('3 · Mark outcomes', 'There\'s no CRM link in the pilot, so mark what happened with each released message: Sent, Replied, Meeting booked or No response.')
+    + term('Went ahead on its own', 'Passed all four checks (segment size, confidence, sensitive content, claims) and was released to the rep, ready to use. Each week a few are picked for a spot-check rating.')
+    + term('Exception', 'Failed a check, so a person accepts, edits or rejects it.')
+    + term('G2 and G1', 'The success gates. G2: how often recommendations are accepted first time (target 70%). G1: review time saved against the 38-minute baseline (target 50%).')
+    + `<div style="font-size:11.5px;color:var(--i3);margin-top:12px">New to the pilot? The work starts in ${link('10-prospecting.html','Prospecting')}, then ${link('11-scoring.html','Account Scoring')}, then ${link('12-nba.html','Micro-segments &amp; NBA')}. Reopen this guide with the ? next to the title.</div>`);
+}
+
+function render(){
+  loadRuns(); SPOT = weeklySpotCheck(RUNS);
+  const role = getRole(), mgr = isManager(), rep = role==='Sales rep', worker = mgr || rep;
+  const items = allItems(), scope = items.filter(x=>x.mine && (mgr || x.owner===myEmail()));
+  const queue = scope.filter(x=>x.queued).sort((a,b)=>a.due-b.due);
+  const spots = queue.filter(x=>x.d.spot==='pending'), exceptions = queue.filter(x=>x.d.spot!=='pending');
+  const approvals = mgr ? items.filter(x=>x.d.status==='Awaiting approval' && !x.paused) : [];
+  const waitingMgr = rep ? scope.filter(x=>x.d.status==='Awaiting approval') : [];
+  const ready = scope.filter(x=>x.d.status==='Released' && (!x.d.outcome || x.d.outcome==='Sent') && x.d.spot!=='pending').sort((a,b)=>(a.d.at||0)-(b.d.at||0));
+  const spotDoneWeek = scope.filter(x=>x.d.spotWeek===isoWeek(Date.now()) && x.d.spot && x.d.spot!=='pending').length;
+  const latest = RUNS.slice().sort((a,b)=>b.saved.createdAt-a.saved.createdAt)[0];
+  const m = measure(RUNS, mgr || !rep ? null : myEmail()), g = gateStatus(m);
+  const lists = DemandAI.loadLists(), scorings = DemandAI.loadScorings(), segs = DemandAI.loadSegmentations();
+  const nothing = !lists.length && !scorings.length && !segs.length;
+  const bl = nothing ? [] : blockers({ mgr, scope, lists, scorings, segs }); window.__BLOCKERS = bl;
+  const dateLine = new Date().toLocaleDateString(undefined,{weekday:'long', day:'numeric', month:'long'});
+
+  // 1 · Title first.
+  const head = `<div class="topbar"><div class="topbar-l"><span class="tb-title">Today</span><span style="font-size:12px;color:var(--i3);margin-left:10px">${esc(dateLine)}</span></div>
+    <div class="topbar-r">${worker ? Copilot.button() : ''}<button class="btn btn-ghost btn-sm" title="How Today works" onclick="openGuide()" style="width:28px;height:28px;padding:0;justify-content:center;border-radius:50%;border:1px solid var(--bdk);font-weight:700;margin-right:4px">?</button></div></div>`;
+  const needs = queue.length + approvals.length;
+  const hello = `<div style="margin-bottom:14px"><div style="font-family:var(--fd);font-size:22px;font-weight:700;color:var(--i1)">${greeting()}, ${esc(firstName())}</div>
+    <div style="font-size:13px;color:var(--i3);margin-top:4px">${nothing ? "Nothing has been built yet. Here's how the pilot runs." :
+      worker ? (needs ? `${needs} item${needs===1?' needs':'s need'} you today.` : 'Nothing is waiting for you. Ready-to-use actions and recent lists are below.') : 'View only: the pilot at a glance.'}
+      <a href="#" onclick="openGuide();return false" style="color:var(--brand);font-weight:600;text-decoration:none;margin-left:6px">How Today works</a></div></div>`;
+
+  if(nothing){
+    const step = (n, t, d, href, cta) => `<div class="panel" style="flex:1"><div class="panel-body">
+        <div style="font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--brand)">STEP ${n}</div>
+        <div style="font-family:var(--fd);font-size:15px;font-weight:700;color:var(--i1);margin:6px 0 4px">${t}</div>
+        <div style="font-size:12px;color:var(--i2);line-height:1.55;margin-bottom:12px">${d}</div>${link(href, cta)}</div></div>`;
+    document.getElementById('mainArea').innerHTML = head + `<div class="canvas">${hello}
+      <div style="display:flex;gap:14px;max-width:980px">
+        ${step(1, 'Bring in prospects', 'Upload the account and contact file, or use the sample. Bad rows are set aside with a reason.', '10-prospecting.html', 'Go to Prospecting →')}
+        ${step(2, 'Score the accounts', 'Fit, intent and timing give each account a tier and a reason. Send the best to micro-segments.', '11-scoring.html', 'Go to Scoring →')}
+        ${step(3, 'Plan the next step', 'Accounts are grouped by their reason to buy now, and each gets an action and a first message. Exceptions come to For Review.', '12-nba.html', 'Go to Micro-segments & NBA →')}
+      </div></div>`;
+    maybeGuide(); return;
+  }
+
+  // 2 · Blockers: a notification just above the tiles; the detail opens in the side panel.
+  const notice = bl.length
+    ? `<a href="#" onclick="openBlockers();return false" style="display:flex;align-items:center;gap:10px;padding:11px 14px;margin-bottom:14px;background:var(--neg-lt);border:1px solid #F0C9C9;border-radius:var(--rmd);text-decoration:none">
+        <span style="width:9px;height:9px;border-radius:50%;background:var(--neg);flex-shrink:0"></span>
+        <span style="flex:1;font-size:12.5px;color:var(--i1)"><b style="color:var(--neg)">${pl(bl.length,'blocker')}</b> stopping work: ${bl[0].title}${bl.length>1?` · and ${bl.length-1} more`:''}</span>
+        <span style="font-size:12px;font-weight:700;color:var(--neg);white-space:nowrap">View and fix →</span></a>`
+    : `<a href="#" onclick="openBlockers();return false" style="display:flex;align-items:center;gap:8px;padding:8px 14px;margin-bottom:14px;background:var(--pos-lt);border-radius:var(--rmd);text-decoration:none;font-size:12px;color:var(--pos);font-weight:600"><span style="width:8px;height:8px;border-radius:50%;background:var(--pos)"></span>No blockers. Your work is running.</a>`;
+
+  // 3 · Tiles, each drills down to the items behind it.
+  const stat = (lbl, val, sub, href, tone) => `<a class="stat stat-link" href="${href}" title="Open the items behind ${esc(lbl.toLowerCase())}">
+    <div class="stat-lbl">${lbl}</div><div class="stat-val" style="${tone?`color:${tone}`:''}">${val}</div><div class="stat-sub">${sub}</div></a>`;
+  const marked = scope.filter(x=>x.d.outcome && x.d.outcome!=='Sent'), positive = marked.filter(x=>['Replied','Meeting booked'].includes(x.d.outcome)).length;
+  const outRate = marked.length ? Math.round(positive/marked.length*100) : null;
+  const tiles = worker ? `<div class="stats" style="margin-bottom:18px;grid-template-columns:repeat(6,1fr)">
+      ${stat('In For Review', queue.length, `${exceptions.length} exception${exceptions.length===1?'':'s'} · ${spots.length} spot-check${spots.length===1?'':'s'}`, '14-review.html', queue.length?'var(--ter-dk)':'')}
+      ${mgr ? stat('Approvals', approvals.length, 'accepted by a rep, needs you', '14-review.html?view=approvals', approvals.length?'var(--brand)':'')
+            : stat('With the sales manager', waitingMgr.length, 'sensitive content you accepted', nbaLink(latest,'waiting'))}
+      ${stat('Awaiting outcome', ready.length, 'mark what happened', '#outcomes')}
+      ${stat('Outcome rate', outRate===null?'—':outRate+'%', marked.length ? `${positive} replied or booked a meeting, of ${marked.length} with a result` : 'No results marked yet', '13-analytics.html?tab=loop', outRate===null?'':'var(--pos)')}
+      ${stat('G2 acceptance', g.g2===null?'—':g.g2+'%', g.g2Word, '13-analytics.html?tab=gates', g.g2Tone)}
+      ${stat('G1 effort saved', g.g1===null?'—':g.g1+'%', g.g1Word, '13-analytics.html?tab=gates', g.g1Tone)}
+    </div>` : `<div class="stats" style="margin-bottom:18px;grid-template-columns:repeat(4,1fr)">
+      ${stat('Recommendations', m.items, `${m.autoN} proceeded · ${m.excN} exceptions`, '13-analytics.html')}
+      ${stat('Meetings booked', m.outcomes['Meeting booked']||0, 'marked by the reps', '13-analytics.html?tab=loop')}
+      ${stat('G2 acceptance', g.g2===null?'—':g.g2+'%', g.g2Word, '13-analytics.html?tab=gates', g.g2Tone)}
+      ${stat('G1 effort saved', g.g1===null?'—':g.g1+'%', g.g1Word, '13-analytics.html?tab=gates', g.g1Tone)}
+    </div>`;
+
+  // Waiting in For Review: earliest due first, with when each is due.
+  const dueTone = t => { const b = dueBucket(t); return b==='overdue'||b==='today' ? 'var(--neg)' : b==='tomorrow' ? 'var(--warn)' : 'var(--i3)'; };
+  // One flat list, earliest due first; an overdue item carries an Overdue tag rather than a heading of its own.
+  const dueDay = t => new Date(t).toLocaleDateString(undefined,{weekday:'short', day:'numeric', month:'short'});
+  const qRows = queue.slice(0,5).map(x=>{
+    const late = dueBucket(x.due)==='overdue';
+    return line(`${esc(x.who)} · ${esc(x.account)}`, `${esc(x.action)} · ${esc(x.channel)} · ${esc(REASON_CATS[x.cats[0]])}${mgr?` · ${esc(repName(x.owner))}`:''}`,
+      `<span style="font-size:11px;font-weight:600;color:${dueTone(x.due)};white-space:nowrap">${esc(late ? 'Was due ' + dueDay(x.due) : dueLabel(x.due))}</span>${late?'<span class="tag tag-red">Overdue</span>':''}<span class="tag ${x.d.spot==='pending'?'tag-blue':'tag-amber'}">${esc(whyHere(x.d))}</span>`, `14-review.html?item=${encodeURIComponent(x.id)}`);
+  }).join('');
+  const aRows = approvals.slice(0,5).map(x=>line(`${esc(x.who)} · ${esc(x.account)}`, `Accepted by ${esc(repName(x.owner))} · ${esc(x.action)}`,
+      `<span class="tag tag-violet">Approval</span>`, `14-review.html?item=${encodeURIComponent(x.id)}`)).join('');
+  const rRows = ready.slice(0,4).map(x=>`<div style="padding:10px 14px;border-bottom:1px solid var(--s75)">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="flex:1;min-width:0"><div style="font-size:12.5px;font-weight:600;color:var(--i1)">${esc(x.who)} · ${esc(x.account)}</div>
+        <div style="font-size:11px;color:var(--i3);margin-top:2px">${esc(x.action)} · ${esc(x.channel)} · released ${ago(x.d.at)}${x.d.outcome?` · marked ${esc(x.d.outcome)}`:''}</div></div>
+        <a href="${nbaLink(x.run)}&rec=${encodeURIComponent(x.r.key)}" style="font-size:11.5px;color:var(--brand);font-weight:600;text-decoration:none;white-space:nowrap">Open the message →</a>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">${OUTCOMES.map(o=>`<button class="tag ${x.d.outcome===o?'tag-violet':'tag-grey'}" style="cursor:pointer;border:none" onclick="markOutcome('${x.id}','${o}')">${o}</button>`).join('')}</div>
+    </div>`).join('');
+
+  // Right column: what the system did, spot-checks, gates, recent lists (and set-up for a manager).
+  const latestIts = latest ? scope.filter(x=>x.run===latest) : [], wentN = latestIts.filter(x=>x.d.released==='auto').length;
+  const didPanel = latest ? box('What the system did', `<span style="font-size:11px;color:var(--i3)">${ago(latest.saved.createdAt)}</span>`, `<div style="padding:12px 14px">
+      <div style="display:flex;gap:22px;margin-bottom:6px">
+        <a href="${nbaLink(latest,'proceeded')}" style="text-decoration:none"><div class="stat-lbl">Went ahead on their own</div><div style="font-family:var(--fd);font-size:20px;font-weight:700;color:var(--pos)">${wentN}</div></a>
+        <a href="${nbaLink(latest,'waiting')}" style="text-decoration:none"><div class="stat-lbl">Needed a person</div><div style="font-family:var(--fd);font-size:20px;font-weight:700;color:var(--ter-dk)">${latestIts.length-wentN}</div></a>
+      </div>
+      </div>${trustRow()}`) : '';
+  // Trust: how often people agreed with the system so far, overall and where it's strongest.
+  function trustRow(){
+    const all = trackRecord(), segs = Object.keys(SEG_MEANS).map(s=>[s, trackRecord(s)]).filter(([,r])=>r.n>=2).sort((a,b)=>b[1].pct-a[1].pct);
+    return `<a href="13-analytics.html?tab=gates" style="display:block;padding:12px 16px;border-top:1px solid var(--s75);text-decoration:none">
+      <div class="stat-lbl">How often reps agreed with it</div>
+      ${all.n ? `<div style="display:flex;align-items:baseline;gap:8px;margin-top:2px"><span style="font-family:var(--fd);font-size:20px;font-weight:700;color:var(--i1)">${all.pct}%</span><span style="font-size:11.5px;color:var(--i2)">${all.a} of ${all.n} first recommendations accepted</span></div>
+        ${all.early ? `<div style="font-size:11px;color:var(--i3);margin-top:3px">Early days: only ${all.n} decision${all.n===1?'':'s'} so far, so read it as a hint.</div>` : ''}
+        ${segs.length ? `<div style="font-size:11px;color:var(--i3);margin-top:3px">${segs.slice(0,3).map(([s,r])=>`${esc(s)} ${r.a} of ${r.n}`).join(' · ')}</div>` : ''}`
+        : `<div style="font-size:11.5px;color:var(--i3);margin-top:3px">No decisions yet. It builds up as people accept or reject items.</div>`}</a>`;
+  }
+  const spotPanel = (() => {
+    const picked = SPOT ? SPOT.picked : 0, total = SPOT && SPOT.reps ? (rep ? (SPOT.reps[myEmail()]||0) : picked) : 0;
+    const done = spotDoneWeek, pct = total ? Math.round(done/total*100) : 0, fri = spots[0] ? dueLabel(spots[0].due) : '';
+    const rows = spots.slice(0,3).map(x=>line(`${esc(x.who)} · ${esc(x.account)}`, `${esc(x.action)}${mgr?` · ${esc(repName(x.owner))}`:''}`,
+      `<span class="tag tag-blue">Rate it</span>`, `14-review.html?item=${encodeURIComponent(x.id)}`)).join('');
+    return box("This week's spot-checks", spots.length ? link('14-review.html?kind=spot', 'Rate them →') : '', `
+      <div style="padding:14px 16px 12px">
+        <div style="display:flex;align-items:baseline;gap:8px">
+          <span style="font-family:var(--fd);font-size:22px;font-weight:700;color:var(--i1)">${done}<span style="color:var(--i3);font-size:15px"> / ${total}</span></span>
+          <span style="font-size:12px;color:var(--i2)">rated</span>
+          <span style="margin-left:auto" class="tag ${!total?'tag-grey':done>=total?'tag-green':'tag-amber'}">${!total?'None picked yet':done>=total?'All done':`${total-done} to rate · ${esc(fri.replace(/^By /,'by '))}`}</span>
+        </div>
+        <div class="progress-track" style="height:6px;background:var(--s100);border-radius:99px;margin-top:10px;overflow:hidden"><div style="width:${pct}%;height:100%;background:var(--pos);border-radius:99px"></div></div>
+      </div>
+      ${rows}`);
+  })();
+  const gatePanel = box('Success gates', link('13-analytics.html?tab=gates', 'Analytics →'), `<div style="padding:12px 14px">
+      ${[['G2 · first-pass acceptance', g.g2, g.g2Tone, g.g2Word, m.weighted!==null ? `${m.pooled.a} of ${m.pooled.n} accepted on first pass, weighted across both paths` : 'Decide in For Review to start the count'],
+         ['G1 · less review effort', g.g1, g.g1Tone, g.g1Word, m.minutes!==null && g.g1!==null ? `${Math.round(m.minutes*10)/10} min per usable first action against ${m.base} min before` : 'Needs decisions to measure']]
+        .map(([t, v, tone, w, d])=>`<a href="13-analytics.html?tab=gates" style="display:block;text-decoration:none;padding:8px 0;border-bottom:1px solid var(--s75)">
+          <div style="display:flex;align-items:baseline;gap:10px"><span style="flex:1;font-size:12.5px;font-weight:600;color:var(--i1)">${t}</span>
+          <span style="font-family:var(--fd);font-size:18px;font-weight:700;color:${tone}">${v===null?'—':v+'%'}</span></div>
+          <div style="font-size:11px;color:${tone};margin-top:2px">${esc(w)}</div><div style="font-size:11px;color:var(--i3);margin-top:2px">${esc(d)}</div></a>`).join('')}
+      </div>`);
+  const recent = [
+    ...lists.map(l=>({ at:l.createdAt, kind:'Prospect list', name:l.name, sub:`${(l.stats&&l.stats.accounts)||(l.accounts||[]).length} accounts`, href:`11-scoring.html?list=${encodeURIComponent(l.id)}` })),
+    ...scorings.map(r=>({ at:r.createdAt, kind:'Scored list', name:r.name, sub:`${(r.stats&&r.stats.scored)||0} scored · ${(r.stats&&r.stats.A)||0} tier A`, href:`11-scoring.html?run=${encodeURIComponent(r.id)}` })),
+    ...segs.map(s=>({ at:s.createdAt, kind:'Micro-segments', name:s.name, sub:`${(s.stats&&s.stats.segments)||0} micro-segments · ${(s.stats&&s.stats.prospects)||0} recommendations`, href:`12-nba.html?run=${encodeURIComponent(s.id)}` })),
+  ].sort((a,b)=>(b.at||0)-(a.at||0)).slice(0,4);
+  const KIND_TONE = {'Prospect list':'tag-grey', 'Scored list':'tag-blue', 'Micro-segments':'tag-violet'};
+  const recentPanel = box('Recent lists', '', recent.map(x=>line(esc(x.name), `${x.sub} · ${x.at?fmtDate(x.at):''}`, `<span class="tag ${KIND_TONE[x.kind]}">${x.kind}</span>`, x.href)).join('') || empty('No lists yet.'));
+
+  const left = worker ? [
+      box('Waiting in For Review', queue.length ? link(`14-review.html?item=${encodeURIComponent(queue[0].id)}`, `Start reviewing (${queue.length}) →`) : '', queue.length ? qRows + (queue.length>5 ? `<div style="padding:8px 14px">${link('14-review.html', `+ ${queue.length-5} more, earliest due first`)}</div>` : '') : empty('Nothing is waiting for your review.')),
+      mgr ? box('Approvals', approvals.length ? link('14-review.html?view=approvals', 'Review them →') : '', aRows || empty('No sensitive items waiting for your approval.')) : '',
+      box('Awaiting your outcome update', ready.length ? `<span style="font-size:11px;color:var(--i3)">${ready.length} · oldest first</span>` : '', (rRows || empty('Nothing released is waiting for an outcome.')) +
+        '', 'outcomes'),
+    ].join('') : recentPanel;
+  const right = worker ? didPanel + spotPanel + gatePanel + (mgr ? setupCard(lists, scorings, segs) : '') + recentPanel : gatePanel;
+
+  document.getElementById('mainArea').innerHTML = head + `<div class="canvas" style="padding:20px 28px 48px">${hello}${notice}${tiles}
+    <div style="display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:20px;align-items:start">
+      <div>${left}</div><div>${right}</div>
+    </div></div>`;
+  maybeGuide();
+}
+// First visit: open the guide in the side panel once.
+function maybeGuide(){ let seen = false; try{ seen = localStorage.getItem(GUIDE_KEY)==='closed'; }catch(e){} if(!seen) openGuide(); }
+
+// Mark what happened with a released action, without leaving Today.
+function markOutcome(id, o){
+  const x = allItems().find(i=>i.id===id); if(!x) return;
+  withRun(x.run, ()=>outcome(x.r.key, o));
+  render();
+}
 const PAGE_ID = '00-today.html';
+setTimeout(()=>{
+  const _setRole = setRole; setRole = function(r){ _setRole(r); render(); reviewBadge(); };
+  render(); reviewBadge();
+}, 0);
 
 /* ═══════════════ ROLE ENGINE — shared across every screen ═══════════════ */
 const ALL_ROLES = ['Admin','Sales manager','Sales rep','Viewer','Platform admin'];
@@ -584,9 +970,9 @@ const ROLE_PERSON = {
   'Viewer':'Elena Vogel', 'Platform admin':'Shantanu Rao'
 };
 const ROLE_NAV_ALLOWED = {
-  'Admin': ['00-today.html','09-setup.html','07-content.html','08-users.html','10-prospecting.html','11-scoring.html','12-nba.html','13-analytics.html'],
-  'Sales manager': ['00-today.html','14-review.html','10-prospecting.html','11-scoring.html','12-nba.html','07-content.html','13-analytics.html','09-setup.html','08-users.html'],
-  'Sales rep': ['00-today.html','14-review.html','10-prospecting.html','11-scoring.html','12-nba.html','07-content.html','13-analytics.html'],
+  'Admin': ['00-today.html','14-review.html','09-setup.html','07-content.html','08-users.html','10-prospecting.html','11-scoring.html','12-nba.html','15-content-studio.html','13-analytics.html'],
+  'Sales manager': ['00-today.html','14-review.html','10-prospecting.html','11-scoring.html','12-nba.html','15-content-studio.html','07-content.html','13-analytics.html','09-setup.html','08-users.html'],
+  'Sales rep': ['00-today.html','14-review.html','10-prospecting.html','11-scoring.html','12-nba.html','15-content-studio.html','07-content.html','13-analytics.html'],
   'Viewer': ['13-analytics.html'],
   'Platform admin': [],
 };
@@ -608,7 +994,7 @@ function applyRoleToNav(){
   const role = getRole();
   const allowed = ROLE_NAV_ALLOWED[role] || [];
   document.querySelectorAll('.nav-item').forEach(a=>{
-    const href = a.getAttribute('href');
+    const href = (a.getAttribute('href')||'').split('?')[0];
     a.style.display = allowed.includes(href) ? '' : 'none';
   });
   const unEl = document.querySelector('.nav-un');
@@ -623,7 +1009,7 @@ function applyRoleToNav(){
   if(!pageIsKnown){ return; } // can't verify this page's id reliably here — don't block access on a guess
   if(!allowed.includes(thisPage)){
     const main = document.querySelector('.main') || document.getElementById('mainArea');
-    const PAGE_NAMES = {'00-today.html':'Today','09-setup.html':'Setup','07-content.html':'Content library','08-users.html':'Users and roles','10-prospecting.html':'Prospecting','11-scoring.html':'Account Scoring','12-nba.html':'Next Best Action','13-analytics.html':'Analytics','14-review.html':'Review'};
+    const PAGE_NAMES = {'00-today.html':'Today','09-setup.html':'Setup','07-content.html':'Content library','08-users.html':'Users and roles','10-prospecting.html':'Prospecting','11-scoring.html':'Account Scoring','12-nba.html':'Next Best Action','13-analytics.html':'Analytics','14-review.html':'Review','15-content-studio.html':'Content studio'};
     const firstAllowedHref = allowed[0] || '00-today.html';
     if(main) main.innerHTML = `
       <div class="topbar"><div class="topbar-l"><span class="tb-title">No access</span></div></div>

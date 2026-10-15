@@ -4,6 +4,8 @@ A clickable prototype of the DemandAI pilot: lead discovery and research (Prospe
 
 The app is built with **Next.js (App Router), React and TypeScript**. It was migrated from standalone HTML pages with vanilla JavaScript; the originals are kept in `legacy/` as the reference.
 
+> **`legacy/` is ahead of the React screens.** The HTML prototype kept changing after the migration was cut (2 Oct 2026): Content studio (`15-content-studio.html`), Copilot, the reworked Account Scoring and Micro-segments flows, and more. Open `legacy/00-today.html` in a browser to see the latest design. The React screens still show the 2 Oct version until those changes are ported.
+
 ## Running it
 
 Requires Node.js 22 or later.
@@ -58,7 +60,7 @@ public/
 tests/
   engine.test.ts        the original golden tests for the engine
   engine-parity.test.ts proves the TypeScript engine matches legacy/demandai-engine.js
-legacy/                 the original HTML/JS pages, the reference for the migration
+legacy/                 the HTML/JS prototype, the latest design (see the note at the top)
 test-data/              generated 7,498-row lead dataset and the Prospecting test-case workbook
 ```
 
@@ -77,4 +79,4 @@ These are unchanged from the original pages, so existing browser data still load
 
 - **Like for like.** The UI, wording, workflows and rules are unchanged. Each screen was compared with its original in Chromium, with screenshots and visible text, across its states and interactions, and they match.
 - **Original quirks kept.** Known quirks of the original pages were kept rather than fixed: for example, the Next Best Action Copy buttons do nothing, as in the original. They are listed in the pull request.
-- **`legacy/` can be removed** once the team is happy with the migration. When it goes, delete `tests/engine-parity.test.ts` with it.
+- **`legacy/` can be removed** once the React screens have caught up with it and the team is happy with the migration. When it goes, delete `tests/engine-parity.test.ts` with it.

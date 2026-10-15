@@ -35,6 +35,8 @@ html{font-size:16px;-webkit-font-smoothing:antialiased;}
 body{margin:0;font-family:var(--fb);font-size:14px;background:var(--bg);color:var(--i1);overflow:hidden;height:100vh;}
 button{font:inherit;cursor:pointer;border:none;background:none;color:inherit;padding:0;}
 input,textarea,select{font:inherit;}
+:root{color-scheme:light;}
+input,textarea,select{background-color:#fff;color:var(--i1);}
 ::-webkit-scrollbar{width:4px;}
 ::-webkit-scrollbar-thumb{background:var(--s200);border-radius:2px;}
 @keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.55;transform:scale(1.3);}}
@@ -56,7 +58,7 @@ input,textarea,select{font:inherit;}
 .nav-body::-webkit-scrollbar{width:3px;}
 .nav-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.07);}
 .nav-sec{padding:8px 14px 3px;font-size:9px;letter-spacing:.09em;text-transform:uppercase;color:var(--r4);font-weight:600;}
-.nav-item{display:flex;align-items:center;gap:9px;height:32px;padding:0 10px;margin:1px 6px;border-radius:7px;color:var(--r3);font-size:12.5px;font-weight:500;cursor:pointer;position:relative;transition:background var(--fast) var(--ease),color var(--fast) var(--ease);}
+.nav-item{display:flex;text-decoration:none;align-items:center;gap:9px;height:32px;padding:0 10px;margin:1px 6px;border-radius:7px;color:var(--r3);font-size:12.5px;font-weight:500;cursor:pointer;position:relative;transition:background var(--fast) var(--ease),color var(--fast) var(--ease);}
 .nav-item:hover{background:var(--rhov);color:var(--r2);}
 .nav-item.active{background:var(--ract);color:var(--r1);}
 .nav-item.active::before{content:'';position:absolute;left:0;top:7px;bottom:7px;width:2.5px;background:var(--brand-mid);border-radius:0 2px 2px 0;}
@@ -420,6 +422,74 @@ input,textarea,select{font:inherit;}
 .dt input[type=checkbox]:checked::after{content:'';width:9px;height:5px;border:2px solid #fff;border-top:0;border-right:0;transform:translateY(-1px) rotate(-45deg);}
 .dt input[type=checkbox]:indeterminate::after{content:'';width:8px;height:2px;background:#fff;border-radius:1px;}
 .dt input[type=checkbox]:focus-visible{outline:2px solid var(--brand-mid);outline-offset:2px;}
+.stat-link{position:relative;cursor:pointer;display:block;text-decoration:none;color:inherit;transition:background var(--fast) var(--ease);}
+.stat-link:hover,.stat-link.on{background:var(--brand-lt);}
+.stat-link::after{content:'›';position:absolute;top:10px;right:14px;font-size:17px;color:var(--i4);}
+.stat-link:hover .stat-lbl,.stat-link.on .stat-lbl{color:var(--brand);}
+.tier-mini{font-size:12px;white-space:nowrap;}
+.mon-tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;}
+.mon-tiles .stat{background:var(--surf);border:1px solid var(--border);border-radius:var(--rmd);padding:12px 14px;}
+.mon-tiles .stat-l{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--i3);}
+.mon-tiles .stat-v{font-family:var(--fd);font-size:22px;font-weight:700;color:var(--i1);margin:4px 0 2px;}
+.mon-tiles .stat-s{font-size:11px;color:var(--i3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ti{background:var(--surf);border:1px solid var(--border);border-radius:var(--rmd);padding:14px 16px;margin-bottom:14px;}
+.ti-h{display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:13px;color:var(--i1);}
+.ti-h b{flex:1;}
+.ti-i{width:20px;height:20px;border-radius:50%;background:var(--brand-lt);color:var(--brand-dk);font-family:Georgia,serif;font-style:italic;font-weight:700;font-size:12px;display:inline-flex;align-items:center;justify-content:center;}
+.ti-closed{display:flex;align-items:center;gap:10px;width:100%;padding:9px 14px;border:1px solid var(--border);border-radius:var(--rmd);background:var(--surf);margin-bottom:14px;cursor:pointer;font-family:var(--fb);font-size:12.5px;color:var(--i1);text-align:left;}
+.ti-closed > span:not(.ti-i){color:var(--i3);font-size:12px;} .ti-x{margin-left:auto;color:var(--brand-dk)!important;font-weight:600;}
+.ti-eq{display:flex;align-items:stretch;gap:8px;margin-bottom:12px;}
+.ti-q{flex:1;padding:9px 11px;border-radius:9px;background:var(--s50);font-size:11.5px;color:var(--i2);line-height:1.45;}
+.ti-q b{display:block;font-size:12.5px;color:var(--i1);}
+.ti-sc{flex:.6;background:var(--brand-lt);} .ti-op{align-self:center;color:var(--i3);font-weight:700;white-space:nowrap;}
+.ti-bar{display:flex;height:44px;border-radius:9px;overflow:hidden;margin-bottom:12px;}
+.ti-z{display:flex;flex-direction:column;justify-content:center;padding:0 10px;font-size:11px;color:#fff;min-width:0;}
+.ti-z b{font-size:14px;} .ti-z span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.9;}
+.ti-c{background:#8C6BB1;} .ti-b{background:#D9822B;} .ti-a{background:#2E7D5A;}
+.ti-mv{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+.ti-mv div{font-size:12px;color:var(--i2);line-height:1.5;padding:8px 10px;border:1px solid var(--s75);border-radius:9px;}
+.ti-mv b{display:block;color:var(--i1);font-size:12.5px;margin-bottom:2px;}
+.rk-foot{display:flex;justify-content:space-between;gap:12px;font-size:11.5px;color:var(--i3);margin-top:10px;flex-wrap:wrap;}
+.rk-foot a{color:var(--brand-dk);font-weight:600;text-decoration:none;}
+.sc-btn{font-family:var(--fm);font-size:12.5px;font-weight:700;color:var(--brand-dk);background:var(--brand-lt);border:1px solid transparent;border-radius:6px;padding:2px 7px;cursor:pointer;}
+.sc-btn:hover{border-color:var(--brand-mid);}
+.bm{color:var(--i4);opacity:.5;cursor:not-allowed;display:inline-flex;}
+.fs{display:flex;align-items:center;gap:8px;}
+.fs-p{flex:1;display:flex;flex-direction:column;gap:3px;padding:9px 10px;border-radius:9px;background:var(--s50);}
+.fs-p span{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--i3);}
+.fs-p b{font-family:var(--fd);font-size:18px;color:var(--i1);}
+.fs-p i{display:block;height:5px;border-radius:3px;background:var(--s75);overflow:hidden;} .fs-p em{display:block;height:100%;border-radius:3px;}
+.fs-p small{font-size:10.5px;color:var(--i3);}
+.fs-r{background:var(--brand-lt);flex:.8;} .fs-op{color:var(--i3);font-weight:700;font-size:12px;white-space:nowrap;}
+.fs-next{margin-top:8px;font-size:12px;color:var(--i2);}
+.sg-c{padding:9px 11px;background:var(--s50);border-radius:var(--rsm);}
+.sg-h{display:flex;align-items:center;gap:8px;justify-content:space-between;margin-bottom:4px;}
+.sg-st{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--i2);white-space:nowrap;}
+.sb{display:inline-flex;gap:2px;} .sb i{width:12px;height:4px;border-radius:2px;background:#DDE1E7;} .sb i.on{background:var(--brand);}
+.sg-m{font-size:10.5px;color:var(--i3);margin-top:2px;}
+.sg-share{height:4px;border-radius:2px;background:#E7EAEE;margin-top:6px;overflow:hidden;} .sg-share i{display:block;height:100%;background:var(--brand-mid);border-radius:2px;}
+.hw{font-size:11.5px;color:var(--i2);line-height:1.5;}
+.hw summary{cursor:pointer;color:var(--brand-dk);font-weight:600;font-size:12px;}
+.hw > div{margin-top:6px;}
+.hw-r{display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-top:1px dashed var(--s75);font-size:11.5px;}
+.hw-r code{font-family:var(--fm);font-size:11px;color:var(--i1);}
+.later-p{opacity:.6;filter:grayscale(.7);}
+.later-p .panel-hdr .soon-pill{margin-left:6px;}
+.soon-pill{display:inline-block;font-size:9px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--brand-dk);background:var(--brand-lt);border-radius:999px;padding:1px 7px;vertical-align:middle;}
+.lt-row{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:8px 0;border-top:1px solid var(--s75);font-size:12px;color:var(--i2);}
+.lt-row:first-child{border-top:none;} .lt-row b{color:var(--i1);font-size:12.5px;grid-column:1;} .lt-row span{grid-column:1;line-height:1.45;} .lt-row button{grid-column:2;grid-row:1/3;align-self:center;}
+.un{padding:9px 0;border-top:1px solid var(--s75);} .un-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;} .un-h span{font-size:11px;color:var(--i3);}
+.un-t{font-size:12.5px;color:var(--i1);} .un-r{font-size:11.5px;color:var(--i2);margin-top:2px;line-height:1.45;}
+@media (max-width:1100px){ .ti-eq{flex-wrap:wrap;} .ti-mv{grid-template-columns:1fr;} }
+.ev{padding:10px 14px;border-top:1px solid var(--s75);} .ev:first-child{border-top:none;}
+.ev-h{display:flex;align-items:center;gap:6px;margin-bottom:4px;}
+.ev-r{font-family:var(--fm);font-size:10.5px;color:var(--i3);}
+.ev-d{font-size:12px;color:var(--i1);line-height:1.45;}
+.ev-m{font-size:11px;color:var(--i3);margin-top:2px;line-height:1.4;}
+.lt-more{border-top:1px solid var(--s75);padding-top:8px;font-size:12px;color:var(--i2);}
+.lt-more summary{cursor:pointer;font-weight:600;color:var(--i1);font-size:12.5px;}
+.lt-more p{margin:6px 0;line-height:1.5;} .lt-more ul{margin:4px 0;padding-left:18px;line-height:1.6;}
+.lt-note{font-size:11px;color:var(--i3);}
 </style>
 </head>
 <body>
@@ -476,6 +546,10 @@ input,textarea,select{font:inherit;}
       <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
       <span class="nav-lbl">Micro-segments &amp; NBA</span>
     </a>
+    <a class="nav-item " href="15-content-studio.html">
+      <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+      <span class="nav-lbl">Content studio</span>
+    </a>
     <div class="nav-div"></div>
     <div class="nav-sec">Measure</div>
     <a class="nav-item " href="13-analytics.html">
@@ -517,6 +591,7 @@ input,textarea,select{font:inherit;}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="demandai-engine.js"></script>
 <script src="demandai-sample-data.js"></script>
+<script src="demandai-copilot.js"></script>
 <script>
 function showToast(msg){document.querySelectorAll('.toast').forEach(t=>t.remove());const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2600);}
 function initials(n){return String(n).split(' ').filter(Boolean).map(w=>w[0]).join('').slice(0,2).toUpperCase();}
@@ -598,8 +673,8 @@ function renderStart(t){
   const types = Object.keys(DemandAI.CONFIG.signalTypes).filter(k=>!DemandAI.CONFIG.signalTypes[k].knockout && !DemandAI.CONFIG.signalTypes[k].reject);
   document.getElementById('mainArea').innerHTML = `
     <div class="topbar"><div class="topbar-l"><span class="tb-title">Account Scoring</span><span class="tb-badge badge-neutral">Fit × Timing · rules only</span></div></div>
-    <div class="ftabs">${ft('new','New scoring')}${ft('saved','Scored lists',runs.length)}</div>
-    <div class="canvas">${tab==='new' ? `
+    <div class="ftabs">${ft('new','New scoring')}${ft('saved','Scored lists',runs.length)}${ft('monitor','Signal monitoring')}</div>
+    <div class="canvas">${tab==='monitor' ? monitorView() : tab==='new' ? `
       <div style="max-width:640px;margin:24px auto 0">
         <div style="font-family:var(--fd);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--brand);margin-bottom:8px">Step 2 · Scoring</div>
         <div style="font-family:var(--fd);font-size:22px;font-weight:700;color:var(--i1);margin-bottom:6px">Score a prospect list</div>
@@ -647,7 +722,7 @@ function renderStart(t){
           </div>
         </div>
       </div>` : `
-      <div class="score-list">${table([['Name','26%'],['Prospect list','18%'],['Signal file','14%'],['Scored','8%','num'],['Tier A','7%','num'],['Saved','11%'],['','16%']],
+      ${scoredStrip(runs)}<div class="score-list">${table([['Name','20%'],['Prospect list','13%'],['Signal file','11%'],['Scored','8%','num'],['Tiers','12%'],['What it led to','17%'],['Saved','9%'],['','10%']],
         runs.map(r=>`<tr>
           <td><div class="person"><div class="co-av" style="background:${avColor(r.id)}">${initials(r.name)}</div><div style="flex:1;min-width:0">${renamingId===r.id
             ? `<div style="display:flex;gap:6px;align-items:center"><input id="renameInput" value="${esc(r.name)}" style="flex:1;min-width:0;padding:6px 9px;border:1px solid var(--brand-mid);border-radius:var(--rsm);font-size:12.5px" onkeydown="if(event.key==='Enter')finishRename('${r.id}');if(event.key==='Escape'){renamingId=null;renderStart('saved')}"><button class="btn btn-primary btn-sm" onclick="finishRename('${r.id}')">Save</button></div>`
@@ -655,9 +730,10 @@ function renderStart(t){
           <td>${cell((DemandAI.getList(r.listId)||{}).name || r.listName, DemandAI.getList(r.listId)?'':'<span style="color:var(--neg)">List deleted</span>')}</td>
           <td>${cell(r.fileName)}</td>
           <td class="num">${r.stats.scored}<span class="sub">prospects</span></td>
-          <td class="num">${r.stats.A}</td>
+          <td><span class="tier-mini"><b style="color:var(--pos)">A ${r.stats.A}</b>${r.stats.B!==undefined?` · <b style="color:var(--warn)">B ${r.stats.B}</b> · <b style="color:var(--brand)">C ${r.stats.C}</b>`:''}</span>${r.stats.watch!==undefined?`<span class="sub">${r.stats.watch} on the watch list</span>`:''}</td>
+          <td>${(()=>{ const d = ledToRun(r); return !d.segs ? '<span class="muted">Not sent to NBA yet</span>' : `<span class="val">${d.recs} recommended · ${d.released} released</span><span class="sub">${d.meetings} meeting${d.meetings===1?'':'s'} booked · <a href="12-nba.html?run=${encodeURIComponent(d.segId)}" style="color:var(--brand);font-weight:600;text-decoration:none">Open in NBA →</a></span>`; })()}</td>
           <td>${cell(fmtDate(r.createdAt), new Date(r.createdAt).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}))}</td>
-          <td style="text-align:right"><button class="btn btn-sec btn-sm" onclick="openRun('${r.id}')">Open</button> <button class="btn btn-ghost btn-sm" onclick="removeRun('${r.id}')">Delete</button></td>
+          <td style="text-align:right;white-space:nowrap"><button class="btn btn-sec btn-sm" onclick="openRun('${r.id}')">Open</button> <button class="btn btn-ghost btn-sm" title="Delete" onclick="removeRun('${r.id}')">✕</button></td>
         </tr>`).join(''), `No scored lists yet. <a href="#" onclick="renderStart('new');return false" style="color:var(--brand);font-weight:600">Score a prospect list</a> and save it.`)}
       </div>`}
     </div>`;
@@ -673,6 +749,43 @@ function renderStart(t){
     dz.addEventListener('dragleave', ()=>{dz.style.borderColor='var(--bdk)';});
     dz.addEventListener('drop', e=>{e.preventDefault(); dz.style.borderColor='var(--bdk)'; if(e.dataTransfer.files[0]) onFile(e.dataTransfer.files[0]);});
   }
+}
+/* ═══════════════ SIGNAL MONITORING: what has come in, per signal type ═══════════════
+   In the POC signals arrive as files, so this counts the rows in every signal file uploaded here and in Micro-segments. */
+function signalFeed(){
+  const files = [], seen = new Set();
+  const add = (grid, file, at, where) => { if(!grid || !grid.length) return; const key = file + '|' + at; if(seen.has(key)) return; seen.add(key);
+    const hi = grid.findIndex(r=>(r||[]).some(c=>String(c).trim().toLowerCase().replace(/\*/g,'')==='signal_type')); if(hi<0) return;
+    const h = grid[hi].map(c=>String(c).trim().toLowerCase().replace(/\*/g,'')), ti = h.indexOf('signal_type'), di = h.indexOf('event_date');
+    files.push({ file, at, where, rows: grid.slice(hi+1).filter(r=>r && String(r[ti]||'').trim()).map(r=>({ type:String(r[ti]).trim(), date:String(r[di]||'').trim(), bytes: r.map(c=>String(c??'')).join(',').length + 1 })) }); };
+  DemandAI.loadScorings().forEach(r=>add(r.grid, r.fileName, r.createdAt, 'Account Scoring'));
+  DemandAI.loadSegmentations().forEach(r=>{ if(r.src && r.src.csv) add(r.src.grid, r.src.fileName, r.createdAt, 'Micro-segments'); });
+  return files;
+}
+function monitorView(){
+  const files = signalFeed(), types = DemandAI.CONFIG.signalTypes, off = new Set(DemandAI.signalsOff()), by = {};
+  files.forEach(f=>f.rows.forEach(r=>{ const k = types[r.type] ? r.type : Object.keys(types).find(t=>t.toLowerCase()===r.type.toLowerCase()) || r.type;
+    const o = by[k] || (by[k] = { n:0, bytes:0, files:new Set(), last:'', at:0 }); o.n++; o.bytes += r.bytes; o.files.add(f.file); if(/^\d{4}-\d{2}-\d{2}$/.test(r.date) && r.date > o.last) o.last = r.date; o.at = Math.max(o.at, f.at||0); }));
+  const known = Object.keys(types), names = known.concat(Object.keys(by).filter(k=>!types[k]));
+  const total = Object.values(by).reduce((a,o)=>a+o.n,0), size = Object.values(by).reduce((a,o)=>a+o.bytes,0), unknown = Object.keys(by).filter(k=>!types[k]);
+  const kb = b => b < 1024 ? `${b} B` : `${(b/1024).toFixed(1)} KB`, max = Math.max(1, ...Object.values(by).map(o=>o.n));
+  const tile = (k, v, sub) => `<div class="stat"><div class="stat-l">${k}</div><div class="stat-v">${v}</div><div class="stat-s">${sub}</div></div>`;
+  return `<div style="max-width:1100px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin-bottom:14px;flex-wrap:wrap">
+      <div><div style="font-family:var(--fd);font-size:18px;font-weight:700;color:var(--i1)">What has come in, per signal</div>
+        <div style="font-size:12.5px;color:var(--i3);margin-top:3px;line-height:1.5">In the POC the client sends signals as files, so this counts the rows in every signal file uploaded so far. Once the data connectors are in, it shows the live stream.</div></div>
+      <a href="09-setup.html#sec-signals" class="btn btn-sec btn-sm" style="text-decoration:none">Switch signals on or off in Setup →</a></div>
+    <div class="mon-tiles">${tile('Records received', total, `${files.length} file${files.length===1?'':'s'}`)}${tile('Size', kb(size), 'all signal rows')}${tile('Signal types seen', Object.keys(by).filter(k=>types[k]).length + ' of ' + known.length, 'known tags')}${tile('Not a known tag', unknown.reduce((a,k)=>a+by[k].n,0), unknown.length ? esc(unknown.join(', ')) : 'every row uses a known tag')}</div>
+    <div class="score-list">${table([['Signal','26%'],['Records received','22%'],['Size','9%','num'],['Files','8%','num'],['Latest event','12%'],['Last received','12%'],['Status','11%']],
+      names.map(k=>{ const o = by[k], c = types[k];
+        const st = !c ? '<span class="tag tag-amber">Not a known tag</span>' : c.knockout ? '<span class="tag tag-grey">Knock-out</span>' : c.reject ? '<span class="tag tag-grey">Not scored</span>' : off.has(k) ? '<span class="tag tag-red">Off</span>' : '<span class="tag tag-green">On</span>';
+        return `<tr style="${o?'':'opacity:.6'}"><td>${cell(k, c && c.segment ? 'Feeds ' + c.segment : '')}</td>
+          <td>${o ? `<div style="display:flex;align-items:center;gap:8px"><span style="flex:1;height:6px;border-radius:3px;background:var(--s75);overflow:hidden"><i style="display:block;height:100%;width:${o.n/max*100}%;background:var(--brand);border-radius:3px"></i></span><b style="min-width:22px;text-align:right;color:var(--i1)">${o.n}</b></div>` : '<span class="muted">None yet</span>'}</td>
+          <td class="num">${o ? kb(o.bytes) : '—'}</td><td class="num">${o ? o.files.size : '—'}</td>
+          <td>${o && o.last ? cell(fmtDate(o.last)) : '<span class="muted">—</span>'}</td><td>${o && o.at ? cell(fmtDate(o.at)) : '<span class="muted">—</span>'}</td><td>${st}</td></tr>`; }).join(''), 'No signal files yet.')}</div>
+    ${files.length ? `<div style="font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--i3);margin:20px 0 8px">Files received</div>
+      <div class="score-list">${table([['File','34%'],['Used in','20%'],['Rows','10%','num'],['Size','10%','num'],['Received','26%']], files.slice().sort((a,b)=>(b.at||0)-(a.at||0)).map(f=>`<tr><td>${cell(f.file)}</td><td>${cell(f.where)}</td><td class="num">${f.rows.length}</td><td class="num">${kb(f.rows.reduce((a,r)=>a+r.bytes,0))}</td><td>${cell(f.at ? fmtDate(f.at) : '—')}</td></tr>`).join(''), '')}</div>` : ''}
+  </div>`;
 }
 async function onLeadFile(file){
   if(!file) return;
@@ -704,9 +817,11 @@ function score(listId, fileName, sheet, grid, asOf, sandbox, saved){
   if(!L){ showToast("That prospect list isn't saved any more"); renderStart('new'); return false; }
   if(sandbox !== !!L.sandbox){ showToast('Sample signals only go with a list built from sample data'); return false; }
   const list = JSON.parse(JSON.stringify({accounts:L.accounts, contacts:L.contacts}));
-  const sig = DemandAI.processSignals(grid, list, {file:fileName, sheet, asOf});
+  const off = saved ? (saved.signalsOff || []) : DemandAI.signalsOff();     // signals switched off in Setup stop here
+  const custom = saved ? (saved.signalsCustom || []) : DemandAI.customSignals().map(c=>c.name);     // and ones added there count
+  const sig = DemandAI.processSignals(grid, list, {file:fileName, sheet, asOf, off, custom});
   const scored = DemandAI.scoreList(list, sig);
-  RUN = {listId, list:L, fileName, sheet, grid, asOf, sandbox, sig, scored, prospects:null, savedId: saved?saved.id:null, name: saved?saved.name:null};
+  RUN = {listId, list:L, fileName, sheet, grid, asOf, sandbox, off, custom, sig, scored, prospects:null, savedId: saved?saved.id:null, name: saved?saved.name:null};
   view='ranked'; filt='all'; q=''; NSEL.clear();
   return true;
 }
@@ -791,6 +906,101 @@ const _score = score;
 score = function(...a){ if(_score(...a)) runChecks(); };
 
 /* ═══════════════ RESULTS: one row per prospect ═══════════════ */
+/* ═══════════════ TIERS EXPLAINED: open on the first visit, folded away after that ═══════════════ */
+const TIER_KEY = 'demandai_scoring_tiers_v1';
+let TIERS_OPEN = (()=>{ try{ return localStorage.getItem(TIER_KEY)!=='closed'; }catch(e){ return true; } })();
+function toggleTiers(){ TIERS_OPEN = !TIERS_OPEN; try{ localStorage.setItem(TIER_KEY, TIERS_OPEN ? 'open' : 'closed'); }catch(e){} renderResults(); }
+function tiersInfo(){
+  const T = DemandAI.CONFIG.tierThresholds, pct = v => v + '%';
+  if(!TIERS_OPEN) return `<button class="ti-closed" onclick="toggleTiers()"><span class="ti-i">i</span><b>How the tiers work</b><span>Score = Fit × Timing ÷ 100 · A from ${T.A} · B from ${T.B}</span><span class="ti-x">Show ▾</span></button>`;
+  return `<div class="ti"><div class="ti-h"><span class="ti-i">i</span><b>How the tiers work</b><button class="btn btn-ghost btn-sm" onclick="toggleTiers()">Hide ▴</button></div>
+    <div class="ti-eq"><div class="ti-q"><b>Fit</b><span>How well the company matches the ideal customer: vertical, size, site, relationship (0–100)</span></div><span class="ti-op">×</span>
+      <div class="ti-q"><b>Timing</b><span>How strong and how recent this person's signals are: an inquiry this week counts far more than a webinar months ago (0–100)</span></div><span class="ti-op">÷ 100 =</span>
+      <div class="ti-q ti-sc"><b>Score</b><span>0–100, sets the tier</span></div></div>
+    <div class="ti-bar"><div class="ti-z ti-c" style="width:${pct(T.B)}"><b>C</b><span>below ${T.B}</span></div><div class="ti-z ti-b" style="width:${pct(T.A-T.B)}"><b>B</b><span>${T.B}–${T.A-1}</span></div><div class="ti-z ti-a" style="width:${pct(100-T.A)}"><b>A</b><span>${T.A} and above · acted on first</span></div></div>
+    <div class="ti-mv"><div><b>C → B</b><span>A strong, recent signal: an inquiry, a system reaching end of support or a capital project. Or a better fit, such as a contact in the primary persona.</span></div>
+      <div><b>B → A</b><span>A second recent signal from the same person, or a stronger one. Signals fade with time, so an account also slips down if nothing new happens.</span></div>
+      <div><b>Watch list</b><span>A good fit with no live signal yet: it moves into a tier as soon as one arrives.</span></div></div></div>`;
+}
+/* Signals in words: how strong, and how fresh. The numbers stay one click away. */
+const sigStrength = s => { const w = (s.tier||0) * (s.strength||0); return w >= 80 ? ['Strong', 3] : w >= 45 ? ['Medium', 2] : ['Light', 1]; };
+const sigFresh = s => s.decay >= 0.999 ? 'full weight' : s.decay >= 0.5 ? 'fading' : 'nearly expired';
+const strengthBars = n => `<span class="sb">${'<i class="on"></i>'.repeat(n)}${'<i></i>'.repeat(3-n)}</span>`;
+const soonTag = '<span class="soon-pill">After the pilot</span>';
+function unusedRows(){ return RUN.sig.signals.filter(s=>s.status!=='Qualified'); }
+function openUnused(){
+  const ss = unusedRows();
+  document.getElementById('detTitle').textContent = 'Signal rows not used';
+  document.getElementById('detSub').textContent = `${RUN.fileName} · ${ss.length} of ${RUN.sig.signals.length} rows`;
+  document.getElementById('detBody').innerHTML = `<div style="font-size:12px;color:var(--i2);margin-bottom:10px;line-height:1.5">Every row of the signal file is checked. These didn't count towards any score, and why. People not in the lead file come back as suggested new contacts.</div>`
+    + ss.map(s=>`<div class="un"><div class="un-h">${tagChip(s.type)}<span>Row ${s.row}</span></div><div class="un-t">${esc(s.company)}${s.personName||s.personRef?` · ${esc(s.personName||s.personRef)}`:''}</div>
+      <div class="un-r"><b>${s.status==='Rejected' ? esc(s.code+' '+DemandAI.CODES[s.code]) : esc(s.status)}</b> · ${esc(s.reason)}</div></div>`).join('');
+  const dr = document.getElementById('detailDrawer'); dr.style.width = '460px'; dr.classList.add('open');
+  if(typeof Copilot!=='undefined') Copilot.footBar('Ask Copilot about this list…', 'scoreAsk');
+}
+
+/* ═══════════════ COPILOT: questions about the scored list, or the prospect open in the side panel ═══════════════ */
+const S_CHIPS = ['Which accounts are closest to tier A?', 'Why are the tier A accounts on top?', "Which signals weren't used, and why?", 'How do the tiers work?'];
+const X_CHIPS = ['What feeds this score?', 'What would move it up a tier?', "Which signals didn't count?", 'Who else is at this company?'];
+let CP_KEY = null;   // the prospect open in the side panel
+function scoreAskKey(q){ scoreAsk(q, CP_KEY); }
+function scoreAsk(q, key){
+  if(!RUN || typeof Copilot==='undefined') return;
+  const x = key ? prospects().find(p=>p.key===key) : null, ctx = x ? 'p:' + x.key : 'list:' + (RUN.savedId || RUN.fileName);
+  if(q && Copilot.isOpen() && document.getElementById('cpPanel').dataset.ctx===ctx) return Copilot.ask2(q);
+  Copilot.panelOpen({ ctx, title: x ? `${x.c.name} · ${x.r.account.name}` : (RUN.name || RUN.list.name), sub: x ? x.r.account.name : 'this scored list',
+    answer: qq => x ? prospectAnswer(qq, x) : listAnswer(qq), context: () => x ? prospectText(x) : listText(), chips: x ? X_CHIPS : S_CHIPS, q: q || undefined });
+  document.getElementById('cpPanel').dataset.ctx = ctx;
+}
+const plS = (n, w) => `${n} ${w}${n===1?'':'s'}`;
+const rowOf = x => `<li><b>${esc(x.c.name)}</b> · ${esc(x.r.account.name)} · tier ${esc(x.tier)}${x.score!==undefined?`, score ${fmt1(x.score)}`:''}</li>`;
+function listAnswer(q){
+  const t = String(q).toLowerCase(), ps = prospects(), T = DemandAI.CONFIG.tierThresholds;
+  const named = ps.find(x=>t.includes(x.c.name.toLowerCase().split(' ')[0]) || t.includes(x.r.account.name.toLowerCase().split(' ')[0]));
+  if(named && !/tier a accounts|closest/.test(t)) return prospectAnswer('what feeds this score', named);
+  if(/closest|almost|nearly|next tier|move up|could reach/.test(t)){ const b = ps.filter(x=>(x.tier==='B'||x.tier==='C') && x.score!==undefined).sort((p,q)=>q.score-p.score).slice(0,5);
+    return b.length ? `<p>Closest to the next tier:</p><ul>${b.map(x=>`<li><b>${esc(x.c.name)}</b> · ${esc(x.r.account.name)}: ${fmt1((x.tier==='B'?T.A:T.B)-x.score)} points short of tier ${x.tier==='B'?'A':'B'}</li>`).join('')}</ul>` : '<p>No tier B or C prospects in this list.</p>'; }
+  if(/tier a|top|first|why .*(on top|ranked)/.test(t)){ const a = ps.filter(x=>x.tier==='A');
+    return a.length ? `<p>${plS(a.length,'prospect')} in tier A (score ${T.A}+): a good company fit and strong, recent signals.</p><ul>${a.map(x=>`<li><b>${esc(x.c.name)}</b> · ${esc(x.r.account.name)} · ${fmt1(x.score)}: ${esc((x.p&&x.p.whyNow)||'')}</li>`).join('')}</ul>` : '<p>No prospect reached tier A in this list.</p>'; }
+  if(/not used|weren.t used|unused|reject|didn.t count|ignored/.test(t)){ const u = unusedRows(), g = {}; u.forEach(s=>{ const k = s.status==='Rejected' ? `${s.code} ${DemandAI.CODES[s.code]}` : s.status; (g[k] = g[k] || []).push(s); });
+    return u.length ? `<p>${plS(u.length,'row')} of the signal file didn't count:</p><ul>${Object.entries(g).map(([k,v])=>`<li><b>${esc(k)}</b> (${v.length}): ${esc(v[0].reason)}</li>`).join('')}</ul><p class="cpp-muted">The link under the table lists every row.</p>` : '<p>Every row of the signal file counted.</p>'; }
+  if(/how .*tier|tiers work|score work|how .*scored|formula/.test(t)) return `<p>Score = <b>Fit × Timing ÷ 100</b>, both on 0–100. Fit is how well the company matches the ideal customer; timing is how strong and how recent the person's signals are.</p><ul><li><b>A</b>: ${T.A} and above, acted on first</li><li><b>B</b>: ${T.B}–${T.A-1}</li><li><b>C</b>: below ${T.B}</li><li><b>Watch list</b>: a good fit with no live signal</li></ul>`;
+  if(/watch/.test(t)){ const w = ps.filter(x=>x.tier==='Watch list'); return w.length ? `<p>On the watch list (good fit, no live signal):</p><ul>${w.map(rowOf).join('')}</ul>` : '<p>Nobody is on the watch list.</p>'; }
+  if(/exclud|below|floor|not scored/.test(t)){ const o = ps.filter(x=>x.tier==='Below fit floor'||x.tier==='Excluded'); return o.length ? `<ul>${o.map(x=>`<li><b>${esc(x.r.account.name)}</b>: ${esc(x.r.excluded ? x.r.excludedReason : `fit ${fmt1(x.fit)} is below the floor of ${DemandAI.CONFIG.fitFloor}`)}</li>`).join('')}</ul>` : '<p>Every account was scored.</p>'; }
+  if(/how many|summary|overview|count/.test(t)){ const c = k => ps.filter(x=>x.tier===k).length; return `<p>${ps.length} prospects: <b>${c('A')}</b> in tier A, ${c('B')} in B, ${c('C')} in C, ${c('Watch list')} on the watch list, ${c('Below fit floor')+c('Excluded')} not scored.</p>`; }
+  return null;
+}
+function prospectAnswer(q, x){
+  const t = String(q).toLowerCase(), T = DemandAI.CONFIG.tierThresholds, a = x.r.account;
+  if(/move|tier a|up a tier|higher|improve/.test(t)){ if(x.score===undefined) return `<p>${esc(a.name)} isn't scored: ${esc(x.r.excluded ? x.r.excludedReason : 'its fit is below the floor')}.</p>`;
+    if(x.tier==='A') return '<p>It is already in tier A.</p>';
+    const next = x.tier==='B' ? ['A', T.A] : ['B', T.B]; return `<p>It needs <b>${fmt1(next[1]-x.score)}</b> more points for tier ${next[0]}. A strong, recent signal from ${esc(x.c.firstName||x.c.name)}, such as a question or a request for a quote, would do it; so would news of a project or a system nearing end of support.</p>`; }
+  if(/didn.t count|not count|unused|rejected|ignored/.test(t)){ const u = RUN.sig.signals.filter(s=>s.accountId===a.id && s.contactRow===x.c.row && s.status!=='Qualified');
+    return u.length ? `<ul>${u.map(s=>`<li><b>${esc(s.type)}</b> (row ${s.row}): ${esc(s.reason)}</li>`).join('')}</ul>` : '<p>Every signal about this person counted.</p>'; }
+  if(/who else|other|colleague|contacts/.test(t)){ const o = (x.r.people||[]).filter(p=>p.contact.row!==x.c.row);
+    return o.length ? `<ul>${o.map(p=>`<li><b>${esc(p.contact.name)}</b>, ${esc(p.contact.jobTitle||'')} · ${p.signals.length ? `tier ${esc(p.tier)}` : 'no signals'}</li>`).join('')}</ul>` : `<p>No one else at ${esc(a.name)} is in the list.</p>`; }
+  if(/fit/.test(t) && x.r.breakdown) return `<p>Fit <b>${fmt1(x.fit)}</b> out of 100:</p><ul>${x.r.breakdown.map(b=>`<li>${esc(b.label)}: ${esc(b.levelLabel)} · ${fmt1(b.points)} of ${b.weight}</li>`).join('')}</ul>`;
+  if(/signal|timing|why now/.test(t) && x.p) return `<ul>${x.p.signals.map(s=>`<li><b>${esc(s.type)}</b>, ${sigStrength(s)[0].toLowerCase()} and ${sigFresh(s)}: ${esc(s.detail||'')}</li>`).join('')}</ul>`;
+  if(/feed|why|score|explain/.test(t)) return x.score===undefined ? `<p>Not scored: ${esc(x.r.excluded ? x.r.excludedReason : 'the company fit is below the floor')}.</p>`
+    : `<p>Score <b>${fmt1(x.score)}</b> = fit ${fmt1(x.fit)} × timing ${fmt1(x.timing)} ÷ 100, so tier ${esc(x.tier)}.</p><p>${esc((x.p&&x.p.whyNow||'').replace(/^./,m=>m.toUpperCase()))}</p>`;
+  return null;
+}
+function prospectText(x){
+  const a = x.r.account, ev = RUN.sig.signals.filter(s=>s.accountId===a.id && s.contactRow===x.c.row);
+  return [`Prospect: ${x.c.name}, ${x.c.jobTitle||''}, persona ${x.c.persona}. Company: ${a.name} · ${a.vertical||''} · ${a.country||''}.`,
+    `Tier ${x.tier}. Score ${x.score!==undefined?fmt1(x.score):'not scored'} = fit ${fmt1(x.fit)} × timing ${x.timing!==undefined?fmt1(x.timing):'—'} / 100. Tier thresholds: A ${DemandAI.CONFIG.tierThresholds.A}+, B ${DemandAI.CONFIG.tierThresholds.B}+.`,
+    x.r.excluded ? `Excluded: ${x.r.excludedReason}` : '', x.r.belowFloor ? `Below fit floor ${DemandAI.CONFIG.fitFloor}` : '',
+    x.r.breakdown ? 'Fit breakdown: ' + x.r.breakdown.map(b=>`${b.label} ${b.levelLabel} ${fmt1(b.points)}/${b.weight}`).join('; ') : '',
+    'Signal file rows about this person:', ...ev.map(s=>`- Row ${s.row} ${s.type} ${s.date} "${s.detail||''}" source ${s.source||''}: ${s.status}${s.status==='Qualified'?` weight ${fmt1(s.weight)}`:` (${s.reason})`}`),
+    'Other people at the company: ' + ((x.r.people||[]).filter(p=>p.contact.row!==x.c.row).map(p=>`${p.contact.name} (${p.contact.jobTitle||''})`).join('; ') || 'none')].filter(Boolean).join('\n');
+}
+function listText(){
+  const ps = prospects();
+  return [`Scored list: ${RUN.name||RUN.list.name}, signal file ${RUN.fileName}, as of ${RUN.asOf}. Tiers: A ${DemandAI.CONFIG.tierThresholds.A}+, B ${DemandAI.CONFIG.tierThresholds.B}+. Score = fit x timing / 100.`,
+    ...ps.map(x=>`- ${x.c.name} · ${x.c.jobTitle||''} · ${x.r.account.name} · tier ${x.tier} · score ${x.score!==undefined?fmt1(x.score):'—'} · fit ${fmt1(x.fit)} · timing ${x.timing!==undefined?fmt1(x.timing):'—'} · ${(x.p&&x.p.whyNow)||x.r.excludedReason||''}`),
+    `Signal rows not used: ${unusedRows().map(s=>`row ${s.row} ${s.type}: ${s.reason}`).join('; ')}`].join('\n').slice(0, 20000);
+}
+
 const TIER_ORDER = {A:0,B:1,C:2,'Watch list':3,'Below fit floor':4,Excluded:5};
 function prospects(){
   if(RUN.prospects) return RUN.prospects;
@@ -812,23 +1022,22 @@ function renderResults(){
       <div class="topbar-l"><span class="tb-title">${esc(RUN.name || RUN.list.name)}</span>
         <span class="tb-badge badge-neutral">${esc(RUN.fileName)} · as of ${RUN.asOf}</span></div>
       <div class="topbar-r">
+        ${typeof Copilot!=='undefined' ? Copilot.plainButton('scoreAsk()') : ''}
         <button class="btn btn-sec btn-sm" onclick="renderStart('new')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>Score a different list</button>
         <button class="btn btn-sec btn-sm" onclick="openSave()">${RUN.savedId?'Saved ✓':'Save'}</button>
         <button class="btn btn-primary btn-sm" onclick="sendToNBA()">Send ${NSEL.size?NSEL.size+' selected':'tier A and B'} to NBA →</button>
       </div>
     </div>
-    <div class="ftabs">${ft('ranked','Ranked prospects',sc.length)}${ft('evidence','Signal evidence',sig.signals.length)}</div>
     <div class="canvas">
+      ${tiersInfo()}
       <div class="stats">
-        <div class="stat"><div class="stat-lbl">Tier A</div><div class="stat-val" style="color:var(--pos)">${count('A')}</div><div class="stat-sub">score ${T.A} and above</div></div>
-        <div class="stat"><div class="stat-lbl">Tier B</div><div class="stat-val" style="color:var(--warn)">${count('B')}</div><div class="stat-sub">score ${T.B}–${T.A-1}</div></div>
-        <div class="stat"><div class="stat-lbl">Tier C</div><div class="stat-val sv1">${count('C')}</div><div class="stat-sub">below ${T.B}</div></div>
-        <div class="stat"><div class="stat-lbl">Watch list</div><div class="stat-val sv5">${count('Watch list')}</div><div class="stat-sub">good fit, no live signal</div></div>
-        <div class="stat"><div class="stat-lbl">Not scored</div><div class="stat-val sv3">${count('Below fit floor')+count('Excluded')}</div><div class="stat-sub">${count('Below fit floor')} below fit floor · ${count('Excluded')} excluded</div></div>
+        ${[['A','Tier A','color:var(--pos)',count('A'),`score ${T.A} and above`],['B','Tier B','color:var(--warn)',count('B'),`score ${T.B}–${T.A-1}`],['C','Tier C','color:var(--brand)',count('C'),`below ${T.B}`],
+           ['Watch list','Watch list','color:var(--i1)',count('Watch list'),'good fit, no live signal'],['out','Not scored','color:var(--ter-dk)',count('Below fit floor')+count('Excluded'),`${count('Below fit floor')} below fit floor · ${count('Excluded')} excluded`]]
+          .map(([f,l,c,v,sub])=>`<a class="stat stat-link ${view==='ranked'&&filt===f?'on':''}" href="#" title="Show only these" onclick="view='ranked';filt=filt==='${f}'?'all':'${f}';q='';renderResults();return false"><div class="stat-lbl">${l}</div><div class="stat-val" style="${c}">${v}</div><div class="stat-sub">${sub}</div></a>`).join('')}
       </div>
-      ${view==='ranked'?rankedTab():evidenceTab()}
+      ${rankedTab()}
     </div>`;
-  if(view==='ranked') drawRanked(); else drawEvidence();
+  view = 'ranked'; drawRanked();
 }
 const NSEL = new Set();
 const sendable = x => x.score !== undefined;
@@ -851,43 +1060,18 @@ function updateNBar(){
   const tb = document.querySelector('.topbar-r .btn-primary'); if(tb) tb.textContent = `Send ${NSEL.size?NSEL.size+' selected':'tier A and B'} to NBA →`;
 }
 
-/* Hand-off to Micro-segments & NBA: the action and channel follow the stage sheet's rules;
-   the draft is a template until AI drafting is connected. */
-const NBA_ABOUT = {'Inquiry or RFQ':'your recent inquiry','Installed system near end of support':'your control system reaching end of support',
-  'Service contract renewal':'your service contract coming up for renewal','Capital project':'the project you have under way','Leadership change':'your new role',
-  'Webinar attended':'the webinar you attended','Webinar registered':'the webinar you registered for','Content download':'the material you downloaded','Email clicked':'the material you opened'};
-const NBA_ACTION = {Inquiry:'Follow up on the inquiry', Modernisation:'Propose a migration or upgrade discussion', 'Service renewal':'Offer a renewal review',
-  Project:'Share a comparable case study and offer a technical session', Leadership:'Introduction to a new leader in a buying role', Engagement:'Follow up on the topic they engaged with'};
-function toNBA(x){
-  const c = x.c, top = x.p.signals[0], seg = (DemandAI.CONFIG.signalTypes[top.type]||{}).segment || 'Engagement';
-  const first = c.firstName || c.name.split(' ')[0];
-  const emailOk = c.email && c.emailVerified, liOk = !!c.linkedin;
-  const channel = seg==='Inquiry' || (!emailOk && !liOk) ? 'Call' : emailOk ? 'Email' : 'DM';
-  const why = x.p.whyNow.replace(/^./,m=>m.toUpperCase());
-  const about = NBA_ABOUT[top.type] || 'your recent activity';
-  const action = NBA_ACTION[seg];
-  return { id:'sc-'+String(x.key).replace(/[^a-z0-9]/gi,''), name:c.name, title:c.jobTitle, co:x.r.account.name, priority:Math.round(x.score),
-    action:seg, chosenAction:action, channel,
-    channelWhy: channel==='Call' ? (seg==='Inquiry' ? 'Inquiries go to a call task, per the routing rules.' : 'No verified email and no LinkedIn URL: call is the only channel.') : channel==='Email' ? 'Verified, sendable email.' : 'No verified email on file, but a LinkedIn URL exists: DM.',
-    routed:'review', confidence:x.r.confidence||'medium', team:null, isNew:true, fromScoring:true,
-    signal: why, signalSrc: `${top.source||'Signal file'} · scored ${fmt1(x.score)} (tier ${x.tier}) · draft from a template, AI drafting not connected`, format:'email',
-    emailSubj: `${x.r.account.name}: ${about.replace(/^your /,'')}`,
-    email: `Hi ${first},\n\nFollowing up on ${about}.\n\nWould a short conversation in the next couple of weeks be useful? We'd come prepared to ${action.charAt(0).toLowerCase()+action.slice(1)}.\n\nBest,\nClient Team`,
-    dmNote: `Hi ${first}, following up on ${about}. Happy to connect.`,
-    dmMessage: `Thanks for connecting. Would a short conversation be useful? We'd come prepared to ${action.charAt(0).toLowerCase()+action.slice(1)}.`,
-    callOpener: `"Hi ${first}, this is [name] from Client, following up on ${about}. Do you have two minutes?"` };
-}
+/* Hand-off to Micro-segments & NBA: the scoring context and the chosen prospects. NBA re-scores with the same
+   rules, groups the accounts into micro-segments and drafts the actions for approval. */
 function sendToNBA(){
   let pick = NSEL.size ? prospects().filter(x=>NSEL.has(x.key)) : prospects().filter(x=>x.tier==='A'||x.tier==='B');
   pick = pick.filter(x=>x.p && x.p.signals.length);
   if(!pick.length){ showToast('Select prospects with a live signal first'); return; }
-  const items = pick.map(toNBA);
-  let prev = []; try{ prev = JSON.parse(localStorage.getItem('demandai_nba_v1')||'[]'); }catch(e){}
-  const ids = new Set(items.map(i=>i.id));
-  try{ localStorage.setItem('demandai_nba_v1', JSON.stringify([...items, ...prev.filter(p=>!ids.has(p.id))])); }
+  const h = { name: RUN.name || RUN.list.name, listId:RUN.listId, listName:RUN.list.name, fileName:RUN.fileName, sheet:RUN.sheet, grid:RUN.grid,
+    asOf:RUN.asOf, sandbox:RUN.sandbox, keys: pick.map(x=>x.key), sentAt: Date.now() };
+  try{ localStorage.setItem('demandai_nba_handoff_v1', JSON.stringify(h)); }
   catch(e){ showToast("This browser blocks storage, so the hand-off can't be made"); return; }
-  showToast(`${items.length} prospect${items.length===1?'':'s'} sent to NBA`);
-  setTimeout(()=>{ location.href = '12-nba.html?from=scoring&ids='+items.map(i=>i.id).join(','); }, 500);
+  showToast(`${pick.length} prospect${pick.length===1?'':'s'} sent to Micro-segments & NBA`);
+  setTimeout(()=>{ location.href = '12-nba.html?from=scoring'; }, 500);
 }
 
 function rankedTab(){
@@ -898,13 +1082,13 @@ function rankedTab(){
     </div>
     <div class="sl-toolbar">${search('drawRanked','Search prospects or companies…')}<div class="sl-seg-filter">${pill(filt,'all','All')+pill(filt,'A','A')+pill(filt,'B','B')+pill(filt,'C','C')+pill(filt,'Watch list','Watch list')+pill(filt,'out','Not scored')}</div></div>
     <div id="rows"></div></div>
-    <div style="font-size:11px;color:var(--i3);margin-top:10px">Each prospect is scored on their own signals: Score = company Fit × their Timing ÷ 100, all on 0–100. Click a prospect for the reasoning.</div>`;
+    <div class="rk-foot"><span>Click a score to see what feeds it: the company's fit, and every signal behind the timing.</span>${unusedRows().length ? `<a href="#" onclick="openUnused();return false">${unusedRows().length} row${unusedRows().length===1?'':'s'} of the signal file weren't used: see why →</a>` : ''}</div>`;
 }
 function drawRanked(){
   const el = document.getElementById('rows'); if(!el) return;
   const rs = visibleProspects();
   const num = v => v!==undefined ? fmt1(v) : '<span class="muted">—</span>';
-  el.innerHTML = table([['<input type="checkbox" id="nAll" title="Select all" onclick="event.stopPropagation();toggleNAll(this.checked)" style="cursor:pointer;vertical-align:middle">','52px'],['Prospect','18%'],['Company','15%'],['Tier','11%'],['Score','7%','num'],['Fit','6%','num'],['Timing','7%','num'],['Why now','32%']],
+  el.innerHTML = table([['<input type="checkbox" id="nAll" title="Select all" onclick="event.stopPropagation();toggleNAll(this.checked)" style="cursor:pointer;vertical-align:middle">','52px'],['Prospect','18%'],['Company','15%'],['Tier','11%'],['Score','7%','num'],['Fit','6%','num'],['Timing','7%','num'],['Why now','28%'],['','40px']],
     rs.map(x=>{
       const tags = x.p ? [...new Set(x.p.signals.map(s=>s.type))].slice(0,2) : [];
       return `<tr class="click" onclick="openProspect('${x.key}')"${NSEL.has(x.key)?' style="background:var(--brand-lt)"':''}>
@@ -912,10 +1096,11 @@ function drawRanked(){
         <td><div class="person"><div class="co-av" style="background:${avColor(x.c.name)}">${initials(x.c.name)}</div><div>${cell(x.c.name, esc(x.c.jobTitle||''), 'dt-main')}</div></div></td>
         <td>${cell(x.r.account.name, esc(x.r.account.vertical+' · '+x.r.account.country))}</td>
         <td>${tierPill(x.tier)}</td>
-        <td class="num" style="color:var(--i1);font-weight:600">${num(x.score)}</td>
+        <td class="num">${x.score!==undefined ? `<button class="sc-btn" title="What feeds this score" onclick="event.stopPropagation();openProspect('${x.key}')">${fmt1(x.score)}</button>` : num(x.score)}</td>
         <td class="num">${num(x.fit)}</td>
         <td class="num">${num(x.timing)}</td>
         <td class="wrap">${x.r.excluded?`<span style="color:var(--i3)">${esc(x.r.excludedReason)}</span>`:x.r.belowFloor?`<span style="color:var(--i3)">Company fit ${fmt1(x.fit)} is below the floor of ${DemandAI.CONFIG.fitFloor}</span>`:x.p&&x.p.whyNow?`<div class="tags" style="margin-bottom:5px">${tags.map(tagChip).join('')}</div><span class="clamp2" title="${esc(x.p.whyNow)}" style="font-size:12px;color:var(--i2)">${esc(x.p.whyNow.replace(/^./,m=>m.toUpperCase()))}</span>`:'<span style="color:var(--i3)">No live signal for this person</span>'}</td>
+        <td onclick="event.stopPropagation()"><span class="bm" title="Follow up: bookmark a promising account (after the pilot)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M6 3h12v18l-6-4-6 4z"/></svg></span></td>
       </tr>`;}).join(''), 'No prospects match.');
   updateNBar();
 }
@@ -964,8 +1149,8 @@ function saveRun(){
   const sc = RUN.scored;
   const prev = RUN.savedId && DemandAI.getScoring(RUN.savedId);
   const run = prev ? Object.assign(prev, {name}) : { id:'run-'+Date.now().toString(36), name, listId:RUN.listId, listName:RUN.list.name,
-    fileName:RUN.fileName, sheet:RUN.sheet, grid:RUN.grid, asOf:RUN.asOf, sandbox:RUN.sandbox, createdAt:Date.now(),
-    stats:{ scored: prospects().filter(x=>x.score!==undefined).length, A: prospects().filter(x=>x.tier==='A').length } };
+    fileName:RUN.fileName, sheet:RUN.sheet, grid:RUN.grid, asOf:RUN.asOf, sandbox:RUN.sandbox, signalsOff:RUN.off||[], signalsCustom:RUN.custom||[], createdAt:Date.now(),
+    stats:{ scored: prospects().filter(x=>x.score!==undefined).length, A: prospects().filter(x=>x.tier==='A').length, B: prospects().filter(x=>x.tier==='B').length, C: prospects().filter(x=>x.tier==='C').length, watch: prospects().filter(x=>x.tier==='Watch list').length } };
   if(!DemandAI.saveScoring(run)){ showToast("This browser blocks storage, so it can't be saved"); return; }
   RUN.savedId = run.id; RUN.name = name;
   hide('saveOverlay'); showToast(`Saved as "${name}"`); renderResults();
@@ -976,6 +1161,28 @@ function openRun(id){
   const ok = _score(r.listId, r.fileName, r.sheet, r.grid, r.asOf, r.sandbox, r);
   if(ok) renderResults();
 }
+/* What a scored list led to: the micro-segments built from it, their recommendations, releases and meetings. */
+function ledToRun(r){
+  const segs = DemandAI.loadSegmentations().filter(s=>s.src && (s.src.scoringId===r.id || (s.src.name===r.name && s.src.listId===r.listId)));
+  const dec = segs.flatMap(s=>Object.values(s.decisions||{}));
+  return { segs: segs.length, segId: segs[0] && segs[0].id, recs: segs.reduce((t,s)=>t+((s.stats&&s.stats.prospects)||0),0),
+    released: dec.filter(d=>d && d.status==='Released').length, meetings: dec.filter(d=>d && d.outcome==='Meeting booked').length };
+}
+function scoredStrip(runs){
+  if(!runs.length) return '';
+  const t = runs.map(ledToRun).reduce((a,b)=>({recs:a.recs+b.recs, released:a.released+b.released, meetings:a.meetings+b.meetings, segs:a.segs+b.segs}), {recs:0,released:0,meetings:0,segs:0});
+  const scored = runs.reduce((n,r)=>n+((r.stats&&r.stats.scored)||0),0), A = runs.reduce((n,r)=>n+((r.stats&&r.stats.A)||0),0);
+  const step = (lbl, v, sub, href, tone) => `<a class="stat stat-link" href="${href}"><div class="stat-lbl">${lbl}</div><div class="stat-val" style="color:${tone||'var(--i1)'}">${v}</div><div class="stat-sub">${sub}</div></a>`;
+  return `<div style="font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--i3);margin-bottom:6px">What your scored lists led to</div>
+    <div class="stats" style="grid-template-columns:repeat(5,1fr);margin-bottom:18px">
+      ${step('Prospects scored', scored, `${runs.length} scored list${runs.length===1?'':'s'}`, '#" onclick="renderStart(\'saved\');return false')}
+      ${step('Tier A', A, 'act on these now', '#" onclick="runs0A();return false', 'var(--pos)')}
+      ${step('Recommendations', t.recs, `${t.segs} micro-segment run${t.segs===1?'':'s'} in NBA`, '12-nba.html')}
+      ${step('Released', t.released, 'ready to use', '12-nba.html')}
+      ${step('Meetings booked', t.meetings, 'marked by the reps', '13-analytics.html?tab=loop')}
+    </div>`;
+}
+function runs0A(){ const r = DemandAI.loadScorings()[0]; if(!r) return; openRun(r.id); setTimeout(()=>{ filt = 'A'; renderResults(); }, 0); }
 function removeRun(id){ DemandAI.deleteScoring(id); showToast('Scored list deleted'); renderStart('saved'); }
 function startRename(id){ renamingId = id; renderStart('saved'); const el=document.getElementById('renameInput'); if(el){ el.focus(); el.select(); } }
 function finishRename(id){
@@ -989,31 +1196,55 @@ function finishRename(id){
 function ago(d){ return d===0?'today':d<14?d+'d ago':d<60?Math.round(d/7)+'w ago':Math.round(d/30)+'mo ago'; }
 function miniStat(label, val, sub){ return `<div style="flex:1;padding:10px 12px;border-right:1px solid var(--border)"><div style="font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--i3)">${label}</div><div style="font-family:var(--fd);font-size:20px;font-weight:700;color:var(--i1);margin-top:2px">${val}</div>${sub?`<div style="font-size:10px;color:var(--i3)">${sub}</div>`:''}</div>`; }
 function openProspect(key){
+  CP_KEY = key;
   const x = prospects().find(p=>p.key===key); if(!x) return;
   const c = x.c, r = x.r, a = r.account;
   const unused = RUN.sig.signals.filter(s=>s.accountId===a.id && s.contactRow===c.row && s.status!=='Qualified');
   document.getElementById('detTitle').textContent = c.name;
   document.getElementById('detSub').textContent = [c.jobTitle, a.name].filter(Boolean).join(' · ');
-  let html = `<div class="panel" style="margin-bottom:12px">
-    <div class="panel-hdr"><span class="panel-ttl">Priority</span>${tierPill(x.tier)}</div>
-    ${r.excluded ? `<div class="panel-body" style="font-size:12px;color:var(--neg);background:var(--neg-lt)"><b>Not scored.</b> ${esc(r.excludedReason)}.</div>`
-      : r.belowFloor ? `<div class="panel-body" style="font-size:12px;color:var(--warn);background:var(--warn-lt)"><b>Not scored.</b> ${esc(a.name)}'s fit of ${fmt1(r.fit)} is below the floor of ${DemandAI.CONFIG.fitFloor}.</div>`
-      : `<div style="display:flex">${miniStat('Score',x.score!==undefined?fmt1(x.score):'—','of 100')}${miniStat('Fit',fmt1(x.fit),'company')}${miniStat('Timing',x.timing!==undefined?fmt1(x.timing):'—',x.p.signals.length+' signal'+(x.p.signals.length===1?'':'s'))}</div>`}
-  </div>`;
-  if(x.p && x.p.whyNow){
-    html += `<div class="panel" style="margin-bottom:12px"><div class="panel-hdr"><span class="panel-ttl">Why now</span></div><div class="panel-body">
-      <div class="tags" style="margin-bottom:8px">${[...new Set(x.p.signals.map(s=>s.type))].map(tagChip).join('')}</div>
-      <div style="font-size:12.5px;color:var(--i1);line-height:1.55">${esc(x.p.whyNow.replace(/^./,m=>m.toUpperCase()))}</div></div></div>`;
-  }
-  if(x.p && x.p.signals.length){
-    html += `<div class="panel" style="margin-bottom:12px"><div class="panel-hdr"><span class="panel-ttl">Signals</span><span style="font-size:10.5px;color:var(--i3)">${x.p.signals.length}</span></div><div class="panel-body" style="display:flex;flex-direction:column;gap:8px">
-      ${x.p.signals.map(s=>`<div style="padding:9px 11px;background:var(--s50);border-radius:var(--rsm)">
-        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><div style="flex:1">${tagChip(s.type)}</div><span style="font-family:var(--fm);font-size:11.5px;font-weight:600;color:var(--i1)">${fmt1(s.weight)}</span></div>
-        <div style="font-size:12px;color:var(--i1);line-height:1.45">${esc(s.detail||s.type)}</div>
-        <div style="font-size:10.5px;color:var(--i3);margin-top:2px">${esc(s.source||'No source')} · ${s.date} · ${ago(s.age)}${s.assigned&&s.assigned!=='Named in the file'?' · <span style="color:var(--warn)">auto-assigned</span>':''}</div>
-      </div>`).join('')}
+  const T = DemandAI.CONFIG.tierThresholds;
+  let html = '';
+  if(r.excluded) html += `<div class="panel" style="margin-bottom:12px"><div class="panel-hdr"><span class="panel-ttl">Not scored</span>${tierPill(x.tier)}</div><div class="panel-body" style="font-size:12px;color:var(--neg);background:var(--neg-lt)">${esc(r.excludedReason)}.</div></div>`;
+  else if(r.belowFloor) html += `<div class="panel" style="margin-bottom:12px"><div class="panel-hdr"><span class="panel-ttl">Not scored</span>${tierPill(x.tier)}</div><div class="panel-body" style="font-size:12px;color:var(--warn);background:var(--warn-lt)">${esc(a.name)}'s fit of ${fmt1(r.fit)} is below the floor of ${DemandAI.CONFIG.fitFloor}.</div></div>`;
+  else {
+    // 1 · What feeds the score: fit times timing, and how far it is from the next tier
+    const next = x.score===undefined ? null : x.score < T.B ? ['B', T.B] : x.score < T.A ? ['A', T.A] : null;
+    html += `<div class="panel" style="margin-bottom:12px"><div class="panel-hdr"><span class="panel-ttl">What feeds the score</span>${tierPill(x.tier)}</div><div class="panel-body">
+      <div class="fs"><div class="fs-p"><span>Fit</span><b>${fmt1(x.fit)}</b><i><em style="width:${x.fit}%;background:var(--sec)"></em></i><small>the company</small></div><span class="fs-op">×</span>
+        <div class="fs-p"><span>Timing</span><b>${x.timing!==undefined?fmt1(x.timing):'—'}</b><i><em style="width:${x.timing||0}%;background:var(--brand)"></em></i><small>${x.p?x.p.signals.length:0} signal${x.p&&x.p.signals.length===1?'':'s'}</small></div><span class="fs-op">÷ 100 =</span>
+        <div class="fs-p fs-r"><span>Score</span><b>${x.score!==undefined?fmt1(x.score):'—'}</b><small>tier ${esc(x.tier)}</small></div></div>
+      ${next ? `<div class="fs-next">${fmt1(next[1]-x.score)} points short of tier ${next[0]} (${next[1]}).</div>` : x.score!==undefined ? '<div class="fs-next" style="color:var(--pos)">In the top tier: acted on first.</div>' : ''}
     </div></div>`;
   }
+  if(x.p && x.p.signals.length){
+    // 2 · Timing: each signal in words (how strong, how fresh), its share of the timing; the numbers on request
+    const max = Math.max(...x.p.signals.map(s=>s.weight||0), 1), sorted = x.p.signals.slice().sort((p,q)=>q.weight-p.weight);
+    html += `<div class="panel" style="margin-bottom:12px"><div class="panel-hdr"><span class="panel-ttl">Timing · the signals behind it</span><span style="font-size:10.5px;color:var(--i3)">${x.p.signals.length}</span></div><div class="panel-body" style="display:flex;flex-direction:column;gap:8px">
+      ${x.p.whyNow ? `<div style="font-size:12.5px;color:var(--i1);line-height:1.55;margin-bottom:2px">${esc(x.p.whyNow.replace(/^./,m=>m.toUpperCase()))}</div>` : ''}
+      ${sorted.map((s,k)=>{ const [st, n] = sigStrength(s); return `<div class="sg-c">
+        <div class="sg-h">${tagChip(s.type)}<span class="sg-st">${strengthBars(n)}${st} · ${sigFresh(s)}</span></div>
+        <div style="font-size:12px;color:var(--i1);line-height:1.45">${esc(s.detail||s.type)}</div>
+        <div class="sg-m">${esc(s.source||'No source')} · ${s.date} · ${ago(s.age)}${s.assigned&&s.assigned!=='Named in the file'?' · <span style="color:var(--warn)">auto-assigned</span>':''}</div>
+        <div class="sg-share" title="Share of the timing"><i style="width:${(s.weight/max*100).toFixed(0)}%"></i></div>
+        <div class="sg-m">${k===0 ? 'Counts in full' : k===1 ? 'Counts half: the second-strongest signal' : `Counts ${['a quarter','an eighth'][k-2]||'a little'}: signal ${k+1}`}</div></div>`; }).join('')}
+      <details class="hw"><summary>How the numbers are worked out</summary><div>
+        Each signal's weight = how much its type counts × how strongly it shows interest × how fresh it is. The strongest counts in full, the next half, the next a quarter, and so on; the total is scaled to 0–100 as the timing.
+        ${sorted.map(s=>`<div class="hw-r"><span>${esc(s.type)}</span><code>${s.tier} × ${s.strength} × ${s.decay.toFixed(2)} = ${fmt1(s.weight)}</code></div>`).join('')}</div></details>
+    </div></div>`;
+  }
+  // Greyed: what the marketer can do on their own, after the pilot
+  if(!r.excluded && !r.belowFloor) html += `<div class="panel later-p" style="margin-bottom:12px"><div class="panel-hdr"><span class="panel-ttl">Your own knowledge ${soonTag}</span></div><div class="panel-body">
+      <div class="lt-row"><b>Add a signal you know</b><span>Something heard offline, as a comment, and move the account up a tier.</span><button class="btn btn-sec btn-sm" disabled>Add a signal</button></div>
+      <div class="lt-row"><b>Follow up</b><span>Bookmark a promising account that isn't ready for outreach yet.</span><button class="btn btn-sec btn-sm" disabled>Bookmark</button></div>
+      ${x.tier==='B'||x.tier==='C'||x.tier==='Watch list' ? `<details class="lt-more"><summary>What would move ${esc(a.name)} to tier A</summary><div>
+        ${x.tier==='Watch list' ? `<p>It has no recent signal yet. The first strong one, such as a question or a request for a quote, puts it in a tier straight away.</p>`
+          : `<p>It is ${fmt1(T.A - x.score)} points short. Any one of these would get it there:</p><ul>
+            ${(()=>{ const has = new Set(((x.p||{}).signals||[]).map(z=>z.type)); return [['Inquiry or RFQ', `${esc(c.firstName||c.name)} asks a question or for a quote`], ['Installed system near end of support', 'News that their control system is nearing end of support'], ['Capital project', 'A new project or expansion announced at the site']].filter(([k])=>!has.has(k)).map(([,l])=>`<li>${l}</li>`).join(''); })()}
+            ${(x.p&&x.p.signals.length) ? `<li>Another signal from ${esc(c.firstName||c.name)}: the second one counts half</li>` : ''}
+            ${c.persona!=='Primary' ? '<li>A contact in an instrumentation, automation or control systems role (a better fit)</li>' : ''}</ul>
+            <p>Signals fade with time, so it can also drop a tier if nothing new comes in.</p>`}
+        <p class="lt-note">Suggested actions to help get it there come after the pilot.</p></div></details>` : ''}
+    </div></div>`;
   const kv = (k,v) => `<div style="display:flex;gap:10px;padding:6px 0;border-bottom:1px solid var(--s75);font-size:12px"><span style="color:var(--i3);width:96px;flex-shrink:0">${k}</span><span style="color:var(--i1);min-width:0;overflow:hidden;text-overflow:ellipsis" title="${esc(String(v).replace(/<[^>]+>/g,''))}">${v}</span></div>`;
   html += `<div class="panel" style="margin-bottom:12px"><div class="panel-hdr"><span class="panel-ttl">Contact</span></div><div class="panel-body" style="padding-top:4px;padding-bottom:4px">
     ${kv('Persona', c.persona)}${kv('Reachable by', c.reachableBy==='none'?'No channel':c.reachableBy)}
@@ -1029,22 +1260,30 @@ function openProspect(key){
       </div>`).join('')}
     </div></div>`;
   }
-  if(unused.length){
-    html += `<div class="panel"><div class="panel-hdr"><span class="panel-ttl">Not counted</span><span style="font-size:10.5px;color:var(--i3)">${unused.length}</span></div><div class="panel-body" style="padding:0">
-      ${unused.map(s=>`<div style="padding:9px 14px;border-bottom:1px solid var(--border)"><div style="margin-bottom:4px">${tagChip(s.type)}</div><div style="font-size:11px;color:var(--i2)"><b>${s.status==='Rejected'?s.code+' '+DemandAI.CODES[s.code]:s.status}</b> · ${esc(s.reason)}</div></div>`).join('')}
+  // Signal evidence: every row of the signal file about this person, counted or not, in file order.
+  const ev = RUN.sig.signals.filter(s=>s.accountId===a.id && (s.contactRow===c.row || (!s.contactRow && s.status!=='Qualified')));
+  if(ev.length){
+    const stTag = s => s.status==='Qualified' ? '<span class="tag tag-green">Counted</span>' : s.status==='Used for a knock-out' ? '<span class="tag tag-amber">Knock-out</span>' : s.status==='Rejected' ? '<span class="tag tag-red">Not counted</span>' : '<span class="tag tag-grey">Not used</span>';
+    html += `<div class="panel" style="margin-bottom:12px"><div class="panel-hdr"><span class="panel-ttl">Signal evidence</span><span style="font-size:10.5px;color:var(--i3)">${ev.length} row${ev.length===1?'':'s'} in ${esc(RUN.fileName)}</span></div><div class="panel-body" style="padding:0">
+      ${ev.map(s=>`<div class="ev"><div class="ev-h"><span class="ev-r">Row ${s.row}</span>${tagChip(s.type)}<span style="flex:1"></span>${stTag(s)}</div>
+        <div class="ev-d">${esc(s.detail||'—')}</div>
+        <div class="ev-m">${s.date?esc(s.date):'No date'}${s.source?` · ${esc(s.source)}`:''}${s.status==='Qualified' ? ` · ${sigStrength(s)[0].toLowerCase()}, ${sigFresh(s)}` : ` · ${s.code?esc(s.code+' '+DemandAI.CODES[s.code])+': ':''}${esc(s.reason)}`}</div></div>`).join('')}
     </div></div>`;
   }
   document.getElementById('detBody').innerHTML = html;
   const dr = document.getElementById('detailDrawer'); dr.style.width = '440px'; dr.classList.add('open');
+  if(typeof Copilot!=='undefined') Copilot.footBar(`Ask Copilot about ${x.c.name}…`, `scoreAskKey`);
 }
 
 /* ═══════════════ BOOT ═══════════════ */
 (function boot(){
-  const id = new URLSearchParams(location.search).get('list');
+  const p = new URLSearchParams(location.search), id = p.get('list');
+  if(p.get('run') && DemandAI.getScoring(p.get('run'))){ openRun(p.get('run')); return; }
   if(id && DemandAI.getList(id)) selListId = id;
-  renderStart('new');
+  renderStart(p.get('tab')==='monitor' ? 'monitor' : 'new');
 })();
 
+setTimeout(()=>{ try{ DemandAI.reviewBadge(); }catch(e){} }, 0);
 const PAGE_ID = '11-scoring.html';
 
 /* ═══════════════ ROLE ENGINE — shared across every screen ═══════════════ */
@@ -1054,9 +1293,9 @@ const ROLE_PERSON = {
   'Viewer':'Elena Vogel', 'Platform admin':'Shantanu Rao'
 };
 const ROLE_NAV_ALLOWED = {
-  'Admin': ['00-today.html','09-setup.html','07-content.html','08-users.html','10-prospecting.html','11-scoring.html','12-nba.html','13-analytics.html'],
-  'Sales manager': ['00-today.html','14-review.html','10-prospecting.html','11-scoring.html','12-nba.html','07-content.html','13-analytics.html','09-setup.html','08-users.html'],
-  'Sales rep': ['00-today.html','14-review.html','10-prospecting.html','11-scoring.html','12-nba.html','07-content.html','13-analytics.html'],
+  'Admin': ['00-today.html','14-review.html','09-setup.html','07-content.html','08-users.html','10-prospecting.html','11-scoring.html','12-nba.html','15-content-studio.html','13-analytics.html'],
+  'Sales manager': ['00-today.html','14-review.html','10-prospecting.html','11-scoring.html','12-nba.html','15-content-studio.html','07-content.html','13-analytics.html','09-setup.html','08-users.html'],
+  'Sales rep': ['00-today.html','14-review.html','10-prospecting.html','11-scoring.html','12-nba.html','15-content-studio.html','07-content.html','13-analytics.html'],
   'Viewer': ['13-analytics.html'],
   'Platform admin': [],
 };
@@ -1078,7 +1317,7 @@ function applyRoleToNav(){
   const role = getRole();
   const allowed = ROLE_NAV_ALLOWED[role] || [];
   document.querySelectorAll('.nav-item').forEach(a=>{
-    const href = a.getAttribute('href');
+    const href = (a.getAttribute('href')||'').split('?')[0];
     a.style.display = allowed.includes(href) ? '' : 'none';
   });
   const unEl = document.querySelector('.nav-un');
@@ -1093,7 +1332,7 @@ function applyRoleToNav(){
   if(!pageIsKnown){ return; } // can't verify this page's id reliably here — don't block access on a guess
   if(!allowed.includes(thisPage)){
     const main = document.querySelector('.main') || document.getElementById('mainArea');
-    const PAGE_NAMES = {'00-today.html':'Today','09-setup.html':'Setup','07-content.html':'Content library','08-users.html':'Users and roles','10-prospecting.html':'Prospecting','11-scoring.html':'Account Scoring','12-nba.html':'Next Best Action','13-analytics.html':'Analytics','14-review.html':'Review'};
+    const PAGE_NAMES = {'00-today.html':'Today','09-setup.html':'Setup','07-content.html':'Content library','08-users.html':'Users and roles','10-prospecting.html':'Prospecting','11-scoring.html':'Account Scoring','12-nba.html':'Next Best Action','13-analytics.html':'Analytics','14-review.html':'Review','15-content-studio.html':'Content studio'};
     const firstAllowedHref = allowed[0] || '00-today.html';
     if(main) main.innerHTML = `
       <div class="topbar"><div class="topbar-l"><span class="tb-title">No access</span></div></div>
