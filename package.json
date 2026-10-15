@@ -1,8 +1,24 @@
 {
   "name": "demand-ai-poc",
   "private": true,
-  "description": "DemandAI clickable prototype; the lead and scoring rules live in demandai-engine.js",
+  "description": "DemandAI clickable prototype in Next.js; the lead and scoring rules live in lib/demandai-engine.ts",
   "scripts": {
-    "test": "node --test tests/*.test.js"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tests",
+    "test": "node --test tests/*.test.ts"
+  },
+  "dependencies": {
+    "next": "^16.4.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "typescript": "^5.9.3"
   }
 }

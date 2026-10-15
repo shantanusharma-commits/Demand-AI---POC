@@ -2,8 +2,8 @@
 // Run with: node --test tests/
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const E = require('../demandai-engine.js');
-const S = require('../demandai-sample-data.js');
+const E = require('./demandai-engine.js');
+const S = require('./demandai-sample-data.js');
 
 function run() {
   const leads = E.processLeads(S.LEADS, { file: S.LEAD_FILE, sheet: 'Lead template' });
