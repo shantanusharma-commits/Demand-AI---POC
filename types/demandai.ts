@@ -77,6 +77,8 @@ export interface Contact {
   status: string;
   /** Emails and LinkedIn URLs of duplicate rows merged into this contact, normalised; signals naming them match. */
   altRefs?: string[];
+  /** Taken out of the list by a reviewer, with what was wrong (G-015): never contacted, never a prospect. */
+  takenOut?: string;
 }
 
 export interface KnockoutCheck {

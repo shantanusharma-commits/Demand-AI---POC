@@ -20,7 +20,7 @@ export interface NbaSignal {
 export interface NbaContact {
   row?: number; name: string; firstName?: string; lastName?: string; jobTitle?: string; persona?: string; email?: string; emailRaw?: string;
   emailVerified?: boolean; linkedin?: string; linkedinRaw?: string; consent?: string; consentOk?: boolean; optOut?: boolean; optOutUnknown?: boolean;
-  owner?: string; country?: string; accountId?: string; reachableBy?: string;
+  takenOut?: string; owner?: string; country?: string; accountId?: string; reachableBy?: string;
 }
 export interface NbaAccount {
   id: string; name: string; key?: string; vertical?: string; verticalLevel?: VerticalLevel; country?: string; existingCustomer?: boolean;
@@ -378,9 +378,9 @@ export function proofFor(action: string, rec: Rec, asOf?: string, brand: BrandPa
 }
 
 /* 5.10 Channel within hard limits: email only if verified, LinkedIn only with a URL, and only for someone who can be
-   contacted at all (G-007: a recognised consent basis and an opt-out confirmed N). */
+   contacted at all (G-007: a recognised consent basis and an opt-out confirmed N; not taken out by a reviewer). */
 export function allowedChannels(c: NbaContact): ('Email' | 'LinkedIn')[] {
-  const ok = c.consentOk !== false && !c.optOut && !c.optOutUnknown;
+  const ok = c.consentOk !== false && !c.optOut && !c.optOutUnknown && !c.takenOut;
   const out: ('Email' | 'LinkedIn')[] = [];
   if (ok && c.email && c.emailVerified) out.push('Email');
   if (ok && c.linkedin) out.push('LinkedIn');
@@ -393,7 +393,7 @@ export function recommendChannel(rec: Pick<Rec, 'contact'>, _action: string, pre
   if (allowed[0] === 'Email') return { channel: 'Email', why: c.linkedin ? 'Verified email, so email first; LinkedIn is the fallback.' : 'Verified, sendable email.' };
   if (allowed[0] === 'LinkedIn') return { channel: 'LinkedIn', why: 'No verified email, but a LinkedIn URL: one connection note.' };
   // Neither is allowed: drafted as an email, but held for a person.
-  return { channel: 'Email', unreachable: true, why: c.optOut || c.optOutUnknown ? "Opt-out not confirmed: a person must confirm before anything is sent."
+  return { channel: 'Email', unreachable: true, why: c.takenOut ? 'Taken out of the list by a reviewer: nothing is sent.' : c.optOut || c.optOutUnknown ? "Opt-out not confirmed: a person must confirm before anything is sent."
     : c.consentOk === false ? 'No recognised consent basis: a person must confirm before anything is sent.' : 'No verified email and no LinkedIn URL: a person must find a way to reach them.' };
 }
 // 5.14 Call script: opener, discovery questions, objection handling, the ask.

@@ -297,6 +297,17 @@ export function missingColumns(fileColumns: string[], kind: 'lead' | 'signal', m
 }
 interface ReadTableOptions { file: string; sheet: string; columns: string[]; required: string[]; anchor: string; mapping?: ColumnMapping }
 
+/** The header row's index (0-based) among the first ten rows: the row naming the anchor column and at least one more
+ *  template column, by their own names, a saved mapping or a synonym. -1 when there is none. */
+export function headerRowOf(grid: Grid, columns: string[], anchor: string, mapping?: ColumnMapping): number {
+  const mapHeader = headerMapper(columns, mapping);
+  for (let i = 0; i < Math.min(grid.length, 10); i++) {
+    const hs = (grid[i] || []).map(h => mapHeader(h).col);
+    if (hs.includes(anchor) && hs.filter(h => columns.includes(h)).length >= 2) return i;
+  }
+  return -1;
+}
+
 /* Finds the header row (the template has a title row above it and a format-hints row below it),
    then returns one record per data row with its real spreadsheet row number. */
 export function readTable(grid: Grid, { file, sheet, columns, required, anchor, mapping }: ReadTableOptions): TableResult {
@@ -304,11 +315,7 @@ export function readTable(grid: Grid, { file, sheet, columns, required, anchor, 
   const at = (row: Issue['row'], field: string, issue: string, outcome: string, code: Issue['code'], fix: string, severity: Severity = 'flag') =>
     issues.push({ file, sheet, row, field, issue, outcome, code, fix, severity });
   const mapHeader = headerMapper(columns, mapping);
-  let headerIdx = -1;
-  for (let i = 0; i < Math.min(grid.length, 10); i++) {
-    const hs = (grid[i] || []).map(h => mapHeader(h).col);
-    if (hs.includes(anchor) && hs.filter(h => columns.includes(h)).length >= 2) { headerIdx = i; break; }
-  }
+  const headerIdx = headerRowOf(grid, columns, anchor, mapping);
   if (headerIdx < 0) {
     at('—', '—', `Couldn't find the header row (looked for a row containing "${anchor}")`, 'File not processed', 'D3',
       'Use the template: column names exactly as in the template, in the first rows of the sheet', 'stop');
@@ -403,7 +410,12 @@ function mergeDuplicate(into: Contact, from: Contact, optState: Map<Contact, Opt
   into.persona = personaOf(into.jobTitle);
 }
 
-export function processLeads(grid: Grid, { file = 'lead file', sheet = 'Sheet1', mapping }: { file?: string; sheet?: string; mapping?: ColumnMapping } = {}): LeadResult {
+/** What people decided about a file's rows (G-015, G-021): rows a reviewer took out of the list, with the reason, and
+ *  accounts whose vertical a person set (the account holding the row), applied after classification. */
+export type LeadDecisions = { removed?: ReadonlyMap<number, string>; verticals?: readonly VerticalChoice[] };
+export type VerticalChoice = { row: number; vertical: string; reason: string };
+
+export function processLeads(grid: Grid, { file = 'lead file', sheet = 'Sheet1', mapping, removed, verticals }: { file?: string; sheet?: string; mapping?: ColumnMapping } & LeadDecisions = {}): LeadResult {
   const table = readTable(grid, { file, sheet, columns: LEAD_COLUMNS, required: LEAD_REQUIRED, anchor: 'company_name', mapping });
   const issues = table.issues.slice();
   const at = (row: Issue['row'], field: string, issue: string, outcome: string, code: Issue['code'], fix: string, severity: Severity = 'flag') =>
@@ -429,6 +441,8 @@ export function processLeads(grid: Grid, { file = 'lead file', sheet = 'Sheet1',
   // How each contact's opt-out and managed-separately were given, so merges and accounts can tell blank (no answer)
   // from unreadable (fails closed).
   const optState = new Map<Contact, OptState>(), managedState = new Map<Contact, OptState>();
+  // A merged repeat's row → the person it was merged into, so a decision about either row reaches that person.
+  const mergedInto = new Map<number, Contact>();
   let notLoaded = 0, merged = 0;
 
   for (const r of table.records) {
@@ -559,6 +573,7 @@ export function processLeads(grid: Grid, { file = 'lead file', sheet = 'Sheet1',
       at(row, dupOf === byLi && !(c.email && byEmail.get(c.email)) ? 'linkedin_url' : 'email', `Duplicate of row ${dupOf.row} (${dupOf.name})`,
         `Merged into row ${dupOf.row}`, 'D5', 'Remove the repeated row');
       mergeDuplicate(dupOf, c, optState, managedState, (field, issue, outcome) => at(row, field, issue, outcome, '—', 'Correct the row that is wrong, then remove the repeat'));
+      mergedInto.set(row, dupOf);
       index(c, dupOf);
       merged++;
       continue;
@@ -586,6 +601,11 @@ export function processLeads(grid: Grid, { file = 'lead file', sheet = 'Sheet1',
     seenPeople.set(k, [...(seenPeople.get(k) ?? []), c]);
   }
 
+  // People a reviewer took out of the list stay visible, with the reason, and are never contacted or scored.
+  const byRow = new Map(contacts.map(c => [c.row, c]));
+  const personAt = (row: number) => byRow.get(row) ?? mergedInto.get(row);
+  for (const [row, why] of removed ?? []) { const c = personAt(row); if (c) c.takenOut = why; }
+
   // Reachability and contactability
   for (const c of contacts) {
     const emailOk = !!c.email && c.emailVerified, liOk = !!c.linkedin;
@@ -593,7 +613,9 @@ export function processLeads(grid: Grid, { file = 'lead file', sheet = 'Sheet1',
     c.contactable = canContact(c);
   }
 
-  const accounts = buildAccounts(contacts, issues, { file, sheet }, managedState);
+  const chosen = new Map<Contact, VerticalChoice>();
+  for (const v of verticals ?? []) { const c = personAt(v.row); if (c) { chosen.delete(c); chosen.set(c, v); } }
+  const accounts = buildAccounts(contacts, issues, { file, sheet }, managedState, chosen);
   const stats: LeadStats = {
     rowsRead: table.records.length, notLoaded, merged, contacts: contacts.length,
     accounts: accounts.length, accountsPass: accounts.filter(a => !a.excluded).length,
@@ -619,8 +641,19 @@ const validDomain = (d: string) => (/^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(d) ? d.re
 /* The one consent gate (G-005, spec 3.6 and 5.10): a usable channel, a recognised consent basis, and an opt-out that
    is confirmed N. Applied wherever someone is picked for outreach: the hand-off, signal auto-assignment, channel and
    contact choice. People who fail it stay visible; they are never handed off or drafted to. */
-export function canContact(c: Pick<Contact, 'reachableBy' | 'consentOk' | 'optOut' | 'optOutUnknown'>): boolean {
-  return c.reachableBy !== 'none' && c.consentOk && !c.optOut && !c.optOutUnknown;
+export function canContact(c: Pick<Contact, 'reachableBy' | 'consentOk' | 'optOut' | 'optOutUnknown' | 'takenOut'>): boolean {
+  return c.reachableBy !== 'none' && c.consentOk && !c.optOut && !c.optOutUnknown && !c.takenOut;
+}
+
+/** Out of the list for good: opted out, or taken out by a reviewer. Never a prospect, never counted as cover. */
+export function suppressed(c: Pick<Contact, 'optOut' | 'takenOut'>): boolean {
+  return c.optOut || !!c.takenOut;
+}
+
+/** The verticals a person can choose for an account: the mapping table's, plus Other and Out of ICP. */
+export const VERTICAL_CHOICES: string[] = [...new Set(CONFIG.verticalMap.map(m => m.vertical)), 'Other', 'Out of ICP'];
+export function verticalLevelOf(vertical: string): VerticalLevel {
+  return CONFIG.verticalMap.find(m => m.vertical === vertical)?.level ?? 'other';
 }
 
 /* Stage 3 classification and stage 4 knock-outs, per account */
@@ -651,7 +684,7 @@ export function classify(industry: string, siteProcess: string): Classification 
     reason: `"${industry || '—'}" has no match in the mapping table. The AI classifier would decide here; it isn't connected yet, so this is held as other for review` };
 }
 
-function buildAccounts(contacts: Contact[], issues: Issue[], { file, sheet }: { file: string; sheet: string }, managedState: Map<Contact, OptState>): Account[] {
+function buildAccounts(contacts: Contact[], issues: Issue[], { file, sheet }: { file: string; sheet: string }, managedState: Map<Contact, OptState>, chosen: Map<Contact, VerticalChoice>): Account[] {
   // Rows group into one account when their company's base name agrees and so does the domain (G-038): "X" and "X Group"
   // on x.com are one company. A row with no domain joins the base name's only domain. A different company on the same
   // domain stays separate and is flagged.
@@ -714,7 +747,11 @@ function buildAccounts(contacts: Contact[], issues: Issue[], { file, sheet }: { 
       if (other) issues.push({ file, sheet, row: other.row, field: col, issue: `Differs from row ${source.row} for ${f.company}`, outcome: kept, code: 'D3',
         fix: 'Repeat the same company details on every contact row', severity: 'flag' });
     }
-    const cls = classify(derived.industry, derived.siteProcess);
+    // A vertical set by a person (G-021) replaces the lookup's, with their reason; the last choice for the account wins.
+    const choice = [...chosen.entries()].filter(([c]) => cs.includes(c)).map(([, v]) => v).pop();
+    const cls: Classification = choice
+      ? { vertical: choice.vertical, level: verticalLevelOf(choice.vertical), confidence: 'high', reason: `Set by a person: ${choice.reason}` }
+      : classify(derived.industry, derived.siteProcess);
     const a = {
       id: 'acc-' + accounts.length, key, names: [...new Set(cs.map(c => c.companyKey))], name: f.company, ...derived,
       vertical: cls.vertical, verticalLevel: cls.level, confidence: cls.confidence,
@@ -722,11 +759,13 @@ function buildAccounts(contacts: Contact[], issues: Issue[], { file, sheet }: { 
     } as Account;
     // Stage 4: yes-or-no rules, in order. The installed-base rule needs the signal file, so it runs in Scoring.
     const inRegion = CONFIG.pilotCountries.some(p => p.toLowerCase() === a.country.toLowerCase());
+    const left = cs.filter(c => !suppressed(c)), anyTakenOut = cs.some(c => c.takenOut);
     a.checks = [
       { rule: 'In the pilot region', pass: inRegion, why: inRegion ? a.country : `Outside the pilot region (${a.country || 'no country'})` },
       { rule: 'Not managed separately', pass: managed === 'N', why: managed === 'Y' ? 'Managed separately by Client' : managed === 'N' ? 'Not managed separately' : 'Managed status not confirmed: confirm before any outreach' },
       { rule: 'Pilot product not installed at the site', pass: null, why: 'Checked in Scoring, from the installed-base rows of the signal file' },
-      { rule: 'At least one contact left after suppression', pass: cs.some(c => !c.optOut), why: cs.some(c => !c.optOut) ? `${cs.filter(c => !c.optOut).length} contact(s) not opted out` : 'No contactable contacts after suppression' },
+      { rule: 'At least one contact left after suppression', pass: left.length > 0,
+        why: left.length ? `${left.length} contact(s) not opted out${anyTakenOut ? ' or taken out' : ''}` : `No contactable contacts after suppression${anyTakenOut ? ' (opted out or taken out by a reviewer)' : ''}` },
     ];
     const failed = a.checks.find(k => k.pass === false);
     a.excluded = !!failed;
@@ -734,7 +773,8 @@ function buildAccounts(contacts: Contact[], issues: Issue[], { file, sheet }: { 
     accounts.push(a);
     for (const c of cs) {
       c.accountId = a.id;
-      if (a.excluded) c.status = `Not in the list: account excluded (${a.excludedReason})`;
+      if (c.takenOut) c.status = `Not in the list (taken out by a reviewer: ${c.takenOut.toLowerCase()})`;
+      else if (a.excluded) c.status = `Not in the list: account excluded (${a.excludedReason})`;
       else if (c.optOut) c.status = 'Not in the list: opted out';
       else if (!c.contactable) c.status = `In the list, not contactable (${notContactableWhy(c)})`;
       else c.status = 'In the final list';
@@ -771,7 +811,7 @@ export function fitFor(account: Account, contacts: Contact[]): Fit {
     ? [account.siteName, account.siteProcess, account.siteCapacity && `${Number(account.siteCapacity).toLocaleString('en-US')} ${account.capacityUnit}`].filter(Boolean).join(' · ')
     : 'No site given';
 
-  const live = contacts.filter(c => !c.optOut);
+  const live = contacts.filter(c => !suppressed(c));
   const coverage = live.some(c => c.persona === 'Primary') ? 100 : live.length ? 40 : 0;
   const at = CONFIG.accountTypes[account.accountType] || CONFIG.accountTypes.other;
   const vLevel = ({ core: 100, adjacent: 50, other: 0 } as Record<VerticalLevel, number>)[account.verticalLevel];
@@ -995,7 +1035,7 @@ export function scoreList(list: LeadList, signalResult: Pick<SignalResult, 'sign
     const fit = res.fit as number;
     const weightOf = (s: Signal) => s.weight as number;
     // Person signal score, then account timing over everyone's signals
-    const people: PersonScore[] = cs.filter(c => !c.optOut).map(c => {
+    const people: PersonScore[] = cs.filter(c => !suppressed(c)).map(c => {
       const sigs = own.filter(s => s.contactRow === c.row).sort((x, y) => weightOf(y) - weightOf(x));
       const raw = stack(sigs.map(weightOf));
       return { contact: c, signals: sigs, raw: round1(raw), score: round1(raw / CONFIG.timingMax * 100) };
@@ -1017,7 +1057,7 @@ export function scoreList(list: LeadList, signalResult: Pick<SignalResult, 'sign
       p.tier = tierFor(p.final, p.signals.length > 0);
       p.whyNow = p.signals.slice(0, 2).map((s, i) => `${i ? 'also ' : ''}${lowerFirst(s.detail || s.type)}`).join('; ');
     });
-    const hasPrimary = cs.some(c => !c.optOut && c.persona === 'Primary');
+    const hasPrimary = cs.some(c => !suppressed(c) && c.persona === 'Primary');
     res.confidence = !hasPrimary ? 'low' : own.length >= 2 ? 'high' : 'medium';
     res.confidenceWhy = !hasPrimary ? 'No contact in the primary persona' : own.length >= 2 ? `${own.length} qualified signals and a primary-persona contact` : 'Only one qualified signal';
     // Why-now line: the spec has AI word it from the evidence; until that's connected it's filled from a template.

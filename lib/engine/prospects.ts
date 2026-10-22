@@ -1,7 +1,7 @@
 // The ranked prospects of a scoring run: one row per person who hasn't opted out, in the order the Scoring screen
 // shows them (tier, then score, then fit). Same rules as the original page's prospects(); the server stores the
 // result so every screen and the hand-off read one ranking.
-import { CONFIG, canContact } from '../demandai-engine.ts';
+import { CONFIG, canContact, suppressed } from '../demandai-engine.ts';
 import type { Contact, PersonScore, ScoreResult, Signal, SignalResult, Tier } from '../../types/demandai';
 
 export interface Prospect {
@@ -27,7 +27,7 @@ export function buildProspects(scored: ScoreResult[]): Prospect[] {
         out.push({ key: r.account.id + '|' + p.contact.row, c: p.contact, r, p, tier: p.tier as Tier, score: live ? p.final : undefined, fit: r.fit, timing: live ? p.timing : undefined });
       });
     } else {
-      r.contacts.filter(c => !c.optOut).forEach(c => out.push({ key: r.account.id + '|' + c.row, c, r, p: null, tier: r.tier as Tier, fit: r.fit }));
+      r.contacts.filter(c => !suppressed(c)).forEach(c => out.push({ key: r.account.id + '|' + c.row, c, r, p: null, tier: r.tier as Tier, fit: r.fit }));
     }
   }
   out.sort((x, y) => TIER_ORDER[x.tier] - TIER_ORDER[y.tier] || (y.score || 0) - (x.score || 0) || (y.fit || 0) - (x.fit || 0));
