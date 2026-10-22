@@ -22,6 +22,20 @@ export const CONFIG = {
   tierThresholds: { A: 35, B: 20 },
   // Stacked timing can't exceed twice the strongest tier weight (100 + 50 + 25 + … < 200).
   timingMax: 200,
+  // Micro-segments: a segment needs this many distinct accounts.
+  minSegmentAccounts: 3,
+  // The agreed action library per segment (proposed in the process flows; the Client approves the final list).
+  // The first option is the recommendation; the next is the runner-up unless the strongest signal says otherwise.
+  segmentLibrary: {
+    'Inquiry':         ['Call to follow up on the inquiry', 'Route the inquiry to the sales owner'],
+    'Modernisation':   ['Propose a migration-path discussion', 'Offer a site assessment', 'Offer a lifecycle service review'],
+    'Service renewal': ['Offer a renewal review', 'Route to the service owner'],
+    'Project':         ['Share a comparable case study and offer a technical session', 'Offer a reference-site visit', 'Offer an early design workshop'],
+    'Leadership':      ['Introduce Client to the new leader', 'Share a peer case study from their sector', 'Invite to a short briefing'],
+    'Engagement':      ['Follow up on the topic they engaged with', 'Invite to a related session'],
+  } as Record<string, string[]>,
+  // Weights for a signal type added in Setup, by the strength chosen there.
+  customStrength: { Strong: { tier: 100, strength: 1 }, Medium: { tier: 60, strength: 1 }, Light: { tier: 30, strength: 1 } } as Record<string, { tier: number; strength: number }>,
   // Industry and site-process mapping (D-15 v1, provisional until the Client's taxonomy arrives): the first match
   // wins, refining first. Exclusions are checked before it: palm-oil, oleochemical, edible-oil and sugar refiners are
   // out of the ICP, whatever "refining" says.
@@ -125,6 +139,7 @@ export function countryKey(raw: string): string {
 }
 
 export const CODES: Record<DqCode, string> = {
+  OFF: 'Switched off in Setup',
   D1: 'Wrong fit',
   D2: 'Stale',
   D3: 'Incomplete',
@@ -775,6 +790,29 @@ function fmtMoney(n: number): string {
   return n.toLocaleString('en-US');
 }
 
+/* ─── Signal types switched off or added in Setup (G-023). A run takes them as settings; the shared configuration is
+   never changed, so lists already scored keep the types they were scored with. ─── */
+export type CustomSignalType = { name: string; segment: string; level: 'Strong' | 'Medium' | 'Light'; full: number; zero: number; about?: string; data?: string; source?: string };
+
+/** Why a signal type can't be added, or null. */
+export function customSignalProblem(def: CustomSignalType, others: CustomSignalType[] = []): string | null {
+  const name = clean(def.name);
+  if (!name) return 'Give the signal a name, as it appears in the signal_type column';
+  if ([...Object.keys(CONFIG.signalTypes), ...others.map(o => o.name)].some(k => k.toLowerCase() === name.toLowerCase())) return `"${name}" is already a signal type`;
+  if (!CONFIG.segmentLibrary[def.segment]) return 'Pick the micro-segment it feeds';
+  if (!(+def.full > 0) || !(+def.zero > +def.full)) return 'Full weight needs a number of days, and "gone after" must be longer';
+  return null;
+}
+
+function signalTypesFor(custom: CustomSignalType[]): Record<string, SignalTypeConfig> {
+  const types: Record<string, SignalTypeConfig> = { ...CONFIG.signalTypes };
+  for (const c of custom) {
+    if (types[c.name]) continue;
+    types[c.name] = { code: 'C', segment: c.segment, full: +c.full, zero: +c.zero, ...(CONFIG.customStrength[c.level] ?? CONFIG.customStrength.Medium) };
+  }
+  return types;
+}
+
 /* ─── Stage 7: signal intake and qualification, per person ─── */
 export function decayFactor(type: Pick<SignalTypeConfig, 'full' | 'zero'>, age: number): number {
   const full = type.full as number, zero = type.zero as number;
@@ -783,8 +821,10 @@ export function decayFactor(type: Pick<SignalTypeConfig, 'full' | 'zero'>, age: 
   return (zero - age) / (zero - full);
 }
 
-export function processSignals(grid: Grid, list: LeadList, { file = 'signal file', sheet = 'Sheet1', asOf, mapping }: { file?: string; sheet?: string; asOf?: string; mapping?: ColumnMapping } = {}): SignalResult {
+export function processSignals(grid: Grid, list: LeadList,
+  { file = 'signal file', sheet = 'Sheet1', asOf, mapping, off = [], custom = [] }: { file?: string; sheet?: string; asOf?: string; mapping?: ColumnMapping; off?: string[]; custom?: CustomSignalType[] } = {}): SignalResult {
   const table = readTable(grid, { file, sheet, columns: SIGNAL_COLUMNS, required: SIGNAL_REQUIRED, anchor: 'signal_type', mapping });
+  const signalTypes = signalTypesFor(custom);
   const issues = table.issues.slice();
   // An account answers to every company name its rows use (G-038); signals also find it by domain, base name or
   // initials (G-044), each only when exactly one account fits.
@@ -847,13 +887,14 @@ export function processSignals(grid: Grid, list: LeadList, { file = 'signal file
     if (how) issues.push({ file, sheet, row: s.row, field: 'company_name', issue: `"${s.company}" matched to ${acc.name} by ${how}`, outcome: 'Counted for that account', code: '—', fix: 'Write the company name as in the lead file', severity: 'info' });
     s.accountId = acc.id;
     const cs = contactsByAcc.get(acc.id) || [];
-    let typeCfg = CONFIG.signalTypes[s.type] || CONFIG.signalTypes[Object.keys(CONFIG.signalTypes).find(k => k.toLowerCase() === s.type.toLowerCase()) as string];
+    let typeCfg = signalTypes[s.type] || signalTypes[Object.keys(signalTypes).find(k => k.toLowerCase() === s.type.toLowerCase()) as string];
     const typeAs = typeCfg ? undefined : CONFIG.synonyms.signalTypes[s.type.toLowerCase().replace(/\s+/g, ' ')];
     if (typeAs) {
-      typeCfg = CONFIG.signalTypes[typeAs];
+      typeCfg = signalTypes[typeAs];
       issues.push({ file, sheet, row: s.row, field: 'signal_type', issue: `"${s.type}" read as ${typeAs}`, outcome: 'Scored as that type', code: '—', fix: 'Use the type from the list in the template', severity: 'info' });
     }
-    if (typeCfg) s.type = Object.keys(CONFIG.signalTypes).find(k => CONFIG.signalTypes[k] === typeCfg) as string;
+    if (typeCfg) s.type = Object.keys(signalTypes).find(k => signalTypes[k] === typeCfg) as string;
+    if (typeCfg && off.includes(s.type)) { reject('OFF', `${s.type} is switched off in Setup`, 'signal_type', 'Switch it back on in Setup to score it'); continue; }
 
     // Installed system (current) is company-wide: it knocks the account out, whoever is named.
     if (typeCfg && typeCfg.knockout) {

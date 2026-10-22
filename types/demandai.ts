@@ -7,7 +7,7 @@ export type Cell = string | number | boolean | Date | null | undefined;
 export type Grid = Cell[][];
 
 export type Severity = 'stop' | 'flag' | 'info';
-export type DqCode = 'D1' | 'D2' | 'D3' | 'D4' | 'D5';
+export type DqCode = 'OFF' | 'D1' | 'D2' | 'D3' | 'D4' | 'D5';
 
 export interface Issue {
   file: string;

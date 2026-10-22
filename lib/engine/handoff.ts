@@ -17,7 +17,7 @@ const fmt1 = (n: number | undefined | null): string => n === undefined || n === 
 /** A hand-off item for a prospect with a live signal. */
 export function toNbaItem(x: Prospect, id: string): NbaItem {
   const p = x.p!;
-  const c = x.c, top = p.signals[0], seg = (CONFIG.signalTypes[top.type] || {}).segment || 'Engagement';
+  const c = x.c, top = p.signals[0], seg = top.segment || (CONFIG.signalTypes[top.type] || {}).segment || 'Engagement';
   const first = c.firstName || c.name.split(' ')[0];
   const emailOk = c.email && c.emailVerified, liOk = !!c.linkedin;
   const channel = seg === 'Inquiry' || (!emailOk && !liOk) ? 'Call' : emailOk ? 'Email' : 'DM';
