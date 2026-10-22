@@ -516,6 +516,18 @@ export function processLeads(grid: Grid, { file = 'lead file', sheet = 'Sheet1' 
   return { contacts, accounts, issues, stats };
 }
 
+/* ─── Account identity (G-038): the company's domain and its name without legal or group suffixes ─── */
+const LEGAL_WORDS = new Set(['group', 'pte', 'ltd', 'limited', 'sdn', 'bhd', 'berhad', 'pt', 'tbk', 'co', 'company', 'corp', 'corporation', 'inc',
+  'incorporated', 'plc', 'jsc', 'llc', 'holdings', 'holding', 'public', 'pcl']);
+/** "ACME REFINING PTE LTD", "Acme Refining Group" and "PT Acme Refining Tbk" all give "acme refining". */
+export function companyBase(name: string): string {
+  const words = name.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(/&/g, ' and ').replace(/[^a-z0-9 ]+/g, ' ').split(/\s+/).filter(Boolean);
+  while (words.length > 1 && LEGAL_WORDS.has(words[words.length - 1])) words.pop();
+  while (words.length > 1 && LEGAL_WORDS.has(words[0])) words.shift();
+  return words.join(' ');
+}
+const validDomain = (d: string) => (/^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(d) ? d.replace(/^www\./, '') : '');
+
 /* The one consent gate (G-005, spec 3.6 and 5.10): a usable channel, a recognised consent basis, and an opt-out that
    is confirmed N. Applied wherever someone is picked for outreach: the hand-off, signal auto-assignment, channel and
    contact choice. People who fail it stay visible; they are never handed off or drafted to. */
@@ -552,14 +564,40 @@ export function classify(industry: string, siteProcess: string): Classification 
 }
 
 function buildAccounts(contacts: Contact[], issues: Issue[], { file, sheet }: { file: string; sheet: string }, managedState: Map<Contact, OptState>): Account[] {
+  // Rows group into one account when their company's base name agrees and so does the domain (G-038): "X" and "X Group"
+  // on x.com are one company. A row with no domain joins the base name's only domain. A different company on the same
+  // domain stays separate and is flagged.
+  const baseOf = new Map(contacts.map(c => [c, companyBase(c.company) || c.companyKey]));
+  const baseDomains = new Map<string, Set<string>>();
+  for (const c of contacts) {
+    const d = validDomain(c.domain);
+    if (d) baseDomains.set(baseOf.get(c)!, new Set([...(baseDomains.get(baseOf.get(c)!) ?? []), d]));
+  }
+  const domainOf = (c: Contact) => validDomain(c.domain) || (baseDomains.get(baseOf.get(c)!)?.size === 1 ? [...baseDomains.get(baseOf.get(c)!)!][0] : '');
   const map = new Map<string, Contact[]>();
   for (const c of contacts) {
-    if (!map.has(c.companyKey)) map.set(c.companyKey, []);
-    map.get(c.companyKey)!.push(c);
+    const k = `${domainOf(c)}|${baseOf.get(c)}`;
+    if (!map.has(k)) map.set(k, []);
+    map.get(k)!.push(c);
+  }
+  const firstOnDomain = new Map<string, Contact>();
+  for (const cs of map.values()) {
+    const f = cs[0], d = domainOf(f);
+    for (const c of cs) {
+      if (c.companyKey !== f.companyKey && cs.find(x => x.companyKey === c.companyKey) === c) {
+        issues.push({ file, sheet, row: c.row, field: 'company_name', issue: `Company name written differently from row ${f.row} ("${c.company}")`,
+          outcome: `Grouped into ${f.company}: same domain and name`, code: '—', fix: 'Write the company name the same way on every row', severity: 'info' });
+      }
+    }
+    if (!d) continue;
+    const owner = firstOnDomain.get(d);
+    if (!owner) firstOnDomain.set(d, f);
+    else issues.push({ file, sheet, row: f.row, field: 'company_domain', issue: `Shares the domain ${d} with ${owner.company} (row ${owner.row})`,
+      outcome: 'Kept as a separate account', code: 'D3', fix: 'Check which company the domain belongs to and correct the other', severity: 'flag' });
   }
   const accounts: Account[] = [];
-  for (const [key, cs] of map) {
-    const f = cs[0];
+  for (const cs of map.values()) {
+    const f = cs[0], key = f.companyKey;
     // Each detail is the first value any row gives, not just the first row's (G-017); a stated relationship or
     // "managed separately" on any row counts.
     const firstOf = <K extends keyof Contact>(k: K): Contact[K] => (cs.find(c => !blankValue(c[k])) ?? f)[k];
@@ -590,7 +628,7 @@ function buildAccounts(contacts: Contact[], issues: Issue[], { file, sheet }: { 
     }
     const cls = classify(derived.industry, derived.siteProcess);
     const a = {
-      id: 'acc-' + accounts.length, key, name: f.company, ...derived,
+      id: 'acc-' + accounts.length, key, names: [...new Set(cs.map(c => c.companyKey))], name: f.company, ...derived,
       vertical: cls.vertical, verticalLevel: cls.level, confidence: cls.confidence,
       classReason: cls.reason, needsReview: !!cls.needsReview, contactIds: cs.map(c => c.row),
     } as Account;
@@ -681,7 +719,9 @@ export function decayFactor(type: Pick<SignalTypeConfig, 'full' | 'zero'>, age: 
 export function processSignals(grid: Grid, list: LeadList, { file = 'signal file', sheet = 'Sheet1', asOf }: { file?: string; sheet?: string; asOf?: string } = {}): SignalResult {
   const table = readTable(grid, { file, sheet, columns: SIGNAL_COLUMNS, required: SIGNAL_REQUIRED, anchor: 'signal_type' });
   const issues = table.issues.slice();
-  const accountsByKey = new Map(list.accounts.map(a => [a.key, a]));
+  // An account answers to every company name its rows use (G-038).
+  const accountsByKey = new Map<string, Account>();
+  for (const a of list.accounts) for (const n of a.names ?? [a.key]) if (!accountsByKey.has(n)) accountsByKey.set(n, a);
   const contactsByAcc = new Map<string, Contact[]>();
   for (const c of list.contacts) {
     if (!contactsByAcc.has(c.accountId)) contactsByAcc.set(c.accountId, []);

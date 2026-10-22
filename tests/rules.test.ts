@@ -272,3 +272,27 @@ test('G-021: the v1 industry table maps the agreed industries and site processes
   }
   assert.equal(E.classify('Mining', '').needsReview, true, 'an unmapped industry still goes to review');
 });
+
+/* ─── G-038 accounts grouped by domain and base name ─── */
+
+test('G-038: the same company written two ways is one account when the domain agrees; the variant is noted', () => {
+  const r = leads({}, { ...OTHER, company_name: 'Acme Refining Group' }, { first_name: 'Cy', email: 'cy@acme-refining.com', linkedin_url: '', company_name: 'ACME REFINING PTE LTD', company_domain: '' });
+  assert.equal(r.accounts.length, 1, 'one account');
+  assert.equal(r.accounts[0].name, 'Acme Refining');
+  assert.deepEqual(r.accounts[0].contactIds, [2, 3, 4]);
+  assert.ok(r.issues.some(i => i.row === 3 && i.field === 'company_name' && i.severity === 'info' && /written differently/.test(i.issue)));
+});
+
+test('G-038: a signal naming either way of writing the company reaches the one account', () => {
+  const r = leads({}, { ...OTHER, company_name: 'Acme Refining Group' });
+  const sig = E.processSignals([SIGNALS, ['Acme Refining Group', 'bo.tan@acme-refining.com', 'Capital project', '2026-09-01', 'New unit', 'Plan', '']],
+    { accounts: r.accounts, contacts: r.contacts }, { asOf: '2026-09-30' });
+  assert.equal(sig.signals[0].status, 'Qualified');
+  assert.equal(sig.signals[0].accountId, r.accounts[0].id);
+});
+
+test('G-038: a different company that shares a domain stays separate and is flagged for review', () => {
+  const r = leads({}, { ...OTHER, company_name: 'Nusa Chemicals' });
+  assert.equal(r.accounts.length, 2);
+  assert.ok(r.issues.some(i => i.row === 3 && i.field === 'company_domain' && i.severity === 'flag' && /shares the domain/i.test(i.issue)));
+});

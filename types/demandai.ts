@@ -88,6 +88,8 @@ export interface KnockoutCheck {
 export interface Account {
   id: string;
   key: string;
+  /** Every company name (normalised) the account's rows use; signals naming any of them match. */
+  names?: string[];
   name: string;
   domain: string;
   country: string;

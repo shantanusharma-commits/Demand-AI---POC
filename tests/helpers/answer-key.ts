@@ -113,7 +113,9 @@ export function measure(data = loadDataset()) {
   }
 
   // ── Accounts against the Account key ──
-  const accByKey = new Map(leads.accounts.map(a => [a.key, a]));
+  // An account answers to every name its rows use (G-038 groups "X" and "X Group" into one).
+  const accByKey = new Map<string, E.Account>();
+  for (const a of leads.accounts) for (const n of a.names ?? [a.key]) if (!accByKey.has(n)) accByKey.set(n, a);
   const resultById = new Map(scored.map(r => [r.account.id, r]));
   let wrongful = 0, missed = 0;
   const accountCases: Record<string, Tally> = {};
