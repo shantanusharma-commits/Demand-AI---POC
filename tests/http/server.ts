@@ -93,6 +93,27 @@ export class Browser {
   }
 
   get(path: string) { return this.request('GET', path); }
+
+  /** A multipart upload, as the browser's file input sends it. */
+  async upload(path: string, form: FormData, headers: Record<string, string> = {}): Promise<{ status: number; json: Record<string, unknown> }> {
+    const res = await fetch(this.base + path, { method: 'POST', headers: { ...(this.cookie ? { cookie: this.cookie } : {}), origin: this.base, ...headers }, body: form });
+    const text = await res.text();
+    let json: Record<string, unknown> = {};
+    try { json = text ? JSON.parse(text) : {}; } catch { /* not JSON */ }
+    return { status: res.status, json };
+  }
+
+  /** Polls a background job until it finishes. */
+  async waitForJob(jobId: string, timeoutMs = 60_000): Promise<{ status: string; progress: { stages: string[]; done: number; result?: Record<string, string> }; error: { code: string; message: string } | null }> {
+    const deadline = Date.now() + timeoutMs;
+    for (;;) {
+      const r = await this.get(`/api/jobs/${jobId}`);
+      const job = r.json.job as { status: string; progress: { stages: string[]; done: number; result?: Record<string, string> }; error: { code: string; message: string } | null };
+      if (job && (job.status === 'succeeded' || job.status === 'failed')) return job;
+      if (Date.now() > deadline) throw new Error(`job ${jobId} did not finish: ${r.text}`);
+      await new Promise(res => setTimeout(res, 100));
+    }
+  }
   post(path: string, body: unknown = {}, headers?: Record<string, string>) { return this.request('POST', path, body, headers); }
 
   async signIn(email: string, password = PASSWORD) {

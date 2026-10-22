@@ -48,6 +48,11 @@ export const envSchema = z
     UPLOAD_MAX_BYTES: int(25 * 1024 * 1024, 1024),
     UPLOAD_MAX_ROWS: int(50_000, 1),
     UPLOAD_TIME_LIMIT_MS: int(60_000, 1_000),
+    UPLOAD_MAX_UNZIPPED_BYTES: int(200 * 1024 * 1024, 1024 * 1024),
+
+    // Background jobs (uploads, scoring). Every app instance runs a worker unless JOBS_WORKER=0.
+    JOBS_WORKER: flag(true),
+    JOBS_POLL_MS: int(1000, 100, 60_000),
 
     // AI (D-5, D-35, D-40). Every capability flag is off unless set.
     AI_PROVIDER: z.enum(AI_PROVIDERS).default('none'),

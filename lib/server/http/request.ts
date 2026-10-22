@@ -28,9 +28,15 @@ export function isSameOrigin(request: Request, appBaseUrl: string | undefined, p
 
 /** Reads a request body as text, refusing anything larger than maxBytes without buffering all of it. */
 export async function readBodyText(request: Request, maxBytes: number): Promise<string | null> {
+  const bytes = await readBodyBytes(request, maxBytes);
+  return bytes === null ? null : bytes.toString('utf8');
+}
+
+/** Reads a request body as bytes, stopping as soon as it passes maxBytes (null), so an oversize upload is never held. */
+export async function readBodyBytes(request: Request, maxBytes: number): Promise<Buffer | null> {
   const declared = Number(request.headers.get('content-length') ?? NaN);
   if (Number.isFinite(declared) && declared > maxBytes) return null;
-  if (!request.body) return '';
+  if (!request.body) return Buffer.alloc(0);
   const reader = request.body.getReader();
   const chunks: Uint8Array[] = [];
   let size = 0;
@@ -44,5 +50,5 @@ export async function readBodyText(request: Request, maxBytes: number): Promise<
     }
     chunks.push(value);
   }
-  return Buffer.concat(chunks).toString('utf8');
+  return Buffer.concat(chunks);
 }

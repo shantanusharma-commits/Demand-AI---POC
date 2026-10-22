@@ -1,6 +1,6 @@
 /* Prospecting: the checks run on an uploaded lead file, and what each found.
    Same steps, labels and grouping rules as the original 10-prospecting.html (CHECKS / STEPS / checkOf / stepResult). */
-import type { Issue, LeadResult } from '@/types/demandai';
+import type { Issue, LeadResult } from '../../types/demandai';
 
 export type StepKey = 'columns' | 'required' | 'emailFormat' | 'verified' | 'liFormat' | 'channel' | 'dupes' | 'formats'
   | 'consent' | 'optout' | 'classify' | 'knockouts';
@@ -19,7 +19,7 @@ export const CHECKS: [StepKey, string, string][] = [
 ];
 
 export function checkOf(i: Issue): StepKey {
-  if (/Required column|isn't in the template|header row|format hints/.test(i.issue)) return 'columns';
+  if (/Required column|isn't in the template|header row|format hints|^File (encoding|delimiter)/.test(i.issue)) return 'columns';
   if (i.code === 'D5') return 'dupes';
   if (i.field === 'email' && /malformed/.test(i.issue)) return 'emailFormat';
   if (i.field === 'email_verified') return 'verified';

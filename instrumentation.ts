@@ -1,10 +1,14 @@
 import type { Instrumentation } from 'next';
 
-// Runs once before the server takes requests: validate the configuration (fail fast) and log the start-up.
+// Runs once before the server takes requests: validate the configuration (fail fast), log the start-up, and start
+// the job worker.
 export async function register() {
   if (process.env.NEXT_RUNTIME === 'nodejs') {
     const { boot } = await import('./lib/server/boot.ts');
     boot();
+    // Upload checks and scoring run as background jobs in every server process (plan §4 item 8).
+    const { startJobWorker } = await import('./lib/server/jobs/handlers.ts');
+    startJobWorker();
   }
 }
 

@@ -51,7 +51,7 @@ ALTER TABLE issues ENABLE ROW LEVEL SECURITY;
 --> statement-breakpoint
 CREATE POLICY issues_owner ON issues
   USING (business_unit_id = app_bu() AND (app_owns(owner_email) OR (owner_email IS NULL AND row_no IS NULL)))
-  WITH CHECK (business_unit_id = app_bu() AND app_owns(owner_email));
+  WITH CHECK (business_unit_id = app_bu() AND (app_owns(owner_email) OR (owner_email IS NULL AND row_no IS NULL)));
 --> statement-breakpoint
 ALTER TABLE signals ENABLE ROW LEVEL SECURITY;
 --> statement-breakpoint
