@@ -1,13 +1,15 @@
 'use client';
 
-/* The frame every screen shares: the sidebar, the demo role switcher and the role check.
-   Markup and behaviour match the nav and ROLE ENGINE block that each original HTML page repeated. */
+/* The frame every screen shares: the sidebar, the signed-in person and their business unit.
+   Which links show comes from the server's permission table for the person's role in the active unit; the
+   server also refuses every page and request the role may not use, so hiding a link is only a convenience. */
 import Link from 'next/link';
-import { useLayoutEffect, useState, type ReactNode } from 'react';
-import {
-  ALL_ROLES, PAGE_NAMES, PAGE_ROUTES, ROLE_NAV_ALLOWED, ROLE_PERSON, getRole, initialsOf, storeRole,
-  type PageId, type Role,
-} from '@/lib/roles';
+import { useRouter } from 'next/navigation';
+import { useState, type ReactNode } from 'react';
+import { PAGE_ACCESS, PAGES, initialsOf, type PageId, type SessionUser } from '@/lib/auth/permissions';
+import { api, errorText } from '@/lib/client/api';
+import { showToast } from '@/lib/ui';
+import { SessionProvider } from './SessionContext';
 
 interface NavLink { page: PageId; label: string; icon: ReactNode }
 
@@ -44,101 +46,109 @@ const EXTRA_ACTIVE: Partial<Record<PageId, PageId[]>> = {
   '08-users.html': ['00-today.html'],
 };
 
-/** Short name used for page-specific CSS (data-page on .shell). */
-const PAGE_KEY: Record<PageId, string> = {
-  '00-today.html': 'today', '07-content.html': 'content', '08-users.html': 'users', '09-setup.html': 'setup',
-  '10-prospecting.html': 'prospecting', '11-scoring.html': 'scoring', '12-nba.html': 'nba', '13-analytics.html': 'analytics', '14-review.html': 'review',
-};
-
-function NoAccess({ role }: { role: Role }) {
-  const firstAllowed = ROLE_NAV_ALLOWED[role][0] || '00-today.html';
+function NoAccess({ user }: { user: SessionUser }) {
+  const role = user.activeBusinessUnit?.role;
+  const first = role ? PAGE_ACCESS[role][0] : null;
   return (
     <main className="main">
       <div className="topbar"><div className="topbar-l"><span className="tb-title">No access</span></div></div>
       <div className="canvas" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '70vh' }}>
-        <div style={{ textAlign: 'center', maxWidth: 360 }}>
+        <div style={{ textAlign: 'center', maxWidth: 380 }}>
           <div style={{ fontSize: 28, marginBottom: 10 }}>🔒</div>
-          <div style={{ fontFamily: 'var(--fd)', fontSize: 15, fontWeight: 700, color: 'var(--i1)', marginBottom: 6 }}>Not available for this role</div>
-          <div style={{ fontSize: 12, color: 'var(--i3)', lineHeight: 1.6 }}>{role} doesn&apos;t have access to this screen. Switch role from the sidebar, or use the menu to go to <Link href={PAGE_ROUTES[firstAllowed]} style={{ color: 'var(--brand)' }}>{PAGE_NAMES[firstAllowed] || firstAllowed}</Link>.</div>
+          <div style={{ fontFamily: 'var(--fd)', fontSize: 15, fontWeight: 700, color: 'var(--i1)', marginBottom: 6 }}>Not available for your role</div>
+          <div style={{ fontSize: 12, color: 'var(--i3)', lineHeight: 1.6 }}>
+            {role
+              ? <>{role} in {user.activeBusinessUnit!.name} doesn&apos;t have access to this screen.{first ? <> Go to <Link href={PAGES[first].route} style={{ color: 'var(--brand)' }}>{PAGES[first].name}</Link>.</> : null}</>
+              : <>You aren&apos;t an active member of a business unit yet. Ask your administrator to add you.{user.platformAdmin ? <> Manage <Link href="/platform" style={{ color: 'var(--brand)' }}>business units</Link>.</> : null}</>}
+          </div>
         </div>
       </div>
     </main>
   );
 }
 
-function RoleModal({ current, onPick, onClose }: { current: Role; onPick: (r: Role) => void; onClose: () => void }) {
-  return (
-    <div id="roleModalOverlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}
-      style={{ position: 'fixed', inset: 0, background: 'rgba(20,26,33,.45)', zIndex: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ background: 'var(--surf)', borderRadius: 'var(--rlg)', boxShadow: 'var(--sh-lg)', width: 360, padding: 20 }} onClick={e => e.stopPropagation()}>
-        <div style={{ fontFamily: 'var(--fd)', fontSize: 14, fontWeight: 700, color: 'var(--i1)', marginBottom: 4 }}>Preview as a role</div>
-        <div style={{ fontSize: 11, color: 'var(--i3)', marginBottom: 14 }}>Changes what you see, matching what that role actually has access to. If this screen isn&apos;t available for the new role, use the sidebar to go to one that is.</div>
-        {ALL_ROLES.map(r => (
-          <div key={r} onClick={() => onPick(r)} style={{ padding: '10px 12px', borderRadius: 8, cursor: 'pointer', marginBottom: 4, background: r === current ? 'var(--brand-lt)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div><div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--i1)' }}>{r}</div><div style={{ fontSize: 10.5, color: 'var(--i3)' }}>{ROLE_PERSON[r]}</div></div>
-            {r === current ? <span style={{ color: 'var(--brand)' }}>✓</span> : null}
-          </div>
-        ))}
-        <button className="btn btn-ghost btn-sm" style={{ width: '100%', justifyContent: 'center', marginTop: 10 }} onClick={onClose}>Close</button>
-      </div>
-    </div>
-  );
-}
-
-export default function AppShell({ page, children }: { page: PageId; children: ReactNode }) {
-  const [role, setRoleState] = useState<Role>('Sales manager');
-  const [modalOpen, setModalOpen] = useState(false);
-  // As in the original, once a role without access has blanked this screen it stays blanked until the page is reloaded
-  // or left, even if another role is picked afterwards.
-  const [blocked, setBlocked] = useState(false);
-
-  const apply = (r: Role) => {
-    setRoleState(r);
-    if (!ROLE_NAV_ALLOWED[r].includes(page)) setBlocked(true);
-  };
-  // Read the stored role before the first paint, as the original did on DOMContentLoaded.
-  useLayoutEffect(() => { apply(getRole()); }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const pickRole = (r: Role) => { storeRole(r); setModalOpen(false); apply(r); };
-  const allowed = ROLE_NAV_ALLOWED[role] || [];
-  const person = ROLE_PERSON[role];
+export default function AppShell({ page, user, allowed, children }: { page: PageId | 'platform'; user: SessionUser; allowed: boolean; children: ReactNode }) {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const role = user.activeBusinessUnit?.role;
+  const visible: readonly PageId[] = role ? PAGE_ACCESS[role] : [];
   const item = (l: NavLink) => (
-    <Link key={l.page} className={`nav-item ${l.page === page || EXTRA_ACTIVE[page]?.includes(l.page) ? 'active' : ''}`} href={PAGE_ROUTES[l.page]} style={allowed.includes(l.page) ? undefined : { display: 'none' }}>
+    <Link key={l.page} className={`nav-item ${l.page === page || (page !== 'platform' && EXTRA_ACTIVE[page]?.includes(l.page)) ? 'active' : ''}`} href={PAGES[l.page].route} style={visible.includes(l.page) ? undefined : { display: 'none' }}>
       {l.icon}
       <span className="nav-lbl">{l.label}</span>
     </Link>
   );
+  const switchUnit = async (businessUnitId: string) => {
+    setBusy(true);
+    try {
+      await api('/api/session/business-unit', { body: { businessUnitId } });
+      router.push('/');
+      router.refresh();
+    } catch (err) {
+      showToast(errorText(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+  const signOut = async () => {
+    setBusy(true);
+    try { await api('/api/auth/logout', { body: {} }); } catch { /* the session may already be gone */ }
+    window.location.assign('/login');
+  };
 
   return (
-    <div className="shell" data-page={PAGE_KEY[page]}>
-      <nav className="nav">
-        <div className="nav-brand">
-          <div style={{ width: 26, height: 26, flexShrink: 0 }}>
-            <svg width="26" height="26" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-              <image href="/demandai-logo.png" width="200" height="200"/>
-            </svg>
+    <SessionProvider user={user}>
+      <div className="shell" data-page={page === 'platform' ? 'platform' : PAGES[page].key}>
+        <nav className="nav" aria-label="Main">
+          <div className="nav-brand">
+            <div style={{ width: 26, height: 26, flexShrink: 0 }}>
+              <svg width="26" height="26" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <image href="/demandai-logo.png" width="200" height="200"/>
+              </svg>
+            </div>
+            <div><div className="nav-nm">DemandAI</div></div>
           </div>
-          <div><div className="nav-nm">DemandAI</div></div>
-        </div>
-        <div className="nav-body">
-          {item(TODAY)}
-          {SECTIONS.map(s => (
-            <SectionBlock key={s.title} title={s.title}>{s.links.map(item)}</SectionBlock>
-          ))}
-        </div>
-        <div className="nav-foot">
-          <div className="nav-user">
-            <div className="nav-av">{initialsOf(person)}</div>
-            <div><div className="nav-un">{person}</div><div className="nav-ur">{role}</div></div>
+          <div className="nav-body">
+            {item(TODAY)}
+            {SECTIONS.map(s => (
+              <SectionBlock key={s.title} title={s.title}>{s.links.map(item)}</SectionBlock>
+            ))}
+            {user.platformAdmin ? (
+              <SectionBlock title="Platform">
+                <Link className={`nav-item ${page === 'platform' ? 'active' : ''}`} href="/platform">
+                  <svg {...svg}><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                  <span className="nav-lbl">Business units</span>
+                </Link>
+              </SectionBlock>
+            ) : null}
           </div>
-          <div id="roleSwitchBtn" style={{ padding: '8px 10px 0', cursor: 'pointer' }} onClick={() => setModalOpen(true)}>
-            <div style={{ fontSize: 10, color: 'var(--r3)', textDecoration: 'underline', textAlign: 'center' }}>Switch role (demo)</div>
+          <div className="nav-foot">
+            <div className="nav-user">
+              <div className="nav-av">{initialsOf(user.displayName)}</div>
+              <div><div className="nav-un">{user.displayName}</div><div className="nav-ur">{role ?? (user.platformAdmin ? 'Platform admin' : 'No unit')}</div></div>
+            </div>
+            {user.memberships.length > 1 ? (
+              <div style={{ padding: '8px 10px 0' }}>
+                <label htmlFor="buSwitch" style={{ fontSize: 10, color: 'var(--r3)', display: 'block', marginBottom: 3 }}>Business unit</label>
+                <select id="buSwitch" disabled={busy} value={user.activeBusinessUnit?.id ?? ''} onChange={e => void switchUnit(e.target.value)}
+                  style={{ width: '100%', fontSize: 11, borderRadius: 6, padding: '4px 6px', background: 'var(--surf)', color: 'var(--i1)' }}>
+                  {user.memberships.map(m => <option key={m.businessUnitId} value={m.businessUnitId}>{m.name} · {m.role}</option>)}
+                </select>
+              </div>
+            ) : user.activeBusinessUnit ? (
+              <div style={{ padding: '6px 10px 0', fontSize: 10, color: 'var(--r3)' }}>{user.activeBusinessUnit.name}</div>
+            ) : null}
+            <div style={{ padding: '8px 10px 0' }}>
+              <button type="button" onClick={() => void signOut()} disabled={busy}
+                style={{ background: 'none', border: 'none', padding: 0, fontSize: 10.5, color: 'var(--r3)', textDecoration: 'underline', cursor: 'pointer', width: '100%' }}>
+                Sign out
+              </button>
+            </div>
           </div>
-        </div>
-      </nav>
-      {blocked ? <NoAccess role={role} /> : children}
-      {modalOpen ? <RoleModal current={role} onPick={pickRole} onClose={() => setModalOpen(false)} /> : null}
-    </div>
+        </nav>
+        {allowed ? children : <NoAccess user={user} />}
+      </div>
+    </SessionProvider>
   );
 }
 

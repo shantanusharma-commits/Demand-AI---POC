@@ -94,3 +94,9 @@ jobs:
 
       - name: Integration tests (migrations, row-level security, append-only, jobs, readiness, seed, backup and restore)
         run: npm run test:integration
+
+      - name: Build (production bundle for the HTTP tests)
+        run: npm run build
+
+      - name: HTTP tests on the standalone server (route inventory, role x route matrix, CSRF, sign-in, pages)
+        run: npm run test:http

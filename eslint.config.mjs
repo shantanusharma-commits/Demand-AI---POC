@@ -6,14 +6,12 @@ import nextTs from 'eslint-config-next/typescript';
 // impure render, setState in effects). They are rewired to server data in Phases 3-5; until each one is,
 // these rules only warn there. Remove a file from this list when its screen is rewritten.
 const PROTOTYPE_SCREENS = [
-  'components/AppShell.tsx',
   'components/screens/NbaScreen.tsx',
   'components/screens/ProspectingScreen.tsx',
   'components/screens/ReviewScreen.tsx',
   'components/screens/ScoringScreen.tsx',
   'components/screens/SetupScreen.tsx',
   'components/screens/TodayScreen.tsx',
-  'components/screens/UsersScreen.tsx',
 ];
 
 export default defineConfig([

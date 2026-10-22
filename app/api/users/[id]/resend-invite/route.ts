@@ -1,0 +1,13 @@
+import { withApi } from '@/lib/server/http/api';
+import { notFound } from '@/lib/server/http/errors';
+import { isUuid } from '@/lib/server/http/schemas';
+import { withTenant } from '@/lib/server/db/tenant';
+import { resendInvite } from '@/lib/server/services/users';
+
+// Returns the one-time link only when it could not be emailed (copy-link fallback).
+export const POST = withApi<undefined, { id: string }>(
+  { route: 'POST /api/users/:id/resend-invite', auth: 'unit', permission: 'users.manage' },
+  async ({ deps, tenant, role, params }) => {
+    if (!isUuid(params.id)) throw notFound();
+    return withTenant(deps.db, tenant!, s => resendInvite(deps, s, { userId: tenant!.userId, role: role! }, params.id));
+  });
