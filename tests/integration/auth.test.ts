@@ -61,6 +61,10 @@ test(`${MAX_FAILED_LOGINS} wrong passwords lock the account for ${LOCK_MINUTES} 
 });
 
 test('sign-in attempts are rate-limited per email, whoever sends them', async () => {
+  // Limits count in fixed 15-minute windows; attempts that straddle a boundary are split between two windows (a
+  // known property of fixed windows, to revisit in Phase 7). Start clear of the next boundary so the test is stable.
+  const toBoundary = 15 * 60_000 - (Date.now() % (15 * 60_000));
+  if (toBoundary < 15_000) await new Promise(r => setTimeout(r, toBoundary + 100));
   let last;
   for (let i = 0; i < 11; i++) last = await login(deps(), { email: 'nobody.else@demandai.test', password: 'x', ip: `192.0.2.${i}` });
   assert.equal(last!.ok, false);
