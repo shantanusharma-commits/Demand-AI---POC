@@ -65,9 +65,91 @@ export const SIGNALS: Grid = [
   ['Kestrel Marine Services', 'ops@kestrelmarine.com', 'Capital project', '2026-09-01', 'New vessel maintenance yard', 'Account plan', ''],
 ];
 
+/* ─── Micro-segments & NBA: one test scenario set ───
+   Twelve fictional accounts, each built to trigger specific rules, in the micro-segment CSV format (one row per
+   signal). Dates are days before the "as of" date, so the set works on any day. */
+export const NBA_COLUMNS = ['first_name', 'last_name', 'job_title', 'email', 'email_verified', 'linkedin_url', 'company_name', 'industry',
+  'country', 'existing_customer', 'consent_basis', 'score', 'signal_type', 'event_date', 'detail', 'source', 'owner_email',
+  'annual_revenue_usd', 'employee_count', 'account_type'];
+const RA = 'rep.a@client-sample.com', RB = 'rep.b@client-sample.com';
+type ScenarioCompany = { name: string; industry: string; country: string; existing: string; revenue: string; employees: string; owner: string };
+const co = (name: string, industry: string, country: string, existing: string, revenue: string, employees: string, owner: string): ScenarioCompany => ({ name, industry, country, existing, revenue, employees, owner });
+const AURORA = co('Aurora Refining', 'Refining', 'Thailand', 'Y', '2100000000', '4200', RA);
+const BLUEWATER = co('Bluewater Refinery', 'Refining', 'Philippines', 'N', '900000000', '2300', RB);
+const CEDAR = co('Cedar Petrochemicals', 'Petrochemicals', 'Malaysia', 'Y', '1200000000', '2600', RA);
+const DELTA = co('Delta Coast Refining', 'Refining', 'Vietnam', 'Y', '650000000', '1500', RB);
+const EASTGATE = co('Eastgate Refinery', 'Refining', 'Indonesia', 'N', '1500000000', '3000', RA);
+const FERNHILL = co('Fernhill Refining', 'Refining', 'Singapore', 'N', '2800000000', '5100', RA);
+const GRANITE = co('Granite Gas Processing', 'Gas processing', 'Malaysia', 'N', '120000000', '400', RB);
+const HARBOR = co('Harbor Point Refinery', 'Refining', 'Thailand', 'N', '1100000000', '2500', RA);
+const IRONWOOD = co('Ironwood Refining', 'Refining', 'Philippines', 'Y', '1300000000', '2700', RA);
+const JUNIPER = co('Juniper Petrochem', 'Petrochemicals', 'Indonesia', 'Y', '1700000000', '3300', RB);
+const KINGFISHER = co('Kingfisher Refining', 'Refining', 'Vietnam', 'N', '800000000', '1900', RA);
+const LANTERN = co('Lantern Petrochemicals', 'Petrochemicals', 'Thailand', 'N', '1400000000', '2900', RB);
+// person: [first, last, title, email, verified, linkedin, consent, score]
+type ScenarioSignal = { c: ScenarioCompany; p: string[]; type: string; ago: number | string; detail: string; source: string };
+const sig = (c: ScenarioCompany, p: string[], type: string, ago: number | string, detail: string, source: string): ScenarioSignal => ({ c, p, type, ago, detail, source });
+const P: Record<string, string[]> = {
+  auroraHead:   ['Niran', 'Wattana', 'Head of Instrumentation', 'niran.w@aurora-refining.example', 'Y', '', 'Existing customer', '78'],
+  auroraPlant:  ['Ploy', 'Siri', 'Plant Manager', 'ploy.s@aurora-refining.example', 'Y', '', 'Existing customer', ''],
+  bluewater:    ['Carlo', 'Reyes', 'I&C Manager', 'carlo.reyes@bluewater.example', 'Y', 'https://www.linkedin.com/in/carlo-reyes-sample', 'Legitimate interest', '64'],
+  cedar:        ['Mei', 'Tan', 'Procurement Lead', '', '', '', 'Existing customer', ''],
+  delta:        ['Bao', 'Tran', 'Head of Automation', 'bao.tran@deltacoast.example', 'Y', '', 'Existing customer', '55'],
+  eastgate:     ['Dian', 'Putri', 'I&C Manager', 'dian.putri@eastgate.example', 'N', 'https://www.linkedin.com/in/dian-putri-sample', 'Legitimate interest', ''],
+  fernhill:     ['Wei', 'Chen', 'Control Systems Lead', 'wei.chen@fernhill.example', 'Y', '', 'Legitimate interest', '71'],
+  granite:      ['Hafiz', 'Rahman', 'Control Systems Lead', 'hafiz.r@granitegas.example', 'Y', '', 'Legitimate interest', 'high'],
+  harbor:       ['Somsak', 'Chai', 'Head of Instrumentation', 'somsak.c@harborpoint.example', 'Y', '', 'Legitimate interest', '82'],
+  ironwood:     ['Ana', 'Cruz', 'Automation Manager', 'ana.cruz@ironwood.example', 'Y', '', 'Existing customer', '80'],
+  juniper:      ['Budi', 'Hartono', 'DCS Engineer', '', '', '', 'Existing customer', '67'],
+  kingfisher:   ['Linh', 'Pham', 'Head of Instrumentation', 'linh.pham@kingfisher.example', 'Y', '', 'Legitimate interest', ''],
+  lantern:      ['Kanya', 'Boon', 'Automation Manager', 'kanya.b@lantern.example', 'Y', '', '', '58'],
+};
+const NBA_SIGNALS = [
+  sig(AURORA, P.auroraHead, 'Installed system near end of support', 10, 'Control system X R4 at the Map Ta Phut site reaches end of support next year', 'Installed base'),
+  sig(AURORA, P.auroraPlant, 'Webinar attended', 12, 'Modernising legacy control systems', 'Event platform export'),
+  sig(AURORA, P.auroraHead, 'Trade show visit', 8, 'Visited the stand', 'Events team'),
+  sig(BLUEWATER, P.bluewater, 'Installed system near end of support', 15, 'Control system X R5 reaches end of support in 2027', 'Installed base'),
+  sig(BLUEWATER, P.bluewater, 'Installed system near end of support', 15, 'Control system X R5 reaches end of support in 2027', 'Installed base'),
+  sig(CEDAR, P.cedar, 'Installed system near end of support', 20, 'Control system X R3 at the Johor plant reaches end of support', 'Installed base'),
+  sig(DELTA, P.delta, 'Service contract renewal', 5, 'Lifecycle service contract ends in three months', 'Service records'),
+  sig(DELTA, P.delta, 'Content download', 60, 'Case study: refinery migration in one shutdown', 'Marketing automation'),
+  sig(EASTGATE, P.eastgate, 'Webinar attended', 10, 'Alarm management for refineries', 'Event platform export'),
+  sig(EASTGATE, P.eastgate, 'Email clicked', 90, 'Clicked "Spring newsletter"', 'Campaign tool export'),
+  sig(FERNHILL, P.fernhill, 'Content download', 10, 'Pricing guide for control system upgrades', 'Marketing automation'),
+  sig(FERNHILL, P.fernhill, 'Newsletter sign-up', 9, 'Subscribed to the automation newsletter', 'Marketing automation'),
+  sig(GRANITE, P.granite, 'Webinar attended', 8, 'Gas plant control modernisation', 'Event platform export'),
+  sig(HARBOR, P.harbor, 'Inquiry or RFQ', 4, 'Asked about upgrading the crude unit controls during the next shutdown', 'CRM leads'),
+  sig(HARBOR, P.harbor, 'Webinar attended', 30, 'Modernising legacy control systems', 'Event platform export'),
+  sig(HARBOR, P.harbor, 'Capital project', 'not a date', 'Hydrotreater revamp', 'Account plan'),
+  sig(IRONWOOD, P.ironwood, 'Inquiry or RFQ', 3, 'Asked about control options after the compressor incident in August', 'CRM leads'),
+  sig(JUNIPER, P.juniper, 'Inquiry or RFQ', 6, 'Asked for a technical call on batch control', 'CRM leads'),
+  sig(KINGFISHER, P.kingfisher, 'Leadership change', 10, 'A new plant director took over in September', 'Customer meeting notes'),
+  sig(LANTERN, P.lantern, 'Capital project', 20, 'New aromatics unit at front-end design', 'Account plan'),
+];
+function isoMinus(asOf: string, days: number): string { const d = new Date(asOf + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() - days); return d.toISOString().slice(0, 10); }
+/** The scenario set as a micro-segment file, dated relative to `asOf` so it works on any day. */
+export function nbaScenarioGrid(asOf: string): Grid {
+  return [NBA_COLUMNS].concat(NBA_SIGNALS.map(x => {
+    const [first, last, title, email, verified, linkedin, consent, score] = x.p;
+    return [first, last, title, email, verified, linkedin, x.c.name, x.c.industry, x.c.country, x.c.existing, consent, score,
+      x.type, typeof x.ago === 'number' ? isoMinus(asOf, x.ago) : x.ago, x.detail, x.source, x.c.owner, x.c.revenue, x.c.employees, 'Owner-operator'];
+  }));
+}
+// A pilot week in progress: the same accounts, two of them now mentioning a security audit or an emissions regulation,
+// so more items carry sensitive content. Micro-segments & NBA applies a few decisions on top (see seedWeek there).
+export function nbaWeekGrid(asOf: string): Grid {
+  const g = nbaScenarioGrid(asOf), co = g[0].indexOf('company_name'), det = g[0].indexOf('detail');
+  // Sensitive wording on a few more accounts, so the pilot week has a real list of approvals for the sales manager.
+  const extra: Record<string, string> = { 'Granite Gas Processing':' ahead of the site security audit', 'Lantern Petrochemicals':' to meet the new emissions regulation',
+    'Bluewater Refinery':' after a cyber security review', 'Delta Coast Refining':' following a compliance finding', 'Fernhill Refining':' after a near-miss incident' };
+  return g.map((row, i) => i && extra[String(row[co])] ? row.map((v, j) => j === det ? String(v).replace(/\.?$/, '') + extra[String(row[co])] : v) : row);
+}
+
 export const LEAD_FILE = 'lead_file.csv';
 export const SIGNAL_FILE = 'signal_file.csv';
 
+export const NBA_SCENARIO_FILE = 'nba_test_scenarios.csv';
+
 /** The sample as one object, the shape the original exposed as window.DemandAISample. */
-export const DemandAISample = { SAMPLE_AS_OF, LEADS, SIGNALS, LEAD_FILE, SIGNAL_FILE };
+export const DemandAISample = { SAMPLE_AS_OF, LEADS, SIGNALS, LEAD_FILE, SIGNAL_FILE, NBA_COLUMNS, nbaScenarioGrid, nbaWeekGrid, NBA_SCENARIO_FILE };
 export default DemandAISample;

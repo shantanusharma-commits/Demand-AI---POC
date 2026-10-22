@@ -53,6 +53,9 @@ const CEILINGS = {
   contactsWithoutPersona: 2701, // G-020: persona dictionary v1
   instrumentEngineersNotPrimary: 0, // G-020: all 438 Instrument Engineers are Primary (was 439 of 439 missing)
   handoffNotContactable: 0, // G-005 closed: the hand-off takes only people who pass canContact
+  // G-007 closed in the port: of the recommendations over every scored account, none would go out to someone canContact
+  // refuses (the legacy channel rule let 2 with an unconfirmed opt-out through).
+  recommendationsNotContactable: 0,
 };
 
 // Changes only with a deliberate rule fix; say which gap moved it in the commit.
@@ -72,6 +75,10 @@ const SNAPSHOT = {
   // G-005: contactable tier A/B prospects go to NBA; those who can't be contacted stay in Scoring.
   handoffProspects: 135,
   handoffHeldBack: 9,
+  // Micro-segments over every scored account: one recommendation per account with a live signal; those who can't be
+  // contacted are held for a person (G-007: 13 → 15 with the 2 unconfirmed opt-outs).
+  recommendations: 205,
+  recommendationsHeld: 15,
   signalOutcomes: { Qualified: 475, 'Not used': 514, 'Used for a knock-out': 45, 'Rejected D1': 58, 'Rejected D2': 149, 'Rejected D3': 118, 'Rejected D4': 92, 'Rejected D5': 41 },
 };
 
@@ -114,6 +121,7 @@ test('gap measures do not get worse', () => {
     contactsWithoutPersona: m.contacts.noPersona,
     instrumentEngineersNotPrimary: m.contacts.instrumentEngineers - m.contacts.instrumentEngineersPrimary,
     handoffNotContactable: m.handoff.notContactable,
+    recommendationsNotContactable: m.recommendations.sendableNotContactable,
   };
   assert.deepEqual(now, CEILINGS, 'a change in either direction must update CEILINGS deliberately');
 });
@@ -123,5 +131,6 @@ test('full-sample snapshot: tiers, prospects and signal outcomes', () => {
   assert.equal(m.prospectsWithSignal, SNAPSHOT.prospectsWithSignal);
   assert.equal(m.handoff.prospects, SNAPSHOT.handoffProspects);
   assert.equal(m.handoff.heldBack, SNAPSHOT.handoffHeldBack);
+  assert.deepEqual([m.recommendations.total, m.recommendations.held], [SNAPSHOT.recommendations, SNAPSHOT.recommendationsHeld]);
   assert.deepEqual(m.signalOutcomes, SNAPSHOT.signalOutcomes);
 });

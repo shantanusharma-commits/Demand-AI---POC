@@ -34,6 +34,12 @@ export const CONFIG = {
     'Leadership':      ['Introduce Client to the new leader', 'Share a peer case study from their sector', 'Invite to a short briefing'],
     'Engagement':      ['Follow up on the topic they engaged with', 'Invite to a related session'],
   } as Record<string, string[]>,
+  // Proceed criteria: an estimated first deal below this goes to a person (USD; placeholder until kickoff).
+  dealSize: { threshold: 250000, base: { core: 600000, adjacent: 350000, other: 150000 } as Record<VerticalLevel, number> },
+  // Outreach limits checked on every draft (the brand pack adds its own words and competitors).
+  brand: { maxSubjectWords: 6, maxNote: 200, competitors: [] as string[] },
+  // 3.3 Data sufficiency: the readiness checks before measurement (placeholders until kickoff).
+  readiness: { accounts: 30, contactable: 60, coverage: 40, recency: 70, recencyDays: 90 },
   // Weights for a signal type added in Setup, by the strength chosen there.
   customStrength: { Strong: { tier: 100, strength: 1 }, Medium: { tier: 60, strength: 1 }, Light: { tier: 30, strength: 1 } } as Record<string, { tier: number; strength: number }>,
   // Industry and site-process mapping (D-15 v1, provisional until the Client's taxonomy arrives): the first match
@@ -195,21 +201,21 @@ export function emailReviewNote(email: string, companyDomain: string): string | 
   if (editDistance(domain, company) <= 2) return `domain looks like a typo of ${company}`;
   return `domain ${domain} is not the company domain ${company}`;
 }
-const LINKEDIN_RE = /linkedin\.com\/(in|pub)\/[^\s/]+/i;
+export const LINKEDIN_RE = /linkedin\.com\/(in|pub)\/[^\s/]+/i;
 const DATE_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
 const DAY_MS = 86400000;
 
-function clean(v: unknown): string { return v === undefined || v === null ? '' : String(v).trim(); }
-function normKey(s: unknown): string { return clean(s).toLowerCase().replace(/\s+/g, ' '); }
+export function clean(v: unknown): string { return v === undefined || v === null ? '' : String(v).trim(); }
+export function normKey(s: unknown): string { return clean(s).toLowerCase().replace(/\s+/g, ' '); }
 function normHeader(h: Cell): string { return clean(h).toLowerCase().replace(/\*/g, '').trim().replace(/[\s-]+/g, '_'); }
-function normEmail(e: unknown): string { return clean(e).toLowerCase(); }
+export function normEmail(e: unknown): string { return clean(e).toLowerCase(); }
 /** linkedin.com/in/<slug>: no scheme, no www or country sub-domain (sg., uk.), no query, no trailing slash (G-039). */
-function normLinkedIn(u: unknown): string {
+export function normLinkedIn(u: unknown): string {
   return clean(u).toLowerCase().replace(/^https?:\/\//, '').replace(/^([a-z0-9-]+\.)*linkedin\.com/, 'linkedin.com').replace(/[?#].*$/, '').replace(/\/+$/, '');
 }
 export function round1(n: number): number { return Math.round(n * 10) / 10; }
 
-function parseIsoDate(s: unknown): number | null {
+export function parseIsoDate(s: unknown): number | null {
   const m = DATE_RE.exec(clean(s));
   if (!m) return null;
   const t = Date.UTC(+m[1], +m[2] - 1, +m[3]);
@@ -219,7 +225,7 @@ function parseIsoDate(s: unknown): number | null {
 export function daysBetween(fromIso: string, toIso: string): number {
   return Math.round(((parseIsoDate(toIso) as number) - (parseIsoDate(fromIso) as number)) / DAY_MS);
 }
-function yesNo(v: unknown): 'Y' | 'N' | '' | null {
+export function yesNo(v: unknown): 'Y' | 'N' | '' | null {
   const s = clean(v).toLowerCase();
   if (s === 'y' || s === 'yes') return 'Y';
   if (s === 'n' || s === 'no') return 'N';
@@ -340,7 +346,7 @@ export function readTable(grid: Grid, { file, sheet, columns, required, anchor, 
 }
 
 /* ─── Stages 1–5: lead file → screened list ─── */
-function parseNumber(raw: unknown): { value: number | null; reformatted?: boolean; invalid?: boolean } {
+export function parseNumber(raw: unknown): { value: number | null; reformatted?: boolean; invalid?: boolean } {
   const s = clean(raw);
   if (!s) return { value: null };
   if (/^\d+(\.\d+)?$/.test(s)) return { value: Number(s) };
@@ -1026,7 +1032,7 @@ export function scoreList(list: LeadList, signalResult: Pick<SignalResult, 'sign
   return results;
 }
 
-function lowerFirst(s: string): string { return s && /^[A-Z][a-z]/.test(s) && !/^[A-Z][a-z]+ [A-Z]/.test(s) ? s[0].toLowerCase() + s.slice(1) : s; }
+export function lowerFirst(s: string): string { return s && /^[A-Z][a-z]/.test(s) && !/^[A-Z][a-z]+ [A-Z]/.test(s) ? s[0].toLowerCase() + s.slice(1) : s; }
 
 /* Lists, scoring runs and hand-offs are stored on the server (lib/server/services), never in the browser (G-012, G-029). */
 

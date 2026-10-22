@@ -3,7 +3,9 @@
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import * as E from '../../lib/demandai-engine.ts';
+import type { Contact } from '../../types/demandai';
 import { buildProspects, handoffSelection } from '../../lib/engine/prospects.ts';
+import { buildSegments, recommendChannel, type NbaResult } from '../../lib/engine/nba.ts';
 
 const require = createRequire(import.meta.url);
 const XLSX = require('xlsx');
@@ -152,6 +154,10 @@ export function measure(data = loadDataset()) {
   for (const r of scored) tiers[r.tier as string] = (tiers[r.tier as string] || 0) + 1;
   const prospects = scored.flatMap(r => r.people || []).filter(p => p.signals.length > 0);
   const handoff = handoffSelection(buildProspects(scored));
+  // ── Recommendations over every scored account (G-007): which would go out, and to whom ──
+  const recs = buildSegments(scored as unknown as NbaResult[]).recs;
+  const held = recs.filter(r => recommendChannel(r, r.action).unreachable);
+  const sendableNotContactable = recs.filter(r => !held.includes(r) && !E.canContact(r.contact as unknown as Contact)).length;
   const signalOutcomes: Record<string, number> = {};
   for (const s of sig.signals) {
     const k = s.status === 'Rejected' ? `Rejected ${s.code}` : s.status;
@@ -165,6 +171,7 @@ export function measure(data = loadDataset()) {
     contacts: { total: leads.contacts.length, noPersona, instrumentEngineers: instrumentEngineers.length, instrumentEngineersPrimary: instrumentEngineers.filter(c => c.persona === 'Primary').length },
     tiers,
     prospectsWithSignal: prospects.length,
+    recommendations: { total: recs.length, held: held.length, sendableNotContactable },
     handoff: { prospects: handoff.items.length, notContactable: handoff.items.filter(p => !p.c.contactable).length, heldBack: handoff.heldBack },
     signalOutcomes,
     resultById,
