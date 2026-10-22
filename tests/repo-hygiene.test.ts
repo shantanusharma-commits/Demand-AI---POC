@@ -10,7 +10,8 @@ const repo = resolve(import.meta.dirname, '..');
 const git = (...args: string[]) => execFileSync('git', ['-C', repo, ...args], { encoding: 'utf8' });
 
 test('git ignores reference_content/, the local DEMANDAI_ documents, .idea/ and .env files', () => {
-  for (const path of ['reference_content', 'reference_content/x.docx', 'DEMANDAI_WORKLOG.md', '.idea/x.xml', '.env', '.env.local', '.env.production']) {
+  // Paths inside the folder: on a fresh clone the folder itself doesn't exist, so a bare directory name can't match.
+  for (const path of ['reference_content/x.docx', 'reference_content/Documentation/y.pdf', 'DEMANDAI_WORKLOG.md', '.idea/x.xml', '.env', '.env.local', '.env.production']) {
     assert.match(git('check-ignore', '-v', '--no-index', path), /\.gitignore|info\/exclude/, `${path} must be ignored`);
   }
   // The template is the one env file that is tracked.
