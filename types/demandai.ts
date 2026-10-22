@@ -261,22 +261,3 @@ export interface LeadList {
   accounts: Account[];
   contacts: Contact[];
 }
-
-/** A list saved under Saved lists (localStorage key demandai_lists_v1). */
-export interface SavedList extends LeadList {
-  id: string;
-  name: string;
-  createdAt: number;
-  sourceFile: string;
-  sheet: string;
-  sandbox: boolean;
-  stats: LeadStats;
-  scoring?: unknown;
-  [extra: string]: unknown;
-}
-
-/** A scoring run saved under localStorage key demandai_scorings_v1. Its shape is owned by the Scoring page. */
-export interface SavedScoring {
-  id: string;
-  [field: string]: unknown;
-}

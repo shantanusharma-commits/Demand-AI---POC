@@ -8,7 +8,7 @@
    TypeScript port of demandai-engine.js: same rules, thresholds, messages and output shapes. */
 import type {
   Account, AccountTypeKey, Cell, Classification, Contact, DqCode, Fit, FitBreakdownRow, FitLevel, Grid, Issue, LeadList,
-  LeadResult, LeadStats, PersonScore, RubricRow, SavedList, SavedScoring, ScoredSignalType, ScoreResult, Severity, Signal,
+  LeadResult, LeadStats, PersonScore, RubricRow, ScoredSignalType, ScoreResult, Severity, Signal,
   SignalResult, SignalTypeConfig, SuggestedContact, TableRecord, TableResult, Tier, VerticalLevel,
 } from '../types/demandai';
 
@@ -650,40 +650,15 @@ export function scoreList(list: LeadList, signalResult: Pick<SignalResult, 'sign
 
 function lowerFirst(s: string): string { return s && /^[A-Z][a-z]/.test(s) && !/^[A-Z][a-z]+ [A-Z]/.test(s) ? s[0].toLowerCase() + s.slice(1) : s; }
 
-/* ─── Lists hand-off between Prospecting and Scoring (browser only) ─── */
-const LIST_KEY = 'demandai_lists_v1';
-let memoryLists: SavedList[] | null = null;
-export function loadLists(): SavedList[] {
-  try { return JSON.parse(localStorage.getItem(LIST_KEY) || '[]'); }
-  catch (e) { return memoryLists || []; }
-}
-function saveLists(lists: SavedList[]): boolean {
-  try { localStorage.setItem(LIST_KEY, JSON.stringify(lists)); return true; }
-  catch (e) { memoryLists = lists; return false; }
-}
-export function saveList(list: SavedList): boolean {
-  const lists = loadLists().filter(l => l.id !== list.id);
-  lists.unshift(list);
-  return saveLists(lists);
-}
-export function getList(id: string): SavedList | null { return loadLists().find(l => l.id === id) || null; }
-export function deleteList(id: string): boolean { return saveLists(loadLists().filter(l => l.id !== id)); }
-
-const SCORING_KEY = 'demandai_scorings_v1';
-export function loadScorings(): SavedScoring[] { try { return JSON.parse(localStorage.getItem(SCORING_KEY) || '[]'); } catch (e) { return []; } }
-function saveScorings(all: SavedScoring[]): boolean { try { localStorage.setItem(SCORING_KEY, JSON.stringify(all)); return true; } catch (e) { return false; } }
-export function saveScoring(run: SavedScoring): boolean { const all = loadScorings().filter(r => r.id !== run.id); all.unshift(run); return saveScorings(all); }
-export function getScoring(id: string): SavedScoring | null { return loadScorings().find(r => r.id === id) || null; }
-export function deleteScoring(id: string): boolean { return saveScorings(loadScorings().filter(r => r.id !== id)); }
+/* Lists, scoring runs and hand-offs are stored on the server (lib/server/services), never in the browser (G-012, G-029). */
 
 /** The engine as one object, the shape the original exposed as window.DemandAI. */
 export const DemandAI = {
   CONFIG, CODES, LEAD_COLUMNS, LEAD_REQUIRED, SIGNAL_COLUMNS, SIGNAL_REQUIRED,
   parseCSV, toCSV, readTable, processLeads, classify, personaOf, fitFor, decayFactor,
   processSignals, scoreList, stack, tierFor, daysBetween, round1,
-  loadLists, saveList, getList, deleteList, loadScorings, saveScoring, getScoring, deleteScoring,
 };
 export default DemandAI;
 
 // Re-exported so pages can name the shapes they work with.
-export type { Cell, Grid, Account, Contact, Issue, LeadResult, ScoreResult, SignalResult, Signal, SavedList, SavedScoring, Tier };
+export type { Cell, Grid, Account, Contact, Issue, LeadResult, ScoreResult, SignalResult, Signal, Tier };

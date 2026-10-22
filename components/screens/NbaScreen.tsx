@@ -7,6 +7,7 @@
    DOM (which reset checkboxes, open menus, hover styles and edit fields). */
 import React, { useEffect, useLayoutEffect, useReducer, useRef, type MouseEvent } from 'react';
 import { sx } from '@/lib/sx';
+import { api, errorText } from '@/lib/client/api';
 import { showToast, initials, avColor } from '@/lib/ui';
 import {
   NBA_QUEUE, NEW_SEGMENTS, ROUTE_LBL, ROUTE_CLS, CONF_LBL, CONF_CLS, OUTCOME_OPTIONS,
@@ -231,28 +232,29 @@ export function NbaScreen() {
     return () => { clearTimeout(t); document.removeEventListener('click', c); };
   }, [openDD]);
 
-  // Load: prospects sent from Scoring join the queue, then the URL hand-offs (from=scoring, openAccount).
+  // Load: prospects handed off from Scoring (stored on the server, ?handoff=<id>, G-049) join the queue, then the
+  // URL hand-off to an account (openAccount). The rest of this screen is the prototype until Phase 5b ports NBA.
   useEffect(() => {
     if (booted.current) return;
     booted.current = true;
-    let items: NbaItem[] = []; try { items = JSON.parse(localStorage.getItem('demandai_nba_v1') || '[]'); } catch (e) {}
-    items.slice().reverse().forEach(it => {
-      if (!m.queue.some(l => l.id === it.id)) m.queue.unshift(it);
-      if (!m.newSegments.includes(it.action) && !['Modernisation', 'Project', 'Leadership', 'Regulation', 'Engagement'].includes(it.action)) m.newSegments.push(it.action);
-    });
-    showSegments();
-    m.stats = computeStats(m.queue);
-    rerender();
-
     const params = new URLSearchParams(window.location.search);
-    if (params.get('from') === 'scoring') {
-      const ids = (params.get('ids') || '').split(',').filter(Boolean);
-      const matched = m.queue.filter(l => ids.includes(l.id));
-      if (matched.length) {
-        showToast(matched.length + ' account' + (matched.length > 1 ? 's' : '') + ' sent from Scoring');
-        openSegment(matched[0].action);
-        setTimeout(() => selectRow(matched[0].id), 150);
-      }
+    const handoffId = params.get('handoff');
+    if (handoffId) {
+      api<{ handoff: { items: NbaItem[] } }>(`/api/handoffs/${encodeURIComponent(handoffId)}`).then(({ handoff }) => {
+        const items = handoff.items;
+        items.slice().reverse().forEach(it => {
+          if (!m.queue.some(l => l.id === it.id)) m.queue.unshift(it);
+          if (!m.newSegments.includes(it.action) && !['Modernisation', 'Project', 'Leadership', 'Regulation', 'Engagement'].includes(it.action)) m.newSegments.push(it.action);
+        });
+        showSegments();
+        m.stats = computeStats(m.queue);
+        rerender();
+        if (items.length) {
+          showToast(items.length + ' account' + (items.length > 1 ? 's' : '') + ' sent from Scoring');
+          openSegment(items[0].action);
+          setTimeout(() => selectRow(items[0].id), 150);
+        }
+      }).catch(e => showToast(errorText(e)));
     }
     const openId = params.get('openAccount');
     if (openId) {

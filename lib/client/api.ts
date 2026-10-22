@@ -37,3 +37,37 @@ export function errorText(err: unknown): string {
   if (err instanceof ApiError) return err.requestId && err.status >= 500 ? `${err.message} (reference ${err.requestId})` : err.message;
   return 'Something went wrong. Check your connection and try again.';
 }
+
+/** Uploads a file as multipart/form-data (the server checks it before storing anything). */
+export async function uploadFile<T = unknown>(path: string, fields: Record<string, string>, file: File): Promise<T> {
+  const form = new FormData();
+  for (const [k, v] of Object.entries(fields)) form.set(k, v);
+  form.set('file', file, file.name);
+  const res = await fetch(path, { method: 'POST', body: form, credentials: 'same-origin', cache: 'no-store' });
+  const text = await res.text();
+  let json: Record<string, unknown> = {};
+  try { json = text ? JSON.parse(text) : {}; } catch { json = { error: res.status === 413 ? 'The file is too large.' : undefined }; }
+  if (!res.ok) throw new ApiError(res.status, json);
+  return json as T;
+}
+
+/** Server types as they arrive over JSON: dates are ISO strings. */
+export type Wire<T> = { [K in keyof T]: T[K] extends Date ? string : T[K] extends Date | null ? string | null : T[K] };
+
+export type JobState = {
+  id: string; kind: string; status: 'queued' | 'running' | 'succeeded' | 'failed' | 'cancelled'; stage: string | null;
+  progress: { stages: string[]; done: number; counts?: Record<string, number>; result?: Record<string, string> };
+  error: { code: string; message: string } | null;
+};
+
+/** Polls a job until it has finished, reporting each change; resolves with the finished job. */
+export async function waitForJob(jobId: string, onChange: (job: JobState) => void, intervalMs = 300): Promise<JobState> {
+  let last = '';
+  for (;;) {
+    const { job } = await api<{ job: JobState }>(`/api/jobs/${jobId}`);
+    const key = `${job.status}:${job.stage}:${job.progress.done}`;
+    if (key !== last) { last = key; onChange(job); }
+    if (job.status === 'succeeded' || job.status === 'failed' || job.status === 'cancelled') return job;
+    await new Promise(r => setTimeout(r, intervalMs));
+  }
+}

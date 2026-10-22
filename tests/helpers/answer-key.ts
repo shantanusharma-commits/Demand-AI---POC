@@ -17,7 +17,8 @@ const split = (v: unknown) => String(v ?? '').split(/[;,]\s*/).map(s => s.trim()
 const norm = (s: unknown) => String(s ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
 
 export function loadDataset() {
-  // Read exactly as lib/file-reader.ts does today (cellDates: true).
+  // Read as the original browser reader did (cellDates: true); the sample's dates are text, so the server reader
+  // gives the same grid (tests/uploads.test.ts proves it).
   const wb = XLSX.readFile(DATASET, { cellDates: true });
   const grid = (n: string) => XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, raw: true, defval: '' });
   const rows = (n: string): Row[] => XLSX.utils.sheet_to_json(wb.Sheets[n], { range: 1, defval: '' });
