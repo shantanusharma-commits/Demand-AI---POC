@@ -19,7 +19,10 @@ const CASE_FLOORS: Record<string, [number, number]> = {
   'FMT-YN-BAD': [67, 70], 'FMT-CONSENT': [60, 60], 'FMT-INCONSISTENT': [57, 60], 'FMT-LINKEDIN': [70, 70], 'FMT-OWNER': [50, 50],
   'FMT-TITLE-NOISE': [25, 120], // G-020
   'SUP-OPTOUT-CONFLICT': [25, 25], // G-060: suppressed and the conflict flagged (duplicates in both row orders: tests/rules.test.ts)
-  'SIG-QUALIFIED': [678, 679], 'SIG-AUTOASSIGN': [84, 115], 'SIG-KNOCKOUT': [45, 45], 'SIG-NEWSLETTER': [55, 59],
+  // D-16 (22 Oct): a signal with no person is auto-assigned only to someone who can be contacted. 13 rows whose
+  // primary contact had no channel or no consent now go to a contactable colleague; 1 is rejected (no one at the
+  // account can be contacted). The key predates D-16, so SIG-AUTOASSIGN and SIG-QUALIFIED drop by design.
+  'SIG-QUALIFIED': [677, 679], 'SIG-AUTOASSIGN': [79, 115], 'SIG-KNOCKOUT': [45, 45], 'SIG-NEWSLETTER': [55, 59],
   'SIG-STALE': [145, 145], 'SIG-NO-COMPANY': [15, 15], 'SIG-UNKNOWN-COMPANY': [45, 45], 'SIG-UNKNOWN-PERSON': [40, 40],
   'SIG-NO-DATE': [25, 25], 'SIG-BAD-DATE': [35, 35], 'SIG-FUTURE': [20, 20], 'SIG-BAD-TYPE': [35, 35], 'SIG-TYPE-CASE': [30, 30],
   'SIG-DUP': [40, 40], 'SIG-NO-DETAIL': [30, 30], 'SIG-OPTED-OUT-PERSON': [63, 63], 'SIG-EXCLUDED-ACCOUNT': [198, 198],
@@ -41,15 +44,18 @@ const CEILINGS = {
   inIcpClassifiedOther: 100, // G-021
   outOfIcpClassifiedCore: 22, // G-021 → 0
   contactsWithoutPersona: 3271, // G-020
-  handoffNotContactable: 11, // G-005 → 0
+  handoffNotContactable: 0, // G-005 closed: the hand-off takes only people who pass canContact
 };
 
 // Changes only with a deliberate rule fix; say which gap moved it in the commit.
 const SNAPSHOT = {
-  tiers: { A: 51, B: 49, C: 74, 'Watch list': 356, 'Below fit floor': 598, Excluded: 315 },
-  prospectsWithSignal: 267,
-  handoffProspects: 117,
-  signalOutcomes: { Qualified: 373, 'Not used': 583, 'Used for a knock-out': 45, 'Rejected D1': 55, 'Rejected D2': 145, 'Rejected D3': 130, 'Rejected D4': 120, 'Rejected D5': 41 },
+  // D-16 moved one account from B to C and three prospects' signals to contactable colleagues (G-050).
+  tiers: { A: 51, B: 48, C: 75, 'Watch list': 356, 'Below fit floor': 598, Excluded: 315 },
+  prospectsWithSignal: 264,
+  // G-005: 109 contactable tier A/B prospects go to NBA; 6 who can't be contacted stay in Scoring (was 117, 11 not contactable).
+  handoffProspects: 109,
+  handoffHeldBack: 6,
+  signalOutcomes: { Qualified: 372, 'Not used': 583, 'Used for a knock-out': 45, 'Rejected D1': 55, 'Rejected D2': 145, 'Rejected D3': 130, 'Rejected D4': 121, 'Rejected D5': 41 },
 };
 
 const m = measure();
@@ -98,5 +104,6 @@ test('full-sample snapshot: tiers, prospects and signal outcomes', () => {
   assert.deepEqual(m.tiers, SNAPSHOT.tiers);
   assert.equal(m.prospectsWithSignal, SNAPSHOT.prospectsWithSignal);
   assert.equal(m.handoff.prospects, SNAPSHOT.handoffProspects);
+  assert.equal(m.handoff.heldBack, SNAPSHOT.handoffHeldBack);
   assert.deepEqual(m.signalOutcomes, SNAPSHOT.signalOutcomes);
 });

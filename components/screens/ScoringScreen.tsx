@@ -230,8 +230,8 @@ export function ScoringScreen() {
   async function sendToNBA() {
     if (!run) return;
     try {
-      const h = await api<{ handoffId: string; count: number }>('/api/handoffs', { body: { runId: run.id, ...(nsel.size ? { contactIds: [...nsel] } : {}) } });
-      showToast(`${h.count} prospect${h.count === 1 ? '' : 's'} sent to NBA`);
+      const h = await api<{ handoffId: string; count: number; heldBack: number }>('/api/handoffs', { body: { runId: run.id, ...(nsel.size ? { contactIds: [...nsel] } : {}) } });
+      showToast(`${h.count} prospect${h.count === 1 ? '' : 's'} sent to NBA` + (h.heldBack ? ` · ${h.heldBack} who can't be contacted stay${h.heldBack === 1 ? 's' : ''} in Scoring` : ''));
       setTimeout(() => { router.push('/nba?handoff=' + encodeURIComponent(h.handoffId)); }, 500);
     } catch (e) { showToast(errorText(e)); }
   }

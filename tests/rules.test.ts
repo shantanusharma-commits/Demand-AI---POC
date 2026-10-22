@@ -66,3 +66,55 @@ test('G-037: company details that differ between duplicate rows are flagged; nam
   assert.equal(r.contacts[0].jobTitle, 'Instrumentation Engineer');
   assert.equal(r.contacts[0].persona, 'Primary', 'persona recomputed after the merge filled the title');
 });
+
+/* ─── G-005, G-050, D-16: one consent gate, applied wherever someone is picked for outreach ─── */
+
+test('G-005: canContact refuses each suppression reason and accepts a clean contact', async () => {
+  const { canContact } = await import('../lib/demandai-engine.ts');
+  const cases: [string, Row, boolean][] = [
+    ['clean', {}, true],
+    ['opted out', { opt_out: 'Y' }, false],
+    ['opt-out blank', { opt_out: '' }, false],
+    ['opt-out unreadable', { opt_out: 'Unknown' }, false],
+    ['no consent basis', { consent_basis: '' }, false],
+    ['unrecognised consent basis', { consent_basis: 'Business card' }, false],
+    ['no usable channel', { email: '', linkedin_url: '' }, false],
+    ['email not verified and no LinkedIn', { email_verified: 'N', linkedin_url: '' }, false],
+  ];
+  for (const [why, row, want] of cases) {
+    const c = leads(row, OTHER).contacts.find(x => x.row === 2)!;
+    assert.equal(canContact(c), want, why);
+    assert.equal(c.contactable, want, `${why}: contactable agrees`);
+  }
+});
+
+const SIGNALS = ['company_name', 'contact_email_or_linkedin', 'signal_type', 'event_date', 'detail', 'source', 'product'];
+
+test('G-050 / D-16: a signal with no person goes to someone who can be contacted, never to a suppressed contact', () => {
+  // The primary-persona contact has no consent basis; the only contactable person is a secondary persona.
+  const r = leads({ consent_basis: '' }, { ...OTHER, job_title: 'Plant Manager' });
+  const list = { accounts: r.accounts, contacts: r.contacts };
+  const sig = E.processSignals([SIGNALS, ['Acme Refining', '', 'Capital project', '2026-09-01', 'New unit', 'Plan', '']], list, { asOf: '2026-09-30' });
+  const s = sig.signals[0];
+  assert.equal(s.status, 'Qualified');
+  assert.equal(s.contactRow, 3, 'assigned to the contactable colleague');
+  assert.match(s.assigned, /^Auto-assigned/);
+  const none = leads({ consent_basis: '' }, { ...OTHER, opt_out: '' });
+  const sig2 = E.processSignals([SIGNALS, ['Acme Refining', '', 'Capital project', '2026-09-01', 'New unit', 'Plan', '']], { accounts: none.accounts, contacts: none.contacts }, { asOf: '2026-09-30' });
+  assert.equal(sig2.signals[0].status, 'Rejected', 'nobody at the account can be contacted');
+  assert.match(sig2.signals[0].reason, /no one at this account can be contacted/i);
+});
+
+test('G-005: the hand-off takes only prospects who can be contacted and says how many it held back', async () => {
+  const { buildProspects, handoffSelection } = await import('../lib/engine/prospects.ts');
+  const r = leads({}, { ...OTHER, consent_basis: '' });
+  const list = { accounts: r.accounts, contacts: r.contacts };
+  const sig = E.processSignals([SIGNALS,
+    ['Acme Refining', 'ann.lee@acme-refining.com', 'Inquiry or RFQ', '2026-09-20', 'RFQ', 'CRM', ''],
+    ['Acme Refining', 'bo.tan@acme-refining.com', 'Inquiry or RFQ', '2026-09-20', 'RFQ', 'CRM', '']], list, { asOf: '2026-09-30' });
+  const prospects = buildProspects(E.scoreList(list, sig));
+  assert.equal(prospects.filter(p => p.score !== undefined).length, 2, 'both are scored and stay visible in Scoring');
+  const picked = handoffSelection(prospects);
+  assert.deepEqual(picked.items.map(p => p.c.row), [2]);
+  assert.equal(picked.heldBack, 1);
+});

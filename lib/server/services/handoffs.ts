@@ -1,9 +1,11 @@
 // The hand-off from Scoring to Micro-segments & NBA, stored with a UUID per item (G-049: two prospects can no
-// longer collapse into one ID). Only prospects with a live signal that the caller can see are handed off.
+// longer collapse into one ID). Only prospects with a live signal that the caller can see, and who pass canContact
+// (G-005), are handed off; the others stay in Scoring and are counted as held back.
 // Phase 5b's NBA port reads handoff_items; until then the NBA screen shows them in its queue.
 import 'server-only';
 import { randomUUID } from 'node:crypto';
 import { and, asc, eq } from 'drizzle-orm';
+import { canContact } from '../../demandai-engine.ts';
 import { toNbaItem } from '../../engine/handoff.ts';
 import type { Prospect } from '../../engine/prospects.ts';
 import type { NbaItem } from '../../nba/data.ts';
@@ -16,12 +18,15 @@ import { logger } from '../logger.ts';
 import { chunks, ownerOnly, type Actor } from './lists.ts';
 import { handoffCandidates } from './scoring.ts';
 
-export async function createHandoff(scope: TenantScope, actor: Actor, input: { runId: string; contactIds?: string[] }): Promise<{ handoffId: string; count: number }> {
+export async function createHandoff(scope: TenantScope, actor: Actor, input: { runId: string; contactIds?: string[] }): Promise<{ handoffId: string; count: number; heldBack: number }> {
   const [run] = await scope.tx.select({ id: scoringRuns.id }).from(scoringRuns)
     .where(and(eq(scoringRuns.id, input.runId), eq(scoringRuns.businessUnitId, scope.ctx.businessUnitId)));
   if (!run) throw notFound('That scoring run is not there any more.');
-  const picked = await handoffCandidates(scope, run.id, input.contactIds ? [...new Set(input.contactIds)] : undefined);
-  if (!picked.length) throw badRequest('Select prospects with a live signal first.');
+  const candidates = await handoffCandidates(scope, run.id, input.contactIds ? [...new Set(input.contactIds)] : undefined);
+  const picked = candidates.filter(p => canContact(p.contact as Contact));
+  const heldBack = candidates.length - picked.length;
+  if (!candidates.length) throw badRequest('Select prospects with a live signal first.');
+  if (!picked.length) throw badRequest(`None of the ${candidates.length} prospect${candidates.length === 1 ? '' : 's'} can be contacted (no usable channel, no consent basis, or opt-out not confirmed), so nothing was handed off.`);
   const [h] = await scope.tx.insert(handoffs).values({
     businessUnitId: scope.ctx.businessUnitId, runId: run.id, selection: input.contactIds ? 'selected' : 'default', itemCount: picked.length, createdBy: actor.userId,
   }).returning({ id: handoffs.id });
@@ -40,9 +45,9 @@ export async function createHandoff(scope: TenantScope, actor: Actor, input: { r
     };
   });
   for (const part of chunks(items)) await scope.tx.insert(handoffItems).values(part);
-  await recordAudit(scope, { action: 'handoff.created', actorRole: actor.role, targetType: 'handoff', targetId: h.id, details: { runId: run.id, count: items.length, selection: input.contactIds ? 'selected' : 'default' } });
-  logger.info({ event: 'handoff.created', handoffId: h.id, count: items.length }, 'Prospects handed off to NBA');
-  return { handoffId: h.id, count: items.length };
+  await recordAudit(scope, { action: 'handoff.created', actorRole: actor.role, targetType: 'handoff', targetId: h.id, details: { runId: run.id, count: items.length, heldBack, selection: input.contactIds ? 'selected' : 'default' } });
+  logger.info({ event: 'handoff.created', handoffId: h.id, count: items.length, heldBack }, 'Prospects handed off to NBA');
+  return { handoffId: h.id, count: items.length, heldBack };
 }
 
 export async function getHandoff(scope: TenantScope, id: string): Promise<{ id: string; runId: string; createdAt: Date; items: NbaItem[] }> {

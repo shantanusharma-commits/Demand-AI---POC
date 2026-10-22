@@ -3,6 +3,7 @@
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import * as E from '../../lib/demandai-engine.ts';
+import { buildProspects, handoffSelection } from '../../lib/engine/prospects.ts';
 
 const require = createRequire(import.meta.url);
 const XLSX = require('xlsx');
@@ -144,7 +145,7 @@ export function measure(data = loadDataset()) {
   const tiers: Record<string, number> = {};
   for (const r of scored) tiers[r.tier as string] = (tiers[r.tier as string] || 0) + 1;
   const prospects = scored.flatMap(r => r.people || []).filter(p => p.signals.length > 0);
-  const handoff = prospects.filter(p => p.tier === 'A' || p.tier === 'B');
+  const handoff = handoffSelection(buildProspects(scored));
   const signalOutcomes: Record<string, number> = {};
   for (const s of sig.signals) {
     const k = s.status === 'Rejected' ? `Rejected ${s.code}` : s.status;
@@ -158,7 +159,7 @@ export function measure(data = loadDataset()) {
     contacts: { total: leads.contacts.length, noPersona, instrumentEngineers: instrumentEngineers.length, instrumentEngineersPrimary: instrumentEngineers.filter(c => c.persona === 'Primary').length },
     tiers,
     prospectsWithSignal: prospects.length,
-    handoff: { prospects: handoff.length, notContactable: handoff.filter(p => !p.contact.contactable).length },
+    handoff: { prospects: handoff.items.length, notContactable: handoff.items.filter(p => !p.c.contactable).length, heldBack: handoff.heldBack },
     signalOutcomes,
     resultById,
   };

@@ -147,35 +147,37 @@ test('scoring the full sample on the server reproduces the answer-key snapshot; 
   assert.equal(job.status, 'succeeded', JSON.stringify(job.error));
   assert.deepEqual(job.progress.stages, ['parse', 'check', 'score', 'save']);
   const tiers = await owner.query(`SELECT tier, count(*)::int n FROM account_scores WHERE run_id = $1 GROUP BY tier`, [runId]);
-  assert.deepEqual(Object.fromEntries(tiers.rows.map(r => [r.tier, r.n])), { A: 51, B: 49, C: 74, 'Watch list': 356, 'Below fit floor': 598, Excluded: 315 });
+  assert.deepEqual(Object.fromEntries(tiers.rows.map(r => [r.tier, r.n])), { A: 51, B: 48, C: 75, 'Watch list': 356, 'Below fit floor': 598, Excluded: 315 });
   const run = await as(admin(), s => getRun(s, adminActor(), runId));
-  assert.equal(run.stats.scored, 267, 'prospects with a live signal');
+  assert.equal(run.stats.scored, 264, 'prospects with a live signal');
   const statuses = await owner.query(`SELECT status, data->>'code' code, count(*)::int n FROM signals WHERE run_id = $1 GROUP BY 1, 2`, [runId]);
   const outcome = Object.fromEntries(statuses.rows.map(r => [r.status === 'Rejected' ? `Rejected ${r.code}` : r.status, 0]));
   for (const r of statuses.rows) outcome[r.status === 'Rejected' ? `Rejected ${r.code}` : r.status] += r.n;
-  assert.deepEqual(outcome, { Qualified: 373, 'Not used': 583, 'Used for a knock-out': 45, 'Rejected D1': 55, 'Rejected D2': 145, 'Rejected D3': 130, 'Rejected D4': 120, 'Rejected D5': 41 });
+  assert.deepEqual(outcome, { Qualified: 372, 'Not used': 583, 'Used for a knock-out': 45, 'Rejected D1': 55, 'Rejected D2': 145, 'Rejected D3': 130, 'Rejected D4': 121, 'Rejected D5': 41 });
   const top = await as(admin(), s => listProspects(s, runId, { tier: 'A', limit: 5 }));
   assert.ok(top.rows.length && top.rows.every(r => r.tier === 'A' && r.sendable && r.score !== null));
   const detail = await as(admin(), s => getProspect(s, runId, top.rows[0].contactId));
   assert.ok(detail.person && detail.person.signals.length > 0 && detail.result.breakdown);
   const ev = await as(admin(), s => listSignals(s, runId, { status: 'Rejected', limit: 500 }));
-  assert.equal(ev.rows.length, 491);
+  assert.equal(ev.rows.length, 492);
   await as(admin(), s => saveRun(s, adminActor(), runId, 'Full sample · scored 2026-09-30'));
   assert.equal((await as(admin(), s => getRun(s, adminActor(), runId))).status, 'saved');
 });
 
-test('G-049: the default hand-off takes the 117 tier A/B prospects with a live signal, each with its own UUID', async () => {
+test('G-049, G-005: the default hand-off takes the 109 contactable tier A/B prospects with a live signal, each with its own UUID', async () => {
   const h = await as(admin(), s => createHandoff(s, adminActor(), { runId }));
-  assert.equal(h.count, 117);
+  assert.deepEqual([h.count, h.heldBack], [109, 6]);
+  const sent = await owner.query(`SELECT c.data FROM handoff_items i JOIN contacts c ON c.id = i.contact_id WHERE i.handoff_id = $1`, [h.handoffId]);
+  assert.ok(sent.rows.every(r => r.data.contactable === true), 'nobody who fails canContact is handed off');
   const got = await as(admin(), s => getHandoff(s, h.handoffId));
   const itemIds = got.items.map(i => i.id);
-  assert.equal(new Set(itemIds).size, 117);
+  assert.equal(new Set(itemIds).size, 109);
   assert.ok(itemIds.every(id => /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(id)));
   // The old IDs ('sc-' + account|row with punctuation removed) could collide, e.g. acc-1|2345 and acc-12|345.
   assert.equal('sc-' + 'acc-1|2345'.replace(/[^a-z0-9]/gi, ''), 'sc-' + 'acc-12|345'.replace(/[^a-z0-9]/gi, ''));
   const picked = await as(admin(), s => listProspects(s, runId, { tier: 'B', limit: 3 }));
   const sel = await as(admin(), s => createHandoff(s, adminActor(), { runId, contactIds: picked.rows.map(r => r.contactId) }));
-  assert.equal(sel.count, picked.rows.filter(r => r.sendable).length);
+  assert.equal(sel.count + sel.heldBack, picked.rows.filter(r => r.sendable).length);
 });
 
 test('G-014 IDOR: a rep can’t open another owner’s prospect, and their hand-off holds only their own', async () => {

@@ -386,7 +386,7 @@ export function processLeads(grid: Grid, { file = 'lead file', sheet = 'Sheet1' 
   for (const c of contacts) {
     const emailOk = !!c.email && c.emailVerified, liOk = !!c.linkedin;
     c.reachableBy = emailOk && liOk ? 'email and LinkedIn' : emailOk ? 'email' : liOk ? 'LinkedIn' : 'none';
-    c.contactable = c.reachableBy !== 'none' && c.consentOk && !c.optOut && !c.optOutUnknown;
+    c.contactable = canContact(c);
   }
 
   const accounts = buildAccounts(contacts, issues, { file, sheet });
@@ -398,6 +398,13 @@ export function processLeads(grid: Grid, { file = 'lead file', sheet = 'Sheet1' 
     issuesBySeverity: (['stop', 'flag', 'info'] as Severity[]).reduce((o, s) => (o[s] = issues.filter(i => i.severity === s).length, o), {} as Record<Severity, number>),
   };
   return { contacts, accounts, issues, stats };
+}
+
+/* The one consent gate (G-005, spec 3.6 and 5.10): a usable channel, a recognised consent basis, and an opt-out that
+   is confirmed N. Applied wherever someone is picked for outreach: the hand-off, signal auto-assignment, channel and
+   contact choice. People who fail it stay visible; they are never handed off or drafted to. */
+export function canContact(c: Pick<Contact, 'reachableBy' | 'consentOk' | 'optOut' | 'optOutUnknown'>): boolean {
+  return c.reachableBy !== 'none' && c.consentOk && !c.optOut && !c.optOutUnknown;
 }
 
 /* Stage 3 classification and stage 4 knock-outs, per account */
@@ -580,10 +587,12 @@ export function processSignals(grid: Grid, list: LeadList, { file = 'signal file
       }
       s.assigned = 'Named in the file';
     } else {
-      const live = cs.filter(c => !c.optOut);
+      // Only someone who can be contacted is auto-assigned (D-16, G-050).
+      const live = cs.filter(canContact);
       person = live.find(c => c.persona === 'Primary') || live[0];
-      if (!person) { reject('D4', 'No person named and no contact left at this account', 'contact_email_or_linkedin', 'Name the person this signal concerns'); continue; }
-      s.assigned = person.persona === 'Primary' ? 'Auto-assigned to the primary-persona contact' : 'Auto-assigned (no primary-persona contact)';
+      if (!person) { reject('D4', 'No person named, and no one at this account can be contacted', 'contact_email_or_linkedin', 'Name the person this signal concerns'); continue; }
+      s.assigned = person.persona === 'Primary' ? 'Auto-assigned to the primary-persona contact'
+        : cs.some(c => c.persona === 'Primary' && !c.optOut) ? 'Auto-assigned (the primary-persona contact can\'t be contacted)' : 'Auto-assigned (no primary-persona contact)';
       issues.push({ file, sheet, row: s.row, field: 'contact_email_or_linkedin', issue: 'No person named',
         outcome: `Attached to ${person.name} (${person.jobTitle}), flagged as auto-assigned`, code: '—', fix: 'Name the contact responsible for this event', severity: 'info' });
     }
@@ -697,7 +706,7 @@ function lowerFirst(s: string): string { return s && /^[A-Z][a-z]/.test(s) && !/
 /** The engine as one object, the shape the original exposed as window.DemandAI. */
 export const DemandAI = {
   CONFIG, CODES, LEAD_COLUMNS, LEAD_REQUIRED, SIGNAL_COLUMNS, SIGNAL_REQUIRED,
-  parseCSV, toCSV, readTable, processLeads, classify, personaOf, fitFor, decayFactor,
+  parseCSV, toCSV, readTable, processLeads, canContact, classify, personaOf, fitFor, decayFactor,
   processSignals, scoreList, stack, tierFor, daysBetween, round1,
 };
 export default DemandAI;

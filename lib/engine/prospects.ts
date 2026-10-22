@@ -1,7 +1,7 @@
 // The ranked prospects of a scoring run: one row per person who hasn't opted out, in the order the Scoring screen
 // shows them (tier, then score, then fit). Same rules as the original page's prospects(); the server stores the
 // result so every screen and the hand-off read one ranking.
-import { CONFIG } from '../demandai-engine.ts';
+import { CONFIG, canContact } from '../demandai-engine.ts';
 import type { Contact, PersonScore, ScoreResult, Signal, SignalResult, Tier } from '../../types/demandai';
 
 export interface Prospect {
@@ -36,6 +36,14 @@ export function buildProspects(scored: ScoreResult[]): Prospect[] {
 
 /** A prospect with a live signal can be handed off. */
 export const sendable = (x: Pick<Prospect, 'score'>): boolean => x.score !== undefined;
+
+/** Who goes to NBA: the chosen prospects (by key), or every tier A and B prospect, with a live signal; of those, only
+ *  people who can be contacted (G-005). The rest stay in Scoring and are counted as held back. */
+export function handoffSelection(prospects: Prospect[], keys?: Set<string>): { items: Prospect[]; heldBack: number } {
+  const candidates = prospects.filter(x => sendable(x) && (keys ? keys.has(x.key) : x.tier === 'A' || x.tier === 'B'));
+  const items = candidates.filter(x => canContact(x.c));
+  return { items, heldBack: candidates.length - items.length };
+}
 
 /* ─── The signal checks pop-up: the same ten steps and wording as the original page ─── */
 export const SIG_STEPS: [string, string, string][] = [
