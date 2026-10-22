@@ -11,18 +11,25 @@
     "start": "next start",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tests",
     "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test tests/*.test.ts",
-    "test:legacy": "node --test legacy/engine.test.js"
+    "test:legacy": "node --test legacy/engine.test.js",
+    "audit:gate": "node scripts/audit-gate.mjs",
+    "deps:age": "node scripts/check-dependency-age.mjs"
   },
   "dependencies": {
     "next": "^16.4.0",
+    "pino": "10.4.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
-    "xlsx": "^0.18.5"
+    "server-only": "0.0.1",
+    "xlsx": "file:vendor/xlsx-0.20.3.tgz",
+    "zod": "4.6.7"
   },
   "devDependencies": {
     "@types/node": "^22.20.5",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "eslint": "9.39.5",
+    "eslint-config-next": "16.4.0",
     "typescript": "^5.9.3"
   }
 }

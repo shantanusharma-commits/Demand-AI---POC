@@ -1,0 +1,14 @@
+{
+  "_comment": "High or critical advisories accepted for DEV dependencies only, each with a reason and an expiry. scripts/audit-gate.mjs fails on anything in a production dependency, on anything not listed here, and on expired entries.",
+  "advisories": [
+    {
+      "advisory": "GHSA-vfj7-8cjw-p6xm",
+      "package": "braces",
+      "severity": "high",
+      "path": "eslint-config-next > @next/eslint-plugin-next > fast-glob 3.3.1 > micromatch 4.0.8 > braces 3.0.3",
+      "reason": "Stack-exhaustion DoS on deeply nested brace patterns. Reached only through the Next.js ESLint plugin, which expands the repository's own fixed glob patterns at lint time; no untrusted input reaches it and it never ships. No fixed braces release exists (3.0.3 is the newest) and every @next/eslint-plugin-next release pins fast-glob 3.3.1.",
+      "added": "2026-10-22",
+      "expires": "2026-11-22"
+    }
+  ]
+}
