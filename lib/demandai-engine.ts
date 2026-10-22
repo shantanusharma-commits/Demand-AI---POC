@@ -215,6 +215,41 @@ export function personaOf(title: unknown): Contact['persona'] {
   return 'None';
 }
 
+type OptState = 'Y' | 'N' | 'blank' | 'bad';
+const COMPANY_FIELDS: [keyof Contact, string][] = [['country', 'country'], ['industry', 'industry'], ['revenue', 'annual_revenue_usd'], ['employees', 'employee_count'],
+  ['accountType', 'account_type'], ['existingCustomer', 'existing_customer'], ['managedSeparately', 'managed_separately']];
+const blankValue = (v: unknown) => v === '' || v === null || v === undefined;
+
+/* Merges a repeated row into the contact it repeats. Blanks are filled from the repeat; Y on opt-out or managed
+   separately wins whichever row it is on; an unreadable opt-out on either row means not confirmed (fails closed);
+   a blank never confirms anything. Company details that differ are flagged on the repeated row. */
+function mergeDuplicate(into: Contact, from: Contact, optState: Map<Contact, OptState>, flag: (field: string, issue: string, outcome: string) => void): void {
+  for (const [k, col] of COMPANY_FIELDS) {
+    const a = into[k], b = from[k];
+    if (k === 'managedSeparately' || k === 'existingCustomer') {
+      if (a !== b) flag(col, `Differs from row ${into.row} for ${into.company}`, k === 'managedSeparately' ? 'Y kept: the account is treated as managed separately' : 'Y kept for the account');
+    } else if (!blankValue(a) && !blankValue(b) && String(a) !== String(b)) {
+      flag(col, `Differs from row ${into.row} for ${into.company}`, `Row ${into.row}'s value used for the account`);
+    }
+  }
+  const sa = optState.get(into) ?? 'blank', sb = optState.get(from) ?? 'blank';
+  const state: OptState = sa === 'Y' || sb === 'Y' ? 'Y' : sa === 'bad' || sb === 'bad' ? 'bad' : sa === 'N' || sb === 'N' ? 'N' : 'blank';
+  if (sa !== sb && sa !== 'blank' && sb !== 'blank') {
+    flag('opt_out', `Differs from row ${into.row} (opt-out ${sa === 'bad' ? 'unreadable' : sa} there, ${sb === 'bad' ? 'unreadable' : sb} here)`,
+      state === 'Y' ? 'Opted out: never contacted' : "Can't confirm the contact hasn't opted out: not contactable");
+  }
+  const target = into as unknown as Record<string, unknown>, source = from as unknown as Record<string, unknown>;
+  for (const k of Object.keys(source)) {
+    if (k === 'row' || k === 'flags' || k === 'optOut' || k === 'optOutUnknown' || k === 'name' || k === 'persona') continue;
+    if (!target[k] && source[k]) target[k] = source[k];
+  }
+  into.optOut = state === 'Y';
+  into.optOutUnknown = state === 'bad' || state === 'blank';
+  optState.set(into, state);
+  into.name = [into.firstName, into.lastName].filter(Boolean).join(' ') || '(no name)';
+  into.persona = personaOf(into.jobTitle);
+}
+
 export function processLeads(grid: Grid, { file = 'lead file', sheet = 'Sheet1' }: { file?: string; sheet?: string } = {}): LeadResult {
   const table = readTable(grid, { file, sheet, columns: LEAD_COLUMNS, required: LEAD_REQUIRED, anchor: 'company_name' });
   const issues = table.issues.slice();
@@ -224,6 +259,8 @@ export function processLeads(grid: Grid, { file = 'lead file', sheet = 'Sheet1' 
 
   const contacts: Contact[] = [];
   const byEmail = new Map<string, Contact>(), byLinkedIn = new Map<string, Contact>();
+  // How each contact's opt-out was given, so a merge can tell blank (no answer) from unreadable (fails closed).
+  const optState = new Map<Contact, OptState>();
   let notLoaded = 0, merged = 0;
 
   for (const r of table.records) {
@@ -283,18 +320,7 @@ export function processLeads(grid: Grid, { file = 'lead file', sheet = 'Sheet1' 
       at(row, 'linkedin_url', 'No LinkedIn URL', c.emailVerified ? 'Email only' : 'No usable channel until the email is verified', '—', 'Add the LinkedIn profile URL if one is held', 'info');
     }
 
-    // Duplicates (same email or LinkedIn URL): merged into the first row, blanks filled from the repeat
-    const dupOf = (c.email && byEmail.get(c.email)) || (c.linkedin && byLinkedIn.get(c.linkedin));
-    if (dupOf) {
-      at(row, c.email && byEmail.get(c.email) ? 'email' : 'linkedin_url', `Duplicate of row ${dupOf.row} (${dupOf.name})`,
-        `Merged into row ${dupOf.row}`, 'D5', 'Remove the repeated row');
-      const from = c as unknown as Record<string, unknown>, into = dupOf as unknown as Record<string, unknown>;
-      for (const k of Object.keys(from)) if (k !== 'row' && k !== 'flags' && !into[k] && from[k]) into[k] = from[k];
-      merged++;
-      continue;
-    }
-
-    // Company-level fields (validated per row; the account uses its first row)
+    // Company-level fields: checked on every row, duplicates included (G-037)
     req('country', 'Country is missing', 'The account fails the region check', 'Add the country');
     req('industry', 'Industry is missing', 'Vertical set to other, held for review', 'Add the industry as held');
     const rev = parseNumber(r.annual_revenue_usd), emp = parseNumber(r.employee_count);
@@ -324,6 +350,7 @@ export function processLeads(grid: Grid, { file = 'lead file', sheet = 'Sheet1' 
     const opt = yn('opt_out', "Can't confirm the contact hasn't opted out: not contactable");
     c.optOut = opt === 'Y';
     c.optOutUnknown = opt === '';
+    optState.set(c, opt === 'Y' || opt === 'N' ? opt : clean(r.opt_out) ? 'bad' : 'blank');
     if (c.optOut) at(row, 'opt_out', 'Opted out', 'Suppressed: never contacted', '—', 'Nothing to fix', 'info');
 
     const consent = clean(r.consent_basis);
@@ -331,9 +358,24 @@ export function processLeads(grid: Grid, { file = 'lead file', sheet = 'Sheet1' 
     c.consentOk = CONFIG.consentBases.includes(consent.toLowerCase());
     if (!consent) { if (!missingCols.has('consent_basis')) at(row, 'consent_basis', 'No consent basis', 'Not contactable', 'D3', 'Add legitimate interest, existing customer or opted in'); }
     else if (!c.consentOk) at(row, 'consent_basis', `"${consent}" isn't a recognised basis`, 'Not contactable until confirmed', 'D3', 'Use legitimate interest, existing customer or opted in');
+    // The row contradicts itself: the opt-out wins, and a person is asked to correct it (G-060).
+    if (c.optOut && consent.toLowerCase() === 'opted in') {
+      at(row, 'opt_out', 'Opted out, but the consent basis says opted in', 'Opt-out wins: never contacted', '—', 'Confirm with the owner and correct the consent basis');
+    }
 
     if (!c.owner) { if (!missingCols.has('owner_email')) at(row, 'owner_email', 'No owner rep', 'Only the sales manager sees this account', 'D3', "Add the assigned rep's email"); }
     else if (!EMAIL_RE.test(c.owner)) at(row, 'owner_email', `Owner "${c.owner}" isn't an email`, 'Only the sales manager sees this account', 'D3', "Use the rep's work email");
+
+    // Duplicates (same email or LinkedIn URL): merged into the first row after their own checks, blanks filled
+    // from the repeat; an opt-out or managed-separately Y on any row wins, and conflicts are flagged (N-01, G-060).
+    const dupOf = (c.email && byEmail.get(c.email)) || (c.linkedin && byLinkedIn.get(c.linkedin));
+    if (dupOf) {
+      at(row, c.email && byEmail.get(c.email) ? 'email' : 'linkedin_url', `Duplicate of row ${dupOf.row} (${dupOf.name})`,
+        `Merged into row ${dupOf.row}`, 'D5', 'Remove the repeated row');
+      mergeDuplicate(dupOf, c, optState, (field, issue, outcome) => at(row, field, issue, outcome, '—', 'Correct the row that is wrong, then remove the repeat'));
+      merged++;
+      continue;
+    }
 
     contacts.push(c);
     if (c.email) byEmail.set(c.email, c);

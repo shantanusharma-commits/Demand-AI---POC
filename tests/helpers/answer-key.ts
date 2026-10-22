@@ -54,10 +54,13 @@ export function measure(data = loadDataset()) {
     'FMT-LINKEDIN': r => has(r, i => /profile URL/.test(i.issue)), 'FMT-OWNER': r => has(r, i => /isn't an email/.test(i.issue)),
     'FMT-INCONSISTENT': r => has(r, i => /^Differs from row/.test(i.issue)) || dup(r),
     'FMT-TITLE-NOISE': r => !!contactByRow.get(r) && contactByRow.get(r)!.persona !== 'None',
-    // Opted-out row that is also a duplicate: the person must end up suppressed.
+    // Opted out while the row (or a duplicate of it) says otherwise: the person must end up suppressed, and the
+    // conflict flagged (G-060).
     'SUP-OPTOUT-CONFLICT': r => {
       const c = contactByRow.get(r) ?? leads.contacts.find(x => has(r, i => i.code === 'D5' && i.outcome === `Merged into row ${x.row}`));
-      return !!c && c.optOut;
+      if (!c || !c.optOut) return false;
+      const rows = [c.row, ...leads.issues.filter(i => i.code === 'D5' && i.outcome === `Merged into row ${c.row}`).map(i => i.row as number)];
+      return rows.some(x => has(x, i => i.field === 'opt_out' && i.severity === 'flag' && /^Differs from row|says opted in/.test(i.issue)));
     },
   };
 

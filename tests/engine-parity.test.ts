@@ -1,43 +1,15 @@
-// Parity check for the TypeScript migration: the TypeScript engine must give exactly the same output as the
-// original demandai-engine.js (kept in legacy/) for the same input. Runs the sample data and the
-// 7,498-row generated dataset through both engines and compares every result field by field.
+// Parity of the helpers the two engines still share. Since Phase 4b the TypeScript engine carries data-quality
+// fixes (N-01, G-016…G-044) that the legacy engine keeps as defects (rule 7: legacy/ is never edited), so their
+// whole-pipeline outputs differ on purpose. The answer-key test (tests/answer-key.test.ts) is now the oracle for
+// behaviour, and the legacy engine's own tests are ported in Phase 4c (G-053).
 // Remove this file together with legacy/ once the original version is retired.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import * as TS from '../lib/demandai-engine.ts';
-import * as S from '../lib/demandai-sample-data.ts';
-import type { Grid } from '../types/demandai';
 
 const require = createRequire(import.meta.url);
 const JS = require('../legacy/demandai-engine.js');
-const XLSX = require('xlsx');
-
-// Maps are compared as arrays of entries; everything else as JSON.
-const snapshot = (v: unknown) => JSON.parse(JSON.stringify(v, (_k, x) => x instanceof Map ? [...x.entries()] : x));
-
-function runBoth(leadGrid: Grid, signalGrid: Grid, asOf: string) {
-  return [TS, JS].map(E => {
-    const leads = E.processLeads(leadGrid, { file: 'lead', sheet: 'Lead template' });
-    const list = { accounts: leads.accounts, contacts: leads.contacts };
-    const sig = E.processSignals(signalGrid, list, { file: 'signal', sheet: 'Signal template', asOf });
-    const scored = E.scoreList(list, sig);
-    return snapshot({ leads, sig, scored });
-  });
-}
-
-test('sample data: TypeScript engine output equals the original engine output', () => {
-  const [ts, js] = runBoth(S.LEADS, S.SIGNALS, S.SAMPLE_AS_OF);
-  assert.deepStrictEqual(ts, js);
-});
-
-test('7,498-row dataset: TypeScript engine output equals the original engine output', () => {
-  const wb = XLSX.readFile(new URL('../test-data/Lead_Research_Sample_Dataset.xlsx', import.meta.url).pathname, { cellDates: true });
-  const grid = (name: string): Grid => XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, raw: true, defval: '' });
-  const [ts, js] = runBoth(grid('Lead template'), grid('Signal template'), '2026-09-30');
-  assert.equal(ts.leads.stats.rowsRead, 7498);
-  assert.deepStrictEqual(ts, js);
-});
 
 test('helpers give the same results as the original', () => {
   const csv = '﻿a,"b,c","d ""q"""\r\n1,"x\ny",3';

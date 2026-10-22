@@ -26,7 +26,7 @@ export function checkOf(i: Issue): StepKey {
   if (i.field === 'linkedin_url' && /profile URL/.test(i.issue)) return 'liFormat';
   if (i.issue === 'No email and no LinkedIn URL' || i.issue === 'No email' || i.issue === 'No LinkedIn URL') return 'channel';
   if (i.field === 'consent_basis') return 'consent';
-  if (i.field === 'opt_out' && i.issue === 'Opted out') return 'optout';
+  if (i.field === 'opt_out' && (i.issue === 'Opted out' || /^Differs from row|says opted in/.test(i.issue))) return 'optout';
   if (/isn't Y or N|commas|isn't a number|isn't on the list|isn't in the form|Differs from row|is blank$/.test(i.issue)) return 'formats';
   return 'required';
 }
