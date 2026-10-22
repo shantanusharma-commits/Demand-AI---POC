@@ -109,6 +109,8 @@ test('G-015: a corrected email is kept in the log, the list is checked again, an
   assert.deepEqual(log.rows.map(r => [r.row, r.field, r.from, r.to, r.severity, r.reason, r.source, r.note, r.who, r.role, r.contact]),
     [[2, 'email', 'ann.lee@acme-refining', 'ann.lee@acme-refining.com', 'major', 'Wrong or bounced email', 'Bounce or reply', 'From the bounce report', 'admin.a', 'Admin', 'Ann Lee']]);
   assert.deepEqual(log.summary, { corrections: 1, people: 1, major: 1, minor: 0, top: { reason: 'Wrong or bounced email', n: 1 } });
+  assert.equal(now.corrections, 1, 'the list says how many corrections its file has');
+  assert.equal((await as(repOne(), s => getList(s, repOneActor(), next))).corrections, 1, 'Ann is rep.one’s');
   listId = next;
 });
 
@@ -185,6 +187,8 @@ test('G-014: a rep can’t correct a list someone else uploaded; on their own up
   assert.ok(mine.rows.length > 0 && mine.rows.every(r => [2, 3, 6].includes(r.row)), 'only corrections to rows rep.one owns');
   const all = await as(admin(), s => listCorrections(s, {}));
   assert.ok(all.rows.some(r => r.row === 4) && all.summary.corrections > mine.summary.corrections);
+  assert.ok((await as(repOne(), s => getList(s, repOneActor(), listId))).corrections < (await as(admin(), s => getList(s, adminActor(), listId))).corrections,
+    'a rep’s count is of their own rows');
 });
 
 test('one rebuild at a time: a second correction while the first is being checked is refused; a replaced version can’t be corrected', async () => {
