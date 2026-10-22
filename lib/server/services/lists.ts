@@ -272,6 +272,8 @@ export type ListDetail = ListSummary & {
   canEdit: boolean;
   /** For a list corrected since (status 'replaced'): its newest version, to open instead. */
   replacedBy: string | null;
+  /** Corrections made to this list's file that the caller can see (G-015). */
+  corrections: number;
 };
 
 async function listRow(scope: TenantScope, id: string) {
@@ -291,6 +293,8 @@ export async function getList(scope: TenantScope, actor: Actor, id: string): Pro
   }).from(accounts).where(and(eq(accounts.listId, id), ownerOnly(scope, accounts.ownerEmail)));
   const c = { all: 0, in: 0, nc: 0, out: 0 };
   for (const g of groups) { c[g.g as ContactGroup] = g.n; c.all += g.n; }
+  const [k] = await scope.tx.select({ n: sql<number>`count(*)::int` }).from(corrections)
+    .where(and(eq(corrections.uploadId, l.uploadId), ownerOnly(scope, corrections.ownerEmail)));
   return {
     id: l.id, name: l.name, status: l.status, sandbox: l.sandbox, sourceFile: l.sourceFile, sheet: l.sheet, createdAt: l.createdAt, savedAt: l.savedAt,
     scored: l.scored, stats: l.stats as LeadStats, checks: l.checks as StepResult[], scope: scope.ctx.scope, visible: { contacts: c, accounts: a },
@@ -299,6 +303,7 @@ export async function getList(scope: TenantScope, actor: Actor, id: string): Pro
     missingColumns: missingColumns(l.fileColumns as string[], 'lead', l.mappingId ? (await getMapping(scope, l.mappingId)) ?? undefined : undefined),
     canEdit: isManager(actor.role) || l.createdBy === actor.userId,
     replacedBy: l.status === 'replaced' ? (await currentVersion(scope, id))?.id ?? null : null,
+    corrections: k.n,
   };
 }
 

@@ -420,6 +420,11 @@ input,textarea,select{font:inherit;}
 .shell[data-page="nba"] .sc,.shell[data-page="review"] .sc{white-space:nowrap;}
 
 /* ─── Prospecting: data quality card and check panes (legacy 10-prospecting.html) ─── */
+.stat-link{position:relative;cursor:pointer;display:block;text-decoration:none;transition:background var(--fast) var(--ease);}
+.stat-link:hover{background:var(--brand-lt);}
+.stat-link::after{content:'›';position:absolute;top:10px;right:14px;font-size:17px;color:var(--i4);}
+.stat-link:hover .stat-lbl{color:var(--brand);}
+.dq-link{text-decoration:none;color:var(--i1);display:block;}
 .dqp-nav{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px;}
 .dqp-nav button{padding:3px 8px;border:1px solid var(--border);border-radius:999px;background:var(--surf);font-size:11px;color:var(--i2);cursor:pointer;font-family:var(--fb);}
 .dqp-nav button.on{border-color:var(--brand);background:var(--brand-lt);color:var(--brand-dk);font-weight:600;}

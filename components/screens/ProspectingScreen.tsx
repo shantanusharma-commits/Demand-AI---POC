@@ -5,32 +5,41 @@
    by a background job whose real stages drive the pop-up (G-043); the list lives in PostgreSQL (G-004, G-012) and is
    read a page at a time with server search (G-022). Reps see their own contacts and accounts (G-014). Each list keeps
    its % clean, check panes with every finding and a CSV per check, the validation report with D-codes, and the
-   readiness checks (G-015). */
+   readiness checks (G-015). A row is corrected with what was wrong and how the person knows; the list is checked
+   again on the server with every correction, and the Corrections tabs show the log (G-015, D-17, G-021). */
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { memo, useCallback, useEffect, useRef, useState, type DragEvent, type ReactNode } from 'react';
-import { DemandAI } from '@/lib/demandai-engine';
+import { DemandAI, VERTICAL_CHOICES } from '@/lib/demandai-engine';
 import { DemandAISample } from '@/lib/demandai-sample-data';
 import { download } from '@/lib/download';
 import { avColor, initials, showToast } from '@/lib/ui';
 import { sx } from '@/lib/sx';
 import { CHECK_HELP, CHECK_SHORT, CHECKS, STEPS, type CheckKey, type StepResult } from '@/lib/prospecting/checks';
+import { EDIT_FIELDS, EDIT_REASONS, EDIT_SOURCES, PUT_BACK, TAKEN_OUT } from '@/lib/engine/corrections';
 import { ApiError, api, errorText, uploadFile, waitForJob, type JobState, type Wire } from '@/lib/client/api';
 import { useDebounced } from '@/lib/client/use-debounced';
 import { usePaged } from '@/lib/client/use-paged';
 import { RenameField } from '@/components/RenameField';
 import type { AccountRow as AccountRowData, ContactRow as ContactRowData, ListDetail as ServerListDetail, ListSummary as ServerListSummary } from '@/lib/server/services/lists';
+import type { CorrectionRow, CorrectionSummary, EditRow } from '@/lib/server/services/corrections';
 import type { Account, Contact, DqCode, Issue } from '@/types/demandai';
 
 /* ═══════════════ STATE SHAPES ═══════════════ */
 type ListDetail = Wire<ServerListDetail>;
 type ListSummary = Wire<ServerListSummary>;
-type StartTab = 'upload' | 'saved';
-type View = 'list' | 'accounts';
+type StartTab = 'upload' | 'saved' | 'corrections';
+type View = 'list' | 'accounts' | 'corrections';
 interface ChecksState { key: number; shown: boolean; fileName: string; phase: 'running' | 'done' | 'failed'; stage: string; done: number; total: number; list: ListDetail | null; error: string }
 interface SaveState { key: number; shown: boolean; go: boolean; saved: boolean; selOnly: boolean; base: string; text: string }
 /** The check pane: which list's findings, for which check. */
 interface PaneState { list: ListDetail; check: CheckKey }
+/** The edit form for one row: what the file has, what the person typed, and where the save is. */
+interface EditState {
+  listId: string; row: number; data: Wire<EditRow>; values: Record<string, string>; reason: string; source: string; note: string; out: boolean;
+  phase: 'form' | 'saving' | 'checking'; error: string; fields: Record<string, string[]>;
+}
+type CorrFilter = { severity?: 'major' | 'minor'; reason?: string } | null;
 
 const OVERLAY_CSS = 'position:fixed;inset:0;background:rgba(20,26,33,.45);z-index:600;display:flex;align-items:center;justify-content:center;padding:16px';
 const upperFirst = (s: string) => s.replace(/^./, m => m.toUpperCase());
@@ -86,7 +95,7 @@ const checkResults = (l: ListDetail): Map<CheckKey, StepResult> => new Map(CHECK
 const sevTag = (s: Issue['severity']) => s === 'stop' ? <span className="tag tag-red">Stops the row</span> : s === 'flag' ? <span className="tag tag-amber">Flagged</span> : <span className="tag tag-grey">For information</span>;
 
 /* One row of the Final list. Memoised so ticking one checkbox does not redraw every row. */
-const ContactRow = memo(function ContactRow({ r, selected, onToggle }: { r: ContactRowData; selected: boolean; onToggle: (c: Contact, on: boolean) => void }) {
+const ContactRow = memo(function ContactRow({ r, selected, onToggle, onEdit }: { r: ContactRowData; selected: boolean; onToggle: (c: Contact, on: boolean) => void; onEdit: (row: number) => void }) {
   const c = r.contact, a = r.account, issues = r.issues;
   const reason = (c.status.match(/\((.*)\)$/) || [])[1];
   const emailSub = c.emailRaw ? (c.email ? (c.emailVerified ? <span style={sx('color:var(--pos)')}>Verified</span> : <span style={sx('color:var(--warn)')}>Not verified</span>) : <span style={sx('color:var(--neg)')}>Malformed</span>) : '';
@@ -94,7 +103,8 @@ const ContactRow = memo(function ContactRow({ r, selected, onToggle }: { r: Cont
   return (
     <tr style={selected ? sx('background:var(--brand-lt)') : undefined}>
       <td>{selectable(c) ? <input type="checkbox" checked={selected} onChange={e => onToggle(c, e.target.checked)} style={sx('cursor:pointer;vertical-align:middle')} /> : <span className="muted" title="Not in the list">—</span>}</td>
-      <td><div className="person"><div className="co-av" style={{ background: avColor(c.company) }}>{initials(c.name)}</div><div>{cell(c.name, 'Row ' + c.row, 'dt-main')}</div></div></td>
+      <td><button className="btn btn-sec btn-sm" title="Correct this person's details" onClick={() => onEdit(c.row)}>Edit</button></td>
+      <td><div className="person"><div className="co-av" style={{ background: avColor(c.company) }}>{initials(c.name)}</div><div>{cell(c.name, r.corrected ? <>{'Row ' + c.row + ' · '}<span style={sx('color:var(--brand);font-weight:600')}>Corrected</span></> : 'Row ' + c.row, 'dt-main', 'Row ' + c.row + (r.corrected ? ' · Corrected' : ''))}</div></div></td>
       <td>{cell(c.company)}</td>
       <td>{cell(c.jobTitle)}</td>
       <td>{personaTag(c.persona)}</td>
@@ -116,7 +126,9 @@ const CONF_TAG: Record<Account['confidence'], ReactNode> = {
   high: <span className="tag tag-green">High</span>, medium: <span className="tag tag-amber">Medium</span>, low: <span className="tag tag-red">Low</span>,
 };
 const money = (n: number | null) => n == null ? '' : n >= 1e9 ? 'USD ' + (n / 1e9).toFixed(1).replace(/\.0$/, '') + 'bn' : 'USD ' + Math.round(n / 1e6) + 'm';
-const AccountRow = memo(function AccountRow({ r }: { r: AccountRowData }) {
+/** Held because no row says whether it is managed separately (D-17), as opposed to excluded on a Y. */
+const managedHeld = (a: Account) => a.excluded && a.excludedReason.startsWith('Managed status not confirmed');
+const AccountRow = memo(function AccountRow({ r, onFix }: { r: AccountRowData; onFix: ((row: number) => void) | null }) {
   const a = r.account, n = r.contacts, prim = r.primary;
   const site = a.siteProcess ? [a.siteName, a.siteProcess].filter(Boolean).join(' · ') : '';
   const accountTypes: Record<string, { label?: string } | undefined> = DemandAI.CONFIG.accountTypes;
@@ -125,7 +137,7 @@ const AccountRow = memo(function AccountRow({ r }: { r: AccountRowData }) {
       <td><div className="person"><div className="co-av" style={{ background: avColor(a.name) }}>{initials(a.name)}</div><div>{cell(a.name, a.domain || '', 'dt-main')}</div></div></td>
       <td>{cell([a.city, a.country].filter(Boolean).join(', '))}</td>
       <td>{cell(a.industry)}</td>
-      <td>{cell(a.vertical, upperFirst(a.verticalLevel))}</td>
+      <td>{cell(a.vertical, upperFirst(a.verticalLevel))}{a.needsReview && onFix ? <button className="btn btn-ghost btn-sm" style={sx('margin-top:4px;padding:2px 8px')} onClick={() => onFix(a.contactIds[0])}>Set the vertical…</button> : null}</td>
       <td>{CONF_TAG[a.confidence]}</td>
       <td className="wrap"><span className="clamp2" title={a.classReason} style={sx('font-size:12px')}>{a.classReason}</span></td>
       <td>{cell((accountTypes[a.accountType] || {}).label || 'Other')}</td>
@@ -134,7 +146,7 @@ const AccountRow = memo(function AccountRow({ r }: { r: AccountRowData }) {
       <td>{cell(site, a.siteCapacity ? Number(a.siteCapacity).toLocaleString('en-US') + ' ' + a.capacityUnit : '')}</td>
       <td>{cell(n + ' contact' + (n === 1 ? '' : 's'), prim ? prim + ' primary persona' : 'No primary persona')}</td>
       <td>{cell(a.owner)}</td>
-      <td>{a.excluded ? <><span className="tag tag-red">Excluded</span><span className="sub" title={a.excludedReason}>{a.excludedReason}</span></> : <><span className="tag tag-green">Pass</span><span className="sub">Region · managed · contacts</span></>}</td>
+      <td>{a.excluded ? <><span className="tag tag-red">Excluded</span><span className="sub" title={a.excludedReason}>{a.excludedReason}</span>{managedHeld(a) && onFix ? <button className="btn btn-ghost btn-sm" style={sx('margin-top:4px;padding:2px 8px')} onClick={() => onFix(a.contactIds[0])}>Confirm managed status…</button> : null}</> : <><span className="tag tag-green">Pass</span><span className="sub">Region · managed · contacts</span></>}</td>
     </tr>
   );
 });
@@ -209,20 +221,28 @@ export function ProspectingScreen() {
   const [save, setSave] = useState<SaveState | null>(null);
   const [pane, setPane] = useState<PaneState | null>(null);
   const [paneOpen, setPaneOpen] = useState(false);
+  const [drawerMode, setDrawerMode] = useState<'check' | 'edit'>('check');
+  const [edit, setEdit] = useState<EditState | null>(null);
+  const [corrF, setCorrF] = useState<CorrFilter>(null);
+  const [unitCorrections, setUnitCorrections] = useState(0);
   const dropRef = useRef<HTMLLabelElement>(null);
   const listNameRef = useRef<HTMLInputElement>(null);
   const selAllRef = useRef<HTMLInputElement>(null);
 
   const refreshLists = useCallback(async () => {
-    try { setLists((await api<{ lists: ListSummary[] }>('/api/lists')).lists); }
-    catch (e) { showToast(errorText(e)); }
+    try {
+      const [l, k] = await Promise.all([api<{ lists: ListSummary[] }>('/api/lists'), api<{ summary: CorrectionSummary }>('/api/corrections?limit=1')]);
+      setLists(l.lists); setUnitCorrections(k.summary.corrections);
+    } catch (e) { showToast(errorText(e)); }
   }, []);
 
-  const openList = useCallback(async (id: string, keepUrl = false) => {
+  // A list corrected since opens at its current version (G-015).
+  const openList = useCallback(async (id: string, keepUrl = false, keepView = false) => {
     try {
-      const { list } = await api<{ list: ListDetail }>(`/api/lists/${id}`);
-      setRun(list); setView('list'); setFilt('all'); setQ(''); setSel(new Map()); setScreen('run');
-      if (!keepUrl) router.replace('/prospecting?list=' + encodeURIComponent(id), { scroll: false });
+      let { list } = await api<{ list: ListDetail }>(`/api/lists/${id}`);
+      if (list.status === 'replaced' && list.replacedBy) { list = (await api<{ list: ListDetail }>(`/api/lists/${list.replacedBy}`)).list; keepUrl = false; }
+      setRun(list); if (!keepView) { setView('list'); setFilt('all'); setQ(''); } setSel(new Map()); setScreen('run');
+      if (!keepUrl) router.replace('/prospecting?list=' + encodeURIComponent(list.id), { scroll: false });
     } catch (e) { showToast(errorText(e)); }
   }, [router]);
 
@@ -326,13 +346,50 @@ export function ProspectingScreen() {
   }, [listId]);
   const visibleContacts = contacts.rows;
   const visibleAccounts = accounts.rows;
+  const corrBase = screen === 'run' && listId && view === 'corrections' ? `/api/lists/${listId}/corrections?` : screen === 'start' && startTab === 'corrections' ? '/api/corrections?' : null;
+  const corrLog = usePaged<Wire<CorrectionRow>, { summary: CorrectionSummary }>(corrBase && corrBase + query({ severity: corrF?.severity, reason: corrF?.reason, limit: PAGE }));
 
   /* ─── data quality: the check pane, its findings a page at a time from the server ─── */
   const findings = usePaged<Issue>(pane && paneOpen ? `/api/lists/${pane.list.id}/issues?` + query({ check: pane.check, limit: 50 }) : null);
   function openCheckPane(check: CheckKey, list?: ListDetail) {
     const l = list ?? pane?.list ?? run;
     if (!l) return;
-    setPane({ list: l, check }); setPaneOpen(true);
+    setPane({ list: l, check }); setDrawerMode('check'); setPaneOpen(true);
+  }
+
+  /* ─── corrections: the edit form for a row, saved on the server, then the list checked again (G-015) ─── */
+  async function openEdit(row: number) {
+    const l = run;
+    if (!l) return;
+    try {
+      const { row: data } = await api<{ row: Wire<EditRow> }>(`/api/lists/${l.id}/contacts/${row}`);
+      setEdit({ listId: l.id, row, data, values: { ...data.raw, vertical: data.account.vertical }, reason: '', source: '', note: '', out: !!data.contact.takenOut, phase: 'form', error: '', fields: {} });
+      setDrawerMode('edit'); setPaneOpen(true);
+    } catch (e) { showToast(errorText(e)); }
+  }
+  const setValue = (f: string, v: string) => setEdit(e => e && { ...e, values: { ...e.values, [f]: v }, fields: { ...e.fields, [f]: [] } });
+  async function saveEdit() {
+    const e = edit;
+    if (!e) return;
+    if (!e.reason) { setEdit({ ...e, error: 'Say what was wrong: it is what makes the correction useful later.' }); return; }
+    const d = e.data, changes: Record<string, string> = {};
+    for (const [f] of EDIT_FIELDS) if ((e.values[f] ?? '').trim() !== (d.raw[f] ?? '').trim()) changes[f] = (e.values[f] ?? '').trim();
+    for (const f of ['opt_out', 'managed_separately'] as const) if (e.values[f] && e.values[f] !== d.raw[f]) changes[f] = e.values[f];
+    if (e.values.vertical !== d.account.vertical) changes.vertical = e.values.vertical;
+    if (e.out !== !!d.contact.takenOut) changes.take_out = e.out ? TAKEN_OUT : PUT_BACK;
+    if (!Object.keys(changes).length) { setEdit({ ...e, error: 'Nothing changed.' }); return; }
+    setEdit({ ...e, phase: 'saving', error: '', fields: {} });
+    try {
+      const r = await api<{ jobId: string }>(`/api/lists/${e.listId}/corrections`, { body: { row: e.row, changes, reason: e.reason, source: e.source, note: e.note.trim() } });
+      setEdit(x => x && { ...x, phase: 'checking' });
+      const job = await waitForJob(r.jobId, () => {});
+      if (job.status !== 'succeeded') throw new JobFailed(`The correction is kept, but the list was not checked again: ${job.error?.message ?? 'try again'}`);
+      await openList(job.progress.result!.listId, false, true);
+      setPaneOpen(false); setEdit(null);
+      showToast('Corrected and checked again' + (changes.take_out === TAKEN_OUT ? ': taken out of the list' : changes.take_out === PUT_BACK ? ': back in the list' : ''));
+    } catch (err) {
+      setEdit(x => x && { ...x, phase: 'form', error: err instanceof JobFailed ? err.message : errorText(err), fields: err instanceof ApiError ? err.fields ?? {} : {} });
+    }
   }
   /** The first check with findings, as the original opened it. */
   const firstCheck = (l: ListDetail): CheckKey => CHECKS.map(c => c[0]).find(k => (checkResults(l).get(k)?.n ?? 0) > 0) ?? 'columns';
@@ -343,6 +400,12 @@ export function ProspectingScreen() {
       openCheckPane(firstCheck(list), list);
     } catch (e) { showToast(errorText(e)); }
   }
+
+  const onEditRef = useRef<(row: number) => void>(() => {});
+  useEffect(() => { onEditRef.current = row => { void openEdit(row); }; });
+  const onEdit = useCallback((row: number) => onEditRef.current(row), []);
+  /** The person a finding's row belongs to: a merged repeat is edited through the row it went into. */
+  const editRowOf = (i: Issue): number => { const m = i.code === 'D5' ? /^Merged into row (\d+)$/.exec(i.outcome) : null; return m ? +m[1] : i.row as number; };
 
   const toggleSel = useCallback((c: Contact, on: boolean) => {
     setSel(prev => { const s = new Map(prev); if (on) s.set(c.row, c); else s.delete(c.row); return s; });
@@ -387,8 +450,8 @@ export function ProspectingScreen() {
     );
     return <>
       <div className="topbar"><div className="topbar-l"><span className="tb-title">Lead discovery and research</span><span className="tb-badge badge-neutral">Stages 1–5 · rules only</span></div></div>
-      <div className="ftabs">{t('upload', 'Upload')}{t('saved', 'Saved lists', lists.length)}</div>
-      <div className="canvas">{startTab === 'upload' ? (
+      <div className="ftabs">{t('upload', 'Upload')}{t('saved', 'Saved lists', lists.length)}{t('corrections', 'Corrections', unitCorrections)}</div>
+      <div className="canvas">{startTab === 'corrections' ? correctionsTable() : startTab === 'upload' ? (
         <div style={sx('max-width:640px;margin:24px auto 0')}>
           <div style={sx('font-family:var(--fd);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--brand);margin-bottom:8px')}>Step 1 · Prospecting</div>
           <div style={sx('font-family:var(--fd);font-size:22px;font-weight:700;color:var(--i1);margin-bottom:6px')}>Upload the lead file</div>
@@ -457,7 +520,7 @@ export function ProspectingScreen() {
           <button id="goScoring" className="btn btn-primary btn-sm" onClick={() => openSave(true, sel.size > 0)} {...off}>{n ? `Send ${n} selected to Scoring →` : 'Save and go to Scoring →'}</button>
         </div>
       </div>
-      <div className="ftabs">{tab('list', 'Final list', v.contacts.all)}{tab('accounts', 'Accounts', v.accounts.all)}</div>
+      <div className="ftabs">{tab('list', 'Final list', v.contacts.all)}{tab('accounts', 'Accounts', v.accounts.all)}{tab('corrections', 'Corrections', r.corrections)}</div>
       <div className="canvas">
         <div className="stats">
           {statLink('Rows read', 'sv1', s.rowsRead, `${s.notLoaded} not loaded · ${s.merged} merged duplicate${s.merged === 1 ? '' : 's'}`, 'Show every contact', () => go('list', 'all'))}
@@ -470,7 +533,7 @@ export function ProspectingScreen() {
         {dqCard(r)}
         {readinessPanel(r)}
         {needsMapping ? mappingPanel(r) : null}
-        {view === 'list' ? renderListTab(r) : renderAccountsTab(r)}
+        {view === 'list' ? renderListTab(r) : view === 'corrections' ? correctionsTable() : renderAccountsTab(r)}
       </div>
     </>;
   }
@@ -550,6 +613,8 @@ export function ProspectingScreen() {
     const [, , what] = CHECKS.find(c => c[0] === k)!, [why, tip] = CHECK_HELP[k];
     const n = res.get(k)?.n ?? 0, rows = findings.rows, total = findings.total;
     const byCode = l.quality ? (Object.entries(l.quality.byCode) as [DqCode, number][]).filter(([, c]) => c > 0) : [];
+    // Rows can be edited from the pane of the list that is open, as in the original (a merged repeat opens its person).
+    const editable = run?.id === l.id && l.canEdit && l.status !== 'replaced';
     return <>
       <div className="dqp-nav">{CHECKS.map(([kk, nm]) => { const m = res.get(kk)?.n ?? 0; return <button key={kk} className={kk === k ? 'on' : ''} onClick={() => openCheckPane(kk)} title={nm}>{CHECK_SHORT[kk]}{m ? <>{' '}<b>{m}</b></> : null}</button>; })}</div>
       <div className="dqp-b"><div className="dqp-k">What it checks</div><div>{what}</div></div>
@@ -560,12 +625,81 @@ export function ProspectingScreen() {
       {n && total !== null && total < n ? <div style={sx('font-size:11.5px;color:var(--i3);margin-bottom:6px')}>{`You see the ${total} on your own rows and about the whole file.`}</div> : null}
       {!n ? <div className="dqp-ok">✓ Every row passed this check.</div> : rows === null ? <div style={sx('font-size:12px;color:var(--i3)')}>Loading…</div>
         : rows.map((i, x) => <div key={x} className="dqp-i"><div className="dqp-ih"><b>{i.row === '—' ? 'Whole file' : 'Row ' + i.row}</b><span className="dqp-f">{i.field || ''}</span>{sevTag(i.severity)}</div>
-          <div className="dqp-t">{i.issue}</div><div className="dqp-o">{'What happens: ' + (i.outcome || '')}</div>{i.fix ? <div className="dqp-o">{'How to fix: ' + i.fix}</div> : null}</div>)}
+          <div className="dqp-t">{i.issue}</div><div className="dqp-o">{'What happens: ' + (i.outcome || '')}</div>{i.fix ? <div className="dqp-o">{'How to fix: ' + i.fix}</div> : null}
+          {editable && typeof i.row === 'number' ? <button className="btn btn-sec btn-sm" style={sx('margin-top:6px')} onClick={() => void openEdit(editRowOf(i))}>{`Edit row ${editRowOf(i)}`}</button> : null}</div>)}
       {findings.next !== null ? <div style={sx('display:flex;justify-content:center;padding:6px')}><button className="btn btn-sec btn-sm" disabled={findings.busy} onClick={() => void findings.more()}>{`Show more (${(rows ?? []).length} of ${total ?? n} shown)`}</button></div> : null}
       <div className="dqp-b" style={sx('margin-top:14px')}><div className="dqp-k" style={sx('display:flex;justify-content:space-between;align-items:center')}>Validation report
         <a className="btn btn-ghost btn-sm" style={sx('text-decoration:none')} href={`/api/lists/${l.id}/report.csv`} download>↓ CSV</a></div>
         <div style={sx('font-size:12px;color:var(--i2)')}>{byCode.length ? byCode.map(([code, c]) => `${code} ${DemandAI.CODES[code]}: ${c.toLocaleString('en-US')}`).join(' · ') : 'No finding carries a D-code.'}</div>
         <div style={sx('font-size:11px;color:var(--i3);margin-top:3px')}>Every finding with its check and D-code, in file order.</div></div>
+    </>;
+  }
+
+  /* The original correctionsTable: what changed, from what, why and how the person knows; major or minor. */
+  function correctionsTable(): ReactNode {
+    const rows = corrLog.rows, sum = corrLog.first?.summary;
+    const tone = (sv: string) => sv === 'major' ? 'tag-red' : 'tag-amber';
+    const when = (t: string) => new Date(t);
+    const tile = (label: string, value: ReactNode, sub: string, color: string, f: CorrFilter, extra?: string) =>
+      <a className="stat stat-link" href="#" onClick={e => { e.preventDefault(); setCorrF(f); }}><div className="stat-lbl">{label}</div><div className="stat-val" style={sx(`color:${color}${extra ?? ''}`)}>{value}</div><div className="stat-sub">{sub}</div></a>;
+    return <>
+      <div style={sx('display:flex;gap:10px;align-items:flex-start;padding:12px 14px;margin-bottom:12px;background:var(--brand-lt);border:1px solid var(--brand-mid);border-radius:var(--rmd)')}>
+        <span className="tag tag-violet">Pilot</span><div style={sx('font-size:12.5px;color:var(--i1);line-height:1.55')}><b>Captured in the pilot, used in production.</b> Every correction is kept with what changed, why and how you know. In the pilot nothing is sent back; in production they show which data sources and rules to fix, so the lists get better the more you use the tool.</div></div>
+      <div className="stats" style={sx('grid-template-columns:repeat(4,1fr)')}>
+        {tile('Corrections', sum ? sum.corrections : '—', sum ? `${sum.people} ${sum.people === 1 ? 'person' : 'people'}` : 'Loading…', 'var(--i1)', null)}
+        {tile('Major', sum ? sum.major : '—', 'wrong email, moved company, wrong person', 'var(--neg)', { severity: 'major' })}
+        {tile('Minor', sum ? sum.minor : '—', 'title, headcount, location', 'var(--warn)', { severity: 'minor' })}
+        {tile('Most common', sum?.top ? sum.top.reason : '—', sum?.top ? `${sum.top.n} time${sum.top.n === 1 ? '' : 's'}` : sum ? 'No corrections yet' : 'Loading…', 'var(--i1)', sum?.top ? { reason: sum.top.reason } : null, ';font-size:15px;line-height:1.3')}
+      </div>
+      {corrF ? <div style={sx('display:flex;gap:8px;align-items:center;margin:0 0 10px;font-size:12px;color:var(--i2)')}>Showing <span className="seg-pill active" onClick={() => setCorrF(null)}>{`${corrF.severity ? upperFirst(corrF.severity) : corrF.reason} ✕`}</span></div> : null}
+      <div className="score-list"><Table cols={[['Corrected on', 140], ['Corrected by', 160], ['Person corrected', 230], ['Field changed', 180], ['Before', 220], ['After', 220], ['Severity', 100], ['Reason', 210], ['Verified by', 220]]}
+        empty={rows ? 'No corrections yet. Click Edit on a row in the final list to correct it.' : 'Loading…'}
+        rows={(rows ?? []).map(x => <tr key={x.id}>
+          <td>{cell(when(x.at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }), when(x.at).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }))}</td>
+          <td>{cell(x.who, x.role)}</td><td>{cell(x.contact, `${x.company} · ${x.file} · row ${x.row}`)}</td><td>{cell(x.fieldLabel)}</td>
+          <td><span style={sx('color:var(--i3);text-decoration:line-through')}>{dash(x.from)}</span></td><td>{cell(x.to)}</td>
+          <td><span className={'tag ' + tone(x.severity)}>{x.severity === 'major' ? 'Major' : 'Minor'}</span></td><td>{cell(x.reason, x.note)}</td><td>{cell(x.source)}</td></tr>)} />
+        {rows ? moreButton(corrLog, rows.length, null) : null}</div>
+    </>;
+  }
+
+  /* The original openEdit form: every editable field as the file has it, then why and how the person knows. */
+  function editBody(e: EditState): ReactNode {
+    const d = e.data, c = d.contact, busy = e.phase !== 'form', ro = !d.canEdit || d.pending;
+    const field = sx('width:100%;margin-top:3px;padding:7px 9px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:12.5px');
+    const small = sx('font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--i3)');
+    const err = (f: string) => e.fields[f]?.[0] ? <span role="alert" style={sx('display:block;font-size:11px;color:var(--neg);margin-top:2px')}>{e.fields[f][0]}</span> : null;
+    const inp = (f: string, label: string) => <label key={f} style={sx('display:block;margin-bottom:9px')}><span style={small}>{label}</span>
+      <input value={e.values[f] ?? ''} disabled={ro || busy} aria-invalid={!!e.fields[f]?.[0]} onChange={ev => setValue(f, ev.target.value)} style={field} />{err(f)}</label>;
+    const select = (id: string, value: string, options: [string, string][], onChange: (v: string) => void, label: string) =>
+      <select id={id} aria-label={label} value={value} disabled={ro || busy} onChange={ev => onChange(ev.target.value)} style={sx('width:100%;padding:7px 9px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:12.5px')}>{options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>;
+    const optOutChoices: [string, string][] = c.optOutUnknown ? [['', 'Not confirmed'], ['N', "N: hasn't opted out"], ['Y', 'Y: opted out']] : [[d.raw.opt_out || 'N', `${d.raw.opt_out || 'N'}: as in the file`], ['Y', 'Y: opted out']];
+    const pick = (f: string) => (v: string) => setValue(f, v);
+    return <>
+      {!d.canEdit ? <div style={sx('font-size:12px;color:var(--warn);margin-bottom:10px')}>Only the person who uploaded this list, or a manager, can correct it.</div>
+        : d.pending ? <div style={sx('font-size:12px;color:var(--warn);margin-bottom:10px')}>A correction to this list is still being checked. Try again in a moment.</div> : null}
+      <div style={sx('font-size:12px;color:var(--i2);line-height:1.55;margin-bottom:12px')}>{"Change what's wrong; the checks run again on this row. Employees and industry change for the whole account."}</div>
+      {EDIT_FIELDS.map(([f, label]) => inp(f, label))}
+      {c.optOutUnknown || !c.optOut || d.account.managedHeld || d.account.needsReview || d.account.verticalByPerson ? <div style={sx('padding:12px;border:1px solid var(--border);border-radius:var(--rmd);margin:6px 0 12px')}>
+        <div style={sx('font-size:12px;font-weight:700;color:var(--i1);margin-bottom:8px')}>What the checks held</div>
+        {c.optOutUnknown || !c.optOut ? <label style={sx('display:block;margin-bottom:9px')}><span style={small}>{c.optOutUnknown ? 'Opt-out (not confirmed)' : 'Opt-out'}</span>{select('edOptOut', e.values.opt_out ?? '', optOutChoices, pick('opt_out'), 'Opt-out')}{err('opt_out')}</label> : null}
+        {d.account.managedHeld ? <label style={sx('display:block;margin-bottom:9px')}><span style={small}>Managed separately (whole account, not confirmed)</span>{select('edManaged', e.values.managed_separately ?? '', [['', 'Not confirmed'], ['N', 'N: not managed separately'], ['Y', 'Y: managed separately']], pick('managed_separately'), 'Managed separately')}{err('managed_separately')}</label> : null}
+        {d.account.needsReview || d.account.verticalByPerson ? <label style={sx('display:block;margin-bottom:9px')}><span style={small}>{`Vertical (whole account${d.account.needsReview ? ', needs review' : ''})`}</span>{select('edVertical', e.values.vertical ?? '', VERTICAL_CHOICES.map(v => [v, v] as [string, string]), pick('vertical'), 'Vertical')}{err('vertical')}</label> : null}
+        <div style={sx('font-size:11px;color:var(--i3);line-height:1.5')}>Confirming that someone has not opted out, or that an account is not managed separately, needs how you know. It is kept with your name.</div>
+      </div> : null}
+      <div style={sx('padding:12px;background:var(--s50);border-radius:var(--rmd);margin:6px 0 12px')}>
+        <div style={sx('font-size:12px;font-weight:700;color:var(--i1);margin-bottom:8px')}>Why, and how you know</div>
+        {select('edReason', e.reason, [['', 'What was wrong…'], ...EDIT_REASONS.map(r => [r, r] as [string, string])], v => setEdit(x => x && { ...x, reason: v, out: v === 'Moved to another company' || v === 'Duplicate person' ? true : x.out }), 'What was wrong')}{err('reason')}
+        <div style={sx('height:7px')}></div>
+        {select('edSource', e.source, [['', 'How you know…'], ...EDIT_SOURCES.map(r => [r, r] as [string, string])], v => setEdit(x => x && { ...x, source: v }), 'How you know')}{err('source')}
+        <textarea rows={2} placeholder="Note (optional)" aria-label="Note" value={e.note} disabled={ro || busy} onChange={ev => { const v = ev.target.value; setEdit(x => x && { ...x, note: v }); }} style={sx('width:100%;margin-top:7px;padding:7px 9px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:12px;font-family:var(--fb)')}></textarea>
+        <label style={sx('display:flex;gap:8px;align-items:flex-start;margin-top:8px;font-size:12px;color:var(--i1)')}><input type="checkbox" checked={e.out} disabled={ro || busy} onChange={ev => { const v = ev.target.checked; setEdit(x => x && { ...x, out: v }); }} style={sx('margin-top:2px')} />{c.takenOut ? `Keep this person out of the list (taken out: ${c.takenOut.toLowerCase()}); untick to put them back` : "Take this person out of the list (for example, they've moved company)"}</label>
+      </div>
+      {e.error ? <div role="alert" style={sx('font-size:12px;color:var(--neg);margin-bottom:8px')}>{e.error}</div> : null}
+      <button className="btn btn-primary btn-sm" style={sx('width:100%;justify-content:center')} disabled={ro || busy} onClick={() => void saveEdit()}>{e.phase === 'saving' ? 'Saving…' : e.phase === 'checking' ? 'Checking the list again…' : 'Save the correction'}</button>
+      <div style={sx('font-size:11px;color:var(--i3);margin-top:10px;line-height:1.5')}>Recorded under Corrections. In the pilot, corrections are collected to improve the data in production; they are not sent anywhere.</div>
+      {d.history.length ? <div className="dqp-b" style={sx('margin-top:12px')}><div className="dqp-k">Corrected before</div>
+        {d.history.map(h => <div key={h.id} style={sx('font-size:11.5px;color:var(--i2);padding:3px 0')}>{`${new Date(h.at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })} · ${h.who}: ${h.fieldLabel} `}<span style={sx('text-decoration:line-through;color:var(--i3)')}>{h.from || '—'}</span>{` → ${h.to || '—'} (${h.reason})`}</div>)}</div> : null}
     </>;
   }
 
@@ -583,7 +717,7 @@ export function ProspectingScreen() {
   function renderListTab(r: ListDetail): ReactNode {
     const n = sel.size;
     const total = dq ? null : filt === 'all' ? r.visible.contacts.all : r.visible.contacts[filt as 'in' | 'nc' | 'out'];
-    const cols: Col[] = [[<input key="selAll" type="checkbox" id="selAll" ref={selAllRef} title="Select all shown" aria-label="Select all shown" checked={allChecked} onChange={e => toggleAll(e.target.checked)} style={sx('cursor:pointer;vertical-align:middle')} />, 58], ['Contact', 220], ['Account', 190], ['Job title', 210], ['Persona', 140], ['Email', 270], ['LinkedIn', 250], ['Location', 190], ['Industry', 180], ['Employees', 120, 'num'], ['Reachable by', 170], ['Consent', 170], ['Owner', 220], ['Status', 230], ['Issues', 290]];
+    const cols: Col[] = [[<input key="selAll" type="checkbox" id="selAll" ref={selAllRef} title="Select all shown" aria-label="Select all shown" checked={allChecked} onChange={e => toggleAll(e.target.checked)} style={sx('cursor:pointer;vertical-align:middle')} />, 58], ['', 80], ['Contact', 220], ['Account', 190], ['Job title', 210], ['Persona', 140], ['Email', 270], ['LinkedIn', 250], ['Location', 190], ['Industry', 180], ['Employees', 120, 'num'], ['Reachable by', 170], ['Consent', 170], ['Owner', 220], ['Status', 230], ['Issues', 290]];
     return <>
       {unattachedNotice()}<div className="score-list">
         <div id="selBar" className="sl-toolbar" style={{ ...sx('display:none;background:var(--brand-lt);align-items:center'), display: n ? 'flex' : 'none' }}>
@@ -592,7 +726,7 @@ export function ProspectingScreen() {
         </div>
         {toolbar(<>{pill('all', 'All')}{pill('in', 'In the final list')}{pill('nc', 'Not contactable')}{pill('out', 'Not in the list')}</>, 'Search name, company or title…')}
         <div id="rows"><Table cols={cols} empty={visibleContacts ? 'No contacts match.' : 'Loading…'}
-          rows={(visibleContacts ?? []).map(row => <ContactRow key={row.contact.row} r={row} selected={sel.has(row.contact.row)} onToggle={toggleSel} />)} /></div>
+          rows={(visibleContacts ?? []).map(row => <ContactRow key={row.contact.row} r={row} selected={sel.has(row.contact.row)} onToggle={toggleSel} onEdit={onEdit} />)} /></div>
         {visibleContacts ? moreButton(contacts, visibleContacts.length, total) : null}</div>
       <div style={sx('font-size:11px;color:var(--i3);margin-top:10px')}>One row per contact: what Lead discovery hands to Scoring. Scroll sideways for more columns; hover a cell for its full text.</div>
     </>;
@@ -605,7 +739,7 @@ export function ProspectingScreen() {
       <div className="score-list">
         {toolbar(<>{pill('all', 'All')}{pill('pass', 'Pass')}{pill('excluded', 'Excluded')}{pill('review', 'Needs review')}</>, 'Search accounts…')}
         <div id="rows"><Table cols={cols} empty={visibleAccounts ? 'No accounts match.' : 'Loading…'}
-          rows={(visibleAccounts ?? []).map(row => <AccountRow key={row.id} r={row} />)} /></div>
+          rows={(visibleAccounts ?? []).map(row => <AccountRow key={row.id} r={row} onFix={r.canEdit ? onEdit : null} />)} /></div>
         {visibleAccounts ? moreButton(accounts, visibleAccounts.length, total) : null}</div>
       <div style={sx('font-size:11px;color:var(--i3);margin-top:10px')}>One row per account. The installed-base knock-out runs in Scoring, from the signal file. Scroll sideways for more columns; hover a cell for its full text.</div>
     </>;
@@ -617,14 +751,14 @@ export function ProspectingScreen() {
     <div className={'detail-drawer' + (paneOpen ? ' open' : '')} id="detailDrawer" style={{ width: '480px' }}>
       <div className="drawer-hdr">
         <div>
-          <div className="drawer-title" id="detTitle">{pane ? CHECKS.find(c => c[0] === pane.check)![1] : ''}</div>
-          <div className="drawer-sub" id="detSub">{pane ? `${pane.list.sourceFile} · ${(checkResults(pane.list).get(pane.check)?.n ?? 0) ? `${checkResults(pane.list).get(pane.check)!.n} found` : 'passed'}` : ''}</div>
+          <div className="drawer-title" id="detTitle">{drawerMode === 'edit' ? (edit ? 'Correct ' + edit.data.contact.name : '') : pane ? CHECKS.find(c => c[0] === pane.check)![1] : ''}</div>
+          <div className="drawer-sub" id="detSub">{drawerMode === 'edit' ? (edit ? `${edit.data.contact.company} · row ${edit.row}` : '') : pane ? `${pane.list.sourceFile} · ${(checkResults(pane.list).get(pane.check)?.n ?? 0) ? `${checkResults(pane.list).get(pane.check)!.n} found` : 'passed'}` : ''}</div>
         </div>
         <div className="drawer-close" role="button" tabIndex={0} aria-label="Close" onClick={() => setPaneOpen(false)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setPaneOpen(false); }}>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
         </div>
       </div>
-      <div className="drawer-body" id="detBody">{pane ? checkPaneBody(pane) : null}</div>
+      <div className="drawer-body" id="detBody">{drawerMode === 'edit' ? (edit ? editBody(edit) : null) : pane ? checkPaneBody(pane) : null}</div>
     </div>
 
     {checks ? <ChecksOverlay ck={checks}
