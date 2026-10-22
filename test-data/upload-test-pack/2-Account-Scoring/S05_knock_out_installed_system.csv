@@ -1,5 +1,0 @@
-company_name,contact_email_or_linkedin,signal_type,event_date,detail,source,product
-Stonegate Refining,gil.ong@stonegaterefining.example,Installed system (current),2026-04-03,Current pilot product installed on the crude unit,Installed base,
-Stonegate Refining,gil.ong@stonegaterefining.example,Inquiry or RFQ,2026-10-15,Asked for a quote on a DCS migration,Web form,
-Quarry Hill Engineering,someone.else@quarryhillengineering.example,Installed system (current),2025-12-24,Pilot product installed,Installed base,
-Apex Refining,kai.ong@apexrefining.example,Installed system near end of support,2026-07-12,Old control system reaches end of support,Installed base,

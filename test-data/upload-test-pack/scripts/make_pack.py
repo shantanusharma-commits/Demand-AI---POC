@@ -1,8 +1,9 @@
-"""Writes the drag-and-drop upload test pack: one small CSV per use case, ready to drop into the POC as it is.
+"""Writes the drag-and-drop upload test pack: one small Excel file per use case, ready to drop into the POC as it is.
 Also writes manifest.json (what each file and row tests) for run_pack.js and build_expected.py.
 Usage: python3 make_pack.py <pack folder> <manifest.json> [<scenario_inputs.json from ../poc-test-sets/make_scenarios.py>]"""
-import csv, json, os, sys
+import json, os, sys
 from openpyxl import Workbook
+from openpyxl.styles import Font
 
 PACK, MANIFEST = sys.argv[1], sys.argv[2]
 SCEN = sys.argv[3] if len(sys.argv) > 3 else None
@@ -33,19 +34,27 @@ def person(company, first, last, title='Instrumentation Manager', seniority='Man
     return d
 
 files = []          # every file in the pack, in order
-def write_csv(path, header, rows):
+def write_book(path, header, rows, sheets=None):
+    """Writes one Excel workbook. Values are written as they are:
+    text stays text, so a badly written date or number reaches the POC exactly as typed. sheets: extra (name, header, rows)."""
     full = os.path.join(PACK, path)
     os.makedirs(os.path.dirname(full), exist_ok=True)
-    with open(full, 'w', newline='', encoding='utf-8') as f:
-        w = csv.writer(f, lineterminator='\r\n')
-        for r in ([header] if header else []) + rows: w.writerow(r)
+    wb = Workbook(); first = True
+    for name, hdr, body in [(('Signal template' if header and 'signal_type' in header else 'Lead template'), header, rows)] + (sheets or []):
+        ws = wb.active if first else wb.create_sheet(); first = False
+        ws.title = name
+        for r in ([hdr] if hdr else []) + body: ws.append([None if v == '' else v for v in r])
+        for c in ws[1]: c.font = Font(bold=True)
+        for col in ws.columns: ws.column_dimensions[col[0].column_letter].width = min(40, max(10, *(len(str(c.value or '')) + 2 for c in col)))
+        ws.freeze_panes = 'A2'
+    wb.save(full)
 
 def lead_file(fid, name, title, why, rows, expect, header=None, pre=None, cols=None, steps=None):
     """rows: list of (dict, what the row tests). cols: the columns to write (default: the template's)."""
     cols = cols or LEAD_COLS
-    path = f'1-Prospecting/{fid}_{name}.csv'
+    path = f'1-Prospecting/{fid}_{name}.xlsx'
     body = [list(p) for p in (pre or [])] + [[r.get(c, '') for c in cols] for r, _ in rows]
-    write_csv(path, header or cols, body)
+    write_book(path, header or cols, body)
     first_data = 2 + len(pre or [])
     files.append(dict(id=fid, folder='1-Prospecting', file=os.path.basename(path), path=path, kind='lead', title=title, why=why, expect=expect,
                       steps=steps or f'Prospecting: drop {os.path.basename(path)} on the upload box.',
@@ -217,13 +226,13 @@ tmpl_header = [('First Name*' if c == 'first_name' else 'Company Name*' if c == 
 hints = ['Text*', 'Text*', 'Text*', 'Text', 'Email* (or LinkedIn URL)', 'Y/N', 'URL', 'Text*', 'Domain*', 'Country*', 'Text', 'Text*', 'Number', 'Number', 'List', 'Y/N*', 'Y/N*',
          'Text', 'Text', 'Number', 'Text', 'List*', 'Y/N*', 'Email*', '', '']
 rows15 = [(person(Y, 'Ana', 'Lim'), 'Data row 1'), (person(Y, 'Ben', 'Tan', job_title='Plant Manager'), 'Data row 2')]
-write_csv('1-Prospecting/P17_template_style_headers.csv', None,
+write_book('1-Prospecting/P17_template_style_headers.xlsx', None,
           [['DemandAI lead template'] + [''] * 25, tmpl_header, hints] + [[r.get(c, '') for c in LEAD_COLS] + ['met at a trade show', '87'] for r, _ in rows15])
-files.append(dict(id='P17', folder='1-Prospecting', file='P17_template_style_headers.csv', path='1-Prospecting/P17_template_style_headers.csv', kind='lead',
+files.append(dict(id='P17', folder='1-Prospecting', file='P17_template_style_headers.xlsx', path='1-Prospecting/P17_template_style_headers.xlsx', kind='lead',
                   title='Template layout: title row, headers with * and spaces, format-hints row, extra columns',
                   why='A file filled in on the template as people really do: a title above the headers, "First Name*" style headers, the hints row left in, and two columns of their own.',
                   expect='Header found on row 2; hints row skipped (note); "Notes" and "Lead score" ignored (notes); 2 contacts load.',
-                  steps='Prospecting: drop P17_template_style_headers.csv.', rows=[dict(row=4, tests='Data row 1'), dict(row=5, tests='Data row 2')]))
+                  steps='Prospecting: drop P17_template_style_headers.xlsx.', rows=[dict(row=4, tests='Data row 1'), dict(row=5, tests='Data row 2')]))
 # P18: an Excel workbook with several sheets
 wb = Workbook(); ws = wb.active; ws.title = 'Instructions'; ws.append(['Fill in the Lead template sheet. company_name and signal_type are explained below.'])
 ws2 = wb.create_sheet('Lead template'); ws2.append(LEAD_COLS)
@@ -236,20 +245,20 @@ files.append(dict(id='P18', folder='1-Prospecting', file='P18_excel_with_several
                   title='Excel workbook with several sheets', why='The POC must pick the "Lead template" sheet, not the first sheet.',
                   expect='Reads the "Lead template" sheet: 2 rows, 1 account, 0 issues.', steps='Prospecting: drop P18_excel_with_several_sheets.xlsx.',
                   rows=[dict(row=2, tests='Data row 1'), dict(row=3, tests='Data row 2')]))
-write_csv('1-Prospecting/P19_wrong_file_signal_file.csv', SIG_COLS, [['Zenith Refining', 'ana.lim@zenithrefining.example', 'Inquiry or RFQ', '2026-10-10', 'Asked for a quote', 'Web form', '']])
-files.append(dict(id='P19', folder='1-Prospecting', file='P19_wrong_file_signal_file.csv', path='1-Prospecting/P19_wrong_file_signal_file.csv', kind='lead',
+write_book('1-Prospecting/P19_wrong_file_signal_file.xlsx', SIG_COLS, [['Zenith Refining', 'ana.lim@zenithrefining.example', 'Inquiry or RFQ', '2026-10-10', 'Asked for a quote', 'Web form', '']])
+files.append(dict(id='P19', folder='1-Prospecting', file='P19_wrong_file_signal_file.xlsx', path='1-Prospecting/P19_wrong_file_signal_file.xlsx', kind='lead',
                   title='Wrong file: a signal file dropped into Prospecting', why='Someone uploads the wrong template.',
-                  expect='File not processed: the lead header row is not found. Nothing loads, with a message saying why.', steps='Prospecting: drop P19_wrong_file_signal_file.csv.', rows=[]))
-write_csv('1-Prospecting/P20_headers_only.csv', LEAD_COLS, [])
-files.append(dict(id='P20', folder='1-Prospecting', file='P20_headers_only.csv', path='1-Prospecting/P20_headers_only.csv', kind='lead',
+                  expect='File not processed: the lead header row is not found. Nothing loads, with a message saying why.', steps='Prospecting: drop P19_wrong_file_signal_file.xlsx.', rows=[]))
+write_book('1-Prospecting/P20_headers_only.xlsx', LEAD_COLS, [])
+files.append(dict(id='P20', folder='1-Prospecting', file='P20_headers_only.xlsx', path='1-Prospecting/P20_headers_only.xlsx', kind='lead',
                   title='Empty template: headers only', why='An empty file must not break the page.', expect='0 rows read, 0 accounts; a clear empty state, no error.',
-                  steps='Prospecting: drop P20_headers_only.csv.', rows=[]))
+                  steps='Prospecting: drop P20_headers_only.xlsx.', rows=[]))
 shuffled = LEAD_COLS[::-1]
 lead_file('P21', 'columns_in_another_order', 'Columns in a different order', 'The template columns, but in reverse order.', [
     (person(co('Aurora Refining'), 'Ana', 'Lim'), 'Clean'), (person(co('Aurora Refining'), 'Ben', 'Tan', job_title='Plant Manager'), 'Clean')],
     'Reads normally: 2 rows, 1 account, 0 issues.', cols=shuffled)
 Q = co('Quay Refining, Ltd')
-lead_file('P22', 'commas_quotes_and_accents', 'Commas, quotes and accents inside values', 'Values with commas and quotes (quoted in the CSV) and accented names.', [
+lead_file('P22', 'commas_quotes_and_accents', 'Commas, quotes and accents inside values', 'Values with commas, quotes and accented names.', [
     (person(Q, 'José', 'Nuñez', job_title='Head of Automation, Instrumentation & Control'), 'Comma in the company name and the job title'),
     (person(Q, 'Thảo', 'Nguyễn', job_title='Plant Manager "Site A"'), 'Accented name and quotes in the title'),
     (person(Q, 'Siti', "Nur'Aini"), 'Apostrophe in the name')],
@@ -286,8 +295,8 @@ A['kings'] = acct('Kingsbridge Fuels', 'Fit 49 (no size given): below the fit fl
 A['rose'] = acct('Rosewood Refining', 'Primary contact opted out; secondary kept', [('Eli', 'Tan', 'Instrumentation Manager', {'opt_out': 'Y'}), ('Fia', 'Ng', 'Plant Manager')], existing='Y')
 A['stone'] = acct('Stonegate Refining', 'Fit 100 (used for the knock-out test)', [('Gil', 'Ong')], existing='Y')
 A['tide'] = acct('Tidewater Refining', 'Outside the pilot region (Australia): excluded in the list', [('Hu', 'Koh')], country='Australia')
-write_csv('2-Account-Scoring/S00_prospect_list_for_scoring_and_signals.csv', LEAD_COLS, [[r.get(c, '') for c in LEAD_COLS] for r, _ in BASE])
-files.append(dict(id='S00', folder='2-Account-Scoring', file='S00_prospect_list_for_scoring_and_signals.csv', path='2-Account-Scoring/S00_prospect_list_for_scoring_and_signals.csv',
+write_book('2-Account-Scoring/S00_prospect_list_for_scoring_and_signals.xlsx', LEAD_COLS, [[r.get(c, '') for c in LEAD_COLS] for r, _ in BASE])
+files.append(dict(id='S00', folder='2-Account-Scoring', file='S00_prospect_list_for_scoring_and_signals.xlsx', path='2-Account-Scoring/S00_prospect_list_for_scoring_and_signals.xlsx',
                   kind='base', title='The prospect list for every scoring and signal file',
                   why='17 accounts, each built to a known fit. Upload it once; every S and G file is scored against it.',
                   expect="24 rows, 17 accounts, 16 pass (Tidewater Refining excluded: Australia), 22 contacts in the final list (Rosewood's primary contact opted out); Kingsbridge Fuels flagged for no company size.",
@@ -299,8 +308,8 @@ def d(days):
     return (date.fromisoformat(AS_OF) - timedelta(days=days)).isoformat()
 def sig_file(folder, fid, name, title, why, rows, expect, cols=None, asofs=None, steps=None):
     cols = cols or SIG_COLS
-    path = f'{folder}/{fid}_{name}.csv'
-    write_csv(path, cols, [[dict(zip(SIG_COLS, r)).get(c, '') for c in cols] for r, _ in rows])
+    path = f'{folder}/{fid}_{name}.xlsx'
+    write_book(path, cols, [[dict(zip(SIG_COLS, r)).get(c, '') for c in cols] for r, _ in rows])
     files.append(dict(id=fid, folder=folder, file=os.path.basename(path), path=path, kind='signal', title=title, why=why, expect=expect,
                       asOf=asofs or [AS_OF], steps=steps or f'Account Scoring: with the S00 list chosen, set "Score as of" to {AS_OF}, then drop {os.path.basename(path)} on box 2.',
                       rows=[dict(row=i + 2, tests=t) for i, (_, t) in enumerate(rows)]))
@@ -391,7 +400,7 @@ sig_file(SG, 'G04', 'dates', 'Event dates', f'Dates in the wrong form, missing, 
     (S_('Apex Refining', APEX_P, 'Leadership change', 'Oct 15, 2026', 'Words'), 'Written in words: rejected D3'),
     (S_('Apex Refining', APEX_P, 'Capital project', '2026-02-30', 'No such day'), '30 February: rejected D3'),
     (S_('Apex Refining', APEX_P, 'Service contract renewal', '2026-10-21', 'Tomorrow'), 'After the scoring date: rejected D3'),
-], '2 qualified; 6 rejected D3 with the reason. (Note: an Excel file stores real dates, so this test is for CSV files.)')
+], '2 qualified; 6 rejected D3 with the reason. (The dates are typed as text, as they arrive from a CSV export; G13 has real Excel dates.)')
 sig_file(SG, 'G05', 'signal_type_spelling', 'Signal type spelling', 'Types written in other cases, misspelt, blank or not on the list.', [
     (S_('Apex Refining', APEX_P, 'inquiry or rfq', 5, INQ), 'Lower case: accepted'),
     (S_('Apex Refining', APEX_P, 'WEBINAR ATTENDED', 6, 'Attended a webinar'), 'Capitals: accepted'),
@@ -435,11 +444,11 @@ sig_file(SG, 'G10', 'missing_detail_column_and_extra_columns', 'A missing column
 sig_file(SG, 'G11', 'no_signal_type_column', 'No signal_type column', 'Without signal_type the file cannot be read.', [
     (S_('Apex Refining', APEX_P, 'Webinar attended', 5, 'Attended a webinar'), 'Not read')],
    'File not processed: header row not found. Nothing is scored.', cols=[c for c in SIG_COLS if c != 'signal_type'])
-write_csv(f'{SG}/G12_wrong_file_lead_file.csv', LEAD_COLS, [[r.get(c, '') for c in LEAD_COLS] for r, _ in BASE[:2]])
-files.append(dict(id='G12', folder=SG, file='G12_wrong_file_lead_file.csv', path=f'{SG}/G12_wrong_file_lead_file.csv', kind='signal', asOf=[AS_OF],
+write_book(f'{SG}/G12_wrong_file_lead_file.xlsx', LEAD_COLS, [[r.get(c, '') for c in LEAD_COLS] for r, _ in BASE[:2]])
+files.append(dict(id='G12', folder=SG, file='G12_wrong_file_lead_file.xlsx', path=f'{SG}/G12_wrong_file_lead_file.xlsx', kind='signal', asOf=[AS_OF],
                   title='Wrong file: a lead file dropped into the signal box', why='Someone uploads the wrong template.',
                   expect='File not processed: the signal header row is not found. Nothing is scored, with a message saying why.',
-                  steps='Account Scoring: with the S00 list chosen, drop G12_wrong_file_lead_file.csv on box 2.', rows=[]))
+                  steps='Account Scoring: with the S00 list chosen, drop G12_wrong_file_lead_file.xlsx on box 2.', rows=[]))
 wb = Workbook(); ws = wb.active; ws.title = 'Read me'; ws.append(['Signals for the pilot. One row per event.'])
 ws2 = wb.create_sheet('Signal template'); ws2.append(SIG_COLS)
 ws2.append(['Apex Refining', APEX_P, 'Inquiry or RFQ', d(5), INQ, 'Web form', '']); ws2.append(['Bayfront Refining', A['bay'][0], 'Webinar attended', d(8), 'Attended a webinar', 'Webinar platform', ''])
@@ -464,12 +473,12 @@ if SCEN:
     for st in sc['sets']:
         if st['id'] not in names: continue
         nid, nm = names[st['id']]
-        lp, sp = f'4-Micro-segments-and-Review/{nid}_{nm}_1_prospects.csv', f'4-Micro-segments-and-Review/{nid}_{nm}_2_signals.csv'
-        write_csv(lp, sc['leadCols'], st['leads']); write_csv(sp, sc['sigCols'], st['signals'])
-        files.append(dict(id=nid, folder='4-Micro-segments-and-Review', file=os.path.basename(lp) + ' + ' + os.path.basename(sp), path=sp, lead_path=lp,
+        lp = sp = f'4-Micro-segments-and-Review/{nid}_{nm}.xlsx'
+        write_book(lp, sc['leadCols'], st['leads'], sheets=[('Signal template', sc['sigCols'], st['signals'])])
+        files.append(dict(id=nid, folder='4-Micro-segments-and-Review', file=os.path.basename(lp), path=sp, lead_path=lp,
                           kind='pair', set=st['id'], asOf=[AS_OF], title=st['title'], why=st['purpose'],
                           expect=f'As in {st["id"]} (answer key in ../poc-test-sets).',
-                          steps=f'Account Scoring: "Upload a prospect file" = {os.path.basename(lp)}; Score as of {AS_OF}; drop {os.path.basename(sp)}. Then send to Micro-segments & NBA and open For Review.',
+                          steps=f'Account Scoring: "Upload a prospect file" = {os.path.basename(lp)} (reads its "Lead template" sheet); Score as of {AS_OF}; drop the same file on box 2 (reads "Signal template"). Then send to Micro-segments & NBA and open For Review.',
                           rows=[]))
 
 json.dump({'asOf': AS_OF, 'files': files}, open(MANIFEST, 'w'), indent=1)

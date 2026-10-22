@@ -1,8 +1,0 @@
-company_name,contact_email_or_linkedin,signal_type,event_date,detail,source,product
-Apex Refining,kai.ong@apexrefining.example,Webinar attended,2026-10-15,Attended a webinar,CRM,
-APEX REFINING,kai.ong@apexrefining.example,Content download,2026-10-14,Downloaded a guide,CRM,
-Apex  Refining ,kai.ong@apexrefining.example,Email clicked,2026-10-13,Clicked an email,CRM,
-Apex Refining Ltd,kai.ong@apexrefining.example,Webinar registered,2026-10-12,Registered for a webinar,CRM,
-Unknown Refining,a.b@unknownrefining.example,Inquiry or RFQ,2026-10-15,Asked for a quote on a DCS migration,CRM,
-,kai.ong@apexrefining.example,Inquiry or RFQ,2026-10-15,Asked for a quote on a DCS migration,CRM,
-Tidewater Refining,hu.koh@tidewaterrefining.example,Inquiry or RFQ,2026-10-15,Asked for a quote on a DCS migration,CRM,

@@ -1,4 +1,0 @@
-first_name,last_name,job_title,seniority,email,email_verified,linkedin_url,company_name,company_domain,country,city,industry,annual_revenue_usd,employee_count,account_type,existing_customer,managed_separately,site_name,site_process_type,site_capacity,capacity_unit
-Ann,Lim,Instrumentation Manager,Manager,ann.lim@vistarefining.example,Y,https://www.linkedin.com/in/ann-lim-vistar,Vista Refining,vistarefining.example,Singapore,,Refining,2400000000,3200,Owner-operator,N,N,Vista site,Crude refining,150000,bpd
-Bo,Tan,Plant Manager,Manager,bo.tan@vistarefining.example,Y,https://www.linkedin.com/in/bo-tan-vistar,Vista Refining,vistarefining.example,Singapore,,Refining,2400000000,3200,Owner-operator,N,N,Vista site,Crude refining,150000,bpd
-Cy,Ng,Instrumentation Manager,Manager,cy.ng@waverefining.example,Y,https://www.linkedin.com/in/cy-ng-wavere,Wave Refining,waverefining.example,Singapore,,Refining,2400000000,3200,Owner-operator,N,N,Wave site,Crude refining,150000,bpd

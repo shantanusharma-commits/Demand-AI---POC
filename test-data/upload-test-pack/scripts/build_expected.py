@@ -142,7 +142,7 @@ lines = [
     '   Once: Account Scoring > New scoring > 1 · Prospect list > "Upload a prospect file" > drop S00_prospect_list_for_scoring_and_signals.csv. It is saved as a list.',
     f"   Then for each S or G file: choose that S00 list, set \"Score as of\" to {man['asOf']}, and drop the file on box 2. Compare with \"Signal rows\" and \"Scoring accounts\".",
     '   S01 is also scored on two later dates (shown in the "Score as of" column) to see signals fade.',
-    '4-Micro-segments-and-Review (N01-N04): each is a pair. Upload the "_1_prospects" file as the prospect list, then the "_2_signals" file, then send the scoring to Micro-segments & NBA and open For Review.',
+    '4-Micro-segments-and-Review (N01-N04): each file holds a "Lead template" and a "Signal template" sheet. Upload it as the prospect list, then drop the same file as the signals; then send the scoring to Micro-segments & NBA and open For Review.',
     '   Their per-account answer keys are in ../poc-test-sets (TS6, TS8, TS9, TS10).',
     '',
     f"Always set Score as of to {man['asOf']} unless the row gives another date: signal ages are counted from that date.",

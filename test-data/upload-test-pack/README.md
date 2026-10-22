@@ -1,6 +1,6 @@
 # Upload test pack
 
-48 small files, one use case each, to drag and drop into the POC as they are. Open **`Expected_Results.xlsx`** next to the POC: the "Files" sheet lists every file, how to run it and what you should see, and the other sheets give the expected result row by row. Every company, person and domain is invented.
+48 small Excel files (.xlsx), one use case each, to drag and drop into the POC as they are. Open **`Expected_Results.xlsx`** next to the POC: the "Files" sheet lists every file, how to run it and what you should see, and the other sheets give the expected result row by row. Every company, person and domain is invented.
 
 Set **Score as of** to **2026-10-20** for every Scoring upload, unless the workbook gives another date.
 
@@ -33,7 +33,7 @@ Set **Score as of** to **2026-10-20** for every Scoring upload, unless the workb
 
 ## 2-Account-Scoring and 3-Signal-rules: one list, many signal files
 
-Upload **`S00_prospect_list_for_scoring_and_signals.csv`** once (Account Scoring > New scoring > "Upload a prospect file"). Then, with that list chosen, drop each S or G file on box 2.
+Upload **`S00_prospect_list_for_scoring_and_signals.xlsx`** once (Account Scoring > New scoring > "Upload a prospect file"). Then, with that list chosen, drop each S or G file on box 2.
 
 | File | Use case |
 |---|---|
@@ -47,7 +47,7 @@ Upload **`S00_prospect_list_for_scoring_and_signals.csv`** once (Account Scoring
 | G01 | Every signal type, and Newsletter sign-up (rejected); also the Setup switch-off test |
 | G02 | Matching the company: capitals, spaces, "Ltd", unknown, blank, excluded |
 | G03 | Matching the person: email, capitals, LinkedIn, unknown (suggested new contact), blank (auto-assigned) |
-| G04 | Event dates: wrong forms, blank, 30 February, future, the scoring date itself |
+| G04 | Event dates typed as text: wrong forms, blank, 30 February, future, the scoring date itself |
 | G05 | Signal type spelling: lower case, capitals, misspelt, not on the list, "RFQ", blank |
 | G06 | Duplicate signals and near-duplicates |
 | G07 | How long each signal type counts: the last day and the first stale day, for all nine types |
@@ -61,9 +61,9 @@ Upload **`S00_prospect_list_for_scoring_and_signals.csv`** once (Account Scoring
 
 ## 4-Micro-segments-and-Review: pairs for the modules that take no file
 
-Micro-segments & NBA, For Review, Today and Analytics take no upload of their own: they work on what Scoring produces. Each pair here is uploaded in Account Scoring (prospects, then signals) and then sent on. The per-account answer keys are in `../poc-test-sets` (TS6, TS8, TS9, TS10).
+Micro-segments & NBA, For Review, Today and Analytics take no upload of their own: they work on what Scoring produces. Each file here has a "Lead template" and a "Signal template" sheet: upload it in Account Scoring as the prospect list, drop the same file as the signals, then send it on. The per-account answer keys are in `../poc-test-sets` (TS6, TS8, TS9, TS10).
 
-| Files | Use case |
+| File | Use case |
 |---|---|
 | N01 | Which micro-segments form, fallbacks, exceptions |
 | N02 | Channel choice and who cannot be reached |
