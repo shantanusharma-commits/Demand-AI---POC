@@ -11,6 +11,7 @@ import type {
   LeadResult, LeadStats, PersonScore, RubricRow, SavedList, SavedScoring, ScoredSignalType, ScoreResult, Severity, Signal,
   SignalResult, SignalTypeConfig, SuggestedContact, TableRecord, TableResult, Tier, VerticalLevel,
 } from '../types/demandai';
+import type { EmailVerification } from '../types/email-verification';
 
 /* ─── Configuration: starting values, to confirm at kickoff ─── */
 export const CONFIG = {
@@ -283,6 +284,11 @@ export function processLeads(grid: Grid, { file = 'lead file', sheet = 'Sheet1' 
     if (dupOf) {
       at(row, c.email && byEmail.get(c.email) ? 'email' : 'linkedin_url', `Duplicate of row ${dupOf.row} (${dupOf.name})`,
         `Merged into row ${dupOf.row}`, 'D5', 'Remove the repeated row');
+      // An opt-out on the repeat must survive the merge: this row is skipped before opt_out is read below.
+      if (!missingCols.has('opt_out') && yesNo(r.opt_out) === 'Y' && !dupOf.optOut) {
+        dupOf.optOut = true; dupOf.optOutUnknown = false;
+        at(row, 'opt_out', 'Opted out', `Suppressed: never contacted (opt-out on the repeat of row ${dupOf.row})`, '—', 'Nothing to fix', 'info');
+      }
       const from = c as unknown as Record<string, unknown>, into = dupOf as unknown as Record<string, unknown>;
       for (const k of Object.keys(from)) if (k !== 'row' && k !== 'flags' && !into[k] && from[k]) into[k] = from[k];
       merged++;
@@ -336,11 +342,7 @@ export function processLeads(grid: Grid, { file = 'lead file', sheet = 'Sheet1' 
   }
 
   // Reachability and contactability
-  for (const c of contacts) {
-    const emailOk = !!c.email && c.emailVerified, liOk = !!c.linkedin;
-    c.reachableBy = emailOk && liOk ? 'email and LinkedIn' : emailOk ? 'email' : liOk ? 'LinkedIn' : 'none';
-    c.contactable = c.reachableBy !== 'none' && c.consentOk && !c.optOut && !c.optOutUnknown;
-  }
+  for (const c of contacts) setReach(c);
 
   const accounts = buildAccounts(contacts, issues, { file, sheet });
   const stats: LeadStats = {
@@ -408,13 +410,45 @@ function buildAccounts(contacts: Contact[], issues: Issue[], { file, sheet }: { 
     accounts.push(a);
     for (const c of cs) {
       c.accountId = a.id;
-      if (a.excluded) c.status = `Not in the list: account excluded (${a.excludedReason})`;
-      else if (c.optOut) c.status = 'Not in the list: opted out';
-      else if (!c.contactable) c.status = `In the list, not contactable (${notContactableWhy(c)})`;
-      else c.status = 'In the final list';
+      c.status = statusOf(c, a);
     }
   }
   return accounts;
+}
+
+/* Reachability and contactability of one contact, from its channels, consent and opt-out. */
+function setReach(c: Contact): void {
+  const emailOk = !!c.email && c.emailVerified, liOk = !!c.linkedin;
+  c.reachableBy = emailOk && liOk ? 'email and LinkedIn' : emailOk ? 'email' : liOk ? 'LinkedIn' : 'none';
+  c.contactable = c.reachableBy !== 'none' && c.consentOk && !c.optOut && !c.optOutUnknown;
+}
+
+function statusOf(c: Contact, a: Pick<Account, 'excluded' | 'excludedReason'>): string {
+  if (a.excluded) return `Not in the list: account excluded (${a.excludedReason})`;
+  if (c.optOut) return 'Not in the list: opted out';
+  if (!c.contactable) return `In the list, not contactable (${notContactableWhy(c)})`;
+  return 'In the final list';
+}
+
+/* Email verification (Hunter.io) on top of a screened list. Only a conclusive answer changes anything:
+   valid sets the address as verified, invalid as not verified. An inconclusive answer is stored on the contact and
+   leaves the file's own verified flag alone. A person who asked not to be processed is suppressed like an opt-out. */
+export function applyEmailVerification(result: LeadResult, found: Record<string, EmailVerification>): LeadResult {
+  const accounts = new Map(result.accounts.map(a => [a.id, a]));
+  const contacts = result.contacts.map(c => {
+    const v = c.email ? found[c.email] : undefined;
+    if (!v || v === c.emailVerification) return c;
+    const n: Contact = { ...c, flags: c.flags.slice(), emailVerification: v };
+    if (v.outcome === 'valid') n.emailVerified = true;
+    else if (v.outcome === 'invalid') n.emailVerified = false;
+    else if (v.outcome === 'do_not_process') { n.emailVerified = false; n.optOut = true; n.flags.push('Asked not to be processed (Hunter.io)'); }
+    setReach(n);
+    const a = accounts.get(n.accountId);
+    if (a) n.status = statusOf(n, a);
+    return n;
+  });
+  const stats = { ...result.stats, inFinalList: contacts.filter(c => c.status === 'In the final list').length };
+  return { ...result, contacts, stats };
 }
 
 function notContactableWhy(c: Contact): string {
@@ -675,7 +709,7 @@ export function deleteScoring(id: string): boolean { return saveScorings(loadSco
 export const DemandAI = {
   CONFIG, CODES, LEAD_COLUMNS, LEAD_REQUIRED, SIGNAL_COLUMNS, SIGNAL_REQUIRED,
   parseCSV, toCSV, readTable, processLeads, classify, personaOf, fitFor, decayFactor,
-  processSignals, scoreList, stack, tierFor, daysBetween, round1,
+  processSignals, scoreList, applyEmailVerification, stack, tierFor, daysBetween, round1,
   loadLists, saveList, getList, deleteList, loadScorings, saveScoring, getScoring, deleteScoring,
 };
 export default DemandAI;

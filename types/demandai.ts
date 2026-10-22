@@ -75,6 +75,8 @@ export interface Contact {
   contactable: boolean;
   accountId: string;
   status: string;
+  /** The Hunter.io result for this contact's email, once verified (see lib/server/hunter.ts). */
+  emailVerification?: import('./email-verification').EmailVerification;
 }
 
 export interface KnockoutCheck {

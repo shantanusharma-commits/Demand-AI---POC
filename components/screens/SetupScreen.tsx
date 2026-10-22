@@ -9,6 +9,7 @@ import Link from 'next/link';
 import { Fragment, useEffect, useRef, useState, type MouseEvent, type ReactNode, type RefObject } from 'react';
 import { showToast } from '@/lib/ui';
 import { sx } from '@/lib/sx';
+import { HunterSettingsPanel } from './HunterSettingsPanel';
 
 type StepStatus = 'todo' | 'review' | 'done';
 type StepId = 'scope' | 'rubric' | 'personas' | 'signals' | 'actions' | 'brand' | 'users';
@@ -446,6 +447,8 @@ export function SetupScreen() {
             </div>
 
             {d.STEPS.map(s => renderStep(s))}
+
+            <HunterSettingsPanel />
 
             <div className="panel" style={sx(`border:2px solid ${done === N ? 'var(--pos)' : 'var(--border)'}`)}>
               <div className="panel-hdr">
