@@ -1,0 +1,32 @@
+# The image is built from source; nothing below may reach the build context.
+
+# Confidential and local-only material
+reference_content/
+DEMANDAI_*
+.env*
+!.env.example
+
+# Version control, editors, tool output
+.git/
+.github/
+.idea/
+.vscode/
+.playwright-mcp/
+.DS_Store
+*.tsbuildinfo
+
+# Built and installed artefacts (rebuilt inside the image)
+node_modules/
+.next/
+next-env.d.ts
+
+# Not part of the product (D-1): the legacy demo, tests, fixtures and design notes
+legacy/
+tests/
+e2e/
+test-data/
+test reports/
+docs/
+playwright-report/
+test-results/
+coverage/

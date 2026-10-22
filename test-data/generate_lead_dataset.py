@@ -7,8 +7,10 @@ so every injected defect can be checked against what the platform reports.
 Every company, person and domain is fictional. The client is referred to as "Client" and
 sales reps use client-sample.com, as in demandai-sample-data.js.
 
-Usage: python3 test-data/generate_lead_dataset.py <template.xlsx> <output.xlsx>
+Usage: python3 test-data/generate_lead_dataset.py <template.xlsx> <output.xlsx> [<name-to-anonymise>]
+(or set ANONYMISE_PATTERN instead of the third argument)
 """
+import os
 import random
 import re
 import sys
@@ -914,13 +916,17 @@ signals.sort(key=lambda s: (not s['r']['company_name'], s['r']['company_name'].l
 
 # ─── Write the workbook ───
 wb = openpyxl.load_workbook(sys.argv[1])
-# Mocks never carry the real client's name: the guide sheets are anonymised to "Client", as in the prototype
-for gs in wb.worksheets:
+# Mocks never carry the real client's name: the guide sheets are anonymised to "Client", as in the prototype.
+# The name to replace is passed in (third argument or ANONYMISE_PATTERN) and is never stored in this repository.
+ANON = sys.argv[3] if len(sys.argv) > 3 else os.environ.get('ANONYMISE_PATTERN', '')
+if not ANON:
+    print('warning: no anonymise pattern given; template text is copied unchanged', file=sys.stderr)
+for gs in wb.worksheets if ANON else []:
     for row in gs.iter_rows():
         for cell in row:
-            if isinstance(cell.value, str) and re.search(r'yokogawa', cell.value, re.I):
-                cell.value = re.sub(r'yokogawa-sample\.com', REP_DOMAIN, cell.value, flags=re.I)
-                cell.value = re.sub(r'yokogawa', 'Client', cell.value, flags=re.I)
+            if isinstance(cell.value, str) and re.search(ANON, cell.value, re.I):
+                cell.value = re.sub(ANON + r'-sample\.com', REP_DOMAIN, cell.value, flags=re.I)
+                cell.value = re.sub(ANON, 'Client', cell.value, flags=re.I)
 ws = wb['Lead template']
 body_font = Font(name='Arial', size=10)
 START = 4
