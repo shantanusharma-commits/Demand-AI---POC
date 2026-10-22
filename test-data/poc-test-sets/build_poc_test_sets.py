@@ -141,6 +141,7 @@ sheet(wb, 'Answer key', ['Row', 'Account', 'What the row tests', 'Expected issue
 guide(wb, [
     'TS4 Micro-segments from a file: 12 prospects already scored outside the POC',
     'Use it to test the second way into Micro-segments & NBA: uploading a list with its signals, without going through Prospecting and Scoring.',
+    'Optional: micro-segments normally come from Scoring (TS1, TS6 to TS10 test that). Run this set only if lists scored outside the POC are in scope.',
     '',
     f'In Micro-segments & NBA choose to upload a file, set the scoring date to {AS_OF}, and upload this file.',
     f"Expect {t4['stats']['rowsRead']} rows read, {t4['stats']['rejected']} rejected, {t4['stats']['accounts']} accounts, and 2 segments: Inquiry 4 and Modernisation 3.",
