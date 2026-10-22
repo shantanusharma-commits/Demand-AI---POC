@@ -113,7 +113,7 @@ function yesNo(v: unknown): 'Y' | 'N' | '' | null {
 }
 
 /* ─── File reading: CSV text or a SheetJS-style array of rows ─── */
-export function parseCSV(text: string): string[][] {
+export function parseCSV(text: string, delimiter = ','): string[][] {
   const rows: string[][] = []; let row: string[] = []; let cell = ''; let quoted = false;
   const s = String(text).replace(/^﻿/, '');
   for (let i = 0; i < s.length; i++) {
@@ -123,7 +123,7 @@ export function parseCSV(text: string): string[][] {
       else if (ch === '"') quoted = false;
       else cell += ch;
     } else if (ch === '"') quoted = true;
-    else if (ch === ',') { row.push(cell); cell = ''; }
+    else if (ch === delimiter) { row.push(cell); cell = ''; }
     else if (ch === '\n' || ch === '\r') {
       if (ch === '\r' && s[i + 1] === '\n') i++;
       row.push(cell); rows.push(row); row = []; cell = '';
