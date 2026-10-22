@@ -56,3 +56,41 @@ jobs:
 
       - name: Dependency age (no version younger than one day, D-31)
         run: node scripts/check-dependency-age.mjs --base "origin/${{ github.base_ref || 'main' }}"
+
+  integration:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    services:
+      postgres:
+        # Same image and digest as compose.yaml and compose.test.yaml.
+        image: postgres:16.15-bookworm@sha256:d81f7b51697014367236d07ec58b54153fc28f828b72bf247fe5c7487520bcb0
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: demandai-test-only
+          POSTGRES_DB: postgres
+        ports:
+          - 55433:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 30
+    env:
+      TEST_DATABASE_ADMIN_URL: postgresql://postgres:demandai-test-only@127.0.0.1:55433/postgres
+      LOG_LEVEL: silent
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install (exactly the lockfile)
+        run: npm ci
+
+      - name: PostgreSQL client tools (psql, pg_dump, pg_restore)
+        run: psql --version && pg_dump --version && pg_restore --version
+
+      - name: Integration tests (migrations, row-level security, append-only, jobs, readiness, seed, backup and restore)
+        run: npm run test:integration

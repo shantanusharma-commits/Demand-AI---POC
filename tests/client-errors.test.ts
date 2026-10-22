@@ -84,7 +84,8 @@ test('.env.example lists every configuration variable, and nothing the app does 
   const listed = new Set(readFileSync(new URL('../.env.example', import.meta.url), 'utf8').split('\n')
     .map(l => l.match(/^([A-Z][A-Z0-9_]*)=/)?.[1]).filter((k): k is string => !!k));
   const schemaKeys = Object.keys(envSchema.shape);
-  const composeOnly = ['POSTGRES_USER', 'POSTGRES_PASSWORD', 'POSTGRES_DB', 'BACKUP_RETAIN', 'NEXT_TELEMETRY_DISABLED'];
+  const composeOnly = ['POSTGRES_USER', 'POSTGRES_PASSWORD', 'POSTGRES_DB', 'DEMANDAI_OWNER_PASSWORD', 'DEMANDAI_APP_PASSWORD',
+    'DEMANDAI_OPS_PASSWORD', 'BACKUP_RETAIN', 'APP_PORT', 'DB_PORT', 'DEMANDAI_IMAGE', 'NEXT_TELEMETRY_DISABLED'];
   assert.deepEqual(schemaKeys.filter(k => !listed.has(k)), [], 'missing from .env.example');
   assert.deepEqual([...listed].filter(k => !schemaKeys.includes(k) && !composeOnly.includes(k)), [], 'unknown to the schema');
 });

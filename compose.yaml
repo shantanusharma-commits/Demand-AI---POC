@@ -1,0 +1,112 @@
+# DemandAI stack: db -> backup -> migrate -> app. The same file runs development (with compose.dev.yaml),
+# the end-to-end tests and a single-host deployment (EC2 or an Azure VM).
+#
+#   docker compose --env-file <env file> up -d          # production-like: no published ports except the app's
+#   docker compose --env-file .env.local -f compose.yaml -f compose.dev.yaml up -d db   # local database only
+#
+# Every value comes from the env file (see .env.example). `${VAR:?}` makes Compose stop if one is missing.
+name: demandai
+
+x-postgres-image: &postgres-image postgres:16.15-bookworm@sha256:d81f7b51697014367236d07ec58b54153fc28f828b72bf247fe5c7487520bcb0
+
+services:
+  db:
+    image: *postgres-image
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+      POSTGRES_DB: ${POSTGRES_DB:?}
+      DEMANDAI_OWNER_PASSWORD: ${DEMANDAI_OWNER_PASSWORD:?}
+      DEMANDAI_APP_PASSWORD: ${DEMANDAI_APP_PASSWORD:?}
+      DEMANDAI_OPS_PASSWORD: ${DEMANDAI_OPS_PASSWORD:?}
+    # Statements slower than 500 ms are logged by PostgreSQL itself.
+    command: ["postgres", "-c", "log_min_duration_statement=500", "-c", "log_line_prefix=%m [%p] %u@%d "]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/init/10-roles.sh:/docker-entrypoint-initdb.d/10-roles.sh:ro
+      - ./db/bootstrap-roles.sql:/opt/demandai/bootstrap-roles.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  backup:
+    image: *postgres-image
+    restart: "no"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGHOST: db
+      POSTGRES_USER: ${POSTGRES_USER:?}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+      POSTGRES_DB: ${POSTGRES_DB:?}
+      BACKUP_RETAIN: ${BACKUP_RETAIN:-20}
+    entrypoint: ["/bin/sh", "/opt/demandai/backup.sh"]
+    volumes:
+      - pg_backups:/backups
+      - ./db/backup.sh:/opt/demandai/backup.sh:ro
+
+  migrate:
+    image: ${DEMANDAI_IMAGE:-demandai-app:local}
+    build: .
+    restart: "no"
+    depends_on:
+      backup:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_MIGRATION_URL: postgresql://demandai_owner:${DEMANDAI_OWNER_PASSWORD:?}@db:5432/${POSTGRES_DB:?}
+      DATABASE_SSL_MODE: disable
+      MIGRATIONS_DIR: /app/drizzle
+    command: ["node", "scripts/db/migrate.mjs"]
+
+  app:
+    image: ${DEMANDAI_IMAGE:-demandai-app:local}
+    build: .
+    restart: unless-stopped
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      NODE_ENV: production
+      APP_BASE_URL: ${APP_BASE_URL:?}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      DATABASE_URL: postgresql://demandai_app:${DEMANDAI_APP_PASSWORD:?}@db:5432/${POSTGRES_DB:?}
+      DATABASE_SSL_MODE: disable
+      SESSION_SECRET: ${SESSION_SECRET:-}
+      NOTIFICATION_DISABLED: ${NOTIFICATION_DISABLED:-1}
+      NOTIFICATION_EMAIL_FROM: ${NOTIFICATION_EMAIL_FROM:-}
+      NOTIFICATION_SENDER_NAME: ${NOTIFICATION_SENDER_NAME:-}
+      NOTIFICATION_APP_PASSWORD: ${NOTIFICATION_APP_PASSWORD:-}
+      NOTIFICATION_SMTP_HOST: ${NOTIFICATION_SMTP_HOST:-}
+      NOTIFICATION_SMTP_PORT: ${NOTIFICATION_SMTP_PORT:-587}
+      SUPPORT_EMAIL: ${SUPPORT_EMAIL:-}
+      AI_PROVIDER: ${AI_PROVIDER:-none}
+      AI_FEATURE_DRAFTING: ${AI_FEATURE_DRAFTING:-0}
+      AI_FEATURE_WHY_NOW: ${AI_FEATURE_WHY_NOW:-0}
+      AI_FEATURE_CLASSIFY: ${AI_FEATURE_CLASSIFY:-0}
+      AI_FEATURE_COPILOT: ${AI_FEATURE_COPILOT:-0}
+      AI_FEATURE_CONTENT_STUDIO: ${AI_FEATURE_CONTENT_STUDIO:-0}
+      AZURE_OPENAI_ENDPOINT: ${AZURE_OPENAI_ENDPOINT:-}
+      AZURE_OPENAI_API_KEY: ${AZURE_OPENAI_API_KEY:-}
+      AZURE_OPENAI_DEPLOYMENT: ${AZURE_OPENAI_DEPLOYMENT:-}
+      AZURE_OPENAI_API_VERSION: ${AZURE_OPENAI_API_VERSION:-2024-06-01}
+      AZURE_OPENAI_EMBEDDING_DEPLOYMENT: ${AZURE_OPENAI_EMBEDDING_DEPLOYMENT:-}
+      AZURE_OPENAI_AUTH_HEADER: ${AZURE_OPENAI_AUTH_HEADER:-api-key}
+      AWS_REGION: ${AWS_REGION:-}
+      BEDROCK_MODEL_ID: ${BEDROCK_MODEL_ID:-}
+    ports:
+      # Loopback only: a reverse proxy on the host (TLS) forwards to it.
+      - "127.0.0.1:${APP_PORT:-3100}:3000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+
+volumes:
+  pgdata:
+  pg_backups:

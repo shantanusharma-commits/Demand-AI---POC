@@ -27,11 +27,11 @@ test('an empty environment gives development defaults with every AI flag off', (
   assert.deepEqual(describeConfig(r.env).aiFeatures, []);
 });
 
-test('production refuses to start without APP_BASE_URL, naming the variable', () => {
+test('production refuses to start without APP_BASE_URL and DATABASE_URL, naming the variables', () => {
   const r = parseEnv({ NODE_ENV: 'production' });
   assert.equal(r.ok, false);
   if (r.ok) return;
-  assert.deepEqual(r.errors, ['APP_BASE_URL is required in production']);
+  assert.deepEqual(r.errors, ['APP_BASE_URL is required in production', 'DATABASE_URL is required in production']);
 });
 
 test('azure-openai needs endpoint, key and deployment; errors never contain a value', () => {
@@ -142,7 +142,7 @@ test('boot exits with code 1 and lists the problems when the configuration is in
   assert.throws(() => boot({ NODE_ENV: 'production', SESSION_SECRET: 'short' }, (c: number) => { code = c; throw new Error('exit'); }, log), /exit/);
   assert.equal(code, 1);
   assert.equal(lines[0].event, 'config.invalid');
-  assert.deepEqual(lines[0].problems, ['SESSION_SECRET must be at least 32 characters', 'APP_BASE_URL is required in production']);
+  assert.deepEqual(lines[0].problems, ['SESSION_SECRET must be at least 32 characters', 'APP_BASE_URL is required in production', 'DATABASE_URL is required in production']);
   assert.ok(!JSON.stringify(lines).includes('short'));
 });
 

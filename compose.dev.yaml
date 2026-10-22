@@ -1,0 +1,6 @@
+# Local development only: publish the database on the loopback interface so `npm run dev` and the migration
+# command can reach it. Never use this file on a server.
+services:
+  db:
+    ports:
+      - "127.0.0.1:${DB_PORT:-55432}:5432"

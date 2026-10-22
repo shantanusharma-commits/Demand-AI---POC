@@ -73,7 +73,10 @@ export const envSchema = z
     const need = (name: keyof typeof env, why: string) => {
       if (!env[name]) ctx.addIssue({ code: 'custom', path: [name], message: `is required ${why}` });
     };
-    if (env.NODE_ENV === 'production') need('APP_BASE_URL', 'in production');
+    if (env.NODE_ENV === 'production') {
+      need('APP_BASE_URL', 'in production');
+      need('DATABASE_URL', 'in production');
+    }
     if (env.AI_PROVIDER === 'azure-openai') {
       need('AZURE_OPENAI_ENDPOINT', 'when AI_PROVIDER=azure-openai');
       need('AZURE_OPENAI_API_KEY', 'when AI_PROVIDER=azure-openai');

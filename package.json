@@ -16,7 +16,11 @@
     "test:integration": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --conditions=react-server --test --test-concurrency=4 tests/integration/*.test.ts",
     "audit:gate": "node scripts/audit-gate.mjs",
     "deps:age": "node scripts/check-dependency-age.mjs",
+    "setup:env": "node scripts/dev/init-env.mjs",
+    "db:up": "docker compose --env-file .env.local -f compose.yaml -f compose.dev.yaml up -d --wait db",
+    "db:down": "docker compose --env-file .env.local -f compose.yaml -f compose.dev.yaml down",
     "db:migrate": "node --env-file-if-exists=.env.local scripts/db/migrate.mjs",
+    "db:seed": "node --env-file-if-exists=.env.local --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/db/seed.ts",
     "db:generate": "drizzle-kit generate",
     "db:test:up": "docker compose -f compose.test.yaml up -d --wait",
     "db:test:down": "docker compose -f compose.test.yaml down"
