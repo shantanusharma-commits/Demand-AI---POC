@@ -19,7 +19,7 @@ export const CHECKS: [StepKey, string, string][] = [
 ];
 
 export function checkOf(i: Issue): StepKey {
-  if (/Required column|isn't in the template|header row|format hints|^File (encoding|delimiter)/.test(i.issue)) return 'columns';
+  if (/Required column|isn't in the template|header row|format hints|^File (encoding|delimiter)|^Column ".*" read as/.test(i.issue)) return 'columns';
   if (i.code === 'D5') return 'dupes';
   if (i.field === 'email' && /malformed|personal \(webmail\)|shared mailbox|company domain|typo of/.test(i.issue)) return 'emailFormat';
   if (i.field === 'email_verified') return 'verified';

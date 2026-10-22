@@ -56,6 +56,9 @@ const EXPECTED: Record<string, Policy> = {
   'GET /api/scoring-runs/:id/signals': { auth: 'unit', permission: 'lists.view' },
   'POST /api/handoffs': { auth: 'unit', permission: 'handoff.create' },
   'GET /api/handoffs/:id': { auth: 'unit', permission: 'lists.view' },
+  'GET /api/column-mappings': { auth: 'unit', permission: 'lists.view' },
+  'POST /api/column-mappings': { auth: 'unit', permission: 'lists.write' },
+  'POST /api/uploads/:id/recheck': { auth: 'unit', permission: 'data.upload' },
 };
 // Infrastructure endpoints outside withApi: no session by design, nothing private, own safeguards.
 const INFRA = ['GET /api/health', 'GET /api/ready', 'POST /api/client-errors'];

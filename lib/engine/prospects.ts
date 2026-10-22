@@ -61,7 +61,7 @@ export const SIG_STEPS: [string, string, string][] = [
 
 export interface SignalStepResult { sev: '' | 'warn' | 'info' | 'stop'; label: string; rows?: string }
 
-const FILE_NOTE = /Required column|isn't in the template|header row|format hints|^File (encoding|delimiter)/;
+const FILE_NOTE = /Required column|isn't in the template|header row|format hints|^File (encoding|delimiter)|^Column ".*" read as/;
 
 export function signalStepResults(sig: Pick<SignalResult, 'signals' | 'issues'>, scored: ScoreResult[], prospects: Prospect[]): SignalStepResult[] {
   const is = sig.issues;

@@ -6,7 +6,7 @@ import 'server-only';
 import { randomUUID } from 'node:crypto';
 import { and, asc, desc, eq, gt, inArray, isNull, like, notExists, sql, type SQL } from 'drizzle-orm';
 import type { AnyPgColumn } from 'drizzle-orm/pg-core';
-import { LEAD_COLUMNS, LEAD_REQUIRED, processLeads, readTable } from '../../demandai-engine.ts';
+import { LEAD_COLUMNS, LEAD_REQUIRED, missingColumns, processLeads, readTable } from '../../demandai-engine.ts';
 import { ENGINE_VERSION } from '../../engine/config.ts';
 import { LEAD_SHEET } from '../../engine/sheets.ts';
 import { STEPS, checkOf, groupIssues, stepResult, type StepResult } from '../../prospecting/checks.ts';
@@ -16,11 +16,14 @@ import { accounts, configVersions, contacts, issues, leadLists, scoringRuns, upl
 import { withTenant, type TenantScope } from '../db/tenant.ts';
 import { recordAudit } from '../db/audit.ts';
 import { JobError, jobContext } from '../jobs/queue.ts';
+import type { Cell, Grid } from '../../../types/demandai';
 import type { JobRun } from '../jobs/worker.ts';
 import { readUpload, UploadReadError, type FileNote } from '../uploads/parse.ts';
 import { badRequest, conflict, forbidden, notFound } from '../http/errors.ts';
 import { logger } from '../logger.ts';
-import { loadUpload, type UploadLimits } from './uploads.ts';
+import { LEAD_STAGES, loadUpload, type UploadLimits } from './uploads.ts';
+import { getMapping } from './mappings.ts';
+import { enqueueJob } from '../jobs/queue.ts';
 
 export type Actor = { userId: string; role: BuRole };
 export type ContactGroup = (typeof CONTACT_GROUPS)[number];
@@ -78,8 +81,12 @@ export function createLeadJob(limits: UploadLimits) {
     const { db, job } = run;
     const ctx = jobContext(job.businessUnitId);
     await run.stage('parse');
-    const upload = await withTenant(db, ctx, s => loadUpload(s, job.payload.uploadId), { label: 'lead.load' });
+    const { upload, mapping } = await withTenant(db, ctx, async s => ({
+      upload: await loadUpload(s, job.payload.uploadId),
+      mapping: job.payload.mappingId ? await getMapping(s, job.payload.mappingId) : null,
+    }), { label: 'lead.load' });
     if (!upload) throw new JobError('gone', 'The uploaded file is no longer there. Upload it again.');
+    if (job.payload.mappingId && !mapping) throw new JobError('gone', 'That column mapping is no longer there. Choose the columns again.');
     let read;
     try {
       read = readUpload(upload.bytes, upload.format, { ...LEAD_SHEET, maxRows: limits.maxRows });
@@ -88,13 +95,13 @@ export function createLeadJob(limits: UploadLimits) {
       throw err;
     }
     await run.stage('check', { sheetRows: read.grid.length });
-    const result = withNotes(processLeads(read.grid, { file: upload.fileName, sheet: read.sheet }), read.notes, upload.fileName, read.sheet);
+    const result = withNotes(processLeads(read.grid, { file: upload.fileName, sheet: read.sheet, mapping: mapping ?? undefined }), read.notes, upload.fileName, read.sheet);
     // Each sheet row's owner, so issues on rows that never became contacts are scoped to that owner too.
     const rawOwners = new Map(readTable(read.grid, { file: upload.fileName, sheet: read.sheet, columns: LEAD_COLUMNS, required: LEAD_REQUIRED, anchor: 'company_name' })
       .records.map(r => [r.__row, lower(r.owner_email)]));
     await run.stage('save', { rowsRead: result.stats.rowsRead, contacts: result.stats.contacts, accounts: result.stats.accounts, issues: result.issues.length });
     const listId = await withTenant(db, ctx, async s => {
-      const id = await insertList(s, { upload, sheet: read.sheet, result, rawOwners, createdBy: job.createdBy });
+      const id = await insertList(s, { upload, sheet: read.sheet, result, rawOwners, createdBy: job.createdBy, fileColumns: fileColumnsOf(read.grid), mappingId: job.payload.mappingId ?? null });
       await s.tx.update(uploads).set({ sheetName: read.sheet, rowsRead: result.stats.rowsRead }).where(eq(uploads.id, upload.id));
       return id;
     }, { label: 'lead.save', slowMs: 30_000 });
@@ -102,7 +109,16 @@ export function createLeadJob(limits: UploadLimits) {
   };
 }
 
+/** The file's own column names: the fullest of its first rows (the header row in a template-shaped file). */
+export function fileColumnsOf(grid: Grid): string[] {
+  const text = (r: Cell[] | undefined) => (r ?? []).map(c => (c === null || c === undefined ? '' : String(c).trim())).filter(Boolean);
+  const best = grid.slice(0, 10).reduce<Cell[] | undefined>((b, r) => (text(r).length > text(b).length ? r : b), undefined);
+  return [...new Set(text(best))].slice(0, 200);
+}
+
 type InsertListInput = {
+  fileColumns?: string[];
+  mappingId?: string | null;
   upload: { id: string; fileName: string; sandbox: boolean };
   sheet: string;
   result: LeadResult;
@@ -117,7 +133,7 @@ async function insertList(scope: TenantScope, input: InsertListInput): Promise<s
   const [list] = await scope.tx.insert(leadLists).values({
     businessUnitId: bu, uploadId: upload.id, name: upload.fileName.replace(/\.[^.]+$/, '') || upload.fileName, status: 'draft', sandbox: upload.sandbox,
     sourceFile: upload.fileName, sheetName: input.sheet, configVersionId: await activeConfigVersionId(scope), engineVersion: ENGINE_VERSION,
-    stats: result.stats, checks, createdBy, updatedBy: createdBy,
+    stats: result.stats, checks, fileColumns: input.fileColumns ?? [], mappingId: input.mappingId ?? null, createdBy, updatedBy: createdBy,
   }).returning({ id: leadLists.id });
   await insertRows(scope, list.id, result.accounts, result.contacts, result.issues, input.rawOwners, createdBy);
   return list.id;
@@ -139,7 +155,8 @@ async function insertRows(scope: TenantScope, listId: string, accs: Account[], c
   // any contact" (rows not loaded, or the whole file).
   const contactOwner = new Map(cons.map(c => [c.row, lower(c.owner)]));
   const issueRows = iss.map((i, seq) => {
-    const rowNo = typeof i.row === 'number' ? i.row : null;
+    // An issue on a row that isn't a data row (the header row) is about the whole file: no owner, visible to all.
+    const rowNo = typeof i.row === 'number' && (contactOwner.has(i.row) || rawOwners.has(i.row)) ? i.row : null;
     const merged = i.code === 'D5' && i.outcome.startsWith('Merged into row ') ? Number(i.outcome.slice('Merged into row '.length)) : null;
     const attach = merged !== null && contactOwner.has(merged) ? merged : rowNo !== null && contactOwner.has(rowNo) ? rowNo : null;
     const ownerEmail = attach !== null ? contactOwner.get(attach)! : rowNo !== null ? rawOwners.get(rowNo) ?? null : null;
@@ -171,6 +188,10 @@ export async function savedLists(scope: TenantScope): Promise<ListSummary[]> {
 
 export type ListDetail = ListSummary & {
   checks: StepResult[];
+  /** The file's column names and the required template columns it lacks, for mapping (G-040). */
+  fileColumns: string[];
+  missingColumns: string[];
+  uploadId: string;
   /** What the caller can see: reps only their own rows (D-33). */
   scope: 'all' | 'own';
   visible: { contacts: Record<'all' | ContactGroup, number>; accounts: { all: number; pass: number; excluded: number; review: number } };
@@ -178,7 +199,7 @@ export type ListDetail = ListSummary & {
 };
 
 async function listRow(scope: TenantScope, id: string) {
-  const [l] = await scope.tx.select({ ...listColumns, checks: leadLists.checks, createdBy: leadLists.createdBy, uploadId: leadLists.uploadId })
+  const [l] = await scope.tx.select({ ...listColumns, checks: leadLists.checks, createdBy: leadLists.createdBy, uploadId: leadLists.uploadId, fileColumns: leadLists.fileColumns, mappingId: leadLists.mappingId })
     .from(leadLists).where(and(eq(leadLists.id, id), eq(leadLists.businessUnitId, scope.ctx.businessUnitId)));
   return l ?? null;
 }
@@ -197,6 +218,8 @@ export async function getList(scope: TenantScope, actor: Actor, id: string): Pro
   return {
     id: l.id, name: l.name, status: l.status, sandbox: l.sandbox, sourceFile: l.sourceFile, sheet: l.sheet, createdAt: l.createdAt, savedAt: l.savedAt,
     scored: l.scored, stats: l.stats as LeadStats, checks: l.checks as StepResult[], scope: scope.ctx.scope, visible: { contacts: c, accounts: a },
+    fileColumns: l.fileColumns as string[], uploadId: l.uploadId,
+    missingColumns: missingColumns(l.fileColumns as string[], 'lead', l.mappingId ? (await getMapping(scope, l.mappingId)) ?? undefined : undefined),
     canEdit: isManager(actor.role) || l.createdBy === actor.userId,
   };
 }
@@ -350,4 +373,14 @@ export async function loadLeadList(scope: TenantScope, id: string): Promise<Load
     id, name: l.name, status: l.status, sandbox: l.sandbox, accounts: accounts_, contacts: cons.map(c => c.data as Contact),
     accountIds: new Map(accs.map((a, i) => [accounts_[i].id, a.id])), contactIds: new Map(cons.map(c => [c.row, c.id])),
   };
+}
+
+/** Checks an uploaded lead file again, with a saved column mapping (G-040): a new draft list, the file not re-sent. */
+export async function recheckUpload(scope: TenantScope, uploadId: string, mappingId: string | null): Promise<{ jobId: string }> {
+  const upload = await loadUpload(scope, uploadId);
+  if (!upload || upload.kind !== 'lead') throw notFound('That lead file is not there any more. Upload it again.');
+  if (mappingId && !(await getMapping(scope, mappingId))) throw notFound('That column mapping is not there any more.');
+  const jobId = await enqueueJob(scope, 'lead.process', { uploadId, ...(mappingId ? { mappingId } : {}) }, LEAD_STAGES);
+  await recordAudit(scope, { action: 'upload.rechecked', targetType: 'upload', targetId: uploadId, details: { mappingId, jobId } });
+  return { jobId };
 }

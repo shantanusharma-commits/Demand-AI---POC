@@ -94,6 +94,27 @@ export const CONFIG = {
     consentBases: { 'opt-in': 'opted in', 'opt in': 'opted in' } as Record<string, string>,
     signalTypes: { 'rfq': 'Inquiry or RFQ', 'inquiry': 'Inquiry or RFQ' } as Record<string, string>,
   },
+  // Column names common CRM and marketing exports use (G-040, v1), keyed in normalised header form; each column read
+  // through one is noted. Anything else can be mapped by a person (a saved mapping).
+  headerSynonyms: {
+    'first': 'first_name', 'firstname': 'first_name', 'given_name': 'first_name',
+    'last': 'last_name', 'lastname': 'last_name', 'surname': 'last_name', 'family_name': 'last_name',
+    'title': 'job_title', 'position': 'job_title', 'designation': 'job_title', 'level': 'seniority',
+    'email_address': 'email', 'e_mail': 'email', 'work_email': 'email', 'business_email': 'email',
+    'verified': 'email_verified', 'linkedin': 'linkedin_url', 'linkedin_profile': 'linkedin_url', 'linkedin_url_(profile)': 'linkedin_url',
+    'company': 'company_name', 'account': 'company_name', 'account_name': 'company_name', 'acct_name': 'company_name',
+    'organisation': 'company_name', 'organization': 'company_name',
+    'domain': 'company_domain', 'website_domain': 'company_domain', 'email_domain': 'company_domain',
+    'country/region': 'country', 'country_name': 'country', 'town': 'city', 'sector': 'industry', 'industry_type': 'industry',
+    'annual_revenue': 'annual_revenue_usd', 'revenue': 'annual_revenue_usd', 'revenue_(usd)': 'annual_revenue_usd',
+    'employees': 'employee_count', 'number_of_employees': 'employee_count', 'headcount': 'employee_count',
+    'type': 'account_type', 'customer': 'existing_customer', 'is_customer': 'existing_customer', 'key_account': 'managed_separately',
+    'consent': 'consent_basis', 'lawful_basis': 'consent_basis', 'legal_basis': 'consent_basis',
+    'opt_out_flag': 'opt_out', 'do_not_contact': 'opt_out', 'unsubscribed': 'opt_out', 'email_opt_out': 'opt_out',
+    'owner': 'owner_email', 'account_owner': 'owner_email', 'owner_email_address': 'owner_email', 'rep_email': 'owner_email',
+    'contact': 'contact_email_or_linkedin', 'contact_email': 'contact_email_or_linkedin', 'person': 'contact_email_or_linkedin',
+    'signal': 'signal_type', 'event_type': 'signal_type', 'date': 'event_date', 'description': 'detail', 'details': 'detail',
+  } as Record<string, string>,
 };
 
 /** A country as the synonym table keys it: lower case, accents and punctuation removed, leading articles and state
@@ -231,17 +252,40 @@ function cellToString(v: Cell): string {
   return clean(v);
 }
 
-interface ReadTableOptions { file: string; sheet: string; columns: string[]; required: string[]; anchor: string }
+/** A person's choice of template column for a file's own column name (G-040), as saved for that source. */
+export type ColumnMapping = Record<string, string>;
+
+/** How a file column reads: by its own name, a person's saved mapping, or a common synonym (G-040). */
+export function headerMapper(columns: string[], mapping?: ColumnMapping): (cell: Cell) => { col: string; via?: 'saved' | 'synonym' } {
+  const saved = new Map(Object.entries(mapping ?? {}).filter(([, to]) => columns.includes(to)).map(([from, to]) => [clean(from).toLowerCase(), to]));
+  return cell => {
+    const n = normHeader(cell), raw = clean(cell).toLowerCase();
+    if (columns.includes(n)) return { col: n };
+    if (saved.has(raw)) return { col: saved.get(raw)!, via: 'saved' };
+    const syn = CONFIG.headerSynonyms[n];
+    return syn && columns.includes(syn) ? { col: syn, via: 'synonym' } : { col: n };
+  };
+}
+
+/** The required template columns a file's column names don't provide, even through synonyms or the mapping. */
+export function missingColumns(fileColumns: string[], kind: 'lead' | 'signal', mapping?: ColumnMapping): string[] {
+  const [columns, required] = kind === 'lead' ? [LEAD_COLUMNS, LEAD_REQUIRED] : [SIGNAL_COLUMNS, SIGNAL_REQUIRED];
+  const map = headerMapper(columns, mapping);
+  const have = new Set(fileColumns.map(c => map(c).col));
+  return required.filter(c => !have.has(c));
+}
+interface ReadTableOptions { file: string; sheet: string; columns: string[]; required: string[]; anchor: string; mapping?: ColumnMapping }
 
 /* Finds the header row (the template has a title row above it and a format-hints row below it),
    then returns one record per data row with its real spreadsheet row number. */
-export function readTable(grid: Grid, { file, sheet, columns, required, anchor }: ReadTableOptions): TableResult {
+export function readTable(grid: Grid, { file, sheet, columns, required, anchor, mapping }: ReadTableOptions): TableResult {
   const issues: Issue[] = [];
   const at = (row: Issue['row'], field: string, issue: string, outcome: string, code: Issue['code'], fix: string, severity: Severity = 'flag') =>
     issues.push({ file, sheet, row, field, issue, outcome, code, fix, severity });
+  const mapHeader = headerMapper(columns, mapping);
   let headerIdx = -1;
   for (let i = 0; i < Math.min(grid.length, 10); i++) {
-    const hs = (grid[i] || []).map(normHeader);
+    const hs = (grid[i] || []).map(h => mapHeader(h).col);
     if (hs.includes(anchor) && hs.filter(h => columns.includes(h)).length >= 2) { headerIdx = i; break; }
   }
   if (headerIdx < 0) {
@@ -249,7 +293,11 @@ export function readTable(grid: Grid, { file, sheet, columns, required, anchor }
       'Use the template: column names exactly as in the template, in the first rows of the sheet', 'stop');
     return { records: [], issues, headers: [] };
   }
-  const headers = grid[headerIdx].map(normHeader);
+  const mapped = grid[headerIdx].map(mapHeader);
+  const headers = mapped.map(m => m.col);
+  mapped.forEach((m, i) => {
+    if (m.via) at(headerIdx + 1, m.col, `Column "${clean(grid[headerIdx][i])}" read as ${m.col}${m.via === 'saved' ? ' (saved mapping)' : ''}`, 'Mapped', '—', 'Nothing to fix', 'info');
+  });
   const missing = required.filter(c => !headers.includes(c));
   missing.forEach(c => at(headerIdx + 1, c, `Required column "${c}" is missing`,
     c === anchor ? 'File not processed' : 'Every row is treated as having this field blank', 'D3',
@@ -334,8 +382,8 @@ function mergeDuplicate(into: Contact, from: Contact, optState: Map<Contact, Opt
   into.persona = personaOf(into.jobTitle);
 }
 
-export function processLeads(grid: Grid, { file = 'lead file', sheet = 'Sheet1' }: { file?: string; sheet?: string } = {}): LeadResult {
-  const table = readTable(grid, { file, sheet, columns: LEAD_COLUMNS, required: LEAD_REQUIRED, anchor: 'company_name' });
+export function processLeads(grid: Grid, { file = 'lead file', sheet = 'Sheet1', mapping }: { file?: string; sheet?: string; mapping?: ColumnMapping } = {}): LeadResult {
+  const table = readTable(grid, { file, sheet, columns: LEAD_COLUMNS, required: LEAD_REQUIRED, anchor: 'company_name', mapping });
   const issues = table.issues.slice();
   const at = (row: Issue['row'], field: string, issue: string, outcome: string, code: Issue['code'], fix: string, severity: Severity = 'flag') =>
     issues.push({ file, sheet, row, field, issue, outcome, code, fix, severity });
@@ -735,8 +783,8 @@ export function decayFactor(type: Pick<SignalTypeConfig, 'full' | 'zero'>, age: 
   return (zero - age) / (zero - full);
 }
 
-export function processSignals(grid: Grid, list: LeadList, { file = 'signal file', sheet = 'Sheet1', asOf }: { file?: string; sheet?: string; asOf?: string } = {}): SignalResult {
-  const table = readTable(grid, { file, sheet, columns: SIGNAL_COLUMNS, required: SIGNAL_REQUIRED, anchor: 'signal_type' });
+export function processSignals(grid: Grid, list: LeadList, { file = 'signal file', sheet = 'Sheet1', asOf, mapping }: { file?: string; sheet?: string; asOf?: string; mapping?: ColumnMapping } = {}): SignalResult {
+  const table = readTable(grid, { file, sheet, columns: SIGNAL_COLUMNS, required: SIGNAL_REQUIRED, anchor: 'signal_type', mapping });
   const issues = table.issues.slice();
   // An account answers to every company name its rows use (G-038); signals also find it by domain, base name or
   // initials (G-044), each only when exactly one account fits.

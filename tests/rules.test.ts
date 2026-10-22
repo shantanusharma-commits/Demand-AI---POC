@@ -338,3 +338,33 @@ test('G-041: the same person under another address (same company, last name, fir
   assert.ok(!r.issues.some(i => i.row === 5 && /Possible duplicate/.test(i.issue)), 'Bo Rao is a different person');
   assert.ok(r.issues.filter(i => /Possible duplicate/.test(i.issue)).every(i => /not merged/.test(i.outcome)));
 });
+
+/* ─── G-040 column mapping: common CRM headers, and a saved mapping for the rest ─── */
+
+const CRM_HEADERS: Record<string, string> = {
+  first_name: 'First Name', last_name: 'Surname', job_title: 'Job Title', seniority: 'Seniority', email: 'Email Address', email_verified: 'Email Verified',
+  linkedin_url: 'LinkedIn Profile', company_name: 'Acct_Name', company_domain: 'Website Domain', country: 'Country/Region', city: 'City', industry: 'Sector',
+  annual_revenue_usd: 'Annual Revenue', employee_count: 'Number of Employees', account_type: 'Account Type', existing_customer: 'Existing Customer',
+  managed_separately: 'Key Account', site_name: 'Site Name', site_process_type: 'Site Process Type', site_capacity: 'Site Capacity', capacity_unit: 'Capacity Unit',
+  consent_basis: 'Lawful Basis', opt_out: 'Do Not Contact', owner_email: 'Account Owner',
+};
+
+test('G-040: a CRM-style export with its own column names processes the same as the template file, saying how it read each column', () => {
+  const template = grid({}, OTHER);
+  const crm = [template[0].map(h => CRM_HEADERS[h as string]), ...template.slice(1)];
+  const a = E.processLeads(template, { file: 'f.csv', sheet: 'Sheet1' });
+  const b = E.processLeads(crm, { file: 'f.csv', sheet: 'Sheet1' });
+  assert.deepEqual(b.contacts, a.contacts);
+  assert.deepEqual(b.accounts, a.accounts);
+  assert.ok(b.issues.some(i => i.severity === 'info' && i.issue === 'Column "Acct_Name" read as company_name'));
+  assert.equal(b.issues.filter(i => i.severity === 'stop').length, 0);
+});
+
+test('G-040: a mapping chosen for headers the synonym table does not know is applied the same way', () => {
+  const template = grid({}, OTHER);
+  const odd = [template[0].map(h => (h === 'company_name' ? 'Org Legal Title' : h === 'owner_email' ? 'Rep Mailbox' : h)), ...template.slice(1)];
+  assert.ok(E.processLeads(odd, { file: 'f.csv', sheet: 'Sheet1' }).issues.some(i => i.severity === 'stop'), 'unmapped: the file cannot be read');
+  const mapped = E.processLeads(odd, { file: 'f.csv', sheet: 'Sheet1', mapping: { 'Org Legal Title': 'company_name', 'Rep Mailbox': 'owner_email' } });
+  assert.deepEqual(mapped.contacts, E.processLeads(template, { file: 'f.csv', sheet: 'Sheet1' }).contacts);
+  assert.ok(mapped.issues.some(i => i.issue === 'Column "Org Legal Title" read as company_name (saved mapping)'));
+});

@@ -193,6 +193,11 @@ export function ProspectingScreen() {
   const [sel, setSel] = useState<Map<number, Contact>>(() => new Map());
   const [unattached, setUnattached] = useState<Issue[]>([]);
   const [checks, setChecks] = useState<ChecksState | null>(null);
+  // Column mapping (G-040): offered when the file lacks required template columns.
+  const [mappings, setMappings] = useState<{ id: string; name: string }[]>([]);
+  const [mapChoice, setMapChoice] = useState<Record<string, string>>({});
+  const [mapName, setMapName] = useState('');
+  const [savedMapping, setSavedMapping] = useState('');
   const [save, setSave] = useState<SaveState | null>(null);
   const dropRef = useRef<HTMLLabelElement>(null);
   const listNameRef = useRef<HTMLInputElement>(null);
@@ -256,6 +261,29 @@ export function ProspectingScreen() {
   }
   function onUseSample() { void follow(DemandAISample.LEAD_FILE, () => api<{ jobId: string }>('/api/uploads/sample', { body: { kind: 'lead' } })); }
   const hideChecks = () => setChecks(c => c && { ...c, shown: false });
+
+  /* ─── column mapping: map the missing template columns to the file's own, then check the stored file again ─── */
+  const needsMapping = !!run && run.missingColumns.length > 0;
+  useEffect(() => {
+    if (!needsMapping) return;
+    let live = true;
+    api<{ mappings: { id: string; name: string }[] }>('/api/column-mappings?kind=lead').then(r => { if (live) setMappings(r.mappings); }).catch(() => {});
+    return () => { live = false; };
+  }, [needsMapping]);
+  async function recheck(mappingId: string) {
+    if (!run) return;
+    const uploadId = run.uploadId;
+    await follow(run.sourceFile, () => api<{ jobId: string }>(`/api/uploads/${uploadId}/recheck`, { body: { mappingId } }));
+  }
+  async function saveAndRecheck() {
+    if (!run) return;
+    const mapping = Object.fromEntries(Object.entries(mapChoice).filter(([, from]) => from).map(([to, from]) => [from, to]));
+    try {
+      const { id } = await api<{ id: string }>('/api/column-mappings', { body: { kind: 'lead', name: mapName.trim() || run.sourceFile.replace(/\.[^.]+$/, '') + ' columns', mapping } });
+      setMapChoice({});
+      await recheck(id);
+    } catch (e) { showToast(errorText(e)); }
+  }
 
   /* ─── drop zone ─── */
   const dzOver = (e: DragEvent<HTMLLabelElement>) => { e.preventDefault(); dropRef.current!.style.borderColor = 'var(--brand)'; };
@@ -411,9 +439,45 @@ export function ProspectingScreen() {
           <div className="stat"><div className="stat-lbl">In the final list</div><div className="stat-val sv4">{v.contacts.in}</div><div className="stat-sub">{`of ${v.contacts.all} contacts`}</div></div>
         </div>
         {r.scope === 'own' ? <div style={sx('font-size:11.5px;color:var(--i3);margin:-4px 0 12px')}>You see the contacts and accounts you own. Rows read and issues count the whole file.</div> : null}
+        {needsMapping ? mappingPanel(r) : null}
         {view === 'list' ? renderListTab(r) : renderAccountsTab(r)}
       </div>
     </>;
+  }
+
+  function mappingPanel(r: ListDetail): ReactNode {
+    const label = sx('font-size:11px;font-weight:600;color:var(--i2)');
+    const field = sx('padding:6px 9px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:12.5px;background:var(--surf);color:var(--i1)');
+    return (
+      <div className="panel" style={sx('margin-bottom:12px;border-color:var(--warn)')}>
+        <div className="panel-hdr"><span className="panel-ttl">{`${r.missingColumns.length} required column${r.missingColumns.length === 1 ? '' : 's'} not found in this file`}</span></div>
+        <div className="panel-body" style={sx('display:flex;flex-direction:column;gap:10px;font-size:12px;color:var(--i2)')}>
+          <div>Choose which of the file&apos;s columns holds each one. The mapping is saved for your business unit, and this file is checked again without sending it again.</div>
+          {r.missingColumns.map(col => (
+            <div key={col} style={sx('display:flex;align-items:center;gap:10px')}>
+              <label htmlFor={'map-' + col} style={{ ...label, ...sx('width:170px;font-family:var(--fm)') }}>{col}</label>
+              <select id={'map-' + col} value={mapChoice[col] ?? ''} onChange={e => setMapChoice(m => ({ ...m, [col]: e.target.value }))} style={{ ...field, ...sx('flex:1') }}>
+                <option value="">Not in this file</option>
+                {r.fileColumns.map(fc => <option key={fc} value={fc}>{fc}</option>)}
+              </select>
+            </div>
+          ))}
+          <div style={sx('display:flex;align-items:center;gap:10px')}>
+            <label htmlFor="mapName" style={{ ...label, ...sx('width:170px') }}>Save the mapping as</label>
+            <input id="mapName" value={mapName} placeholder={r.sourceFile.replace(/\.[^.]+$/, '') + ' columns'} onChange={e => setMapName(e.target.value)} style={{ ...field, ...sx('flex:1') }} />
+            <button className="btn btn-primary btn-sm" disabled={!Object.values(mapChoice).some(Boolean)} onClick={() => void saveAndRecheck()}>Save and check again</button>
+          </div>
+          {mappings.length ? <div style={sx('display:flex;align-items:center;gap:10px')}>
+            <label htmlFor="savedMapping" style={{ ...label, ...sx('width:170px') }}>Or use a saved mapping</label>
+            <select id="savedMapping" value={savedMapping} onChange={e => setSavedMapping(e.target.value)} style={{ ...field, ...sx('flex:1') }}>
+              <option value="">Choose…</option>
+              {mappings.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+            </select>
+            <button className="btn btn-sec btn-sm" disabled={!savedMapping} onClick={() => void recheck(savedMapping)}>Check again</button>
+          </div> : null}
+        </div>
+      </div>
+    );
   }
 
   function unattachedNotice(): ReactNode {

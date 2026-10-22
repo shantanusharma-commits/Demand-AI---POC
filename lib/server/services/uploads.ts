@@ -39,7 +39,7 @@ export type Received = { uploadId: string; jobId: string | null };
 
 export async function receiveUpload(
   scope: TenantScope,
-  input: { kind: UploadKind; fileName: string; mediaType: string; bytes: Buffer; sandbox?: boolean },
+  input: { kind: UploadKind; fileName: string; mediaType: string; bytes: Buffer; sandbox?: boolean; mappingId?: string },
   limits: UploadLimits,
 ): Promise<Received> {
   const verdict = inspectUpload({ fileName: input.fileName, mediaType: input.mediaType, bytes: input.bytes }, limits);
@@ -54,7 +54,7 @@ export async function receiveUpload(
     byteSize: input.bytes.length, sha256, sandbox: !!input.sandbox, createdBy: scope.ctx.userId,
   }).returning({ id: uploads.id });
   await scope.tx.insert(uploadFiles).values({ uploadId: row.id, businessUnitId: scope.ctx.businessUnitId, bytes: input.bytes, createdBy: scope.ctx.userId });
-  const jobId = input.kind === 'lead' ? await enqueueJob(scope, 'lead.process', { uploadId: row.id }, LEAD_STAGES) : null;
+  const jobId = input.kind === 'lead' ? await enqueueJob(scope, 'lead.process', { uploadId: row.id, ...(input.mappingId ? { mappingId: input.mappingId } : {}) }, LEAD_STAGES) : null;
   await recordAudit(scope, { action: 'upload.received', targetType: 'upload', targetId: row.id,
     details: { kind: input.kind, format: verdict.format, bytes: input.bytes.length, sandbox: !!input.sandbox, jobId } });
   logger.info({ event: 'upload.received', kind: input.kind, format: verdict.format, bytes: input.bytes.length, sha256: sha256.slice(0, 12), sandbox: !!input.sandbox }, 'Upload received');

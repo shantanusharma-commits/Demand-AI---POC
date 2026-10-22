@@ -1,6 +1,7 @@
 import { withApi } from '@/lib/server/http/api';
 import { badRequest, HttpError, tooMany } from '@/lib/server/http/errors';
 import { readBodyBytes } from '@/lib/server/http/request';
+import { isUuid } from '@/lib/server/http/schemas';
 import { withTenant } from '@/lib/server/db/tenant';
 import { env } from '@/lib/server/env';
 import { hit } from '@/lib/server/auth/rate-limit';
@@ -23,10 +24,11 @@ export const POST = withApi({ route: 'POST /api/uploads', auth: 'unit', permissi
   } catch {
     throw badRequest('The upload could not be read. Choose the file again.');
   }
-  const kind = form.get('kind'), file = form.get('file');
+  const kind = form.get('kind'), file = form.get('file'), mappingId = form.get('mappingId');
   if (kind !== 'lead' && kind !== 'signal') throw badRequest('Say whether this is a lead file or a signal file.', { kind: ['Use lead or signal.'] });
   if (!(file instanceof File)) throw badRequest('Choose a file to upload.', { file: ['Choose a file.'] });
   const bytes = Buffer.from(await file.arrayBuffer());
-  const result = await withTenant(deps.db, tenant!, s => receiveUpload(s, { kind, fileName: file.name, mediaType: file.type, bytes }, limits), { label: 'upload.receive', slowMs: 5000 });
+  if (mappingId !== null && !isUuid(mappingId)) throw badRequest('That column mapping is not valid.', { mappingId: ['Not a valid ID.'] });
+  const result = await withTenant(deps.db, tenant!, s => receiveUpload(s, { kind, fileName: file.name, mediaType: file.type, bytes, mappingId: mappingId ?? undefined }, limits), { label: 'upload.receive', slowMs: 5000 });
   return Response.json(result, { status: 201 });
 });

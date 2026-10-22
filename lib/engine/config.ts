@@ -3,7 +3,7 @@
 import { CONFIG } from '../demandai-engine.ts';
 
 /** Bumped whenever an engine rule changes results; stamped on every stored run with the config version. */
-export const ENGINE_VERSION = 'ts-1.9.0';
+export const ENGINE_VERSION = 'ts-1.10.0';
 
 export type SerializedRegex = { regex: string; flags: string };
 

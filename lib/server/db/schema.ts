@@ -287,6 +287,9 @@ export const leadLists = pgTable('lead_lists', {
   engineVersion: text('engine_version').notNull(),
   stats: jsonb('stats').notNull(),
   checks: jsonb('checks').notNull(),
+  /** The file's own column names (its header row, or its fullest early row), for mapping them (G-040). */
+  fileColumns: jsonb('file_columns').notNull().default([]),
+  mappingId: uuid('mapping_id').references((): AnyPgColumn => columnMappings.id, { onDelete: 'set null' }),
   createdAt: createdAt(),
   createdBy: createdBy(),
   updatedAt: updatedAt(),
@@ -504,4 +507,22 @@ export const handoffItems = pgTable('handoff_items', {
   index('handoff_items_account_idx').on(t.accountId),
   index('handoff_items_bu_idx').on(t.businessUnitId),
   lowerOwner('handoff_items_owner_lower_check', t.ownerEmail),
+]);
+
+/* ─── Column mappings (G-040): a person's choice of template column for a source's own column names ─── */
+
+export const columnMappings = pgTable('column_mappings', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  businessUnitId: uuid('business_unit_id').notNull().references(() => businessUnits.id),
+  kind: text('kind').notNull(),
+  name: text('name').notNull(),
+  /** { "file column name": "template column" } */
+  mapping: jsonb('mapping').notNull(),
+  createdAt: createdAt(),
+  createdBy: createdBy(),
+  updatedAt: updatedAt(),
+  updatedBy: updatedBy(),
+}, t => [
+  check('column_mappings_kind_check', sql`${t.kind} in (${inList(UPLOAD_KINDS)})`),
+  uniqueIndex('column_mappings_bu_kind_name_key').on(t.businessUnitId, t.kind, t.name),
 ]);
