@@ -78,7 +78,7 @@ test('the full sample over HTTP: upload, real job stages, save, page through, sc
   listId = job.progress.result!.listId;
   assert.equal((await b.post(`/api/lists/${listId}/save`, { name: 'Full sample' })).status, 200);
   const list = (await b.get(`/api/lists/${listId}`)).json.list as { stats: { rowsRead: number }; visible: { contacts: { all: number } } };
-  assert.deepEqual([list.stats.rowsRead, list.visible.contacts.all], [7498, 6996]);
+  assert.deepEqual([list.stats.rowsRead, list.visible.contacts.all], [7498, 6985]);
   const page = await b.get(`/api/lists/${listId}/contacts?limit=200`);
   assert.equal((page.json.rows as unknown[]).length, 200);
   const next = await b.get(`/api/lists/${listId}/contacts?limit=200&after=${page.json.next}`);

@@ -74,7 +74,7 @@ test('G-004: the full sample (7,498 rows) saves to the database and reloads in f
   const detail = await as(admin(), s => getList(s, adminActor(), listId));
   assert.equal(detail.status, 'saved');
   assert.deepEqual(detail.stats, leads.stats);
-  assert.deepEqual(detail.visible.contacts, { all: 6996, in: leads.contacts.filter(c => c.status === 'In the final list').length,
+  assert.deepEqual(detail.visible.contacts, { all: leads.contacts.length, in: leads.contacts.filter(c => c.status === 'In the final list').length,
     nc: leads.contacts.filter(c => c.status.startsWith('In the list')).length, out: leads.contacts.filter(c => c.status.startsWith('Not in')).length });
   // Reload every contact through the paged API and compare with the engine's own output.
   const got: E.Contact[] = [];

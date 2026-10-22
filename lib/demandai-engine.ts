@@ -110,6 +110,42 @@ export const SIGNAL_REQUIRED = ['company_name', 'signal_type', 'event_date', 'de
 
 /* ─── Small helpers ─── */
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+// A stricter address check (G-019): the local part and the domain as mail systems accept them.
+const EMAIL_LOCAL = /^[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+(\.[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+)*$/;
+const EMAIL_DOMAIN = /^([A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?\.)+[A-Za-z]{2,}$/;
+/** Why an email can't be used as written, or null when it is a valid address. */
+export function emailProblem(raw: string): string | null {
+  if (!EMAIL_RE.test(raw)) return '';
+  if (/\.\./.test(raw)) return 'two dots in a row';
+  if (/[.,;]$/.test(raw)) return 'ends with a dot, comma or semicolon';
+  if (/[:;<>()[\],\s"]/.test(raw)) return 'has characters an address can\'t contain';
+  const at = raw.lastIndexOf('@');
+  return EMAIL_LOCAL.test(raw.slice(0, at)) && EMAIL_DOMAIN.test(raw.slice(at + 1)) ? null : '';
+}
+// Review flags on valid addresses (G-019): kept and usable, but a person should look before outreach.
+const WEBMAIL = /^(gmail|googlemail|ymail|rocketmail|hotmail|outlook|live|msn|icloud|me|aol|protonmail|proton|gmx|yandex|qq|163|126|mail)\.|^yahoo\./;
+// A shared mailbox: the local part is made only of role words ("sales", "plant.ops", "procurement-team").
+const ROLE_WORDS = new Set(['info', 'sales', 'procurement', 'purchasing', 'purchase', 'admin', 'contact', 'contactus', 'enquiries', 'enquiry', 'inquiries',
+  'inquiry', 'hr', 'it', 'office', 'marketing', 'support', 'service', 'services', 'careers', 'jobs', 'accounts', 'finance', 'hello', 'team', 'general',
+  'mail', 'noreply', 'no', 'reply', 'webmaster', 'reception', 'plant', 'ops', 'operations', 'site', 'dept', 'department', 'desk', 'group', 'all']);
+const isRoleLocal = (local: string) => { const words = local.toLowerCase().split(/[._-]+/).filter(Boolean); return words.length > 0 && words.every(w => ROLE_WORDS.has(w)); };
+function editDistance(a: string, b: string): number {
+  const d = Array.from({ length: a.length + 1 }, (_, i) => [i, ...new Array(b.length).fill(0)]);
+  for (let j = 1; j <= b.length; j++) d[0][j] = j;
+  for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++)
+    d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+  return d[a.length][b.length];
+}
+/** A review note for a valid address, or null. */
+export function emailReviewNote(email: string, companyDomain: string): string | null {
+  const at = email.lastIndexOf('@'), local = email.slice(0, at), domain = email.slice(at + 1);
+  if (WEBMAIL.test(domain)) return 'is a personal (webmail) address, not a work email';
+  if (isRoleLocal(local)) return `is a shared mailbox (${local}@), not a person`;
+  const company = companyDomain.replace(/^www\./, '');
+  if (!company || !company.includes('.') || domain === company) return null;
+  if (editDistance(domain, company) <= 2) return `domain looks like a typo of ${company}`;
+  return `domain ${domain} is not the company domain ${company}`;
+}
 const LINKEDIN_RE = /linkedin\.com\/(in|pub)\/[^\s/]+/i;
 const DATE_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
 const DAY_MS = 86400000;
@@ -118,8 +154,9 @@ function clean(v: unknown): string { return v === undefined || v === null ? '' :
 function normKey(s: unknown): string { return clean(s).toLowerCase().replace(/\s+/g, ' '); }
 function normHeader(h: Cell): string { return clean(h).toLowerCase().replace(/\*/g, '').trim().replace(/[\s-]+/g, '_'); }
 function normEmail(e: unknown): string { return clean(e).toLowerCase(); }
+/** linkedin.com/in/<slug>: no scheme, no www or country sub-domain (sg., uk.), no query, no trailing slash (G-039). */
 function normLinkedIn(u: unknown): string {
-  return clean(u).toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/[?#].*$/, '').replace(/\/+$/, '');
+  return clean(u).toLowerCase().replace(/^https?:\/\//, '').replace(/^([a-z0-9-]+\.)*linkedin\.com/, 'linkedin.com').replace(/[?#].*$/, '').replace(/\/+$/, '');
 }
 export function round1(n: number): number { return Math.round(n * 10) / 10; }
 
@@ -274,7 +311,7 @@ function mergeDuplicate(into: Contact, from: Contact, optState: Map<Contact, Opt
   }
   const target = into as unknown as Record<string, unknown>, source = from as unknown as Record<string, unknown>;
   for (const k of Object.keys(source)) {
-    if (k === 'row' || k === 'flags' || k === 'optOut' || k === 'optOutUnknown' || k === 'name' || k === 'persona') continue;
+    if (k === 'row' || k === 'flags' || k === 'optOut' || k === 'optOutUnknown' || k === 'name' || k === 'persona' || k === 'altRefs') continue;
     if (!target[k] && source[k]) target[k] = source[k];
   }
   into.optOut = state === 'Y';
@@ -292,7 +329,21 @@ export function processLeads(grid: Grid, { file = 'lead file', sheet = 'Sheet1' 
   const missingCols = new Set(LEAD_REQUIRED.filter(c => !table.headers.includes(c)));
 
   const contacts: Contact[] = [];
-  const byEmail = new Map<string, Contact>(), byLinkedIn = new Map<string, Contact>();
+  // A person is found again by their email, their LinkedIn URL, or the address exactly as written (lower case), so two
+  // rows with the same malformed address are still one person; a merged repeat's own keys point to the same person.
+  const byEmail = new Map<string, Contact>(), byLinkedIn = new Map<string, Contact>(), byRawEmail = new Map<string, Contact>();
+  const index = (keys: Contact, person: Contact) => {
+    if (keys.email && !byEmail.has(keys.email)) byEmail.set(keys.email, person);
+    if (keys.linkedin && !byLinkedIn.has(keys.linkedin)) byLinkedIn.set(keys.linkedin, person);
+    // Only something shaped like an address: placeholders ("N/A", "none") never make two people one.
+    const raw = normEmail(keys.emailRaw);
+    if (/^[^@\s]+@[^@\s]+\.[^@\s]*$/.test(raw) && !byRawEmail.has(raw)) byRawEmail.set(raw, person);
+    // A merged repeat's own email and LinkedIn still name this person when a signal uses them.
+    if (keys !== person) {
+      const refs = [keys.email, keys.linkedin, raw].filter(r => r && r !== person.email && r !== person.linkedin);
+      if (refs.length) person.altRefs = [...new Set([...(person.altRefs ?? []), ...refs])];
+    }
+  };
   // How each contact's opt-out and managed-separately were given, so merges and accounts can tell blank (no answer)
   // from unreadable (fails closed).
   const optState = new Map<Contact, OptState>(), managedState = new Map<Contact, OptState>();
@@ -331,15 +382,18 @@ export function processLeads(grid: Grid, { file = 'lead file', sheet = 'Sheet1' 
     }
 
     // Email and verification
+    const emailWhy = c.emailRaw ? emailProblem(c.emailRaw) : null;
     if (c.emailRaw) {
-      if (EMAIL_RE.test(c.emailRaw)) {
+      if (emailWhy === null) {
         c.email = normEmail(c.emailRaw);
+        const note = emailReviewNote(c.email, c.domain);
+        if (note) at(row, 'email', `Email "${c.emailRaw}" ${note}`, 'Kept; flagged for review before any outreach', '—', 'Use the person\'s own work address if one is held');
         const v = yesNo(r.email_verified);
         if (v === null) at(row, 'email_verified', `"${clean(r.email_verified)}" isn't Y or N`, 'Email treated as not verified, so not used as a channel', 'D3', 'Use Y or N');
         else if (v !== 'Y') at(row, 'email_verified', 'Email not verified', 'Email not used as a channel', '—', 'Verify the address and set email_verified to Y', 'info');
         c.emailVerified = v === 'Y';
       } else {
-        at(row, 'email', `Email "${c.emailRaw}" is malformed`, c.linkedinRaw ? 'Email not used; LinkedIn only' : 'Email not used', 'D3', 'Correct the address');
+        at(row, 'email', `Email "${c.emailRaw}" is malformed${emailWhy ? ` (${emailWhy})` : ''}`, c.linkedinRaw ? 'Email not used; LinkedIn only' : 'Email not used', 'D3', 'Correct the address');
       }
     }
     // LinkedIn
@@ -413,22 +467,23 @@ export function processLeads(grid: Grid, { file = 'lead file', sheet = 'Sheet1' 
     }
 
     if (!c.owner) { if (!missingCols.has('owner_email')) at(row, 'owner_email', 'No owner rep', 'Only the sales manager sees this account', 'D3', "Add the assigned rep's email"); }
-    else if (!EMAIL_RE.test(c.owner)) at(row, 'owner_email', `Owner "${c.owner}" isn't an email`, 'Only the sales manager sees this account', 'D3', "Use the rep's work email");
+    else if (emailProblem(c.owner) !== null) at(row, 'owner_email', `Owner "${c.owner}" isn't an email`, 'Only the sales manager sees this account', 'D3', "Use the rep's work email");
 
     // Duplicates (same email or LinkedIn URL): merged into the first row after their own checks, blanks filled
     // from the repeat; an opt-out or managed-separately Y on any row wins, and conflicts are flagged (N-01, G-060).
-    const dupOf = (c.email && byEmail.get(c.email)) || (c.linkedin && byLinkedIn.get(c.linkedin));
+    const byLi = c.linkedin ? byLinkedIn.get(c.linkedin) : undefined;
+    const dupOf = (c.email && byEmail.get(c.email)) || byLi || (c.emailRaw ? byRawEmail.get(normEmail(c.emailRaw)) : undefined);
     if (dupOf) {
-      at(row, c.email && byEmail.get(c.email) ? 'email' : 'linkedin_url', `Duplicate of row ${dupOf.row} (${dupOf.name})`,
+      at(row, dupOf === byLi && !(c.email && byEmail.get(c.email)) ? 'linkedin_url' : 'email', `Duplicate of row ${dupOf.row} (${dupOf.name})`,
         `Merged into row ${dupOf.row}`, 'D5', 'Remove the repeated row');
       mergeDuplicate(dupOf, c, optState, managedState, (field, issue, outcome) => at(row, field, issue, outcome, '—', 'Correct the row that is wrong, then remove the repeat'));
+      index(c, dupOf);
       merged++;
       continue;
     }
 
     contacts.push(c);
-    if (c.email) byEmail.set(c.email, c);
-    if (c.linkedin) byLinkedIn.set(c.linkedin, c);
+    index(c, c);
   }
 
   // Reachability and contactability
@@ -650,7 +705,7 @@ export function processSignals(grid: Grid, list: LeadList, { file = 'signal file
     let person: Contact | null | undefined = null;
     if (s.personRef) {
       const ref = s.personRef.includes('@') ? normEmail(s.personRef) : normLinkedIn(s.personRef);
-      person = cs.find(c => (c.email && c.email === ref) || (c.linkedin && c.linkedin === ref) || normEmail(c.emailRaw) === ref);
+      person = cs.find(c => (c.email && c.email === ref) || (c.linkedin && c.linkedin === ref) || normEmail(c.emailRaw) === ref || !!c.altRefs?.includes(ref));
       if (!person) {
         reject('D4', `Person ${s.personRef} is not in the lead file for this account (sent back as a suggested new contact)`, 'contact_email_or_linkedin', 'Add this person to the lead file, or correct the email or LinkedIn URL');
         suggested.push({ company: acc.name, person: s.personRef, signal: s.type, row: s.row });

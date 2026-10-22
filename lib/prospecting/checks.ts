@@ -21,7 +21,7 @@ export const CHECKS: [StepKey, string, string][] = [
 export function checkOf(i: Issue): StepKey {
   if (/Required column|isn't in the template|header row|format hints|^File (encoding|delimiter)/.test(i.issue)) return 'columns';
   if (i.code === 'D5') return 'dupes';
-  if (i.field === 'email' && /malformed/.test(i.issue)) return 'emailFormat';
+  if (i.field === 'email' && /malformed|personal \(webmail\)|shared mailbox|company domain|typo of/.test(i.issue)) return 'emailFormat';
   if (i.field === 'email_verified') return 'verified';
   if (i.field === 'linkedin_url' && /profile URL/.test(i.issue)) return 'liFormat';
   if (i.issue === 'No email and no LinkedIn URL' || i.issue === 'No email' || i.issue === 'No LinkedIn URL') return 'channel';

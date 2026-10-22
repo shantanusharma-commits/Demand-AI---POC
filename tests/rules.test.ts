@@ -193,3 +193,49 @@ test('G-018 / D-17: managed separately fails closed: with no readable answer the
   assert.ok(leads({ managed_separately: 'N' }, { ...OTHER, managed_separately: 'Y' }).issues.some(i => i.row === 3 && i.field === 'managed_separately'
     && /^Differs from row 2/.test(i.issue) && /Y kept/.test(i.outcome)), 'the Y row is flagged as differing, and Y is kept');
 });
+
+/* ─── G-019 email syntax and review flags; G-039 LinkedIn normalisation ─── */
+
+test('G-019: double dots, edge dots, decorations and stray punctuation make an email malformed (not used)', () => {
+  for (const bad of ['ann..lee@acme-refining.com', '.ann@acme-refining.com', 'ann.lee@acme-refining.com.', 'ann.lee@acme-refining.com,', 'mailto:ann.lee@acme-refining.com',
+    '<ann.lee@acme-refining.com>', 'ann.lee@acme-refining.com;', 'ann.lee@acme..com', 'ann lee@acme-refining.com']) {
+    const r = leads({ email: bad }, OTHER);
+    const c = r.contacts.find(x => x.row === 2)!;
+    assert.equal(c.email, '', bad);
+    assert.equal(c.reachableBy, 'LinkedIn', `${bad}: LinkedIn only`);
+    assert.ok(r.issues.some(i => i.row === 2 && i.field === 'email' && /is malformed/.test(i.issue)), bad);
+  }
+});
+
+test('G-019: personal webmail, shared mailboxes, another domain and likely typos are flagged for review, still usable', () => {
+  const cases: [string, RegExp][] = [['ann.lee@gmail.com', /personal/], ['ann.lee@yahoo.com.sg', /personal/], ['sales@acme-refining.com', /shared mailbox/],
+    ['procurement@acme-refining.com', /shared mailbox/], ['ann.lee@other-company.com', /not the company domain/], ['ann.lee@acme-refning.com', /typo/], ['ann.lee@acme-refining.co', /typo/]];
+  for (const [email, re] of cases) {
+    const r = leads({ email }, OTHER);
+    assert.equal(r.contacts[0].email, email, `${email} stays usable`);
+    assert.ok(r.issues.some(i => i.row === 2 && i.field === 'email' && i.severity === 'flag' && re.test(i.issue)), email);
+  }
+  assert.deepEqual(leads({}, OTHER).issues.filter(i => i.row === 2 && i.field === 'email'), [], 'a clean work address has no email issue');
+});
+
+test('G-039: LinkedIn URLs that differ only by country sub-domain, scheme, query or case are the same person', () => {
+  const r = leads({ email: '', linkedin_url: 'https://sg.linkedin.com/in/Ann-Lee/' }, { email: '', linkedin_url: 'http://www.linkedin.com/in/ann-lee?trk=public' }, OTHER);
+  assert.equal(r.contacts.length, 2, 'the two Ann Lee rows merged');
+  assert.ok(r.issues.some(i => i.row === 3 && i.code === 'D5'));
+});
+
+test('duplicates: the same malformed address is one person; placeholders like "N/A" never merge two people', () => {
+  const same = leads({ email: 'ann.lee@acme-refining..com' }, { email: 'ann.lee@acme-refining..com', first_name: 'Annie' }, OTHER);
+  assert.equal(same.contacts.length, 2, 'the two rows with the same malformed address merged');
+  const placeholders = leads({ email: 'N/A', linkedin_url: 'https://www.linkedin.com/in/ann-lee' }, { ...OTHER, email: 'N/A' });
+  assert.equal(placeholders.contacts.length, 2, 'two people with "N/A" stay two people');
+});
+
+test('a signal naming a merged repeat by its own LinkedIn URL reaches the merged person', () => {
+  const r = leads({}, { linkedin_url: 'https://www.linkedin.com/in/ann-lee-old', first_name: 'Annie' }, OTHER);
+  assert.equal(r.contacts.length, 2);
+  const sig = E.processSignals([SIGNALS, ['Acme Refining', 'https://www.linkedin.com/in/ann-lee-old', 'Webinar attended', '2026-09-20', 'Webinar', 'Events', '']],
+    { accounts: r.accounts, contacts: r.contacts }, { asOf: '2026-09-30' });
+  assert.equal(sig.signals[0].status, 'Qualified');
+  assert.equal(sig.signals[0].contactRow, 2);
+});

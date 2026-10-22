@@ -75,6 +75,8 @@ export interface Contact {
   contactable: boolean;
   accountId: string;
   status: string;
+  /** Emails and LinkedIn URLs of duplicate rows merged into this contact, normalised; signals naming them match. */
+  altRefs?: string[];
 }
 
 export interface KnockoutCheck {

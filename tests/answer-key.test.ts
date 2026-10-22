@@ -11,10 +11,10 @@ const CASE_FLOORS: Record<string, [number, number]> = {
   'MF-CHANNEL': [140, 140], 'MF-CONSENT': [110, 110], 'MF-OPTOUT': [80, 80], 'MF-VERIFIED': [160, 160],
   'MF-COUNTRY': [70, 70], 'MF-INDUSTRY': [90, 90], 'MF-EXISTING': [75, 75], 'MF-MANAGED': [75, 75], 'MF-OWNER': [70, 70], // G-037 closed
   'EM-NO-AT': [45, 45], 'EM-DOUBLE-AT': [30, 30], 'EM-NO-TLD': [40, 40], 'EM-SPACE': [35, 35], 'EM-PLACEHOLDER': [45, 45],
-  'EM-DOUBLE-DOT': [0, 30], 'EM-TRAILING-DOT': [0, 30], 'EM-BAD-CHAR': [0, 35], // G-019
-  'EM-PERSONAL': [0, 90], 'EM-ROLE': [0, 55], 'EM-DOMAIN-MISMATCH': [0, 70], 'EM-TYPO-DOMAIN': [0, 40], // G-019
+  'EM-DOUBLE-DOT': [30, 30], 'EM-TRAILING-DOT': [30, 30], 'EM-BAD-CHAR': [35, 35], // G-019 closed: malformed, not used
+  'EM-PERSONAL': [90, 90], 'EM-ROLE': [55, 55], 'EM-DOMAIN-MISMATCH': [70, 70], 'EM-TYPO-DOMAIN': [40, 40], // G-019 closed: flagged for review
   'DUP-EXACT': [140, 140], 'DUP-EMAIL-CASE': [80, 80], 'DUP-UPDATED': [60, 60], 'DUP-CROSS-COMPANY': [30, 30],
-  'DUP-LINKEDIN': [59, 70], // G-039
+  'DUP-LINKEDIN': [70, 70], // G-039 closed
   'DUP-FUZZY': [3, 70], // G-041 (target: listed for review)
   'FMT-YN-BAD': [67, 70], 'FMT-CONSENT': [60, 60], 'FMT-INCONSISTENT': [57, 60], 'FMT-LINKEDIN': [70, 70], 'FMT-OWNER': [50, 50],
   'FMT-TITLE-NOISE': [25, 120], // G-020
@@ -45,7 +45,7 @@ const CEILINGS = {
   needsReview: 852, // G-021 (G-017: the industry now comes from the first row that gives one)
   inIcpClassifiedOther: 98, // G-021
   outOfIcpClassifiedCore: 22, // G-021 → 0
-  contactsWithoutPersona: 3271, // G-020
+  contactsWithoutPersona: 3264, // G-020 (G-039: 11 more LinkedIn duplicates merged into their person)
   handoffNotContactable: 0, // G-005 closed: the hand-off takes only people who pass canContact
 };
 
