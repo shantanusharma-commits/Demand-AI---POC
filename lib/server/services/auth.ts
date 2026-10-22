@@ -86,7 +86,7 @@ export async function acceptInvite(deps: AuthDeps, input: { token: string; passw
     if (problems.length) return { ok: false, reason: 'weak_password', problems };
     await tx.update(users).set({
       passwordHash: await hashPassword(input.password), status: 'active', emailVerifiedAt: user.emailVerifiedAt ?? new Date(),
-      failedLoginCount: 0, lockedUntil: null, updatedAt: new Date(), updatedBy: user.id,
+      failedLoginCount: 0, lockedUntil: null, lastLoginAt: new Date(), updatedAt: new Date(), updatedBy: user.id,
     }).where(eq(users.id, user.id));
     await markUsed(tx, t.tokenId);
     await revokeUserSessions(tx, user.id, 'password_set');

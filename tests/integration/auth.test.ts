@@ -105,8 +105,8 @@ test('invite: emailed link, weak password keeps the link usable, then single use
   assert.equal(ok.ok, true);
   const again = await acceptInvite(deps(), { token, password: 'blue river under the bridge', ...client });
   assert.deepEqual(again, { ok: false, reason: 'invalid_link' });
-  const row = (await owner.query(`SELECT status, email_verified_at IS NOT NULL AS verified FROM users WHERE email = 'new.rep@demandai.test'`)).rows[0];
-  assert.deepEqual(row, { status: 'active', verified: true });
+  const row = (await owner.query(`SELECT status, email_verified_at IS NOT NULL AS verified, last_login_at IS NOT NULL AS signed_in FROM users WHERE email = 'new.rep@demandai.test'`)).rows[0];
+  assert.deepEqual(row, { status: 'active', verified: true, signed_in: true }, 'accepting the invite signs them in, and the list shows it');
 
   sent.length = 0;
   await withTenant(app, adminA(), s => inviteMember(deps(), s, { userId: ids.adminA, role: 'Admin' }, { email: 'late@demandai.test', displayName: 'Late Joiner', role: 'Viewer' }));
