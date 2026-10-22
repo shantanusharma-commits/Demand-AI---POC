@@ -4,15 +4,15 @@
 // are owner-scoped twice: row-level security, and the filters here (G-014).
 import 'server-only';
 import { randomUUID } from 'node:crypto';
-import { and, asc, desc, eq, gt, inArray, isNull, like, notExists, sql, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, inArray, isNull, like, notExists, or, sql, type SQL } from 'drizzle-orm';
 import type { AnyPgColumn } from 'drizzle-orm/pg-core';
-import { LEAD_COLUMNS, LEAD_REQUIRED, missingColumns, processLeads, readTable } from '../../demandai-engine.ts';
+import { CODES, LEAD_COLUMNS, LEAD_REQUIRED, missingColumns, processLeads, readTable, toCSV } from '../../demandai-engine.ts';
 import { ENGINE_VERSION } from '../../engine/config.ts';
 import { LEAD_SHEET } from '../../engine/sheets.ts';
-import { STEPS, checkOf, groupIssues, stepResult, type StepResult } from '../../prospecting/checks.ts';
+import { CHECKS, STEPS, checkOf, groupIssues, stepResult, type CheckKey, type StepResult } from '../../prospecting/checks.ts';
 import { listQuality, readinessChecks, readinessCounts, type ListQuality, type ReadinessCheck } from '../../prospecting/quality.ts';
 import { can, type BuRole } from '../../auth/permissions.ts';
-import type { Account, Contact, Issue, LeadList, LeadResult, LeadStats, Severity } from '../../../types/demandai';
+import type { Account, Contact, DqCode, Issue, LeadList, LeadResult, LeadStats, Severity } from '../../../types/demandai';
 import { accounts, configVersions, contacts, issues, leadLists, scoringRuns, uploads, CONTACT_GROUPS } from '../db/schema.ts';
 import { withTenant, type TenantScope } from '../db/tenant.ts';
 import { recordAudit } from '../db/audit.ts';
@@ -289,6 +289,56 @@ export async function unattachedIssues(scope: TenantScope, listId: string): Prom
   const rows = await scope.tx.select({ data: issues.data }).from(issues)
     .where(and(eq(issues.listId, listId), isNull(issues.attachRowNo))).orderBy(asc(issues.seq)).limit(1000);
   return rows.map(r => r.data as Issue);
+}
+
+/* ─── Check panes, per-check CSV and the validation report (G-015) ─── */
+
+/** The repository half of the issues policy: reps get their own rows' findings and the whole-file notes. */
+function visibleIssues(scope: TenantScope): SQL | undefined {
+  const own = ownerOnly(scope, issues.ownerEmail);
+  return own && or(own, and(isNull(issues.ownerEmail), isNull(issues.rowNo)));
+}
+
+export type CheckPage = Page<Issue> & { total: number };
+
+/** One check's findings a page at a time, in file order. `total` is what the caller can see (a rep: their own rows). */
+export async function issuesForCheck(scope: TenantScope, listId: string, check: CheckKey, query: PageQuery): Promise<CheckPage> {
+  if (!(await listRow(scope, listId))) throw notFound('That list is not there any more.');
+  const limit = limitOf(query);
+  const where = and(eq(issues.listId, listId), eq(issues.checkKey, check), visibleIssues(scope));
+  const rows = await scope.tx.select({ seq: issues.seq, data: issues.data }).from(issues)
+    .where(and(where, query.after !== undefined ? gt(issues.seq, query.after) : undefined)).orderBy(asc(issues.seq)).limit(limit + 1);
+  const [{ n }] = await scope.tx.select({ n: sql<number>`count(*)::int` }).from(issues).where(where);
+  const page = rows.slice(0, limit);
+  return { rows: page.map(r => r.data as Issue), next: rows.length > limit ? page[page.length - 1].seq : null, total: n };
+}
+
+export type CsvFile = { fileName: string; csv: string };
+const fileBase = (sourceFile: string) => sourceFile.replace(/\.[^.]+$/, '') || 'lead-file';
+const ISSUE_HEADER = ['Row', 'Field', 'Issue', 'What happens', 'How to fix', 'Severity'];
+const issueCells = (i: Issue) => [i.row, i.field || '', i.issue, i.outcome || '', i.fix || '', i.severity];
+
+/** One check's findings as the original pane's CSV, `<file>-<check>-issues.csv`; formulas neutralised (G-052). */
+export async function checkCsv(scope: TenantScope, listId: string, check: CheckKey): Promise<CsvFile> {
+  const l = await listRow(scope, listId);
+  if (!l) throw notFound('That list is not there any more.');
+  const rows = await scope.tx.select({ data: issues.data }).from(issues)
+    .where(and(eq(issues.listId, listId), eq(issues.checkKey, check), visibleIssues(scope))).orderBy(asc(issues.seq));
+  return { fileName: `${fileBase(l.sourceFile)}-${check}-issues.csv`, csv: toCSV([ISSUE_HEADER, ...rows.map(r => issueCells(r.data as Issue))]) };
+}
+
+/** Every finding the caller can see, with its check and D-code, in file order: the validation report. */
+export async function reportCsv(scope: TenantScope, listId: string): Promise<CsvFile> {
+  const l = await listRow(scope, listId);
+  if (!l) throw notFound('That list is not there any more.');
+  const rows = await scope.tx.select({ data: issues.data, check: issues.checkKey }).from(issues)
+    .where(and(eq(issues.listId, listId), visibleIssues(scope))).orderBy(asc(issues.seq));
+  const checkName = new Map<string, string>(CHECKS.map(([k, name]) => [k, name]));
+  const body = rows.map(r => {
+    const i = r.data as Issue;
+    return [...issueCells(i), checkName.get(r.check) ?? r.check, i.code === '—' ? '' : i.code, i.code === '—' ? '' : CODES[i.code as DqCode]];
+  });
+  return { fileName: `${fileBase(l.sourceFile)}-validation-report.csv`, csv: toCSV([[...ISSUE_HEADER, 'Check', 'D-code', 'What the code means'], ...body]) };
 }
 
 /* ─── Changing lists ─── */

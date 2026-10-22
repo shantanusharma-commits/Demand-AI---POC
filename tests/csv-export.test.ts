@@ -15,3 +15,14 @@ test('ordinary values, numbers and negative numbers are unchanged', () => {
   const cells = ['Northwind Refining', 'a,b', 'say "hi"', 'x=1', '12', '-5', '-0.25', '2400000000', ''];
   assert.deepEqual(parseCSV(toCSV([cells]))[0], cells);
 });
+
+test('CSV downloads: UTF-8 with a byte-order mark, attachment with a plain-ASCII name and the UTF-8 name beside it', async () => {
+  const { csvDownload } = await import('../lib/server/http/download.ts');
+  const r = csvDownload('Lead "file" Việt.csv', 'Row,Field\r\n2,email');
+  assert.equal(r.headers.get('content-type'), 'text/csv; charset=utf-8');
+  assert.equal(r.headers.get('content-disposition'), `attachment; filename="Lead file Vi_t.csv"; filename*=UTF-8''Lead%20%22file%22%20Vi%E1%BB%87t.csv`);
+  assert.equal(r.headers.get('x-content-type-options'), 'nosniff');
+  const bytes = new Uint8Array(await r.arrayBuffer());
+  assert.deepEqual([...bytes.slice(0, 3)], [0xef, 0xbb, 0xbf]);
+  assert.equal(new TextDecoder().decode(bytes), 'Row,Field\r\n2,email', 'the decoder drops the mark; the rest is the CSV');
+});

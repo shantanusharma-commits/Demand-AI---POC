@@ -127,6 +127,29 @@ test('G-014 over HTTP: a rep sees only their own prospects; another owner’s is
   assert.equal((await viewer.get(`/api/lists/${listId}`)).status, 403, 'a Viewer has no list access');
 });
 
+test('G-015 over HTTP: per-check CSV and the validation report download as UTF-8 CSV attachments; a bad check is 400', async () => {
+  const b = await admin();
+  const r = await b.get(`/api/lists/${listId}/issues.csv?check=dupes`);
+  assert.equal(r.status, 200);
+  assert.match(String(r.headers.get('content-type')), /^text\/csv; charset=utf-8/);
+  assert.equal(r.headers.get('content-disposition'), `attachment; filename="Lead_Research_Sample_Dataset-dupes-issues.csv"; filename*=UTF-8''Lead_Research_Sample_Dataset-dupes-issues.csv`);
+  assert.equal(r.headers.get('cache-control'), 'no-store');
+  assert.ok(r.text.startsWith('Row,Field,Issue,What happens,How to fix,Severity\r\n'), 'the BOM is stripped by fetch; the header row follows');
+  assert.equal((await b.get(`/api/lists/${listId}/issues.csv?check=nonsense`)).status, 400);
+  assert.equal((await b.get(`/api/lists/${listId}/issues.csv`)).status, 400, 'the check is required');
+  const page = await b.get(`/api/lists/${listId}/issues?check=dupes&limit=5`);
+  assert.deepEqual([(page.json.rows as unknown[]).length, typeof page.json.total], [5, 'number']);
+  const report = await b.get(`/api/lists/${listId}/report.csv`);
+  assert.equal(report.status, 200);
+  assert.ok(report.text.split('\r\n')[0].endsWith(',Check,D-code,What the code means'));
+  const rep = new Browser(srv.base);
+  await rep.signIn('rep.a@demandai.test');
+  const mine = await rep.get(`/api/lists/${listId}/report.csv`);
+  assert.equal(mine.status, 200);
+  assert.ok(mine.text.split('\r\n').length < report.text.split('\r\n').length, 'a rep’s report holds only their own rows and the whole-file notes');
+  assert.equal((await rep.get(`/api/lists/${randomUUID()}/report.csv`)).status, 404);
+});
+
 test('logs: upload and scoring events are logged without file names or any contact’s address', async () => {
   const lines = srv.logs.join('').split('\n').filter(l => l.startsWith('{')).map(l => JSON.parse(l));
   for (const event of ['upload.received', 'job.started', 'job.stage', 'job.succeeded', 'scoring.started', 'handoff.created', 'upload.refused']) {

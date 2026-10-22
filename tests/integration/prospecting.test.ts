@@ -13,7 +13,8 @@ import { createAppWorker } from '../../lib/server/jobs/handlers.ts';
 import { createWorker } from '../../lib/server/jobs/worker.ts';
 import { enqueueJob, getJob } from '../../lib/server/jobs/queue.ts';
 import { receiveSample, receiveUpload, uploadLimits, type UploadLimits } from '../../lib/server/services/uploads.ts';
-import { deleteList, getList, listAccounts, listContacts, saveList, savedLists, unattachedIssues, type Actor } from '../../lib/server/services/lists.ts';
+import { checkCsv, deleteList, getList, issuesForCheck, listAccounts, listContacts, reportCsv, saveList, savedLists, unattachedIssues, type Actor } from '../../lib/server/services/lists.ts';
+import { checkOf } from '../../lib/prospecting/checks.ts';
 import { asOfProblem, getProspect, getRun, listProspects, listSignals, saveRun, startScoringRun } from '../../lib/server/services/scoring.ts';
 import { createHandoff, getHandoff } from '../../lib/server/services/handoffs.ts';
 import { HttpError } from '../../lib/server/http/errors.ts';
@@ -144,6 +145,60 @@ test('G-015: a list keeps its % clean, findings per D-code and readiness over th
   assert.equal(old.quality, null);
   assert.equal(old.readiness, null);
   await owner.query(`UPDATE lead_lists SET quality = $2 WHERE id = $1`, [listId, JSON.stringify(want)]);
+});
+
+test('G-015 check panes: one check’s findings page in file order; a rep gets their own rows’ findings and the whole-file notes', async () => {
+  const dupes = leads.issues.filter(i => checkOf(i) === 'dupes');
+  const seen: E.Issue[] = [];
+  let after: number | undefined, total = -1;
+  do {
+    const page = await as(admin(), s => issuesForCheck(s, listId, 'dupes', { after, limit: 200 }));
+    total = page.total;
+    seen.push(...page.rows);
+    after = page.next ?? undefined;
+  } while (after !== undefined);
+  assert.equal(total, dupes.length);
+  assert.deepStrictEqual(seen, dupes, 'every duplicate finding, in file order');
+  const repRows = new Set(leads.contacts.filter(c => c.owner === someOwner).map(c => c.row));
+  for (const check of ['dupes', 'columns', 'channel'] as const) {
+    const mine = await as(repCtx([someOwner]), s => issuesForCheck(s, listId, check, { limit: 500 }));
+    assert.equal(mine.rows.length, mine.total);
+    assert.ok(mine.rows.every(i => i.row === '—' || repRows.has(i.row) || i.code === 'D5' || !leads.contacts.some(c => c.row === i.row)), check);
+    assert.ok(mine.total <= leads.issues.filter(i => checkOf(i) === check).length, check);
+  }
+  const repDupes = await as(repCtx([someOwner]), s => issuesForCheck(s, listId, 'dupes', { limit: 500 }));
+  assert.ok(repDupes.total > 0 && repDupes.total < dupes.length, 'a rep sees some duplicate findings, not every one');
+  await assert.rejects(as(admin(), s => issuesForCheck(s, randomUUID(), 'dupes', {})), (e: HttpError) => e.status === 404);
+});
+
+test('G-015 CSV: per-check findings as the original pane wrote them, and the validation report with D-codes', async () => {
+  const csv = await as(admin(), s => checkCsv(s, listId, 'dupes'));
+  assert.equal(csv.fileName, 'Lead_Research_Sample_Dataset-dupes-issues.csv');
+  const lines = csv.csv.split('\r\n');
+  assert.equal(lines[0], 'Row,Field,Issue,What happens,How to fix,Severity');
+  assert.equal(lines.length, 1 + leads.issues.filter(i => checkOf(i) === 'dupes').length);
+  const report = await as(admin(), s => reportCsv(s, listId));
+  assert.equal(report.fileName, 'Lead_Research_Sample_Dataset-validation-report.csv');
+  const rl = report.csv.split('\r\n');
+  assert.equal(rl[0], 'Row,Field,Issue,What happens,How to fix,Severity,Check,D-code,What the code means');
+  assert.equal(rl.length, 1 + leads.issues.length);
+  assert.equal(rl.filter(l => l.endsWith(',D5,Duplicate')).length, leads.issues.filter(i => i.code === 'D5').length);
+  const mine = await as(repCtx([someOwner]), s => reportCsv(s, listId));
+  assert.ok(mine.csv.split('\r\n').length < rl.length, 'a rep’s report holds only what they can see');
+});
+
+test('G-052 in the check CSV: a column name written as a formula in the uploaded file is neutralised', async () => {
+  const header = [...E.LEAD_COLUMNS, '=HYPERLINK("http://x.example","y")'];
+  const row = E.LEAD_COLUMNS.map(c => ({ first_name: 'Ann', last_name: 'Lee', company_name: 'Acme', country: 'Singapore', owner_email: 'rep@client.example' } as Record<string, string>)[c] ?? '');
+  // Written by hand: toCSV would neutralise the formula before it ever reached the server.
+  const raw = [header, [...row, 'x']].map(r => r.map(v => /[",]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v).join(',')).join('\r\n');
+  const up = await uploadLeads(Buffer.from(raw), 'formula.csv', 'text/csv');
+  assert.equal(up.job.status, 'succeeded', JSON.stringify(up.job.error));
+  const csv = await as(admin(), s => checkCsv(s, up.job.progress.result!.listId, 'columns'));
+  const line = csv.csv.split('\r\n').find(l => l.includes('HYPERLINK'))!;
+  assert.ok(line, 'the unknown column is reported');
+  assert.ok(!/(^|,)"?=/.test(line), `no cell starts with = (${line})`);
+  assert.match(line, /'=HYPERLINK/);
 });
 
 test('G-061: the as-of date must be a real date, not in the future; nothing silently becomes today', () => {

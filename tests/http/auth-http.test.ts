@@ -45,6 +45,8 @@ const EXPECTED: Record<string, Policy> = {
   'GET /api/lists/:id/contacts': { auth: 'unit', permission: 'lists.view' },
   'GET /api/lists/:id/accounts': { auth: 'unit', permission: 'lists.view' },
   'GET /api/lists/:id/issues': { auth: 'unit', permission: 'lists.view' },
+  'GET /api/lists/:id/issues.csv': { auth: 'unit', permission: 'lists.view' },
+  'GET /api/lists/:id/report.csv': { auth: 'unit', permission: 'lists.view' },
   'GET /api/scoring-runs': { auth: 'unit', permission: 'lists.view' },
   'POST /api/scoring-runs': { auth: 'unit', permission: 'scoring.run' },
   'GET /api/scoring-runs/:id': { auth: 'unit', permission: 'lists.view' },

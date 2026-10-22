@@ -1,0 +1,14 @@
+// A generated file sent as a download. The name is kept readable for the browser (RFC 6266 with an RFC 5987
+// UTF-8 form for names that aren't plain ASCII); the byte-order mark lets spreadsheet programs read UTF-8.
+import 'server-only';
+
+export function csvDownload(fileName: string, csv: string): Response {
+  const ascii = fileName.replace(/[^\x20-\x7e]/g, '_').replace(/["\\]/g, '');
+  return new Response('\ufeff' + csv, {
+    headers: {
+      'content-type': 'text/csv; charset=utf-8',
+      'content-disposition': `attachment; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(fileName)}`,
+      'x-content-type-options': 'nosniff',
+    },
+  });
+}

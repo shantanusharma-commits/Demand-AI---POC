@@ -3,7 +3,9 @@
 /* Prospecting (was legacy/10-prospecting.html): upload a lead file, watch the checks run on the server, review the
    final list and accounts, save the list for Scoring. Markup and text match the original page. The file is checked
    by a background job whose real stages drive the pop-up (G-043); the list lives in PostgreSQL (G-004, G-012) and is
-   read a page at a time with server search (G-022). Reps see their own contacts and accounts (G-014). */
+   read a page at a time with server search (G-022). Reps see their own contacts and accounts (G-014). Each list keeps
+   its % clean, check panes with every finding and a CSV per check, the validation report with D-codes, and the
+   readiness checks (G-015). */
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { memo, useCallback, useEffect, useRef, useState, type DragEvent, type ReactNode } from 'react';
@@ -12,13 +14,13 @@ import { DemandAISample } from '@/lib/demandai-sample-data';
 import { download } from '@/lib/download';
 import { avColor, initials, showToast } from '@/lib/ui';
 import { sx } from '@/lib/sx';
-import { STEPS } from '@/lib/prospecting/checks';
+import { CHECK_HELP, CHECK_SHORT, CHECKS, STEPS, type CheckKey, type StepResult } from '@/lib/prospecting/checks';
 import { ApiError, api, errorText, uploadFile, waitForJob, type JobState, type Wire } from '@/lib/client/api';
 import { useDebounced } from '@/lib/client/use-debounced';
 import { usePaged } from '@/lib/client/use-paged';
 import { RenameField } from '@/components/RenameField';
 import type { AccountRow as AccountRowData, ContactRow as ContactRowData, ListDetail as ServerListDetail, ListSummary as ServerListSummary } from '@/lib/server/services/lists';
-import type { Account, Contact, Issue } from '@/types/demandai';
+import type { Account, Contact, DqCode, Issue } from '@/types/demandai';
 
 /* ═══════════════ STATE SHAPES ═══════════════ */
 type ListDetail = Wire<ServerListDetail>;
@@ -27,6 +29,8 @@ type StartTab = 'upload' | 'saved';
 type View = 'list' | 'accounts';
 interface ChecksState { key: number; shown: boolean; fileName: string; phase: 'running' | 'done' | 'failed'; stage: string; done: number; total: number; list: ListDetail | null; error: string }
 interface SaveState { key: number; shown: boolean; go: boolean; saved: boolean; selOnly: boolean; base: string; text: string }
+/** The check pane: which list's findings, for which check. */
+interface PaneState { list: ListDetail; check: CheckKey }
 
 const OVERLAY_CSS = 'position:fixed;inset:0;background:rgba(20,26,33,.45);z-index:600;display:flex;align-items:center;justify-content:center;padding:16px';
 const upperFirst = (s: string) => s.replace(/^./, m => m.toUpperCase());
@@ -76,6 +80,10 @@ function issueCell(is: Issue[]): ReactNode {
   );
 }
 const selectable = (c: Contact) => c.status.startsWith('In the');
+const dqTone = (sc: number) => sc >= 90 ? 'var(--pos)' : sc >= 70 ? 'var(--warn)' : 'var(--neg)';
+/** The ten checks' whole-file results, in CHECKS order (a list's `checks` follow STEPS, which start with them). */
+const checkResults = (l: ListDetail): Map<CheckKey, StepResult> => new Map(CHECKS.map(([k], i) => [k, l.checks[i]]));
+const sevTag = (s: Issue['severity']) => s === 'stop' ? <span className="tag tag-red">Stops the row</span> : s === 'flag' ? <span className="tag tag-amber">Flagged</span> : <span className="tag tag-grey">For information</span>;
 
 /* One row of the Final list. Memoised so ticking one checkbox does not redraw every row. */
 const ContactRow = memo(function ContactRow({ r, selected, onToggle }: { r: ContactRowData; selected: boolean; onToggle: (c: Contact, on: boolean) => void }) {
@@ -199,6 +207,8 @@ export function ProspectingScreen() {
   const [mapName, setMapName] = useState('');
   const [savedMapping, setSavedMapping] = useState('');
   const [save, setSave] = useState<SaveState | null>(null);
+  const [pane, setPane] = useState<PaneState | null>(null);
+  const [paneOpen, setPaneOpen] = useState(false);
   const dropRef = useRef<HTMLLabelElement>(null);
   const listNameRef = useRef<HTMLInputElement>(null);
   const selAllRef = useRef<HTMLInputElement>(null);
@@ -224,7 +234,7 @@ export function ProspectingScreen() {
   }, [refreshLists, openList]);
 
   function renderStart(tab?: StartTab) {
-    setRun(null);
+    setRun(null); setPaneOpen(false);
     if (tab) setStartTab(tab);
     void refreshLists();
     setScreen('start');
@@ -317,6 +327,23 @@ export function ProspectingScreen() {
   const visibleContacts = contacts.rows;
   const visibleAccounts = accounts.rows;
 
+  /* ─── data quality: the check pane, its findings a page at a time from the server ─── */
+  const findings = usePaged<Issue>(pane && paneOpen ? `/api/lists/${pane.list.id}/issues?` + query({ check: pane.check, limit: 50 }) : null);
+  function openCheckPane(check: CheckKey, list?: ListDetail) {
+    const l = list ?? pane?.list ?? run;
+    if (!l) return;
+    setPane({ list: l, check }); setPaneOpen(true);
+  }
+  /** The first check with findings, as the original opened it. */
+  const firstCheck = (l: ListDetail): CheckKey => CHECKS.map(c => c[0]).find(k => (checkResults(l).get(k)?.n ?? 0) > 0) ?? 'columns';
+  async function openListQuality(id: string) {
+    try {
+      const { list } = await api<{ list: ListDetail }>(`/api/lists/${id}`);
+      if (!list.quality) { showToast('This list was saved before data quality was kept with it'); return; }
+      openCheckPane(firstCheck(list), list);
+    } catch (e) { showToast(errorText(e)); }
+  }
+
   const toggleSel = useCallback((c: Contact, on: boolean) => {
     setSel(prev => { const s = new Map(prev); if (on) s.set(c.row, c); else s.delete(c.row); return s; });
   }, []);
@@ -383,13 +410,14 @@ export function ProspectingScreen() {
           </div>
         </div>) : (
         <div className="score-list">
-          <Table cols={[['List', 300], ['Source file', 220], ['Accounts', 120, 'num'], ['In the list', 130, 'num'], ['Saved', 190], ['', 190]]}
+          <Table cols={[['List', 300], ['Source file', 220], ['Data quality', 160], ['Accounts', 120, 'num'], ['In the list', 130, 'num'], ['Saved', 190], ['', 190]]}
             rows={lists.map(l => (
               <tr key={l.id}>
                 <td><div className="person"><div className="co-av" style={{ background: avColor(l.id) }}>{initials(l.name)}</div><div style={sx('flex:1')}>{renamingId === l.id
                   ? <RenameField initial={l.name} onDone={name => void finishRename(l.id, name)} onCancel={() => setRenamingId(null)} />
                   : <><div style={sx('display:flex;align-items:center;gap:6px;min-width:0')}><span className="dt-main" title={l.name}>{l.name}</span><button title="Rename" aria-label={`Rename ${l.name}`} onClick={() => startRename(l.id)} style={sx('flex-shrink:0;color:var(--i3);display:flex;padding:2px')}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button></div><span className="sub">{l.scored ? 'Scored' : 'Not scored yet'}</span></>}</div></div></td>
                 <td>{cell(l.sourceFile)}</td>
+                <td>{l.quality ? <a href="#" className="dq-link" title="Open the checks" onClick={e => { e.preventDefault(); void openListQuality(l.id); }}><b style={{ color: dqTone(l.quality.clean) }}>{l.quality.clean}%</b> clean<span className="sub">{`${l.stats.issues} finding${l.stats.issues === 1 ? '' : 's'} · open →`}</span></a> : <span className="muted">Not kept</span>}</td>
                 <td className="num">{l.stats.accountsPass}<span className="sub">{`of ${l.stats.accounts}`}</span></td>
                 <td className="num">{l.stats.inFinalList}<span className="sub">contacts</span></td>
                 <td>{cell(new Date(l.savedAt ?? l.createdAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }), new Date(l.savedAt ?? l.createdAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }))}</td>
@@ -432,17 +460,53 @@ export function ProspectingScreen() {
       <div className="ftabs">{tab('list', 'Final list', v.contacts.all)}{tab('accounts', 'Accounts', v.accounts.all)}</div>
       <div className="canvas">
         <div className="stats">
-          <div className="stat"><div className="stat-lbl">Rows read</div><div className="stat-val sv1">{s.rowsRead}</div><div className="stat-sub">{`${s.notLoaded} not loaded · ${s.merged} merged duplicate${s.merged === 1 ? '' : 's'}`}</div></div>
-          <div className="stat"><div className="stat-lbl">Issues</div><div className="stat-val sv3">{s.issues}</div><div className="stat-sub">{`${s.issuesBySeverity.stop} stop · ${s.issuesBySeverity.flag} flagged · ${s.issuesBySeverity.info} info`}</div></div>
-          <div className="stat"><div className="stat-lbl">Accounts</div><div className="stat-val sv2">{v.accounts.all}</div><div className="stat-sub">{`${v.accounts.pass} pass the knock-outs`}</div></div>
-          <div className="stat"><div className="stat-lbl">Excluded</div><div className="stat-val sv5">{v.accounts.excluded}</div><div className="stat-sub">knock-out rule, logged</div></div>
-          <div className="stat"><div className="stat-lbl">In the final list</div><div className="stat-val sv4">{v.contacts.in}</div><div className="stat-sub">{`of ${v.contacts.all} contacts`}</div></div>
+          {statLink('Rows read', 'sv1', s.rowsRead, `${s.notLoaded} not loaded · ${s.merged} merged duplicate${s.merged === 1 ? '' : 's'}`, 'Show every contact', () => go('list', 'all'))}
+          {statLink('Issues', 'sv3', s.issues, `${s.issuesBySeverity.stop} stop · ${s.issuesBySeverity.flag} flagged · ${s.issuesBySeverity.info} info`, 'Open the checks and what they found', () => openCheckPane(firstCheck(r), r))}
+          {statLink('Accounts', 'sv2', v.accounts.all, `${v.accounts.pass} pass the knock-outs`, 'Show the accounts that pass', () => go('accounts', 'pass'))}
+          {statLink('Excluded', 'sv5', v.accounts.excluded, 'knock-out rule, logged', 'Show the excluded accounts and why', () => go('accounts', 'excluded'))}
+          {statLink('In the final list', 'sv4', v.contacts.in, `of ${v.contacts.all} contacts`, 'Show the contacts in the final list', () => go('list', 'in'))}
         </div>
-        {r.scope === 'own' ? <div style={sx('font-size:11.5px;color:var(--i3);margin:-4px 0 12px')}>You see the contacts and accounts you own. Rows read and issues count the whole file.</div> : null}
+        {r.scope === 'own' ? <div style={sx('font-size:11.5px;color:var(--i3);margin:-4px 0 12px')}>You see the contacts and accounts you own. Rows read, issues and % clean count the whole file.</div> : null}
+        {dqCard(r)}
+        {readinessPanel(r)}
         {needsMapping ? mappingPanel(r) : null}
         {view === 'list' ? renderListTab(r) : renderAccountsTab(r)}
       </div>
     </>;
+  }
+
+  function go(to: View, f: string) { setView(to); setFilt(f); setQ(''); }
+  function statLink(label: string, cls: string, value: number, sub: string, tip: string, onGo: () => void): ReactNode {
+    return <a className="stat stat-link" href="#" title={tip} onClick={e => { e.preventDefault(); onGo(); }}><div className="stat-lbl">{label}</div><div className={'stat-val ' + cls}>{value}</div><div className="stat-sub">{sub}</div></a>;
+  }
+
+  /* The original dqCard: % of rows clean, then each check that found something, worst first by colour. */
+  function dqCard(r: ListDetail): ReactNode {
+    if (!r.quality) return null;
+    const sc = r.quality.clean, tone = dqTone(sc), res = checkResults(r);
+    const found = CHECKS.filter(([k]) => (res.get(k)?.n ?? 0) > 0), passed = CHECKS.length - found.length;
+    const dot = (k: CheckKey) => res.get(k)?.sev || 'info';
+    return (
+      <div className="dq2"><span className="dq2-v" style={{ color: tone }}>{sc}%</span><span className="dq2-l">rows clean</span>
+        <span className="dq2-bar" title={`${sc}% of rows have no issue`}><i style={{ width: sc + '%', background: tone }}></i></span>
+        <span className="dq2-sep"></span>
+        {found.length ? found.map(([k, name]) => <button key={k} className="dq2-c" onClick={() => openCheckPane(k, r)} title={name}><i className={'dq2-d ' + dot(k)}></i>{CHECK_SHORT[k]}<b>{res.get(k)!.n}</b></button>) : <span className="dq2-ok">✓ Every check passed</span>}
+        {found.length ? <span className="dq2-p">{`${passed} passed`}</span> : null}
+        <button className="dq2-all" onClick={() => openCheckPane((found[0] || CHECKS[0])[0], r)}>All checks →</button></div>
+    );
+  }
+
+  /* Readiness (spec 3.3): shown before the list goes to Scoring, as a warning; it never blocks saving or scoring. */
+  function readinessPanel(r: ListDetail): ReactNode {
+    if (!r.readiness) return null;
+    const short = r.readiness.filter(c => !c.ok);
+    if (!short.length) return <div style={sx('font-size:12px;color:var(--pos);margin:-4px 0 12px')} role="status">{'✓ Ready for measurement: ' + r.readiness.map(c => `${c.k.toLowerCase()} ${c.show}`).join(' · ')}</div>;
+    return (
+      <div className="panel" style={sx('margin-bottom:12px;border-color:var(--warn)')}><div className="panel-body" style={sx('font-size:12px;color:var(--i2);line-height:1.7')}>
+        <b>Not ready for measurement yet.</b> You can still save and score this list; the pilot&apos;s readiness checks ask for more:
+        {short.map(c => <div key={c.k}><b>{c.k}</b>{`: ${c.show}, needs ${c.need}. `}<span style={sx('color:var(--i3)')}>{`To fix: ${c.fix}.`}</span></div>)}
+      </div></div>
+    );
   }
 
   function mappingPanel(r: ListDetail): ReactNode {
@@ -478,6 +542,31 @@ export function ProspectingScreen() {
         </div>
       </div>
     );
+  }
+
+  /* The original openCheckPane: the ten checks, what each is for, and every finding in this file. */
+  function checkPaneBody(p: PaneState): ReactNode {
+    const l = p.list, res = checkResults(l), k = p.check;
+    const [, , what] = CHECKS.find(c => c[0] === k)!, [why, tip] = CHECK_HELP[k];
+    const n = res.get(k)?.n ?? 0, rows = findings.rows, total = findings.total;
+    const byCode = l.quality ? (Object.entries(l.quality.byCode) as [DqCode, number][]).filter(([, c]) => c > 0) : [];
+    return <>
+      <div className="dqp-nav">{CHECKS.map(([kk, nm]) => { const m = res.get(kk)?.n ?? 0; return <button key={kk} className={kk === k ? 'on' : ''} onClick={() => openCheckPane(kk)} title={nm}>{CHECK_SHORT[kk]}{m ? <>{' '}<b>{m}</b></> : null}</button>; })}</div>
+      <div className="dqp-b"><div className="dqp-k">What it checks</div><div>{what}</div></div>
+      <div className="dqp-b"><div className="dqp-k">Why it matters</div><div>{why}</div></div>
+      <div className="dqp-b dqp-tip"><div className="dqp-k">For the next upload</div><div>{tip}</div></div>
+      <div className="dqp-k" style={sx('margin:14px 0 6px;display:flex;justify-content:space-between;align-items:center')}>{n ? `Found in this file · ${n}` : 'Nothing found in this file'}
+        {n ? <a className="btn btn-ghost btn-sm" style={sx('text-decoration:none')} href={`/api/lists/${l.id}/issues.csv?` + query({ check: k })} download>↓ CSV</a> : null}</div>
+      {n && total !== null && total < n ? <div style={sx('font-size:11.5px;color:var(--i3);margin-bottom:6px')}>{`You see the ${total} on your own rows and about the whole file.`}</div> : null}
+      {!n ? <div className="dqp-ok">✓ Every row passed this check.</div> : rows === null ? <div style={sx('font-size:12px;color:var(--i3)')}>Loading…</div>
+        : rows.map((i, x) => <div key={x} className="dqp-i"><div className="dqp-ih"><b>{i.row === '—' ? 'Whole file' : 'Row ' + i.row}</b><span className="dqp-f">{i.field || ''}</span>{sevTag(i.severity)}</div>
+          <div className="dqp-t">{i.issue}</div><div className="dqp-o">{'What happens: ' + (i.outcome || '')}</div>{i.fix ? <div className="dqp-o">{'How to fix: ' + i.fix}</div> : null}</div>)}
+      {findings.next !== null ? <div style={sx('display:flex;justify-content:center;padding:6px')}><button className="btn btn-sec btn-sm" disabled={findings.busy} onClick={() => void findings.more()}>{`Show more (${(rows ?? []).length} of ${total ?? n} shown)`}</button></div> : null}
+      <div className="dqp-b" style={sx('margin-top:14px')}><div className="dqp-k" style={sx('display:flex;justify-content:space-between;align-items:center')}>Validation report
+        <a className="btn btn-ghost btn-sm" style={sx('text-decoration:none')} href={`/api/lists/${l.id}/report.csv`} download>↓ CSV</a></div>
+        <div style={sx('font-size:12px;color:var(--i2)')}>{byCode.length ? byCode.map(([code, c]) => `${code} ${DemandAI.CODES[code]}: ${c.toLocaleString('en-US')}`).join(' · ') : 'No finding carries a D-code.'}</div>
+        <div style={sx('font-size:11px;color:var(--i3);margin-top:3px')}>Every finding with its check and D-code, in file order.</div></div>
+    </>;
   }
 
   function unattachedNotice(): ReactNode {
@@ -525,6 +614,19 @@ export function ProspectingScreen() {
   return <>
     <main className="main" id="mainArea">{screen === 'run' && run ? renderRunView(run) : renderStartView()}</main>
 
+    <div className={'detail-drawer' + (paneOpen ? ' open' : '')} id="detailDrawer" style={{ width: '480px' }}>
+      <div className="drawer-hdr">
+        <div>
+          <div className="drawer-title" id="detTitle">{pane ? CHECKS.find(c => c[0] === pane.check)![1] : ''}</div>
+          <div className="drawer-sub" id="detSub">{pane ? `${pane.list.sourceFile} · ${(checkResults(pane.list).get(pane.check)?.n ?? 0) ? `${checkResults(pane.list).get(pane.check)!.n} found` : 'passed'}` : ''}</div>
+        </div>
+        <div className="drawer-close" role="button" tabIndex={0} aria-label="Close" onClick={() => setPaneOpen(false)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setPaneOpen(false); }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+        </div>
+      </div>
+      <div className="drawer-body" id="detBody">{pane ? checkPaneBody(pane) : null}</div>
+    </div>
+
     {checks ? <ChecksOverlay ck={checks}
       onDifferent={() => { hideChecks(); renderStart('upload'); }}
       onView={() => { hideChecks(); setScreen('run'); }} /> : null}
@@ -534,6 +636,7 @@ export function ProspectingScreen() {
         <div key={save.key} role="dialog" aria-modal="true" aria-label={save.saved ? 'Update the saved list' : 'Save the screened list'} style={sx('background:var(--surf);border-radius:var(--rlg);box-shadow:var(--sh-lg);width:440px;max-width:100%;padding:20px 22px')}>
           <div style={sx('font-family:var(--fd);font-size:15px;font-weight:700;color:var(--i1);margin-bottom:4px')}>{save.saved ? 'Update the saved list' : 'Save the screened list'}</div>
           <div style={sx('font-size:12px;color:var(--i3);margin-bottom:14px;line-height:1.5')}>{save.text}</div>
+          {run?.readiness?.some(c => !c.ok) ? <div role="status" style={sx('font-size:12px;color:var(--warn);margin:-6px 0 14px;line-height:1.5')}>{'Not ready for measurement yet: ' + run.readiness.filter(c => !c.ok).map(c => `${c.k.toLowerCase()} ${c.show} (needs ${c.need})`).join('; ') + '. You can still save and score it.'}</div> : null}
           <label htmlFor="listName" style={sx('font-size:11px;font-weight:600;color:var(--i2)')}>List name</label>
           <input id="listName" ref={listNameRef} defaultValue={save.base} style={sx('width:100%;margin:5px 0 18px;padding:9px 11px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:13px')} onKeyDown={e => { if (e.key === 'Enter') void saveList(save.go); }} />
           <div style={sx('display:flex;gap:8px;justify-content:flex-end')}>

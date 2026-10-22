@@ -2,10 +2,12 @@
    Same steps, labels and grouping rules as the original 10-prospecting.html (CHECKS / STEPS / checkOf / stepResult). */
 import type { Issue, LeadResult } from '../../types/demandai';
 
-export type StepKey = 'columns' | 'required' | 'emailFormat' | 'verified' | 'liFormat' | 'channel' | 'dupes' | 'formats'
-  | 'consent' | 'optout' | 'classify' | 'knockouts';
+/** The ten checks run on the file; their findings have a pane and a CSV each. */
+export const CHECK_KEYS = ['columns', 'required', 'emailFormat', 'verified', 'liFormat', 'channel', 'dupes', 'formats', 'consent', 'optout'] as const;
+export type CheckKey = (typeof CHECK_KEYS)[number];
+export type StepKey = CheckKey | 'classify' | 'knockouts';
 
-export const CHECKS: [StepKey, string, string][] = [
+export const CHECKS: [CheckKey, string, string][] = [
   ['columns',     'Columns match the template',        'Required columns present, nothing unexpected'],
   ['required',    'Required fields filled in',          'Name, title, company, domain, country, industry, size, owner'],
   ['emailFormat', 'Email format',                       'Every email is a well-formed address'],
@@ -18,7 +20,22 @@ export const CHECKS: [StepKey, string, string][] = [
   ['optout',      'Opt-outs',                           'Opted-out contacts are suppressed, never contacted'],
 ];
 
-export function checkOf(i: Issue): StepKey {
+/** Why each check matters, and what to do for the next upload (the original CHECK_HELP). */
+export const CHECK_HELP: Record<CheckKey, [string, string]> = {
+  columns:     ['A missing or renamed column means a whole field is lost for every row.', 'Start from the lead template and keep its header row as it is. Extra columns are fine; renamed ones are not.'],
+  required:    ['Without the basics a contact can\'t be grouped, scored or owned.', 'Fill in name, title, company, domain, country, industry, size and owner on every row before export.'],
+  emailFormat: ['A malformed address bounces, and bounces hurt the sender\'s reputation.', 'Export emails straight from the CRM; don\'t retype them. Watch for spaces and missing domains.'],
+  verified:    ['Only verified emails are used, so unverified ones reduce who can be reached.', 'Run the export through the email verification tool and set email_verified to Y or N.'],
+  liFormat:    ['A link that isn\'t a profile can\'t be used for a connection note.', 'Use the full profile URL, like https://www.linkedin.com/in/name, not a search or company page.'],
+  channel:     ['A contact with no email and no LinkedIn URL can\'t be reached at all.', 'Add at least one: a verified work email, or the LinkedIn profile URL.'],
+  dupes:       ['The same person twice would get two messages.', 'De-duplicate on email and LinkedIn URL in the CRM before export. Repeats are merged here, keeping the first row.'],
+  formats:     ['Inconsistent values (Y/N, numbers, account types) break scoring and grouping.', 'Use Y or N, plain numbers without commas, and the account types from the template list.'],
+  consent:     ['No recognised consent basis means the contact can only be called, not emailed.', 'Record legitimate interest, existing customer or opted in for each contact.'],
+  optout:      ['Opted-out contacts are never contacted: that is the law, and the brand.', 'Keep opt-outs in the file so they stay suppressed; they are removed from the list automatically.'],
+};
+export const CHECK_SHORT: Record<CheckKey, string> = { columns: 'Columns', required: 'Required', emailFormat: 'Email format', verified: 'Verified', liFormat: 'LinkedIn', channel: 'Reachable', dupes: 'Duplicates', formats: 'Values', consent: 'Consent', optout: 'Opt-outs' };
+
+export function checkOf(i: Issue): CheckKey {
   if (/Required column|isn't in the template|header row|format hints|^File (encoding|delimiter)|^Column ".*" read as/.test(i.issue)) return 'columns';
   if (i.code === 'D5') return 'dupes';
   if (i.field === 'email' && /malformed|personal \(webmail\)|shared mailbox|company domain|typo of/.test(i.issue)) return 'emailFormat';
