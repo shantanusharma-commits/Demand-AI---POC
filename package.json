@@ -11,7 +11,7 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tests",
-    "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test tests/*.test.ts",
+    "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --conditions=react-server --test tests/*.test.ts",
     "test:legacy": "node --test legacy/engine.test.js",
     "audit:gate": "node scripts/audit-gate.mjs",
     "deps:age": "node scripts/check-dependency-age.mjs"
