@@ -3,3 +3,17 @@ node_modules/
 next-env.d.ts
 *.tsbuildinfo
 .DS_Store
+
+# Local-only reference material: confidential, never commit or ship
+/reference_content/
+
+# Local working documents for the remediation
+/DEMANDAI_*
+
+# IDE and tool artefacts
+.idea/
+.playwright-mcp/
+
+# Environment files hold secrets; only the template is tracked
+.env*
+!.env.example
