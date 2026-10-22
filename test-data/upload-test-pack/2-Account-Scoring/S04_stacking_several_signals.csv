@@ -1,0 +1,8 @@
+company_name,contact_email_or_linkedin,signal_type,event_date,detail,source,product
+Apex Refining,kai.ong@apexrefining.example,Inquiry or RFQ,2026-10-17,Asked for a quote on a DCS migration,Web form,
+Apex Refining,kai.ong@apexrefining.example,Webinar attended,2026-10-14,Attended the alarm management webinar,Webinar platform,
+Apex Refining,kai.ong@apexrefining.example,Email clicked,2026-10-16,Clicked the lifecycle services email,Email platform,
+Bayfront Refining,mia.tan@bayfrontrefining.example,Inquiry or RFQ,2026-10-17,Asked for a quote on a DCS migration,Web form,
+Bayfront Refining,ned.lim@bayfrontrefining.example,Content download,2026-10-11,Downloaded the migration planning guide,Website,
+Coldwater Refining,oli.ng@coldwaterrefining.example,Webinar attended,2026-10-15,Attended the alarm management webinar,Webinar platform,
+Coldwater Refining,oli.ng@coldwaterrefining.example,Webinar attended,2026-08-31,Attended the reliability webinar,Webinar platform,

@@ -1,0 +1,5 @@
+DemandAI lead template,,,,,,,,,,,,,,,,,,,,,,,,,
+First Name*,Last Name,Job Title,Seniority,Email,Email Verified,Linkedin Url,Company Name*,Company Domain,Country,City,Industry,Annual Revenue Usd,Employee Count,Account Type,Existing Customer,Managed Separately,Site Name,Site Process Type,Site Capacity,Capacity Unit,Consent Basis,Opt Out,Owner Email,Notes,Lead score
+Text*,Text*,Text*,Text,Email* (or LinkedIn URL),Y/N,URL,Text*,Domain*,Country*,Text,Text*,Number,Number,List,Y/N*,Y/N*,Text,Text,Number,Text,List*,Y/N*,Email*,,
+Ana,Lim,Instrumentation Manager,Manager,ana.lim@yonderrefining.example,Y,https://www.linkedin.com/in/ana-lim-yonder,Yonder Refining,yonderrefining.example,Singapore,,Refining,2400000000,3200,Owner-operator,N,N,Yonder site,Crude refining,150000,bpd,legitimate interest,N,rep.a@client-sample.com,met at a trade show,87
+Ben,Tan,Plant Manager,Manager,ben.tan@yonderrefining.example,Y,https://www.linkedin.com/in/ben-tan-yonder,Yonder Refining,yonderrefining.example,Singapore,,Refining,2400000000,3200,Owner-operator,N,N,Yonder site,Crude refining,150000,bpd,legitimate interest,N,rep.a@client-sample.com,met at a trade show,87

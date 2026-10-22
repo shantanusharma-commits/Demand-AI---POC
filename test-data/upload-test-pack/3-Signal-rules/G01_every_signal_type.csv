@@ -1,0 +1,11 @@
+company_name,contact_email_or_linkedin,signal_type,event_date,detail,source,product
+Apex Refining,kai.ong@apexrefining.example,Inquiry or RFQ,2026-10-17,Asked for a quote on a DCS migration,CRM,
+Apex Refining,kai.ong@apexrefining.example,Installed system near end of support,2026-10-16,Control system reaches end of support in 2027,CRM,
+Apex Refining,kai.ong@apexrefining.example,Service contract renewal,2026-10-15,Service contract renews next quarter,CRM,
+Apex Refining,kai.ong@apexrefining.example,Capital project,2026-10-14,Announced a refinery expansion,CRM,
+Apex Refining,kai.ong@apexrefining.example,Leadership change,2026-10-13,New head of operations appointed,CRM,
+Apex Refining,kai.ong@apexrefining.example,Webinar attended,2026-10-12,Attended the alarm management webinar,CRM,
+Apex Refining,kai.ong@apexrefining.example,Webinar registered,2026-10-11,Registered for the reliability webinar,CRM,
+Apex Refining,kai.ong@apexrefining.example,Content download,2026-10-10,Downloaded the migration planning guide,CRM,
+Apex Refining,kai.ong@apexrefining.example,Email clicked,2026-10-09,Clicked the lifecycle services email,CRM,
+Apex Refining,kai.ong@apexrefining.example,Newsletter sign-up,2026-10-16,Signed up for the newsletter,Website,
