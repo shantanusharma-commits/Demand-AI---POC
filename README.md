@@ -1,5 +1,7 @@
 # DemandAI PoC
 
+> **Status (22 Oct 2026).** This branch is turning the prototype into a server-backed pilot application: PostgreSQL storage, sign-in with roles, server-side processing and an AI gateway. Until that work lands, the description below is accurate: the app still runs entirely in the browser.
+
 A clickable prototype of the DemandAI pilot: lead discovery and research (Prospecting), Account Scoring, micro-segments and Next Best Action, plus the surrounding screens. It runs entirely in the browser. Data is read from the files you upload, and saved lists and scoring runs are kept in the browser's `localStorage`. There is no backend, no login and no AI service. The two steps the spec hands to AI (classifying an unmapped industry, and wording the "why now" line) fall back to fixed rules.
 
 The app is built with **Next.js (App Router), React and TypeScript**. It was migrated from standalone HTML pages with vanilla JavaScript; the originals are kept in `legacy/` as the reference.
@@ -8,15 +10,16 @@ The app is built with **Next.js (App Router), React and TypeScript**. It was mig
 
 ## Running it
 
-Requires Node.js 22 or later.
+Requires Node.js 22.18 or later (`npm test` relies on Node's built-in TypeScript stripping). The project pins Node 24.22.1 in `.nvmrc`; with nvm, run `nvm use`.
 
 ```bash
-npm install
-npm run dev        # http://localhost:3000 (opens on /today)
-npm run build      # production build
-npm start          # serve the production build
-npm test           # engine tests (node --test)
-npm run typecheck  # strict TypeScript, app and tests
+npm ci               # install exactly what package-lock.json records
+npm run dev          # http://localhost:3000 (opens on /today)
+npm run build        # production build
+npm start            # serve the production build
+npm test             # engine and repository tests (node --test)
+npm run test:legacy  # the legacy engine's own tests
+npm run typecheck    # strict TypeScript, app and tests
 ```
 
 ## Screens

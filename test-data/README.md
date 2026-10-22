@@ -10,7 +10,7 @@
 | Signal template | 1,492 signal rows, scoring date 2026-09-30. Upload this in Scoring | Yes |
 | Account key | One row per true account: region, real vertical, expected status, knock-outs and the test cases on it | No (answer key) |
 | Row key | Every lead and signal row that carries a test case, with the expected result | No (answer key) |
-| Test scenarios | 86 test cases with the PDF step (3.1 to 3.6), the data-quality code, the expected behaviour and a count | No (answer key) |
+| Test scenarios | 79 test cases with the PDF step (3.1 to 3.6), the data-quality code, the expected behaviour and a count | No (answer key) |
 
 ## What is in it
 
@@ -29,7 +29,7 @@ The data is generated from a fixed seed, so running the script again gives the s
 python3 test-data/generate_lead_dataset.py <Lead_Research_Template.xlsx> test-data/Lead_Research_Sample_Dataset.xlsx
 ```
 
-It needs `openpyxl`. The first argument is the empty template workbook, which isn't stored in the repo.
+It needs `openpyxl`. The first argument is the empty template workbook, which isn't stored in the repo. The template's guidance sheets carry the client's real name; pass that name as a third argument (or in `ANONYMISE_PATTERN`) so it is replaced with "Client". The name itself is never stored in the repo.
 
 ## Test cases for the Prospecting page
 
