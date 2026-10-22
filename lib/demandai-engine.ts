@@ -251,7 +251,12 @@ const blankValue = (v: unknown) => v === '' || v === null || v === undefined;
 /* Merges a repeated row into the contact it repeats. Blanks are filled from the repeat; Y on opt-out or managed
    separately wins whichever row it is on; an unreadable opt-out on either row means not confirmed (fails closed);
    a blank never confirms anything. Company details that differ are flagged on the repeated row. */
-function mergeDuplicate(into: Contact, from: Contact, optState: Map<Contact, OptState>, flag: (field: string, issue: string, outcome: string) => void): void {
+/** Y wins; then unreadable (fails closed); then N; a blank never confirms. */
+function combineStates(states: OptState[]): OptState {
+  return states.includes('Y') ? 'Y' : states.includes('bad') ? 'bad' : states.includes('N') ? 'N' : 'blank';
+}
+
+function mergeDuplicate(into: Contact, from: Contact, optState: Map<Contact, OptState>, managedState: Map<Contact, OptState>, flag: (field: string, issue: string, outcome: string) => void): void {
   for (const [k, col] of COMPANY_FIELDS) {
     const a = into[k], b = from[k];
     if (k === 'managedSeparately' || k === 'existingCustomer') {
@@ -261,7 +266,8 @@ function mergeDuplicate(into: Contact, from: Contact, optState: Map<Contact, Opt
     }
   }
   const sa = optState.get(into) ?? 'blank', sb = optState.get(from) ?? 'blank';
-  const state: OptState = sa === 'Y' || sb === 'Y' ? 'Y' : sa === 'bad' || sb === 'bad' ? 'bad' : sa === 'N' || sb === 'N' ? 'N' : 'blank';
+  const state = combineStates([sa, sb]);
+  managedState.set(into, combineStates([managedState.get(into) ?? 'blank', managedState.get(from) ?? 'blank']));
   if (sa !== sb && sa !== 'blank' && sb !== 'blank') {
     flag('opt_out', `Differs from row ${into.row} (opt-out ${sa === 'bad' ? 'unreadable' : sa} there, ${sb === 'bad' ? 'unreadable' : sb} here)`,
       state === 'Y' ? 'Opted out: never contacted' : "Can't confirm the contact hasn't opted out: not contactable");
@@ -287,8 +293,9 @@ export function processLeads(grid: Grid, { file = 'lead file', sheet = 'Sheet1' 
 
   const contacts: Contact[] = [];
   const byEmail = new Map<string, Contact>(), byLinkedIn = new Map<string, Contact>();
-  // How each contact's opt-out was given, so a merge can tell blank (no answer) from unreadable (fails closed).
-  const optState = new Map<Contact, OptState>();
+  // How each contact's opt-out and managed-separately were given, so merges and accounts can tell blank (no answer)
+  // from unreadable (fails closed).
+  const optState = new Map<Contact, OptState>(), managedState = new Map<Contact, OptState>();
   let notLoaded = 0, merged = 0;
 
   for (const r of table.records) {
@@ -384,7 +391,9 @@ export function processLeads(grid: Grid, { file = 'lead file', sheet = 'Sheet1' 
       return v;
     };
     c.existingCustomer = yn('existing_customer', 'Treated as N (no relationship); confirm') === 'Y';
-    c.managedSeparately = yn('managed_separately', 'Treated as N; confirm before any outreach') === 'Y';
+    const managed = yn('managed_separately', 'Not confirmed: the account is held unless another row confirms it (D-17)');
+    c.managedSeparately = managed === 'Y';
+    managedState.set(c, managed === 'Y' || managed === 'N' ? managed : clean(r.managed_separately) ? 'bad' : 'blank');
     const opt = yn('opt_out', "Can't confirm the contact hasn't opted out: not contactable");
     c.optOut = opt === 'Y';
     c.optOutUnknown = opt === '';
@@ -412,7 +421,7 @@ export function processLeads(grid: Grid, { file = 'lead file', sheet = 'Sheet1' 
     if (dupOf) {
       at(row, c.email && byEmail.get(c.email) ? 'email' : 'linkedin_url', `Duplicate of row ${dupOf.row} (${dupOf.name})`,
         `Merged into row ${dupOf.row}`, 'D5', 'Remove the repeated row');
-      mergeDuplicate(dupOf, c, optState, (field, issue, outcome) => at(row, field, issue, outcome, '—', 'Correct the row that is wrong, then remove the repeat'));
+      mergeDuplicate(dupOf, c, optState, managedState, (field, issue, outcome) => at(row, field, issue, outcome, '—', 'Correct the row that is wrong, then remove the repeat'));
       merged++;
       continue;
     }
@@ -429,7 +438,7 @@ export function processLeads(grid: Grid, { file = 'lead file', sheet = 'Sheet1' 
     c.contactable = canContact(c);
   }
 
-  const accounts = buildAccounts(contacts, issues, { file, sheet });
+  const accounts = buildAccounts(contacts, issues, { file, sheet }, managedState);
   const stats: LeadStats = {
     rowsRead: table.records.length, notLoaded, merged, contacts: contacts.length,
     accounts: accounts.length, accountsPass: accounts.filter(a => !a.excluded).length,
@@ -462,7 +471,7 @@ export function classify(industry: string, siteProcess: string): Classification 
     reason: `"${industry || '—'}" has no match in the mapping table. The AI classifier would decide here; it isn't connected yet, so this is held as other for review` };
 }
 
-function buildAccounts(contacts: Contact[], issues: Issue[], { file, sheet }: { file: string; sheet: string }): Account[] {
+function buildAccounts(contacts: Contact[], issues: Issue[], { file, sheet }: { file: string; sheet: string }, managedState: Map<Contact, OptState>): Account[] {
   const map = new Map<string, Contact[]>();
   for (const c of contacts) {
     if (!map.has(c.companyKey)) map.set(c.companyKey, []);
@@ -471,28 +480,45 @@ function buildAccounts(contacts: Contact[], issues: Issue[], { file, sheet }: { 
   const accounts: Account[] = [];
   for (const [key, cs] of map) {
     const f = cs[0];
-    // Company details should repeat identically on every contact row; say so when they don't.
-    const fields: [keyof Contact, string][] = [['country', 'country'], ['industry', 'industry'], ['revenue', 'annual_revenue_usd'], ['employees', 'employee_count'],
-      ['accountType', 'account_type'], ['existingCustomer', 'existing_customer'], ['managedSeparately', 'managed_separately']];
-    for (const [k, col] of fields) {
-      const other = cs.find(c => String(c[k]) !== String(f[k]));
-      if (other) issues.push({ file, sheet, row: other.row, field: col, issue: `Differs from row ${f.row} for ${f.company}`,
-        outcome: `Row ${f.row}'s value used for the account`, code: 'D3', fix: 'Repeat the same company details on every contact row', severity: 'flag' });
+    // Each detail is the first value any row gives, not just the first row's (G-017); a stated relationship or
+    // "managed separately" on any row counts.
+    const firstOf = <K extends keyof Contact>(k: K): Contact[K] => (cs.find(c => !blankValue(c[k])) ?? f)[k];
+    // Managed separately: Y on any row excludes; otherwise an N on any row confirms (a stray unreadable row is flagged
+    // on that row); with no readable answer at all the account is held until a person confirms (D-17).
+    const rowStates = cs.map(c => managedState.get(c) ?? 'blank');
+    const managed: OptState = rowStates.includes('Y') ? 'Y' : rowStates.includes('N') ? 'N' : 'bad';
+    const derived = {
+      country: firstOf('country'), city: firstOf('city'), industry: firstOf('industry'), domain: firstOf('domain'),
+      revenue: cs.find(c => c.revenue !== null && c.revenue !== undefined)?.revenue ?? null,
+      employees: cs.find(c => c.employees !== null && c.employees !== undefined)?.employees ?? null,
+      accountType: cs.find(c => c.accountType !== 'other')?.accountType ?? 'other',
+      existingCustomer: cs.some(c => c.existingCustomer), managedSeparately: managed === 'Y',
+      siteName: firstOf('siteName'), siteProcess: firstOf('siteProcess'), siteCapacity: firstOf('siteCapacity'), capacityUnit: firstOf('capacityUnit'),
+      owner: firstOf('owner'),
+    };
+    // Company details should repeat identically on every contact row; say so when a row gives a different value.
+    for (const [k, col] of COMPANY_FIELDS) {
+      // The first row that gives a value is the reference; the first row that gives a different one is flagged. A blank
+      // is "missing" (flagged as such), not a difference; yes/no details are never blank.
+      const yesNo = typeof f[k] === 'boolean';
+      const source = yesNo ? f : cs.find(c => !blankValue(c[k])) ?? f;
+      const other = cs.find(c => c !== source && (yesNo ? c[k] !== source[k] : !blankValue(c[k]) && String(c[k]) !== String(source[k])));
+      const kept = yesNo && derived[k as 'existingCustomer' | 'managedSeparately']
+        ? (k === 'managedSeparately' ? 'Y kept: the account is treated as managed separately' : 'Y kept for the account') : `Row ${source.row}'s value used for the account`;
+      if (other) issues.push({ file, sheet, row: other.row, field: col, issue: `Differs from row ${source.row} for ${f.company}`, outcome: kept, code: 'D3',
+        fix: 'Repeat the same company details on every contact row', severity: 'flag' });
     }
-    const cls = classify(f.industry, f.siteProcess);
+    const cls = classify(derived.industry, derived.siteProcess);
     const a = {
-      id: 'acc-' + accounts.length, key, name: f.company, domain: f.domain, country: f.country, city: f.city,
-      industry: f.industry, revenue: f.revenue, employees: f.employees, accountType: f.accountType,
-      existingCustomer: f.existingCustomer, managedSeparately: f.managedSeparately,
-      siteName: f.siteName, siteProcess: f.siteProcess, siteCapacity: f.siteCapacity, capacityUnit: f.capacityUnit,
-      owner: f.owner, vertical: cls.vertical, verticalLevel: cls.level, confidence: cls.confidence,
+      id: 'acc-' + accounts.length, key, name: f.company, ...derived,
+      vertical: cls.vertical, verticalLevel: cls.level, confidence: cls.confidence,
       classReason: cls.reason, needsReview: !!cls.needsReview, contactIds: cs.map(c => c.row),
     } as Account;
     // Stage 4: yes-or-no rules, in order. The installed-base rule needs the signal file, so it runs in Scoring.
     const inRegion = CONFIG.pilotCountries.some(p => p.toLowerCase() === a.country.toLowerCase());
     a.checks = [
       { rule: 'In the pilot region', pass: inRegion, why: inRegion ? a.country : `Outside the pilot region (${a.country || 'no country'})` },
-      { rule: 'Not managed separately', pass: !a.managedSeparately, why: a.managedSeparately ? 'Managed separately by Client' : 'Not managed separately' },
+      { rule: 'Not managed separately', pass: managed === 'N', why: managed === 'Y' ? 'Managed separately by Client' : managed === 'N' ? 'Not managed separately' : 'Managed status not confirmed: confirm before any outreach' },
       { rule: 'Pilot product not installed at the site', pass: null, why: 'Checked in Scoring, from the installed-base rows of the signal file' },
       { rule: 'At least one contact left after suppression', pass: cs.some(c => !c.optOut), why: cs.some(c => !c.optOut) ? `${cs.filter(c => !c.optOut).length} contact(s) not opted out` : 'No contactable contacts after suppression' },
     ];

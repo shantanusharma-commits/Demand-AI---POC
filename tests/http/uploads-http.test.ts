@@ -100,13 +100,13 @@ test('the full sample over HTTP: upload, real job stages, save, page through, sc
   const sj = await b.waitForJob(String(started.json.jobId));
   assert.equal(sj.status, 'succeeded', JSON.stringify(sj.error));
   const run = (await b.get(`/api/scoring-runs/${runId}`)).json.run as { stats: { scored: number }; visible: { tiers: Record<string, number> } };
-  assert.equal(run.stats.scored, 289);
+  assert.equal(run.stats.scored, 301);
   const a = await b.get(`/api/scoring-runs/${runId}/prospects?tier=A&limit=500`);
   assert.equal((a.json.rows as unknown[]).length, run.visible.tiers.A);
   const h = await b.post('/api/handoffs', { runId });
-  assert.deepEqual([h.status, h.json.count, h.json.heldBack], [201, 120, 8]);
+  assert.deepEqual([h.status, h.json.count, h.json.heldBack], [201, 124, 8]);
   const items = ((await b.get(`/api/handoffs/${h.json.handoffId}`)).json.handoff as { items: { id: string }[] }).items;
-  assert.equal(new Set(items.map(i => i.id)).size, 120, 'G-049: one UUID per hand-off item');
+  assert.equal(new Set(items.map(i => i.id)).size, 124, 'G-049: one UUID per hand-off item');
 });
 
 test('G-014 over HTTP: a rep sees only their own prospects; another owner’s is 404; a manager-only list action is 403', async () => {

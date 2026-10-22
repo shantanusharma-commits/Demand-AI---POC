@@ -160,3 +160,36 @@ test('G-045: RFQ and Inquiry signals read as "Inquiry or RFQ"; other unknown typ
   }
   for (const t of ['Demo request', 'Site visit', 'Webinar', 'Price request']) assert.equal(run(t).signals[0].code, 'D3', t);
 });
+
+/* ─── G-017 account attributes by rule; G-018 / D-17 managed separately fails closed ─── */
+
+test('G-017: account details come from the first non-blank value, not just the first row; differences are flagged', () => {
+  const r = leads({ country: '', industry: '', annual_revenue_usd: '', employee_count: '' }, { ...OTHER, country: 'Malaysia', industry: 'Refining', employee_count: '4000' });
+  const a = r.accounts[0];
+  assert.equal(a.country, 'Malaysia');
+  assert.equal(a.excluded, false, 'a blank country on the first row no longer knocks the account out');
+  assert.equal(a.industry, 'Refining');
+  assert.equal(a.employees, 4000);
+  const diff = leads({ country: 'Singapore' }, { ...OTHER, country: 'Malaysia' });
+  assert.equal(diff.accounts[0].country, 'Singapore', 'the first value given wins');
+  assert.ok(diff.issues.some(i => i.row === 3 && i.field === 'country' && /^Differs from row 2/.test(i.issue)));
+});
+
+test('G-018 / D-17: managed separately fails closed: with no readable answer the account is held; Y on any row excludes', () => {
+  const held = (rows: Row[]) => { const a = leads(...rows).accounts[0]; return [a.excluded, a.excludedReason] as const; };
+  assert.deepEqual(held([{ managed_separately: 'N' }, { ...OTHER, managed_separately: '' }]), [false, ''], 'one N confirms; a blank does not undo it');
+  const stray = leads({ managed_separately: 'N' }, { ...OTHER, managed_separately: 'maybe' });
+  assert.equal(stray.accounts[0].excluded, false, 'an N on another row confirms the account');
+  assert.ok(stray.issues.some(i => i.row === 3 && i.field === 'managed_separately' && /isn't Y or N/.test(i.issue)), 'the unreadable row is still flagged');
+  for (const rows of [[{ managed_separately: 'X' }], [{ managed_separately: 'maybe' }, { ...OTHER, managed_separately: '' }],
+    [{ managed_separately: '' }, { ...OTHER, managed_separately: '' }]] as Row[][]) {
+    const [excluded, why] = held(rows);
+    assert.equal(excluded, true, JSON.stringify(rows.map(r => r.managed_separately)));
+    assert.match(why, /Managed status not confirmed/);
+  }
+  const [ex, why] = held([{ managed_separately: 'N' }, { ...OTHER, managed_separately: 'Y' }]);
+  assert.equal(ex, true);
+  assert.match(why, /Managed separately by Client/);
+  assert.ok(leads({ managed_separately: 'N' }, { ...OTHER, managed_separately: 'Y' }).issues.some(i => i.row === 3 && i.field === 'managed_separately'
+    && /^Differs from row 2/.test(i.issue) && /Y kept/.test(i.outcome)), 'the Y row is flagged as differing, and Y is kept');
+});

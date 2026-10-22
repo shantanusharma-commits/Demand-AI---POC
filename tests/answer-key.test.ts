@@ -31,17 +31,19 @@ const CASE_FLOORS: Record<string, [number, number]> = {
 
 const ACCOUNT_CASE_FLOORS: Record<string, [number, number]> = {
   'ICP-REGION': [152, 152], 'ICP-INSTALLED': [45, 45], 'ACC-ALL-OPTED-OUT': [12, 12],
-  'ICP-MANAGED': [45, 46], // G-018
+  'ICP-MANAGED': [46, 46], // G-018 closed
   'FMT-COUNTRY': [49, 49], // G-016 closed: 46 kept in scope + 3 excluded for their own knock-outs
 };
 
 // Gap measures that may only move towards their target.
 const CEILINGS = {
-  wrongfulExclusions: 14, // G-016 closed (46 back in scope); G-017 → 0
-  missedExclusions: 1, // G-018 → 0
+  // G-016 closed (46 back in scope), G-017 closed (first non-blank values). The 4 left: 2 accounts with no country on
+  // any row, 2 with a blank managed_separately on every row, held by D-17 until a person confirms.
+  wrongfulExclusions: 4,
+  missedExclusions: 0, // G-018 closed: the "X" account is held
   accountsBuiltOver: 43, // G-038 → 1,400 accounts
-  needsReview: 854, // G-021
-  inIcpClassifiedOther: 100, // G-021
+  needsReview: 852, // G-021 (G-017: the industry now comes from the first row that gives one)
+  inIcpClassifiedOther: 98, // G-021
   outOfIcpClassifiedCore: 22, // G-021 → 0
   contactsWithoutPersona: 3271, // G-020
   handoffNotContactable: 0, // G-005 closed: the hand-off takes only people who pass canContact
@@ -52,12 +54,14 @@ const SNAPSHOT = {
   // History: D-16 moved one account from B to C (G-050). D-14 synonyms (G-016, G-042, G-045): 47 accounts whose
   // country was a code or variant are back in scope (Excluded 315 → 268) and RFQ/Inquiry signals now score, so
   // every tier grows: A 51 → 58, B 48 → 51, C 75 → 78, Watch 356 → 374, Below floor 598 → 614.
-  tiers: { A: 58, B: 51, C: 78, 'Watch list': 374, 'Below fit floor': 614, Excluded: 268 },
-  prospectsWithSignal: 289,
+  // G-017/G-018: details from the first non-blank row bring 13 more accounts into scope (Excluded 268 → 259) and
+  // better sizes and industries: A 58 → 59, B 51 → 54, C 78 → 80, Watch 374 → 377.
+  tiers: { A: 59, B: 54, C: 80, 'Watch list': 377, 'Below fit floor': 614, Excluded: 259 },
+  prospectsWithSignal: 301,
   // G-005: contactable tier A/B prospects go to NBA; those who can't be contacted stay in Scoring.
-  handoffProspects: 120,
+  handoffProspects: 124,
   handoffHeldBack: 8,
-  signalOutcomes: { Qualified: 413, 'Not used': 550, 'Used for a knock-out': 45, 'Rejected D1': 55, 'Rejected D2': 149, 'Rejected D3': 118, 'Rejected D4': 121, 'Rejected D5': 41 },
+  signalOutcomes: { Qualified: 434, 'Not used': 529, 'Used for a knock-out': 45, 'Rejected D1': 55, 'Rejected D2': 149, 'Rejected D3': 118, 'Rejected D4': 121, 'Rejected D5': 41 },
 };
 
 const m = measure();

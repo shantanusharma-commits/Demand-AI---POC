@@ -54,7 +54,9 @@ export function measure(data = loadDataset()) {
     // FMT-CONSENT: flagged as unrecognised, or (D-14) read through an agreed synonym with a note ("Opt-in").
     'FMT-YN-BAD': r => has(r, i => /isn't Y or N/.test(i.issue)), 'FMT-CONSENT': r => has(r, i => /recognised/.test(i.issue) || (i.field === 'consent_basis' && /read as/.test(i.issue))),
     'FMT-LINKEDIN': r => has(r, i => /profile URL/.test(i.issue)), 'FMT-OWNER': r => has(r, i => /isn't an email/.test(i.issue)),
-    'FMT-INCONSISTENT': r => has(r, i => /^Differs from row/.test(i.issue)) || dup(r),
+    // A company detail that differs from the account's, or a size that can't be read (a sign-flipped revenue): either
+    // way the row is flagged. Since G-017 a blank is reported as missing, not as differing.
+    'FMT-INCONSISTENT': r => has(r, i => /^Differs from row/.test(i.issue) || (/^(annual_revenue_usd|employee_count)$/.test(i.field) && /isn't a number/.test(i.issue))) || dup(r),
     'FMT-TITLE-NOISE': r => !!contactByRow.get(r) && contactByRow.get(r)!.persona !== 'None',
     // Opted out while the row (or a duplicate of it) says otherwise: the person must end up suppressed, and the
     // conflict flagged (G-060).
