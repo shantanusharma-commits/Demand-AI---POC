@@ -1,0 +1,25 @@
+// Common passwords and base words, refused for new passwords (checked in lower case, also after stripping
+// trailing digits and symbols, so "Password2026!" is refused too). Short entries still matter for that reason.
+export const COMMON_PASSWORDS: ReadonlySet<string> = new Set([
+  '000000000000', '0987654321qwerty', '111111111111', '112233445566', '121212121212', '123123123123', '123456789012',
+  '1234567890123', '12345678901234', '123456789012345', '1234567890qwerty', '1q2w3e4r5t6y', '1q2w3e4r5t6y7u',
+  '1qaz2wsx3edc', '1qaz2wsx3edc4rfv', 'abc123abc123', 'abcd1234abcd', 'abcdefghijkl', 'abcdefghijklmn', 'access',
+  'accessgranted', 'admin', 'admin123456', 'administrator', 'android', 'april', 'asdfghjkl', 'asdfghjkl123',
+  'august', 'autumn', 'autumn2026', 'bangkok', 'baseball', 'basketball', 'batman', 'changeit', 'changeme',
+  'changemenow', 'company', 'computer', 'contrasena', 'cricket', 'december', 'default', 'demo', 'demopassword',
+  'dragon', 'example', 'facebook', 'february', 'flower', 'football', 'freedom', 'friday', 'goodmorning', 'goodnight',
+  'google', 'guest', 'hanoi', 'hello1234', 'helloworld', 'hockey', 'iloveyou', 'iloveyouforever', 'indonesia',
+  'internet', 'iphone', 'jakarta', 'january', 'jennifer', 'jessica', 'july', 'june', 'kualalumpur', 'letmein',
+  'letmeinplease', 'letsgo', 'linkedin', 'login', 'loginlogin', 'lovely', 'loveme', 'malaysia', 'manila', 'march',
+  'master', 'masterkey', 'may', 'michael', 'microsoft', 'monday', 'monkey', 'motdepasse', 'mypassword',
+  'newpassword', 'november', 'october', 'opensesame', 'openup', 'p@ssw0rd', 'p@ssword', 'pa55word', 'pass1234',
+  'pass12345678', 'passw0rd', 'password', 'password1', 'password12', 'password2025', 'password2026', 'passwort',
+  'philippines', 'pokemon', 'princess', 'private', 'qazwsxedc', 'qazwsxedcrfv', 'qwerty', 'qwerty123456', 'qwertyui',
+  'qwertyuiop', 'qwertyuiop123', 'qwertyuiopas', 'root', 'sample', 'samplepassword', 'samsung', 'secret',
+  'secretpassword', 'secure', 'securepassword', 'security', 'security123', 'senha', 'september', 'shadow',
+  'singapore', 'soccer', 'spiderman', 'spring', 'spring2026', 'starwars', 'strongpassword', 'summer', 'summer2026',
+  'sunshine', 'superman', 'supersecret', 'temp1234', 'temporary', 'test', 'test1234', 'testing', 'testpassword',
+  'testtest', 'thailand', 'thepassword', 'toor', 'topsecret', 'trustno1', 'user', 'verystrongpassword', 'vietnam',
+  'wachtwoord', 'welcome', 'welcome2025', 'welcome2026', 'welcometothejungle', 'whatever', 'winter', 'winter2026',
+  'yourpassword', 'zaq12wsx', 'zaq12wsxcde3', 'zxcvbnm', 'zxcvbnm123',
+]);

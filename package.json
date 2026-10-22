@@ -14,6 +14,7 @@
     "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --conditions=react-server --test tests/*.test.ts",
     "test:legacy": "node --test legacy/engine.test.js",
     "test:integration": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --conditions=react-server --test --test-concurrency=4 tests/integration/*.test.ts",
+    "test:http": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --conditions=react-server --test --test-concurrency=1 tests/http/*.test.ts",
     "audit:gate": "node scripts/audit-gate.mjs",
     "deps:age": "node scripts/check-dependency-age.mjs",
     "setup:env": "node scripts/dev/init-env.mjs",
@@ -23,11 +24,14 @@
     "db:seed": "node --env-file-if-exists=.env.local --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/db/seed.ts",
     "db:generate": "drizzle-kit generate",
     "db:test:up": "docker compose -f compose.test.yaml up -d --wait",
-    "db:test:down": "docker compose -f compose.test.yaml down"
+    "db:test:down": "docker compose -f compose.test.yaml down",
+    "user:create-admin": "node --env-file-if-exists=.env.local scripts/users/create-admin.mjs"
   },
   "dependencies": {
+    "bcryptjs": "3.0.3",
     "drizzle-orm": "0.45.4",
     "next": "^16.4.0",
+    "nodemailer": "10.1.0",
     "pg": "8.23.1",
     "pino": "10.4.0",
     "react": "^19.3.0",

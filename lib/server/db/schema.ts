@@ -174,3 +174,55 @@ export const configVersions = pgTable('config_versions', {
   // At most one active version per business unit.
   uniqueIndex('config_versions_one_active_key').on(t.businessUnitId).where(sql`${t.status} = 'active'`),
 ]);
+
+/* ─── Sign-in (D-3): sessions, one-time email tokens, rate limits ─── */
+
+/** One row per signed-in browser. The cookie carries the ID, HMAC-signed; every request re-reads the row. */
+export const sessions = pgTable('sessions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  activeBusinessUnitId: uuid('active_business_unit_id').references(() => businessUnits.id),
+  createdAt: createdAt(),
+  lastSeenAt: tsz('last_seen_at').notNull().defaultNow(),
+  expiresAt: tsz('expires_at').notNull(),
+  idleExpiresAt: tsz('idle_expires_at').notNull(),
+  ipHash: text('ip_hash'),
+  userAgentHash: text('user_agent_hash'),
+  revokedAt: tsz('revoked_at'),
+  revokedReason: text('revoked_reason'),
+}, t => [
+  index('sessions_user_idx').on(t.userId, t.expiresAt),
+  index('sessions_bu_idx').on(t.activeBusinessUnitId),
+  check('sessions_revoked_reason_check', sql`${t.revokedReason} is null or ${t.revokedReason} in
+    ('sign_out', 'password_reset', 'password_set', 'deactivated', 'role_changed', 'removed_from_unit', 'admin')`),
+]);
+
+export const EMAIL_TOKEN_PURPOSES = ['invite', 'password_reset'] as const;
+
+/** Single-use links (invite, password reset). Only a SHA-256 of the 256-bit secret is stored. */
+export const emailTokens = pgTable('email_tokens', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  purpose: text('purpose').notNull(),
+  tokenHash: text('token_hash').notNull(),
+  businessUnitId: uuid('business_unit_id').references(() => businessUnits.id),
+  expiresAt: tsz('expires_at').notNull(),
+  usedAt: tsz('used_at'),
+  createdAt: createdAt(),
+  createdBy: createdBy(),
+}, t => [
+  check('email_tokens_purpose_check', sql`${t.purpose} in (${inList(EMAIL_TOKEN_PURPOSES)})`),
+  index('email_tokens_user_idx').on(t.userId, t.purpose),
+  index('email_tokens_bu_idx').on(t.businessUnitId),
+]);
+
+/** Fixed-window counters for sign-in, reset and other throttled actions; kept in the database so limits hold
+ *  across restarts and instances. Keys hold hashes, never raw emails or addresses. */
+export const rateLimits = pgTable('rate_limits', {
+  key: text('key').notNull(),
+  windowStart: tsz('window_start').notNull(),
+  count: integer('count').notNull().default(0),
+}, t => [
+  primaryKey({ name: 'rate_limits_pkey', columns: [t.key, t.windowStart] }),
+  index('rate_limits_window_idx').on(t.windowStart),
+]);

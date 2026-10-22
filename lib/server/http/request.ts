@@ -1,11 +1,16 @@
 // Request helpers shared by route handlers.
 import 'server-only';
 
-/** The client address as seen by the first trusted proxy (X-Forwarded-For's first entry), for rate limiting only. */
-export function clientAddress(request: Request): string {
-  const forwarded = request.headers.get('x-forwarded-for');
-  if (forwarded) return forwarded.split(',')[0].trim() || 'unknown';
-  return request.headers.get('x-real-ip') || 'unknown';
+/**
+ * The client address, for rate limiting and pseudonymous session records only. The left-hand entries of
+ * X-Forwarded-For are whatever the client sent, so they can't be trusted; the entry added by our own outermost
+ * trusted proxy is `trustedHops` from the right (1 = one reverse proxy such as Caddy, nginx or an ALB in front of
+ * the app). Next.js fills the header with the socket address when no proxy set it.
+ */
+export function clientAddress(request: Request, trustedHops = Number(process.env.TRUSTED_PROXY_HOPS) || 1): string {
+  const entries = (request.headers.get('x-forwarded-for') ?? '').split(',').map(e => e.trim()).filter(Boolean);
+  if (!entries.length) return 'unknown';
+  return entries[Math.max(0, entries.length - trustedHops)];
 }
 
 /**

@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import { createClientErrorHandler, MAX_REPORT_BYTES } from '../lib/server/client-errors.ts';
 import { createLogger } from '../lib/server/logger.ts';
 import { createMemoryRateLimiter } from '../lib/server/http/memory-rate-limit.ts';
-import { isSameOrigin } from '../lib/server/http/request.ts';
+import { clientAddress, isSameOrigin } from '../lib/server/http/request.ts';
 import { envSchema } from '../lib/server/env.ts';
 
 const BASE = 'https://demandai.example.test';
@@ -62,6 +62,14 @@ test('one address can send only so many reports per window', async () => {
   assert.equal((await POST(report(valid, { 'x-forwarded-for': '198.51.100.7' }))).status, 204);
 });
 
+test('the client address is the entry our proxy added, not one the client forged', () => {
+  const req = (xff?: string) => new Request('http://x/api', { headers: xff ? { 'x-forwarded-for': xff } : {} });
+  assert.equal(clientAddress(req('203.0.113.9')), '203.0.113.9');
+  assert.equal(clientAddress(req('6.6.6.6, 203.0.113.9')), '203.0.113.9', 'a forged left-hand entry is ignored');
+  assert.equal(clientAddress(req('6.6.6.6, 198.51.100.1, 10.0.0.2'), 2), '198.51.100.1', 'two trusted hops');
+  assert.equal(clientAddress(req()), 'unknown');
+});
+
 test('the memory rate limiter opens a new window after windowMs', () => {
   let t = 0;
   const limiter = createMemoryRateLimiter(1, 1000, () => t);
@@ -85,7 +93,7 @@ test('.env.example lists every configuration variable, and nothing the app does 
     .map(l => l.match(/^([A-Z][A-Z0-9_]*)=/)?.[1]).filter((k): k is string => !!k));
   const schemaKeys = Object.keys(envSchema.shape);
   const composeOnly = ['POSTGRES_USER', 'POSTGRES_PASSWORD', 'POSTGRES_DB', 'DEMANDAI_OWNER_PASSWORD', 'DEMANDAI_APP_PASSWORD',
-    'DEMANDAI_OPS_PASSWORD', 'BACKUP_RETAIN', 'APP_PORT', 'DB_PORT', 'DEMANDAI_IMAGE', 'NEXT_TELEMETRY_DISABLED'];
+    'DEMANDAI_OPS_PASSWORD', 'BACKUP_RETAIN', 'APP_PORT', 'DB_PORT', 'DEMANDAI_IMAGE', 'NEXT_TELEMETRY_DISABLED', 'DEV_SEED_PASSWORD'];
   assert.deepEqual(schemaKeys.filter(k => !listed.has(k)), [], 'missing from .env.example');
   assert.deepEqual([...listed].filter(k => !schemaKeys.includes(k) && !composeOnly.includes(k)), [], 'unknown to the schema');
 });

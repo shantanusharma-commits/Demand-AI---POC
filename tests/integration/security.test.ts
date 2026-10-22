@@ -11,7 +11,7 @@ import { freshDatabase, type TestDatabase } from './harness.ts';
 import { seedBasics, type Basics } from './fixtures.ts';
 
 // Tables shared by every unit; everything else must carry business_unit_id and row-level security.
-const GLOBAL_TABLES = ['business_units', 'user_owner_aliases', 'user_role_history', 'users'];
+const GLOBAL_TABLES = ['business_units', 'email_tokens', 'rate_limits', 'sessions', 'user_owner_aliases', 'user_role_history', 'users'];
 const APPEND_ONLY = ['audit_log', 'user_role_history'];
 
 let db: TestDatabase, owner: pg.Pool, appPool: pg.Pool, app: Db, ids: Basics;

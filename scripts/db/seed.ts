@@ -1,6 +1,7 @@
 // Development seed: fictional business units, users, memberships, owner aliases and config v1 per unit.
 // Idempotent (fixed IDs, ON CONFLICT DO NOTHING). Refuses to run with NODE_ENV=production.
 // Run: npm run db:seed   (uses DATABASE_MIGRATION_URL, the owner role)
+import bcrypt from 'bcryptjs';
 import pg from 'pg';
 import { SYSTEM_USER_ID } from '../../lib/server/db/schema.ts';
 import { ENGINE_VERSION, serializeConfig } from '../../lib/engine/config.ts';
@@ -22,8 +23,10 @@ export const SEED = {
   ],
 };
 
-export async function seed(client: pg.ClientBase): Promise<void> {
+/** With a password, seeded people are active and can sign in; without one they stay invited. */
+export async function seed(client: pg.ClientBase, devPassword?: string): Promise<void> {
   const s = SYSTEM_USER_ID;
+  const hash = devPassword ? await bcrypt.hash(devPassword, 10) : null;
   await client.query('BEGIN');
   try {
     for (const u of SEED.units) {
@@ -37,9 +40,11 @@ export async function seed(client: pg.ClientBase): Promise<void> {
     }
     for (const u of SEED.users) {
       await client.query(
-        `INSERT INTO users (id, email, display_name, platform_admin, status, created_by, updated_by)
-         VALUES ($1, $2, $3, $4, 'invited', $5, $5) ON CONFLICT (id) DO NOTHING`,
-        [u.id, u.email, u.name, u.platformAdmin, s]);
+        `INSERT INTO users (id, email, display_name, platform_admin, status, password_hash, email_verified_at, created_by, updated_by)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8)
+         ON CONFLICT (id) DO UPDATE SET password_hash = EXCLUDED.password_hash, status = EXCLUDED.status, email_verified_at = EXCLUDED.email_verified_at
+         WHERE users.password_hash IS NULL AND EXCLUDED.password_hash IS NOT NULL`,
+        [u.id, u.email, u.name, u.platformAdmin, hash ? 'active' : 'invited', hash, hash ? new Date() : null, s]);
       for (const [unit, role] of u.memberships) {
         await client.query(
           `INSERT INTO business_unit_members (business_unit_id, user_id, role, created_by, updated_by)
@@ -72,8 +77,10 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const client = new pg.Client({ connectionString: url });
   await client.connect();
   try {
-    await seed(client);
-    console.log(`Seeded ${SEED.units.length} business units and ${SEED.users.length} fictional users (invited; passwords come with sign-in, Phase 3).`);
+    const devPassword = process.env.DEV_SEED_PASSWORD;
+    await seed(client, devPassword);
+    console.log(`Seeded ${SEED.units.length} business units and ${SEED.users.length} fictional users ` +
+      (devPassword ? '(active; password = DEV_SEED_PASSWORD from your env file).' : '(invited: set DEV_SEED_PASSWORD to make them active).'));
   } finally {
     await client.end();
   }

@@ -27,11 +27,11 @@ test('an empty environment gives development defaults with every AI flag off', (
   assert.deepEqual(describeConfig(r.env).aiFeatures, []);
 });
 
-test('production refuses to start without APP_BASE_URL and DATABASE_URL, naming the variables', () => {
+test('production refuses to start without APP_BASE_URL, DATABASE_URL and SESSION_SECRET, naming the variables', () => {
   const r = parseEnv({ NODE_ENV: 'production' });
   assert.equal(r.ok, false);
   if (r.ok) return;
-  assert.deepEqual(r.errors, ['APP_BASE_URL is required in production', 'DATABASE_URL is required in production']);
+  assert.deepEqual(r.errors, ['APP_BASE_URL is required in production', 'DATABASE_URL is required in production', 'SESSION_SECRET is required in production']);
 });
 
 test('azure-openai needs endpoint, key and deployment; errors never contain a value', () => {

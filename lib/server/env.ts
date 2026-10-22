@@ -20,6 +20,7 @@ export const envSchema = z
     APP_BUILD_VERSION: z.string().max(100).default('dev'),
     LOG_LEVEL: z.enum(LOG_LEVELS).default('info'),
     LOG_SLOW_QUERY_MS: int(500),
+    TRUSTED_PROXY_HOPS: int(1, 1, 5),
 
     // Database (D-28). Required once the app stores data (Phase 2).
     DATABASE_URL: postgresUrl.optional(),
@@ -76,6 +77,7 @@ export const envSchema = z
     if (env.NODE_ENV === 'production') {
       need('APP_BASE_URL', 'in production');
       need('DATABASE_URL', 'in production');
+      need('SESSION_SECRET', 'in production');
     }
     if (env.AI_PROVIDER === 'azure-openai') {
       need('AZURE_OPENAI_ENDPOINT', 'when AI_PROVIDER=azure-openai');
