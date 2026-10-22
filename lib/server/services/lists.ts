@@ -10,6 +10,7 @@ import { LEAD_COLUMNS, LEAD_REQUIRED, missingColumns, processLeads, readTable } 
 import { ENGINE_VERSION } from '../../engine/config.ts';
 import { LEAD_SHEET } from '../../engine/sheets.ts';
 import { STEPS, checkOf, groupIssues, stepResult, type StepResult } from '../../prospecting/checks.ts';
+import { listQuality, readinessChecks, readinessCounts, type ListQuality, type ReadinessCheck } from '../../prospecting/quality.ts';
 import { can, type BuRole } from '../../auth/permissions.ts';
 import type { Account, Contact, Issue, LeadList, LeadResult, LeadStats, Severity } from '../../../types/demandai';
 import { accounts, configVersions, contacts, issues, leadLists, scoringRuns, uploads, CONTACT_GROUPS } from '../db/schema.ts';
@@ -96,12 +97,14 @@ export function createLeadJob(limits: UploadLimits) {
     }
     await run.stage('check', { sheetRows: read.grid.length });
     const result = withNotes(processLeads(read.grid, { file: upload.fileName, sheet: read.sheet, mapping: mapping ?? undefined }), read.notes, upload.fileName, read.sheet);
-    // Each sheet row's owner, so issues on rows that never became contacts are scoped to that owner too.
-    const rawOwners = new Map(readTable(read.grid, { file: upload.fileName, sheet: read.sheet, columns: LEAD_COLUMNS, required: LEAD_REQUIRED, anchor: 'company_name' })
+    // Each data row's owner (read through the same column mapping), so issues on rows that never became contacts are
+    // scoped to that owner too.
+    const rawOwners = new Map(readTable(read.grid, { file: upload.fileName, sheet: read.sheet, columns: LEAD_COLUMNS, required: LEAD_REQUIRED, anchor: 'company_name', mapping: mapping ?? undefined })
       .records.map(r => [r.__row, lower(r.owner_email)]));
-    await run.stage('save', { rowsRead: result.stats.rowsRead, contacts: result.stats.contacts, accounts: result.stats.accounts, issues: result.issues.length });
+    const quality = listQuality(result, new Set(rawOwners.keys()));
+    await run.stage('save', { rowsRead: result.stats.rowsRead, contacts: result.stats.contacts, accounts: result.stats.accounts, issues: result.issues.length, clean: quality.clean });
     const listId = await withTenant(db, ctx, async s => {
-      const id = await insertList(s, { upload, sheet: read.sheet, result, rawOwners, createdBy: job.createdBy, fileColumns: fileColumnsOf(read.grid), mappingId: job.payload.mappingId ?? null });
+      const id = await insertList(s, { upload, sheet: read.sheet, result, quality, rawOwners, createdBy: job.createdBy, fileColumns: fileColumnsOf(read.grid), mappingId: job.payload.mappingId ?? null });
       await s.tx.update(uploads).set({ sheetName: read.sheet, rowsRead: result.stats.rowsRead }).where(eq(uploads.id, upload.id));
       return id;
     }, { label: 'lead.save', slowMs: 30_000 });
@@ -122,6 +125,7 @@ type InsertListInput = {
   upload: { id: string; fileName: string; sandbox: boolean };
   sheet: string;
   result: LeadResult;
+  quality: ListQuality;
   rawOwners: Map<number, string | null>;
   createdBy: string;
 };
@@ -133,7 +137,7 @@ async function insertList(scope: TenantScope, input: InsertListInput): Promise<s
   const [list] = await scope.tx.insert(leadLists).values({
     businessUnitId: bu, uploadId: upload.id, name: upload.fileName.replace(/\.[^.]+$/, '') || upload.fileName, status: 'draft', sandbox: upload.sandbox,
     sourceFile: upload.fileName, sheetName: input.sheet, configVersionId: await activeConfigVersionId(scope), engineVersion: ENGINE_VERSION,
-    stats: result.stats, checks, fileColumns: input.fileColumns ?? [], mappingId: input.mappingId ?? null, createdBy, updatedBy: createdBy,
+    stats: result.stats, checks, quality: input.quality, fileColumns: input.fileColumns ?? [], mappingId: input.mappingId ?? null, createdBy, updatedBy: createdBy,
   }).returning({ id: leadLists.id });
   await insertRows(scope, list.id, result.accounts, result.contacts, result.issues, input.rawOwners, createdBy);
   return list.id;
@@ -169,12 +173,14 @@ async function insertRows(scope: TenantScope, listId: string, accs: Account[], c
 
 export type ListSummary = {
   id: string; name: string; status: string; sandbox: boolean; sourceFile: string; sheet: string; stats: LeadStats;
+  /** Over the whole file, whoever is looking; null for lists built before it was kept. */
+  quality: ListQuality | null;
   createdAt: Date; savedAt: Date | null; scored: boolean;
 };
 
 const listColumns = {
   id: leadLists.id, name: leadLists.name, status: leadLists.status, sandbox: leadLists.sandbox, sourceFile: leadLists.sourceFile,
-  sheet: leadLists.sheetName, stats: leadLists.stats, createdAt: leadLists.createdAt, savedAt: leadLists.savedAt,
+  sheet: leadLists.sheetName, stats: leadLists.stats, quality: leadLists.quality, createdAt: leadLists.createdAt, savedAt: leadLists.savedAt,
   scored: sql<boolean>`exists (select 1 from scoring_runs r where r.list_id = lead_lists.id and r.status = 'saved')`,
 };
 
@@ -183,11 +189,13 @@ export async function savedLists(scope: TenantScope): Promise<ListSummary[]> {
   const rows = await scope.tx.select(listColumns).from(leadLists)
     .where(and(eq(leadLists.businessUnitId, scope.ctx.businessUnitId), eq(leadLists.status, 'saved')))
     .orderBy(desc(leadLists.createdAt));
-  return rows.map(r => ({ ...r, stats: r.stats as LeadStats }));
+  return rows.map(r => ({ ...r, stats: r.stats as LeadStats, quality: r.quality as ListQuality | null }));
 }
 
 export type ListDetail = ListSummary & {
   checks: StepResult[];
+  /** The readiness checks a lead list can answer (accounts in scope, contactability); a warning, never a block. */
+  readiness: ReadinessCheck[] | null;
   /** The file's column names and the required template columns it lacks, for mapping (G-040). */
   fileColumns: string[];
   missingColumns: string[];
@@ -218,6 +226,7 @@ export async function getList(scope: TenantScope, actor: Actor, id: string): Pro
   return {
     id: l.id, name: l.name, status: l.status, sandbox: l.sandbox, sourceFile: l.sourceFile, sheet: l.sheet, createdAt: l.createdAt, savedAt: l.savedAt,
     scored: l.scored, stats: l.stats as LeadStats, checks: l.checks as StepResult[], scope: scope.ctx.scope, visible: { contacts: c, accounts: a },
+    quality: l.quality as ListQuality | null, readiness: l.quality ? readinessChecks(l.quality as ListQuality) : null,
     fileColumns: l.fileColumns as string[], uploadId: l.uploadId,
     missingColumns: missingColumns(l.fileColumns as string[], 'lead', l.mappingId ? (await getMapping(scope, l.mappingId)) ?? undefined : undefined),
     canEdit: isManager(actor.role) || l.createdBy === actor.userId,
@@ -324,10 +333,12 @@ export async function saveList(scope: TenantScope, actor: Actor, id: string, inp
     .filter(i => (i.attach !== null && rows.has(i.attach)) || i.row === null).map(i => i.data as Issue);
   const base = l.stats as LeadStats;
   const stats: LeadStats = { ...base, contacts: cons.length, accounts: accs.length, accountsPass: accs.filter(a => !a.excluded).length, inFinalList: cons.filter(c => c.status === 'In the final list').length };
+  // The file's % clean and findings stay those of the whole file (as the original kept them); readiness is the selection's.
+  const quality = l.quality ? { ...(l.quality as ListQuality), ...readinessCounts({ accounts: accs, contacts: cons }) } : null;
   const [created] = await scope.tx.insert(leadLists).values({
     businessUnitId: scope.ctx.businessUnitId, uploadId: l.uploadId, parentListId: id, name: input.name, status: 'saved', sandbox: l.sandbox,
     sourceFile: l.sourceFile, sheetName: l.sheet, configVersionId: await activeConfigVersionId(scope), engineVersion: ENGINE_VERSION,
-    stats, checks: l.checks, createdBy: actor.userId, updatedBy: actor.userId, savedAt: sql`now()`,
+    stats, checks: l.checks, quality, createdBy: actor.userId, updatedBy: actor.userId, savedAt: sql`now()`,
   }).returning({ id: leadLists.id });
   await insertRows(scope, created.id, accs, cons, iss, new Map(), actor.userId);
   await recordAudit(scope, { action: 'list.saved_selection', actorRole: actor.role, targetType: 'lead_list', targetId: created.id, details: { from: id, contacts: cons.length, accounts: accs.length } });

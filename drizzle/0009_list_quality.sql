@@ -1,0 +1,1 @@
+ALTER TABLE "lead_lists" ADD COLUMN "quality" jsonb;

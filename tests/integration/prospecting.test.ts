@@ -20,6 +20,7 @@ import { HttpError } from '../../lib/server/http/errors.ts';
 import { freshDatabase, type TestDatabase } from './harness.ts';
 import { seedBasics, type Basics } from './fixtures.ts';
 import { DATASET, loadDataset } from '../helpers/answer-key.ts';
+import { listQuality, readinessChecks } from '../../lib/prospecting/quality.ts';
 import { scaledLeadCsv } from '../helpers/volume.ts';
 
 let db: TestDatabase, owner: pg.Pool, app: Db, ids: Basics;
@@ -39,6 +40,7 @@ const leads = E.processLeads(dataset.leadGrid, { file: 'Lead_Research_Sample_Dat
 const ownerCounts = new Map<string, number>();
 for (const c of leads.contacts) if (c.owner) ownerCounts.set(c.owner, (ownerCounts.get(c.owner) ?? 0) + 1);
 const [someOwner, otherOwner] = [...ownerCounts.keys()].sort();
+const leadRows = new Set(E.readTable(dataset.leadGrid, { file: 'f', sheet: 's', columns: E.LEAD_COLUMNS, required: E.LEAD_REQUIRED, anchor: 'company_name' }).records.map(r => r.__row));
 
 before(async () => {
   db = await freshDatabase('prospecting');
@@ -126,6 +128,22 @@ test('G-014: a rep sees only contacts they own (by alias) and the counts say so;
   assert.equal(detail.visible.contacts.all, ownerCounts.get(someOwner));
   assert.equal(detail.canEdit, false, 'a rep may not rename or delete a list someone else uploaded');
   await assert.rejects(as(repCtx([someOwner]), s => deleteList(s, repActor(), listId)), (e: HttpError) => e.status === 403);
+});
+
+test('G-015: a list keeps its % clean, findings per D-code and readiness over the whole file, the same for a rep', async () => {
+  const want = listQuality(leads, leadRows);
+  const manager = await as(admin(), s => getList(s, adminActor(), listId));
+  assert.deepEqual(manager.quality, want);
+  assert.deepEqual(manager.readiness, readinessChecks(want));
+  const rep = await as(repCtx([someOwner]), s => getList(s, repActor(), listId));
+  assert.deepEqual(rep.quality, want, 'a rep sees the file-level figures although they see only their own rows');
+  assert.deepEqual((await as(admin(), s => savedLists(s))).find(l => l.id === listId)?.quality, want);
+  // A list stored before quality was kept says so instead of showing a figure.
+  await owner.query(`UPDATE lead_lists SET quality = NULL WHERE id = $1`, [listId]);
+  const old = await as(admin(), s => getList(s, adminActor(), listId));
+  assert.equal(old.quality, null);
+  assert.equal(old.readiness, null);
+  await owner.query(`UPDATE lead_lists SET quality = $2 WHERE id = $1`, [listId, JSON.stringify(want)]);
 });
 
 test('G-061: the as-of date must be a real date, not in the future; nothing silently becomes today', () => {
@@ -223,6 +241,10 @@ test('saving a selection makes a new list with just those prospects and their ac
   assert.equal(d.visible.contacts.all, 3);
   assert.equal(d.stats.rowsRead, 7498, 'the file-level counts stay those of the upload');
   assert.ok(d.visible.accounts.all >= 1 && d.visible.accounts.all <= 3);
+  const whole = listQuality(leads, leadRows);
+  assert.equal(d.quality?.clean, whole.clean, '% clean stays that of the file');
+  assert.equal(d.quality?.inScope, d.visible.accounts.pass, 'readiness counts the selection’s own accounts');
+  assert.ok(d.quality!.primaryReachable <= d.quality!.inScope);
 });
 
 test('a file that can’t be read fails its job with the reason; deleting a list removes its runs and unused files', async () => {

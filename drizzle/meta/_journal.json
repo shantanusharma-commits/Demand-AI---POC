@@ -64,6 +64,13 @@
       "when": 1792684655894,
       "tag": "0008_column_mappings_security",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1792702809985,
+      "tag": "0009_list_quality",
+      "breakpoints": true
     }
   ]
 }

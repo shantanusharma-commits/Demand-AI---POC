@@ -287,6 +287,8 @@ export const leadLists = pgTable('lead_lists', {
   engineVersion: text('engine_version').notNull(),
   stats: jsonb('stats').notNull(),
   checks: jsonb('checks').notNull(),
+  /** % clean, findings per D-code and readiness counts over the whole file (G-015); null on lists built before they were kept. */
+  quality: jsonb('quality'),
   /** The file's own column names (its header row, or its fullest early row), for mapping them (G-040). */
   fileColumns: jsonb('file_columns').notNull().default([]),
   mappingId: uuid('mapping_id').references((): AnyPgColumn => columnMappings.id, { onDelete: 'set null' }),
