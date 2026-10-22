@@ -17,3 +17,6 @@ next-env.d.ts
 # Environment files hold secrets; only the template is tracked
 .env*
 !.env.example
+
+# Personal editor settings (MCP servers, local paths)
+.vscode/
