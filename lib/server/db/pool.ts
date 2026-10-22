@@ -40,14 +40,16 @@ export function createPool(options: { url: string; ssl: pg.ConnectionConfig['ssl
   return pool;
 }
 
-let shared: pg.Pool | undefined;
+// Kept on globalThis: Next bundles server code into several chunks (pages, route handlers, instrumentation), each
+// with its own copy of this module, and the process must still share one pool.
+const holder = globalThis as typeof globalThis & { __demandaiPool?: pg.Pool };
 
 /** The process-wide pool, created on first use from DATABASE_URL. */
 export function getPool(): pg.Pool {
-  if (shared) return shared;
+  if (holder.__demandaiPool) return holder.__demandaiPool;
   const e = env();
   if (!e.DATABASE_URL) throw new Error('DATABASE_URL is not configured');
-  shared = createPool({
+  const shared = createPool({
     url: e.DATABASE_URL,
     ssl: sslOptions(e.DATABASE_SSL_MODE, e.DATABASE_SSL_CA_FILE, e.NODE_ENV === 'production'),
     max: e.DATABASE_POOL_MAX,
@@ -57,12 +59,13 @@ export function getPool(): pg.Pool {
   const close = () => { void closePool(); };
   process.once('SIGTERM', close);
   process.once('SIGINT', close);
+  holder.__demandaiPool = shared;
   return shared;
 }
 
 export async function closePool(): Promise<void> {
-  const pool = shared;
-  shared = undefined;
+  const pool = holder.__demandaiPool;
+  holder.__demandaiPool = undefined;
   if (!pool) return;
   try {
     await pool.end();

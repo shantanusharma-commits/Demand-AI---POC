@@ -133,6 +133,7 @@ test('logs: upload and scoring events are logged without file names or any conta
     assert.ok(lines.some(l => l.event === event), `no ${event} line`);
   }
   assert.ok(lines.filter(l => l.event === 'job.stage').every(l => typeof l.durationMs === 'number' && l.jobId && l.businessUnitId));
+  assert.equal(lines.filter(l => l.event === 'db.pool.created').length, 1, 'pages, routes and the job worker share one pool');
   const all = srv.logs.join('');
   assert.doesNotMatch(all, /@client-sample\.com|@[a-z0-9-]+\.(co\.th|com\.my|co\.id|vn)\b/i, 'no contact address from the sample');
   assert.doesNotMatch(all, /Lead_Research_Sample_Dataset/, 'no file names');
