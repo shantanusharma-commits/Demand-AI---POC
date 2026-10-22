@@ -22,14 +22,26 @@ export const CONFIG = {
   tierThresholds: { A: 35, B: 20 },
   // Stacked timing can't exceed twice the strongest tier weight (100 + 50 + 25 + … < 200).
   timingMax: 200,
+  // Industry and site-process mapping (D-15 v1, provisional until the Client's taxonomy arrives): the first match
+  // wins, refining first. Exclusions are checked before it: palm-oil, oleochemical, edible-oil and sugar refiners are
+  // out of the ICP, whatever "refining" says.
   verticalMap: [
     { pattern: /refin/i, vertical: 'Refining', level: 'core' },
+    { pattern: /downstream|fuels? (&|and) lubricants?|condensate splitting|residue upgrading|hydrocrack/i, vertical: 'Refining', level: 'core' },
     { pattern: /petrochem/i, vertical: 'Petrochemicals', level: 'adjacent' },
+    { pattern: /polymer|plastic|olefin|basic chemical|aromatic|\bbtx\b|polypropylene|polyethylene|\bpta\b/i, vertical: 'Petrochemicals', level: 'adjacent' },
     { pattern: /gas processing|\blng\b/i, vertical: 'Gas processing', level: 'adjacent' },
+    { pattern: /natural gas|midstream gas|gas separation/i, vertical: 'Gas processing', level: 'adjacent' },
   ] as { pattern: RegExp; vertical: string; level: VerticalLevel }[],
+  verticalExclusions: [/palm oil|oleochem|edible oil|fatty acid|\bsugar\b/i],
+  // Persona dictionary (D-15 v1, provisional): the original terms plus instrument and control-system titles, their
+  // abbreviations (Inst., Instr., Ctrl Sys.), and the Thai, Vietnamese and Indonesian titles seen in the sample.
   personas: {
-    primary: [/instrumentation/i, /\bi&c\b/i, /\be&i\b/i, /automation/i, /control systems?\b/i, /\bdcs\b/i],
-    secondary: [/plant manager/i, /operations/i, /procurement/i, /project director/i, /maintenance/i, /reliability/i],
+    primary: [/instrumentation/i, /\bi&c\b/i, /\be&i\b/i, /automation/i, /control systems?\b/i, /\bdcs\b/i,
+      /\binstr(\.|\b|ument)/i, /\binst\b/i, /\b(control|ctrl)\.?\s*sys/i, /điều khiển/i, /instrumentasi/i, /เครื่องมือวัด/],
+    secondary: [/plant manager/i, /operations/i, /procurement/i, /project director/i, /maintenance/i, /reliability/i,
+      /\bplant\s*(mgr|head)\b/i, /\bgm\b[\s.,-]*plant|\bplant\b[\s.,-]*gm\b/i, /factory manager/i, /\bmaint\b/i, /purchasing/i,
+      /pengadaan|pemeliharaan|kepala pabrik/i, /ผู้จัดการโรงงาน|ซ่อมบำรุง/, /bảo trì/i],
   },
   rubric: [
     { key: 'vertical', label: 'Vertical', weight: 30 },
@@ -512,8 +524,21 @@ export function canContact(c: Pick<Contact, 'reachableBy' | 'consentOk' | 'optOu
 }
 
 /* Stage 3 classification and stage 4 knock-outs, per account */
+/** The vertical a text maps to, or 'excluded' for an out-of-ICP industry (D-15 exclusions). */
+function verticalHit(s: string) {
+  if (!s) return null;
+  if (CONFIG.verticalExclusions.some(re => re.test(s))) return 'excluded' as const;
+  return CONFIG.verticalMap.find(m => m.pattern.test(s)) ?? null;
+}
+
 export function classify(industry: string, siteProcess: string): Classification {
-  const hit = (s: string) => s ? CONFIG.verticalMap.find(m => m.pattern.test(s)) : null;
+  const raw = (s: string) => verticalHit(s);
+  const excluded = [industry, siteProcess].find(x => raw(x) === 'excluded');
+  if (excluded) {
+    return { vertical: 'Out of ICP', level: 'other', confidence: 'high',
+      reason: `"${excluded}" is out of the ICP: palm-oil, oleochemical, edible-oil and sugar refining are not oil refining` };
+  }
+  const hit = (s: string) => { const h = raw(s); return h && h !== 'excluded' ? h : null; };
   const a = hit(industry), b = hit(siteProcess);
   if (a && b && a.vertical === b.vertical) return { vertical: a.vertical, level: a.level, confidence: 'high', reason: `Industry "${industry}" and site process "${siteProcess}" both map to ${a.vertical}` };
   if (a && b) return { vertical: a.vertical, level: a.level, confidence: 'medium', reason: `Industry maps to ${a.vertical}, site process to ${b.vertical}; industry used` };
@@ -612,7 +637,8 @@ export function fitFor(account: Account, contacts: Contact[]): Fit {
   } else { size = 0; sizeWhy = 'No size given'; }
   const sizeLbl = size === 100 ? 'Above target' : size === 70 ? 'In target' : size === 20 ? 'Below target' : 'Not provided';
 
-  const siteHit = account.siteProcess ? CONFIG.verticalMap.find(m => m.pattern.test(account.siteProcess)) : null;
+  const siteFound = verticalHit(account.siteProcess);
+  const siteHit = siteFound && siteFound !== 'excluded' ? siteFound : null;
   const site = !account.siteProcess ? 30 : siteHit && siteHit.level === 'core' ? 100 : 50;
   const siteLbl = site === 100 ? 'Suits the product' : site === 50 ? 'Partly' : 'Unknown';
   const siteWhy = account.siteProcess

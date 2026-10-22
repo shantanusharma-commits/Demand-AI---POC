@@ -17,12 +17,13 @@ const CASE_FLOORS: Record<string, [number, number]> = {
   'DUP-LINKEDIN': [70, 70], // G-039 closed
   'DUP-FUZZY': [3, 70], // G-041 (target: listed for review)
   'FMT-YN-BAD': [67, 70], 'FMT-CONSENT': [60, 60], 'FMT-INCONSISTENT': [57, 60], 'FMT-LINKEDIN': [70, 70], 'FMT-OWNER': [50, 50],
-  'FMT-TITLE-NOISE': [25, 120], // G-020
+  'FMT-TITLE-NOISE': [118, 120], // G-020: persona dictionary v1 (D-15); left: "Supply Chain Manager", and a row not loaded
   'SUP-OPTOUT-CONFLICT': [25, 25], // G-060: suppressed and the conflict flagged (duplicates in both row orders: tests/rules.test.ts)
   // D-16 (22 Oct): a signal with no person is auto-assigned only to someone who can be contacted. 13 rows whose
   // primary contact had no channel or no consent now go to a contactable colleague; 1 is rejected (no one at the
   // account can be contacted). The key predates D-16, so SIG-AUTOASSIGN and SIG-QUALIFIED drop by design.
-  'SIG-QUALIFIED': [677, 679], 'SIG-AUTOASSIGN': [79, 115], 'SIG-KNOCKOUT': [45, 45], 'SIG-NEWSLETTER': [55, 59],
+  // SIG-AUTOASSIGN 79 → 83 with persona dictionary v1 (D-15).
+  'SIG-QUALIFIED': [677, 679], 'SIG-AUTOASSIGN': [83, 115], 'SIG-KNOCKOUT': [45, 45], 'SIG-NEWSLETTER': [55, 59],
   'SIG-STALE': [145, 145], 'SIG-NO-COMPANY': [15, 15], 'SIG-UNKNOWN-COMPANY': [45, 45], 'SIG-UNKNOWN-PERSON': [40, 40],
   'SIG-NO-DATE': [25, 25], 'SIG-BAD-DATE': [35, 35], 'SIG-FUTURE': [20, 20], 'SIG-BAD-TYPE': [35, 35], 'SIG-TYPE-CASE': [30, 30],
   'SIG-DUP': [40, 40], 'SIG-NO-DETAIL': [30, 30], 'SIG-OPTED-OUT-PERSON': [63, 63], 'SIG-EXCLUDED-ACCOUNT': [198, 198],
@@ -42,10 +43,13 @@ const CEILINGS = {
   wrongfulExclusions: 4,
   missedExclusions: 0, // G-018 closed: the "X" account is held
   accountsBuiltOver: 43, // G-038 → 1,400 accounts
-  needsReview: 852, // G-021 (G-017: the industry now comes from the first row that gives one)
-  inIcpClassifiedOther: 98, // G-021
-  outOfIcpClassifiedCore: 22, // G-021 → 0
-  contactsWithoutPersona: 3264, // G-020 (G-039: 11 more LinkedIn duplicates merged into their person)
+  // G-021 rules (D-15 industry table v1 with exclusions): the 714 left are industries outside the table (mining,
+  // pharma, power …), which the AI classifier takes in Phase 6. The one in-ICP account left has no industry or site.
+  needsReview: 714,
+  inIcpClassifiedOther: 1,
+  outOfIcpClassifiedCore: 0, // G-021: palm-oil, oleochemical and edible-oil refiners are out of the ICP
+  contactsWithoutPersona: 2701, // G-020: persona dictionary v1
+  instrumentEngineersNotPrimary: 0, // G-020: all 438 Instrument Engineers are Primary (was 439 of 439 missing)
   handoffNotContactable: 0, // G-005 closed: the hand-off takes only people who pass canContact
 };
 
@@ -56,12 +60,14 @@ const SNAPSHOT = {
   // every tier grows: A 51 → 58, B 48 → 51, C 75 → 78, Watch 356 → 374, Below floor 598 → 614.
   // G-017/G-018: details from the first non-blank row bring 13 more accounts into scope (Excluded 268 → 259) and
   // better sizes and industries: A 58 → 59, B 51 → 54, C 78 → 80, Watch 374 → 377.
-  tiers: { A: 59, B: 54, C: 80, 'Watch list': 377, 'Below fit floor': 614, Excluded: 259 },
-  prospectsWithSignal: 301,
+  // G-020/G-021: the right vertical and contact coverage lift fits: 31 accounts clear the floor (Below floor 614 → 583)
+  // and A 59 → 62, B 54 → 57, C 80 → 87, Watch 377 → 395.
+  tiers: { A: 62, B: 57, C: 87, 'Watch list': 395, 'Below fit floor': 583, Excluded: 259 },
+  prospectsWithSignal: 325,
   // G-005: contactable tier A/B prospects go to NBA; those who can't be contacted stay in Scoring.
-  handoffProspects: 124,
-  handoffHeldBack: 8,
-  signalOutcomes: { Qualified: 434, 'Not used': 529, 'Used for a knock-out': 45, 'Rejected D1': 55, 'Rejected D2': 149, 'Rejected D3': 118, 'Rejected D4': 121, 'Rejected D5': 41 },
+  handoffProspects: 133,
+  handoffHeldBack: 9,
+  signalOutcomes: { Qualified: 464, 'Not used': 499, 'Used for a knock-out': 45, 'Rejected D1': 55, 'Rejected D2': 149, 'Rejected D3': 118, 'Rejected D4': 121, 'Rejected D5': 41 },
 };
 
 const m = measure();
@@ -101,6 +107,7 @@ test('gap measures do not get worse', () => {
     inIcpClassifiedOther: m.accounts.inIcpLost,
     outOfIcpClassifiedCore: m.accounts.outOfIcpCore,
     contactsWithoutPersona: m.contacts.noPersona,
+    instrumentEngineersNotPrimary: m.contacts.instrumentEngineers - m.contacts.instrumentEngineersPrimary,
     handoffNotContactable: m.handoff.notContactable,
   };
   assert.deepEqual(now, CEILINGS, 'a change in either direction must update CEILINGS deliberately');

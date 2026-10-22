@@ -239,3 +239,36 @@ test('a signal naming a merged repeat by its own LinkedIn URL reaches the merged
   assert.equal(sig.signals[0].status, 'Qualified');
   assert.equal(sig.signals[0].contactRow, 2);
 });
+
+/* ─── D-15 persona dictionary v1 (G-020) and industry mapping v1 with exclusions (G-021), provisional ─── */
+
+test('G-020: instrument and control titles, their abbreviations and local-language titles get a persona', () => {
+  const primary = ['Instrument Engineer', 'Senior Instrument Engineer', 'Sr. Instrument Engr', 'Snr Inst Engineer', 'Lead Instr. Eng.', 'Instr. Mgr',
+    'Inst. & Ctrl Manager', 'Control Sys. Engr.', 'Sr. Ctrl Sys Engr', 'Ctrl Systems Eng', 'Kỹ sư điều khiển', 'Kepala Instrumentasi', 'ผู้จัดการแผนกเครื่องมือวัด',
+    'Head of Instrumentation', 'Automation Head'];
+  const secondary = ['Plant Mgr', 'GM - Plant', 'Factory Manager', 'Maint. Mgr.', 'Purchasing Mgr', 'Head - Purchasing', 'Manajer Pengadaan', 'Kepala Pemeliharaan',
+    'Kepala Pabrik', 'ผู้จัดการโรงงาน', 'ผู้จัดการฝ่ายซ่อมบำรุง', 'Trưởng phòng bảo trì', 'Plant Manager'];
+  for (const t of primary) assert.equal(E.personaOf(t), 'Primary', t);
+  for (const t of secondary) assert.equal(E.personaOf(t), 'Secondary', t);
+  for (const t of ['HR Manager', 'Finance Manager', 'Institute Director', 'Sales Manager', '']) assert.equal(E.personaOf(t), 'None', t);
+});
+
+test('G-021: the v1 industry table maps the agreed industries and site processes; oleochemical and edible-oil refiners are out', () => {
+  const cases: [string, string, string, string][] = [
+    ['Plastics & Polymers', '', 'Petrochemicals', 'adjacent'], ['Olefins & Polymers', 'Polypropylene production', 'Petrochemicals', 'adjacent'],
+    ['Basic Chemicals', 'Aromatics (BTX)', 'Petrochemicals', 'adjacent'], ['Oil & Gas - Downstream', '', 'Refining', 'core'],
+    ['Downstream Oil & Gas', 'Residue upgrading', 'Refining', 'core'], ['Fuels & Lubricants', 'Condensate splitting', 'Refining', 'core'],
+    ['Natural Gas', '', 'Gas processing', 'adjacent'], ['Midstream Gas', 'Gas separation', 'Gas processing', 'adjacent'],
+    ['', 'Hydrocracking', 'Refining', 'core'], ['Oil & Gas - Refining', 'Crude refining', 'Refining', 'core'],
+  ];
+  for (const [industry, site, vertical, level] of cases) {
+    const c = E.classify(industry, site);
+    assert.deepEqual([c.vertical, c.level, !!c.needsReview], [vertical, level, false], `${industry} / ${site}`);
+  }
+  for (const [industry, site] of [['Palm Oil Refining', 'Palm oil refining'], ['Oleochemicals', 'Palm oil refining'], ['Edible Oils', 'Fatty acid distillation'], ['Sugar Refining', '']]) {
+    const c = E.classify(industry, site);
+    assert.deepEqual([c.level, !!c.needsReview], ['other', false], `${industry}: out of the ICP, no review needed`);
+    assert.match(c.reason, /out of the ICP/i);
+  }
+  assert.equal(E.classify('Mining', '').needsReview, true, 'an unmapped industry still goes to review');
+});
