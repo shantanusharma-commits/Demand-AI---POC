@@ -499,6 +499,24 @@ export function processLeads(grid: Grid, { file = 'lead file', sheet = 'Sheet1' 
     index(c, c);
   }
 
+  // Possible duplicates (G-041): the same last name at the same company with the same first name or its initial, under
+  // a different email and LinkedIn. Listed for a person to decide; never merged automatically.
+  const firstOk = (a: string, b: string) => {
+    const x = a.toLowerCase().replace(/\.$/, ''), y = b.toLowerCase().replace(/\.$/, '');
+    return !!x && !!y && (x === y || (x.length === 1 && y.startsWith(x)) || (y.length === 1 && x.startsWith(y)));
+  };
+  const seenPeople = new Map<string, Contact[]>();
+  for (const c of contacts) {
+    if (!c.lastName) continue;
+    const k = `${companyBase(c.company)}|${c.lastName.toLowerCase()}`;
+    const earlier = (seenPeople.get(k) ?? []).find(p => firstOk(p.firstName, c.firstName));
+    if (earlier) {
+      issues.push({ file, sheet, row: c.row, field: 'first_name / last_name', issue: `Possible duplicate of row ${earlier.row} (${earlier.name})`,
+        outcome: 'Kept and not merged; listed for review', code: 'D5', fix: 'If it is the same person, remove one row or give both the same email', severity: 'flag' });
+    }
+    seenPeople.set(k, [...(seenPeople.get(k) ?? []), c]);
+  }
+
   // Reachability and contactability
   for (const c of contacts) {
     const emailOk = !!c.email && c.emailVerified, liOk = !!c.linkedin;

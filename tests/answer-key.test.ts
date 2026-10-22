@@ -15,7 +15,7 @@ const CASE_FLOORS: Record<string, [number, number]> = {
   'EM-PERSONAL': [90, 90], 'EM-ROLE': [55, 55], 'EM-DOMAIN-MISMATCH': [70, 70], 'EM-TYPO-DOMAIN': [40, 40], // G-019 closed: flagged for review
   'DUP-EXACT': [140, 140], 'DUP-EMAIL-CASE': [80, 80], 'DUP-UPDATED': [60, 60], 'DUP-CROSS-COMPANY': [30, 30],
   'DUP-LINKEDIN': [70, 70], // G-039 closed
-  'DUP-FUZZY': [3, 70], // G-041 (target: listed for review)
+  'DUP-FUZZY': [70, 70], // G-041 closed: 67 listed as possible duplicates (no false flag on the sample), 3 exact merges
   'FMT-YN-BAD': [67, 70], 'FMT-CONSENT': [60, 60], 'FMT-INCONSISTENT': [57, 60], 'FMT-LINKEDIN': [70, 70], 'FMT-OWNER': [50, 50],
   'FMT-TITLE-NOISE': [118, 120], // G-020: persona dictionary v1 (D-15); left: "Supply Chain Manager", and a row not loaded
   'SUP-OPTOUT-CONFLICT': [25, 25], // G-060: suppressed and the conflict flagged (duplicates in both row orders: tests/rules.test.ts)

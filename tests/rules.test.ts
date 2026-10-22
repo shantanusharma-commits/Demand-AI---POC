@@ -324,3 +324,17 @@ test('G-044: initials that fit more than one account match none', () => {
   const sig = E.processSignals([SIGNALS, ['VPG', '', 'Capital project', '2026-09-01', 'x', 'Plan', '']], { accounts: r.accounts, contacts: r.contacts }, { asOf: '2026-09-30' });
   assert.equal(sig.signals[0].code, 'D4');
 });
+
+/* ─── G-041 possible duplicates: listed for review, never merged ─── */
+
+test('G-041: the same person under another address (same company, last name, first name or initial) is listed as a possible duplicate', () => {
+  const r = leads({ first_name: 'Aditi', last_name: 'Rao' },
+    { first_name: 'A.', last_name: 'Rao', email: 'a.rao@acme-refining.com', linkedin_url: '' },
+    { first_name: 'Aditi', last_name: 'RAO', email: 'aditi.rao2@acme-refining.com', linkedin_url: '' },
+    { first_name: 'Bo', last_name: 'Rao', email: 'bo.rao@acme-refining.com', linkedin_url: '' });
+  assert.equal(r.contacts.length, 4, 'nothing is merged');
+  const flagged = r.issues.filter(i => i.code === 'D5' && /^Possible duplicate of row 2/.test(i.issue) && i.severity === 'flag').map(i => i.row);
+  assert.deepEqual(flagged.sort(), [3, 4]);
+  assert.ok(!r.issues.some(i => i.row === 5 && /Possible duplicate/.test(i.issue)), 'Bo Rao is a different person');
+  assert.ok(r.issues.filter(i => /Possible duplicate/.test(i.issue)).every(i => /not merged/.test(i.outcome)));
+});
