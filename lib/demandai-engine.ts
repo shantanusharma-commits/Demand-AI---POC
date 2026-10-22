@@ -133,9 +133,14 @@ export function parseCSV(text: string): string[][] {
   return rows;
 }
 
+/* A cell starting with = + - or @ would run as a formula in a spreadsheet (G-052): prefix it with an apostrophe.
+   Plain numbers, negative ones included, stay as they are. Cells are trimmed, so no leading tab or CR survives. */
+const FORMULA_START = /^[=+\-@]/;
+const PLAIN_NUMBER = /^-?\d+(\.\d+)?$/;
 export function toCSV(rows: unknown[][]): string {
   return rows.map(r => r.map(v => {
-    const s = clean(v);
+    let s = clean(v);
+    if (FORMULA_START.test(s) && !PLAIN_NUMBER.test(s)) s = "'" + s;
     return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
   }).join(',')).join('\r\n');
 }
