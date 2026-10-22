@@ -13,7 +13,8 @@ import { CHECKS, STEPS, checkOf, groupIssues, stepResult, type CheckKey, type St
 import { listQuality, readinessChecks, readinessCounts, type ListQuality, type ReadinessCheck } from '../../prospecting/quality.ts';
 import { can, type BuRole } from '../../auth/permissions.ts';
 import type { Account, Contact, DqCode, Issue, LeadList, LeadResult, LeadStats, Severity } from '../../../types/demandai';
-import { accounts, configVersions, contacts, issues, leadLists, scoringRuns, uploads, CONTACT_GROUPS } from '../db/schema.ts';
+import { accounts, configVersions, contacts, corrections, issues, jobs, leadLists, scoringRuns, uploads, CONTACT_GROUPS } from '../db/schema.ts';
+import { applyCorrections, rowValues, type Correction } from '../../engine/corrections.ts';
 import { withTenant, type TenantScope } from '../db/tenant.ts';
 import { recordAudit } from '../db/audit.ts';
 import { JobError, jobContext } from '../jobs/queue.ts';
@@ -82,9 +83,10 @@ export function createLeadJob(limits: UploadLimits) {
     const { db, job } = run;
     const ctx = jobContext(job.businessUnitId);
     await run.stage('parse');
-    const { upload, mapping } = await withTenant(db, ctx, async s => ({
+    const { upload, mapping, fixes } = await withTenant(db, ctx, async s => ({
       upload: await loadUpload(s, job.payload.uploadId),
       mapping: job.payload.mappingId ? await getMapping(s, job.payload.mappingId) : null,
+      fixes: await correctionsOf(s, job.payload.uploadId),
     }), { label: 'lead.load' });
     if (!upload) throw new JobError('gone', 'The uploaded file is no longer there. Upload it again.');
     if (job.payload.mappingId && !mapping) throw new JobError('gone', 'That column mapping is no longer there. Choose the columns again.');
@@ -95,21 +97,78 @@ export function createLeadJob(limits: UploadLimits) {
       if (err instanceof UploadReadError) throw new JobError(err.code, err.message);
       throw err;
     }
-    await run.stage('check', { sheetRows: read.grid.length });
-    const result = withNotes(processLeads(read.grid, { file: upload.fileName, sheet: read.sheet, mapping: mapping ?? undefined }), read.notes, upload.fileName, read.sheet);
+    await run.stage('check', { sheetRows: read.grid.length, corrections: fixes.length });
+    // Every correction made to this upload, replayed in order onto the file as received (G-015).
+    const opts = { file: upload.fileName, sheet: read.sheet, mapping: mapping ?? undefined };
+    const fixed = applyCorrections(read.grid, fixes, opts);
+    const whole = withNotes(processLeads(fixed.grid, { ...opts, removed: fixed.removed, verticals: fixed.verticals }), read.notes, upload.fileName, read.sheet);
     // Each data row's owner (read through the same column mapping), so issues on rows that never became contacts are
     // scoped to that owner too.
-    const rawOwners = new Map(readTable(read.grid, { file: upload.fileName, sheet: read.sheet, columns: LEAD_COLUMNS, required: LEAD_REQUIRED, anchor: 'company_name', mapping: mapping ?? undefined })
+    const rawOwners = new Map(readTable(fixed.grid, { ...opts, columns: LEAD_COLUMNS, required: LEAD_REQUIRED, anchor: 'company_name' })
       .records.map(r => [r.__row, lower(r.owner_email)]));
-    const quality = listQuality(result, new Set(rawOwners.keys()));
-    await run.stage('save', { rowsRead: result.stats.rowsRead, contacts: result.stats.contacts, accounts: result.stats.accounts, issues: result.issues.length, clean: quality.clean });
+    const raw = rowValues(fixed.grid, whole.contacts.map(c => c.row), opts.mapping);
+    await run.stage('save', { rowsRead: whole.stats.rowsRead, contacts: whole.stats.contacts, accounts: whole.stats.accounts, issues: whole.issues.length });
     const listId = await withTenant(db, ctx, async s => {
-      const id = await insertList(s, { upload, sheet: read.sheet, result, quality, rawOwners, createdBy: job.createdBy, fileColumns: fileColumnsOf(read.grid), mappingId: job.payload.mappingId ?? null });
-      await s.tx.update(uploads).set({ sheetName: read.sheet, rowsRead: result.stats.rowsRead }).where(eq(uploads.id, upload.id));
+      // A correction rebuilds the list it was made on: the new version takes its place (name, status, uploader, and
+      // for a saved selection the same people); the old one points to it.
+      const target = job.payload.replaceListId ? await currentVersion(s, job.payload.replaceListId) : null;
+      if (job.payload.replaceListId && !target) throw new JobError('gone', 'That list was deleted while it was being checked again.');
+      const keep = target?.parentListId ? new Set((await s.tx.select({ row: contacts.rowNo }).from(contacts).where(eq(contacts.listId, target.id))).map(r => r.row)) : null;
+      const result = keep ? selectRows(whole, keep, rawOwners) : whole;
+      const quality = { ...listQuality(whole, new Set(rawOwners.keys())), ...readinessCounts(result) };
+      const id = await insertList(s, {
+        upload, sheet: read.sheet, result, quality, rawOwners, raw, fileColumns: fileColumnsOf(read.grid), mappingId: job.payload.mappingId ?? null,
+        createdBy: target?.createdBy ?? job.createdBy, updatedBy: job.createdBy,
+        ...(target ? { name: target.name, status: target.status, savedAt: target.savedAt, parentListId: target.parentListId } : {}),
+      });
+      if (target) await retire(s, target.id, id, job.createdBy, fixes.length);
+      await s.tx.update(uploads).set({ sheetName: read.sheet, rowsRead: whole.stats.rowsRead }).where(eq(uploads.id, upload.id));
       return id;
     }, { label: 'lead.save', slowMs: 30_000 });
     return { listId };
   };
+}
+
+/** Every correction made to an upload, in the order they are replayed. */
+async function correctionsOf(scope: TenantScope, uploadId: string): Promise<Correction[]> {
+  const rows = await scope.tx.select({ row: corrections.rowNo, field: corrections.field, to: corrections.toValue, reason: corrections.reason })
+    .from(corrections).where(eq(corrections.uploadId, uploadId)).orderBy(asc(corrections.seq));
+  return rows.map(r => ({ row: r.row, field: r.field as Correction['field'], to: r.to, reason: r.reason }));
+}
+
+/** The newest version of a list, following what replaced it; null when it was deleted. */
+async function currentVersion(scope: TenantScope, id: string) {
+  const { rows } = await scope.tx.execute<{ id: string }>(sql`
+    WITH RECURSIVE chain(id, next, depth) AS (
+      SELECT id, replaced_by_list_id, 0 FROM lead_lists WHERE id = ${id}
+      UNION ALL SELECT l.id, l.replaced_by_list_id, c.depth + 1 FROM lead_lists l JOIN chain c ON l.id = c.next WHERE c.depth < 1000)
+    SELECT id FROM chain WHERE next IS NULL`);
+  if (!rows[0]) return null;
+  const [l] = await scope.tx.select({ id: leadLists.id, name: leadLists.name, status: leadLists.status, savedAt: leadLists.savedAt, parentListId: leadLists.parentListId, createdBy: leadLists.createdBy })
+    .from(leadLists).where(eq(leadLists.id, rows[0].id)).for('update');
+  return l ?? null;
+}
+
+/** A corrected list makes way for its new version. Its rows are dropped unless scoring runs were made on it. */
+async function retire(scope: TenantScope, id: string, by: string, updatedBy: string, corrected: number) {
+  await scope.tx.update(leadLists).set({ status: 'replaced', replacedByListId: by, updatedAt: sql`now()`, updatedBy }).where(eq(leadLists.id, id));
+  const [{ runs }] = await scope.tx.select({ runs: sql<number>`count(*)::int` }).from(scoringRuns).where(eq(scoringRuns.listId, id));
+  if (!runs) {
+    await scope.tx.delete(issues).where(eq(issues.listId, id));
+    await scope.tx.delete(accounts).where(eq(accounts.listId, id)); // contacts go with their accounts
+  }
+  await recordAudit(scope, { action: 'list.rebuilt', targetType: 'lead_list', targetId: by, details: { replaced: id, corrections: corrected, keptForRuns: runs } });
+  logger.info({ event: 'list.rebuilt', listId: by, replaced: id, corrections: corrected }, 'List rebuilt with its corrections');
+}
+
+/** The people of a saved selection, with their accounts and findings, from a rebuilt file (as saveList picks them). */
+function selectRows(r: LeadResult, rows: Set<number>, dataRows: Map<number, string | null>): LeadResult {
+  const cons = r.contacts.filter(c => rows.has(c.row));
+  const accIds = new Set(cons.map(c => c.accountId));
+  const accs = r.accounts.filter(a => accIds.has(a.id));
+  const attachOf = (i: Issue) => { const m = i.code === 'D5' ? /^Merged into row (\d+)$/.exec(i.outcome) : null; return m ? +m[1] : i.row; };
+  const iss = r.issues.filter(i => typeof i.row !== 'number' || !dataRows.has(i.row) || rows.has(attachOf(i) as number));
+  return { contacts: cons, accounts: accs, issues: iss, stats: { ...r.stats, contacts: cons.length, accounts: accs.length, accountsPass: accs.filter(a => !a.excluded).length, inFinalList: cons.filter(c => c.status === 'In the final list').length } };
 }
 
 /** The file's own column names: the fullest of its first rows (the header row in a template-shaped file). */
@@ -127,7 +186,12 @@ type InsertListInput = {
   result: LeadResult;
   quality: ListQuality;
   rawOwners: Map<number, string | null>;
+  /** Each contact row's editable fields as the file has them (the edit form). */
+  raw?: Map<number, Record<string, string>>;
   createdBy: string;
+  updatedBy?: string;
+  /** A new version of a corrected list keeps these. */
+  name?: string; status?: string; savedAt?: Date | null; parentListId?: string | null;
 };
 
 async function insertList(scope: TenantScope, input: InsertListInput): Promise<string> {
@@ -135,16 +199,18 @@ async function insertList(scope: TenantScope, input: InsertListInput): Promise<s
   const bu = scope.ctx.businessUnitId;
   const checks: StepResult[] = STEPS.map(([k]) => stepResult(result, k, groupIssues(result)));
   const [list] = await scope.tx.insert(leadLists).values({
-    businessUnitId: bu, uploadId: upload.id, name: upload.fileName.replace(/\.[^.]+$/, '') || upload.fileName, status: 'draft', sandbox: upload.sandbox,
+    businessUnitId: bu, uploadId: upload.id, name: input.name ?? (upload.fileName.replace(/\.[^.]+$/, '') || upload.fileName), status: input.status ?? 'draft', sandbox: upload.sandbox,
     sourceFile: upload.fileName, sheetName: input.sheet, configVersionId: await activeConfigVersionId(scope), engineVersion: ENGINE_VERSION,
-    stats: result.stats, checks, quality: input.quality, fileColumns: input.fileColumns ?? [], mappingId: input.mappingId ?? null, createdBy, updatedBy: createdBy,
+    stats: result.stats, checks, quality: input.quality, fileColumns: input.fileColumns ?? [], mappingId: input.mappingId ?? null, createdBy, updatedBy: input.updatedBy ?? createdBy,
+    savedAt: input.savedAt ?? null, parentListId: input.parentListId ?? null,
   }).returning({ id: leadLists.id });
-  await insertRows(scope, list.id, result.accounts, result.contacts, result.issues, input.rawOwners, createdBy);
+  await insertRows(scope, list.id, result.accounts, result.contacts, result.issues, input.rawOwners, input.updatedBy ?? createdBy, input.raw);
   return list.id;
 }
 
 /** Writes accounts, contacts and issues for a list. Shared by the job and by saving a selection. */
-async function insertRows(scope: TenantScope, listId: string, accs: Account[], cons: Contact[], iss: Issue[], rawOwners: Map<number, string | null>, createdBy: string) {
+async function insertRows(scope: TenantScope, listId: string, accs: Account[], cons: Contact[], iss: Issue[], rawOwners: Map<number, string | null>, createdBy: string,
+  raw?: Map<number, Record<string, string>> | Map<number, unknown>) {
   const bu = scope.ctx.businessUnitId;
   const accountIds = new Map(accs.map(a => [a.id, randomUUID()]));
   for (const part of chunks(accs.map((a, seq) => ({
@@ -153,7 +219,7 @@ async function insertRows(scope: TenantScope, listId: string, accs: Account[], c
   })))) await scope.tx.insert(accounts).values(part);
   for (const part of chunks(cons.map(c => ({
     businessUnitId: bu, listId, accountId: accountIds.get(c.accountId)!, rowNo: c.row, statusGroup: groupOf(c.status), ownerEmail: lower(c.owner),
-    search: `${c.name} ${c.company} ${c.jobTitle}`.toLowerCase(), data: c, createdBy,
+    search: `${c.name} ${c.company} ${c.jobTitle}`.toLowerCase(), data: c, raw: raw?.get(c.row) ?? null, createdBy,
   })))) await scope.tx.insert(contacts).values(part);
   // An issue shows on its own contact row; a merged duplicate's on the row it was merged into; others are "not on
   // any contact" (rows not loaded, or the whole file).
@@ -204,10 +270,12 @@ export type ListDetail = ListSummary & {
   scope: 'all' | 'own';
   visible: { contacts: Record<'all' | ContactGroup, number>; accounts: { all: number; pass: number; excluded: number; review: number } };
   canEdit: boolean;
+  /** For a list corrected since (status 'replaced'): its newest version, to open instead. */
+  replacedBy: string | null;
 };
 
 async function listRow(scope: TenantScope, id: string) {
-  const [l] = await scope.tx.select({ ...listColumns, checks: leadLists.checks, createdBy: leadLists.createdBy, uploadId: leadLists.uploadId, fileColumns: leadLists.fileColumns, mappingId: leadLists.mappingId })
+  const [l] = await scope.tx.select({ ...listColumns, checks: leadLists.checks, createdBy: leadLists.createdBy, uploadId: leadLists.uploadId, fileColumns: leadLists.fileColumns, mappingId: leadLists.mappingId, parentListId: leadLists.parentListId })
     .from(leadLists).where(and(eq(leadLists.id, id), eq(leadLists.businessUnitId, scope.ctx.businessUnitId)));
   return l ?? null;
 }
@@ -230,6 +298,7 @@ export async function getList(scope: TenantScope, actor: Actor, id: string): Pro
     fileColumns: l.fileColumns as string[], uploadId: l.uploadId,
     missingColumns: missingColumns(l.fileColumns as string[], 'lead', l.mappingId ? (await getMapping(scope, l.mappingId)) ?? undefined : undefined),
     canEdit: isManager(actor.role) || l.createdBy === actor.userId,
+    replacedBy: l.status === 'replaced' ? (await currentVersion(scope, id))?.id ?? null : null,
   };
 }
 
@@ -238,13 +307,15 @@ export type PageQuery = { after?: number; limit?: number; q?: string };
 
 const limitOf = (q: PageQuery) => Math.min(Math.max(1, q.limit ?? PAGE_DEFAULT), PAGE_MAX);
 
-export type ContactRow = { id: string; contact: Contact; account: { industry: string; employees: number | null } | null; issues: Issue[] };
+export type ContactRow = { id: string; contact: Contact; account: { industry: string; employees: number | null } | null; issues: Issue[]; corrected: boolean };
 
 export async function listContacts(scope: TenantScope, listId: string, query: PageQuery & { group?: ContactGroup }): Promise<Page<ContactRow>> {
-  if (!(await listRow(scope, listId))) throw notFound('That list is not there any more.');
+  const l = await listRow(scope, listId);
+  if (!l) throw notFound('That list is not there any more.');
   const limit = limitOf(query);
   const rows = await scope.tx.select({
     id: contacts.id, rowNo: contacts.rowNo, data: contacts.data,
+    corrected: sql<boolean>`exists (select 1 from corrections k where k.upload_id = ${l.uploadId} and k.row_no = contacts.row_no)`,
     industry: sql<string | null>`${accounts.data}->>'industry'`, employees: sql<number | null>`(${accounts.data}->>'employees')::float8`, hasAccount: sql<boolean>`${accounts.id} is not null`,
   }).from(contacts).leftJoin(accounts, eq(accounts.id, contacts.accountId))
     .where(and(eq(contacts.listId, listId), ownerOnly(scope, contacts.ownerEmail), query.group ? eq(contacts.statusGroup, query.group) : undefined,
@@ -258,7 +329,7 @@ export async function listContacts(scope: TenantScope, listId: string, query: Pa
     for (const f of found) byRow.set(f.row!, [...(byRow.get(f.row!) ?? []), f.data as Issue]);
   }
   return {
-    rows: page.map(r => ({ id: r.id, contact: r.data as Contact, account: r.hasAccount ? { industry: r.industry ?? '', employees: r.employees } : null, issues: byRow.get(r.rowNo) ?? [] })),
+    rows: page.map(r => ({ id: r.id, contact: r.data as Contact, account: r.hasAccount ? { industry: r.industry ?? '', employees: r.employees } : null, issues: byRow.get(r.rowNo) ?? [], corrected: r.corrected })),
     next: rows.length > limit ? page[page.length - 1].rowNo : null,
   };
 }
@@ -343,10 +414,11 @@ export async function reportCsv(scope: TenantScope, listId: string): Promise<Csv
 
 /* ─── Changing lists ─── */
 
-async function editableList(scope: TenantScope, actor: Actor, id: string) {
+export async function editableList(scope: TenantScope, actor: Actor, id: string, { replaced = false } = {}) {
   const l = await listRow(scope, id);
   if (!l) throw notFound('That list is not there any more.');
   if (!isManager(actor.role) && l.createdBy !== actor.userId) throw forbidden('Only the person who uploaded this list, or a manager, can change it.');
+  if (l.status === 'replaced' && !replaced) throw conflict('This list has been corrected since. Open its current version to change it.');
   return l;
 }
 
@@ -362,9 +434,10 @@ export async function saveList(scope: TenantScope, actor: Actor, id: string, inp
   }
   const l = await listRow(scope, id);
   if (!l) throw notFound('That list is not there any more.');
+  if (l.status === 'replaced') throw conflict('This list has been corrected since. Open its current version to pick prospects from it.');
   const wanted = [...new Set(input.contactRows)];
   // Only prospects the caller can see and that are in the list (contactable or not) can be picked.
-  const picked = await scope.tx.select({ data: contacts.data }).from(contacts)
+  const picked = await scope.tx.select({ data: contacts.data, raw: contacts.raw }).from(contacts)
     .where(and(eq(contacts.listId, id), ownerOnly(scope, contacts.ownerEmail), inArray(contacts.rowNo, wanted), inArray(contacts.statusGroup, ['in', 'nc'])))
     .orderBy(asc(contacts.rowNo));
   if (!picked.length) throw badRequest('None of the selected prospects can be saved: pick prospects that are in the list.');
@@ -390,7 +463,7 @@ export async function saveList(scope: TenantScope, actor: Actor, id: string, inp
     sourceFile: l.sourceFile, sheetName: l.sheet, configVersionId: await activeConfigVersionId(scope), engineVersion: ENGINE_VERSION,
     stats, checks: l.checks, quality, createdBy: actor.userId, updatedBy: actor.userId, savedAt: sql`now()`,
   }).returning({ id: leadLists.id });
-  await insertRows(scope, created.id, accs, cons, iss, new Map(), actor.userId);
+  await insertRows(scope, created.id, accs, cons, iss, new Map(), actor.userId, new Map(picked.map(p => [(p.data as Contact).row, p.raw])));
   await recordAudit(scope, { action: 'list.saved_selection', actorRole: actor.role, targetType: 'lead_list', targetId: created.id, details: { from: id, contacts: cons.length, accounts: accs.length } });
   logger.info({ event: 'list.saved_selection', listId: created.id, contacts: cons.length }, 'Selection saved as a list');
   return { listId: created.id };
@@ -402,14 +475,21 @@ export async function renameList(scope: TenantScope, actor: Actor, id: string, n
   await recordAudit(scope, { action: 'list.renamed', actorRole: actor.role, targetType: 'lead_list', targetId: id });
 }
 
-/** Deletes a list with its scoring runs and hand-offs, and the uploaded files nothing else uses. */
+/** Deletes a list with the versions it replaced, their scoring runs and hand-offs, and the uploaded files nothing else
+ *  uses. An upload that corrections refer to stays: the corrections log is append-only and goes with the upload. */
 export async function deleteList(scope: TenantScope, actor: Actor, id: string): Promise<{ runs: number }> {
-  const l = await editableList(scope, actor, id);
-  const runs = await scope.tx.select({ upload: scoringRuns.signalUploadId }).from(scoringRuns).where(eq(scoringRuns.listId, id));
-  await scope.tx.delete(leadLists).where(eq(leadLists.id, id));
+  const l = await editableList(scope, actor, id, { replaced: true });
+  const { rows: chain } = await scope.tx.execute<{ id: string }>(sql`
+    WITH RECURSIVE chain(id, depth) AS (
+      SELECT id, 0 FROM lead_lists WHERE id = ${id}
+      UNION ALL SELECT l.id, c.depth + 1 FROM lead_lists l JOIN chain c ON l.replaced_by_list_id = c.id WHERE c.depth < 1000)
+    SELECT id FROM chain`);
+  const ids = chain.map(r => r.id);
+  const runs = await scope.tx.select({ upload: scoringRuns.signalUploadId }).from(scoringRuns).where(inArray(scoringRuns.listId, ids));
+  await scope.tx.delete(leadLists).where(inArray(leadLists.id, ids));
   await deleteUnusedUploads(scope, [l.uploadId, ...runs.map(r => r.upload)]);
-  await recordAudit(scope, { action: 'list.deleted', actorRole: actor.role, targetType: 'lead_list', targetId: id, details: { runs: runs.length } });
-  logger.info({ event: 'list.deleted', listId: id, runs: runs.length }, 'List deleted');
+  await recordAudit(scope, { action: 'list.deleted', actorRole: actor.role, targetType: 'lead_list', targetId: id, details: { runs: runs.length, versions: ids.length } });
+  logger.info({ event: 'list.deleted', listId: id, runs: runs.length, versions: ids.length }, 'List deleted');
   return { runs: runs.length };
 }
 
@@ -417,7 +497,15 @@ export async function deleteUnusedUploads(scope: TenantScope, ids: string[]): Pr
   if (!ids.length) return;
   await scope.tx.delete(uploads).where(and(inArray(uploads.id, ids),
     notExists(scope.tx.select({ x: sql`1` }).from(leadLists).where(eq(leadLists.uploadId, uploads.id))),
-    notExists(scope.tx.select({ x: sql`1` }).from(scoringRuns).where(eq(scoringRuns.signalUploadId, uploads.id)))));
+    notExists(scope.tx.select({ x: sql`1` }).from(scoringRuns).where(eq(scoringRuns.signalUploadId, uploads.id))),
+    sql`not upload_has_corrections(${uploads.id})`));
+}
+
+/** Is a rebuild of this list queued or running? One correction is checked at a time. */
+export async function rebuildPending(scope: TenantScope, listId: string): Promise<boolean> {
+  const [r] = await scope.tx.select({ x: sql`1` }).from(jobs)
+    .where(and(eq(jobs.kind, 'lead.process'), inArray(jobs.status, ['queued', 'running']), sql`${jobs.payload}->>'replaceListId' = ${listId}`)).limit(1);
+  return !!r;
 }
 
 /* ─── For scoring: the whole list in the engine's shape ─── */

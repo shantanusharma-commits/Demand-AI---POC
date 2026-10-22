@@ -49,6 +49,7 @@ export async function startScoringRun(scope: TenantScope, actor: Actor, input: {
   const [list] = await scope.tx.select({ id: leadLists.id, status: leadLists.status, sandbox: leadLists.sandbox }).from(leadLists)
     .where(and(eq(leadLists.id, input.listId), eq(leadLists.businessUnitId, scope.ctx.businessUnitId)));
   if (!list) throw notFound("That prospect list isn't saved any more.");
+  if (list.status === 'replaced') throw conflict('This list has been corrected since. Score its current version.');
   if (list.status !== 'saved') throw conflict('Save the prospect list before scoring it.');
   const upload = await loadUpload(scope, input.signalUploadId);
   if (!upload || upload.kind !== 'signal') throw notFound('That signal file is not there any more. Upload it again.');

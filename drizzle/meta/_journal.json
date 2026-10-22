@@ -71,6 +71,20 @@
       "when": 1792702809985,
       "tag": "0009_list_quality",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1792703619037,
+      "tag": "0010_corrections",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1792703648253,
+      "tag": "0011_corrections_security",
+      "breakpoints": true
     }
   ]
 }

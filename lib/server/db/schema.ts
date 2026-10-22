@@ -4,7 +4,7 @@
 // No `server-only` import here: drizzle-kit and the migration tests load this file outside Next.js.
 import { sql } from 'drizzle-orm';
 import {
-  boolean, check, customType, date, doublePrecision, index, integer, jsonb, pgTable, primaryKey, text, timestamp, uniqueIndex, uuid,
+  bigint, boolean, check, customType, date, doublePrecision, index, integer, jsonb, pgTable, primaryKey, text, timestamp, uniqueIndex, uuid,
   type AnyPgColumn,
 } from 'drizzle-orm/pg-core';
 
@@ -267,7 +267,10 @@ export const uploadFiles = pgTable('upload_files', {
 
 /* ─── Prospecting: lead lists and what the checks built from them (derived from the upload + config + engine) ─── */
 
-export const LIST_STATUSES = ['draft', 'saved'] as const;
+/** A list corrected since (G-015) is 'replaced' by its new version and kept only as the pointer to it, with the scoring
+ *  runs made on it. */
+export const LIST_STATUSES = ['draft', 'saved', 'replaced'] as const;
+export const RUN_STATUSES = ['draft', 'saved'] as const;
 /** Final-list groups: in the final list, in the list but not contactable, not in the list. */
 export const CONTACT_GROUPS = ['in', 'nc', 'out'] as const;
 const lowerOwner = (name: string, col: AnyPgColumn) => check(name, sql`${col} is null or ${col} = lower(${col})`);
@@ -292,6 +295,8 @@ export const leadLists = pgTable('lead_lists', {
   /** The file's own column names (its header row, or its fullest early row), for mapping them (G-040). */
   fileColumns: jsonb('file_columns').notNull().default([]),
   mappingId: uuid('mapping_id').references((): AnyPgColumn => columnMappings.id, { onDelete: 'set null' }),
+  /** The version built when this list was corrected (status 'replaced'). */
+  replacedByListId: uuid('replaced_by_list_id').references((): AnyPgColumn => leadLists.id, { onDelete: 'set null' }),
   createdAt: createdAt(),
   createdBy: createdBy(),
   updatedAt: updatedAt(),
@@ -302,6 +307,7 @@ export const leadLists = pgTable('lead_lists', {
   index('lead_lists_bu_status_idx').on(t.businessUnitId, t.status, t.createdAt),
   index('lead_lists_upload_idx').on(t.uploadId),
   index('lead_lists_parent_idx').on(t.parentListId),
+  index('lead_lists_replaced_by_idx').on(t.replacedByListId),
 ]);
 
 export const accounts = pgTable('accounts', {
@@ -338,6 +344,8 @@ export const contacts = pgTable('contacts', {
   ownerEmail: text('owner_email'),
   search: text('search').notNull(),
   data: jsonb('data').notNull(),
+  /** The row's editable fields as the file (with its corrections) has them, for the edit form; null on older lists. */
+  raw: jsonb('raw'),
   createdAt: createdAt(),
   createdBy: createdBy(),
 }, t => [
@@ -372,10 +380,50 @@ export const scoringRuns = pgTable('scoring_runs', {
   updatedBy: updatedBy(),
   savedAt: tsz('saved_at'),
 }, t => [
-  check('scoring_runs_status_check', sql`${t.status} in (${inList(LIST_STATUSES)})`),
+  check('scoring_runs_status_check', sql`${t.status} in (${inList(RUN_STATUSES)})`),
   index('scoring_runs_bu_status_idx').on(t.businessUnitId, t.status, t.createdAt),
   index('scoring_runs_list_idx').on(t.listId),
   index('scoring_runs_upload_idx').on(t.signalUploadId),
+]);
+
+/* ─── Corrections (G-015, D-17, G-021): append-only, replayed onto the upload's grid whenever a list is built ─── */
+
+export const CORRECTION_FIELD_NAMES = ['first_name', 'last_name', 'job_title', 'email', 'email_verified', 'linkedin_url', 'city', 'country',
+  'owner_email', 'employee_count', 'industry', 'opt_out', 'managed_separately', 'vertical', 'take_out'] as const;
+
+export const corrections = pgTable('corrections', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  /** The order corrections are replayed in. */
+  seq: bigint('seq', { mode: 'number' }).generatedAlwaysAsIdentity(),
+  businessUnitId: uuid('business_unit_id').notNull().references(() => businessUnits.id),
+  uploadId: uuid('upload_id').notNull().references(() => uploads.id, { onDelete: 'cascade' }),
+  /** The list it was made on, as history: no foreign key, because the log outlives a list version (it goes with its upload). */
+  listId: uuid('list_id').notNull(),
+  rowNo: integer('row_no').notNull(),
+  field: text('field').notNull(),
+  fromValue: text('from_value').notNull(),
+  toValue: text('to_value').notNull(),
+  severity: text('severity').notNull(),
+  /** What was wrong, how the person knows, and their note. */
+  reason: text('reason').notNull(),
+  source: text('source').notNull(),
+  note: text('note').notNull(),
+  contactName: text('contact_name').notNull(),
+  company: text('company').notNull(),
+  /** The contact's owner when the correction was made: reps see the corrections to their own rows. */
+  ownerEmail: text('owner_email'),
+  actorRole: text('actor_role').notNull(),
+  createdAt: createdAt(),
+  createdBy: createdBy(),
+}, t => [
+  check('corrections_field_check', sql`${t.field} in (${inList(CORRECTION_FIELD_NAMES)})`),
+  check('corrections_severity_check', sql`${t.severity} in ('major', 'minor')`),
+  check('corrections_row_check', sql`${t.rowNo} > 0`),
+  uniqueIndex('corrections_seq_key').on(t.seq),
+  index('corrections_upload_seq_idx').on(t.uploadId, t.seq),
+  index('corrections_bu_seq_idx').on(t.businessUnitId, t.seq),
+  index('corrections_list_idx').on(t.listId),
+  lowerOwner('corrections_owner_lower_check', t.ownerEmail),
 ]);
 
 /** What the checks found, for a list (lead file) or a scoring run (signal file). */

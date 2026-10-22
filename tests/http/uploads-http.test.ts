@@ -150,6 +150,36 @@ test('G-015 over HTTP: per-check CSV and the validation report download as UTF-8
   assert.equal((await rep.get(`/api/lists/${randomUUID()}/report.csv`)).status, 404);
 });
 
+test('G-015 corrections over HTTP: Origin and fields checked, a rep refused on another’s list, then the list is rebuilt and replaced', async () => {
+  const b = await admin();
+  const first = ((await b.get(`/api/lists/${listId}/contacts?group=nc&limit=1`)).json.rows as { contact: { row: number; jobTitle: string } }[])[0];
+  const row = first.contact.row;
+  const edit = await b.get(`/api/lists/${listId}/contacts/${row}`);
+  assert.equal(edit.status, 200);
+  assert.equal((edit.json.row as { raw: Record<string, string> }).raw.job_title, first.contact.jobTitle);
+  assert.equal((await b.get(`/api/lists/${listId}/contacts/0`)).status, 404);
+  const body = { row, changes: { job_title: 'Lead DCS Engineer' }, reason: 'Wrong job title', source: 'Checked their LinkedIn profile', note: '' };
+  assert.equal((await b.request('POST', `/api/lists/${listId}/corrections`, body, { origin: 'https://evil.example' })).status, 403, 'CSRF');
+  const bad = await b.post(`/api/lists/${listId}/corrections`, { ...body, reason: 'Because' });
+  assert.equal(bad.status, 400);
+  assert.ok((bad.json.fields as Record<string, string[]>).reason);
+  const rep = new Browser(srv.base);
+  await rep.signIn('rep.a@demandai.test');
+  assert.equal((await rep.post(`/api/lists/${listId}/corrections`, body)).status, 403, 'only the uploader or a manager corrects a list');
+  const ok = await b.post(`/api/lists/${listId}/corrections`, body);
+  assert.equal(ok.status, 201);
+  const job = await b.waitForJob(String(ok.json.jobId));
+  assert.equal(job.status, 'succeeded', JSON.stringify(job.error));
+  const next = job.progress.result!.listId;
+  const old = (await b.get(`/api/lists/${listId}`)).json.list as { status: string; replacedBy: string };
+  assert.deepEqual([old.status, old.replacedBy], ['replaced', next]);
+  const log = await b.get(`/api/lists/${next}/corrections`);
+  assert.deepEqual((log.json.rows as { field: string; to: string }[]).map(r => [r.field, r.to]), [['job_title', 'Lead DCS Engineer']]);
+  assert.equal(((await b.get('/api/corrections')).json.summary as { corrections: number }).corrections, 1);
+  assert.equal((await b.post(`/api/lists/${listId}/corrections`, body)).status, 409, 'a replaced version is not corrected');
+  listId = next;
+});
+
 test('logs: upload and scoring events are logged without file names or any contact’s address', async () => {
   const lines = srv.logs.join('').split('\n').filter(l => l.startsWith('{')).map(l => JSON.parse(l));
   for (const event of ['upload.received', 'job.started', 'job.stage', 'job.succeeded', 'scoring.started', 'handoff.created', 'upload.refused']) {
