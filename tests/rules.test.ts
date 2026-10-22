@@ -296,3 +296,31 @@ test('G-038: a different company that shares a domain stays separate and is flag
   assert.equal(r.accounts.length, 2);
   assert.ok(r.issues.some(i => i.row === 3 && i.field === 'company_domain' && i.severity === 'flag' && /shares the domain/i.test(i.issue)));
 });
+
+/* ─── G-044 / D-16: signals matched by domain, then name, base name and initials ─── */
+
+test('G-044: a signal names its company by domain, legal-suffix variant, capitals or initials, and still matches (with a note)', () => {
+  const r = leads({ company_name: 'Vantage Pacific Gas', company_domain: 'vantagegas.com', email: 'ann.lee@vantagegas.com', industry: 'Natural Gas' },
+    { ...OTHER, company_name: 'Vantage Pacific Gas', company_domain: 'vantagegas.com', email: 'bo.tan@vantagegas.com', industry: 'Natural Gas' });
+  const list = { accounts: r.accounts, contacts: r.contacts };
+  const HEAD = [...SIGNALS, 'company_domain'];
+  const one = (company: string, domain = '') => E.processSignals([HEAD, [company, 'ann.lee@vantagegas.com', 'Capital project', '2026-09-01', 'New train', 'Plan', '', domain]], list, { asOf: '2026-09-30' });
+  for (const [company, domain, how] of [['Another Name Entirely', 'vantagegas.com', /domain/], ['Vantage Pacific Gas Pte Ltd', '', /name variant/],
+    ['VANTAGE PACIFIC GAS GROUP', '', /name variant/], ['VPG', '', /initials/]] as const) {
+    const sig = one(company, domain);
+    assert.equal(sig.signals[0].status, 'Qualified', company);
+    assert.ok(sig.issues.some(i => i.field === 'company_name' && i.severity === 'info' && how.test(i.issue)), `${company}: noted`);
+  }
+  assert.equal(one('vantage pacific gas').issues.filter(i => i.field === 'company_name').length, 0, 'an exact name needs no note');
+  assert.equal(one('Unknown Holdings').signals[0].code, 'D4', 'an unknown company is still rejected');
+  assert.ok(E.SIGNAL_COLUMNS.includes('company_domain'), 'the signal template has an optional company_domain column');
+  assert.ok(!E.SIGNAL_REQUIRED.includes('company_domain'));
+});
+
+test('G-044: initials that fit more than one account match none', () => {
+  const r = leads({ company_name: 'Vantage Pacific Gas', company_domain: 'vpg-one.com', email: 'ann.lee@vpg-one.com' },
+    { ...OTHER, company_name: 'Victory Pacific Group Holdings Polymers', company_domain: 'vpg-two.com', email: 'bo.tan@vpg-two.com' },
+    { first_name: 'Cy', email: 'cy@vpg-three.com', linkedin_url: '', company_name: 'Valley Petro Gas', company_domain: 'vpg-three.com' });
+  const sig = E.processSignals([SIGNALS, ['VPG', '', 'Capital project', '2026-09-01', 'x', 'Plan', '']], { accounts: r.accounts, contacts: r.contacts }, { asOf: '2026-09-30' });
+  assert.equal(sig.signals[0].code, 'D4');
+});

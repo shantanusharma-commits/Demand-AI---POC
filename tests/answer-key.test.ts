@@ -27,7 +27,9 @@ const CASE_FLOORS: Record<string, [number, number]> = {
   'SIG-STALE': [145, 145], 'SIG-NO-COMPANY': [15, 15], 'SIG-UNKNOWN-COMPANY': [45, 45], 'SIG-UNKNOWN-PERSON': [40, 40],
   'SIG-NO-DATE': [25, 25], 'SIG-BAD-DATE': [35, 35], 'SIG-FUTURE': [20, 20], 'SIG-BAD-TYPE': [35, 35], 'SIG-TYPE-CASE': [30, 30],
   'SIG-DUP': [40, 40], 'SIG-NO-DETAIL': [30, 30], 'SIG-OPTED-OUT-PERSON': [63, 63], 'SIG-EXCLUDED-ACCOUNT': [198, 198],
-  'SIG-NAME-VARIANT': [5, 35], // G-044
+  // G-044: matched by base name and unique initials; the 4 left are initials that fit two or more accounts
+  // (CNR, CO, MG, VPG), which are correctly left unmatched.
+  'SIG-NAME-VARIANT': [31, 35],
 };
 
 const ACCOUNT_CASE_FLOORS: Record<string, [number, number]> = {
@@ -64,12 +66,13 @@ const SNAPSHOT = {
   // and A 59 → 62, B 54 → 57, C 80 → 87, Watch 377 → 395.
   // G-038: 42 accounts written two ways became one each; their rows now share one fit and one set of knock-outs
   // (Excluded 259 → 251, Below floor 583 → 566, Watch 395 → 378).
-  tiers: { A: 62, B: 57, C: 87, 'Watch list': 378, 'Below fit floor': 566, Excluded: 251 },
-  prospectsWithSignal: 325,
+  // G-044: 26 more signals reach their account, moving 3 Watch-list accounts to C (Watch 378 → 375, C 87 → 90).
+  tiers: { A: 62, B: 57, C: 90, 'Watch list': 375, 'Below fit floor': 566, Excluded: 251 },
+  prospectsWithSignal: 330,
   // G-005: contactable tier A/B prospects go to NBA; those who can't be contacted stay in Scoring.
-  handoffProspects: 133,
+  handoffProspects: 135,
   handoffHeldBack: 9,
-  signalOutcomes: { Qualified: 464, 'Not used': 499, 'Used for a knock-out': 45, 'Rejected D1': 58, 'Rejected D2': 149, 'Rejected D3': 118, 'Rejected D4': 118, 'Rejected D5': 41 },
+  signalOutcomes: { Qualified: 475, 'Not used': 514, 'Used for a knock-out': 45, 'Rejected D1': 58, 'Rejected D2': 149, 'Rejected D3': 118, 'Rejected D4': 92, 'Rejected D5': 41 },
 };
 
 const m = measure();

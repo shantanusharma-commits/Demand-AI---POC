@@ -117,7 +117,8 @@ export const LEAD_COLUMNS = ['first_name', 'last_name', 'job_title', 'seniority'
   'capacity_unit', 'consent_basis', 'opt_out', 'owner_email'];
 export const LEAD_REQUIRED = ['first_name', 'last_name', 'job_title', 'company_name', 'company_domain', 'country', 'industry',
   'existing_customer', 'managed_separately', 'consent_basis', 'opt_out', 'owner_email'];
-export const SIGNAL_COLUMNS = ['company_name', 'contact_email_or_linkedin', 'signal_type', 'event_date', 'detail', 'source', 'product'];
+// company_domain is optional (D-16): when given, it matches the signal to its account before the name does (G-044).
+export const SIGNAL_COLUMNS = ['company_name', 'contact_email_or_linkedin', 'signal_type', 'event_date', 'detail', 'source', 'product', 'company_domain'];
 export const SIGNAL_REQUIRED = ['company_name', 'signal_type', 'event_date', 'detail'];
 
 /* ─── Small helpers ─── */
@@ -719,9 +720,35 @@ export function decayFactor(type: Pick<SignalTypeConfig, 'full' | 'zero'>, age: 
 export function processSignals(grid: Grid, list: LeadList, { file = 'signal file', sheet = 'Sheet1', asOf }: { file?: string; sheet?: string; asOf?: string } = {}): SignalResult {
   const table = readTable(grid, { file, sheet, columns: SIGNAL_COLUMNS, required: SIGNAL_REQUIRED, anchor: 'signal_type' });
   const issues = table.issues.slice();
-  // An account answers to every company name its rows use (G-038).
+  // An account answers to every company name its rows use (G-038); signals also find it by domain, base name or
+  // initials (G-044), each only when exactly one account fits.
   const accountsByKey = new Map<string, Account>();
-  for (const a of list.accounts) for (const n of a.names ?? [a.key]) if (!accountsByKey.has(n)) accountsByKey.set(n, a);
+  const byDomain = new Map<string, Account[]>(), byBase = new Map<string, Account[]>(), byInitials = new Map<string, Account[]>();
+  const add = (m: Map<string, Account[]>, k: string, a: Account) => { if (k && !(m.get(k) ?? []).includes(a)) m.set(k, [...(m.get(k) ?? []), a]); };
+  for (const a of list.accounts) {
+    for (const n of a.names ?? [a.key]) {
+      if (!accountsByKey.has(n)) accountsByKey.set(n, a);
+      add(byBase, companyBase(n), a);
+    }
+    add(byDomain, validDomain(a.domain), a);
+    const words = companyBase(a.name).split(' ').filter(w => !['and', 'of', 'the'].includes(w));
+    if (words.length >= 2) add(byInitials, words.map(w => w[0]).join('').toUpperCase(), a);
+  }
+  const only = (list: Account[] | undefined) => (list && list.length === 1 ? list[0] : undefined);
+  const resolveAccount = (company: string, domain: string): { acc?: Account; how?: string } => {
+    const viaDomain = only(byDomain.get(validDomain(domain)));
+    if (viaDomain) return { acc: viaDomain, how: `domain ${validDomain(domain)}` };
+    const exact = accountsByKey.get(normKey(company));
+    if (exact) return { acc: exact };
+    const viaBase = only(byBase.get(companyBase(company)));
+    if (viaBase) return { acc: viaBase, how: 'name variant' };
+    const initials = company.trim();
+    if (/^[A-Z]{2,6}$/.test(initials)) {
+      const viaInitials = only(byInitials.get(initials));
+      if (viaInitials) return { acc: viaInitials, how: 'initials' };
+    }
+    return {};
+  };
   const contactsByAcc = new Map<string, Contact[]>();
   for (const c of list.contacts) {
     if (!contactsByAcc.has(c.accountId)) contactsByAcc.set(c.accountId, []);
@@ -748,9 +775,10 @@ export function processSignals(grid: Grid, list: LeadList, { file = 'signal file
     };
 
     // 1. Match to the account by company, then to the person by email or LinkedIn URL
-    const acc = accountsByKey.get(normKey(s.company));
     if (!s.company) { reject('D3', 'No company name', 'company_name', 'Add the company name as in the lead file'); continue; }
+    const { acc, how } = resolveAccount(s.company, clean(r.company_domain).toLowerCase());
     if (!acc) { reject('D4', 'Company is not in the target universe', 'company_name', 'Use the company name exactly as in the lead file, or add the company to the lead file'); continue; }
+    if (how) issues.push({ file, sheet, row: s.row, field: 'company_name', issue: `"${s.company}" matched to ${acc.name} by ${how}`, outcome: 'Counted for that account', code: '—', fix: 'Write the company name as in the lead file', severity: 'info' });
     s.accountId = acc.id;
     const cs = contactsByAcc.get(acc.id) || [];
     let typeCfg = CONFIG.signalTypes[s.type] || CONFIG.signalTypes[Object.keys(CONFIG.signalTypes).find(k => k.toLowerCase() === s.type.toLowerCase()) as string];
