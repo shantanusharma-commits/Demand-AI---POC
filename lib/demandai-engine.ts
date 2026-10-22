@@ -61,7 +61,35 @@ export const CONFIG = {
     'Installed system (current)':           { knockout: true },
     'Newsletter sign-up':                   { reject: 'D1' },
   } as Record<string, SignalTypeConfig>,
+  // Value synonyms (D-14, provisional v1 until the Client confirms). A value read through one gets an info note
+  // ("read as …"). Anything not listed keeps its normal treatment: Business card, Trade show, Consent, Implied and
+  // Contract stay unrecognised consent bases; Demo request, Site visit, Webinar, Price request stay unknown types.
+  synonyms: {
+    version: 'synonyms v1 (D-14, provisional)',
+    // Keys are countryKey() forms: lower case, no accents or punctuation, no "the / republic of / kingdom of".
+    countries: {
+      'sg': 'Singapore', 'sgp': 'Singapore', 'singapore': 'Singapore',
+      'my': 'Malaysia', 'mys': 'Malaysia', 'malaysia': 'Malaysia', 'malasia': 'Malaysia',
+      'th': 'Thailand', 'tha': 'Thailand', 'thailand': 'Thailand', 'thai': 'Thailand',
+      'ph': 'Philippines', 'phl': 'Philippines', 'philippines': 'Philippines', 'phillipines': 'Philippines', 'philippine': 'Philippines', 'phillippines': 'Philippines',
+      'id': 'Indonesia', 'idn': 'Indonesia', 'indonesia': 'Indonesia',
+      'vn': 'Vietnam', 'vnm': 'Vietnam', 'vietnam': 'Vietnam', 'viet nam': 'Vietnam',
+    } as Record<string, string>,
+    accountTypes: {
+      'owner operator': 'owner-operator', 'owner/operator': 'owner-operator', 'operator': 'owner-operator', 'end user': 'owner-operator',
+      'si': 'system integrator',
+    } as Record<string, AccountTypeKey>,
+    consentBases: { 'opt-in': 'opted in', 'opt in': 'opted in' } as Record<string, string>,
+    signalTypes: { 'rfq': 'Inquiry or RFQ', 'inquiry': 'Inquiry or RFQ' } as Record<string, string>,
+  },
 };
+
+/** A country as the synonym table keys it: lower case, accents and punctuation removed, leading articles and state
+ *  titles dropped ("Việt Nam" → "viet nam", "Republic of Indonesia" → "indonesia"). */
+export function countryKey(raw: string): string {
+  return raw.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(/[^a-z ]+/g, ' ').replace(/\s+/g, ' ').trim()
+    .replace(/^(the |socialist republic of |republic of the |republic of |kingdom of )+/, '');
+}
 
 export const CODES: Record<DqCode, string> = {
   D1: 'Wrong fit',
@@ -322,6 +350,11 @@ export function processLeads(grid: Grid, { file = 'lead file', sheet = 'Sheet1' 
 
     // Company-level fields: checked on every row, duplicates included (G-037)
     req('country', 'Country is missing', 'The account fails the region check', 'Add the country');
+    const countryAs = CONFIG.synonyms.countries[countryKey(c.country)];
+    if (countryAs) {
+      if (countryAs.toLowerCase() !== c.country.toLowerCase()) at(row, 'country', `"${c.country}" read as ${countryAs}`, 'Matched to the pilot region', '—', 'Write the country name in full', 'info');
+      c.country = countryAs;
+    }
     req('industry', 'Industry is missing', 'Vertical set to other, held for review', 'Add the industry as held');
     const rev = parseNumber(r.annual_revenue_usd), emp = parseNumber(r.employee_count);
     ([['annual_revenue_usd', rev], ['employee_count', emp]] as const).forEach(([f, n]) => {
@@ -333,9 +366,14 @@ export function processLeads(grid: Grid, { file = 'lead file', sheet = 'Sheet1' 
       at(row, 'annual_revenue_usd / employee_count', 'No company size', 'Company size scores 0 in fit', 'D3', 'Add revenue, or employees if revenue is unknown');
     }
 
-    const at0 = clean(r.account_type).toLowerCase();
+    const at0 = clean(r.account_type).toLowerCase().replace(/\s+/g, ' ');
+    const atAs = CONFIG.synonyms.accountTypes[at0];
     if (!at0) { c.accountType = 'other'; at(row, 'account_type', 'Account type is blank', 'Scores 0 for account type', '—', 'Choose from the list', 'info'); }
     else if (CONFIG.accountTypes[at0 as AccountTypeKey]) c.accountType = at0 as AccountTypeKey;
+    else if (atAs) {
+      c.accountType = atAs;
+      at(row, 'account_type', `"${clean(r.account_type)}" read as ${atAs[0].toUpperCase() + atAs.slice(1)}`, 'Scored as that account type', '—', 'Choose the type from the list', 'info');
+    }
     else { c.accountType = 'other'; at(row, 'account_type', `"${clean(r.account_type)}" isn't on the list`, 'Treated as Other', 'D3', 'Choose Owner-operator, EPC contractor, System integrator, Distributor or Other'); }
 
     const yn = (f: string, blankOutcome: string): 'Y' | 'N' | '' => {
@@ -355,7 +393,9 @@ export function processLeads(grid: Grid, { file = 'lead file', sheet = 'Sheet1' 
 
     const consent = clean(r.consent_basis);
     c.consent = consent;
-    c.consentOk = CONFIG.consentBases.includes(consent.toLowerCase());
+    const consentAs = CONFIG.synonyms.consentBases[consent.toLowerCase()];
+    c.consentOk = CONFIG.consentBases.includes(consentAs ?? consent.toLowerCase());
+    if (consentAs) at(row, 'consent_basis', `"${consent}" read as ${consentAs}`, 'Recognised consent basis', '—', 'Use the wording from the list', 'info');
     if (!consent) { if (!missingCols.has('consent_basis')) at(row, 'consent_basis', 'No consent basis', 'Not contactable', 'D3', 'Add legitimate interest, existing customer or opted in'); }
     else if (!c.consentOk) at(row, 'consent_basis', `"${consent}" isn't a recognised basis`, 'Not contactable until confirmed', 'D3', 'Use legitimate interest, existing customer or opted in');
     // The row contradicts itself: the opt-out wins, and a person is asked to correct it (G-060).
@@ -566,7 +606,12 @@ export function processSignals(grid: Grid, list: LeadList, { file = 'signal file
     if (!acc) { reject('D4', 'Company is not in the target universe', 'company_name', 'Use the company name exactly as in the lead file, or add the company to the lead file'); continue; }
     s.accountId = acc.id;
     const cs = contactsByAcc.get(acc.id) || [];
-    const typeCfg = CONFIG.signalTypes[s.type] || CONFIG.signalTypes[Object.keys(CONFIG.signalTypes).find(k => k.toLowerCase() === s.type.toLowerCase()) as string];
+    let typeCfg = CONFIG.signalTypes[s.type] || CONFIG.signalTypes[Object.keys(CONFIG.signalTypes).find(k => k.toLowerCase() === s.type.toLowerCase()) as string];
+    const typeAs = typeCfg ? undefined : CONFIG.synonyms.signalTypes[s.type.toLowerCase().replace(/\s+/g, ' ')];
+    if (typeAs) {
+      typeCfg = CONFIG.signalTypes[typeAs];
+      issues.push({ file, sheet, row: s.row, field: 'signal_type', issue: `"${s.type}" read as ${typeAs}`, outcome: 'Scored as that type', code: '—', fix: 'Use the type from the list in the template', severity: 'info' });
+    }
     if (typeCfg) s.type = Object.keys(CONFIG.signalTypes).find(k => CONFIG.signalTypes[k] === typeCfg) as string;
 
     // Installed system (current) is company-wide: it knocks the account out, whoever is named.

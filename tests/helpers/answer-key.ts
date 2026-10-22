@@ -51,7 +51,8 @@ export function measure(data = loadDataset()) {
     'EM-DOUBLE-DOT': malformed, 'EM-TRAILING-DOT': malformed, 'EM-BAD-CHAR': malformed,
     'EM-PERSONAL': field('email'), 'EM-ROLE': field('email'), 'EM-DOMAIN-MISMATCH': field('email'), 'EM-TYPO-DOMAIN': field('email'),
     'DUP-EXACT': dup, 'DUP-EMAIL-CASE': dup, 'DUP-LINKEDIN': dup, 'DUP-FUZZY': dup, 'DUP-UPDATED': dup, 'DUP-CROSS-COMPANY': dup,
-    'FMT-YN-BAD': r => has(r, i => /isn't Y or N/.test(i.issue)), 'FMT-CONSENT': r => has(r, i => /recognised/.test(i.issue)),
+    // FMT-CONSENT: flagged as unrecognised, or (D-14) read through an agreed synonym with a note ("Opt-in").
+    'FMT-YN-BAD': r => has(r, i => /isn't Y or N/.test(i.issue)), 'FMT-CONSENT': r => has(r, i => /recognised/.test(i.issue) || (i.field === 'consent_basis' && /read as/.test(i.issue))),
     'FMT-LINKEDIN': r => has(r, i => /profile URL/.test(i.issue)), 'FMT-OWNER': r => has(r, i => /isn't an email/.test(i.issue)),
     'FMT-INCONSISTENT': r => has(r, i => /^Differs from row/.test(i.issue)) || dup(r),
     'FMT-TITLE-NOISE': r => !!contactByRow.get(r) && contactByRow.get(r)!.persona !== 'None',
@@ -83,7 +84,8 @@ export function measure(data = loadDataset()) {
     'SIG-NO-DATE': rejected('D3', /^No event date/),
     'SIG-BAD-DATE': rejected('D3', /isn't YYYY-MM-DD/),
     'SIG-FUTURE': rejected('D3', /after the scoring date/),
-    'SIG-BAD-TYPE': rejected('D3', /isn't on the list/),
+    // D-14 (provisional, key expectation updated deliberately): RFQ and Inquiry read as "Inquiry or RFQ" with a note.
+    'SIG-BAD-TYPE': s => rejected('D3', /isn't on the list/)(s) || sig.issues.some(i => i.row === s.row && i.field === 'signal_type' && /read as/.test(i.issue)),
     'SIG-TYPE-CASE': s => !rejected('D3', /isn't on the list/)(s),
     'SIG-DUP': rejected('D5'),
     'SIG-NO-DETAIL': s => sig.issues.some(i => i.row === s.row && i.field === 'detail'),

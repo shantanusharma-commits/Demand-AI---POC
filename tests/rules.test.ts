@@ -118,3 +118,45 @@ test('G-005: the hand-off takes only prospects who can be contacted and says how
   assert.deepEqual(picked.items.map(p => p.c.row), [2]);
   assert.equal(picked.heldBack, 1);
 });
+
+/* ─── D-14 synonyms (provisional v1): country G-016, account type and consent G-042, signal type G-045 ─── */
+
+test('G-016: country codes, long forms, diacritics and known misspellings read as the pilot country, with a note', () => {
+  const cases: [string, string][] = [['SG', 'Singapore'], ['Republic of Singapore', 'Singapore'], ['MY', 'Malaysia'], ['Malasia', 'Malaysia'],
+    ['TH', 'Thailand'], ['Kingdom of Thailand', 'Thailand'], ['Thai', 'Thailand'], ['PH', 'Philippines'], ['Phillipines', 'Philippines'],
+    ['Philippine', 'Philippines'], ['The Philippines', 'Philippines'], ['ID', 'Indonesia'], ['Republic of Indonesia', 'Indonesia'],
+    ['VN', 'Vietnam'], ['Viet Nam', 'Vietnam'], ['Việt Nam', 'Vietnam'], ['singapore', 'Singapore']];
+  for (const [raw, want] of cases) {
+    const r = leads({ country: raw }, OTHER);
+    assert.equal(r.accounts[0].country, want, raw);
+    assert.equal(r.accounts[0].excluded, false, `${raw} is in the pilot region`);
+    if (raw !== want && raw.toLowerCase() !== want.toLowerCase()) assert.ok(r.issues.some(i => i.row === 2 && i.field === 'country' && i.severity === 'info' && i.issue.includes(`read as ${want}`)), raw);
+  }
+  for (const out of ['India', 'Asia', 'Taiwan']) assert.equal(leads({ country: out }, { ...OTHER, country: out }).accounts[0].excluded, true, out);
+});
+
+test('G-042: account-type and consent wordings read through the agreed synonyms; others stay rejected', () => {
+  for (const raw of ['Owner operator', 'Owner/Operator', 'Operator', 'End user']) {
+    const r = leads({ account_type: raw }, OTHER);
+    assert.equal(r.contacts[0].accountType, 'owner-operator', raw);
+    assert.ok(r.issues.some(i => i.row === 2 && i.field === 'account_type' && i.severity === 'info' && /read as Owner-operator/.test(i.issue)), raw);
+  }
+  assert.equal(leads({ account_type: 'SI' }, OTHER).contacts[0].accountType, 'system integrator');
+  const optIn = leads({ consent_basis: 'Opt-in' }, OTHER);
+  assert.equal(optIn.contacts[0].consentOk, true);
+  assert.ok(optIn.issues.some(i => i.row === 2 && i.field === 'consent_basis' && i.severity === 'info' && /read as opted in/i.test(i.issue)));
+  for (const raw of ['Business card', 'Trade show', 'Consent', 'Implied', 'Contract']) assert.equal(leads({ consent_basis: raw }, OTHER).contacts[0].consentOk, false, raw);
+});
+
+test('G-045: RFQ and Inquiry signals read as "Inquiry or RFQ"; other unknown types stay D3', () => {
+  const r = leads({}, OTHER);
+  const run = (type: string) => E.processSignals([SIGNALS, ['Acme Refining', 'ann.lee@acme-refining.com', type, '2026-09-20', 'Asked for a quote', 'CRM', '']],
+    { accounts: r.accounts, contacts: r.contacts }, { asOf: '2026-09-30' });
+  for (const t of ['RFQ', 'Inquiry', 'rfq']) {
+    const sig = run(t);
+    assert.equal(sig.signals[0].status, 'Qualified', t);
+    assert.equal(sig.signals[0].type, 'Inquiry or RFQ', t);
+    assert.ok(sig.issues.some(i => i.field === 'signal_type' && i.severity === 'info' && /read as Inquiry or RFQ/.test(i.issue)), t);
+  }
+  for (const t of ['Demo request', 'Site visit', 'Webinar', 'Price request']) assert.equal(run(t).signals[0].code, 'D3', t);
+});
