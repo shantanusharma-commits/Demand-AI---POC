@@ -102,6 +102,15 @@ const EXPECTED: Record<string, Policy> = {
   'PATCH /api/analytics/validation': { auth: 'unit', permission: 'validation.edit' },
   'GET /api/exports/outcome-log.csv': { auth: 'unit', permission: 'review.decide' },
   'POST /api/readout/signoffs': { auth: 'unit', permission: 'readout.signoff' },
+  'GET /api/studio/items': { auth: 'unit', permission: 'studio.use' },
+  'POST /api/studio/items': { auth: 'unit', permission: 'studio.use' },
+  'GET /api/studio/items/:id': { auth: 'unit', permission: 'studio.use' },
+  'PUT /api/studio/items/:id': { auth: 'unit', permission: 'studio.use' },
+  'POST /api/studio/items/:id/change': { auth: 'unit', permission: 'studio.use' },
+  'POST /api/studio/items/:id/status': { auth: 'unit', permission: 'studio.use' },
+  'GET /api/studio/items/:id/docx': { auth: 'unit', permission: 'studio.use' },
+  'GET /api/studio/items/:id/md': { auth: 'unit', permission: 'studio.use' },
+  'POST /api/recommendations/:id/content': { auth: 'unit', permission: 'review.decide' },
   'GET /api/routing-rules': { auth: 'unit', permission: 'lists.view' },
   'POST /api/routing-rules': { auth: 'unit', permission: 'routing.manage' },
   'PATCH /api/routing-rules/:id': { auth: 'unit', permission: 'routing.manage' },
@@ -327,6 +336,25 @@ test('Analytics and Today: a Viewer reads aggregates without records; the report
   await manager.signIn(people['Sales manager']);
   assert.equal((await manager.request('PATCH', '/api/analytics/validation', { g2Threshold: 140 })).status, 400);
   assert.equal((await manager.request('PATCH', '/api/analytics/validation', { surprise: 1 })).status, 400, 'unknown settings are refused');
+});
+
+test('Content studio: a rep writes a piece and downloads it as Word and Markdown; a vague request only asks back', async () => {
+  const rep = new Browser(srv.base);
+  await rep.signIn(people['Sales rep']);
+  const vague = await rep.post('/api/studio/items', { text: 'a blog', type: 'blog' });
+  assert.deepEqual([vague.status, vague.json.created], [200, false]);
+  const made = await rep.post('/api/studio/items', { text: 'A short blog on planning a control system migration for plant managers', type: 'blog' });
+  assert.equal(made.status, 200);
+  const id = (made.json.item as { id: string }).id;
+  const res = await fetch(`${srv.base}/api/studio/items/${id}/docx`, { headers: { cookie: rep.cookie } });
+  assert.equal(res.status, 200);
+  assert.equal(res.headers.get('content-type'), 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+  assert.match(res.headers.get('content-disposition')!, /^attachment; filename="planning-a-control-system-migration\.docx"/);
+  assert.equal(Buffer.from(await res.arrayBuffer()).subarray(0, 2).toString(), 'PK');
+  const md = await rep.get(`/api/studio/items/${id}/md`);
+  assert.match(md.text, /^# Planning a control system migration\n/);
+  const xss = await rep.request('PUT', `/api/studio/items/${id}`, { blocks: [{ id: 'a', tag: 'script', role: 'free', v: 0, text: 'x' }], rev: 1 });
+  assert.equal(xss.status, 400);
 });
 
 test('logs: one access line per API request with request ID and status, and no email addresses anywhere', async () => {

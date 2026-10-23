@@ -763,6 +763,8 @@ export const recommendations = pgTable('recommendations', {
   decidedAt: tsz('decided_at'),
   decidedBy: uuid('decided_by').references(() => users.id),
   approvedBy: uuid('approved_by').references(() => users.id),
+  /** Content studio pieces a rep added to the email or LinkedIn message (attached, or shared as a link). */
+  content: uuid('content').array().notNull().default(sql`'{}'::uuid[]`),
   createdAt: createdAt(),
   createdBy: createdBy(),
   updatedAt: updatedAt(),
@@ -909,6 +911,60 @@ export const reviewViews = pgTable('review_views', {
   userId: uuid('user_id').notNull().references(() => users.id),
   shownAt: tsz('shown_at').notNull().defaultNow(),
 }, t => [primaryKey({ name: 'review_views_pkey', columns: [t.businessUnitId, t.userId] })]);
+
+/* ─── Content studio (D-36): blogs and whitepapers in the brand voice, shared in the unit ─── */
+
+/** Kept in step with lib/content/studio.ts. */
+export const STUDIO_TYPES = ['blog', 'whitepaper'] as const;
+export const STUDIO_TONES = ['Direct', 'Formal', 'Warm'] as const;
+export const STUDIO_LENGTHS = ['Short', 'Medium', 'Long'] as const;
+export const STUDIO_STATUSES = ['Draft', 'Ready'] as const;
+
+/** A piece: its brief, its sources (approved claim IDs it may cite) and its blocks of plain text. Ready means it is in
+ *  the Content library, where reps add it to messages; only a piece whose checks pass gets there. `rev` guards against
+ *  two people overwriting each other. */
+export const studioItems = pgTable('studio_items', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  businessUnitId: uuid('business_unit_id').notNull().references(() => businessUnits.id),
+  type: text('type').notNull(),
+  title: text('title').notNull(),
+  topic: text('topic').notNull(),
+  segment: text('segment').notNull(),
+  tone: text('tone').notNull(),
+  length: text('length').notNull(),
+  sources: text('sources').array().notNull().default(sql`'{}'::text[]`),
+  blocks: jsonb('blocks').notNull(),
+  status: text('status').notNull().default('Draft'),
+  /** The brand version it was written with. */
+  brandVersionNo: integer('brand_version_no').notNull(),
+  rev: integer('rev').notNull().default(1),
+  createdAt: createdAt(),
+  createdBy: createdBy(),
+  updatedAt: updatedAt(),
+  updatedBy: updatedBy(),
+}, t => [
+  check('studio_items_type_check', sql`${t.type} in (${inList(STUDIO_TYPES)})`),
+  check('studio_items_tone_check', sql`${t.tone} in (${inList(STUDIO_TONES)})`),
+  check('studio_items_length_check', sql`${t.length} in (${inList(STUDIO_LENGTHS)})`),
+  check('studio_items_status_check', sql`${t.status} in (${inList(STUDIO_STATUSES)})`),
+  index('studio_items_bu_time_idx').on(t.businessUnitId, t.updatedAt),
+]);
+
+/** The conversation that wrote a piece: what was asked and what the writer answered. Append-only. */
+export const studioMessages = pgTable('studio_messages', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  seq: bigint('seq', { mode: 'number' }).generatedAlwaysAsIdentity(),
+  businessUnitId: uuid('business_unit_id').notNull().references(() => businessUnits.id),
+  itemId: uuid('item_id').notNull().references(() => studioItems.id),
+  who: text('who').notNull(),
+  text: text('text').notNull(),
+  createdAt: createdAt(),
+  createdBy: createdBy(),
+}, t => [
+  check('studio_messages_who_check', sql`${t.who} in ('me', 'ai')`),
+  index('studio_messages_item_idx').on(t.itemId, t.seq),
+  index('studio_messages_bu_idx').on(t.businessUnitId),
+]);
 
 /* ─── The pilot readout (7.5, D-27, D-38): verdicts per success area and the sponsor's decision ─── */
 

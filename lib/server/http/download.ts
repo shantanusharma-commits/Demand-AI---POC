@@ -16,7 +16,13 @@ export function markdownDownload(fileName: string, text: string): Response {
   return download(fileName, text, 'text/markdown; charset=utf-8');
 }
 
-function download(fileName: string, body: string, type: string): Response {
+/** A Word document (Content studio). */
+export function docxDownload(fileName: string, bytes: Buffer): Response {
+  const body = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+  return download(fileName, body, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+}
+
+function download(fileName: string, body: string | ArrayBuffer, type: string): Response {
   const ascii = fileName.replace(/[^\x20-\x7e]/g, '_').replace(/["\\]/g, '');
   return new Response(body, {
     headers: {
