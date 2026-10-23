@@ -3,8 +3,8 @@
 // (path, query, headers, body) so a test can read what the app sent. Never a live model.
 import { createServer, type IncomingMessage, type Server } from 'node:http';
 import type { ModelRequest } from '../../lib/ai/types.ts';
-import { classifier, draftWriter, pieceWriter, whyNowWriter } from './ai-fakes.ts';
-import { reply, type StepFn } from './fake-model.ts';
+import { classifier, draftWriter, pieceWriter, rewriteIds, whyNowWriter } from './ai-fakes.ts';
+import { json, reply, type StepFn } from './fake-model.ts';
 
 export type Received = { path: string; query: URLSearchParams; headers: IncomingMessage['headers']; body: { messages: { role: string; content: string }[]; response_format?: unknown; max_tokens?: number } };
 
@@ -16,11 +16,12 @@ export const byTask: StepFn = (req, n) => {
   if (/"why now" line/.test(s)) return whyNowWriter()(req, n);
   if (/first outreach message/.test(s)) return draftWriter()(req, n);
   if (/one part at a time/.test(s)) return pieceWriter()(req, n);
+  if (/^You edit a /.test(s)) { const id = rewriteIds(req)[0]; return json({ parts: id ? { [id]: 'A plainer opening, as one engineer would put it to another.' } : {}, reply: 'Rewrote the opening in a plainer, peer-to-peer voice.' }); }
   if (/You are Copilot/.test(s)) { const t = req.messages.at(-1)!.content.match(/\bP\d+\b/)?.[0]; return reply(t ? `${t} is the one to look at first.` : 'Nothing in the data answers that.'); }
   return reply('OK');
 };
 
-export async function startFakeAzure(answer: StepFn = byTask): Promise<{ base: string; received: Received[]; stop: () => Promise<void> }> {
+export async function startFakeAzure(answer: StepFn = byTask, port = 0): Promise<{ base: string; received: Received[]; stop: () => Promise<void> }> {
   const received: Received[] = [];
   let n = 0;
   const server: Server = createServer(async (req, res) => {
@@ -42,7 +43,7 @@ export async function startFakeAzure(answer: StepFn = byTask): Promise<{ base: s
       usage: { prompt_tokens: out.promptTokens, completion_tokens: out.completionTokens, total_tokens: out.promptTokens + out.completionTokens },
     }));
   });
-  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
-  const port = (server.address() as { port: number }).port;
-  return { base: `http://127.0.0.1:${port}`, received, stop: () => new Promise(resolve => server.close(() => resolve())) };
+  await new Promise<void>(resolve => server.listen(port, '127.0.0.1', resolve));
+  const bound = (server.address() as { port: number }).port;
+  return { base: `http://127.0.0.1:${bound}`, received, stop: () => new Promise(resolve => server.close(() => resolve())) };
 }

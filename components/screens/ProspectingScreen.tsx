@@ -201,7 +201,8 @@ const query = (o: Record<string, string | number | undefined>) =>
   Object.entries(o).filter(([, v]) => v !== undefined && v !== '').map(([k, v]) => `${k}=${encodeURIComponent(String(v))}`).join('&');
 
 /* ═══════════════ THE SCREEN ═══════════════ */
-export function ProspectingScreen() {
+/** `aiClassify`: the AI classifier is switched on for industries the mapping table doesn't match (Phase 6). */
+export function ProspectingScreen({ aiClassify = false }: { aiClassify?: boolean }) {
   const router = useRouter();
   const [screen, setScreen] = useState<'start' | 'run'>('start');
   const [startTab, setStartTab] = useState<StartTab>('upload');
@@ -451,7 +452,7 @@ export function ProspectingScreen() {
       <div className={`ftab ${startTab === id ? 'active' : ''}`} onClick={() => renderStart(id)}>{n !== undefined ? <>{label + ' '}<span className="ftab-cnt">{n}</span></> : label}</div>
     );
     return <>
-      <div className="topbar"><div className="topbar-l"><span className="tb-title">Lead discovery and research</span><span className="tb-badge badge-neutral">Stages 1–5 · rules only</span></div></div>
+      <div className="topbar"><div className="topbar-l"><span className="tb-title">Lead discovery and research</span><span className="tb-badge badge-neutral">{aiClassify ? 'Stages 1–5 · rules, with AI for industries the table can\'t match' : 'Stages 1–5 · rules only'}</span></div></div>
       <div className="ftabs">{t('upload', 'Upload')}{t('saved', 'Saved lists', lists.length)}{t('corrections', 'Corrections', unitCorrections)}</div>
       <div className="canvas">{startTab === 'corrections' ? correctionsTable() : startTab === 'upload' ? (
         <div style={sx('max-width:640px;margin:24px auto 0')}>

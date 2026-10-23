@@ -20,6 +20,13 @@ export function aiFlags(e: Env): Record<Capability, boolean> {
   };
 }
 
+/** Which capabilities would reach a model (a provider is configured and the switch is on), for the screens' words.
+ *  Reads the configuration only: no client, no pool. */
+export function aiOn(): Record<Capability, boolean> {
+  const e = env(), configured = providerConfig(e).provider !== 'none', f = aiFlags(e);
+  return Object.fromEntries(Object.entries(f).map(([k, v]) => [k, configured && v])) as Record<Capability, boolean>;
+}
+
 /** Where calls go, from the environment. The key stays inside the provider client. */
 export function providerConfig(e: Env): ProviderConfig {
   if (e.AI_PROVIDER === 'azure-openai' && e.AZURE_OPENAI_ENDPOINT && e.AZURE_OPENAI_API_KEY && e.AZURE_OPENAI_DEPLOYMENT) {

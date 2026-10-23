@@ -134,7 +134,8 @@ type StartData = [{ lists: ListSummary[] }, { runs: RunSummary[]; signalSettings
 const fetchStart = (): Promise<StartData> => Promise.all([api<{ lists: ListSummary[] }>('/api/lists'), api<{ runs: RunSummary[]; signalSettings: NewRunSettings }>('/api/scoring-runs')]);
 
 /* ═══════════════ SCREEN ═══════════════ */
-export function ScoringScreen() {
+/** `aiWhyNow`: tier A and B why-now lines are worded with AI (Phase 6); the scores themselves are always the rules'. */
+export function ScoringScreen({ aiWhyNow = false }: { aiWhyNow?: boolean }) {
   const router = useRouter();
   const canSetup = useCan('setup.view');
   const [screen, setScreen] = useState<'none' | 'start' | 'results'>('none');
@@ -363,7 +364,7 @@ export function ScoringScreen() {
     const types = [...Object.keys(DemandAI.CONFIG.signalTypes).filter(k => !DemandAI.CONFIG.signalTypes[k].knockout && !DemandAI.CONFIG.signalTypes[k].reject), ...added.map(c => c.name)];
     const settingsNote = [off.size ? `Switched off in Setup, so not scored: ${[...off].join(', ')}.` : '', added.length ? `Added in Setup: ${added.map(c => c.name).join(', ')}.` : ''].filter(Boolean).join(' ');
     return <>
-      <div className="topbar"><div className="topbar-l"><span className="tb-title">Account Scoring</span><span className="tb-badge badge-neutral">Fit × Timing · rules only</span></div></div>
+      <div className="topbar"><div className="topbar-l"><span className="tb-title">Account Scoring</span><span className="tb-badge badge-neutral">{aiWhyNow ? 'Fit × Timing · rules · why-now worded with AI' : 'Fit × Timing · rules only'}</span></div></div>
       <div className="ftabs">{ft('new', 'New scoring')}{ft('saved', 'Scored lists', runs.length)}{ft('monitor', 'Signal monitoring')}</div>
       <div className="canvas">{tab === 'monitor' ? monitorView() : tab === 'new' ? (
         <div style={sx('max-width:640px;margin:24px auto 0')}>

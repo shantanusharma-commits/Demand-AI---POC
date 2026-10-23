@@ -12,8 +12,8 @@ export function fallbackWords(reason: string): string {
 }
 
 /** "X of Y …; the rest …" for a job's AI step. */
-export function aiShare(what: string, s: { asked: number; worded?: number; answered?: number; fallbacks: Record<string, number> }): string {
-  const done = s.worded ?? s.answered ?? 0, rest = s.asked - done;
+export function aiShare(what: string, s: { asked: number; worded?: number; written?: number; answered?: number; fallbacks: Record<string, number> }): string {
+  const done = s.worded ?? s.written ?? s.answered ?? 0, rest = s.asked - done;
   const why = Object.entries(s.fallbacks).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]).map(([r]) => fallbackWords(r));
   return `${what}: ${done} of ${s.asked} by AI.${rest > 0 ? ` The other ${rest} use the rules${why.length ? ` (${[...new Set(why)].join('; ')})` : ''}.` : ''}`;
 }

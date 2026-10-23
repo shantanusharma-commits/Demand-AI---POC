@@ -88,3 +88,10 @@ test('on the sample a grounded writer words every tier A and B line, 10 prospect
   const r0 = await wordWhyNow(gateway(off, false), CTX, items);
   assert.deepEqual([r0.lines.size, off.requests.length], [0, 0]);
 });
+
+test('the share line reads each step\'s own count: lines worded, drafts written, industries answered', async () => {
+  const { aiShare } = await import('../lib/ai/words.ts');
+  assert.equal(aiShare('Why-now lines', { asked: 144, worded: 140, fallbacks: { grounding: 4 } }), 'Why-now lines: 140 of 144 by AI. The other 4 use the rules (the line named something its signal rows do not say).');
+  assert.equal(aiShare('First messages', { asked: 53, written: 53, fallbacks: {} }), 'First messages: 53 of 53 by AI.');
+  assert.equal(aiShare('Industries', { asked: 10, answered: 8, fallbacks: { busy: 2 } }), 'Industries: 8 of 10 by AI. The other 2 use the rules (the AI service was busy or slow).');
+});
