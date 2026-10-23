@@ -7,6 +7,7 @@ import assert from 'node:assert/strict';
 import { CONFIG } from '../lib/demandai-engine.ts';
 import * as G from '../lib/engine/gates.ts';
 import * as R from '../lib/engine/review.ts';
+import { AREA_VERDICTS, SPONSOR_DECISIONS } from '../lib/server/db/schema.ts';
 
 const log = (p: Partial<R.LogFacts>): R.LogFacts => ({
   decisive: true, firstPass: true, accepted: true, kind: 'exception', flag: null, checked: false, segment: 'Inquiry', reason: '', cause: null,
@@ -110,4 +111,9 @@ test('readiness before measurement: each check against its agreed level; the bas
   assert.equal(G.pilotReadiness(facts, { ...settings, g1BaselineTimed: true }).at(-1)!.ok, true);
   assert.equal(G.pilotReadiness({ ...facts, qualified: 0, recent: 0 }, settings)[3].ok, false, 'no qualified signals: recency fails');
   assert.equal(G.pilotVerdict(G.pilotReadiness({ ...facts, covered: 30, noProof: [] }, settings)), 'Sufficient with gaps');
+});
+
+test('the readout verdicts the screens offer are the ones the database accepts', () => {
+  assert.deepEqual([...G.AREA_VERDICTS], [...AREA_VERDICTS]);
+  assert.deepEqual([...G.SPONSOR_DECISIONS], [...SPONSOR_DECISIONS]);
 });

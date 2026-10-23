@@ -123,3 +123,8 @@ export function pilotVerdict(checks: PilotCheck[]): 'Sufficient' | 'Sufficient w
   const gaps = checks.filter(x => !x.ok).length;
   return !gaps ? 'Sufficient' : gaps <= 2 ? 'Sufficient with gaps' : 'Not yet sufficient';
 }
+
+/* ─── The readout (D-27, D-38): what a validator and the sponsor can say. Kept in step with the database checks. ─── */
+
+export const AREA_VERDICTS = ['Satisfied', 'Satisfied with concerns', 'Not satisfied'] as const;
+export const SPONSOR_DECISIONS = ['Go to production', 'Extend the pilot', 'Stop'] as const;

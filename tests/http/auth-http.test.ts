@@ -101,6 +101,7 @@ const EXPECTED: Record<string, Policy> = {
   'GET /api/analytics/validation': { auth: 'unit', permission: 'analytics.view' },
   'PATCH /api/analytics/validation': { auth: 'unit', permission: 'validation.edit' },
   'GET /api/exports/outcome-log.csv': { auth: 'unit', permission: 'review.decide' },
+  'POST /api/readout/signoffs': { auth: 'unit', permission: 'readout.signoff' },
   'GET /api/routing-rules': { auth: 'unit', permission: 'lists.view' },
   'POST /api/routing-rules': { auth: 'unit', permission: 'routing.manage' },
   'PATCH /api/routing-rules/:id': { auth: 'unit', permission: 'routing.manage' },

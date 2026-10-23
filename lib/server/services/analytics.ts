@@ -13,8 +13,8 @@ import * as G from '../../engine/gates.ts';
 import * as R from '../../engine/review.ts';
 import type { DqCode } from '../../../types/demandai';
 import {
-  accountTransfers, brandVersions, businessUnitMembers, configChanges, configVersions, decisionLog, drafts, leadLists, nbaRuns, recommendations,
-  routingRules, scoringRuns, signalTypeChanges, users,
+  accountTransfers, AREA_VERDICTS, brandVersions, businessUnitMembers, configChanges, configVersions, decisionLog, drafts, leadLists, nbaRuns, READOUT_KINDS,
+  readouts, readoutSignoffs, recommendations, routingRules, scoringRuns, signalTypeChanges, SPONSOR_DECISIONS, users,
 } from '../db/schema.ts';
 import type { TenantScope } from '../db/tenant.ts';
 import { recordAudit } from '../db/audit.ts';
@@ -239,7 +239,7 @@ export type Area = { key: AreaKey; title: string; question: string; tab: string;
 const checkState = (cs: G.PilotCheck[]): G.GateState | null => (!cs.length ? null : cs.every(c => c.ok) ? 'met' : 'below');
 const stateWord: Record<G.GateState, string> = { none: 'No data yet', early: 'Too early to call', met: 'Meets the agreed level', below: 'Below the agreed level' };
 
-async function areasOf(scope: TenantScope, x: Pilot): Promise<Area[]> {
+async function areasOf(scope: TenantScope, x: Pilot, rs: ReadoutState): Promise<Area[]> {
   const bu = scope.ctx.businessUnitId, { p, items, logs, m, gates, checks, first } = x;
   const check = (k: string) => checks.find(c => c.k === k);
   const listIds = p.lists.map(l => l.id), uploadIds = [...new Set(p.lists.map(l => l.uploadId))];
@@ -309,13 +309,67 @@ async function areasOf(scope: TenantScope, x: Pilot): Promise<Area[]> {
       { label: 'Outcomes marked', value: String(items.filter(i => i.outcome).length), sub: `${out('Replied')} replied · ${out('Meeting booked')} meetings booked · ${out('No response')} no response · ${out('Sent')} sent` },
       { label: 'Replied or booked a meeting', value: marked.length ? pct0((out('Replied') + out('Meeting booked')) / marked.length * 100) : '—', sub: `of ${pl(marked.length, 'message')} with a result` },
       { label: 'People deciding in For Review', value: String(deciders), sub: pl(logs.filter(l => l.decisive).length, 'decision') },
+      { label: 'Validator verdicts recorded', value: `${AREAS.filter(z => rs.current[z.key]).length} of ${AREAS.length} areas`,
+        sub: `${AREAS.filter(z => rs.current[z.key]?.verdict === 'Satisfied').length} satisfied · ${AREAS.filter(z => rs.current[z.key]?.verdict === 'Satisfied with concerns').length} with concerns · ${AREAS.filter(z => rs.current[z.key]?.verdict === 'Not satisfied').length} not satisfied` },
+      { label: 'Sponsor decision', value: rs.current.sponsor?.verdict ?? 'Not yet decided' },
     ]),
   ];
 }
 
 export async function areasView(scope: TenantScope, actor: Actor, rep?: string | null) {
   const x = await pilot(scope, actor, rep);
-  return { ...lensInfo(x), reps: await repsFor(scope, x.lens), builds: x.p.builds.length, configVersion: x.validation.versionNo, areas: await areasOf(scope, x) };
+  const rs = await readoutState(scope);
+  return { ...lensInfo(x), reps: await repsFor(scope, x.lens), builds: x.p.builds.length, configVersion: x.validation.versionNo, areas: await areasOf(scope, x, rs),
+    verdicts: rs.current, history: rs.history, canSign: isManager(actor.role) };
+}
+
+/* ─── Readout sign-offs (D-27, D-38): a verdict per area and the sponsor's decision, tied to who recorded them ─── */
+
+export type ReadoutKind = (typeof READOUT_KINDS)[number];
+export type Signoff = { kind: ReadoutKind; verdict: string; note: string; by: string; role: string; at: Date; configVersion: number | null };
+type ReadoutState = { readoutId: string | null; current: Partial<Record<ReadoutKind, Signoff>>; history: Partial<Record<ReadoutKind, Signoff[]>> };
+
+/** The current readout's sign-offs: the latest of each kind is the current one; the rest are its history. */
+async function readoutState(scope: TenantScope): Promise<ReadoutState> {
+  const [r] = await scope.tx.select({ id: readouts.id }).from(readouts).where(eq(readouts.businessUnitId, scope.ctx.businessUnitId)).orderBy(desc(readouts.createdAt)).limit(1);
+  if (!r) return { readoutId: null, current: {}, history: {} };
+  const rows = await scope.tx.select({ kind: readoutSignoffs.kind, verdict: readoutSignoffs.verdict, note: readoutSignoffs.note, role: readoutSignoffs.actorRole, at: readoutSignoffs.createdAt,
+    by: sql<string>`coalesce(${users.displayName}, 'A former member')`, configVersion: configVersions.versionNo })
+    .from(readoutSignoffs).leftJoin(users, eq(users.id, readoutSignoffs.createdBy)).leftJoin(configVersions, eq(configVersions.id, readoutSignoffs.configVersionId))
+    .where(eq(readoutSignoffs.readoutId, r.id)).orderBy(desc(readoutSignoffs.seq));
+  const out: ReadoutState = { readoutId: r.id, current: {}, history: {} };
+  for (const row of rows as Signoff[]) {
+    out.current[row.kind] ??= row;
+    (out.history[row.kind] ??= []).push(row);
+  }
+  return out;
+}
+
+const verdictLine = (v: Signoff | undefined) => (v ? `${v.verdict} · ${v.by} (${v.role}), ${v.at.toISOString().slice(0, 10)}${v.note ? ` · ${v.note}` : ''}` : '');
+
+/** An Admin or Sales manager records a validator's verdict on one area, or the sponsor's decision. The evidence they
+ *  judged (the area as Analytics shows it for the whole unit, or the gates and verdicts for the sponsor) is kept with it. */
+export async function recordSignoff(scope: TenantScope, actor: Actor, input: { kind: string; verdict: string; note?: string }): Promise<Signoff> {
+  if (!isManager(actor.role)) throw forbidden('Only the sales manager or an Admin can record the readout.');
+  const kind = input.kind as ReadoutKind;
+  if (!READOUT_KINDS.includes(kind)) throw badRequest('Pick one of the six success areas, or the sponsor decision.', { kind: ['Not a success area.'] });
+  const allowed: readonly string[] = kind === 'sponsor' ? SPONSOR_DECISIONS : AREA_VERDICTS;
+  if (!allowed.includes(input.verdict)) throw badRequest(`Choose one of: ${allowed.join(', ')}.`, { verdict: [`One of: ${allowed.join(', ')}.`] });
+  const note = R.cleanNote(input.note, 1000);
+  const x = await pilot(scope, actor);
+  const rs = await readoutState(scope);
+  const evidence = kind === 'sponsor'
+    ? { gates: { g1: { value: x.gates.g1.value, state: x.gates.g1.state }, g2: { value: x.gates.g2.value, state: x.gates.g2.state } },
+      verdicts: Object.fromEntries(AREAS.map(a => [a.key, rs.current[a.key]?.verdict ?? null])) }
+    : (({ state, stateLabel, evidence: e }) => ({ state, stateLabel, evidence: e }))((await areasOf(scope, x, rs)).find(a => a.key === kind)!);
+  let readoutId = rs.readoutId;
+  if (!readoutId) [{ id: readoutId }] = await scope.tx.insert(readouts).values({ businessUnitId: scope.ctx.businessUnitId, createdBy: actor.userId }).returning({ id: readouts.id });
+  const [row] = await scope.tx.insert(readoutSignoffs).values({ businessUnitId: scope.ctx.businessUnitId, readoutId: readoutId!, kind, verdict: input.verdict, note, actorRole: actor.role,
+    evidence, configVersionId: x.validation.versionId, createdBy: actor.userId }).returning({ at: readoutSignoffs.createdAt });
+  await recordAudit(scope, { action: 'readout.signed_off', actorRole: actor.role, targetType: 'readout', targetId: readoutId!, details: { kind, verdict: input.verdict } });
+  logger.info({ event: 'readout.signed_off', kind }, 'Readout verdict recorded');
+  const [me] = await scope.tx.select({ name: users.displayName }).from(users).where(eq(users.id, actor.userId));
+  return { kind, verdict: input.verdict, note, by: me?.name ?? '', role: actor.role, at: row.at, configVersion: x.validation.versionNo };
 }
 
 /* ─── Weekly summary (7.4), for the business-unit lead ─── */
@@ -458,7 +512,8 @@ function betterData(x: Pilot): string[] {
 
 export async function readoutView(scope: TenantScope, actor: Actor, rep?: string | null, now = new Date()) {
   const x = await pilot(scope, actor, rep);
-  const areas = await areasOf(scope, x);
+  const rs = await readoutState(scope);
+  const areas = await areasOf(scope, x, rs);
   const { m, gates, settings } = x;
   const said: Record<G.GateState, string> = { none: 'open', early: `too early to call (fewer than ${settings.minDecisions} decisions)`, met: 'met', below: 'not met' };
   const ev = evidenceOf(x.items, x.logs, []);
@@ -473,15 +528,18 @@ export async function readoutView(scope: TenantScope, actor: Actor, rep?: string
     `  - Proceeded path: ${pct0(m.auto.pct)} of ${m.auto.n} spot-checks, from ${m.autoN} items`,
     `  - Exception path: ${pct0(m.exc.pct)} of ${m.exc.n} decisions, from ${m.excN} items`,
     `  - Within one alternative: ${pct0(m.alternatives.pct)} of ${m.alternatives.n}`, '',
-    ...areas.flatMap((a, i) => [`## ${i + 1} · ${a.title}`, ...(a.stateLabel ? [`- Measured: ${a.stateLabel}`] : []), ...a.evidence.map(e => `- ${e.label}: ${e.value}${e.sub ? ` (${e.sub})` : ''}`), '']),
+    ...areas.flatMap((a, i) => [`## ${i + 1} · ${a.title}`, ...(a.stateLabel ? [`- Measured: ${a.stateLabel}`] : []), ...a.evidence.map(e => `- ${e.label}: ${e.value}${e.sub ? ` (${e.sub})` : ''}`),
+      `- Validator verdict: ${verdictLine(rs.current[a.key]) || 'not yet judged'}`, '']),
     '## Work done', ...funnelStages(x.p, x.items, x.logs).map(s => `- ${s.k}: ${s.n} (${s.sub})`), '',
     '## Decision reasons',
     ...(ev.reasons.length ? ev.reasons.map(r => `- ${r.code ? r.code + ' ' : ''}${r.reason}: ${r.n}`) : ['- No rejections yet']),
     `- By cause: ${m.causes.data} from gaps in the Client's data, ${m.causes.system} from the system's judgement, ${m.causes.other} other; ${m.compliance} compliance send-backs`,
     `- What worked (acceptance tags): ${ev.tags.length ? ev.tags.map(t => `${t.tag} ${t.n}`).join(', ') : 'none yet'}`, '',
-    '## What better data would add', ...((d => (d.length ? d.map(s => `- ${s}`) : ['- No data gaps found']))(betterData(x))),
+    '## What better data would add', ...((d => (d.length ? d.map(s => `- ${s}`) : ['- No data gaps found']))(betterData(x))), '',
+    '## Sponsor decision', `- ${verdictLine(rs.current.sponsor) || 'Not yet decided'}`,
   ];
-  return { ...lensInfo(x), reps: await repsFor(scope, x.lens), builds: x.p.builds.length, areas, text: lines.join('\n') };
+  return { ...lensInfo(x), reps: await repsFor(scope, x.lens), builds: x.p.builds.length, areas, text: lines.join('\n'),
+    sponsor: rs.current.sponsor ?? null, verdicts: rs.current, canDecide: isManager(actor.role) };
 }
 
 /* ─── Validation: method, baseline, sample and threshold per gate; the readiness checks; changing the settings ─── */

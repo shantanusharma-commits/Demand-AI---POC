@@ -12,8 +12,9 @@ import { SYSTEM_USER_ID } from '../../lib/server/db/schema.ts';
 import { createDb, withTenant, type Db, type TenantContext } from '../../lib/server/db/tenant.ts';
 import type { Actor } from '../../lib/server/services/lists.ts';
 import {
-  areasView, evidenceView, funnelView, gatesView, learningLoopView, outcomeLogCsv, readoutView, saveValidation, validationView, weeklyMarkdown, weeklyView,
+  AREAS, areasView, evidenceView, funnelView, gatesView, learningLoopView, outcomeLogCsv, readoutView, recordSignoff, saveValidation, validationView, weeklyMarkdown, weeklyView,
 } from '../../lib/server/services/analytics.ts';
+import { READOUT_KINDS } from '../../lib/server/db/schema.ts';
 import { getSetup } from '../../lib/server/services/setup.ts';
 import { isoWeek } from '../../lib/server/services/review.ts';
 import { HttpError } from '../../lib/server/http/errors.ts';
@@ -210,4 +211,35 @@ test('validation: a manager changes the gate settings, which makes a new configu
   await assert.rejects(owner.query(`UPDATE config_changes SET changes = '{}'`), /append-only/);
   const audit = await one(`SELECT details FROM audit_log WHERE action = 'config.validation_changed'`);
   assert.deepEqual([audit.details.versionNo, audit.details.changes], [2, 3]);
+});
+
+test('readout sign-offs: a verdict per area and the sponsor decision, tied to who recorded them, with the evidence they judged (D-27, D-38)', async () => {
+  assert.deepEqual(READOUT_KINDS.slice(0, 6), AREAS.map(a => a.key), 'the database knows the six areas');
+  await assert.rejects(as(rep(), s => recordSignoff(s, repActor(), { kind: 'discovery', verdict: 'Satisfied' })), status(403));
+  await assert.rejects(as(admin(), s => recordSignoff(s, mgr(), { kind: 'discovery', verdict: 'Go to production' })), status(400));
+  await assert.rejects(as(admin(), s => recordSignoff(s, mgr(), { kind: 'sponsor', verdict: 'Satisfied' })), status(400));
+  await assert.rejects(as(admin(), s => recordSignoff(s, mgr(), { kind: 'morale', verdict: 'Satisfied' })), status(400));
+  const first = await as(admin(), s => recordSignoff(s, mgr(), { kind: 'qualification', verdict: 'Satisfied with concerns', note: 'Tier C under-sampled' }));
+  assert.deepEqual([first.verdict, first.by, first.role, first.note], ['Satisfied with concerns', 'admin.a', 'Admin', 'Tier C under-sampled']);
+  const stored = await one(`SELECT kind, verdict, actor_role, created_by, evidence FROM readout_signoffs`);
+  const area = (await as(admin(), s => areasView(s, mgr()))).areas.find(a => a.key === 'qualification')!;
+  assert.deepEqual([stored.kind, stored.actor_role, stored.created_by], ['qualification', 'Admin', ids.adminA]);
+  assert.deepEqual(stored.evidence.evidence, area.evidence, 'the evidence in front of the validator is kept with the verdict');
+  await as(admin(), s => recordSignoff(s, mgr(), { kind: 'qualification', verdict: 'Satisfied' }));
+  await as(admin(), s => recordSignoff(s, mgr(), { kind: 'sponsor', verdict: 'Extend the pilot', note: 'Two more weeks of decisions' }));
+  assert.equal((await one(`SELECT count(*)::int n FROM readouts`)).n, 1, 'one readout, created with the first sign-off');
+  const a = await as(viewer(), s => areasView(s, viewerActor()));
+  assert.deepEqual([a.verdicts.qualification?.verdict, a.history.qualification?.length, a.verdicts.sponsor?.verdict, a.canSign], ['Satisfied', 2, 'Extend the pilot', false]);
+  const value = a.areas.find(x => x.key === 'value')!;
+  assert.deepEqual(value.evidence.slice(-2).map(e => e.value), ['1 of 6 areas', 'Extend the pilot']);
+  const r = await as(admin(), s => readoutView(s, mgr()));
+  const today = new Date().toISOString().slice(0, 10);
+  assert.ok(r.text.includes(`\n- Validator verdict: Satisfied · admin.a (Admin), ${today}\n`), 'the latest verdict, in the readout');
+  assert.ok(r.text.includes('\n- Validator verdict: not yet judged\n'));
+  assert.ok(r.text.endsWith(`## Sponsor decision\n- Extend the pilot · admin.a (Admin), ${today} · Two more weeks of decisions`));
+  assert.deepEqual([r.sponsor?.verdict, r.canDecide], ['Extend the pilot', true]);
+  await assert.rejects(owner.query(`UPDATE readout_signoffs SET verdict = 'Satisfied'`), /append-only/);
+  await assert.rejects(owner.query(`DELETE FROM readouts`), /append-only/);
+  const audit = (await owner.query(`SELECT details FROM audit_log WHERE action = 'readout.signed_off' ORDER BY occurred_at`)).rows.map(x => x.details.kind);
+  assert.deepEqual(audit, ['qualification', 'qualification', 'sponsor']);
 });

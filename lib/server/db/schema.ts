@@ -910,6 +910,45 @@ export const reviewViews = pgTable('review_views', {
   shownAt: tsz('shown_at').notNull().defaultNow(),
 }, t => [primaryKey({ name: 'review_views_pkey', columns: [t.businessUnitId, t.userId] })]);
 
+/* ─── The pilot readout (7.5, D-27, D-38): verdicts per success area and the sponsor's decision ─── */
+
+/** The readout the verdicts are recorded against; created with the unit's first sign-off, the newest is current. */
+export const readouts = pgTable('readouts', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  businessUnitId: uuid('business_unit_id').notNull().references(() => businessUnits.id),
+  name: text('name').notNull().default('Pilot readout'),
+  createdAt: createdAt(),
+  createdBy: createdBy(),
+}, t => [index('readouts_bu_time_idx').on(t.businessUnitId, t.createdAt)]);
+
+/** Kept in step with AREAS in lib/server/services/analytics.ts. */
+export const READOUT_KINDS = ['discovery', 'qualification', 'intent', 'routing', 'content', 'value', 'sponsor'] as const;
+export const AREA_VERDICTS = ['Satisfied', 'Satisfied with concerns', 'Not satisfied'] as const;
+export const SPONSOR_DECISIONS = ['Go to production', 'Extend the pilot', 'Stop'] as const;
+
+/** A validator's verdict on one success area, or the sponsor's decision, tied to the signed-in Admin or Sales manager
+ *  who recorded it and their role then (D-27), with the evidence in front of them. Append-only: a later row of the
+ *  same kind supersedes an earlier one, which stays as history. */
+export const readoutSignoffs = pgTable('readout_signoffs', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  seq: bigint('seq', { mode: 'number' }).generatedAlwaysAsIdentity(),
+  businessUnitId: uuid('business_unit_id').notNull().references(() => businessUnits.id),
+  readoutId: uuid('readout_id').notNull().references(() => readouts.id),
+  kind: text('kind').notNull(),
+  verdict: text('verdict').notNull(),
+  note: text('note').notNull().default(''),
+  actorRole: text('actor_role').notNull(),
+  evidence: jsonb('evidence').notNull(),
+  configVersionId: uuid('config_version_id').references(() => configVersions.id),
+  createdAt: createdAt(),
+  createdBy: createdBy(),
+}, t => [
+  check('readout_signoffs_kind_check', sql`${t.kind} in (${inList(READOUT_KINDS)})`),
+  check('readout_signoffs_verdict_check', sql`(${t.kind} = 'sponsor' and ${t.verdict} in (${inList(SPONSOR_DECISIONS)})) or (${t.kind} <> 'sponsor' and ${t.verdict} in (${inList(AREA_VERDICTS)}))`),
+  index('readout_signoffs_bu_seq_idx').on(t.businessUnitId, t.seq),
+  index('readout_signoffs_readout_idx').on(t.readoutId, t.kind, t.seq),
+]);
+
 /* ─── Lead routing (D-34): rules that suggest an owner and a business unit, and accounts moved to another unit ─── */
 
 /** A unit's routing rules, in order: the first active rule whose countries, verticals and tiers all match an account

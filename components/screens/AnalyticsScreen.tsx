@@ -9,7 +9,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import * as R from '@/lib/engine/review';
-import { gateLabel, type Gate, type GateState } from '@/lib/engine/gates';
+import { AREA_VERDICTS, gateLabel, SPONSOR_DECISIONS, type Gate, type GateState } from '@/lib/engine/gates';
 import { sx } from '@/lib/sx';
 import { api, errorText, type WireDeep } from '@/lib/client/api';
 import { showToast } from '@/lib/ui';
@@ -37,6 +37,7 @@ const fmtDate = (t: string) => new Date(t).toLocaleDateString(undefined, { day: 
 const pill = (bg: string, fg: string) => sx(`display:inline-flex;align-items:center;font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:999px;background:${bg};color:${fg}`);
 const REASON_CODE: Record<string, string> = Object.fromEntries(R.REJECT.map(([c, l]) => [l, c]));
 const MIN = 3;
+const verdictPill = (v: string) => (v === 'Satisfied' || v === 'Go to production' ? pill('var(--pos-lt)', 'var(--pos)') : v === 'Not satisfied' || v === 'Stop' ? pill('var(--neg-lt)', 'var(--neg)') : pill('var(--warn-lt)', 'var(--warn)'));
 
 function badge(g: Pick<Gate, 'state' | 'n' | 'min'>): ReactNode {
   if (g.state === 'none') return <span style={pill('var(--s100)', 'var(--i3)')}>No data yet</span>;
@@ -86,6 +87,8 @@ export function AnalyticsScreen({ initialTab }: { initialTab?: string }) {
   const [form, setForm] = useState<Record<string, string | boolean> | null>(null);
   const [saving, setSaving] = useState(false);
   const [tick, setTick] = useState(0);
+  const [verdicts, setVerdicts] = useState<Record<string, { verdict: string; note: string }>>({});
+  const [signing, setSigning] = useState<string | null>(null);
 
   const key = `${tab}|${rep}|${week}|${tick}`;
   useEffect(() => {
@@ -125,6 +128,30 @@ export function AnalyticsScreen({ initialTab }: { initialTab?: string }) {
     <div style={sx('font-size:12px;color:var(--i3);margin-top:6px')}>The measures are worked out from real decisions. Build micro-segments, then decide in For Review.{' '}
       {!me.activeBusinessUnit || me.activeBusinessUnit.role !== 'Viewer' ? <Link href="/nba" style={sx('color:var(--brand);font-weight:600;text-decoration:none')}>Go to Micro-segments &amp; NBA →</Link> : null}</div></div></div>;
 
+  /* ─── Readout sign-offs: a verdict per area, the sponsor's decision (Admin or Sales manager, D-27) ─── */
+  async function sign(kind: string) {
+    const f = verdicts[kind];
+    if (!f?.verdict) { showToast(kind === 'sponsor' ? 'Choose a decision' : 'Choose a verdict'); return; }
+    setSigning(kind);
+    try {
+      await api('/api/readout/signoffs', { body: { kind, verdict: f.verdict, note: f.note } });
+      showToast(kind === 'sponsor' ? 'Decision recorded' : 'Verdict recorded');
+      setVerdicts(v => { const n = { ...v }; delete n[kind]; return n; });
+      setTick(t => t + 1);
+    } catch (err) { showToast(errorText(err)); }
+    finally { setSigning(null); }
+  }
+  function signForm(kind: string, options: readonly string[], cta: string, placeholder: string): ReactNode {
+    const f = verdicts[kind] ?? { verdict: '', note: '' };
+    const set = (patch: Partial<typeof f>) => setVerdicts(v => ({ ...v, [kind]: { ...f, ...patch } }));
+    return <div style={sx('margin-top:8px')}>
+      <div role="radiogroup" aria-label={cta}>{options.map(o => <label key={o} style={sx('display:inline-flex;align-items:center;gap:5px;margin-right:12px;font-size:12px;color:var(--i1);cursor:pointer')}>
+        <input type="radio" name={`v_${kind}`} value={o} checked={f.verdict === o} onChange={() => set({ verdict: o })} style={sx('accent-color:var(--brand)')} />{o}</label>)}</div>
+      <div style={sx('display:flex;gap:8px;margin-top:6px')}><input aria-label={`${cta}: note`} value={f.note} onChange={e => set({ note: e.target.value })} placeholder={placeholder} maxLength={1000}
+        style={sx('flex:1;padding:6px 9px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:12px')} />
+        <button className="btn btn-sec btn-sm" disabled={signing === kind} onClick={() => void sign(kind)}>{signing === kind ? 'Recording…' : cta}</button></div></div>;
+  }
+
   /* ─── The six success areas ─── */
   function areasTab(d: Areas): ReactNode {
     if (!d.builds) return <>{repFilter(d)}{noData()}</>;
@@ -137,6 +164,15 @@ export function AnalyticsScreen({ initialTab }: { initialTab?: string }) {
             <div style={sx('color:var(--i2)')}>{e.label}</div><div style={sx('color:var(--i1);font-weight:600;margin-top:2px')}>{e.value}</div>{e.sub ? <div style={sx('font-size:10.5px;color:var(--i3)')}>{e.sub}</div> : null}</div>
             : arow(e.label, e.label, e.value, e.sub))}
           <div style={sx('margin-top:10px')}><a href={`?tab=${a.tab}`} onClick={ev => { ev.preventDefault(); pick(a.tab as Tab); }} style={sx('font-size:11.5px;color:var(--brand);font-weight:600;text-decoration:none')}>See the detail →</a></div>
+          {(() => {
+            const v = d.verdicts[a.key], earlier = (d.history[a.key] || []).length - 1;
+            return <div style={sx('margin-top:12px;padding-top:10px;border-top:1px solid var(--border)')}>
+              <div style={sx('display:flex;align-items:center;gap:8px')}><span className="stat-lbl" style={sx('margin:0')}>Validator verdict</span>
+                {v ? <span style={verdictPill(v.verdict)}>{v.verdict}</span> : <span style={pill('var(--s100)', 'var(--i3)')}>Not yet judged</span>}</div>
+              {v ? <div style={sx('font-size:11px;color:var(--i3);margin-top:4px')}>{v.by} ({v.role}), {fmtDate(v.at)}{v.note ? ` · ${v.note}` : ''}{earlier > 0 ? ` · ${earlier} earlier verdict${earlier === 1 ? '' : 's'} kept` : ''}</div> : null}
+              {d.canSign ? signForm(a.key, AREA_VERDICTS, v ? 'Record a new verdict' : 'Record the verdict', 'What the validator found') : null}
+            </div>;
+          })()}
         </div></div>)}</div></>;
   }
 
@@ -230,7 +266,12 @@ export function AnalyticsScreen({ initialTab }: { initialTab?: string }) {
   function readoutTab(d: Readout): ReactNode {
     if (!d.builds) return <>{repFilter(d)}{noData()}</>;
     return <>{repFilter(d, <a className="btn btn-primary btn-sm" style={sx('margin-left:auto;text-decoration:none')} href={`/api/analytics/readout.md${rep ? `?rep=${encodeURIComponent(rep)}` : ''}`} download>Download the readout (.md)</a>)}
-      <div className="panel" style={sx('margin-bottom:16px')}><div className="panel-body" style={sx('padding:20px 24px')}>{markdown(d.text)}</div></div></>;
+      <div className="panel" style={sx('margin-bottom:16px')}><div className="panel-body" style={sx('padding:20px 24px')}>{markdown(d.text)}</div></div>
+      {apanel('The sponsor decides on production', d.sponsor ? <span style={verdictPill(d.sponsor.verdict)}>{d.sponsor.verdict} · {d.sponsor.by}</span> : null, <>
+        <div style={sx('font-size:12px;color:var(--i2);margin-bottom:6px;line-height:1.5')}>Once the validators have judged each area (Success areas tab), the sponsor decides with the gates, the evidence and their verdicts in front of them. {Object.keys(d.verdicts).filter(k => k !== 'sponsor').length} of 6 areas judged so far.</div>
+        {d.sponsor ? <div style={sx('font-size:11px;color:var(--i3);margin-bottom:6px')}>{d.sponsor.by} ({d.sponsor.role}), {fmtDate(d.sponsor.at)}{d.sponsor.note ? ` · ${d.sponsor.note}` : ''}</div> : null}
+        {d.canDecide ? signForm('sponsor', SPONSOR_DECISIONS, d.sponsor ? 'Record a new decision' : 'Record the decision', 'Reasons and conditions')
+          : <div style={sx('font-size:11px;color:var(--i3)')}>Recorded by an Admin or the sales manager.</div>}</>)}</>;
   }
 
   /* ─── Decision log ─── */
