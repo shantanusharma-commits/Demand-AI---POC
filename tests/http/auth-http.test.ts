@@ -104,6 +104,7 @@ const EXPECTED: Record<string, Policy> = {
   'POST /api/readout/signoffs': { auth: 'unit', permission: 'readout.signoff' },
   'GET /api/studio/items': { auth: 'unit', permission: 'studio.use' },
   'POST /api/studio/items': { auth: 'unit', permission: 'studio.use' },
+  'POST /api/copilot': { auth: 'unit', permission: 'copilot.use' },
   'GET /api/studio/items/:id': { auth: 'unit', permission: 'studio.use' },
   'PUT /api/studio/items/:id': { auth: 'unit', permission: 'studio.use' },
   'POST /api/studio/items/:id/change': { auth: 'unit', permission: 'studio.use' },
