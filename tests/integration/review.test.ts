@@ -188,7 +188,7 @@ test('G-007: a message to someone who can’t be contacted is never released, by
   await assert.rejects(as(rep(), s => acceptItem(s, repActor(), w.id, {})), status(409, /no way to reach/));
   await assert.rejects(as(admin(), s => acceptItem(s, mgr(), w.id, {})), status(409, /no way to reach/));
   const live = await as(rep(), s => itemDetail(s, repActor(), w.id));
-  assert.ok(live.reasons.includes("Can't reach them: Opt-out not confirmed: a person must confirm before anything is sent") && !live.fourChecks.find(([k]) => k === 'Reachable')![1]);
+  assert.ok(live.reasons.includes("Can't reach them: Opt-out not confirmed: a person must confirm before anything is sent") && !live.fourChecks.find(f => f.name === 'Reachable')!.ok);
   // Put on hold while the data is fixed: it stays in the queue; taken off hold, it is back.
   await assert.rejects(as(rep(), s => holdItem(s, repActor(), w.id, { why: 'Because' })), status(400));
   await as(rep(), s => holdItem(s, repActor(), w.id, { why: 'Missing contact details', note: 'Asked the account owner' }));

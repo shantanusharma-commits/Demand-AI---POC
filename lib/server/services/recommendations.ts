@@ -208,7 +208,7 @@ export async function itemDetail(scope: TenantScope, actor: Actor, id: string) {
     chosenAction: action, segOf: seg, segSince: state.status === 'Released' && seg ? (row.segmentAt ?? (state.released === 'auto' ? run.createdAt : row.decidedAt)) : null,
     draft: { ...item.draft.draft, version: item.draft.version, reason: item.draft.reason, at: item.draft.at, by: item.draft.by },
     checks: item.draft.checks, confidence: item.draft.confidence, sensitive: R.isSensitive(item.draft.checks),
-    reasons, cats, fourChecks: R.fourChecks(reasons), stuck: R.stuck(rec, state, item.draft.draft, item.draft.checks, cats),
+    reasons, cats, fourChecks: R.fourChecks(reasons).map(([name, ok]) => ({ name, ok })), stuck: R.stuck(rec, state, item.draft.draft, item.draft.checks, cats),
     brief: { who: brief.who, whyNow: brief.whyNow, angle: brief.angle, proof: brief.proof, objection: brief.objection, ask: brief.ask, constraints: brief.constraints },
     options: { recommended: optionFacts(item, rec.action, rec.reason), runnerUp: rec.runnerUp ? optionFacts(item, rec.runnerUp.action, rec.runnerUp.reason) : null },
     versions, history,

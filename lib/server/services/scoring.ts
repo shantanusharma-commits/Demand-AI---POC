@@ -267,7 +267,8 @@ export async function getRun(scope: TenantScope, actor: Actor, id: string): Prom
   };
 }
 
-export type ProspectRow = { contactId: string; rank: number; tier: Tier; score: number | null; fit: number | null; timing: number | null; sendable: boolean; summary: ProspectSummary };
+/** One person in the ranked list: their prospect tier, with their account's tier beside it (D-12). */
+export type ProspectRow = { contactId: string; rank: number; tier: Tier; accountTier: Tier | null; score: number | null; fit: number | null; timing: number | null; sendable: boolean; summary: ProspectSummary };
 export type TierFilter = Tier | 'out';
 
 const limitOf = (q: PageQuery) => Math.min(Math.max(1, q.limit ?? PAGE_DEFAULT), PAGE_MAX);
@@ -278,15 +279,16 @@ export async function listProspects(scope: TenantScope, runId: string, query: Pa
   const t = query.tier;
   const rows = await scope.tx.select({
     contactId: prospectScores.contactId, rank: prospectScores.rankNo, tier: prospectScores.tier, score: prospectScores.score, fit: prospectScores.fit,
-    timing: prospectScores.timing, sendable: prospectScores.sendable, data: prospectScores.data,
+    timing: prospectScores.timing, sendable: prospectScores.sendable, data: prospectScores.data, accountTier: accountScores.tier,
   }).from(prospectScores)
+    .leftJoin(accountScores, and(eq(accountScores.runId, prospectScores.runId), eq(accountScores.accountId, prospectScores.accountId)))
     .where(and(eq(prospectScores.runId, runId), ownerOnly(scope, prospectScores.ownerEmail),
       t === 'out' ? inArray(prospectScores.tier, ['Below fit floor', 'Excluded']) : t ? eq(prospectScores.tier, t) : undefined,
       query.q?.trim() ? like(prospectScores.search, containsPattern(query.q)) : undefined, query.after !== undefined ? gt(prospectScores.rankNo, query.after) : undefined))
     .orderBy(asc(prospectScores.rankNo)).limit(limit + 1);
   const page = rows.slice(0, limit);
   return {
-    rows: page.map(r => ({ contactId: r.contactId, rank: r.rank, tier: r.tier as Tier, score: r.score, fit: r.fit, timing: r.timing, sendable: r.sendable, summary: (r.data as { summary: ProspectSummary }).summary })),
+    rows: page.map(r => ({ contactId: r.contactId, rank: r.rank, tier: r.tier as Tier, accountTier: (r.accountTier as Tier | null) ?? null, score: r.score, fit: r.fit, timing: r.timing, sendable: r.sendable, summary: (r.data as { summary: ProspectSummary }).summary })),
     next: rows.length > limit ? page[page.length - 1].rank : null,
   };
 }

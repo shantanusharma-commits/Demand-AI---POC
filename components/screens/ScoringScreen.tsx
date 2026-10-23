@@ -94,10 +94,12 @@ function tagChip(t: string, key?: string | number, segment?: string): ReactNode 
   const seg = DemandAI.CONFIG.signalTypes[t]?.segment ?? segment;
   return <span key={key} className={`tag ${(seg && SEG_TONE[seg]) || 'tag-grey'}`}>{t}</span>;
 }
+const TIER_PILL = { A: ['tag-green', 'Tier A'], B: ['tag-amber', 'Tier B'], C: ['tag-blue', 'Tier C'], 'Watch list': ['tag-grey', 'Watch list'], 'Below fit floor': ['tag-grey', 'Below floor'], Excluded: ['tag-red', 'Excluded'] } as Record<Tier, [string, string]>;
 function tierPill(t: Tier): ReactNode {
-  const m = ({ A: ['tag-green', 'Tier A'], B: ['tag-amber', 'Tier B'], C: ['tag-blue', 'Tier C'], 'Watch list': ['tag-grey', 'Watch list'], 'Below fit floor': ['tag-grey', 'Below floor'], Excluded: ['tag-red', 'Excluded'] } as Record<Tier, [string, string]>)[t];
+  const m = TIER_PILL[t];
   return <span className={`tag ${m[0]}`}>{m[1]}</span>;
 }
+const tierName = (t: Tier): string => TIER_PILL[t]?.[1] ?? t;
 
 function ago(d: number): string { return d === 0 ? 'today' : d < 14 ? d + 'd ago' : d < 60 ? Math.round(d / 7) + 'w ago' : Math.round(d / 30) + 'mo ago'; }
 function miniStat(label: string, val: string, sub: string): ReactNode {
@@ -489,14 +491,14 @@ export function ScoringScreen() {
           <button className="btn btn-ghost btn-sm" onClick={clearN}>Clear</button>
         </div>
         <div className="sl-toolbar">{searchBox('Search prospects or companies…')}<div className="sl-seg-filter">{[pill('all', 'All'), pill('A', 'A'), pill('B', 'B'), pill('C', 'C'), pill('Watch list', 'Watch list'), pill('out', 'Not scored')]}</div></div>
-        <div id="rows">{table([[<input key="nAll" type="checkbox" id="nAll" ref={nAllRef} title="Select all shown" aria-label="Select all shown" checked={allChecked} onClick={e => e.stopPropagation()} onChange={e => toggleNAll(e.currentTarget.checked)} style={sx('cursor:pointer;vertical-align:middle')} />, '52px'], ['Prospect', '18%'], ['Company', '15%'], ['Tier', '11%'], ['Score', '7%', 'num'], ['Fit', '6%', 'num'], ['Timing', '7%', 'num'], ['Why now', '32%']],
+        <div id="rows">{table([[<input key="nAll" type="checkbox" id="nAll" ref={nAllRef} title="Select all shown" aria-label="Select all shown" checked={allChecked} onClick={e => e.stopPropagation()} onChange={e => toggleNAll(e.currentTarget.checked)} style={sx('cursor:pointer;vertical-align:middle')} />, '52px'], ['Prospect', '18%'], ['Company', '15%'], ['Prospect tier', '11%'], ['Score', '7%', 'num'], ['Fit', '6%', 'num'], ['Timing', '7%', 'num'], ['Why now', '32%']],
           rs.map(x => {
             const s = x.summary, on = nsel.has(x.contactId);
             return <tr key={x.contactId} className="click" onClick={() => void openProspect(x.contactId)} style={on ? sx('background:var(--brand-lt)') : undefined}>
               <td onClick={e => e.stopPropagation()}>{x.sendable ? <input type="checkbox" checked={on} aria-label={`Select ${s.name}`} onChange={e => toggleN(x.contactId, e.currentTarget.checked)} style={sx('cursor:pointer;vertical-align:middle')} /> : <span className="muted">—</span>}</td>
               <td><div className="person"><div className="co-av" style={{ background: avColor(s.name) }}>{initials(s.name)}</div><div>{cell(s.name, escSub(s.jobTitle || ''), 'dt-main')}</div></div></td>
               <td>{cell(s.company, escSub(s.vertical + ' · ' + s.country))}</td>
-              <td>{tierPill(x.tier)}</td>
+              <td>{tierPill(x.tier)}{x.accountTier ? <span className="sub" title="The account's own tier, from everyone's signals">{`Account: ${tierName(x.accountTier)}`}</span> : null}</td>
               <td className="num" style={sx('color:var(--i1);font-weight:600')}>{num(x.score)}</td>
               <td className="num">{num(x.fit)}</td>
               <td className="num">{num(x.timing)}</td>
@@ -679,7 +681,7 @@ export function ScoringScreen() {
     const reach = c.reachableBy === 'none' ? 'No channel' : c.reachableBy;
     return <>
       <div className="panel" style={sx('margin-bottom:12px')}>
-        <div className="panel-hdr"><span className="panel-ttl">Priority</span>{tierPill(x.tier)}</div>
+        <div className="panel-hdr"><span className="panel-ttl">Prospect tier</span><span style={sx('display:flex;align-items:center;gap:6px')}>{r.tier ? <span style={sx('font-size:11px;color:var(--i3)')}>{`Account: ${tierName(r.tier as Tier)}`}</span> : null}{tierPill(x.tier)}</span></div>
         {r.excluded ? <div className="panel-body" style={sx('font-size:12px;color:var(--neg);background:var(--neg-lt)')}><b>Not scored.</b>{` ${r.excludedReason}.`}</div>
           : r.belowFloor ? <div className="panel-body" style={sx('font-size:12px;color:var(--warn);background:var(--warn-lt)')}><b>Not scored.</b>{` ${a.name}'s fit of ${fmt1(r.fit)} is below the floor of ${DemandAI.CONFIG.fitFloor}.`}</div>
           : <><div style={sx('display:flex')}>{miniStat('Score', x.score !== null ? fmt1(x.score) : '—', 'of 100')}{miniStat('Fit', fmt1(x.fit), 'company')}{miniStat('Timing', x.timing !== null ? fmt1(x.timing) : '—', (p ? p.signals.length : 0) + ' signal' + (p && p.signals.length === 1 ? '' : 's'))}</div>

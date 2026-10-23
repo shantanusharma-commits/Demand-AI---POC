@@ -17,7 +17,7 @@ import { createAppWorker } from '../../lib/server/jobs/handlers.ts';
 import { getJob } from '../../lib/server/jobs/queue.ts';
 import { receiveUpload, uploadLimits, type UploadLimits } from '../../lib/server/services/uploads.ts';
 import { deleteList, saveList, type Actor } from '../../lib/server/services/lists.ts';
-import { deleteRun, saveRun, startScoringRun } from '../../lib/server/services/scoring.ts';
+import { deleteRun, listProspects, saveRun, startScoringRun } from '../../lib/server/services/scoring.ts';
 import { createHandoff } from '../../lib/server/services/handoffs.ts';
 import { buildNbaRun, getNbaRun, listNbaRuns, setSegmentPaused } from '../../lib/server/services/nba.ts';
 import { checkDateOf, itemDetail, markOutcome, openItem } from '../../lib/server/services/recommendations.ts';
@@ -241,4 +241,12 @@ test('builds are per business unit: another unit sees none of them', async () =>
   await assert.rejects(as(other, s => getNbaRun(s, runId)), status(404));
   const raw = await as(other, s => s.tx.execute<{ n: number }>(`SELECT (SELECT count(*) FROM recommendations) + (SELECT count(*) FROM drafts) + (SELECT count(*) FROM decision_log) + (SELECT count(*) FROM nba_runs) AS n`));
   assert.equal(Number(raw.rows[0].n), 0);
+});
+
+test('D-12: the ranked list is per person (prospect tier), with the account’s own tier beside it', async () => {
+  const want = await owner.query(`SELECT p.contact_id, a.tier FROM prospect_scores p JOIN account_scores a ON a.run_id = p.run_id AND a.account_id = p.account_id WHERE p.run_id = $1`, [scoringRunId]);
+  const accountTier = new Map(want.rows.map(r => [r.contact_id, r.tier]));
+  const rows = (await as(admin(), s => listProspects(s, scoringRunId, { limit: 500 }))).rows;
+  assert.ok(rows.length === 500 && rows.every(r => r.accountTier === accountTier.get(r.contactId)));
+  assert.ok(rows.some(r => r.accountTier !== r.tier), 'a person can rank apart from their account');
 });
