@@ -148,6 +148,9 @@ test('step 6–7: R6 brings back the runner-up once, redrafted; rejecting the al
   assert.deepEqual([second.status, second.outcome], ['Closed', 'Second rejection: the account is closed for the pilot']);
   const last = await lastLog(item.i.id);
   assert.deepEqual([last.kind, last.linked_to], ['alternative', rejection.id], 'the alternative’s decision links to the rejection it came from');
+  const rows = (await as(admin(), x => decisionLogRows(x, mgr(), {}))).rows.filter(r => r.recommendationId === item.i.id);
+  assert.equal(rows.find(r => r.kind === 'alternative')!.linkedTo, `${item.d.recommended} (${rejection.channel})`);
+  assert.ok(rows.filter(r => r.kind !== 'alternative').every(r => r.linkedTo === ''), 'only an alternative’s decision says what it was the alternative to');
 });
 
 test('G-062 / D-18: R3 sets the account aside and flags its data for the owner; R4 closes it under engage-once', async () => {
@@ -238,6 +241,8 @@ test('fixes on the account: confirming the contact or the deal size drops that r
   assert.ok((await as(rep(), s => reviewQueue(s, repActor()))).items.find(i => i.id === it.id)!.paused);
   await as(admin(), s => setSegmentPaused(s, mgr(), runId, it.formedSegment ?? '', false));
   await as(rep(), s => teach(s, repActor(), it.id, { tags: ['Right action'], note: 'Small sites still buy' }));
+  const taught = await lastLog(it.id);
+  assert.deepEqual([taught.decision, taught.tags, taught.note], ['Taught the system', ['Right action'], 'Small sites still buy']);
   await assert.rejects(as(rep(), s => teach(s, repActor(), it.id, {})), status(400));
 });
 
@@ -284,4 +289,17 @@ test('the log is append-only even for the database owner, and every decision car
   assert.equal(missing.n, 0);
   const run = await as(admin(), s => getNbaRun(s, runId));
   assert.ok(run.recs.some(r => r.status === 'Set aside') && run.recs.some(r => r.status === 'Closed'));
+});
+
+test('a spot-check went out on its own; if the rep’s edit adds sensitive content, it waits for the manager', async () => {
+  const s = await one(`SELECT r.id FROM recommendations r JOIN drafts d ON d.recommendation_id = r.id AND d.version = r.draft_version
+    WHERE r.nba_run_id = $1 AND r.owner_email = ANY($2) AND r.spot = 'pending' AND d.channel <> 'Task' ORDER BY r.position LIMIT 1`, [runId, repEmails]);
+  const d = await draftOf(s.id);
+  const f = d.draft.channel === 'Email' ? 'body' : 'note';
+  const res = await as(rep(), x => acceptItem(x, repActor(), s.id, { draft: { [f]: d.draft[f] + ' We can review the cyber security findings too.' } }));
+  assert.deepEqual([res.status, /goes to the sales manager/.test(res.message)], ['Awaiting approval', true]);
+  const row = await one(`SELECT status, spot, released FROM recommendations WHERE id = $1`, [s.id]);
+  assert.deepEqual([row.status, row.spot, row.released], ['Awaiting approval', 'accepted', null]);
+  const l = await lastLog(s.id);
+  assert.deepEqual([l.kind, l.accepted, /Sensitive: sent to the sales manager/.test(l.note)], ['spot', true, true]);
 });

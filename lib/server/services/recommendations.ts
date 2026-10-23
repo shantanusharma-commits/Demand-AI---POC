@@ -194,6 +194,8 @@ export async function itemDetail(scope: TenantScope, actor: Actor, id: string) {
   const by = await namesOf(scope, [row.decidedBy, row.approvedBy, row.holdBy]);
   return {
     id: row.id, run: { id: run.id, name: run.name, asOf: run.asOf, segments: run.segments.map(s => s.name) }, key: row.engineKey, position: row.position,
+    // The brand pack and date the checks use, so an edit is checked live as it is typed (the server checks again on saving).
+    pack: item.pack, checkDate: item.checkDate,
     account: { name: rec.account.name, vertical: rec.account.vertical || '', existingCustomer: !!rec.account.existingCustomer, country: rec.account.country || '' },
     contact: reachOf(lr.contact), originalContact: lr.contact.row === rec.contact.row ? null : reachOf(rec.contact),
     person: { tier: lr.person.tier ?? null, final: lr.person.final ?? null, signals: lr.person.signals },

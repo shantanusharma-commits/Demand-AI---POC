@@ -210,7 +210,11 @@ export async function acceptItem(scope: TenantScope, actor: Actor, id: string, i
   const label = rating ? `Accepted with a ${rating.rating} edit` : 'Accepted';
   const now = new Date();
   let status: string, message: string;
-  if (kind === 'spot') { await setState(scope, item, actor, { spot: 'accepted' }); status = 'Released'; message = 'Spot-check rated and logged'; }
+  if (kind === 'spot' && sensitive && !manager) {
+    // A spot-check went out on its own, so it had nothing sensitive: the rep's edit added it. Rated, and held for the manager.
+    await setState(scope, item, actor, { spot: 'accepted', status: 'Awaiting approval', released: null }, { decidedAt: now, decidedBy: actor.userId });
+    status = 'Awaiting approval'; message = 'Spot-check rated. Your edit adds sensitive content, so it goes to the sales manager for approval';
+  } else if (kind === 'spot') { await setState(scope, item, actor, { spot: 'accepted' }); status = 'Released'; message = 'Spot-check rated and logged'; }
   else if (sensitive && !manager) {
     await setState(scope, item, actor, { status: 'Awaiting approval', holdWhy: null }, { decidedAt: now, decidedBy: actor.userId, holdNote: null, holdAt: null, holdBy: null });
     status = 'Awaiting approval'; message = 'Accepted: sensitive content goes to the sales manager for approval';
@@ -222,7 +226,7 @@ export async function acceptItem(scope: TenantScope, actor: Actor, id: string, i
     decision: label, kind, firstPass, accepted: true, editRating: rating ? rating.rating : 'none', tags: (input.tags ?? []).filter(t => R.ACCEPT_TAGS.includes(t)),
     linkedTo: kind === 'alternative' ? await lastRejection(scope, item) : null,
     note: [rating ? `${rating.rating} edit: ${rating.why}` : '', R.cleanNote(input.note, 500), kind === 'spot' ? 'Spot-check rating' : '',
-      sensitive && !manager && kind !== 'spot' ? 'Sensitive: sent to the sales manager for approval' : '', input.fromRow ? 'From the queue row' : ''].filter(Boolean).join(' · '),
+      sensitive && !manager ? 'Sensitive: sent to the sales manager for approval' : '', input.fromRow ? 'From the queue row' : ''].filter(Boolean).join(' · '),
   }, input);
   logger.info({ event: 'review.accepted', recommendationId: id, kind, status, flagged: !!flag }, 'Recommendation accepted');
   return { status, message, flag };
@@ -347,7 +351,7 @@ export async function teach(scope: TenantScope, actor: Actor, id: string, input:
   const tags = (input.tags ?? []).filter(t => R.ACCEPT_TAGS.includes(t) || R.WRONG_TAGS.includes(t));
   const note = R.cleanNote(input.note, 500);
   if (!tags.length && !note) throw badRequest('Pick what it got right or wrong, or write a note.');
-  await logItem(scope, item, actor, { decision: 'Taught the system', note: [tags.join(', '), note].filter(Boolean).join(' · '), tags });
+  await logItem(scope, item, actor, { decision: 'Taught the system', note, tags });
 }
 
 /** Step 5 · The sales manager approves a sensitive item (any edit saved, rated and versioned first) and it is released. */
@@ -411,7 +415,8 @@ export type LogRow = {
 /** Newest first. Managers see everything; a rep sees the decisions they made themselves. */
 export async function decisionLogRows(scope: TenantScope, actor: Actor, query: { flagged?: boolean; q?: string; before?: number; limit?: number }): Promise<{ rows: LogRow[]; next: number | null }> {
   const limit = Math.min(Math.max(1, query.limit ?? 200), 500);
-  const linked = sql<string>`coalesce((select l2.action || ' (' || l2.channel || ')' from decision_log l2 where l2.id = "decision_log"."linked_to" and l2.kind is distinct from 'manager_check'), '')`;
+  // An alternative's decision links to the rejection it came back from: "alternative to <that action (channel)>".
+  const linked = sql<string>`case when "decision_log"."kind" = 'alternative' then coalesce((select l2.action || ' (' || l2.channel || ')' from decision_log l2 where l2.id = "decision_log"."linked_to"), '') else '' end`;
   const conds: (SQL | undefined)[] = [eq(decisionLog.businessUnitId, scope.ctx.businessUnitId), isManager(actor.role) ? undefined : eq(decisionLog.createdBy, actor.userId),
     query.before ? lt(decisionLog.seq, query.before) : undefined, query.flagged ? and(sql`${decisionLog.flag} is not null`, sql`not ${checkedSql}`) : undefined];
   if (query.q) {
