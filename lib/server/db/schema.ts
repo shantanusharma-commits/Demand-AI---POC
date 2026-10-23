@@ -372,6 +372,10 @@ export const scoringRuns = pgTable('scoring_runs', {
   sheetName: text('sheet_name'),
   configVersionId: uuid('config_version_id').references(() => configVersions.id),
   engineVersion: text('engine_version').notNull(),
+  /** The signal settings this run was scored with (G-023), copied from the active configuration when it started:
+   *  types switched off in Setup (their rows rejected as OFF) and types added there. Later changes leave the run as it was. */
+  signalsOff: text('signals_off').array().notNull().default(sql`'{}'::text[]`),
+  signalsCustom: jsonb('signals_custom').notNull().default([]),
   stats: jsonb('stats').notNull().default({}),
   checks: jsonb('checks').notNull().default([]),
   createdAt: createdAt(),

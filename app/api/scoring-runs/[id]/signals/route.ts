@@ -7,6 +7,6 @@ import { listSignals } from '@/lib/server/services/scoring';
 
 export const GET = withApi<undefined, { id: string }>({ route: 'GET /api/scoring-runs/:id/signals', auth: 'unit', permission: 'lists.view' }, async ({ request, deps, tenant, params }) => {
   if (!isUuid(params.id)) throw notFound();
-  const q = pageQuery(request, { status: z.enum(['Qualified', 'Rejected', 'Not used', 'Used for a knock-out']).optional() });
+  const q = pageQuery(request, { status: z.enum(['Qualified', 'Rejected', 'Not used', 'Used for a knock-out', 'unused']).optional() });
   return withTenant(deps.db, tenant!, s => listSignals(s, params.id, q));
 });

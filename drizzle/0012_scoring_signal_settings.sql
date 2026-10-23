@@ -1,0 +1,2 @@
+ALTER TABLE "scoring_runs" ADD COLUMN "signals_off" text[] DEFAULT '{}'::text[] NOT NULL;--> statement-breakpoint
+ALTER TABLE "scoring_runs" ADD COLUMN "signals_custom" jsonb DEFAULT '[]'::jsonb NOT NULL;

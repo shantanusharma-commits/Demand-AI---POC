@@ -60,6 +60,7 @@ const EXPECTED: Record<string, Policy> = {
   'GET /api/scoring-runs/:id/prospects': { auth: 'unit', permission: 'lists.view' },
   'GET /api/scoring-runs/:id/prospects/:contactId': { auth: 'unit', permission: 'lists.view' },
   'GET /api/scoring-runs/:id/signals': { auth: 'unit', permission: 'lists.view' },
+  'GET /api/signal-monitoring': { auth: 'unit', permission: 'lists.view' },
   'POST /api/handoffs': { auth: 'unit', permission: 'handoff.create' },
   'GET /api/handoffs/:id': { auth: 'unit', permission: 'lists.view' },
   'GET /api/column-mappings': { auth: 'unit', permission: 'lists.view' },

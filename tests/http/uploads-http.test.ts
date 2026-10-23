@@ -127,6 +127,29 @@ test('G-014 over HTTP: a rep sees only their own prospects; another owner’s is
   assert.equal((await viewer.get(`/api/lists/${listId}`)).status, 403, 'a Viewer has no list access');
 });
 
+test('G-023 over HTTP: Signal monitoring counts the scored file once per type; a rep counts their own rows; the unused-rows filter', async () => {
+  const b = await admin();
+  const runs = await b.get('/api/scoring-runs');
+  assert.deepEqual(runs.json.signalSettings, { off: [], custom: [], problem: null }, 'what a new run would take');
+  const m = await b.get('/api/signal-monitoring');
+  assert.equal(m.status, 200);
+  const all = m.json.monitoring as { scope: string; totals: { records: number; files: number; unknownTypes: string[] }; types: { type: string; status: string }[] };
+  assert.deepEqual([all.scope, all.totals.records, all.totals.files], ['all', 1492, 1]);
+  assert.equal(all.types.find(t => t.type === 'Installed system (current)')!.status, 'Knock-out');
+  const rep = new Browser(srv.base);
+  await rep.signIn('rep.a@demandai.test');
+  const mine = (await rep.get('/api/signal-monitoring')).json.monitoring as typeof all;
+  assert.equal(mine.scope, 'own');
+  assert.ok(mine.totals.records > 0 && mine.totals.records < all.totals.records, String(mine.totals.records));
+  const run = (await b.get(`/api/scoring-runs/${runId}`)).json.run as { visible: { unused: number }; signalSettings: unknown };
+  assert.deepEqual(run.signalSettings, { off: [], custom: [] });
+  const unused = await b.get(`/api/scoring-runs/${runId}/signals?status=unused&limit=500`);
+  assert.equal(unused.status, 200);
+  assert.ok((unused.json.rows as { status: string }[]).every(r => r.status !== 'Qualified'));
+  assert.equal(run.visible.unused, 1492 - 475, 'every row but the 475 that counted');
+  assert.equal((await b.get(`/api/scoring-runs/${runId}/signals?status=bogus`)).status, 400);
+});
+
 test('G-015 over HTTP: per-check CSV and the validation report download as UTF-8 CSV attachments; a bad check is 400', async () => {
   const b = await admin();
   const r = await b.get(`/api/lists/${listId}/issues.csv?check=dupes`);

@@ -3,12 +3,12 @@
 // the same ranking. Person-level rows are owner-scoped like the list's (G-014).
 import 'server-only';
 import { and, asc, desc, eq, gt, inArray, like, ne, or, sql } from 'drizzle-orm';
-import { processSignals, scoreList } from '../../demandai-engine.ts';
+import { CONFIG, customSignalProblem, processSignals, scoreList, type CustomSignalType } from '../../demandai-engine.ts';
 import { ENGINE_VERSION } from '../../engine/config.ts';
 import { SIGNAL_SHEET } from '../../engine/sheets.ts';
 import { buildProspects, sendable, signalStepResults, type SignalStepResult } from '../../engine/prospects.ts';
 import type { Account, Contact, Issue, PersonScore, ScoreResult, Signal, Tier } from '../../../types/demandai';
-import { accountScores, accounts, contacts, issues, leadLists, prospectScores, scoringRuns, signals, TIERS } from '../db/schema.ts';
+import { accountScores, accounts, configVersions, contacts, issues, leadLists, prospectScores, scoringRuns, signals, TIERS } from '../db/schema.ts';
 import { withTenant, type TenantScope } from '../db/tenant.ts';
 import { recordAudit } from '../db/audit.ts';
 import { enqueueJob, JobError, jobContext } from '../jobs/queue.ts';
@@ -17,7 +17,7 @@ import { readUpload, UploadReadError, type FileNote } from '../uploads/parse.ts'
 import { badRequest, conflict, forbidden, notFound } from '../http/errors.ts';
 import { logger } from '../logger.ts';
 import { loadUpload, type UploadLimits } from './uploads.ts';
-import { activeConfigVersionId, chunks, containsPattern, deleteUnusedUploads, isManager, loadLeadList, ownerOnly, PAGE_DEFAULT, PAGE_MAX, type Actor, type Page, type PageQuery } from './lists.ts';
+import { chunks, containsPattern, deleteUnusedUploads, isManager, loadLeadList, ownerOnly, PAGE_DEFAULT, PAGE_MAX, type Actor, type Page, type PageQuery } from './lists.ts';
 
 export const SCORING_STAGES = ['parse', 'check', 'score', 'save'];
 
@@ -41,6 +41,52 @@ export function asOfProblem(value: unknown, today: string): string | null {
 
 export const todayUtc = () => new Date().toISOString().slice(0, 10);
 
+/* ─── Signal settings (G-023): types switched off in Setup and types added there ─── */
+
+export type SignalSettings = { off: string[]; custom: CustomSignalType[] };
+
+const LEVELS = Object.keys(CONFIG.customStrength);
+
+/** The signal settings in a configuration body (`signalsOff`, `signalsCustom`), checked as Setup checks them; throws
+ *  with the reason when they can't be used, so a run is never scored with settings other than the ones shown. */
+export function signalSettingsOf(body: unknown): SignalSettings {
+  const b = (body && typeof body === 'object' ? body : {}) as { signalsOff?: unknown; signalsCustom?: unknown };
+  const offIn = b.signalsOff ?? [], customIn = b.signalsCustom ?? [];
+  if (!Array.isArray(customIn)) throw new Error('the added signal types are not a list');
+  const custom: CustomSignalType[] = [];
+  for (const c of customIn as Partial<CustomSignalType>[]) {
+    if (!c || typeof c !== 'object') throw new Error('an added signal type has no definition');
+    const def: CustomSignalType = {
+      name: String(c.name ?? '').trim(), segment: String(c.segment ?? ''), level: c.level as CustomSignalType['level'], full: Number(c.full), zero: Number(c.zero),
+      ...(c.about ? { about: String(c.about) } : {}), ...(c.data ? { data: String(c.data) } : {}), ...(c.source ? { source: String(c.source) } : {}),
+    };
+    const problem = customSignalProblem(def, custom) ?? (LEVELS.includes(def.level) ? null : `Pick how strong "${def.name}" is (${LEVELS.join(', ')})`);
+    if (problem) throw new Error(problem);
+    custom.push(def);
+  }
+  if (!Array.isArray(offIn) || offIn.some(t => typeof t !== 'string')) throw new Error('the switched-off signal types are not a list of names');
+  const known = new Set([...Object.keys(CONFIG.signalTypes), ...custom.map(c => c.name)]);
+  const unknown = (offIn as string[]).find(t => !known.has(t));
+  if (unknown !== undefined) throw new Error(`"${unknown}" is switched off but is not a signal type`);
+  return { off: [...new Set(offIn as string[])], custom };
+}
+
+export type ActiveSignalSettings = SignalSettings & { configVersionId: string | null; problem: string | null };
+
+/** The signal settings a new run of the caller's unit would take, from its active configuration version. When they
+ *  can't be used, `problem` says why (and no run starts until Setup fixes them). */
+export async function activeSignalSettings(scope: TenantScope): Promise<ActiveSignalSettings> {
+  const [c] = await scope.tx.select({ id: configVersions.id, body: configVersions.body }).from(configVersions)
+    .where(and(eq(configVersions.businessUnitId, scope.ctx.businessUnitId), eq(configVersions.status, 'active')));
+  if (!c) return { configVersionId: null, off: [], custom: [], problem: null };
+  try {
+    return { configVersionId: c.id, ...signalSettingsOf(c.body), problem: null };
+  } catch (err) {
+    logger.warn({ event: 'config.signals.invalid', configVersionId: c.id, problem: (err as Error).message }, 'Active signal settings cannot be used');
+    return { configVersionId: c.id, off: [], custom: [], problem: `The signal settings in Setup can't be used: ${(err as Error).message}. Fix them in Setup, then score again.` };
+  }
+}
+
 /* ─── Starting a run ─── */
 
 export async function startScoringRun(scope: TenantScope, actor: Actor, input: { listId: string; signalUploadId: string; asOf: string }): Promise<{ runId: string; jobId: string }> {
@@ -54,13 +100,18 @@ export async function startScoringRun(scope: TenantScope, actor: Actor, input: {
   const upload = await loadUpload(scope, input.signalUploadId);
   if (!upload || upload.kind !== 'signal') throw notFound('That signal file is not there any more. Upload it again.');
   if (upload.sandbox !== list.sandbox) throw conflict('Sample signals only go with a list built from sample data.');
+  // The run keeps the signal settings it started with: a type switched off later still counts here (G-023).
+  const settings = await activeSignalSettings(scope);
+  if (settings.problem) throw conflict(settings.problem);
   const [run] = await scope.tx.insert(scoringRuns).values({
     businessUnitId: scope.ctx.businessUnitId, listId: list.id, signalUploadId: upload.id, asOf: input.asOf, status: 'draft', sandbox: list.sandbox,
-    sourceFile: upload.fileName, configVersionId: await activeConfigVersionId(scope), engineVersion: ENGINE_VERSION, createdBy: actor.userId, updatedBy: actor.userId,
+    sourceFile: upload.fileName, configVersionId: settings.configVersionId, engineVersion: ENGINE_VERSION, signalsOff: settings.off, signalsCustom: settings.custom,
+    createdBy: actor.userId, updatedBy: actor.userId,
   }).returning({ id: scoringRuns.id });
   const jobId = await enqueueJob(scope, 'scoring.run', { runId: run.id }, SCORING_STAGES);
-  await recordAudit(scope, { action: 'scoring.started', actorRole: actor.role, targetType: 'scoring_run', targetId: run.id, details: { listId: list.id, uploadId: upload.id, asOf: input.asOf, jobId } });
-  logger.info({ event: 'scoring.started', runId: run.id, listId: list.id }, 'Scoring run queued');
+  await recordAudit(scope, { action: 'scoring.started', actorRole: actor.role, targetType: 'scoring_run', targetId: run.id,
+    details: { listId: list.id, uploadId: upload.id, asOf: input.asOf, jobId, signalsOff: settings.off, signalsAdded: settings.custom.map(c => c.name) } });
+  logger.info({ event: 'scoring.started', runId: run.id, listId: list.id, signalsOff: settings.off.length, signalsAdded: settings.custom.length }, 'Scoring run queued');
   return { runId: run.id, jobId };
 }
 
@@ -98,7 +149,7 @@ export function createScoringJob(limits: UploadLimits) {
       throw err;
     }
     await run.stage('check', { sheetRows: read.grid.length, accounts: list.accounts.length, contacts: list.contacts.length });
-    const sig = processSignals(read.grid, list, { file: upload.fileName, sheet: read.sheet, asOf: r.asOf });
+    const sig = processSignals(read.grid, list, { file: upload.fileName, sheet: read.sheet, asOf: r.asOf, off: r.signalsOff, custom: r.signalsCustom as CustomSignalType[] });
     sig.issues.unshift(...noteIssues(read.notes, upload.fileName, read.sheet));
     await run.stage('score', { signals: sig.signals.length });
     const scored = scoreList(list, sig);
@@ -184,7 +235,7 @@ export async function savedRuns(scope: TenantScope): Promise<RunSummary[]> {
 }
 
 async function runRow(scope: TenantScope, id: string) {
-  const [r] = await scope.tx.select({ ...runColumns, checks: scoringRuns.checks, signalUploadId: scoringRuns.signalUploadId })
+  const [r] = await scope.tx.select({ ...runColumns, checks: scoringRuns.checks, signalUploadId: scoringRuns.signalUploadId, signalsOff: scoringRuns.signalsOff, signalsCustom: scoringRuns.signalsCustom })
     .from(scoringRuns).innerJoin(leadLists, eq(leadLists.id, scoringRuns.listId))
     .where(and(eq(scoringRuns.id, id), eq(scoringRuns.businessUnitId, scope.ctx.businessUnitId)));
   return r ?? null;
@@ -192,8 +243,10 @@ async function runRow(scope: TenantScope, id: string) {
 
 export type RunDetail = RunSummary & {
   checks: SignalStepResult[]; scope: 'all' | 'own';
-  /** Counts of what the caller can see (reps: their own prospects, D-33). */
-  visible: { tiers: Record<Tier, number>; prospects: number; signals: number };
+  /** The signal settings the run was scored with (G-023). */
+  signalSettings: SignalSettings;
+  /** Counts of what the caller can see (reps: their own prospects, D-33). `unused`: signal rows that didn't count. */
+  visible: { tiers: Record<Tier, number>; prospects: number; signals: number; unused: number };
   canEdit: boolean;
 };
 
@@ -204,12 +257,13 @@ export async function getRun(scope: TenantScope, actor: Actor, id: string): Prom
   const counts = await scope.tx.select({ tier: prospectScores.tier, n: sql<number>`count(*)::int` }).from(prospectScores)
     .where(and(eq(prospectScores.runId, id), ownerOnly(scope, prospectScores.ownerEmail))).groupBy(prospectScores.tier);
   for (const c of counts) tiers[c.tier as Tier] = c.n;
-  const [sg] = await scope.tx.select({ n: sql<number>`count(*)::int` }).from(signals).where(and(eq(signals.runId, id), ownerOnly(scope, signals.ownerEmail)));
-  const { createdBy, signalUploadId: _s, ...rest } = r;
+  const [sg] = await scope.tx.select({ n: sql<number>`count(*)::int`, unused: sql<number>`(count(*) filter (where ${signals.status} <> 'Qualified'))::int` })
+    .from(signals).where(and(eq(signals.runId, id), ownerOnly(scope, signals.ownerEmail)));
+  const { createdBy, signalUploadId: _s, signalsOff, signalsCustom, ...rest } = r;
   void _s;
   return {
-    ...rest, stats: r.stats as RunStats, checks: r.checks as SignalStepResult[], scope: scope.ctx.scope,
-    visible: { tiers, prospects: counts.reduce((n, c) => n + c.n, 0), signals: sg.n }, canEdit: isManager(actor.role) || createdBy === actor.userId,
+    ...rest, stats: r.stats as RunStats, checks: r.checks as SignalStepResult[], scope: scope.ctx.scope, signalSettings: { off: signalsOff, custom: signalsCustom as CustomSignalType[] },
+    visible: { tiers, prospects: counts.reduce((n, c) => n + c.n, 0), signals: sg.n, unused: sg.unused }, canEdit: isManager(actor.role) || createdBy === actor.userId,
   };
 }
 
@@ -237,13 +291,15 @@ export async function listProspects(scope: TenantScope, runId: string, query: Pa
   };
 }
 
-export type SignalFilter = 'Qualified' | 'Rejected' | 'Not used' | 'Used for a knock-out';
+/** A signal status, or 'unused': every row that didn't count towards a score. */
+export type SignalFilter = 'Qualified' | 'Rejected' | 'Not used' | 'Used for a knock-out' | 'unused';
 
 export async function listSignals(scope: TenantScope, runId: string, query: PageQuery & { status?: SignalFilter }): Promise<Page<Signal & { seq: number }>> {
   if (!(await runRow(scope, runId))) throw notFound('That scoring run is not there any more.');
   const limit = limitOf(query);
   const rows = await scope.tx.select({ seq: signals.seq, data: signals.data }).from(signals)
-    .where(and(eq(signals.runId, runId), ownerOnly(scope, signals.ownerEmail), query.status ? eq(signals.status, query.status) : undefined,
+    .where(and(eq(signals.runId, runId), ownerOnly(scope, signals.ownerEmail),
+      query.status === 'unused' ? ne(signals.status, 'Qualified') : query.status ? eq(signals.status, query.status) : undefined,
       query.q?.trim() ? like(signals.search, containsPattern(query.q)) : undefined, query.after !== undefined ? gt(signals.seq, query.after) : undefined))
     .orderBy(asc(signals.seq)).limit(limit + 1);
   const page = rows.slice(0, limit);
