@@ -160,6 +160,9 @@ export const inQueue = (st: Pick<RecState, 'status' | 'spot'>): boolean => st.st
 export const needsPerson = (st: Pick<RecState, 'status' | 'spot'>): boolean => inQueue(st) || st.status === 'Awaiting approval';
 export const kindOfItem = (st: Pick<RecState, 'spot' | 'why'>): 'spot' | 'alternative' | 'intervention' | 'exception' =>
   st.spot === 'pending' ? 'spot' : st.why === 'alternative' ? 'alternative' : st.why === 'stepped in' ? 'intervention' : 'exception';
+/** The tag a queue row carries: why it is in the queue. */
+export const whyHere = (st: Pick<RecState, 'spot' | 'why'>): string =>
+  st.spot === 'pending' ? 'Spot-check' : ({ exception: 'Exception', alternative: 'Alternative', 'sent back': 'Sent back', 'stepped in': 'Intervention' } as Record<string, string>)[st.why || ''] || 'Exception';
 
 /** The status a rep sees on the next best action screen, with its tag tone. */
 export function statusLabel(st: Pick<RecState, 'status' | 'spot' | 'released'> & { meeting?: { seen: boolean } | null }, paused: boolean): [string, string] {
@@ -326,15 +329,17 @@ export interface LogFacts {
 const counts = (l: LogFacts) => !l.flag || l.checked;
 const rate = (ls: LogFacts[]) => { const n = ls.length, a = ls.filter(l => l.accepted).length; return { n, a, pct: n ? a / n * 100 : null }; };
 
-/** Trust: how often people agreed with the system's first recommendation (optionally in one micro-segment). */
-export function trackRecord(logs: LogFacts[], seg?: string): { n: number; a: number; pct: number | null; early: boolean } {
+/** Trust: how often people agreed with the system's first recommendation (optionally in one micro-segment); early
+ *  below the unit's "too early to call" number. */
+export function trackRecord(logs: LogFacts[], seg?: string, min = CONFIG.minDecisions): { n: number; a: number; pct: number | null; early: boolean } {
   const ls = logs.filter(l => l.decisive && l.firstPass && counts(l) && (seg === undefined || l.segment === seg));
   const a = ls.filter(l => l.accepted).length;
-  return { n: ls.length, a, pct: ls.length ? Math.round(a / ls.length * 100) : null, early: ls.length < CONFIG.minDecisions };
+  return { n: ls.length, a, pct: ls.length ? Math.round(a / ls.length * 100) : null, early: ls.length < min };
 }
 
-/** G2 weighted across the two paths, and G1 against the baseline, over the items and the log in view. */
-export function measure(items: { passed: boolean; status: string; outcome: string | null }[], logs: LogFacts[]) {
+/** G2 weighted across the two paths, and G1 against the baseline (the unit's, from its configuration), over the items
+ *  and the log in view. */
+export function measure(items: { passed: boolean; status: string; outcome: string | null }[], logs: LogFacts[], base = CONFIG.g1BaselineMinutes) {
   const decisive = logs.filter(l => l.decisive);
   const first = decisive.filter(l => l.firstPass && counts(l));
   const autoN = items.filter(x => x.passed).length, excN = items.length - autoN;
@@ -346,7 +351,7 @@ export function measure(items: { passed: boolean; status: string; outcome: strin
   const reasons: Record<string, number> = {}; rejections.forEach(l => { reasons[l.reason] = (reasons[l.reason] || 0) + 1; });
   const released = items.filter(x => x.status === 'Released').length;
   const secs = decisive.reduce((t, l) => t + (l.seconds || 0), 0);
-  const minutes = released ? secs / 60 / released : null, base = CONFIG.g1BaselineMinutes;
+  const minutes = released ? secs / 60 / released : null;
   return {
     items: items.length, autoN, excN, auto, exc, weighted, pooled: rate(first),
     partial: auto.pct === null || exc.pct === null,

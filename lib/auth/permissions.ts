@@ -35,6 +35,7 @@ const WORKERS: readonly BuRole[] = ['Admin', 'Sales manager', 'Sales rep'];
 
 /** What each role may do in its business unit. */
 export const ACTIONS = {
+  'today.view': WORKERS,
   'users.view': MANAGERS,
   'users.manage': MANAGERS,
   'users.grantAdmin': ['Admin'], // only Admin grants or removes the Admin role (D-26)
@@ -98,7 +99,7 @@ export function initialsOf(name: string): string {
 
 /** Plain words for each action, used in "Your role (…) cannot …" refusals. */
 export const ACTION_LABELS: Record<Action, string> = {
-  'users.view': 'view users', 'users.manage': 'manage users', 'users.grantAdmin': 'grant or remove the Admin role',
+  'today.view': 'open Today', 'users.view': 'view users', 'users.manage': 'manage users', 'users.grantAdmin': 'grant or remove the Admin role',
   'setup.view': 'view Setup', 'setup.signOff': 'sign off Setup sections', 'setup.signals': 'switch signal types',
   'content.view': 'view the Content library', 'brand.manage': 'change the brand pack', 'claims.manage': 'manage approved claims',
   'studio.use': 'use the Content studio', 'data.upload': 'upload files', 'lists.view': 'view lists', 'lists.write': 'change lists',

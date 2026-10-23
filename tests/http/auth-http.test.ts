@@ -88,6 +88,7 @@ const EXPECTED: Record<string, Policy> = {
   'POST /api/recommendations/:id/open': { auth: 'unit', permission: 'lists.view' },
   'POST /api/recommendations/:id/outcome': { auth: 'unit', permission: 'review.decide' },
   'GET /api/review/queue': { auth: 'unit', permission: 'review.decide' },
+  'GET /api/today': { auth: 'unit', permission: 'today.view' },
   'GET /api/routing-rules': { auth: 'unit', permission: 'lists.view' },
   'POST /api/routing-rules': { auth: 'unit', permission: 'routing.manage' },
   'PATCH /api/routing-rules/:id': { auth: 'unit', permission: 'routing.manage' },

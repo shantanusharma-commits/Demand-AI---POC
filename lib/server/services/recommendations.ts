@@ -4,7 +4,7 @@
 // whichever is later, so a claim that has expired since fails its check (G-009). Owner-scoped twice (G-014): the
 // row-level security policies, and the repository filter here.
 import 'server-only';
-import { and, desc, eq, inArray, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, or, sql } from 'drizzle-orm';
 import { CONFIG } from '../../demandai-engine.ts';
 import {
   approvedClaims, briefFor, checkDraft, confidenceFor, draftFor, estimateDealSize, type BrandPack, type CheckResult, type Claim, type Draft, type NbaContact, type Rec,
@@ -15,6 +15,7 @@ import type { TenantScope } from '../db/tenant.ts';
 import { conflict, notFound } from '../http/errors.ts';
 import { currentLogContext, logger } from '../logger.ts';
 import { isManager, ownerOnly, type Actor } from './lists.ts';
+import { activeValidation } from './measures.ts';
 import { todayUtc } from './scoring.ts';
 import { ownerNames, unitReps } from './users.ts';
 
@@ -128,15 +129,17 @@ export async function pausedSegments(scope: TenantScope, runId: string): Promise
 }
 export const segKey = (rec: Pick<Rec, 'segment'>): string => rec.segment || '';
 
-/** The measures' view of the log the caller can see: decisive rows, with whether a manager checked a flagged one;
- *  for a rep's own results, the rows logged while they owned the item. */
+/** The measures' view of the log the caller can see: decisive rows (with whether a manager checked a flagged one),
+ *  and the step-ins and compliance send-backs, which are logged as rows of their own; for a rep's own results, the
+ *  rows logged while they owned the item. */
 export async function logFacts(scope: TenantScope, opts: { ownerEmails?: string[] } = {}): Promise<R.LogFacts[]> {
   const rows = await scope.tx.select({
     decisive: decisionLog.decisive, firstPass: decisionLog.firstPass, accepted: decisionLog.accepted, kind: decisionLog.kind, flag: decisionLog.flag,
     segment: decisionLog.segment, reason: decisionLog.reason, cause: decisionLog.cause, compliance: decisionLog.compliance, intervention: decisionLog.intervention,
     editRating: decisionLog.editRating, seconds: decisionLog.seconds,
     checked: checkedSql,
-  }).from(decisionLog).where(and(eq(decisionLog.businessUnitId, scope.ctx.businessUnitId), eq(decisionLog.decisive, true),
+  }).from(decisionLog).where(and(eq(decisionLog.businessUnitId, scope.ctx.businessUnitId),
+    or(eq(decisionLog.decisive, true), eq(decisionLog.intervention, true), eq(decisionLog.compliance, true)),
     opts.ownerEmails ? (opts.ownerEmails.length ? inArray(decisionLog.ownerEmail, opts.ownerEmails) : sql`false`) : undefined));
   return rows;
 }
@@ -181,7 +184,7 @@ export async function itemDetail(scope: TenantScope, actor: Actor, id: string) {
     role: decisionLog.actorRole, decision: decisionLog.decision, note: decisionLog.note, reason: decisionLog.reason, tags: decisionLog.tags, flag: decisionLog.flag,
     checked: checkedSql,
   }).from(decisionLog).leftJoin(users, eq(users.id, decisionLog.createdBy)).where(eq(decisionLog.recommendationId, id)).orderBy(desc(decisionLog.seq));
-  const facts = await logFacts(scope);
+  const facts = await logFacts(scope), min = (await activeValidation(scope)).settings.minDecisions;
   const manager = isManager(actor.role), mine = mineOf(scope, row.ownerEmail);
   const names = await ownerNames(scope, row.ownerEmail ? [row.ownerEmail] : []);
   const people = (rec.result.people || []).filter(p => p.contact.row !== lr.contact.row).map(p => ({
@@ -214,7 +217,7 @@ export async function itemDetail(scope: TenantScope, actor: Actor, id: string) {
     brief: { who: brief.who, whyNow: brief.whyNow, angle: brief.angle, proof: brief.proof, objection: brief.objection, ask: brief.ask, constraints: brief.constraints },
     options: { recommended: optionFacts(item, rec.action, rec.reason), runnerUp: rec.runnerUp ? optionFacts(item, rec.runnerUp.action, rec.runnerUp.reason) : null },
     versions, history,
-    trackRecord: { segment: rec.segment ? R.trackRecord(facts, rec.segment) : null, all: R.trackRecord(facts) },
+    trackRecord: { segment: rec.segment ? R.trackRecord(facts, rec.segment, min) : null, all: R.trackRecord(facts, undefined, min) },
     deal: estimateDealSize(rec.account), dealThreshold: CONFIG.dealSize.threshold,
     paused: paused ? { by: paused.by, at: paused.at } : null,
     people, claims: approvedClaims(item.pack).filter(c => (c.segments || []).includes(claimSeg)).map((c: Claim) => ({ id: c.id, title: c.title, type: c.type, year: c.year, claim: c.claim, expiry: c.expiry })),

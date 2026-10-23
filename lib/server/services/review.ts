@@ -6,7 +6,7 @@
 import 'server-only';
 import { randomInt } from 'node:crypto';
 import { and, desc, eq, inArray, isNull, lt, or, sql, type SQL } from 'drizzle-orm';
-import { CONFIG, toCSV } from '../../demandai-engine.ts';
+import { toCSV } from '../../demandai-engine.ts';
 import { briefFor, callScript, type Draft, type Rec } from '../../engine/nba.ts';
 import * as R from '../../engine/review.ts';
 import { decisionLog, drafts, nbaRuns, recommendations, reviewViews, SYSTEM_USER_ID, spotChecks, users } from '../db/schema.ts';
@@ -20,6 +20,7 @@ import {
   type Item, type LogInput, type RecRow,
 } from './recommendations.ts';
 import { ownerNames, unitReps } from './users.ts';
+import { activeValidation } from './measures.ts';
 
 const byName = sql<string>`coalesce(${users.displayName}, 'A former member')`;
 
@@ -38,6 +39,7 @@ export function isoWeek(t: Date): string {
  *  is marked with the week, so it is never drawn twice. */
 export async function drawSpotChecks(scope: TenantScope, actor: Actor, now = new Date()): Promise<{ week: string; picked: number }> {
   const week = isoWeek(now);
+  const share = (await activeValidation(scope)).settings.spotCheckShare;
   const eligible = await scope.tx.select({ id: recommendations.id, ownerEmail: recommendations.ownerEmail, runId: recommendations.nbaRunId, segment: recommendations.segment })
     .from(recommendations).where(and(eq(recommendations.businessUnitId, scope.ctx.businessUnitId), ownerOnly(scope, recommendations.ownerEmail),
       eq(recommendations.passed, true), eq(recommendations.released, 'auto'), eq(recommendations.status, 'Released'), isNull(recommendations.spotWeek)));
@@ -54,7 +56,7 @@ export async function drawSpotChecks(scope: TenantScope, actor: Actor, now = new
   let total = 0;
   for (const [ownerEmail, ids] of byOwner) {
     const order = ids.map(id => [randomInt(1 << 30), id] as const).sort((a, b) => a[0] - b[0]).map(x => x[1]);
-    const n = Math.max(1, Math.round(ids.length * CONFIG.spotCheckShare));
+    const n = Math.max(1, Math.round(ids.length * share));
     const picked = order.slice(0, n);
     const [drawn] = await scope.tx.insert(spotChecks).values({ businessUnitId: scope.ctx.businessUnitId, isoWeek: week, ownerEmail, eligible: ids.length, picked, createdBy: actor.userId })
       .onConflictDoNothing().returning({ id: spotChecks.id });
@@ -84,22 +86,21 @@ function rowItem(row: RecRow, d: { draft: unknown; checks: unknown }, runName: s
   return { rec: row.rec as Rec, state: stateOf(row), draft: d.draft as Draft, checks: d.checks as Item['draft']['checks'], runName };
 }
 
-/** Everything in For Review the caller can see: their queue (exceptions, spot-checks, alternatives, items sent back or
- *  stepped into), what waits for a manager's approval, and the measures behind the tiles. Opening the queue draws the
- *  week's spot-checks and starts the clock for decisions made from a row. */
-export async function reviewQueue(scope: TenantScope, actor: Actor) {
-  await drawSpotChecks(scope, actor);
-  const [shown] = await scope.tx.insert(reviewViews).values({ businessUnitId: scope.ctx.businessUnitId, userId: actor.userId })
-    .onConflictDoUpdate({ target: [reviewViews.businessUnitId, reviewViews.userId], set: { shownAt: sql`now()` } }).returning({ shownAt: reviewViews.shownAt });
+/** What needs a person: in a queue (waiting, or a spot-check to rate) or waiting for a manager's approval. */
+export const needsPersonSql = or(inArray(recommendations.status, ['Waiting', 'Awaiting approval']), eq(recommendations.spot, 'pending'));
+
+/** The rows a filter picks among the recommendations the caller can see, each with why it needs a person, what is
+ *  stuck, and whether its micro-segment is paused. */
+export async function queueRows(scope: TenantScope, where: SQL | undefined): Promise<QueueRow[]> {
   const visible = and(eq(recommendations.businessUnitId, scope.ctx.businessUnitId), ownerOnly(scope, recommendations.ownerEmail));
   const rows = await scope.tx.select({ row: recommendations, draft: drafts.draft, checks: drafts.checks, runName: nbaRuns.name })
     .from(recommendations).innerJoin(drafts, and(eq(drafts.recommendationId, recommendations.id), eq(drafts.version, recommendations.draftVersion)))
     .innerJoin(nbaRuns, eq(nbaRuns.id, recommendations.nbaRunId))
-    .where(and(visible, or(inArray(recommendations.status, ['Waiting', 'Awaiting approval']), eq(recommendations.spot, 'pending'))));
+    .where(and(visible, where));
   const pausedBy = new Map<string, Set<string>>();
   for (const runId of new Set(rows.map(r => r.row.nbaRunId))) pausedBy.set(runId, new Set((await pausedSegments(scope, runId)).keys()));
   const names = await ownerNames(scope, rows.map(r => r.row.ownerEmail ?? ''));
-  const items: QueueRow[] = rows.map(({ row, draft, checks, runName }) => {
+  return rows.map(({ row, draft, checks, runName }): QueueRow => {
     const x = rowItem(row, { draft, checks }, runName);
     const reasons = R.exceptionReasons(R.liveRec(x.rec, x.state), x.draft, x.checks);
     const cats = R.reasonCats(x.state, { reasons, unreachable: x.draft.unreachable });
@@ -112,9 +113,20 @@ export async function reviewQueue(scope: TenantScope, actor: Actor) {
       cats, stuck: R.stuck(x.rec, x.state, x.draft, x.checks, cats), paused: pausedBy.get(row.nbaRunId)!.has(row.segment || ''),
     };
   });
+}
+
+/** Everything in For Review the caller can see: their queue (exceptions, spot-checks, alternatives, items sent back or
+ *  stepped into), what waits for a manager's approval, and the measures behind the tiles. Opening the queue draws the
+ *  week's spot-checks and starts the clock for decisions made from a row. */
+export async function reviewQueue(scope: TenantScope, actor: Actor) {
+  await drawSpotChecks(scope, actor);
+  const [shown] = await scope.tx.insert(reviewViews).values({ businessUnitId: scope.ctx.businessUnitId, userId: actor.userId })
+    .onConflictDoUpdate({ target: [reviewViews.businessUnitId, reviewViews.userId], set: { shownAt: sql`now()` } }).returning({ shownAt: reviewViews.shownAt });
+  const items = await queueRows(scope, needsPersonSql);
+  const visible = and(eq(recommendations.businessUnitId, scope.ctx.businessUnitId), ownerOnly(scope, recommendations.ownerEmail));
   const all = await scope.tx.select({ passed: recommendations.passed, status: recommendations.status, outcome: recommendations.outcome }).from(recommendations).where(visible);
   const logs = await logFacts(scope, { ownerEmails: scope.ctx.scope === 'own' ? scope.ctx.ownerEmails : undefined });
-  const measure = R.measure(all, logs);
+  const measure = R.measure(all, logs, (await activeValidation(scope)).settings.g1BaselineMinutes);
   return {
     items, shownAt: shown.shownAt, total: all.length, released: all.filter(x => x.status === 'Released').length, auto: all.filter(x => x.passed).length,
     measure, reps: isManager(actor.role) ? await unitReps(scope) : [],

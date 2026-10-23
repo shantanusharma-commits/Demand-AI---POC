@@ -51,6 +51,11 @@ export const CONFIG = {
   // Review by when: working days from the moment an item reaches For Review (0 = by 5 pm the same day).
   // A buyer who asked (an inquiry) and sensitive content are same-day; spot-checks are due by Friday of the week drawn.
   reviewDue: { inquiry: 0, sensitive: 0, sentback: 0, reach: 1, alternative: 1, intervention: 1, brand: 1, claim: 2, low: 2, small: 2, deal: 2, other: 2 } as Record<string, number>,
+  // How often each run is expected. In the pilot people start runs by hand; Today calls out a run that is overdue.
+  schedule: [
+    { id: 'nba', name: 'Micro-segments & NBA build', everyDays: 1, href: '/nba', owner: 'Sales manager' },
+    { id: 'scoring', name: 'Signal file scoring', everyDays: 7, href: '/scoring', owner: 'Sales manager' },
+  ] as { id: 'nba' | 'scoring'; name: string; everyDays: number; href: string; owner: string }[],
   // Weights for a signal type added in Setup, by the strength chosen there.
   customStrength: { Strong: { tier: 100, strength: 1 }, Medium: { tier: 60, strength: 1 }, Light: { tier: 30, strength: 1 } } as Record<string, { tier: number; strength: number }>,
   // Industry and site-process mapping (D-15 v1, provisional until the Client's taxonomy arrives): the first match
