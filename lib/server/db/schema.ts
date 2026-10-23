@@ -649,6 +649,224 @@ export const handoffItems = pgTable('handoff_items', {
   lowerOwner('handoff_items_owner_lower_check', t.ownerEmail),
 ]);
 
+/* ─── Micro-segments and next best action (G-006, plan §7): built from a stored hand-off ─── */
+
+/** A micro-segment build: the hand-off it grouped, as of the scoring run's date, stamped with the configuration and
+ *  brand versions its actions, drafts and checks used. Never deleted by the app: its recommendations' decision log is
+ *  the evidence for the success gates (purged with the pilot data, Phase 7). */
+export const nbaRuns = pgTable('nba_runs', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  businessUnitId: uuid('business_unit_id').notNull().references(() => businessUnits.id),
+  handoffId: uuid('handoff_id').notNull().references(() => handoffs.id),
+  scoringRunId: uuid('scoring_run_id').notNull().references(() => scoringRuns.id),
+  name: text('name').notNull(),
+  asOf: date('as_of', { mode: 'string' }).notNull(),
+  configVersionId: uuid('config_version_id').references(() => configVersions.id),
+  brandVersionId: uuid('brand_version_id').notNull().references(() => brandVersions.id),
+  engineVersion: text('engine_version').notNull(),
+  /** Seeds the order within a priority tier, so position doesn't decide the outcome. */
+  seed: text('seed').notNull(),
+  /** The micro-segments formed: [{ name, accounts }]. */
+  segments: jsonb('segments').notNull().default([]),
+  /** Accounts set aside by engage-once: [{ name, label, ownerEmail }]. */
+  engaged: jsonb('engaged').notNull().default([]),
+  /** Each build step's result, for the checks pop-up. */
+  checks: jsonb('checks').notNull().default([]),
+  stats: jsonb('stats').notNull().default({}),
+  createdAt: createdAt(),
+  createdBy: createdBy(),
+  updatedAt: updatedAt(),
+  updatedBy: updatedBy(),
+}, t => [
+  index('nba_runs_bu_time_idx').on(t.businessUnitId, t.createdAt),
+  index('nba_runs_handoff_idx').on(t.handoffId),
+  index('nba_runs_scoring_run_idx').on(t.scoringRunId),
+]);
+
+/** Kept in step with lib/engine/review.ts. */
+export const REC_STATUSES = ['Waiting', 'Awaiting approval', 'Released', 'Closed', 'Set aside', 'Watch list'] as const;
+export const REC_WHY = ['exception', 'sensitive', 'alternative', 'sent back', 'stepped in'] as const;
+export const REC_OUTCOMES = ['Sent', 'Replied', 'Meeting booked', 'No response'] as const;
+export const REJECT_CODES = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8', 'R9', 'R10', 'R11', 'R12'] as const;
+
+/** One recommendation per account: what the system produced when the micro-segments were built (immutable: the app
+ *  role may update only the decision-state columns), and where the decision stands now. Owner-scoped by the
+ *  current owner (G-014), who changes only when a manager reassigns it. */
+export const recommendations = pgTable('recommendations', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  businessUnitId: uuid('business_unit_id').notNull().references(() => businessUnits.id),
+  nbaRunId: uuid('nba_run_id').notNull().references(() => nbaRuns.id),
+  handoffItemId: uuid('handoff_item_id').notNull().references(() => handoffItems.id),
+  accountId: uuid('account_id').notNull().references(() => accounts.id),
+  contactId: uuid('contact_id').notNull().references(() => contacts.id),
+  /** The engine's key for the prospect: account engine ID | contact row. */
+  engineKey: text('engine_key').notNull(),
+  position: integer('position').notNull(),
+  segment: text('segment'),
+  action: text('action').notNull(),
+  runnerUp: jsonb('runner_up'),
+  /** The engine's recommendation as built (contact, account, people at the account, signals), for redrafting. */
+  rec: jsonb('rec').notNull(),
+  passed: boolean('passed').notNull().default(false),
+  reasons: text('reasons').array().notNull().default(sql`'{}'::text[]`),
+  // ── the decision as it stands (UPDATE granted on these columns only) ──
+  ownerEmail: text('owner_email'),
+  status: text('status').notNull(),
+  why: text('why'),
+  released: text('released'),
+  routedAt: tsz('routed_at').notNull().defaultNow(),
+  assignedSegment: text('assigned_segment'),
+  segmentAt: tsz('segment_at'),
+  useRunnerUp: boolean('use_runner_up').notNull().default(false),
+  manualAction: text('manual_action'),
+  channelPref: text('channel_pref'),
+  variant: text('variant'),
+  contactRow: integer('contact_row'),
+  draftVersion: integer('draft_version').notNull().default(1),
+  edited: boolean('edited').notNull().default(false),
+  editRating: text('edit_rating'),
+  fixed: text('fixed').array().notNull().default(sql`'{}'::text[]`),
+  alternativeUsed: boolean('alternative_used').notNull().default(false),
+  alternativeOf: text('alternative_of'),
+  rejectCode: text('reject_code'),
+  sentBackNote: text('sent_back_note'),
+  spot: text('spot'),
+  spotWeek: text('spot_week'),
+  holdWhy: text('hold_why'),
+  holdNote: text('hold_note'),
+  holdAt: tsz('hold_at'),
+  holdBy: uuid('hold_by').references(() => users.id),
+  outcome: text('outcome'),
+  meeting: jsonb('meeting'),
+  openedAt: tsz('opened_at'),
+  openedBy: uuid('opened_by').references(() => users.id),
+  decidedAt: tsz('decided_at'),
+  decidedBy: uuid('decided_by').references(() => users.id),
+  approvedBy: uuid('approved_by').references(() => users.id),
+  createdAt: createdAt(),
+  createdBy: createdBy(),
+  updatedAt: updatedAt(),
+  updatedBy: updatedBy(),
+}, t => [
+  check('recommendations_status_check', sql`${t.status} in (${inList(REC_STATUSES)})`),
+  check('recommendations_why_check', sql`${t.why} is null or ${t.why} in (${inList(REC_WHY)})`),
+  check('recommendations_released_check', sql`${t.released} is null or ${t.released} in ('auto', 'accepted', 'approved')`),
+  check('recommendations_spot_check', sql`${t.spot} is null or ${t.spot} in ('pending', 'accepted', 'rejected')`),
+  check('recommendations_outcome_check', sql`${t.outcome} is null or ${t.outcome} in (${inList(REC_OUTCOMES)})`),
+  check('recommendations_reject_code_check', sql`${t.rejectCode} is null or ${t.rejectCode} in (${inList(REJECT_CODES)})`),
+  check('recommendations_edit_rating_check', sql`${t.editRating} is null or ${t.editRating} in ('minor', 'major')`),
+  check('recommendations_channel_check', sql`${t.channelPref} is null or ${t.channelPref} in ('Email', 'LinkedIn')`),
+  uniqueIndex('recommendations_run_key').on(t.nbaRunId, t.engineKey),
+  index('recommendations_run_position_idx').on(t.nbaRunId, t.position),
+  index('recommendations_bu_status_idx').on(t.businessUnitId, t.status),
+  index('recommendations_owner_idx').on(t.businessUnitId, t.ownerEmail),
+  index('recommendations_handoff_item_idx').on(t.handoffItemId),
+  index('recommendations_account_idx').on(t.accountId),
+  index('recommendations_contact_idx').on(t.contactId),
+  lowerOwner('recommendations_owner_lower_check', t.ownerEmail),
+]);
+
+/** Every version of a recommendation's message (5.19): generated by the rules, regenerated after a rejection, or edited
+ *  by a person. Append-only; the recommendation names the current one. */
+export const drafts = pgTable('drafts', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  businessUnitId: uuid('business_unit_id').notNull().references(() => businessUnits.id),
+  recommendationId: uuid('recommendation_id').notNull().references(() => recommendations.id),
+  version: integer('version').notNull(),
+  channel: text('channel').notNull(),
+  /** The action and contact row it was drafted for. */
+  action: text('action').notNull(),
+  contactRow: integer('contact_row'),
+  /** The draft as the engine shapes it: subject, body, note, task, why, proof, noProof, unreachable. */
+  draft: jsonb('draft').notNull(),
+  checks: jsonb('checks').notNull(),
+  confidence: jsonb('confidence').notNull(),
+  /** Why this version exists ("Generated from the action", "Edited before accepting (minor: …)"). */
+  reason: text('reason').notNull(),
+  aiAssisted: boolean('ai_assisted').notNull().default(false),
+  brandVersionId: uuid('brand_version_id').notNull().references(() => brandVersions.id),
+  createdAt: createdAt(),
+  createdBy: createdBy(),
+}, t => [
+  check('drafts_channel_check', sql`${t.channel} in ('Email', 'LinkedIn', 'Task')`),
+  check('drafts_version_check', sql`${t.version} > 0`),
+  uniqueIndex('drafts_recommendation_version_key').on(t.recommendationId, t.version),
+  index('drafts_bu_idx').on(t.businessUnitId),
+]);
+
+export const LOG_KINDS = ['exception', 'spot', 'alternative', 'intervention', 'system', 'manager_check'] as const;
+
+/** Who decided what about a recommendation, when and why (plan §7). Append-only: a manager's check of a flagged
+ *  decision is a new row linked to it. The measures (G1, G2) are computed from it. */
+export const decisionLog = pgTable('decision_log', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  seq: bigint('seq', { mode: 'number' }).generatedAlwaysAsIdentity(),
+  businessUnitId: uuid('business_unit_id').notNull().references(() => businessUnits.id),
+  nbaRunId: uuid('nba_run_id').notNull().references(() => nbaRuns.id),
+  recommendationId: uuid('recommendation_id').notNull().references(() => recommendations.id),
+  actorRole: text('actor_role').notNull(),
+  decision: text('decision').notNull(),
+  kind: text('kind'),
+  reasonCode: text('reason_code'),
+  reason: text('reason').notNull().default(''),
+  tags: text('tags').array().notNull().default(sql`'{}'::text[]`),
+  action: text('action').notNull().default(''),
+  channel: text('channel').notNull().default(''),
+  /** The micro-segment the item was in, and the contact row it was about, when it was logged. */
+  segment: text('segment').notNull().default(''),
+  contactRow: integer('contact_row'),
+  note: text('note').notNull().default(''),
+  draftVersion: integer('draft_version'),
+  openedAt: tsz('opened_at'),
+  seconds: integer('seconds'),
+  queuePosition: integer('queue_position'),
+  decisive: boolean('decisive').notNull().default(false),
+  firstPass: boolean('first_pass'),
+  accepted: boolean('accepted'),
+  flag: text('flag'),
+  linkedTo: uuid('linked_to').references((): AnyPgColumn => decisionLog.id),
+  cause: text('cause'),
+  compliance: boolean('compliance').notNull().default(false),
+  intervention: boolean('intervention').notNull().default(false),
+  /** The item's owner when it was logged (reps' own results). */
+  ownerEmail: text('owner_email'),
+  editRating: text('edit_rating'),
+  configVersionId: uuid('config_version_id').references(() => configVersions.id),
+  brandVersionId: uuid('brand_version_id').references(() => brandVersions.id),
+  requestId: text('request_id'),
+  createdAt: createdAt(),
+  createdBy: createdBy(),
+}, t => [
+  check('decision_log_kind_check', sql`${t.kind} is null or ${t.kind} in (${inList(LOG_KINDS)})`),
+  check('decision_log_reason_code_check', sql`${t.reasonCode} is null or ${t.reasonCode} in (${inList(REJECT_CODES)})`),
+  check('decision_log_cause_check', sql`${t.cause} is null or ${t.cause} in ('data', 'system', 'other', 'compliance')`),
+  check('decision_log_edit_rating_check', sql`${t.editRating} is null or ${t.editRating} in ('none', 'minor', 'major')`),
+  uniqueIndex('decision_log_seq_key').on(t.seq),
+  index('decision_log_bu_seq_idx').on(t.businessUnitId, t.seq),
+  index('decision_log_recommendation_idx').on(t.recommendationId, t.seq),
+  index('decision_log_run_idx').on(t.nbaRunId),
+  index('decision_log_actor_idx').on(t.businessUnitId, t.createdBy),
+  index('decision_log_linked_idx').on(t.linkedTo),
+  lowerOwner('decision_log_owner_lower_check', t.ownerEmail),
+]);
+
+/** A manager pausing or resuming a micro-segment (6.3); '' is the group with no micro-segment. The state is the latest row. */
+export const segmentPauses = pgTable('segment_pauses', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  seq: bigint('seq', { mode: 'number' }).generatedAlwaysAsIdentity(),
+  businessUnitId: uuid('business_unit_id').notNull().references(() => businessUnits.id),
+  nbaRunId: uuid('nba_run_id').notNull().references(() => nbaRuns.id),
+  segment: text('segment').notNull(),
+  action: text('action').notNull(),
+  reason: text('reason').notNull().default(''),
+  createdAt: createdAt(),
+  createdBy: createdBy(),
+}, t => [
+  check('segment_pauses_action_check', sql`${t.action} in ('pause', 'resume')`),
+  index('segment_pauses_run_seq_idx').on(t.nbaRunId, t.seq),
+  index('segment_pauses_bu_idx').on(t.businessUnitId),
+]);
+
 /* ─── Column mappings (G-040): a person's choice of template column for a source's own column names ─── */
 
 export const columnMappings = pgTable('column_mappings', {

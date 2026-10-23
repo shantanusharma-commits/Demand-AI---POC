@@ -40,6 +40,17 @@ export const CONFIG = {
   brand: { maxSubjectWords: 6, maxNote: 200, competitors: [] as string[] },
   // 3.3 Data sufficiency: the readiness checks before measurement (placeholders until kickoff).
   readiness: { accounts: 30, contactable: 60, coverage: 40, recency: 70, recencyDays: 90 },
+  // For Review: the share of items that went ahead on their own picked at random for a spot-check.
+  spotCheckShare: 0.2,
+  // G1: minutes a person spent per usable first action before the pilot (the Client's timed baseline; placeholder).
+  g1BaselineMinutes: 38,
+  // Success gates: the thresholds agreed at kickoff (placeholders until then).
+  g2Threshold: 70, g1Threshold: 50,
+  // A gate reads "too early to call" below this many decisions.
+  minDecisions: 10,
+  // Review by when: working days from the moment an item reaches For Review (0 = by 5 pm the same day).
+  // A buyer who asked (an inquiry) and sensitive content are same-day; spot-checks are due by Friday of the week drawn.
+  reviewDue: { inquiry: 0, sensitive: 0, sentback: 0, reach: 1, alternative: 1, intervention: 1, brand: 1, claim: 2, low: 2, small: 2, deal: 2, other: 2 } as Record<string, number>,
   // Weights for a signal type added in Setup, by the strength chosen there.
   customStrength: { Strong: { tier: 100, strength: 1 }, Medium: { tier: 60, strength: 1 }, Light: { tier: 30, strength: 1 } } as Record<string, { tier: number; strength: number }>,
   // Industry and site-process mapping (D-15 v1, provisional until the Client's taxonomy arrives): the first match

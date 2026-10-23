@@ -242,6 +242,28 @@ export async function ownerEmailsOf(db: Db | Tx, userId: string, email: string):
   return [email, ...rows.map(r => r.e)].map(e => e.toLowerCase());
 }
 
+/** Who owns each lead-file owner address, for display: the unit's members by sign-in email or alias. Addresses that
+ *  match nobody are left out (the screens show the address). */
+export async function ownerNames(scope: TenantScope, emails: string[]): Promise<Map<string, string>> {
+  const want = [...new Set(emails.filter(Boolean).map(e => e.toLowerCase()))];
+  if (!want.length) return new Map();
+  const member = and(eq(businessUnitMembers.businessUnitId, scope.ctx.businessUnitId), eq(businessUnitMembers.status, 'active'));
+  const direct = await scope.tx.select({ email: sql<string>`lower(${users.email})`, name: users.displayName }).from(businessUnitMembers)
+    .innerJoin(users, eq(users.id, businessUnitMembers.userId)).where(and(member, inArray(sql`lower(${users.email})`, want)));
+  const aliased = await scope.tx.select({ email: sql<string>`lower(${userOwnerAliases.ownerEmail})`, name: users.displayName }).from(userOwnerAliases)
+    .innerJoin(users, eq(users.id, userOwnerAliases.userId)).innerJoin(businessUnitMembers, eq(businessUnitMembers.userId, users.id))
+    .where(and(member, inArray(sql`lower(${userOwnerAliases.ownerEmail})`, want)));
+  return new Map([...aliased, ...direct].map(r => [r.email, r.name]));
+}
+
+/** The unit's active sales reps, by sign-in email: who a manager can move an item to. */
+export async function unitReps(scope: TenantScope): Promise<{ email: string; name: string }[]> {
+  return scope.tx.select({ email: sql<string>`lower(${users.email})`, name: users.displayName }).from(businessUnitMembers)
+    .innerJoin(users, eq(users.id, businessUnitMembers.userId))
+    .where(and(eq(businessUnitMembers.businessUnitId, scope.ctx.businessUnitId), eq(businessUnitMembers.status, 'active'), eq(businessUnitMembers.role, 'Sales rep')))
+    .orderBy(asc(users.displayName));
+}
+
 /** Users of this unit by ID, for display; never more than the unit's own members. */
 export async function memberNames(scope: TenantScope, ids: string[]): Promise<Map<string, string>> {
   if (!ids.length) return new Map();

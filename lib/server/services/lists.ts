@@ -13,7 +13,7 @@ import { CHECKS, STEPS, checkOf, groupIssues, stepResult, type CheckKey, type St
 import { listQuality, readinessChecks, readinessCounts, type ListQuality, type ReadinessCheck } from '../../prospecting/quality.ts';
 import { can, type BuRole } from '../../auth/permissions.ts';
 import type { Account, Contact, DqCode, Issue, LeadList, LeadResult, LeadStats, Severity } from '../../../types/demandai';
-import { accounts, configVersions, contacts, corrections, issues, jobs, leadLists, scoringRuns, uploads, CONTACT_GROUPS } from '../db/schema.ts';
+import { accounts, configVersions, contacts, corrections, issues, jobs, leadLists, nbaRuns, scoringRuns, uploads, CONTACT_GROUPS } from '../db/schema.ts';
 import { applyCorrections, rowValues, type Correction } from '../../engine/corrections.ts';
 import { withTenant, type TenantScope } from '../db/tenant.ts';
 import { recordAudit } from '../db/audit.ts';
@@ -482,6 +482,9 @@ export async function renameList(scope: TenantScope, actor: Actor, id: string, n
 
 /** Deletes a list with the versions it replaced, their scoring runs and hand-offs, and the uploaded files nothing else
  *  uses. An upload that corrections refer to stays: the corrections log is append-only and goes with the upload. */
+/** Micro-segments built on a list's runs keep it: the decisions made on them are evidence for the pilot. */
+export const NBA_KEEPS = 'Micro-segments were built from it, and the decisions made on them are kept as evidence for the pilot, so it can’t be deleted.';
+
 export async function deleteList(scope: TenantScope, actor: Actor, id: string): Promise<{ runs: number }> {
   const l = await editableList(scope, actor, id, { replaced: true });
   const { rows: chain } = await scope.tx.execute<{ id: string }>(sql`
@@ -490,6 +493,8 @@ export async function deleteList(scope: TenantScope, actor: Actor, id: string): 
       UNION ALL SELECT l.id, c.depth + 1 FROM lead_lists l JOIN chain c ON l.replaced_by_list_id = c.id WHERE c.depth < 1000)
     SELECT id FROM chain`);
   const ids = chain.map(r => r.id);
+  const [built] = await scope.tx.select({ x: sql`1` }).from(nbaRuns).innerJoin(scoringRuns, eq(scoringRuns.id, nbaRuns.scoringRunId)).where(inArray(scoringRuns.listId, ids)).limit(1);
+  if (built) throw conflict(NBA_KEEPS);
   const runs = await scope.tx.select({ upload: scoringRuns.signalUploadId }).from(scoringRuns).where(inArray(scoringRuns.listId, ids));
   await scope.tx.delete(leadLists).where(inArray(leadLists.id, ids));
   await deleteUnusedUploads(scope, [l.uploadId, ...runs.map(r => r.upload)]);

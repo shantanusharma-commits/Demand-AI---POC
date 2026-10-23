@@ -49,7 +49,7 @@ export type PackInput = z.infer<typeof PackInput>;
 
 export type BrandVersionRow = { versionNo: number; note: string; sections: string[]; changes: string[]; restoredFrom: number | null; at: Date; by: string };
 export type BrandState = {
-  live: BrandVersionRow & { pack: BrandPack };
+  live: BrandVersionRow & { id: string; pack: BrandPack };
   draft: { pack: BrandPack; baseVersionNo: number; updatedAt: Date; updatedBy: string; changes: BrandDiff[] } | null;
   versions: BrandVersionRow[];
 };
@@ -58,8 +58,8 @@ const byName = sql<string>`coalesce(${users.displayName}, 'A former member')`;
 const versionColumns = { versionNo: brandVersions.versionNo, note: brandVersions.note, sections: brandVersions.sections, changes: brandVersions.changes, restoredFrom: brandVersions.restoredFrom, at: brandVersions.createdAt, by: byName };
 
 /** The live version: the newest. A unit without one starts from the starting pack (version 1). */
-async function liveVersion(scope: TenantScope): Promise<BrandVersionRow & { pack: BrandPack }> {
-  const read = () => scope.tx.select({ ...versionColumns, pack: brandVersions.pack }).from(brandVersions).leftJoin(users, eq(users.id, brandVersions.createdBy))
+export async function liveBrand(scope: TenantScope): Promise<BrandVersionRow & { id: string; pack: BrandPack }> {
+  const read = () => scope.tx.select({ ...versionColumns, id: brandVersions.id, pack: brandVersions.pack }).from(brandVersions).leftJoin(users, eq(users.id, brandVersions.createdBy))
     .where(eq(brandVersions.businessUnitId, scope.ctx.businessUnitId)).orderBy(desc(brandVersions.versionNo)).limit(1);
   let [v] = await read();
   if (!v) {
@@ -70,7 +70,7 @@ async function liveVersion(scope: TenantScope): Promise<BrandVersionRow & { pack
 }
 
 export async function getBrand(scope: TenantScope): Promise<BrandState> {
-  const live = await liveVersion(scope);
+  const live = await liveBrand(scope);
   const [d] = await scope.tx.select({ pack: brandDrafts.pack, baseVersionNo: brandDrafts.baseVersionNo, updatedAt: brandDrafts.updatedAt, updatedBy: byName })
     .from(brandDrafts).leftJoin(users, eq(users.id, brandDrafts.updatedBy)).where(eq(brandDrafts.businessUnitId, scope.ctx.businessUnitId));
   const versions = await scope.tx.select(versionColumns).from(brandVersions).leftJoin(users, eq(users.id, brandVersions.createdBy))
@@ -105,7 +105,7 @@ async function buildPack(scope: TenantScope, input: PackInput, base: BrandPack):
 /* ─── The draft ─── */
 
 export async function saveDraft(scope: TenantScope, actor: Actor, input: { pack: PackInput; baseVersionNo: number }): Promise<{ changes: BrandDiff[] }> {
-  const live = await liveVersion(scope);
+  const live = await liveBrand(scope);
   if (input.baseVersionNo !== live.versionNo) throw conflict(`Brand v${live.versionNo} was saved since these changes were started. Reload to see it; these changes were not kept.`);
   const pack = await buildPack(scope, input.pack, live.pack);
   const changes = diffSummary(live.pack, pack);
@@ -143,7 +143,7 @@ async function addVersion(scope: TenantScope, actor: Actor, pack: BrandPack, not
 }
 
 export async function publishDraft(scope: TenantScope, actor: Actor, note = ''): Promise<{ versionNo: number }> {
-  const live = await liveVersion(scope);
+  const live = await liveBrand(scope);
   const [d] = await scope.tx.select().from(brandDrafts).where(eq(brandDrafts.businessUnitId, scope.ctx.businessUnitId)).for('update');
   if (!d) throw conflict('Nothing to save: there are no unsaved changes.');
   if (d.baseVersionNo !== live.versionNo) throw conflict(`Brand v${live.versionNo} was saved since these changes were started. Discard them and start again from v${live.versionNo}.`);
@@ -157,7 +157,7 @@ export async function publishDraft(scope: TenantScope, actor: Actor, note = ''):
 }
 
 export async function restoreVersion(scope: TenantScope, actor: Actor, from: number): Promise<{ versionNo: number }> {
-  const live = await liveVersion(scope);
+  const live = await liveBrand(scope);
   const [pending] = await scope.tx.select({ bu: brandDrafts.businessUnitId }).from(brandDrafts).where(eq(brandDrafts.businessUnitId, scope.ctx.businessUnitId));
   if (pending) throw conflict('Save or discard the unsaved changes first.');
   if (from === live.versionNo) throw conflict(`Brand v${from} is already the version in use.`);

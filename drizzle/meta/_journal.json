@@ -120,6 +120,20 @@
       "when": 1792743208150,
       "tag": "0016_brand_security",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1792755454991,
+      "tag": "0017_nba_review",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1792755485834,
+      "tag": "0018_nba_review_security",
+      "breakpoints": true
     }
   ]
 }

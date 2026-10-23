@@ -69,7 +69,7 @@ test('refusals: macro-enabled, zip bomb, wrong type, not multipart, no Origin �
   assert.equal(await countUploads(), before);
 });
 
-let listId = '', runId = '';
+let listId = '', runId = '', handoffId = '';
 
 test('the full sample over HTTP: upload, real job stages, save, page through, score as of a validated date, hand off', async () => {
   const b = await admin();
@@ -108,6 +108,7 @@ test('the full sample over HTTP: upload, real job stages, save, page through, sc
   assert.equal((a.json.rows as unknown[]).length, run.visible.tiers.A);
   const h = await b.post('/api/handoffs', { runId });
   assert.deepEqual([h.status, h.json.count, h.json.heldBack], [201, 135, 9]);
+  handoffId = String(h.json.handoffId);
   const items = ((await b.get(`/api/handoffs/${h.json.handoffId}`)).json.handoff as { items: { id: string }[] }).items;
   assert.equal(new Set(items.map(i => i.id)).size, 135, 'G-049: one UUID per hand-off item');
 });
@@ -128,6 +129,38 @@ test('G-014 over HTTP: a rep sees only their own prospects; another owner’s is
   const units = ((await viewer.get('/api/me')).json.user as { memberships: { businessUnitId: string; role: string }[] }).memberships;
   await viewer.post('/api/session/business-unit', { businessUnitId: units.find(m => m.role === 'Viewer')!.businessUnitId });
   assert.equal((await viewer.get(`/api/lists/${listId}`)).status, 403, 'a Viewer has no list access');
+});
+
+test('G-006 over HTTP: micro-segments built from the hand-off; a rep sees and opens only their own items; pausing is for managers', async () => {
+  const b = await admin();
+  assert.equal((await b.request('POST', '/api/nba-runs', { handoffId }, { origin: 'https://evil.example' })).status, 403, 'CSRF');
+  assert.equal((await b.post('/api/nba-runs', {})).status, 400);
+  const built = await b.post('/api/nba-runs', { handoffId });
+  assert.equal(built.status, 201, built.text);
+  const nbaRun = String(built.json.runId);
+  const run = (await b.get(`/api/nba-runs/${nbaRun}`)).json.run as { recs: { id: string; status: string; ownerEmail: string | null }[]; segments: { name: string }[] };
+  assert.equal(run.recs.length, 107);
+  assert.ok(((await b.get('/api/nba-runs')).json.runs as { id: string }[]).some(r => r.id === nbaRun));
+  const released = run.recs.find(r => r.status === 'Released')!;
+  const item = (await b.get(`/api/recommendations/${released.id}`)).json.item as { draft: { channel: string }; checks: { flags: unknown[] }; can: { outcome: boolean } };
+  assert.ok(['Email', 'LinkedIn', 'Task'].includes(item.draft.channel) && item.can.outcome);
+  assert.match(String((await b.post(`/api/recommendations/${released.id}/open`, {})).json.openedAt), /^\d{4}-/);
+  assert.equal((await b.post(`/api/recommendations/${released.id}/outcome`, { outcome: 'Sent' })).status, 200);
+  assert.equal((await b.post(`/api/recommendations/${released.id}/outcome`, { outcome: 'Delivered' })).status, 400);
+
+  const rep = new Browser(srv.base);
+  await rep.signIn('rep.a@demandai.test');
+  const mine = (await rep.get(`/api/nba-runs/${nbaRun}`)).json.run as { recs: { id: string; ownerEmail: string }[] };
+  assert.ok(mine.recs.length > 0 && mine.recs.every(r => r.ownerEmail === SAMPLE_OWNER));
+  const other = run.recs.find(r => r.ownerEmail !== SAMPLE_OWNER)!;
+  for (const [m, path] of [['GET', `/api/recommendations/${other.id}`], ['POST', `/api/recommendations/${other.id}/open`], ['POST', `/api/recommendations/${other.id}/outcome`]] as const) {
+    assert.equal((await rep.request(m, path, m === 'GET' ? undefined : { outcome: 'Sent' })).status, 404, `${m} ${path}`);
+  }
+  assert.equal((await rep.post(`/api/nba-runs/${nbaRun}/segments/pause`, { segment: run.segments[0].name })).status, 403);
+  assert.equal((await b.post(`/api/nba-runs/${nbaRun}/segments/pause`, { segment: run.segments[0].name, reason: 'Checking' })).status, 200);
+  assert.equal((await b.post(`/api/nba-runs/${nbaRun}/segments/pause`, { segment: run.segments[0].name })).status, 409);
+  assert.equal((await rep.request('DELETE', `/api/scoring-runs/${runId}`)).status, 403);
+  assert.equal((await b.request('DELETE', `/api/scoring-runs/${runId}`)).status, 409, 'the evidence keeps the run it came from');
 });
 
 test('G-023 over HTTP: Signal monitoring counts the scored file once per type; a rep counts their own rows; the unused-rows filter', async () => {
@@ -257,7 +290,7 @@ test('G-015 corrections over HTTP: Origin and fields checked, a rep refused on a
 
 test('logs: upload and scoring events are logged without file names or any contact’s address', async () => {
   const lines = srv.logs.join('').split('\n').filter(l => l.startsWith('{')).map(l => JSON.parse(l));
-  for (const event of ['upload.received', 'job.started', 'job.stage', 'job.succeeded', 'scoring.started', 'handoff.created', 'upload.refused']) {
+  for (const event of ['upload.received', 'job.started', 'job.stage', 'job.succeeded', 'scoring.started', 'handoff.created', 'upload.refused', 'nba.built']) {
     assert.ok(lines.some(l => l.event === event), `no ${event} line`);
   }
   assert.ok(lines.filter(l => l.event === 'job.stage').every(l => typeof l.durationMs === 'number' && l.jobId && l.businessUnitId));

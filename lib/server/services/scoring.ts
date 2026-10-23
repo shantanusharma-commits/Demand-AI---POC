@@ -8,7 +8,7 @@ import { ENGINE_VERSION } from '../../engine/config.ts';
 import { SIGNAL_SHEET } from '../../engine/sheets.ts';
 import { buildProspects, sendable, signalStepResults, type SignalStepResult } from '../../engine/prospects.ts';
 import type { Account, Contact, Issue, PersonScore, ScoreResult, Signal, Tier } from '../../../types/demandai';
-import { accountScores, accounts, configVersions, contacts, issues, leadLists, prospectScores, scoringRuns, signals, TIERS } from '../db/schema.ts';
+import { accountScores, accounts, configVersions, contacts, issues, leadLists, nbaRuns, prospectScores, scoringRuns, signals, TIERS } from '../db/schema.ts';
 import { withTenant, type TenantScope } from '../db/tenant.ts';
 import { recordAudit } from '../db/audit.ts';
 import { enqueueJob, JobError, jobContext } from '../jobs/queue.ts';
@@ -17,7 +17,7 @@ import { readUpload, UploadReadError, type FileNote } from '../uploads/parse.ts'
 import { badRequest, conflict, forbidden, notFound } from '../http/errors.ts';
 import { logger } from '../logger.ts';
 import { loadUpload, type UploadLimits } from './uploads.ts';
-import { chunks, containsPattern, deleteUnusedUploads, isManager, loadLeadList, ownerOnly, PAGE_DEFAULT, PAGE_MAX, type Actor, type Page, type PageQuery } from './lists.ts';
+import { chunks, containsPattern, deleteUnusedUploads, isManager, loadLeadList, NBA_KEEPS, ownerOnly, PAGE_DEFAULT, PAGE_MAX, type Actor, type Page, type PageQuery } from './lists.ts';
 
 export const SCORING_STAGES = ['parse', 'check', 'score', 'save'];
 
@@ -355,6 +355,8 @@ export async function renameRun(scope: TenantScope, actor: Actor, id: string, na
 
 export async function deleteRun(scope: TenantScope, actor: Actor, id: string): Promise<void> {
   const r = await editableRun(scope, actor, id);
+  const [built] = await scope.tx.select({ x: sql`1` }).from(nbaRuns).where(eq(nbaRuns.scoringRunId, id)).limit(1);
+  if (built) throw conflict(NBA_KEEPS);
   await scope.tx.delete(scoringRuns).where(eq(scoringRuns.id, id));
   await deleteUnusedUploads(scope, [r.signalUploadId]);
   await recordAudit(scope, { action: 'scoring.deleted', actorRole: actor.role, targetType: 'scoring_run', targetId: id });
