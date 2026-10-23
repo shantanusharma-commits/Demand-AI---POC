@@ -112,14 +112,15 @@ function checkRev(row: Row, rev: number) {
 }
 const DRAFT_NOTE = ' A check fails now, so it is back to draft and out of the Content library until it is fixed.';
 
-/** A person's own edits, saved as they type. */
-export async function saveBlocks(scope: TenantScope, actor: Actor, id: string, input: { blocks: unknown; rev: number }): Promise<{ rev: number; backToDraft: boolean }> {
+/** A person's own edits, saved as they type; the checks come back with the new revision. */
+export async function saveBlocks(scope: TenantScope, actor: Actor, id: string, input: { blocks: unknown; rev: number }): Promise<{ rev: number; backToDraft: boolean; checks: CheckResult }> {
   const problem = W.blocksProblem(input.blocks);
   if (problem) throw badRequest(problem, { blocks: [problem] });
   const row = await rowOf(scope, id, true);
   checkRev(row, input.rev);
   const r = await store(scope, actor, row, { blocks: input.blocks as W.Block[] });
-  return { rev: row.rev + 1, backToDraft: r.backToDraft };
+  const { pack } = await liveBrand(scope);
+  return { rev: row.rev + 1, backToDraft: r.backToDraft, checks: W.checksOf(input.blocks as W.Block[], pack, todayUtc()) };
 }
 
 export type ChangeInput = { op: 'ask' | 'tone' | 'length' | 'regenerate' | 'remove' | 'restore'; q?: string; value?: string; target?: string | null; blocks?: unknown; rev: number };

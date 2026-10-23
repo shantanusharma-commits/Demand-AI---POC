@@ -33,14 +33,12 @@ const SECTIONS: { title: string; links: NavLink[] }[] = [
   ] },
   { title: 'Engage', links: [
     { page: '12-nba.html', label: 'Micro-segments & NBA', icon: <svg {...svg}><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> },
+    { page: '15-content-studio.html', label: 'Content studio', icon: <svg {...svg}><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg> },
   ] },
   { title: 'Measure', links: [
     { page: '13-analytics.html', label: 'Analytics', icon: <svg {...svg}><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> },
   ] },
 ];
-
-/** Nav items shown as active on each screen. In the original, Content library and Users and roles also marked
- *  Today as active (a copy-paste quirk in their markup); kept so the sidebar looks the same. */
 
 function NoAccess({ user }: { user: SessionUser }) {
   const role = user.activeBusinessUnit?.role;

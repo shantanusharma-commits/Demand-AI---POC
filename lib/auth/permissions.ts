@@ -15,6 +15,7 @@ export const PAGES = {
   '10-prospecting.html': { route: '/prospecting', name: 'Prospecting', key: 'prospecting' },
   '11-scoring.html': { route: '/scoring', name: 'Account Scoring', key: 'scoring' },
   '12-nba.html': { route: '/nba', name: 'Micro-segments & NBA', key: 'nba' },
+  '15-content-studio.html': { route: '/studio', name: 'Content studio', key: 'studio' },
   '13-analytics.html': { route: '/analytics', name: 'Analytics', key: 'analytics' },
 } as const;
 export type PageId = keyof typeof PAGES;
@@ -25,7 +26,7 @@ const ALL_PAGES = Object.keys(PAGES) as PageId[];
 export const PAGE_ACCESS: Record<BuRole, readonly PageId[]> = {
   'Admin': ALL_PAGES,
   'Sales manager': ALL_PAGES,
-  'Sales rep': ['00-today.html', '14-review.html', '10-prospecting.html', '11-scoring.html', '12-nba.html', '07-content.html', '13-analytics.html'],
+  'Sales rep': ['00-today.html', '14-review.html', '10-prospecting.html', '11-scoring.html', '12-nba.html', '15-content-studio.html', '07-content.html', '13-analytics.html'],
   'Viewer': ['13-analytics.html'],
 };
 

@@ -77,7 +77,8 @@ test('chat changes and own edits are saved with a revision guard; an unbacked cl
   assert.deepEqual([undo.item.rev, undo.item.blocks.length, undo.reply], [4, before.length, 'Undone. The piece is back to how it was before my last change.']);
   await assert.rejects(as(admin(), s => saveBlocks(s, mgr(), piece.id, { blocks: [{ id: 'x', tag: 'script', role: 'free', v: 0, text: 'x' }], rev: 4 })), status(400, /not a block type/));
   const edited: Block[] = before.map(b => (b.tag === 'h1' ? { ...b, text: 'Plan the cutover first', edited: true } : b));
-  assert.deepEqual(await as(admin(), s => saveBlocks(s, mgr(), piece.id, { blocks: edited, rev: 4 })), { rev: 5, backToDraft: false });
+  const saved = await as(admin(), s => saveBlocks(s, mgr(), piece.id, { blocks: edited, rev: 4 }));
+  assert.deepEqual([saved.rev, saved.backToDraft, saved.checks.unsupported.length], [5, false, 0]);
   assert.equal((await as(admin(), s => getItem(s, piece.id))).title, 'Plan the cutover first', 'the title follows the heading');
 });
 

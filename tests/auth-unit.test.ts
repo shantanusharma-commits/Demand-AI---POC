@@ -67,6 +67,7 @@ test('permissions: Admin opens For Review (G-034); reps lose Setup and Users; Vi
   assert.equal(PAGE_ACCESS['Sales manager'].length, Object.keys(PAGES).length);
   assert.ok(!canAccessPage('Sales rep', '09-setup.html') && !canAccessPage('Sales rep', '08-users.html'));
   assert.ok(canAccessPage('Sales rep', '14-review.html') && canAccessPage('Sales rep', '10-prospecting.html'));
+  assert.ok(canAccessPage('Sales rep', '15-content-studio.html') && !canAccessPage('Viewer', '15-content-studio.html'), 'D-36: reps write content; viewers don’t');
   assert.deepEqual(PAGE_ACCESS.Viewer, ['13-analytics.html']);
   for (const p of Object.keys(PAGES) as PageId[]) assert.equal(canAccessPage(null, p), false, `no role, no ${p}`);
   assert.equal(homePage('Viewer'), '13-analytics.html');
