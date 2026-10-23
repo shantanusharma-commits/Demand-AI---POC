@@ -6,7 +6,8 @@
    - a piece is a list of blocks of plain text (headings, paragraphs, lists, quotes), never stored HTML: nothing a
      person types can run in another person's browser. Inline bold, italic and links are not ported;
    - every change a person asks for in the chat is worked out here, on the server, so the stored piece is the one
-     source of truth (Phase 6 puts the model behind the same calls; these rules stay the fallback). */
+     source of truth. With AI on (lib/ai/studio.ts) the model words a new piece's parts and the requests these rules
+     don't understand; the proof stays the approved claims, the checks stay these, and these rules are the fallback. */
 import { approvedClaims, checkContent, PLAYBOOK, type BrandPack, type CheckResult, type Claim, type Play } from '../engine/nba.ts';
 
 export const TYPES = {
@@ -39,8 +40,9 @@ export const SUGGESTIONS: Record<ContentType, string[]> = {
 export type BlockTag = 'h1' | 'h2' | 'p' | 'ul' | 'ol' | 'blockquote';
 export const BLOCK_TAGS: BlockTag[] = ['h1', 'h2', 'p', 'ul', 'ol', 'blockquote'];
 /** One block of a piece. `role` names what the writer made it for (title, intro, h:why for its heading, free when a
- *  person wrote it), `v` which wording, `edited` whether a person changed it; a list's text is its items. */
-export type Block = { id: string; tag: BlockTag; role: string; v: number; edited?: boolean; text: string | string[] };
+ *  person wrote it), `v` which wording, `edited` whether a person changed it, `ai` whether the AI wrote it (Phase 6);
+ *  a list's text is its items. */
+export type Block = { id: string; tag: BlockTag; role: string; v: number; edited?: boolean; text: string | string[]; ai?: boolean };
 /** What the writer needs to know about a piece. */
 export type Piece = { type: ContentType; topic: string; seg: string; tone: Tone; length: Length; sources: string[]; title: string; blocks: Block[] };
 
@@ -125,6 +127,30 @@ function ctxOf(p: Pick<Piece, 'title' | 'topic' | 'seg' | 'sources' | 'tone'>, p
 function genBlock(c: Ctx, role: string, v: number): Block {
   return { id: newId(), tag: role === 'title' ? 'h1' : LIST_ROLES[role] || 'p', role, v, text: toneize(GEN[role](c, v), c.tone, role) };
 }
+/** What each part of a piece is for, as the AI writer is told (Phase 6). */
+export const ROLE_PURPOSE: Record<string, string> = {
+  title: 'the headline, under 12 words', intro: 'the opening paragraph: the situation the reader is in, and what the piece covers',
+  why: 'why acting early matters', questions: 'a list of 3 to 5 questions the reader should ask their team', objection: 'a common concern, quoted, and a calm answer to it',
+  cta: 'the close: one easy next step with the account team', steps: 'a numbered list of 3 to 5 practical steps', pitfalls: 'where plans usually slip, and how to avoid it',
+  summary: 'an executive summary: who it is for and what it covers', challenge: 'what makes the problem hard in practice', good: 'what a good outcome looks like',
+};
+/** The parts the AI may word for a piece (the proof is always the approved claims, word for word). */
+export const aiRoles = (type: ContentType, length: Length): string[] => LAYOUT[type][length].filter(r => r !== 'proof');
+export const isListRole = (role: string) => !!LIST_ROLES[role];
+
+/** The piece laid out for its type and length with the given wording per part, each marked as the AI's; the proof
+ *  comes from the approved claims word for word, and a part without usable wording keeps the rules' text. */
+export function layoutWith(p: Pick<Piece, 'type' | 'length' | 'title' | 'topic' | 'seg' | 'sources' | 'tone'>, pack: BrandPack, parts: Record<string, string | string[]>): Block[] {
+  const c = ctxOf(p, pack), out: Block[] = [];
+  for (const role of LAYOUT[p.type][p.length]) {
+    if (role === 'proof' && !c.claims.length) continue;
+    if (HEAD[role]) out.push({ id: newId(), tag: 'h2', role: 'h:' + role, v: 0, text: HEAD[role][0] });
+    const tag: BlockTag = role === 'title' ? 'h1' : LIST_ROLES[role] || 'p', given = role === 'proof' ? undefined : parts[role];
+    out.push(given !== undefined && Array.isArray(given) === (tag === 'ul' || tag === 'ol') ? { id: newId(), tag, role, v: 0, text: given, ai: true } : genBlock(c, role, 0));
+  }
+  return out;
+}
+
 /** The piece as the writer lays it out for its type and length; no approved source, no proof section. */
 export function generate(p: Pick<Piece, 'type' | 'length' | 'title' | 'topic' | 'seg' | 'sources' | 'tone'>, pack: BrandPack): Block[] {
   const c = ctxOf(p, pack), out: Block[] = [];
@@ -192,7 +218,8 @@ export const titleOf = (blocks: Block[], fallback: string) => {
 
 /* ─── Changes: one block or the whole piece. Each returns the new blocks and what to say. ─── */
 
-export type Change = { blocks: Block[]; reply: string; tone?: Tone; length?: Length; sources?: string[]; select?: string | null; changed: boolean };
+/** `unknown`: the rules didn't understand the request (not a refusal); the AI writer may take it (Phase 6). */
+export type Change = { blocks: Block[]; reply: string; tone?: Tone; length?: Length; sources?: string[]; select?: string | null; changed: boolean; unknown?: boolean };
 const sentences = (t: string) => String(t).split(/(?<=[.?!])\s+(?!\[)/).filter(Boolean);
 const CLAIMY = /(\d+\s?%|\b(reduces?|reduced|improves?|improved|increases?|increased|cuts? (downtime|costs?)|savings|uptime|faster|proven|guarantee\w*)\b)/i;
 const kindOf = (b: Block) => (b.tag === 'h1' ? 'title' : b.tag === 'h2' ? 'heading' : 'paragraph');
@@ -338,7 +365,7 @@ export function change(p: Piece, q: string, pack: BrandPack, target?: string | n
     return { blocks: generate(p, pack), reply: 'Rewrote the whole piece from the brief. Your earlier version is one Undo away.', select: null, changed: true };
   }
   if (/remove|delete|drop/.test(low) && el) return { ...removeBlock(p, el.id), reply: 'Removed it.' };
-  return { ...same, reply: `I can change ${el ? 'that part' : 'the piece'}: make it shorter or longer, change the tone (direct, formal, warm), rewrite it, change the title, add a section on a topic, or add proof from an approved source. To start something new, ask for another blog or whitepaper. I won't add claims that aren't in the approved sources.` };
+  return { ...same, unknown: true, reply: `I can change ${el ? 'that part' : 'the piece'}: make it shorter or longer, change the tone (direct, formal, warm), rewrite it, change the title, add a section on a topic, or add proof from an approved source. To start something new, ask for another blog or whitepaper. I won't add claims that aren't in the approved sources.` };
 }
 
 /* ─── Files: Markdown for the website, and Word (.docx) with minimal branding ─── */

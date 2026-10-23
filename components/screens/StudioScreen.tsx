@@ -10,6 +10,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { AUDIENCE, LENGTHS, SUGGESTIONS, TONES, TYPES, textOf, titleOf, wordsOf, type Block, type ContentType } from '@/lib/content/studio';
 import type { CheckResult } from '@/lib/engine/nba';
 import { sx } from '@/lib/sx';
+import { AiTag } from '@/components/AiTag';
 import { api, ApiError, errorText, type WireDeep } from '@/lib/client/api';
 import { showToast } from '@/lib/ui';
 import type { ItemSummary, ItemView } from '@/lib/server/services/studio';
@@ -229,7 +230,7 @@ export function StudioScreen({ initialItem }: { initialItem?: string }) {
             <td><div className="sv-name"><div className="sv-ic">{TYPES[x.type].ic}</div><div style={sx('min-width:0')}><div className="sv-t" title={x.title}>{x.title}</div><div className="sv-s">{statusTag(x.status)}</div></div></div></td>
             <td><span className="sv-link" onClick={e => { e.stopPropagation(); setLibF(x.type); }}>{TYPES[x.type].label}</span><div className="sv-s">{x.length} · {x.tone}</div></td>
             <td><div className="sv-v">{AUDIENCE[x.seg] || x.seg}</div></td>
-            <td>{x.issues ? <span className="tag tag-red">{x.issues} to fix</span> : <span className="tag tag-green">All pass</span>}<div className="sv-s">Brand v{x.brandVersionNo}</div></td>
+            <td>{x.issues ? <span className="tag tag-red">{x.issues} to fix</span> : <span className="tag tag-green">All pass</span>}<div className="sv-s">Brand v{x.brandVersionNo}</div>{x.ai ? <div style={sx('margin-top:4px')}><AiTag confidence={x.ai.confidence} /></div> : null}</td>
             <td><div className="sv-v">{x.usage}</div><div className="sv-s">message{x.usage === 1 ? '' : 's'}</div></td>
             <td><div className="sv-v">{fmtWhen(x.updatedAt)}</div><div className="sv-s">{x.updatedBy}</div></td>
             <td style={sx('text-align:right;white-space:nowrap')}><button className="btn btn-sec btn-sm" onClick={e => { e.stopPropagation(); void openItem(x.id); }}>Open</button>{' '}
@@ -289,7 +290,7 @@ export function StudioScreen({ initialItem }: { initialItem?: string }) {
         }}>{LENGTHS.map(l => <option key={l}>{l}</option>)}</select>
         <span style={sx('flex:1')} /><span className="sub">{words} words · {Math.max(1, Math.round(words / 220))} min read</span></div>
       <div className="cv-scroll">
-        <div className="att"><span className="tag tag-grey">{AUDIENCE[item.seg] || item.seg}</span><span className="tag tag-blue">Brand v{item.brandVersionNo}</span>{item.usage ? <span className="tag tag-blue">In {item.usage} message{item.usage > 1 ? 's' : ''}</span> : null}</div>
+        <div className="att"><span className="tag tag-grey">{AUDIENCE[item.seg] || item.seg}</span><span className="tag tag-blue">Brand v{item.brandVersionNo}</span>{item.ai ? <AiTag confidence={item.ai.confidence} title="Parts of this piece were written with AI from the brief and the brand pack. Any proof is an approved claim, word for word; every part goes through the same brand and claim checks." /> : null}{item.usage ? <span className="tag tag-blue">In {item.usage} message{item.usage > 1 ? 's' : ''}</span> : null}</div>
         <div className="paper"><div className="doc" key={docSeq}>
           {(item.blocks as Block[]).map(b => <div key={b.id} style={sx('position:relative')}>
             {target === b.id && !busy ? <div className="gutter" style={sx('display:flex;top:-28px;right:0')}>

@@ -12,13 +12,15 @@ import { createAppWorker } from '../../lib/server/jobs/handlers.ts';
 import { enqueueJob, getJob } from '../../lib/server/jobs/queue.ts';
 import { createHandoff } from '../../lib/server/services/handoffs.ts';
 import { NBA_STAGES } from '../../lib/server/services/nba-ai.ts';
+import { changeItemWithAi, createItemWithAi, saveBlocks } from '../../lib/server/services/studio.ts';
+import { HttpError } from '../../lib/server/http/errors.ts';
 import { receiveUpload } from '../../lib/server/services/uploads.ts';
 import { addCorrections } from '../../lib/server/services/corrections.ts';
 import { saveList } from '../../lib/server/services/lists.ts';
 import { getRun, startScoringRun } from '../../lib/server/services/scoring.ts';
 import { AS_OF } from '../helpers/answer-key.ts';
 import { DATASET } from '../helpers/answer-key.ts';
-import { draftWriter, sensibleClassifier, whyNowWriter } from '../helpers/ai-fakes.ts';
+import { draftWriter, pieceWriter, rewriteIds, sensibleClassifier, whyNowWriter } from '../helpers/ai-fakes.ts';
 import { FakeModel, json } from '../helpers/fake-model.ts';
 import { limits } from './pilot.ts';
 import { freshDatabase, type TestDatabase } from './harness.ts';
@@ -236,5 +238,35 @@ test("a build job runs as the person who asked: a rep's build holds only their o
     await owner.query(`UPDATE business_unit_members SET status = 'removed' WHERE user_id = $1 AND business_unit_id = $2`, [ids.repA2, ids.buA]);
     const gone = await buildJob({ userId: ids.repA2, businessUnitId: ids.buA, scope: 'own', ownerEmails: ['rep.a2@demandai.test'] }, { handoffId });
     assert.deepEqual([gone.status, gone.error?.code], ['failed', 'forbidden']);
+  } finally { setAiGatewayForTests(undefined); }
+});
+
+/* ─── Content studio's AI writer (D-36) ─── */
+
+test('the studio writes a piece with AI behind the same call, and hands it only the requests the rules do not understand', async () => {
+  const actor = { userId: ids.adminA, role: 'Admin' as const };
+  const fake = new FakeModel([pieceWriter()], { otherwise: req => ({ text: JSON.stringify({ parts: { [rewriteIds(req)[0]]: 'A calmer opening, in plain words.' }, reply: 'Made the opening calmer.' }), finish: 'stop', promptTokens: 10, completionTokens: 10 }) });
+  setAiGatewayForTests(fakeGateway(app, fake, { ...ALL_ON, classify: false, why_now: false, draft_message: false }));
+  try {
+    const made = await createItemWithAi(app, unitA(), actor, { text: 'A blog on planning a control system migration for plant managers', type: 'blog' });
+    assert.equal(made.created, true);
+    const item = (made as { item: { id: string; rev: number; ai: { confidence: string } | null; blocks: { ai?: boolean; role: string }[]; messages: { text: string }[]; issues: number } }).item;
+    assert.ok(item.ai, 'labelled AI-assisted');
+    assert.equal(item.ai!.confidence, 'High', 'every check passes and it cites approved claims');
+    assert.equal(item.issues, 0);
+    assert.ok(item.blocks.some(b => b.ai) && !item.blocks.find(b => b.role === 'proof')!.ai);
+    assert.ok(item.messages.some(m => /^Written with AI from the brief/.test(m.text)));
+    // A refusal stays the rules' (no model call); a request they don't understand goes to the AI.
+    const before = fake.requests.length;
+    const refused = await changeItemWithAi(app, unitA(), actor, item.id, { op: 'ask', q: 'say that we reduce downtime by 40%', rev: item.rev });
+    assert.match(refused.reply, /^I can't add/);
+    assert.equal(fake.requests.length, before);
+    const done = await changeItemWithAi(app, unitA(), actor, item.id, { op: 'ask', q: 'make it sound calmer, like a senior engineer talking', rev: item.rev });
+    assert.match(done.reply, /^Made the opening calmer\. \(Written with AI; every check was run again\.\)$/);
+    assert.equal(fake.requests.length, before + 1);
+    // An edit saved while the AI writes wins: the AI's change is refused by the revision guard.
+    const slow = new FakeModel([], { otherwise: async req => { await withTenant(app, unitA(), s => saveBlocks(s, actor, item.id, { blocks: done.item.blocks, rev: done.item.rev })); return { text: JSON.stringify({ parts: { [rewriteIds(req)[0]]: 'Too late.' }, reply: 'Done.' }), finish: 'stop', promptTokens: 1, completionTokens: 1 }; } });
+    setAiGatewayForTests(fakeGateway(app, slow, { ...ALL_ON, classify: false, why_now: false, draft_message: false }));
+    await assert.rejects(changeItemWithAi(app, unitA(), actor, item.id, { op: 'ask', q: 'make it sound like a sports commentator', rev: done.item.rev }), (e: HttpError) => e.status === 409);
   } finally { setAiGatewayForTests(undefined); }
 });

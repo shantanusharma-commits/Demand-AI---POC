@@ -68,3 +68,17 @@ export function draftWriter(over?: (ask: ReturnType<typeof draftAsk>, n: number)
         ask: 'Would a short call next week help?', claimId: a.claimIds[0] });
   };
 }
+
+/** The parts a piece request asks for, from its format line. */
+export function pieceRoles(req: ModelRequest): { role: string; list: boolean }[] {
+  const fmt = req.system.slice(req.system.lastIndexOf('Format:'));
+  return [...fmt.matchAll(/"(\w+)": (\[|")/g)].filter(m => m[1] !== 'parts').map(m => ({ role: m[1], list: m[2] === '[' }));
+}
+/** A piece writer: plain wording for every part, or `over` for some. */
+export function pieceWriter(over: Record<string, string | string[]> = {}): Step {
+  return req => json({ parts: Object.fromEntries(pieceRoles(req).map(({ role, list }) => [role, over[role] ?? (list
+    ? ['What does the site need to keep running?', 'Who owns the decision?', 'When is the next window?']
+    : role === 'title' ? 'Planning the change before the date is set for you' : `A plain paragraph for the ${role} part, with no claims in it.`)])) });
+}
+/** The part IDs a rewrite request offers. */
+export const rewriteIds = (req: ModelRequest) => [...req.messages[0].content.matchAll(/^\[([\w-]+)\] \(/gm)].map(m => m[1]);

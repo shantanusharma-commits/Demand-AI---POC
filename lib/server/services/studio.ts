@@ -9,7 +9,9 @@ import * as W from '../../content/studio.ts';
 import { checkContent, type CheckResult, type Rec } from '../../engine/nba.ts';
 import * as R from '../../engine/review.ts';
 import { recommendations, studioItems, studioMessages, users } from '../db/schema.ts';
-import type { TenantScope } from '../db/tenant.ts';
+import { withTenant, type Db, type TenantContext, type TenantScope } from '../db/tenant.ts';
+import { rewritePiece, writePiece, PIECE_TEMPLATE, REWRITE_TEMPLATE } from '../../ai/studio.ts';
+import { aiGateway, callContext } from '../ai.ts';
 import { recordAudit } from '../db/audit.ts';
 import { badRequest, conflict, notFound } from '../http/errors.ts';
 import { zipFiles } from '../http/zip-writer.ts';
@@ -35,12 +37,16 @@ async function usageOf(scope: TenantScope, ids: string[]): Promise<Map<string, n
 export type ItemSummary = {
   id: string; type: W.ContentType; title: string; topic: string; seg: string; tone: string; length: string; status: string; brandVersionNo: number;
   issues: number; cited: string[]; usage: number; words: number; createdBy: string; updatedAt: Date; updatedBy: string;
+  /** Some part was written by the AI writer (Phase 6), and how far to trust it: High when every check passes and it
+   *  cites an approved claim, Medium when it passes with no claim, Low while a check fails. */
+  ai: { confidence: 'High' | 'Medium' | 'Low' } | null;
 };
 export type ItemView = ItemSummary & { sources: string[]; blocks: W.Block[]; rev: number; checks: CheckResult; createdAt: Date; messages: { who: string; text: string; at: Date; by: string }[] };
 
 function summarise(r: Row & { createdByName: string; updatedByName: string }, chk: CheckResult, usage: number): ItemSummary {
   return { id: r.id, type: r.type as W.ContentType, title: r.title, topic: r.topic, seg: r.segment, tone: r.tone, length: r.length, status: r.status, brandVersionNo: r.brandVersionNo,
-    issues: W.issuesOf(chk), cited: W.citedIn(chk), usage, words: W.wordsOf(r.blocks as W.Block[]), createdBy: r.createdByName, updatedAt: r.updatedAt, updatedBy: r.updatedByName };
+    issues: W.issuesOf(chk), cited: W.citedIn(chk), usage, words: W.wordsOf(r.blocks as W.Block[]), createdBy: r.createdByName, updatedAt: r.updatedAt, updatedBy: r.updatedByName,
+    ai: (r.blocks as W.Block[]).some(b => b.ai) ? { confidence: W.issuesOf(chk) ? 'Low' : W.citedIn(chk).length ? 'High' : 'Medium' } : null };
 }
 const creator = sql<string>`(select coalesce(display_name, 'A former member') from users u where u.id = "studio_items"."created_by")`;
 const updater = sql<string>`(select coalesce(display_name, 'A former member') from users u where u.id = "studio_items"."updated_by")`;
@@ -80,21 +86,23 @@ async function say(scope: TenantScope, actor: Actor, itemId: string, msgs: { who
 }
 
 /** A new piece from what the person asked for. A request too vague to write gets a question back and stores nothing. */
-export async function createItem(scope: TenantScope, actor: Actor, input: { text: string; type: W.ContentType }): Promise<{ created: false; question: string } | { created: true; item: ItemView }> {
+export async function createItem(scope: TenantScope, actor: Actor, input: { text: string; type: W.ContentType }, written?: { blocks: W.Block[] }): Promise<{ created: false; question: string } | { created: true; item: ItemView }> {
   const text = R.cleanNote(input.text, 1000);
   if (!text) throw badRequest('Say what to write.', { text: ['Say what to write.'] });
   const live = await liveBrand(scope);
   const brief = W.parseBrief(text, input.type, live.pack.voice.preset);
   if (!brief.ok) return { created: false, question: W.briefQuestion(brief.type) };
-  const p = W.newPiece(brief, live.pack);
+  const rules = W.newPiece(brief, live.pack);
+  const p = written ? { ...rules, blocks: written.blocks, title: W.titleOf(written.blocks, rules.title) } : rules;
   const [row] = await scope.tx.insert(studioItems).values({
     businessUnitId: scope.ctx.businessUnitId, type: p.type, title: p.title, topic: p.topic, segment: p.seg, tone: p.tone, length: p.length, sources: p.sources,
     blocks: p.blocks, brandVersionNo: live.versionNo, createdBy: actor.userId, updatedBy: actor.userId,
   }).returning({ id: studioItems.id });
   await say(scope, actor, row.id, [{ who: 'me', text }, { who: 'ai', text: W.planLine(p, live.pack, live.versionNo) },
+    ...(written ? [{ who: 'ai' as const, text: 'Written with AI from the brief and the brand pack. Any proof is an approved claim, word for word, and every part went through the same brand and claim checks.' }] : []),
     { who: 'ai', text: W.summaryFor(p, W.checksOf(p.blocks, live.pack, todayUtc()), live.versionNo) }]);
   await recordAudit(scope, { action: 'studio.created', actorRole: actor.role, targetType: 'studio_item', targetId: row.id, details: { type: p.type, length: p.length } });
-  logger.info({ event: 'studio.created', type: p.type, blocks: p.blocks.length }, 'Content piece written');
+  logger.info({ event: 'studio.created', type: p.type, blocks: p.blocks.length, ai: !!written }, 'Content piece written');
   return { created: true, item: await getItem(scope, row.id) };
 }
 
@@ -126,7 +134,7 @@ export async function saveBlocks(scope: TenantScope, actor: Actor, id: string, i
 export type ChangeInput = { op: 'ask' | 'tone' | 'length' | 'regenerate' | 'remove' | 'restore'; q?: string; value?: string; target?: string | null; blocks?: unknown; rev: number };
 
 /** A change asked for in the chat, or from the canvas (tone, length, regenerate or remove a part, undo). */
-export async function changeItem(scope: TenantScope, actor: Actor, id: string, input: ChangeInput): Promise<{ item: ItemView; reply: string; select: string | null }> {
+export async function changeItem(scope: TenantScope, actor: Actor, id: string, input: ChangeInput, ai?: { blocks: W.Block[]; reply?: string }): Promise<{ item: ItemView; reply: string; select: string | null }> {
   const row = await rowOf(scope, id, true);
   checkRev(row, input.rev);
   const { pack } = await liveBrand(scope), p = pieceOf(row);
@@ -136,6 +144,8 @@ export async function changeItem(scope: TenantScope, actor: Actor, id: string, i
       asked = R.cleanNote(input.q, 1000);
       if (!asked) throw badRequest('Say what to change.', { q: ['Say what to change.'] });
       c = W.change(p, asked, pack, input.target);
+      // A request the rules didn't understand, done by the AI writer (checked before it got here).
+      if (c.unknown && ai) c = { blocks: ai.blocks, reply: `${ai.reply || 'Done.'} (Written with AI; every check was run again.)`, select: input.target ?? null, changed: true };
       break;
     }
     case 'tone':
@@ -166,6 +176,47 @@ export async function changeItem(scope: TenantScope, actor: Actor, id: string, i
   await say(scope, actor, id, [{ who: 'me', text: asked }, { who: 'ai', text: reply }]);
   logger.info({ event: 'studio.changed', op: input.op, changed: c.changed }, 'Content piece changed');
   return { item: await getItem(scope, id), reply, select: c.select === undefined ? input.target ?? null : c.select };
+}
+
+/* ─── With the AI writer on (D-36, Phase 6): read, write with no transaction open, then store ─── */
+
+/** A new piece, worded by the AI writer when it is on and its piece passes every check; otherwise the rules'. */
+export async function createItemWithAi(db: Db, tenant: TenantContext, actor: Actor, input: { text: string; type: W.ContentType }) {
+  const ai = aiGateway();
+  let written: { blocks: W.Block[] } | undefined;
+  if (ai.enabled('draft_content')) {
+    const plan = await withTenant(db, tenant, async s => {
+      const live = await liveBrand(s), brief = W.parseBrief(R.cleanNote(input.text, 1000), input.type, live.pack.voice.preset);
+      return brief.ok ? { p: W.newPiece(brief, live.pack), pack: live.pack } : null;
+    }, { label: 'studio.plan' });
+    if (plan) {
+      const w = await writePiece(ai, callContext(tenant, { deadlineMs: 45_000 }), plan.p, plan.pack, todayUtc());
+      if (w.ok === true) written = { blocks: w.blocks };
+      else logger.info({ event: 'studio.ai_fallback', template: PIECE_TEMPLATE.id, reason: w.reason }, 'Content piece written by the rules');
+    }
+  }
+  return withTenant(db, tenant, s => createItem(s, actor, input, written));
+}
+
+/** A chat change; a request the rules don't understand goes to the AI writer when it is on. */
+export async function changeItemWithAi(db: Db, tenant: TenantContext, actor: Actor, id: string, input: ChangeInput) {
+  const ai = aiGateway();
+  let done: { blocks: W.Block[]; reply?: string } | undefined;
+  if (input.op === 'ask' && ai.enabled('draft_content')) {
+    const look = await withTenant(db, tenant, async s => {
+      const row = await rowOf(s, id);
+      checkRev(row, input.rev);
+      const { pack } = await liveBrand(s), p = pieceOf(row), asked = R.cleanNote(input.q, 1000);
+      return asked && W.change(p, asked, pack, input.target).unknown ? { p, pack, asked } : null;
+    }, { label: 'studio.look' });
+    if (look) {
+      const w = await rewritePiece(ai, callContext(tenant, { deadlineMs: 45_000 }), look.p, look.asked, input.target ?? null, look.pack, todayUtc());
+      if (w.ok === true) done = { blocks: w.blocks, reply: w.reply };
+      else logger.info({ event: 'studio.ai_fallback', template: REWRITE_TEMPLATE.id, reason: w.reason }, 'Content change left to the rules');
+    }
+  }
+  // The second transaction checks the revision again: an edit made while the AI wrote wins, and nothing is lost.
+  return withTenant(db, tenant, s => changeItem(s, actor, id, input, done));
 }
 
 /** In or out of the Content library. In only when every brand and claim check passes. */

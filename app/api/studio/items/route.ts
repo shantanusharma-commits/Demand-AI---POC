@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { withApi } from '@/lib/server/http/api';
 import { withTenant } from '@/lib/server/db/tenant';
-import { createItem, listItems } from '@/lib/server/services/studio';
+import { createItemWithAi, listItems } from '@/lib/server/services/studio';
 
 // Content studio: the unit's pieces, newest first (?ready=1 for those in the Content library), with their checks and
 // how many messages they are in.
@@ -14,5 +14,5 @@ const Body = z.object({ text: z.string().max(2000), type: z.enum(['blog', 'white
 
 // A new piece from a request in the person's own words; a request too vague to write gets a question back.
 export const POST = withApi<z.infer<typeof Body>>({ route: 'POST /api/studio/items', auth: 'unit', permission: 'studio.use', body: Body }, async ({ deps, tenant, role, body }) => {
-  return withTenant(deps.db, tenant!, s => createItem(s, { userId: tenant!.userId, role: role! }, body));
+  return createItemWithAi(deps.db, tenant!, { userId: tenant!.userId, role: role! }, body);
 });
