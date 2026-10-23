@@ -127,6 +127,8 @@ function NewPasswordForm({ kind }: { kind: 'invite' | 'reset' }) {
     setError(null);
     try {
       await api(kind === 'invite' ? '/api/auth/accept-invite' : '/api/auth/reset', { body: { token, password } });
+      // A full reload: the new session cookie is read by the server's page guard from the first request.
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
       if (kind === 'invite') window.location.assign('/');
       else { setDone(true); setBusy(false); }
     } catch (err) {

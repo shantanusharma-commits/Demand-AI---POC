@@ -381,7 +381,7 @@ export function ScoringScreen() {
                   <div style={sx('font-size:13px;font-weight:600;color:var(--i1)')}>Click to choose the prospect file, or drop it here</div>
                   <div style={sx('font-size:11px;color:var(--i3);margin-top:4px')}>.xlsx or .csv · the lead template, one row per contact · checked like in Prospecting, then saved as a list</div>
                 </label>
-                <div style={sx('margin-top:10px')}><button className="btn btn-sec btn-sm" onClick={() => { void download('lead_template.csv', DemandAI.toCSV([DemandAI.LEAD_COLUMNS])); }}>Download lead template (.csv)</button></div>
+                <div style={sx('margin-top:10px')}><button className="btn btn-sec btn-sm" onClick={() => { download('lead_template.csv', DemandAI.toCSV([DemandAI.LEAD_COLUMNS])); }}>Download lead template (.csv)</button></div>
               </> : lists.length ? <>
                 <select value={selListId || ''} aria-label="Prospect list" onChange={e => chooseList(e.currentTarget.value)} style={sx('width:100%;padding:9px 11px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:13px;background:var(--surf);color:var(--i1)')}>
                   {lists.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
@@ -406,7 +406,7 @@ export function ScoringScreen() {
               </label>
               <div style={sx('display:flex;gap:8px;margin-top:12px;flex-wrap:wrap')}>
                 {L && L.sandbox ? <button className="btn btn-primary btn-sm" onClick={useSample}>Use sample signals</button> : null}
-                <button className="btn btn-sec btn-sm" onClick={() => { void download('signal_template.csv', DemandAI.toCSV([DemandAI.SIGNAL_COLUMNS])); }}>Download signal template (.csv)</button>
+                <button className="btn btn-sec btn-sm" onClick={() => { download('signal_template.csv', DemandAI.toCSV([DemandAI.SIGNAL_COLUMNS])); }}>Download signal template (.csv)</button>
               </div>
               <div style={sx('font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--i3);margin:16px 0 8px')}>Signal tags the file can use</div>
               <div className="tags">{types.map((t, i) => off.has(t)

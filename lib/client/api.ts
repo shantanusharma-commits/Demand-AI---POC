@@ -26,6 +26,8 @@ export async function api<T = unknown>(path: string, init: { method?: string; bo
   const text = await res.text();
   const json = text ? JSON.parse(text) : {};
   if (res.status === 401 && typeof window !== 'undefined' && !path.startsWith('/api/auth/')) {
+    // The session ended: a full reload to the sign-in page drops everything the screen held.
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
     window.location.assign(`/login?next=${encodeURIComponent(window.location.pathname)}`);
   }
   if (!res.ok) throw new ApiError(res.status, json);

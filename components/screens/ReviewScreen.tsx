@@ -493,14 +493,14 @@ export function ReviewScreen() {
       const cite = tx.slice(e).match(/^\s*\[[^\]]+, \d{4}\]/); if (cite) e += cite[0].length;
       while (e < tx.length && tx[e] === ' ') e++;
       setField(mainKey, (tx.slice(0, s0).replace(/[ ]+$/, '') + (s0 && tx[s0 - 1] !== '\n' && tx[e] && tx[e] !== '\n' ? ' ' : '') + tx.slice(e)).replace(/\n{3,}/g, '\n\n'));
-      showToast('Sentence removed. It is saved when you approve.');
+      showToast('Sentence removed. It is saved with your decision.');
     };
     const replaceClaim = (id: string) => {
       const cl = it.claims.find(z => z.id === id), u = chk.unsupported[0]; if (!cl || !u) return;
       const i0 = text.indexOf(u.text); if (i0 < 0) return;
       let e = i0 + u.text.length; const cite = text.slice(e).match(/^\s*\[[^\]]+, \d{4}\]/); if (cite) e += cite[0].length;
       setField(mainKey, text.slice(0, i0) + `${cl.claim} [${cl.type}, ${cl.year}]` + text.slice(e));
-      showToast('Claim replaced with an approved one');
+      showToast('Claim replaced with an approved one. It is saved with your decision.');
     };
     const fixRow = (k: string, title: string, body: ReactNode, acts: ReactNode) => <div key={k} className="fx" data-k={k}><div className="fx-h"><span className="fx-t">{title}</span>
       <span className="fx-st">{['sensitive', 'claim', 'brand'].includes(k) ? (marks.some(m => m[2] === k) ? <span className="fx-n">{marks.filter(m => m[2] === k).length} in the message</span> : <span className="fx-ok">✓ Gone from the message</span>) : null}</span></div>

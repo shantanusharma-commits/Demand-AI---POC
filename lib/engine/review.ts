@@ -6,7 +6,7 @@
    - nothing is sent or decided in bulk, and a message to someone who can't be contacted is never released (G-007):
      the server refuses to release a draft marked unreachable;
    - due dates are worked out where they are shown (the browser's time zone), from when the item reached For Review. */
-import { CONFIG, clean } from '../demandai-engine.ts';
+import { CONFIG, clean, lowerFirst } from '../demandai-engine.ts';
 import {
   allowedChannels, briefFor, callScript, draftFor, estimateDealSize, type BrandPack, type CheckResult, type Draft, type Rec,
 } from './nba.ts';
@@ -178,7 +178,6 @@ export function statusLabel(st: Pick<RecState, 'status' | 'spot' | 'released'> &
 /* Why it needs you, in plain words: what is stuck, and the call the reviewer has to make. */
 export const SENSITIVE_RE = /\b(incident|accident|explosion|fatalit\w*|injur\w*|lawsuit|security|cyber|breach\w*|vulnerab\w*|regulat\w*|compliance|emission\w*)\b/i;
 const firstOf = (c: { firstName?: string; name: string }) => (c.firstName || String(c.name || '').split(' ')[0] || 'them');
-const lowerInitial = (t: string) => t.charAt(0).toLowerCase() + t.slice(1);
 export type Stuck = { cat: string; label: string; line: string; call: string; also: string[]; missing: string };
 export function stuck(r: Rec, st: RecState, draft: Draft, chk: CheckResult, cats: string[]): Stuck {
   const c = liveRec(r, st).contact, cat = cats[0];
@@ -190,7 +189,7 @@ export function stuck(r: Rec, st: RecState, draft: Draft, chk: CheckResult, cats
     small: [`No micro-segment: fewer than ${CONFIG.minSegmentAccounts} accounts share its signal.`, 'Pick the micro-segment to release it into, then accept.'],
     deal: [(() => { const ds = estimateDealSize(r.account); return ds ? `The deal looks small: about USD ${Math.round(ds.value / 1000)}k against a ${Math.round(CONFIG.dealSize.threshold / 1000)}k threshold.` : 'The deal looks below the size threshold.'; })(), `Is ${r.account.name} worth this outreach anyway?`],
     brand: [`The message breaks a brand rule: ${chk.flags.filter(f => f.rule !== 'Sensitive term').map(f => f.rule.toLowerCase() + ' (' + f.detail + ')').join(', ') || 'brand rules'}.`, 'Edit the message, or reject it for a new one.'],
-    reach: [`No way to reach ${firstOf(c)}: ${lowerInitial(String(draft.why || 'No verified email or LinkedIn').split(':')[0].replace(/\.$/, ''))}.`, 'Find a way to reach them, or put it on hold until the data is fixed.'],
+    reach: [`No way to reach ${firstOf(c)}: ${lowerFirst(String(draft.why || 'No verified email or LinkedIn').split(':')[0].replace(/\.$/, ''))}.`, 'Find a way to reach them, or put it on hold until the data is fixed.'],
     spot: ['It passed every check and went ahead on its own. It was picked for this week\'s spot-check.', 'Would you have sent this? Rate it.'],
     alternative: [`You rejected “${st.alternativeOf || 'the first recommendation'}”. This is the one alternative.`, 'Use this alternative, or reject it to close the account for the pilot.'],
     sentback: [`Sent back by the sales manager: “${st.sentBackNote || ''}”.`, 'Change what they asked, then accept again.'],
@@ -311,7 +310,7 @@ export function meetingScript(r: Rec, st: RecState, x: Partial<Draft>, brand: Br
   const base = callScript(lr, action, brief.whyNow, brand), first = (lr.contact.name || '').split(' ')[0];
   const sent = x.channel === 'Email' ? `the email "${x.subject}"` : x.channel === 'LinkedIn' ? 'the LinkedIn message' : 'the follow-up';
   return {
-    opener: `Hi ${first}, thanks for making the time. We reached out with ${sent} because of your ${r.reason.replace(/\s*\([^)]*\)/g, '').replace(/:\s*/, ' (').replace(/\.?$/, ')').replace(/^./, c => c.toLowerCase())}. Is that still the priority on your side?`,
+    opener: `Hi ${first}, thanks for making the time. We reached out with ${sent} because of your ${lowerFirst(r.reason.replace(/\s*\([^)]*\)/g, '').replace(/:\s*/, ' (').replace(/\.?$/, ')'))}. Is that still the priority on your side?`,
     agenda: ['Confirm the situation and who else is involved', 'Share what similar sites did' + (brief.proof ? ` (${brief.proof.title})` : ''), 'Agree a next step and a date'],
     questions: base.questions, objection: base.objection, response: base.response,
     ask: `Close on a next step: ${base.ask.replace(/\?$/, '')}, with a date in the next two weeks.`,

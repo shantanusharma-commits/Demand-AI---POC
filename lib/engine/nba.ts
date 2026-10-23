@@ -344,7 +344,7 @@ const GENERIC = { cta: 'Worth a conversation?', alt: 'Would that be useful?', br
 
 function opener(sg: NbaSignal, account: NbaAccount): string {
   const d = clean(sg.detail).replace(/\.$/, '');
-  const low = d ? d[0].toLowerCase() + d.slice(1) : '';
+  const low = d ? lowerFirst(d) : '';   // keeps an acronym ("RFQ for …") or a name as written
   switch (sg.type) {
     case 'Inquiry or RFQ': {
       const about = low.replace(/^asked (about|for) /, '');
@@ -449,7 +449,7 @@ export function draftFor(rec: Rec, action: string, opts: { asOf?: string; channe
   }
   // LinkedIn: one connection note, no follow-up message. Their signal, then a reason to connect.
   if (ch.channel === 'LinkedIn') {
-    const hook = open ? open.charAt(0).toLowerCase() + open.slice(1) + ' ' : '';
+    const hook = open ? lowerFirst(open) + ' ' : '';
     const tries = [`Hi ${first}, ${hook}${copy.bridge} Would be good to connect.`, `Hi ${first}, ${hook}Would be good to connect.`, `Hi ${first}, would be good to connect.`];
     return { ...base, channel: 'LinkedIn', note: tries.find(t => t.length <= CONFIG.brand.maxNote)!.replace(/\s+/g, ' ') };
   }

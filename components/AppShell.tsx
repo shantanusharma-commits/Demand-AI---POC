@@ -41,10 +41,6 @@ const SECTIONS: { title: string; links: NavLink[] }[] = [
 
 /** Nav items shown as active on each screen. In the original, Content library and Users and roles also marked
  *  Today as active (a copy-paste quirk in their markup); kept so the sidebar looks the same. */
-const EXTRA_ACTIVE: Partial<Record<PageId, PageId[]>> = {
-  '07-content.html': ['00-today.html'],
-  '08-users.html': ['00-today.html'],
-};
 
 function NoAccess({ user }: { user: SessionUser }) {
   const role = user.activeBusinessUnit?.role;
@@ -73,7 +69,7 @@ export default function AppShell({ page, user, allowed, children }: { page: Page
   const role = user.activeBusinessUnit?.role;
   const visible: readonly PageId[] = role ? PAGE_ACCESS[role] : [];
   const item = (l: NavLink) => (
-    <Link key={l.page} className={`nav-item ${l.page === page || (page !== 'platform' && EXTRA_ACTIVE[page]?.includes(l.page)) ? 'active' : ''}`} href={PAGES[l.page].route} style={visible.includes(l.page) ? undefined : { display: 'none' }}>
+    <Link key={l.page} className={`nav-item ${l.page === page ? 'active' : ''}`} href={PAGES[l.page].route} style={visible.includes(l.page) ? undefined : { display: 'none' }}>
       {l.icon}
       <span className="nav-lbl">{l.label}</span>
     </Link>
@@ -93,6 +89,8 @@ export default function AppShell({ page, user, allowed, children }: { page: Page
   const signOut = async () => {
     setBusy(true);
     try { await api('/api/auth/logout', { body: {} }); } catch { /* the session may already be gone */ }
+    // A full reload, not a client navigation: nothing of the signed-out person stays in memory.
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
     window.location.assign('/login');
   };
 

@@ -268,7 +268,7 @@ export function ProspectingScreen() {
     } catch (e) { showToast(errorText(e)); }
     renderStart('saved');
   }
-  function downloadTemplate() { void download('lead_template.csv', DemandAI.toCSV([DemandAI.LEAD_COLUMNS])); }
+  function downloadTemplate() { download('lead_template.csv', DemandAI.toCSV([DemandAI.LEAD_COLUMNS])); }
 
   /* ─── upload, then follow the job ─── */
   async function follow(fileName: string, start: () => Promise<{ jobId: string | null }>) {

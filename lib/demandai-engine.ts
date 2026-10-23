@@ -970,7 +970,7 @@ export function processSignals(grid: Grid, list: LeadList,
       const ref = s.personRef.includes('@') ? normEmail(s.personRef) : normLinkedIn(s.personRef);
       person = cs.find(c => (c.email && c.email === ref) || (c.linkedin && c.linkedin === ref) || normEmail(c.emailRaw) === ref || !!c.altRefs?.includes(ref));
       if (!person) {
-        reject('D4', `Person ${s.personRef} is not in the lead file for this account (sent back as a suggested new contact)`, 'contact_email_or_linkedin', 'Add this person to the lead file, or correct the email or LinkedIn URL');
+        reject('D4', `Person ${s.personRef} is not in the lead file for this account`, 'contact_email_or_linkedin', 'Add this person to the lead file, or correct the email or LinkedIn URL');
         suggested.push({ company: acc.name, person: s.personRef, signal: s.type, row: s.row });
         continue;
       }

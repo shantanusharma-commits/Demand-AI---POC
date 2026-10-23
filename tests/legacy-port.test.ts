@@ -176,6 +176,23 @@ test('drafts cite one approved proof point and pass the brand and claim checks',
   assert.match(N.confidenceFor(rec, d, chk).reason, /1 of 1 claim verified, no open flags/);
 });
 
+// 5d: a signal's detail keeps its capitals when it opens a message (it read "rFQ for …"), and "I" stays "I".
+test('an opener keeps an acronym and "I" capitalised, in an email and in a LinkedIn note', () => {
+  const base = sampleRecs().recs[0], action = E.CONFIG.segmentLibrary.Inquiry[0];
+  const withDetail = (detail: string, contact: Partial<N.NbaContact> = { email: 'pat@x.example', emailVerified: true, consentOk: true }): N.Rec => {
+    const sg = { ...base.signal, type: 'Inquiry or RFQ', detail };
+    return { ...base, signal: sg, contact: { ...base.contact, ...contact }, person: { ...base.person, signals: [sg] } };
+  };
+  const email = N.draftFor(withDetail('RFQ for three DCS cabinets'), action, { asOf: S.SAMPLE_AS_OF });
+  assert.equal(email.channel, 'Email');
+  assert.match(email.body!, /Thanks for your question: RFQ for three DCS cabinets\./);
+  const asked = N.draftFor(withDetail('Asked about the DCS upgrade'), action, { asOf: S.SAMPLE_AS_OF });
+  assert.match(asked.body!, /Thanks for your question about the DCS upgrade\./, 'an ordinary word is still lowered');
+  const li = N.draftFor(withDetail('RFQ for three DCS cabinets', { emailVerified: false, linkedin: 'https://linkedin.com/in/x', consentOk: true }), action, { asOf: S.SAMPLE_AS_OF });
+  assert.match(li.note!, /^Hi \w+, thanks for your question: RFQ for three DCS cabinets\./);
+  assert.doesNotMatch(E.processSignals.toString(), /suggested new contact/, 'the D4 reason promises no list that nothing shows');
+});
+
 // legacy engine.test.js:262, changed per D-10 (G-051): the legacy draft went out without a proof line; now the
 // action becomes a task for the account owner, naming the proof point that lapsed.
 test('no approved proof for the case: the action becomes a task for the owner, not a draft (D-10)', () => {

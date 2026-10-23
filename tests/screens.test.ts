@@ -36,3 +36,8 @@ test('browser storage keeps UI preferences only: three named keys, read and writ
   }
   assert.deepEqual(uses.sort(), ['components/screens/ReviewScreen.tsx', 'components/screens/ScoringScreen.tsx', 'components/screens/TodayScreen.tsx']);
 });
+
+test('nothing in the app depends on the claude.ai runtime (rule 7, N-03)', () => {
+  const hits = sources.filter(f => /window\.claude|ClaudeDownloads/.test(readFileSync(f, 'utf8'))).map(f => relative(repo, f));
+  assert.deepEqual(hits, []);
+});
