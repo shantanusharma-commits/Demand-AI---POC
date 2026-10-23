@@ -106,6 +106,20 @@
       "when": 1792742413560,
       "tag": "0014_setup_security",
       "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1792743207668,
+      "tag": "0015_brand_versions",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1792743208150,
+      "tag": "0016_brand_security",
+      "breakpoints": true
     }
   ]
 }

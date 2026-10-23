@@ -9,6 +9,7 @@ import {
 } from 'drizzle-orm/pg-core';
 
 export const citext = customType<{ data: string }>({ dataType: () => 'citext' });
+export const bytea = customType<{ data: Buffer; driverData: Buffer }>({ dataType: () => 'bytea' });
 
 /** Seeded by the first security migration; jobs and imports act as this user. It can never sign in. */
 export const SYSTEM_USER_ID = '00000000-0000-0000-0000-000000000001';
@@ -222,6 +223,45 @@ export const signalTypeChanges = pgTable('signal_type_changes', {
   index('signal_type_changes_version_idx').on(t.configVersionId),
 ]);
 
+/* ─── Content library (G-009): brand-pack versions, the unit's working draft, guideline documents ─── */
+
+/** Every saved brand pack, append-only: the highest version is the one new drafts follow; earlier ones are kept for
+ *  lists already drafted with them, and can be restored (as a new version). */
+export const brandVersions = pgTable('brand_versions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  businessUnitId: uuid('business_unit_id').notNull().references(() => businessUnits.id),
+  versionNo: integer('version_no').notNull(),
+  pack: jsonb('pack').notNull(),
+  note: text('note').notNull().default(''),
+  sections: text('sections').array().notNull().default(sql`'{}'::text[]`),
+  changes: text('changes').array().notNull().default(sql`'{}'::text[]`),
+  restoredFrom: integer('restored_from'),
+  createdAt: createdAt(),
+  createdBy: createdBy(),
+}, t => [uniqueIndex('brand_versions_bu_version_key').on(t.businessUnitId, t.versionNo)]);
+
+/** The unit's unsaved changes to the brand pack: one working draft, shared by the people who maintain it. */
+export const brandDrafts = pgTable('brand_drafts', {
+  businessUnitId: uuid('business_unit_id').primaryKey().references(() => businessUnits.id),
+  baseVersionNo: integer('base_version_no').notNull(),
+  pack: jsonb('pack').notNull(),
+  updatedAt: updatedAt(),
+  updatedBy: updatedBy(),
+});
+
+/** A brand guideline document, kept as the reference the pack names (never personal data). */
+export const brandDocuments = pgTable('brand_documents', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  businessUnitId: uuid('business_unit_id').notNull().references(() => businessUnits.id),
+  fileName: text('file_name').notNull(),
+  mediaType: text('media_type').notNull(),
+  byteSize: integer('byte_size').notNull(),
+  sha256: text('sha256').notNull(),
+  bytes: bytea('bytes').notNull(),
+  createdAt: createdAt(),
+  createdBy: createdBy(),
+}, t => [check('brand_documents_size_check', sql`${t.byteSize} > 0`), index('brand_documents_bu_idx').on(t.businessUnitId)]);
+
 /* ─── Sign-in (D-3): sessions, one-time email tokens, rate limits ─── */
 
 /** One row per signed-in browser. The cookie carries the ID, HMAC-signed; every request re-reads the row. */
@@ -276,7 +316,6 @@ export const rateLimits = pgTable('rate_limits', {
 
 /* ─── Uploads (D-7, D-8). The file as received is the input of record; rows are re-read from it on demand. ─── */
 
-export const bytea = customType<{ data: Buffer; driverData: Buffer }>({ dataType: () => 'bytea' });
 
 export const UPLOAD_KINDS = ['lead', 'signal'] as const;
 export const UPLOAD_FORMATS = ['xlsx', 'xls', 'csv'] as const;

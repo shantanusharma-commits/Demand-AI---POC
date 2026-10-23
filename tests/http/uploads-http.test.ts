@@ -175,6 +175,33 @@ test('G-002 over HTTP: Setup reads for managers; a switch needs a same-site Orig
   assert.equal((await b.post('/api/config/signals/switch', { ...body, on: true })).json.versionNo, 3);
 });
 
+test('G-009 over HTTP: the brand pack for everyone with Content library; changes, documents, saving and restoring for managers', async () => {
+  const b = await admin();
+  type Pack = { voice: { preset: string }; negative: string[]; competitors: string[]; claims: unknown[]; frameworks: unknown[] };
+  const brand = (await b.get('/api/brand')).json.brand as { live: { versionNo: number; pack: Pack } };
+  assert.equal(brand.live.versionNo, 1);
+  const p = brand.live.pack;
+  const pack = { voice: { ...p.voice, preset: 'Warm' }, negative: p.negative, competitors: p.competitors, claims: p.claims, frameworks: p.frameworks, guideline: null };
+  assert.equal((await b.request('PUT', '/api/brand/draft', { pack, baseVersionNo: 1 }, { origin: 'https://evil.example' })).status, 403, 'CSRF');
+  const saved = await b.request('PUT', '/api/brand/draft', { pack, baseVersionNo: 1 });
+  assert.equal(saved.status, 200);
+  assert.deepEqual(saved.json.changes, [{ section: 'Voice and tone', lines: ['Voice: Direct → Warm'] }]);
+  const rep = new Browser(srv.base);
+  await rep.signIn('rep.a@demandai.test');
+  assert.equal((await rep.get('/api/brand')).status, 200, 'reps see the brand pack');
+  assert.equal((await rep.request('PUT', '/api/brand/draft', { pack, baseVersionNo: 1 })).status, 403, 'but do not change it');
+  const f = new FormData();
+  f.set('file', new Blob([new TextEncoder().encode('# Guideline\nNever use: synergy\n')], { type: 'text/markdown' }), 'guide.md');
+  const doc = await b.upload('/api/brand/documents', f);
+  assert.equal(doc.status, 201);
+  const file = await b.get(`/api/brand/documents/${(doc.json.document as { id: string }).id}`);
+  assert.deepEqual([file.status, file.headers.get('content-type'), file.headers.get('x-content-type-options')], [200, 'application/octet-stream', 'nosniff']);
+  assert.match(String(file.headers.get('content-disposition')), /^attachment; filename="guide.md"/);
+  assert.equal((await b.post('/api/brand/publish', { note: '' })).json.versionNo, 2);
+  assert.equal((await b.post('/api/brand/restore', { versionNo: 1 })).json.versionNo, 3);
+  assert.equal(((await b.get('/api/brand')).json.brand as { live: { pack: Pack } }).live.pack.voice.preset, 'Direct');
+});
+
 test('G-015 over HTTP: per-check CSV and the validation report download as UTF-8 CSV attachments; a bad check is 400', async () => {
   const b = await admin();
   const r = await b.get(`/api/lists/${listId}/issues.csv?check=dupes`);
