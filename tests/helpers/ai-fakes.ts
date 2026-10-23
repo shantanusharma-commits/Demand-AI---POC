@@ -1,7 +1,7 @@
 // Fake model answers per capability: they read the request the way a model would (the items between the
 // delimiters) and answer in the capability's format, so tests exercise the real prompts and checks.
 import type { ModelRequest } from '../../lib/ai/types.ts';
-import { json, type Step } from './fake-model.ts';
+import { json, type StepFn } from './fake-model.ts';
 
 export type ClassifyItem = { ref: number; industry: string; siteProcess: string };
 
@@ -14,12 +14,12 @@ export function classifyItems(req: ModelRequest): ClassifyItem[] {
 }
 
 /** A classifier that answers every item with `pick`. */
-export function classifier(pick: (it: ClassifyItem) => { vertical: string; confidence?: string; reason?: string }): Step {
+export function classifier(pick: (it: ClassifyItem) => { vertical: string; confidence?: string; reason?: string }): StepFn {
   return req => json({ items: classifyItems(req).map(it => { const p = pick(it); return { ref: it.ref, vertical: p.vertical, confidence: p.confidence ?? 'high', reason: p.reason ?? `From "${it.industry}".` }; }) });
 }
 
 /** A plausible model: firms that serve the industry are Other, plain refining is Refining, everything else is out. */
-export const sensibleClassifier = classifier(it => {
+export const sensibleClassifier: StepFn = classifier(it => {
   const t = `${it.industry} ${it.siteProcess}`.toLowerCase();
   if (/engineer|construct|integrat|epc|automation|instrument|electrical|controls/.test(t)) return { vertical: 'Other', reason: 'Serves the industry rather than running a plant.' };
   if (/crude|refiner/.test(t)) return { vertical: 'Refining', confidence: 'medium' };
@@ -42,7 +42,7 @@ export function whyNowItems(req: ModelRequest): WhyNowItem[] {
 }
 
 /** A writer that words each line from its strongest row, or with `line` when given. */
-export function whyNowWriter(line?: (it: WhyNowItem) => { line: string; rows?: number[] } | null): Step {
+export function whyNowWriter(line?: (it: WhyNowItem) => { line: string; rows?: number[] } | null): StepFn {
   return req => json({ items: whyNowItems(req).map(it => {
     const own = line?.(it);
     const top = it.rows[0];
@@ -58,7 +58,7 @@ export function draftAsk(req: ModelRequest): { channel: string; claimIds: string
 }
 
 /** A drafter that writes plain, grounded copy and picks the first approved claim, or answers with `over`. */
-export function draftWriter(over?: (ask: ReturnType<typeof draftAsk>, n: number) => Record<string, unknown> | null): Step {
+export function draftWriter(over?: (ask: ReturnType<typeof draftAsk>, n: number) => Record<string, unknown> | null): StepFn {
   return (req, n) => {
     const a = draftAsk(req);
     const own = over?.(a, n);
@@ -75,7 +75,7 @@ export function pieceRoles(req: ModelRequest): { role: string; list: boolean }[]
   return [...fmt.matchAll(/"(\w+)": (\[|")/g)].filter(m => m[1] !== 'parts').map(m => ({ role: m[1], list: m[2] === '[' }));
 }
 /** A piece writer: plain wording for every part, or `over` for some. */
-export function pieceWriter(over: Record<string, string | string[]> = {}): Step {
+export function pieceWriter(over: Record<string, string | string[]> = {}): StepFn {
   return req => json({ parts: Object.fromEntries(pieceRoles(req).map(({ role, list }) => [role, over[role] ?? (list
     ? ['What does the site need to keep running?', 'Who owns the decision?', 'When is the next window?']
     : role === 'title' ? 'Planning the change before the date is set for you' : `A plain paragraph for the ${role} part, with no claims in it.`)])) });

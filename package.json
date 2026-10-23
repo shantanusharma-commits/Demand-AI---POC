@@ -25,7 +25,9 @@
     "db:generate": "drizzle-kit generate",
     "db:test:up": "docker compose -f compose.test.yaml up -d --wait",
     "db:test:down": "docker compose -f compose.test.yaml down",
-    "user:create-admin": "node --env-file-if-exists=.env.local scripts/users/create-admin.mjs"
+    "user:create-admin": "node --env-file-if-exists=.env.local scripts/users/create-admin.mjs",
+    "ai:evaluate": "node --env-file-if-exists=.env.local --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --conditions=react-server scripts/ai/evaluate.ts",
+    "test:ai-live": "node --env-file-if-exists=.env.local --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --conditions=react-server --test tests/ai-live-smoke.test.ts"
   },
   "dependencies": {
     "@aws-sdk/client-bedrock-runtime": "3.1152.0",

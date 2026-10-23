@@ -3,7 +3,8 @@
 // would have been sent (the personal-data scan, prompt-injection fixtures).
 import { ModelError, type ModelClient, type ModelErrorKind, type ModelRequest, type ModelResponse, type ProviderName } from '../../lib/ai/types.ts';
 
-export type Step = ModelResponse | ModelError | ((req: ModelRequest, n: number) => ModelResponse | ModelError | Promise<ModelResponse | ModelError>);
+export type StepFn = (req: ModelRequest, n: number) => ModelResponse | ModelError | Promise<ModelResponse | ModelError>;
+export type Step = ModelResponse | ModelError | StepFn;
 
 export const reply = (text: string, extra: Partial<ModelResponse> = {}): ModelResponse =>
   ({ text, finish: 'stop', promptTokens: 120, completionTokens: 40, ...extra });
