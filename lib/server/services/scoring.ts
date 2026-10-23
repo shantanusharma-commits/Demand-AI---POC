@@ -365,7 +365,8 @@ export async function deleteRun(scope: TenantScope, actor: Actor, id: string): P
   logger.info({ event: 'scoring.deleted', runId: id }, 'Scoring run deleted');
 }
 
-/** Prospects for a hand-off, in rank order: the given contacts, or every tier A and B prospect, with a live signal. */
+/** Prospects for a hand-off, in rank order: the given contacts, or every tier A and B prospect, with a live signal; not
+ *  accounts moved to another unit. */
 export async function handoffCandidates(scope: TenantScope, runId: string, contactIds?: string[]) {
   return scope.tx.select({
     contactId: prospectScores.contactId, accountId: prospectScores.accountId, ownerEmail: prospectScores.ownerEmail, rank: prospectScores.rankNo,
@@ -376,6 +377,8 @@ export async function handoffCandidates(scope: TenantScope, runId: string, conta
     .innerJoin(accounts, eq(accounts.id, prospectScores.accountId))
     .innerJoin(accountScores, and(eq(accountScores.runId, prospectScores.runId), eq(accountScores.accountId, prospectScores.accountId)))
     .where(and(eq(prospectScores.runId, runId), eq(prospectScores.sendable, true), ownerOnly(scope, prospectScores.ownerEmail),
-      contactIds ? inArray(prospectScores.contactId, contactIds) : or(eq(prospectScores.tier, 'A'), eq(prospectScores.tier, 'B'))))
+      contactIds ? inArray(prospectScores.contactId, contactIds) : or(eq(prospectScores.tier, 'A'), eq(prospectScores.tier, 'B')),
+      // An account moved to another unit (D-34) is not handed off here again.
+      sql`not exists (select 1 from account_transfers t where t.business_unit_id = ${scope.ctx.businessUnitId} and t.account_key = "accounts"."data"->>'key')`))
     .orderBy(asc(prospectScores.rankNo));
 }

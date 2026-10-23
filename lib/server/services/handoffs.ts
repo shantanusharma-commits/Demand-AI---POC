@@ -13,6 +13,7 @@ import { recordAudit } from '../db/audit.ts';
 import { badRequest, notFound } from '../http/errors.ts';
 import { logger } from '../logger.ts';
 import { chunks, ownerOnly, type Actor } from './lists.ts';
+import { ruleOwners } from './routing.ts';
 import { handoffCandidates } from './scoring.ts';
 
 export async function createHandoff(scope: TenantScope, actor: Actor, input: { runId: string; contactIds?: string[] }): Promise<{ handoffId: string; count: number; heldBack: number }> {
@@ -27,11 +28,15 @@ export async function createHandoff(scope: TenantScope, actor: Actor, input: { r
   const [h] = await scope.tx.insert(handoffs).values({
     businessUnitId: scope.ctx.businessUnitId, runId: run.id, selection: input.contactIds ? 'selected' : 'default', itemCount: picked.length, createdBy: actor.userId,
   }).returning({ id: handoffs.id });
+  // D-34: an account the lead file gives no owner takes the owner its routing rule names, so the work lands in that
+  // rep's queue.
+  const ruleOwner = await ruleOwners(scope);
   const items = picked.map((p, position) => {
     const id = randomUUID();
+    const ownerEmail = p.ownerEmail ?? ruleOwner(p.account as Account, (p.result as { tier?: string }).tier);
     const summary: HandoffItem = { id, name: (p.contact as Contact).name, company: (p.account as Account).name, tier: p.tier, score: p.score };
     return {
-      id, businessUnitId: scope.ctx.businessUnitId, handoffId: h.id, contactId: p.contactId, accountId: p.accountId, ownerEmail: p.ownerEmail,
+      id, businessUnitId: scope.ctx.businessUnitId, handoffId: h.id, contactId: p.contactId, accountId: p.accountId, ownerEmail,
       position, data: summary, createdBy: actor.userId,
     };
   });

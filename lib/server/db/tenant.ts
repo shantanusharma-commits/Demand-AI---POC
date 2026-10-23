@@ -55,19 +55,36 @@ async function timedTransaction<T>(db: Db, label: string, slowMs: number, run: (
 
 export type ScopeOptions = { label?: string; slowMs?: number };
 
-export function withTenant<T>(db: Db, ctx: TenantContext, fn: (scope: TenantScope) => Promise<T>, opts: ScopeOptions = {}): Promise<T> {
+/** Sets the transaction's identity for the row-level security policies. */
+async function setTenant(tx: Tx, ctx: TenantContext): Promise<void> {
   checkContext(ctx);
   const emails = ctx.ownerEmails.map(e => e.trim().toLowerCase()).filter(Boolean).join(',');
+  await tx.execute(sql`select
+    set_config('app.user_id', ${ctx.userId}, true),
+    set_config('app.business_unit_id', ${ctx.businessUnitId}, true),
+    set_config('app.scope', ${ctx.scope}, true),
+    set_config('app.owner_emails', ${emails}, true),
+    set_config('app.platform_admin', 'off', true)`);
+}
+
+export function withTenant<T>(db: Db, ctx: TenantContext, fn: (scope: TenantScope) => Promise<T>, opts: ScopeOptions = {}): Promise<T> {
+  checkContext(ctx);
   return withLogContext({ userId: ctx.userId, businessUnitId: ctx.businessUnitId }, () =>
     timedTransaction(db, opts.label ?? 'tenant', opts.slowMs ?? 500, async tx => {
-      await tx.execute(sql`select
-        set_config('app.user_id', ${ctx.userId}, true),
-        set_config('app.business_unit_id', ${ctx.businessUnitId}, true),
-        set_config('app.scope', ${ctx.scope}, true),
-        set_config('app.owner_emails', ${emails}, true),
-        set_config('app.platform_admin', 'off', true)`);
+      await setTenant(tx, ctx);
       return fn({ tx, ctx });
     }));
+}
+
+/** Runs part of a transaction as another business unit, then returns to the first: the one place work crosses units
+ *  (moving an account, D-34), so both sides commit or roll back together. The caller checks the person's role in the
+ *  other unit first. */
+export async function inOtherUnit<T>(scope: TenantScope, ctx: TenantContext, fn: (other: TenantScope) => Promise<T>): Promise<T> {
+  await setTenant(scope.tx, ctx);
+  // On an error the transaction rolls back as a whole, so there is nothing to switch back.
+  const result = await fn({ tx: scope.tx, ctx });
+  await setTenant(scope.tx, scope.ctx);
+  return result;
 }
 
 export function withUser<T>(db: Db, ctx: UserContext, fn: (scope: UserScope) => Promise<T>, opts: ScopeOptions = {}): Promise<T> {

@@ -12,6 +12,7 @@ import { DemandAISample } from '@/lib/demandai-sample-data';
 import { showToast } from '@/lib/ui';
 import { sx } from '@/lib/sx';
 import { ApiError, api, errorText, type WireDeep } from '@/lib/client/api';
+import { RoutingRules } from '@/components/RoutingRules';
 import { useCan, useSessionUser } from '@/components/SessionContext';
 import type { SetupState } from '@/lib/server/services/setup';
 import type { SignalTypeConfig } from '@/types/demandai';
@@ -306,6 +307,7 @@ export function SetupScreen() {
             </tbody></table>
           </div>
         </div>
+        <RoutingRules num={9} />
       </div>
     </main>
     {modal ? <div id="setupModalOverlay" style={OVERLAY} onClick={e => { if (e.target === e.currentTarget) setModal(null); }}>

@@ -890,6 +890,54 @@ export const reviewViews = pgTable('review_views', {
   shownAt: tsz('shown_at').notNull().defaultNow(),
 }, t => [primaryKey({ name: 'review_views_pkey', columns: [t.businessUnitId, t.userId] })]);
 
+/* ─── Lead routing (D-34): rules that suggest an owner and a business unit, and accounts moved to another unit ─── */
+
+/** A unit's routing rules, in order: the first active rule whose countries, verticals and tiers all match an account
+ *  (an empty list matches anything) names who should own it when the lead file names nobody, and the business unit
+ *  it belongs to. Changed by managers; every change is audited. */
+export const routingRules = pgTable('routing_rules', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  businessUnitId: uuid('business_unit_id').notNull().references(() => businessUnits.id),
+  position: integer('position').notNull(),
+  name: text('name').notNull(),
+  countries: text('countries').array().notNull().default(sql`'{}'::text[]`),
+  verticals: text('verticals').array().notNull().default(sql`'{}'::text[]`),
+  tiers: text('tiers').array().notNull().default(sql`'{}'::text[]`),
+  /** A sales rep's sign-in email: owns matching accounts the lead file gives no owner. */
+  assignOwner: text('assign_owner'),
+  targetBusinessUnitId: uuid('target_business_unit_id').references(() => businessUnits.id),
+  active: boolean('active').notNull().default(true),
+  createdAt: createdAt(),
+  createdBy: createdBy(),
+  updatedAt: updatedAt(),
+  updatedBy: updatedBy(),
+}, t => [
+  index('routing_rules_bu_position_idx').on(t.businessUnitId, t.position),
+  check('routing_rules_owner_lower_check', sql`${t.assignOwner} is null or ${t.assignOwner} = lower(${t.assignOwner})`),
+]);
+
+/** An account a manager moved to another business unit: its rows (as corrected) went there as a lead file, and this
+ *  unit stops handing it off. Append-only; both units see it. */
+export const accountTransfers = pgTable('account_transfers', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  businessUnitId: uuid('business_unit_id').notNull().references(() => businessUnits.id),
+  toBusinessUnitId: uuid('to_business_unit_id').notNull().references(() => businessUnits.id),
+  /** The engine's company key: the same company in a later list of this unit is not handed off again. */
+  accountKey: text('account_key').notNull(),
+  accountName: text('account_name').notNull(),
+  fromListId: uuid('from_list_id').notNull(),
+  fromAccountId: uuid('from_account_id').notNull(),
+  rows: integer('rows').notNull(),
+  reason: text('reason').notNull(),
+  ruleId: uuid('rule_id'),
+  createdAt: createdAt(),
+  createdBy: createdBy(),
+}, t => [
+  index('account_transfers_bu_key_idx').on(t.businessUnitId, t.accountKey),
+  index('account_transfers_to_bu_idx').on(t.toBusinessUnitId),
+  check('account_transfers_other_unit_check', sql`${t.toBusinessUnitId} <> ${t.businessUnitId}`),
+]);
+
 /* ─── Column mappings (G-040): a person's choice of template column for a source's own column names ─── */
 
 export const columnMappings = pgTable('column_mappings', {

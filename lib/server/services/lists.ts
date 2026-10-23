@@ -13,7 +13,7 @@ import { CHECKS, STEPS, checkOf, groupIssues, stepResult, type CheckKey, type St
 import { listQuality, readinessChecks, readinessCounts, type ListQuality, type ReadinessCheck } from '../../prospecting/quality.ts';
 import { can, type BuRole } from '../../auth/permissions.ts';
 import type { Account, Contact, DqCode, Issue, LeadList, LeadResult, LeadStats, Severity } from '../../../types/demandai';
-import { accounts, configVersions, contacts, corrections, issues, jobs, leadLists, nbaRuns, scoringRuns, uploads, CONTACT_GROUPS } from '../db/schema.ts';
+import { accounts, accountTransfers, businessUnits, configVersions, contacts, corrections, issues, jobs, leadLists, nbaRuns, scoringRuns, uploads, CONTACT_GROUPS } from '../db/schema.ts';
 import { applyCorrections, rowValues, type Correction } from '../../engine/corrections.ts';
 import { withTenant, type TenantScope } from '../db/tenant.ts';
 import { recordAudit } from '../db/audit.ts';
@@ -83,10 +83,11 @@ export function createLeadJob(limits: UploadLimits) {
     const { db, job } = run;
     const ctx = jobContext(job.businessUnitId);
     await run.stage('parse');
-    const { upload, mapping, fixes } = await withTenant(db, ctx, async s => ({
+    const { upload, mapping, fixes, transfer } = await withTenant(db, ctx, async s => ({
       upload: await loadUpload(s, job.payload.uploadId),
       mapping: job.payload.mappingId ? await getMapping(s, job.payload.mappingId) : null,
       fixes: await correctionsOf(s, job.payload.uploadId),
+      transfer: job.payload.transferId ? await transferredIn(s, job.payload.transferId) : null,
     }), { label: 'lead.load' });
     if (!upload) throw new JobError('gone', 'The uploaded file is no longer there. Upload it again.');
     if (job.payload.mappingId && !mapping) throw new JobError('gone', 'That column mapping is no longer there. Choose the columns again.');
@@ -120,6 +121,8 @@ export function createLeadJob(limits: UploadLimits) {
         upload, sheet: read.sheet, result, quality, rawOwners, raw, fileColumns: fileColumnsOf(read.grid), mappingId: job.payload.mappingId ?? null,
         createdBy: target?.createdBy ?? job.createdBy, updatedBy: job.createdBy,
         ...(target ? { name: target.name, status: target.status, savedAt: target.savedAt, parentListId: target.parentListId } : {}),
+        // An account moved here from another unit (D-34) arrives as a saved list named after it.
+        ...(transfer && !target ? { name: `${transfer.accountName} · from ${transfer.fromUnit}`, status: 'saved', savedAt: new Date() } : {}),
       });
       if (target) await retire(s, target.id, id, job.createdBy, fixes.length);
       await s.tx.update(uploads).set({ sheetName: read.sheet, rowsRead: whole.stats.rowsRead }).where(eq(uploads.id, upload.id));
@@ -129,8 +132,16 @@ export function createLeadJob(limits: UploadLimits) {
   };
 }
 
+/** An account moved into this unit: its name and the unit it came from. */
+async function transferredIn(scope: TenantScope, id: string): Promise<{ accountName: string; fromUnit: string } | null> {
+  const [t] = await scope.tx.select({ accountName: accountTransfers.accountName, fromUnit: businessUnits.name }).from(accountTransfers)
+    .innerJoin(businessUnits, eq(businessUnits.id, accountTransfers.businessUnitId))
+    .where(and(eq(accountTransfers.id, id), eq(accountTransfers.toBusinessUnitId, scope.ctx.businessUnitId)));
+  return t ?? null;
+}
+
 /** Every correction made to an upload, in the order they are replayed. */
-async function correctionsOf(scope: TenantScope, uploadId: string): Promise<Correction[]> {
+export async function correctionsOf(scope: TenantScope, uploadId: string): Promise<Correction[]> {
   const rows = await scope.tx.select({ row: corrections.rowNo, field: corrections.field, to: corrections.toValue, reason: corrections.reason })
     .from(corrections).where(eq(corrections.uploadId, uploadId)).orderBy(asc(corrections.seq));
   return rows.map(r => ({ row: r.row, field: r.field as Correction['field'], to: r.to, reason: r.reason }));

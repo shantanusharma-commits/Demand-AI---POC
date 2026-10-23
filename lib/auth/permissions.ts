@@ -54,6 +54,7 @@ export const ACTIONS = {
   'review.decide': WORKERS,
   'review.approve': MANAGERS,
   'segments.pause': MANAGERS,
+  'routing.manage': MANAGERS, // the unit's routing rules (D-34)
   'routing.transfer': MANAGERS, // move an account to another business unit (D-34)
   'validation.edit': MANAGERS,
   'readout.signoff': MANAGERS,
@@ -103,6 +104,6 @@ export const ACTION_LABELS: Record<Action, string> = {
   'studio.use': 'use the Content studio', 'data.upload': 'upload files', 'lists.view': 'view lists', 'lists.write': 'change lists',
   'scoring.run': 'run scoring', 'handoff.create': 'hand off prospects', 'nba.run': 'build next best actions',
   'review.decide': 'decide on recommendations', 'review.approve': 'approve sensitive items', 'segments.pause': 'pause segments',
-  'routing.transfer': 'move accounts between business units', 'validation.edit': 'change validation settings',
+  'routing.manage': 'change the routing rules', 'routing.transfer': 'move accounts between business units', 'validation.edit': 'change validation settings',
   'readout.signoff': 'sign off the readout', 'analytics.view': 'view Analytics', 'audit.view': 'view the audit log', 'session.use': 'use DemandAI',
 };

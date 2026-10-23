@@ -21,6 +21,7 @@ import { ApiError, api, errorText, uploadFile, waitForJob, type JobState, type W
 import { useDebounced } from '@/lib/client/use-debounced';
 import { usePaged } from '@/lib/client/use-paged';
 import { RenameField } from '@/components/RenameField';
+import { RoutingTab } from '@/components/RoutingTab';
 import { useCan } from '@/components/SessionContext';
 import type { ListDetail as ServerListDetail, ListSummary as ServerListSummary } from '@/lib/server/services/lists';
 import type { ActiveSignalSettings, ProspectDetail, ProspectRow, RunDetail as ServerRunDetail, RunSummary as ServerRunSummary } from '@/lib/server/services/scoring';
@@ -36,7 +37,7 @@ type SrcMode = 'saved' | 'upload';
 type StartTab = 'new' | 'saved' | 'monitor';
 type NewRunSettings = Omit<ActiveSignalSettings, 'configVersionId'>;
 type Monitoring = Omit<SignalMonitoring, 'types' | 'files'> & { types: Wire<MonitoredType>[]; files: Wire<MonitoredFile>[] };
-type View = 'ranked' | 'evidence';
+type View = 'ranked' | 'evidence' | 'routing';
 interface ChecksState { phase: 'running' | 'done' | 'failed'; stage: string; done: number; total: number; listName: string; fileName: string; asOf: string; run: RunDetail | null; error: string }
 
 /** A job that ended without a result: its message is written for the person. */
@@ -562,7 +563,8 @@ export function ScoringScreen() {
           <button className="btn btn-primary btn-sm" onClick={() => void sendToNBA()}>{`Send ${n ? n + ' selected' : 'tier A and B'} to NBA →`}</button>
         </div>
       </div>
-      <div className="ftabs">{ft('ranked', 'Ranked prospects', r.visible.prospects)}{ft('evidence', 'Signal evidence', r.visible.signals)}</div>
+      <div className="ftabs">{ft('ranked', 'Ranked prospects', r.visible.prospects)}{ft('evidence', 'Signal evidence', r.visible.signals)}
+        <div className={`ftab ${view === 'routing' ? 'active' : ''}`} onClick={() => { setView('routing'); setFilt('all'); setQ(''); }}>Routing</div></div>
       <div className="canvas">
         {tiersInfo()}
         <div className="stats">
@@ -576,7 +578,7 @@ export function ScoringScreen() {
         {r.signalSettings.off.length || r.signalSettings.custom.length ? <div style={sx('font-size:11.5px;color:var(--i3);margin:-4px 0 12px')}>{[
           r.signalSettings.off.length ? `Scored with ${r.signalSettings.off.join(', ')} switched off in Setup: those rows are rejected (OFF).` : '',
           r.signalSettings.custom.length ? `Signal types added in Setup: ${r.signalSettings.custom.map(c => c.name).join(', ')}.` : ''].filter(Boolean).join(' ')}</div> : null}
-        {view === 'ranked' ? rankedTab(r) : evidenceTab(r)}
+        {view === 'ranked' ? rankedTab(r) : view === 'routing' ? <RoutingTab runId={r.id} /> : evidenceTab(r)}
       </div>
     </>;
   }
