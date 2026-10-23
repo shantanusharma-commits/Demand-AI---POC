@@ -11,6 +11,7 @@ import { createDb, withTenant, type Db, type TenantContext } from '../../lib/ser
 import type { Actor } from '../../lib/server/services/lists.ts';
 import { changeItem, createItem, exportItem, getItem, listItems, saveBlocks, setContent, setReady, type ItemView } from '../../lib/server/services/studio.ts';
 import type { Block } from '../../lib/content/studio.ts';
+import { itemDetail } from '../../lib/server/services/recommendations.ts';
 import { HttpError } from '../../lib/server/http/errors.ts';
 import { freshDatabase, type TestDatabase } from './harness.ts';
 import { seedBasics, type Basics } from './fixtures.ts';
@@ -133,6 +134,9 @@ test('reps add library pieces to outreach messages: one, or every message with t
   const listed = (await as(admin(), s => listItems(s))).find(i => i.id === piece.id)!;
   assert.equal(listed.usage, same);
   assert.deepEqual((await as(admin(), s => listItems(s, { ready: true }))).map(i => i.id), [piece.id]);
+  const detail = await as(admin(), s => itemDetail(s, mgr(), target.id));
+  assert.deepEqual([detail.content.map(c => [c.id, c.status]), detail.sameAction, detail.can.content], [[[piece.id, 'Ready']], same - 1, true],
+    'the drawer shows what is attached and how many messages share the action');
   const log = await one(`SELECT decision, note FROM decision_log WHERE recommendation_id = $1 ORDER BY seq DESC LIMIT 1`, [target.id]);
   assert.match(`${log.decision} · ${log.note}`, new RegExp(`^Content added to the message · 1 piece\\(s\\), also added to ${same - 1} other message`));
   const task = await one(`SELECT r.id FROM recommendations r JOIN drafts d ON d.recommendation_id = r.id AND d.version = r.draft_version WHERE d.channel = 'Task' LIMIT 1`);

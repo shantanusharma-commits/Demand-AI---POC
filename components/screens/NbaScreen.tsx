@@ -11,6 +11,7 @@ import Link from 'next/link';
 import { CONFIG } from '@/lib/demandai-engine';
 import * as R from '@/lib/engine/review';
 import { sx } from '@/lib/sx';
+import { MessageBar } from '@/components/ContentPicker';
 import { api, errorText, type WireDeep } from '@/lib/client/api';
 import { showToast, initials, avColor } from '@/lib/ui';
 import { useCan } from '@/components/SessionContext';
@@ -393,6 +394,8 @@ export function NbaScreen() {
       {panel(x.channel === 'Task' ? 'Task for the team' : x.channel === 'LinkedIn' ? 'LinkedIn note' : 'Email', <span style={sx('display:flex;gap:6px')}>{st.edited ? <span className="tag tag-violet">Edited</span> : null}{x.version > 1 ? <span className="tag tag-grey">v{x.version}</span> : null}</span>, <>
         <div className="ar-to">{x.channel === 'Email' ? (c.email ? <>To <b>{c.email}</b> {c.emailVerified ? <span className="tag tag-green">Verified</span> : <span className="tag tag-amber">Not verified</span>}</> : <span className="tag tag-red">No email on file</span>)
           : x.channel === 'LinkedIn' ? <>To <b>{c.name}</b> on LinkedIn</> : 'Owned by a person'}</div>
+        {x.channel !== 'Task' ? <MessageBar recId={it.id} channel={x.channel} content={it.content} canEdit={it.can.content} seg={it.segOf} action={it.chosenAction} sameAction={it.sameAction}
+          who={`${c.name} · ${it.account.name}`} onChanged={() => void loadItem(it.id)} /> : null}
         {x.channel === 'Email' ? <>{field(x.subject || '')}{field(x.body || '', 8)}</> : x.channel === 'LinkedIn' ? field(x.note || '', 3) : field(x.task || '', 3)}
         <div className="ar-row">{st.status === 'Released' && x.channel !== 'Task' && !it.paused ? <button className="btn btn-primary btn-sm" onClick={() => copy(messageText)}>Copy the message</button> : null}
           {failing ? <span className="tag tag-red">✗ {it.checks.flags[0]?.rule || 'Claim with no source'}</span> : <span className="ar-ok">✓ Brand and claims pass</span>}</div>

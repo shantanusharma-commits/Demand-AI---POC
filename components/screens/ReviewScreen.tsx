@@ -19,6 +19,7 @@ import { useCan, useSessionUser } from '@/components/SessionContext';
 import type { LogRow, QueueRow } from '@/lib/server/services/review';
 import type { ItemDetail } from '@/lib/server/services/recommendations';
 import { SegTag } from './NbaScreen';
+import { MessageBar } from '@/components/ContentPicker';
 
 type Row = WireDeep<QueueRow>;
 type Item = WireDeep<ItemDetail>;
@@ -559,6 +560,8 @@ export function ReviewScreen() {
         <div className="wm-who"><b>{c.name}</b><span>{c.jobTitle}{c.persona ? ` · ${c.persona} persona` : ''}</span></div>
         <div className="wm-reach">{x.channel === 'Email' ? (c.email ? <>{c.email} {c.emailVerified ? <span className="tag tag-green">Verified</span> : <span className="tag tag-amber">Not verified</span>}</> : <span className="tag tag-red">No email on file</span>)
           : x.channel === 'LinkedIn' ? (c.linkedin ? <><span className="ws-sub">LinkedIn ·</span> {c.linkedin.replace(/^https?:\/\/(www\.)?/, '')}</> : 'LinkedIn connection note') : 'A task for the team'}</div></div>
+      {x.channel !== 'Task' ? <div style={sx('padding:8px 0 0')}><MessageBar recId={it.id} channel={x.channel} content={it.content} canEdit={it.can.content} seg={it.segOf} action={it.chosenAction} sameAction={it.sameAction}
+        who={`${c.name} · ${it.account.name}`} onChanged={() => { void api<{ item: Item }>(`/api/recommendations/${encodeURIComponent(it.id)}`).then(({ item }) => setWs(w => w && w.id === it.id && w.item ? { ...w, item: { ...w.item, content: item.content, sameAction: item.sameAction } } : w), err => showToast(errorText(err))); }} /></div> : null}
       {x.channel === 'Email' ? <><input id="dSubj" className="ws-in ws-subj" value={f.subject} readOnly={ro} aria-label="Subject" onChange={e => setField('subject', e.target.value)} />
         <div className="hl"><div className="hl-back ws-in ws-body" id="hlBack" aria-hidden="true">{highlighted(f.body, marks)}</div><textarea id="dBody" className="ws-in ws-body hl-ta" readOnly={ro} aria-label="Message" value={f.body} onChange={e => setField('body', e.target.value)} style={sx('min-height:160px')} rows={Math.max(8, f.body.split('\n').length + 1)} /></div></>
         : x.channel === 'LinkedIn' ? <div className="hl"><div className="hl-back ws-in" id="hlBack" aria-hidden="true">{highlighted(f.note, marks)}</div><textarea id="dNote" className="ws-in hl-ta" style={sx('min-height:96px')} readOnly={ro} aria-label="Connection note" value={f.note} onChange={e => setField('note', e.target.value)} /></div>

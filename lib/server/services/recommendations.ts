@@ -10,7 +10,7 @@ import {
   approvedClaims, briefFor, checkDraft, confidenceFor, draftFor, estimateDealSize, type BrandPack, type CheckResult, type Claim, type Draft, type NbaContact, type Rec,
 } from '../../engine/nba.ts';
 import * as R from '../../engine/review.ts';
-import { brandVersions, decisionLog, drafts, nbaRuns, recommendations, segmentPauses, SYSTEM_USER_ID, users } from '../db/schema.ts';
+import { brandVersions, decisionLog, drafts, nbaRuns, recommendations, segmentPauses, studioItems, SYSTEM_USER_ID, users } from '../db/schema.ts';
 import type { TenantScope } from '../db/tenant.ts';
 import { conflict, notFound } from '../http/errors.ts';
 import { currentLogContext, logger } from '../logger.ts';
@@ -195,6 +195,14 @@ export async function itemDetail(scope: TenantScope, actor: Actor, id: string) {
   const reachOf = (c: NbaContact) => ({ name: c.name, firstName: c.firstName || '', jobTitle: c.jobTitle || '', persona: c.persona || '', email: c.email || '',
     emailVerified: !!c.emailVerified, linkedin: c.linkedin || '', row: c.row ?? null });
   const by = await namesOf(scope, [row.decidedBy, row.approvedBy, row.holdBy]);
+  // Content studio pieces added to the message, and how many other messages share its action in the micro-segment.
+  const attached = row.content?.length ? await scope.tx.select({ id: studioItems.id, title: studioItems.title, type: studioItems.type, status: studioItems.status }).from(studioItems)
+    .where(and(eq(studioItems.businessUnitId, scope.ctx.businessUnitId), inArray(studioItems.id, row.content))) : [];
+  const peers = seg ? await scope.tx.select({ id: recommendations.id, rec: recommendations.rec, segment: recommendations.segment, assignedSegment: recommendations.assignedSegment,
+    useRunnerUp: recommendations.useRunnerUp, manualAction: recommendations.manualAction }).from(recommendations)
+    .where(and(eq(recommendations.nbaRunId, row.nbaRunId), eq(recommendations.businessUnitId, scope.ctx.businessUnitId), ownerOnly(scope, recommendations.ownerEmail), sql`${recommendations.id} <> ${row.id}`)) : [];
+  const sameAction = peers.filter(p => { const st2 = { assignedSegment: p.assignedSegment, useRunnerUp: p.useRunnerUp, manualAction: p.manualAction }, r2 = p.rec as Rec;
+    return R.segOf(r2, st2) === seg && R.chosenAction(r2, st2) === action; }).length;
   return {
     id: row.id, run: { id: run.id, name: run.name, asOf: run.asOf, segments: run.segments.map(s => s.name) }, key: row.engineKey, position: row.position,
     // The brand pack and date the checks use, so an edit is checked live as it is typed (the server checks again on saving).
@@ -222,7 +230,9 @@ export async function itemDetail(scope: TenantScope, actor: Actor, id: string) {
     paused: paused ? { by: paused.by, at: paused.at } : null,
     people, claims: approvedClaims(item.pack).filter(c => (c.segments || []).includes(claimSeg)).map((c: Claim) => ({ id: c.id, title: c.title, type: c.type, year: c.year, claim: c.claim, expiry: c.expiry })),
     reps: manager ? await unitReps(scope) : [],
+    content: row.content.map(cid => attached.find(a => a.id === cid)).filter((a): a is (typeof attached)[number] => !!a), sameAction,
     can: {
+      content: (item.draft.draft.channel === 'Email' || item.draft.draft.channel === 'LinkedIn') && mine && !paused,
       decide: R.inQueue(state) && mine && !paused,
       approve: state.status === 'Awaiting approval' && manager && !paused,
       swap: state.status === 'Released' && !state.outcome && mine && !paused && !!rec.runnerUp,

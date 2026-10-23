@@ -4,8 +4,9 @@
    Changes wait in the unit's draft; "Save as vN" makes the next version and earlier ones are kept, and can be
    restored. Approved claims carry an owner and an expiry: an expired claim fails the draft checks. Admin and Sales
    manager change it; everyone else with the screen sees it. Each claim shows where it was used in micro-segment drafts,
-   and "From For Review" lists sentences people approved that are not claims yet. Not ported yet: the Content tab
-   (Content studio, Phase 5e). The "after the pilot" calls to action are not shown (dead controls, G-063). */
+   and "From For Review" lists sentences people approved that are not claims yet. The Content tab lists the pieces
+   written in Content studio, and each claim says which pieces cite it. The "after the pilot" calls to action (and the
+   sign-off column) are not shown (dead controls, G-063). */
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { VOICE_PRESETS, type BrandPack, type Claim, type Framework } from '@/lib/engine/nba';
 import { CLAIM_TYPES, applySuggestion, claimFits, claimStatus, nextClaimId, readRules, type ClaimStatus, type RuleSuggestion } from '@/lib/content/brand';
@@ -14,14 +15,16 @@ import { sx } from '@/lib/sx';
 import { ApiError, api, errorText, uploadFile, type WireDeep } from '@/lib/client/api';
 import { useCan, useSessionUser } from '@/components/SessionContext';
 import type { BrandState, ClaimUse, FromReview } from '@/lib/server/services/brand';
+import type { ItemSummary } from '@/lib/server/services/studio';
 
 type Brand = WireDeep<BrandState>;
-type Tab = 'guidelines' | 'framework' | 'voice' | 'negative' | 'claims' | 'versions';
+type Tab = 'guidelines' | 'framework' | 'voice' | 'negative' | 'claims' | 'content' | 'versions';
 type Guideline = { documentId: string; name: string; size: number; at: string; by: string };
 type Modal = { kind: 'changes' } | { kind: 'discard' } | { kind: 'restore'; versionNo: number } | { kind: 'claim'; pre?: string } | { kind: 'fromReview' } | { kind: 'framework'; index: number } | { kind: 'sample'; id: string };
 type Usage = WireDeep<{ use: Record<string, ClaimUse[]>; fromReview: FromReview[] }>;
+type Piece = WireDeep<ItemSummary>;
 
-const TABS: [Tab, string][] = [['guidelines', 'Brand guidelines'], ['framework', 'Messaging frameworks'], ['voice', 'Voice and tone'], ['negative', 'Negative keywords'], ['claims', 'Approved claims'], ['versions', 'Versions']];
+const TABS: [Tab, string][] = [['guidelines', 'Brand guidelines'], ['framework', 'Messaging frameworks'], ['voice', 'Voice and tone'], ['negative', 'Negative keywords'], ['claims', 'Approved claims'], ['content', 'Content'], ['versions', 'Versions']];
 const SECTION_OF: Record<string, Tab> = { 'Brand guidelines': 'guidelines', 'Messaging frameworks': 'framework', 'Voice and tone': 'voice', 'Negative keywords': 'negative', 'Approved claims': 'claims' };
 const USE = ['Often', 'Sometimes', 'Rarely', 'Not used'];
 const USE_TONE: Record<string, string> = { Often: 'tag-green', Sometimes: 'tag-blue', Rarely: 'tag-amber', 'Not used': 'tag-grey' };
@@ -179,6 +182,8 @@ export function ContentScreen() {
   const [fwf, setFwf] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [usage, setUsage] = useState<Usage | null>(null);
+  const [pieces, setPieces] = useState<Piece[] | null>(null);
+  const [ctf, setCtf] = useState<string | null>(null);
   const formRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -187,6 +192,8 @@ export function ContentScreen() {
     api<{ brand: Brand }>('/api/brand').then(r => { if (live) { setBrand(r.brand); if (TABS.some(([k]) => k === t)) setTab(t as Tab); } }, e => { if (live) setLoadError(errorText(e)); });
     // Where each claim was used in micro-segment drafts (5b); the tab works without it.
     api<Usage>('/api/brand/claims/usage').then(u => { if (live) setUsage(u); }, () => { /* shown as not used yet */ });
+    // Content studio's pieces (D-36): the Content tab, and which pieces cite each claim.
+    api<{ items: Piece[] }>('/api/studio/items').then(r => { if (live) setPieces(r.items); }, () => { if (live) setPieces([]); });
     return () => { live = false; };
   }, []);
   const reload = async () => setBrand((await api<{ brand: Brand }>('/api/brand')).brand);
@@ -362,6 +369,8 @@ export function ContentScreen() {
       {([['Source', `${c.title} · ${c.type}, ${c.year}`], ['Topics it fits', (c.segments || []).join(', ')], ['Owner', c.owner || '—'], ['Expires', c.expiry]] as [string, string][]).map(([k, v]) => <div key={k} className="cl-kv"><span>{k}</span><b>{v}</b></div>)}
       {(() => { const uses = usesOf(c), out = uses.filter(u => u.out); return <div className="cl-kv"><span>Where it was used</span><b>{uses.length ? `${uses.length} drafted message${uses.length === 1 ? '' : 's'}, ${out.length} sent` : 'Not used yet'}</b>
         {uses.slice(0, 5).map((u, k) => <div key={k} className="cl-u">{`${u.who} · ${u.account}`}<span>{`${fmtDay(u.at)}${u.out ? ' · sent' : ''}`}</span></div>)}{uses.length > 5 ? <div className="cl-s">{`and ${uses.length - 5} more`}</div> : null}</div>; })()}
+      {(() => { const ps = (pieces ?? []).filter(p => p.cited.includes(c.id)); return <div className="cl-kv"><span>In content</span><b>{ps.length ? `${ps.length} piece${ps.length === 1 ? '' : 's'}` : 'None yet'}</b>
+        {ps.map(p => <div key={p.id} className="cl-u"><a href={`/studio?item=${p.id}`} style={sx('color:var(--brand-dk);text-decoration:none')}>{p.title}</a><span>{p.status === 'Ready' ? 'in the library' : 'draft'}</span></div>)}</div>; })()}
       {afterExpiry(c) ? <div className="cl-alert">{`Used ${afterExpiry(c)} time${afterExpiry(c) === 1 ? '' : 's'} after it expired on ${c.expiry}. Renew the source or retire the claim.`}</div>
         : st === 'Expired' ? <div className="cl-alert">{`Expired on ${c.expiry}: drafts that cite it fail the claim check. Renew the source and its date, or retire the claim.`}</div> : null}
       {canEdit ? <div className="cl-act">
@@ -409,6 +418,31 @@ export function ContentScreen() {
   }
 
   /* ─── Versions: every save, who made it, and exactly what changed; an earlier one can be restored ─── */
+  /* Content: the pieces written in Content studio; those in the library are what reps add to messages. */
+  function contentTab(): ReactNode {
+    const all = pieces ?? [], inLib = all.filter(p => p.status === 'Ready'), drafts = all.filter(p => p.status !== 'Ready');
+    const used = all.reduce((n, p) => n + p.usage, 0), citing = inLib.filter(p => p.cited.length).length;
+    const list = ctf === 'draft' ? drafts : ctf === 'used' ? all.filter(p => p.usage) : inLib;
+    const tile = (f: string | null, l: string, v: number, sub: string) => <a key={f ?? 'lib'} className={'stat stat-link' + (ctf === f ? ' on' : '')} href="#" onClick={e => { e.preventDefault(); setCtf(ctf === f ? null : f); }}>
+      <div className="stat-lbl">{l}</div><div className="stat-val">{v}</div><div className="stat-sub">{sub}</div></a>;
+    return <>
+      <div className="stats" style={sx('grid-template-columns:repeat(4,1fr);margin-bottom:16px')}>
+        {tile(null, 'In the library', inLib.length, `${inLib.filter(p => p.type === 'blog').length} blogs · ${inLib.filter(p => p.type === 'whitepaper').length} whitepapers`)}
+        {tile('draft', 'Drafts in Content studio', drafts.length, 'not in the library yet')}
+        {tile('used', 'In messages', used, 'added by reps')}
+        <div className="stat"><div className="stat-lbl">Cite approved claims</div><div className="stat-val">{citing}</div><div className="stat-sub">of {inLib.length} in the library</div></div></div>
+      {card(ctf === 'draft' ? 'Drafts in Content studio' : ctf === 'used' ? 'Content in messages' : 'Content in the library', <a className="btn btn-sec btn-sm" href="/studio" style={sx('text-decoration:none')}>✎ Write in Content studio</a>,
+        !pieces ? <div className="cl-s">Loading…</div> : list.length ? <table className="dt" style={sx('table-layout:auto')}><thead><tr><th>Content</th><th>Status</th><th>Claims it cites</th><th className="num">In messages</th><th /></tr></thead><tbody>
+          {list.map(p => <tr key={p.id}>
+            <td><span className="dt-main">{p.title}</span><span className="sub">{p.type === 'whitepaper' ? 'Whitepaper' : 'Blog'} · {p.updatedBy}, {fmtDay(p.updatedAt)}</span></td>
+            <td>{p.status === 'Ready' ? <span className="tag tag-green">In the library</span> : <span className="tag tag-grey">Draft</span>}{p.issues ? <div className="cl-warn">{`${p.issues} check${p.issues > 1 ? 's' : ''} to fix`}</div> : null}<div className="cl-s">Brand v{p.brandVersionNo}</div></td>
+            <td>{p.cited.length ? p.cited.join(' ') : <span className="cl-s">No product claims</span>}</td>
+            <td className="num">{p.usage}</td>
+            <td style={sx('text-align:right;white-space:nowrap')}><a className="btn btn-ghost btn-sm" href={`/studio?item=${p.id}`} style={sx('text-decoration:none')}>Open</a>{' '}
+              <a className="btn btn-sec btn-sm" href={`/api/studio/items/${p.id}/docx`} style={sx('text-decoration:none')}>↓ Word</a></td></tr>)}
+        </tbody></table> : <div className="cl-s" style={sx('padding:6px 0')}>{ctf === 'draft' ? 'No drafts.' : ctf === 'used' ? 'No content in messages yet.' : 'Nothing in the library yet. Write a piece in Content studio and add it to the library when its checks pass.'}</div>)}
+    </>;
+  }
   const versionsTab = (): ReactNode => card('Versions', <span style={sx('font-size:11px;color:var(--i2)')}>{`In use: Brand v${liveV}`}</span>, <>
     <div style={sx('font-size:12px;color:var(--i2);margin-bottom:10px')}>Each save is a new version: guidelines, messaging frameworks, voice, keywords and claims together. Only the latest reaches new drafts; earlier versions are kept, and restoring one makes it the latest again.</div>
     {brand.versions.map(h => { const open = openVersion === h.versionNo, kickoff = h.versionNo === 1 && !h.restoredFrom;
@@ -463,7 +497,7 @@ export function ContentScreen() {
         <span style={sx('display:flex;gap:8px')}>{close}<button className="btn btn-primary btn-sm" onClick={() => saveFramework(m.index)}>Done</button></span></div></>;
   }
 
-  const body: Record<Tab, () => ReactNode> = { guidelines: guidelinesTab, framework: frameworkTab, voice: voiceTab, negative: negativeTab, claims: claimsTab, versions: versionsTab };
+  const body: Record<Tab, () => ReactNode> = { guidelines: guidelinesTab, framework: frameworkTab, voice: voiceTab, negative: negativeTab, claims: claimsTab, content: contentTab, versions: versionsTab };
   return <>
     <main className="main" id="mainArea">
       <div className="topbar"><div className="topbar-l"><span className="tb-title">Content library</span><span className="tb-badge badge-neutral">{`Brand v${liveV}`}</span></div></div>
