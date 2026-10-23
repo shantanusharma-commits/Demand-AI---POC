@@ -1,6 +1,6 @@
 // The AI classifier inside the lead job (spec 3.4, G-021, D-5): the accounts whose industry the mapping table can't
-// match are asked about once per industry text and unit, the answers kept (ai_verticals) so every rebuild of the list
-// agrees, and the list is then built again with them. Off, unanswered or failing, the rules stand: "Other, for review".
+// match are asked about once per industry text, unit and model, the answers kept (ai_verticals) so every rebuild of
+// the list agrees, and the list is then built again with them. Off, unanswered or failing, the rules stand: "Other, for review".
 import 'server-only';
 import { and, eq, inArray } from 'drizzle-orm';
 import { classifyIndustries, CLASSIFY_TEMPLATE, type IndustryText } from '../../ai/classify.ts';
@@ -33,12 +33,13 @@ export async function classifyStep(db: Db, ctx: TenantContext, ai: AiGateway, re
   if (!ai.enabled('classify')) return null;
   const ask = unmatchedIndustries(result);
   if (!ask.length) return null;
-  const keys = ask.map(a => a.key);
+  const keys = ask.map(a => a.key), d = ai.describe(), model = `${d.provider}:${d.deployment ?? ''}`;
   const kept = await withTenant(db, ctx, async s => {
     const rows: { key: string; vertical: string; confidence: string; reason: string }[] = [];
     for (const part of chunks(keys, 500)) {
       rows.push(...await s.tx.select({ key: aiVerticals.industryKey, vertical: aiVerticals.vertical, confidence: aiVerticals.confidence, reason: aiVerticals.reason })
-        .from(aiVerticals).where(and(eq(aiVerticals.businessUnitId, ctx.businessUnitId), eq(aiVerticals.templateVersion, CLASSIFY_TEMPLATE.version), inArray(aiVerticals.industryKey, part))));
+        .from(aiVerticals).where(and(eq(aiVerticals.businessUnitId, ctx.businessUnitId), eq(aiVerticals.templateVersion, CLASSIFY_TEMPLATE.version), eq(aiVerticals.model, model),
+          inArray(aiVerticals.industryKey, part))));
     }
     return rows;
   }, { label: 'ai.verticals.read' });
@@ -50,7 +51,7 @@ export async function classifyStep(db: Db, ctx: TenantContext, ai: AiGateway, re
     step.answered = fresh.answers.size;
     step.fallbacks = fresh.fallbacks as Record<string, number>;
     if (fresh.answers.size) {
-      const rows = [...fresh.answers].map(([key, a]) => ({ businessUnitId: ctx.businessUnitId, industryKey: key, templateVersion: CLASSIFY_TEMPLATE.version,
+      const rows = [...fresh.answers].map(([key, a]) => ({ businessUnitId: ctx.businessUnitId, industryKey: key, templateVersion: CLASSIFY_TEMPLATE.version, model,
         vertical: a.vertical, confidence: a.confidence, reason: a.reason, aiCallId: a.callId, createdBy: ctx.userId }));
       await withTenant(db, ctx, async s => {
         for (const part of chunks(rows, 500)) await s.tx.insert(aiVerticals).values(part).onConflictDoNothing();

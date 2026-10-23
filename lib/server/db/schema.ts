@@ -1113,14 +1113,16 @@ export const aiCalls = pgTable('ai_calls', {
   index('ai_calls_bu_capability_idx').on(t.businessUnitId, t.capability, t.createdAt),
 ]);
 
-/** The AI classifier's answer for an industry text the mapping table doesn't match, kept per unit and template
- *  version so every rebuild of a list (corrections replayed) reads the same answer instead of asking again. */
+/** The AI classifier's answer for an industry text the mapping table doesn't match, kept per unit, template version
+ *  and model so every rebuild of a list (corrections replayed) reads the same answer instead of asking again. */
 export const aiVerticals = pgTable('ai_verticals', {
   id: uuid('id').primaryKey().defaultRandom(),
   businessUnitId: uuid('business_unit_id').notNull().references(() => businessUnits.id),
   /** industryKey(industry, site process): the two texts as the lookup reads them. */
   industryKey: text('industry_key').notNull(),
   templateVersion: integer('template_version').notNull(),
+  /** The provider and deployment that answered: another model asks again. */
+  model: text('model').notNull().default(''),
   vertical: text('vertical').notNull(),
   confidence: text('confidence').notNull(),
   reason: text('reason').notNull(),
@@ -1130,7 +1132,7 @@ export const aiVerticals = pgTable('ai_verticals', {
   createdBy: createdBy(),
 }, t => [
   check('ai_verticals_confidence_check', sql`${t.confidence} in ('high', 'medium', 'low')`),
-  uniqueIndex('ai_verticals_bu_key_version_key').on(t.businessUnitId, t.industryKey, t.templateVersion),
+  uniqueIndex('ai_verticals_bu_key_version_key').on(t.businessUnitId, t.industryKey, t.templateVersion, t.model),
 ]);
 
 /** A run of Autopilot (G-013, the legacy Copilot contract): what a person asked it to do, what it did and what it

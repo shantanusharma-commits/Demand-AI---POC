@@ -122,6 +122,11 @@ test('the lead job asks about each unmatched industry text once, keeps the answe
     const second = await listAccounts(await uploadSample());
     assert.equal(fake.requests.length, asked, 'no new model call: the kept answers are used');
     assert.deepEqual([second.ai, second.review], [first.ai, first.review], 'the same answers');
+    // Another model is asked again: its answers are its own.
+    const other = new FakeModel([], { otherwise: sensibleClassifier, deployment: 'another-deployment' });
+    setAiGatewayForTests(fakeGateway(app, other));
+    await uploadSample();
+    assert.equal(other.requests.length, asked);
   } finally { setAiGatewayForTests(undefined); }
 });
 

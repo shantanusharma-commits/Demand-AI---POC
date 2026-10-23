@@ -253,6 +253,13 @@
       "when": 1792793485589,
       "tag": "0035_autopilot_security",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1792795346892,
+      "tag": "0036_ai_verticals_model",
+      "breakpoints": true
     }
   ]
 }
