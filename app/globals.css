@@ -1098,3 +1098,60 @@ mark.k-brand{background:#E8DDF4;color:inherit;border-radius:3px;box-shadow:0 0 0
 .cp-f{display:flex;align-items:center;gap:10px;padding:12px 20px;border-top:1px solid var(--border);background:var(--s50);}
 .cp-f span{flex:1;font-size:12.5px;color:var(--i1);}
 @media (max-width:1100px){ .cp-b{grid-template-columns:1fr 1fr;} .cp-col.cp-pv{display:none;} }
+
+/* ─── Copilot side panel (G-013; from legacy demandai-copilot.js, scoped under .copilot) ─── */
+.copilot{position:fixed;top:0;right:0;bottom:0;width:420px;max-width:100vw;background:var(--surf);border-left:1px solid var(--border);box-shadow:-8px 0 32px rgba(20,26,33,.10);z-index:650;display:flex;flex-direction:column;font-family:var(--fb);animation:fadeUp .18s ease;}
+.copilot .cpp-h{display:flex;align-items:center;gap:10px;padding:12px 10px 12px 16px;border-bottom:1px solid var(--border);min-height:58px;}
+.copilot .cpp-logo{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,#9B6BC6,var(--brand-dk));color:#fff;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;font-size:15px;}
+.copilot .cpp-logo.sm{width:24px;height:24px;border-radius:7px;font-size:12px;}
+.copilot .cpp-ht{flex:1;min-width:0;}
+.copilot .cpp-t{font-size:14px;font-weight:700;color:var(--i1);line-height:1.2;}
+.copilot .cpp-s{font-size:11.5px;color:var(--i3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px;}
+.copilot .cpp-tool{width:32px;height:32px;border-radius:8px;border:none;background:transparent;color:var(--i2);cursor:pointer;font-size:14px;}
+.copilot .cpp-tool:hover{background:var(--s75);color:var(--i1);}
+.copilot .cpp-b{flex:1;overflow-y:auto;padding:18px 18px 8px;display:flex;flex-direction:column;gap:14px;}
+.copilot .cpp-me{align-self:flex-end;max-width:86%;padding:9px 13px;background:var(--brand-lt);color:var(--i1);border-radius:16px 16px 4px 16px;font-size:13px;line-height:1.5;white-space:pre-wrap;word-break:break-word;}
+.copilot .cpp-ai{display:flex;gap:10px;align-items:flex-start;}
+.copilot .cpp-ai-b{flex:1;min-width:0;font-size:13px;color:var(--i1);line-height:1.6;padding-top:2px;}
+.copilot .cpp-ai-b p{margin:0 0 8px;}
+.copilot .cpp-ai-b p:last-child{margin-bottom:0;}
+.copilot .cpp-ai-b ul,.copilot .cpp-ai-b ol{margin:4px 0 8px;padding-left:18px;}
+.copilot .cpp-ai-b li{margin:2px 0;}
+.copilot .cpp-muted{color:var(--i3);font-size:12px;}
+.copilot .cpp-sub{color:var(--i3);font-size:11.5px;}
+.copilot .cpp-err{color:var(--neg);font-size:12px;}
+.copilot .cpp-rows{display:flex;flex-direction:column;margin:4px 0 8px;}
+.copilot .cpp-row{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:7px 0;border-top:1px solid var(--s75);text-decoration:none;color:inherit;font-size:12px;}
+.copilot .cpp-row:hover b{color:var(--brand-dk);}
+.copilot .cpp-card{border:1px solid var(--border);border-radius:10px;margin:8px 0;overflow:hidden;}
+.copilot .cpp-tbl{width:100%;border-collapse:collapse;font-size:12px;}
+.copilot .cpp-tbl th{text-align:left;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--i3);padding:6px 10px;}
+.copilot .cpp-tbl td{padding:7px 10px;border-top:1px solid var(--s75);vertical-align:top;color:var(--i1);}
+.copilot .cpp-plan{padding:10px 12px;}
+.copilot .cpp-plan ul{margin:4px 0 8px;padding-left:18px;font-size:12px;}
+.copilot .cpp-plan-h{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-top:4px;}
+.copilot .cpp-plan-h.ok{color:var(--pos);}
+.copilot .cpp-plan-h.warn{color:var(--warn);}
+.copilot .cpp-act{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;}
+.copilot .cpp-typing{display:inline-flex;gap:4px;padding:8px 0;}
+.copilot .cpp-typing i{width:6px;height:6px;border-radius:50%;background:var(--brand-mid);animation:cppDot 1s infinite ease-in-out;}
+.copilot .cpp-typing i:nth-child(2){animation-delay:.15s;}
+.copilot .cpp-typing i:nth-child(3){animation-delay:.3s;}
+@keyframes cppDot{0%,80%,100%{opacity:.3;transform:translateY(0);}40%{opacity:1;transform:translateY(-3px);}}
+.copilot .cpp-follow{display:flex;flex-direction:column;gap:6px;margin-left:34px;}
+.copilot .cpp-follow button{align-self:flex-start;max-width:100%;padding:6px 11px;border:1px solid var(--border);border-radius:999px;background:var(--surf);color:var(--i2);font-size:12px;cursor:pointer;text-align:left;}
+.copilot .cpp-follow button:hover{border-color:var(--brand-mid);color:var(--brand-dk);}
+.copilot .cpp-hello{margin:auto 0;display:flex;flex-direction:column;gap:8px;padding:8px 2px 4px;}
+.copilot .cpp-hello-t{font-family:var(--fd);font-size:17px;font-weight:700;color:var(--i1);line-height:1.3;}
+.copilot .cpp-hello-s{font-size:12.5px;color:var(--i2);line-height:1.5;}
+.copilot .cpp-sugg{display:flex;flex-direction:column;margin-top:10px;border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+.copilot .cpp-sugg button{padding:11px 14px;border:none;border-top:1px solid var(--s75);background:var(--surf);color:var(--i1);font-size:12.5px;text-align:left;cursor:pointer;}
+.copilot .cpp-sugg button:first-child{border-top:none;}
+.copilot .cpp-sugg button:hover{background:#FCFAFE;}
+.copilot .cpp-f{padding:10px 14px 12px;border-top:1px solid var(--border);}
+.copilot .cpp-comp{display:flex;align-items:flex-end;gap:8px;border:1px solid var(--bdk);border-radius:14px;padding:6px 6px 6px 14px;}
+.copilot .cpp-comp:focus-within{border-color:var(--brand-mid);box-shadow:0 0 0 3px var(--brand-lt);}
+.copilot .cpp-comp textarea{flex:1;min-width:0;border:none;outline:none;resize:none;font-family:var(--fb);font-size:13px;line-height:1.5;padding:6px 0;max-height:140px;background:transparent;color:var(--i1);}
+.copilot .cpp-send{width:32px;height:32px;border-radius:10px;border:none;background:var(--brand);color:#fff;cursor:pointer;flex-shrink:0;}
+.copilot .cpp-send.busy{background:var(--i1);}
+.copilot .cpp-foot{font-size:10.5px;color:var(--i3);margin-top:6px;text-align:center;}

@@ -10,6 +10,7 @@ import Link from 'next/link';
 import * as R from '@/lib/engine/review';
 import { gateLabel, type Gate } from '@/lib/engine/gates';
 import { sx } from '@/lib/sx';
+import { CopilotButton } from '@/components/Copilot';
 import { api, errorText, type WireDeep } from '@/lib/client/api';
 import { showToast } from '@/lib/ui';
 import { useSessionUser } from '@/components/SessionContext';
@@ -87,7 +88,8 @@ export function TodayScreen() {
   const dateLine = v ? new Date(now).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' }) : '';
 
   const head = <div className="topbar"><div className="topbar-l"><span className="tb-title">Today</span><span style={sx('font-size:12px;color:var(--i3);margin-left:10px')}>{dateLine}</span></div>
-    <div className="topbar-r"><button className="btn btn-ghost btn-sm" title="How Today works" aria-label="How Today works" onClick={openGuide}
+    <div className="topbar-r"><CopilotButton screen="today" ctxRef={{}} title="Today's work" />
+      <button className="btn btn-ghost btn-sm" title="How Today works" aria-label="How Today works" onClick={openGuide}
       style={sx('width:28px;height:28px;padding:0;justify-content:center;border-radius:50%;border:1px solid var(--bdk);font-weight:700;margin-right:4px')}>?</button></div></div>;
 
   function body(): ReactNode {

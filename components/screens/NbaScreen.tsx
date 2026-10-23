@@ -17,6 +17,7 @@ import { AiTag, aiShare } from '@/components/AiTag';
 import { showToast, initials, avColor } from '@/lib/ui';
 import { useCan } from '@/components/SessionContext';
 import { RenameField } from '@/components/RenameField';
+import { CopilotButton } from '@/components/Copilot';
 import type { BuildSource, BuildStep, NbaRunSummary, RecRowView } from '@/lib/server/services/nba';
 import type { getNbaRun } from '@/lib/server/services/nba';
 import type { ItemDetail } from '@/lib/server/services/recommendations';
@@ -285,7 +286,8 @@ export function NbaScreen() {
     return <>
       <div className="topbar">
         <div className="topbar-l"><span className="tb-title">{r.name}</span><span className="tb-badge badge-neutral">{`Config v${r.configVersionNo ?? '—'} · Brand v${r.brandVersionNo} · as of ${r.asOf}`}</span></div>
-        <div className="topbar-r"><button className="btn btn-sec btn-sm" onClick={() => { setScreen('start'); setRun(null); setDrawer(null); setTab('new'); void reloadRuns(); }}>
+        <div className="topbar-r"><CopilotButton screen="nba" ctxRef={drawer ? { itemId: drawer.id } : { nbaRunId: r.id }} title={drawer?.item ? `${drawer.item.contact.name} · ${drawer.item.account.name}` : r.name}
+          onChanged={() => { void loadRun(r.id); if (drawer) void loadItem(drawer.id); }} /><button className="btn btn-sec btn-sm" onClick={() => { setScreen('start'); setRun(null); setDrawer(null); setTab('new'); void reloadRuns(); }}>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="15 18 9 12 15 6" /></svg>Group another list</button></div>
       </div>
       <div className="ftabs">{ft('grid', 'Micro-segments', r.segments.length)}{ft('list', 'Recommendations', recs.length)}</div>

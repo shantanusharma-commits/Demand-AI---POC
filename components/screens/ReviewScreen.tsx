@@ -21,6 +21,7 @@ import type { ItemDetail } from '@/lib/server/services/recommendations';
 import { AI_DRAFT, SegTag } from './NbaScreen';
 import { AiTag } from '@/components/AiTag';
 import { MessageBar } from '@/components/ContentPicker';
+import { CopilotButton } from '@/components/Copilot';
 
 type Row = WireDeep<QueueRow>;
 type Item = WireDeep<ItemDetail>;
@@ -418,7 +419,7 @@ export function ReviewScreen() {
     return <>
       <div className="topbar">
         <div className="topbar-l"><span className="tb-title">For Review</span><span className="tb-badge badge-neutral">{mgr ? 'Everyone\'s items' : 'Your items · ' + me.displayName}</span></div>
-        <div className="topbar-r"><div style={sx('position:relative')}>
+        <div className="topbar-r"><CopilotButton screen="review" ctxRef={{}} title={mgr ? "Everyone's queue" : 'Your queue'} onChanged={() => void loadQueue()} /><div style={sx('position:relative')}>
           <button className="btn btn-sec btn-sm" aria-expanded={exportOpen} onClick={e => { e.stopPropagation(); setExportOpen(o => !o); }}>Export <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="6 9 12 15 18 9" /></svg></button>
           {exportOpen ? <div style={sx('position:absolute;right:0;top:34px;width:270px;background:var(--surf);border:1px solid var(--border);border-radius:var(--rmd);box-shadow:var(--sh-lg);padding:6px;z-index:250')}>
             {[['released-messages', 'Released messages', 'Emails and LinkedIn messages ready to use'], ['tasks', 'Tasks for the team', 'Calls and follow-ups owned by a person'], ['decision-log', 'Decision log', 'Who decided what, when and why']].map(([k, t, d]) =>
@@ -463,7 +464,7 @@ export function ReviewScreen() {
     const fromLbl = { queue: mgr ? 'Queue' : 'My queue', approvals: 'Approvals', log: 'Decision log' }[w.from];
     const top = <div className="topbar">
       <div className="topbar-l"><nav className="ws-crumb"><a href="#" onClick={e => { e.preventDefault(); leave(); }}>For Review</a><span>›</span><a href="#" onClick={e => { e.preventDefault(); leave(); }}>{fromLbl}</a><span>›</span><b>{it ? `${it.contact.name} · ${it.account.name}` : 'Loading…'}</b></nav></div>
-      <div className="topbar-r"><span className="ws-sub">{n > 1 ? `${i + 1} of ${n}` : ''}</span>
+      <div className="topbar-r"><CopilotButton screen="review" ctxRef={{ itemId: w.id }} title={it ? `${it.contact.name} · ${it.account.name}` : 'This item'} onChanged={() => void reloadItem(w.id)} /><span className="ws-sub">{n > 1 ? `${i + 1} of ${n}` : ''}</span>
         <button className="btn btn-sec btn-sm" disabled={i <= 0} onClick={() => go(-1)} title="Previous (←)">‹</button>
         <button className="btn btn-sec btn-sm" disabled={i >= n - 1} onClick={() => go(1)} title="Next (→)">›</button>
         <button className="btn btn-ghost btn-sm" onClick={leave} title="Back to the list (Esc)">✕ Close</button></div>

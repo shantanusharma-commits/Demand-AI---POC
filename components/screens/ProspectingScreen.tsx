@@ -22,6 +22,7 @@ import { useDebounced } from '@/lib/client/use-debounced';
 import { usePaged } from '@/lib/client/use-paged';
 import { RenameField } from '@/components/RenameField';
 import { AiTag } from '@/components/AiTag';
+import { CopilotButton } from '@/components/Copilot';
 import type { AccountRow as AccountRowData, ContactRow as ContactRowData, ListDetail as ServerListDetail, ListSummary as ServerListSummary } from '@/lib/server/services/lists';
 import type { CorrectionRow, CorrectionSummary, EditRow } from '@/lib/server/services/corrections';
 import type { Account, Contact, DqCode, Issue } from '@/types/demandai';
@@ -516,6 +517,7 @@ export function ProspectingScreen() {
         <div className="topbar-l"><span className="tb-title">{r.status === 'saved' ? r.name : r.sourceFile}</span>
           <span className="tb-badge badge-neutral">{r.sheet}</span></div>
         <div className="topbar-r">
+          <CopilotButton screen="prospecting" ctxRef={{ listId: r.id }} title={r.status === 'saved' ? r.name : r.sourceFile} />
           <button className="btn btn-sec btn-sm" onClick={() => renderStart('upload')}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>Upload a different file</button>
           <button className="btn btn-sec btn-sm" onClick={() => openSave(false)} {...off}>{r.status === 'saved' ? 'Saved ✓' : 'Save list'}</button>
           <button id="goScoring" className="btn btn-primary btn-sm" onClick={() => openSave(true, sel.size > 0)} {...off}>{n ? `Send ${n} selected to Scoring →` : 'Save and go to Scoring →'}</button>

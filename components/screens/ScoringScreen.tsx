@@ -23,6 +23,7 @@ import { usePaged } from '@/lib/client/use-paged';
 import { RenameField } from '@/components/RenameField';
 import { RoutingTab } from '@/components/RoutingTab';
 import { AiTag, aiShare } from '@/components/AiTag';
+import { CopilotButton } from '@/components/Copilot';
 import { useCan } from '@/components/SessionContext';
 import type { ListDetail as ServerListDetail, ListSummary as ServerListSummary } from '@/lib/server/services/lists';
 import type { ActiveSignalSettings, ProspectDetail, ProspectRow, RunDetail as ServerRunDetail, RunSummary as ServerRunSummary } from '@/lib/server/services/scoring';
@@ -559,6 +560,8 @@ export function ScoringScreen() {
         <div className="topbar-l"><span className="tb-title">{r.name || r.listName}</span>
           <span className="tb-badge badge-neutral">{`${r.sourceFile} · as of ${r.asOf}`}</span></div>
         <div className="topbar-r">
+          <CopilotButton screen="scoring" ctxRef={drawerOpen && drawerMode === 'prospect' && drawer ? { runId: r.id, contactId: drawer.contactId } : { runId: r.id }}
+            title={drawerOpen && drawerMode === 'prospect' && drawer ? `${drawer.contact.name} · ${drawer.account.name}` : r.name || r.listName} />
           <button className="btn btn-sec btn-sm" onClick={() => renderStart('new')}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="15 18 9 12 15 6" /></svg>Score a different list</button>
           <button className="btn btn-sec btn-sm" onClick={openSave}>{r.status === 'saved' ? 'Saved ✓' : 'Save'}</button>
           <button className="btn btn-primary btn-sm" onClick={() => void sendToNBA()}>{`Send ${n ? n + ' selected' : 'tier A and B'} to NBA →`}</button>
