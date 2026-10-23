@@ -92,6 +92,20 @@
       "when": 1792741198180,
       "tag": "0012_scoring_signal_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1792742413111,
+      "tag": "0013_setup_signoffs",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1792742413560,
+      "tag": "0014_setup_security",
+      "breakpoints": true
     }
   ]
 }

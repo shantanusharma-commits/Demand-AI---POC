@@ -175,6 +175,53 @@ export const configVersions = pgTable('config_versions', {
   uniqueIndex('config_versions_one_active_key').on(t.businessUnitId).where(sql`${t.status} = 'active'`),
 ]);
 
+/* ─── Setup (G-002, D-13): sign-offs per section and signal-type changes, both append-only ─── */
+
+/** The Setup sections, as the original page numbered them. */
+export const CONFIG_SECTIONS = ['scope', 'rubric', 'personas', 'signals', 'actions', 'brand', 'users'] as const;
+export type ConfigSection = (typeof CONFIG_SECTIONS)[number];
+
+/** Who signed a Setup section off, or reopened it, and on which configuration version. A section's state is its
+ *  latest row. */
+export const configSignoffs = pgTable('config_signoffs', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  seq: bigint('seq', { mode: 'number' }).generatedAlwaysAsIdentity(),
+  businessUnitId: uuid('business_unit_id').notNull().references(() => businessUnits.id),
+  configVersionId: uuid('config_version_id').notNull().references(() => configVersions.id),
+  section: text('section').notNull(),
+  action: text('action').notNull(),
+  note: text('note').notNull().default(''),
+  createdAt: createdAt(),
+  createdBy: createdBy(),
+}, t => [
+  check('config_signoffs_section_check', sql`${t.section} in (${inList(CONFIG_SECTIONS)})`),
+  check('config_signoffs_action_check', sql`${t.action} in ('sign_off', 'reopen')`),
+  index('config_signoffs_bu_seq_idx').on(t.businessUnitId, t.seq),
+  index('config_signoffs_version_idx').on(t.configVersionId),
+]);
+
+export const SIGNAL_CHANGES = ['off', 'on', 'added', 'removed'] as const;
+
+/** A signal type switched off or on, added or removed in Setup, with why. Each change made the configuration version
+ *  it names, so every run can be traced to the switches it was scored with (G-023). */
+export const signalTypeChanges = pgTable('signal_type_changes', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  seq: bigint('seq', { mode: 'number' }).generatedAlwaysAsIdentity(),
+  businessUnitId: uuid('business_unit_id').notNull().references(() => businessUnits.id),
+  configVersionId: uuid('config_version_id').notNull().references(() => configVersions.id),
+  signalType: text('signal_type').notNull(),
+  change: text('change').notNull(),
+  reason: text('reason').notNull().default(''),
+  /** The definition of a type added in Setup. */
+  definition: jsonb('definition'),
+  createdAt: createdAt(),
+  createdBy: createdBy(),
+}, t => [
+  check('signal_type_changes_change_check', sql`${t.change} in (${inList(SIGNAL_CHANGES)})`),
+  index('signal_type_changes_bu_seq_idx').on(t.businessUnitId, t.seq),
+  index('signal_type_changes_version_idx').on(t.configVersionId),
+]);
+
 /* ─── Sign-in (D-3): sessions, one-time email tokens, rate limits ─── */
 
 /** One row per signed-in browser. The cookie carries the ID, HMAC-signed; every request re-reads the row. */

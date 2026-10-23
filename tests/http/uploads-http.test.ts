@@ -9,6 +9,7 @@ import { randomUUID } from 'node:crypto';
 import { Browser, startServer, type TestServer } from './server.ts';
 import { DATASET } from '../helpers/answer-key.ts';
 import { buildZip, WORKBOOK_PARTS } from '../helpers/zip.ts';
+import { serializeConfig } from '../../lib/engine/config.ts';
 
 let srv: TestServer;
 const XLSX_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
@@ -18,6 +19,8 @@ before(async () => {
   srv = await startServer('http_uploads');
   // rep.a@demandai.test owns one of the sample's reps' accounts through an alias (D-33).
   await srv.db.pool('demandai_owner').query(`INSERT INTO user_owner_aliases (user_id, owner_email, created_by) VALUES ($1, $2, $1)`, [srv.ids.repA, SAMPLE_OWNER]);
+  await srv.db.pool('demandai_owner').query(`INSERT INTO config_versions (business_unit_id, version_no, status, body, engine_version, created_by, activated_at, activated_by)
+    VALUES ($1, 1, 'active', $2, 't', $3, now(), $3)`, [srv.ids.buA, JSON.stringify(serializeConfig()), srv.ids.adminA]);
 });
 after(async () => { await srv?.stop(); });
 
@@ -148,6 +151,28 @@ test('G-023 over HTTP: Signal monitoring counts the scored file once per type; a
   assert.ok((unused.json.rows as { status: string }[]).every(r => r.status !== 'Qualified'));
   assert.equal(run.visible.unused, 1492 - 475, 'every row but the 475 that counted');
   assert.equal((await b.get(`/api/scoring-runs/${runId}/signals?status=bogus`)).status, 400);
+});
+
+test('G-002 over HTTP: Setup reads for managers; a switch needs a same-site Origin and makes a version; the export is a JSON file', async () => {
+  const b = await admin();
+  const setup = await b.get('/api/config');
+  assert.equal(setup.status, 200);
+  assert.equal((setup.json.setup as { version: { versionNo: number } }).version.versionNo, 1);
+  const body = { type: 'Email clicked', on: false, reason: 'Tracking data on hold' };
+  assert.equal((await b.request('POST', '/api/config/signals/switch', body, { origin: 'https://evil.example' })).status, 403, 'CSRF');
+  assert.equal((await b.post('/api/config/signals/switch', { ...body, reason: '' })).status, 400, 'a reason is required');
+  const sw = await b.post('/api/config/signals/switch', body);
+  assert.deepEqual([sw.status, sw.json.versionNo], [200, 2]);
+  const file = await b.get('/api/config/export');
+  assert.equal(file.status, 200);
+  assert.match(String(file.headers.get('content-type')), /^application\/json/);
+  assert.equal(file.headers.get('content-disposition'), `attachment; filename="demandai-config-v2.json"; filename*=UTF-8''demandai-config-v2.json`);
+  const out = JSON.parse(file.text) as { version: { number: number }; signals: { off: string[] } };
+  assert.deepEqual([out.version.number, out.signals.off], [2, ['Email clicked']]);
+  const rep = new Browser(srv.base);
+  await rep.signIn('rep.a@demandai.test');
+  assert.equal((await rep.get('/api/config')).status, 403, 'reps have no Setup');
+  assert.equal((await b.post('/api/config/signals/switch', { ...body, on: true })).json.versionNo, 3);
 });
 
 test('G-015 over HTTP: per-check CSV and the validation report download as UTF-8 CSV attachments; a bad check is 400', async () => {

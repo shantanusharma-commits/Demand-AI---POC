@@ -3,10 +3,19 @@
 import 'server-only';
 
 export function csvDownload(fileName: string, csv: string): Response {
+  return download(fileName, '\ufeff' + csv, 'text/csv; charset=utf-8');
+}
+
+/** A JSON file to save (the configuration export). */
+export function jsonDownload(fileName: string, json: string): Response {
+  return download(fileName, json, 'application/json; charset=utf-8');
+}
+
+function download(fileName: string, body: string, type: string): Response {
   const ascii = fileName.replace(/[^\x20-\x7e]/g, '_').replace(/["\\]/g, '');
-  return new Response('\ufeff' + csv, {
+  return new Response(body, {
     headers: {
-      'content-type': 'text/csv; charset=utf-8',
+      'content-type': type,
       'content-disposition': `attachment; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(fileName)}`,
       'x-content-type-options': 'nosniff',
     },
