@@ -14,6 +14,9 @@ import { createHandoff } from '../../lib/server/services/handoffs.ts';
 import { NBA_STAGES } from '../../lib/server/services/nba-ai.ts';
 import { changeItemWithAi, createItemWithAi, saveBlocks } from '../../lib/server/services/studio.ts';
 import { HttpError } from '../../lib/server/http/errors.ts';
+import { aiStatus, healthCheck } from '../../lib/server/services/ai-admin.ts';
+import { AiGateway } from '../../lib/ai/gateway.ts';
+import { recordAiCall } from '../../lib/server/ai.ts';
 import { receiveUpload } from '../../lib/server/services/uploads.ts';
 import { addCorrections } from '../../lib/server/services/corrections.ts';
 import { saveList } from '../../lib/server/services/lists.ts';
@@ -21,7 +24,7 @@ import { getRun, startScoringRun } from '../../lib/server/services/scoring.ts';
 import { AS_OF } from '../helpers/answer-key.ts';
 import { DATASET } from '../helpers/answer-key.ts';
 import { draftWriter, pieceWriter, rewriteIds, sensibleClassifier, whyNowWriter } from '../helpers/ai-fakes.ts';
-import { FakeModel, json } from '../helpers/fake-model.ts';
+import { FakeModel, fail, json, reply } from '../helpers/fake-model.ts';
 import { limits } from './pilot.ts';
 import { freshDatabase, type TestDatabase } from './harness.ts';
 import { seedBasics, type Basics } from './fixtures.ts';
@@ -269,4 +272,36 @@ test('the studio writes a piece with AI behind the same call, and hands it only 
     setAiGatewayForTests(fakeGateway(app, slow, { ...ALL_ON, classify: false, why_now: false, draft_message: false }));
     await assert.rejects(changeItemWithAi(app, unitA(), actor, item.id, { op: 'ask', q: 'make it sound like a sports commentator', rev: done.item.rev }), (e: HttpError) => e.status === 409);
   } finally { setAiGatewayForTests(undefined); }
+});
+
+/* ─── The Admin's AI health check and status (plan §8) ─── */
+
+test('the health check makes one tiny call and reports ok, provider, deployment and latency; failing or unconfigured, it says why', async () => {
+  const actor = { userId: ids.adminA, role: 'Admin' as const };
+  const good = fakeGateway(app, new FakeModel([reply('OK')], { deployment: 'gpt-4o' }), { healthcheck: true });
+  const r = await healthCheck(app, unitA(), actor, good);
+  assert.deepEqual([r.ok, r.provider, r.deployment, typeof r.latencyMs], [true, 'azure-openai', 'gpt-4o', 'number']);
+  assert.match(r.message, /^The model answered in \d+ ms\.$/);
+  const rec = (await owner.query(`SELECT capability, outcome, template_id FROM ai_calls WHERE capability = 'healthcheck' ORDER BY seq DESC LIMIT 1`)).rows[0];
+  assert.deepEqual(rec, { capability: 'healthcheck', outcome: 'ok', template_id: 'healthcheck' });
+  assert.equal((await owner.query(`SELECT count(*)::int n FROM audit_log WHERE action = 'ai.healthcheck'`)).rows[0].n, 1);
+  const bad = fakeGateway(app, new FakeModel([], { otherwise: fail('auth', { status: 401 }) }), { healthcheck: true });
+  const r2 = await healthCheck(app, unitA(), actor, bad);
+  assert.deepEqual([r2.ok, r2.message], [false, 'The model did not answer: the AI service failed.']);
+  const none = new AiGateway({ client: null, flags: {}, timeoutMs: 1000, maxConcurrency: 1, record: x => recordAiCall(app, x) });
+  const r3 = await healthCheck(app, unitA(), actor, none);
+  assert.deepEqual([r3.ok, r3.provider], [false, 'none']);
+});
+
+test('the status shows where calls go, each switch, and the last 30 days of calls in the unit only', async () => {
+  const gw = fakeGateway(app, new FakeModel([]), { classify: true, copilot: false, healthcheck: true });
+  const s = await withTenant(app, unitA(), sc => aiStatus(sc, gw));
+  assert.deepEqual([s.provider, s.deployment, s.breaker], ['azure-openai', 'fake-deployment', 'closed']);
+  const by = Object.fromEntries(s.capabilities.map(c => [c.key, c]));
+  assert.deepEqual([by.classify.on, by.copilot.on, by.why_now.on], [true, false, false]);
+  const calls = (await owner.query(`SELECT count(*)::int n FROM ai_calls WHERE business_unit_id = $1 AND capability = 'classify'`, [ids.buA])).rows[0].n;
+  assert.equal(by.classify.calls, calls);
+  assert.ok(by.classify.reasons.every(r => r.words));
+  const other = await withTenant(app, unitB(), sc => aiStatus(sc, gw));
+  assert.equal(other.capabilities.reduce((n, c) => n + c.calls, 0), 0, "another unit's calls are not counted");
 });
