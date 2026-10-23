@@ -646,7 +646,8 @@ export function ScoringScreen() {
     const moves = nextTierMoves(x.fit, signals.map(s => s.weight ?? 0), signals.map(s => s.type));
     const again = signals.length ? nextTierMoves(x.fit, signals.map(s => s.weight ?? 0), [], [signals[0].type])[0] : null;
     const outcome = (m: { score: number; tier: string }) => ` (score ${fmt1(m.score)}: ${m.tier === 'A' ? 'tier A' : `tier ${m.tier}, not yet A`})`;
-    return <div className="panel" style={sx('margin-bottom:12px')}><div className="panel-body"><details className="lt-more" style={sx('border-top:none;padding-top:0')}>
+    // Keyed by person, so it opens folded for each prospect (React would otherwise keep the last one's open state).
+    return <div key={x.contactId} className="panel" style={sx('margin-bottom:12px')}><div className="panel-body"><details className="lt-more" style={sx('border-top:none;padding-top:0')}>
       <summary>{`What would move ${a.name} to tier A`}</summary><div>
         {x.tier === 'Watch list' ? <p>{'It has no recent signal yet. The first strong one, such as a question or a request for a quote, puts it in a tier straight away' + (moves[0] ? outcome(moves[0]) : '') + '.'}</p> : <>
           <p>{`It is ${fmt1(T.A - (x.score ?? 0))} points short. One new signal today would make it:`}</p>
