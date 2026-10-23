@@ -867,6 +867,29 @@ export const segmentPauses = pgTable('segment_pauses', {
   index('segment_pauses_bu_idx').on(t.businessUnitId),
 ]);
 
+/** Step 2 · The weekly spot-check: once per ISO week and owner ('' = unassigned), a random share of what went ahead on
+ *  its own since the last draw goes back to its rep to rate. Append-only: the draw is part of the evidence. */
+export const spotChecks = pgTable('spot_checks', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  businessUnitId: uuid('business_unit_id').notNull().references(() => businessUnits.id),
+  isoWeek: text('iso_week').notNull(),
+  ownerEmail: text('owner_email').notNull(),
+  eligible: integer('eligible').notNull(),
+  picked: uuid('picked').array().notNull(),
+  createdAt: createdAt(),
+  createdBy: createdBy(),
+}, t => [
+  uniqueIndex('spot_checks_bu_week_owner_key').on(t.businessUnitId, t.isoWeek, t.ownerEmail),
+  lowerOwner('spot_checks_owner_lower_check', t.ownerEmail),
+]);
+
+/** When each person was last shown their For Review queue: a decision made from a row is timed from here. */
+export const reviewViews = pgTable('review_views', {
+  businessUnitId: uuid('business_unit_id').notNull().references(() => businessUnits.id),
+  userId: uuid('user_id').notNull().references(() => users.id),
+  shownAt: tsz('shown_at').notNull().defaultNow(),
+}, t => [primaryKey({ name: 'review_views_pkey', columns: [t.businessUnitId, t.userId] })]);
+
 /* ─── Column mappings (G-040): a person's choice of template column for a source's own column names ─── */
 
 export const columnMappings = pgTable('column_mappings', {

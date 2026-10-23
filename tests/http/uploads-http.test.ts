@@ -159,8 +159,45 @@ test('G-006 over HTTP: micro-segments built from the hand-off; a rep sees and op
   assert.equal((await rep.post(`/api/nba-runs/${nbaRun}/segments/pause`, { segment: run.segments[0].name })).status, 403);
   assert.equal((await b.post(`/api/nba-runs/${nbaRun}/segments/pause`, { segment: run.segments[0].name, reason: 'Checking' })).status, 200);
   assert.equal((await b.post(`/api/nba-runs/${nbaRun}/segments/pause`, { segment: run.segments[0].name })).status, 409);
+  assert.equal((await b.post(`/api/nba-runs/${nbaRun}/segments/resume`, { segment: run.segments[0].name })).status, 200);
   assert.equal((await rep.request('DELETE', `/api/scoring-runs/${runId}`)).status, 403);
   assert.equal((await b.request('DELETE', `/api/scoring-runs/${runId}`)).status, 409, 'the evidence keeps the run it came from');
+});
+
+test('G-008 over HTTP: the rep decides from their queue; a sensitive item waits for the manager, who approves it; exports are CSV files', async () => {
+  const rep = new Browser(srv.base);
+  await rep.signIn('rep.a@demandai.test');
+  const q = await rep.get('/api/review/queue');
+  assert.equal(q.status, 200);
+  const items = q.json.items as { id: string; ownerEmail: string; status: string; paused: boolean; spot: string | null; channel: string }[];
+  assert.ok(items.length > 0 && items.every(i => i.ownerEmail === SAMPLE_OWNER));
+  const waiting = items.filter(i => i.status === 'Waiting' && !i.paused && i.channel !== 'Task');
+  const [first, second] = waiting;
+  const item = (await rep.get(`/api/recommendations/${first.id}`)).json.item as { draft: { channel: string; body?: string; note?: string } };
+  await rep.post(`/api/recommendations/${first.id}/open`, {});
+  const field = item.draft.channel === 'Email' ? 'body' : 'note';
+  assert.equal((await rep.request('POST', `/api/recommendations/${first.id}/accept`, {}, { origin: 'https://evil.example' })).status, 403, 'CSRF');
+  const accepted = await rep.post(`/api/recommendations/${first.id}/accept`, { draft: { [field]: String(item.draft[field]) + ' Happy to cover the security review too.' }, queuePosition: 1 });
+  assert.deepEqual([accepted.status, accepted.json.status], [200, 'Awaiting approval']);
+  assert.equal((await rep.post(`/api/recommendations/${first.id}/approve`, {})).status, 403, 'a rep cannot approve');
+  assert.ok(second, 'the rep has at least two items to decide');
+  assert.equal((await rep.post(`/api/recommendations/${second.id}/reject`, { code: 'R12' })).status, 400, '"Other" needs a comment');
+  assert.equal((await rep.post(`/api/recommendations/${second.id}/reject`, { code: 'R3', note: 'Wrong site' })).json.status, 'Set aside');
+  const b = await admin();
+  const approvals = ((await b.get('/api/review/queue')).json.items as { id: string; status: string }[]).filter(i => i.status === 'Awaiting approval');
+  assert.ok(approvals.some(i => i.id === first.id));
+  const ok = await b.post(`/api/recommendations/${first.id}/approve`, {});
+  assert.deepEqual([ok.status, ok.json.message], [200, 'Approved and released']);
+  const mine = (await rep.get('/api/decision-log')).json.rows as { who: string; decision: string }[];
+  assert.ok(mine.length >= 2 && new Set(mine.map(r => r.who)).size === 1, 'a rep sees the decisions they made');
+  for (const [file, name, header] of [['released-messages', 'released_messages.csv', 'owner,prospect,job_title'], ['tasks', 'tasks.csv', 'owner,prospect,company'], ['decision-log', 'decision_log.csv', 'when,who,role']]) {
+    const r = await b.request('GET', `/api/exports/${file}.csv`);
+    assert.equal(r.status, 200, file);
+    assert.match(String(r.headers.get('content-type')), /^text\/csv; charset=utf-8/);
+    assert.match(String(r.headers.get('content-disposition')), new RegExp(`attachment; filename="${name}"`));
+    assert.ok(r.text.startsWith(header), `${file}: the BOM is stripped by fetch; the header row follows`);
+  }
+  assert.ok((await b.request('GET', '/api/exports/decision-log.csv')).text.split('\r\n').length > 3);
 });
 
 test('G-023 over HTTP: Signal monitoring counts the scored file once per type; a rep counts their own rows; the unused-rows filter', async () => {
@@ -290,7 +327,7 @@ test('G-015 corrections over HTTP: Origin and fields checked, a rep refused on a
 
 test('logs: upload and scoring events are logged without file names or any contact’s address', async () => {
   const lines = srv.logs.join('').split('\n').filter(l => l.startsWith('{')).map(l => JSON.parse(l));
-  for (const event of ['upload.received', 'job.started', 'job.stage', 'job.succeeded', 'scoring.started', 'handoff.created', 'upload.refused', 'nba.built']) {
+  for (const event of ['upload.received', 'job.started', 'job.stage', 'job.succeeded', 'scoring.started', 'handoff.created', 'upload.refused', 'nba.built', 'review.accepted', 'review.approved']) {
     assert.ok(lines.some(l => l.event === event), `no ${event} line`);
   }
   assert.ok(lines.filter(l => l.event === 'job.stage').every(l => typeof l.durationMs === 'number' && l.jobId && l.businessUnitId));

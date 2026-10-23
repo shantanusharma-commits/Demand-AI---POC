@@ -46,8 +46,9 @@ export function statePatch(p: Partial<R.RecState>): Partial<RecRow> {
 }
 
 const byName = sql<string>`coalesce(${users.displayName}, 'A former member')`;
-/** A flagged decision counts once a manager has checked it: a later row linked to it. */
-export const checkedSql = sql<boolean>`exists (select 1 from decision_log c where c.linked_to = ${decisionLog.id} and c.kind = 'manager_check')`;
+/** A flagged decision counts once a manager has checked it: a later row linked to it. The outer column is written by
+ *  hand: on a single-table query Drizzle leaves it unqualified, and it would bind to the subquery's own row. */
+export const checkedSql = sql<boolean>`exists (select 1 from decision_log c where c.linked_to = "decision_log"."id" and c.kind = 'manager_check')`;
 
 export async function runInfo(scope: TenantScope, id: string): Promise<RunInfo & { pack: BrandPack }> {
   const [r] = await scope.tx.select({
@@ -127,14 +128,16 @@ export async function pausedSegments(scope: TenantScope, runId: string): Promise
 }
 export const segKey = (rec: Pick<Rec, 'segment'>): string => rec.segment || '';
 
-/** The measures' view of the log the caller can see: decisive rows, with whether a manager checked a flagged one. */
-export async function logFacts(scope: TenantScope, opts: { ownerEmail?: string | null } = {}): Promise<R.LogFacts[]> {
+/** The measures' view of the log the caller can see: decisive rows, with whether a manager checked a flagged one;
+ *  for a rep's own results, the rows logged while they owned the item. */
+export async function logFacts(scope: TenantScope, opts: { ownerEmails?: string[] } = {}): Promise<R.LogFacts[]> {
   const rows = await scope.tx.select({
     decisive: decisionLog.decisive, firstPass: decisionLog.firstPass, accepted: decisionLog.accepted, kind: decisionLog.kind, flag: decisionLog.flag,
     segment: decisionLog.segment, reason: decisionLog.reason, cause: decisionLog.cause, compliance: decisionLog.compliance, intervention: decisionLog.intervention,
     editRating: decisionLog.editRating, seconds: decisionLog.seconds,
     checked: checkedSql,
-  }).from(decisionLog).where(and(eq(decisionLog.businessUnitId, scope.ctx.businessUnitId), opts.ownerEmail ? eq(decisionLog.ownerEmail, opts.ownerEmail) : undefined));
+  }).from(decisionLog).where(and(eq(decisionLog.businessUnitId, scope.ctx.businessUnitId), eq(decisionLog.decisive, true),
+    opts.ownerEmails ? (opts.ownerEmails.length ? inArray(decisionLog.ownerEmail, opts.ownerEmails) : sql`false`) : undefined));
   return rows;
 }
 
