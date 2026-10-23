@@ -1,5 +1,6 @@
 // What the AI gateway and its model clients agree on (D-5, D-35, D-40). No SDK is imported here: the two providers
-// (Azure OpenAI, Amazon Bedrock) and the tests' fake client all implement ModelClient, and only the gateway calls them.
+// (Azure OpenAI, Amazon Bedrock) and the tests' fake client (standing in for one of them) implement ModelClient, and
+// only the gateway calls them.
 
 /** Each thing DemandAI asks a model to do; each sits behind its own flag, with the rules as its fallback. */
 export const CAPABILITIES = ['classify', 'why_now', 'draft_message', 'draft_content', 'copilot', 'healthcheck'] as const;
@@ -51,7 +52,7 @@ export class ModelError extends Error {
   }
 }
 
-export type ProviderName = 'azure-openai' | 'bedrock' | 'fake';
+export type ProviderName = 'azure-openai' | 'bedrock';
 
 export interface ModelClient {
   readonly provider: ProviderName;

@@ -1070,3 +1070,42 @@ export const columnMappings = pgTable('column_mappings', {
   check('column_mappings_kind_check', sql`${t.kind} in (${inList(UPLOAD_KINDS)})`),
   uniqueIndex('column_mappings_bu_kind_name_key').on(t.businessUnitId, t.kind, t.name),
 ]);
+
+/* ─── AI (Phase 6; D-5, D-6, D-35): what each model call was, never what it said ─── */
+
+export const AI_CAPABILITIES = ['classify', 'why_now', 'draft_message', 'draft_content', 'copilot', 'healthcheck'] as const;
+export const AI_OUTCOMES = ['ok', 'fallback', 'filtered', 'error'] as const;
+export const AI_CALL_PROVIDERS = ['azure-openai', 'bedrock'] as const;
+
+/** One row per call the gateway made (its retries and its one repair included): metadata only, no prompt and no reply
+ *  (D-6). Append-only; a unit sees its own. */
+export const aiCalls = pgTable('ai_calls', {
+  id: uuid('id').primaryKey(),
+  seq: bigint('seq', { mode: 'number' }).generatedAlwaysAsIdentity(),
+  businessUnitId: uuid('business_unit_id').notNull().references(() => businessUnits.id),
+  capability: text('capability').notNull(),
+  templateId: text('template_id').notNull(),
+  templateVersion: integer('template_version').notNull(),
+  provider: text('provider').notNull(),
+  deployment: text('deployment').notNull(),
+  latencyMs: integer('latency_ms').notNull(),
+  promptTokens: integer('prompt_tokens').notNull(),
+  completionTokens: integer('completion_tokens').notNull(),
+  attempts: integer('attempts').notNull(),
+  outcome: text('outcome').notNull(),
+  fallbackReason: text('fallback_reason'),
+  /** Content-filter categories that fired, by name only. */
+  filterCategories: text('filter_categories').array().notNull().default(sql`'{}'::text[]`),
+  estCostUsd: doublePrecision('est_cost_usd'),
+  requestId: text('request_id'),
+  providerRequestId: text('provider_request_id'),
+  createdAt: createdAt(),
+  createdBy: createdBy(),
+}, t => [
+  check('ai_calls_capability_check', sql`${t.capability} in (${inList(AI_CAPABILITIES)})`),
+  check('ai_calls_outcome_check', sql`${t.outcome} in (${inList(AI_OUTCOMES)})`),
+  check('ai_calls_provider_check', sql`${t.provider} in (${inList(AI_CALL_PROVIDERS)})`),
+  check('ai_calls_reason_check', sql`(${t.outcome} = 'ok') = (${t.fallbackReason} is null)`),
+  index('ai_calls_bu_seq_idx').on(t.businessUnitId, t.seq),
+  index('ai_calls_bu_capability_idx').on(t.businessUnitId, t.capability, t.createdAt),
+]);

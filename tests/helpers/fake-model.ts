@@ -1,7 +1,7 @@
 // A scripted model client for tests: CI never calls a live model (remediation prompt §7.9). Each step answers one
 // request in turn (a reply, an error, or a function of the request); every request is kept so tests can read what
 // would have been sent (the personal-data scan, prompt-injection fixtures).
-import { ModelError, type ModelClient, type ModelErrorKind, type ModelRequest, type ModelResponse } from '../../lib/ai/types.ts';
+import { ModelError, type ModelClient, type ModelErrorKind, type ModelRequest, type ModelResponse, type ProviderName } from '../../lib/ai/types.ts';
 
 export type Step = ModelResponse | ModelError | ((req: ModelRequest, n: number) => ModelResponse | ModelError | Promise<ModelResponse | ModelError>);
 
@@ -13,13 +13,14 @@ export const fail = (kind: ModelErrorKind, extra: { status?: number; retryAfterM
 export const hang = (): Step => req => new Promise((_, reject) => req.signal.addEventListener('abort', () => reject(new ModelError('aborted', 'fake abort'))));
 
 export class FakeModel implements ModelClient {
-  readonly provider = 'fake' as const;
+  readonly provider: ProviderName;
   readonly deployment: string;
   readonly requests: ModelRequest[] = [];
   private readonly steps: Step[];
   private readonly fallback: Step | null;
-  constructor(steps: Step[] = [], opts: { deployment?: string; otherwise?: Step } = {}) {
+  constructor(steps: Step[] = [], opts: { deployment?: string; provider?: ProviderName; otherwise?: Step } = {}) {
     this.steps = steps.slice();
+    this.provider = opts.provider ?? 'azure-openai';
     this.deployment = opts.deployment ?? 'fake-deployment';
     this.fallback = opts.otherwise ?? null;
   }

@@ -62,6 +62,8 @@ export const ACTIONS = {
   'readout.signoff': MANAGERS,
   'analytics.view': EVERYONE,
   'audit.view': ['Admin'],
+  'ai.admin': ['Admin'], // the AI health check and the record of AI calls (Phase 6)
+  'copilot.use': WORKERS,
   'session.use': EVERYONE,
 } as const satisfies Record<string, readonly BuRole[]>;
 export type Action = keyof typeof ACTIONS;
@@ -108,4 +110,5 @@ export const ACTION_LABELS: Record<Action, string> = {
   'review.decide': 'decide on recommendations', 'review.approve': 'approve sensitive items', 'segments.pause': 'pause segments',
   'routing.manage': 'change the routing rules', 'routing.transfer': 'move accounts between business units', 'validation.edit': 'change validation settings',
   'readout.signoff': 'sign off the readout', 'analytics.view': 'view Analytics', 'audit.view': 'view the audit log', 'session.use': 'use DemandAI',
+  'ai.admin': 'check the AI service', 'copilot.use': 'ask Copilot',
 };

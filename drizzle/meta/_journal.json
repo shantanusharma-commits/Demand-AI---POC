@@ -204,6 +204,20 @@
       "when": 1792776696608,
       "tag": "0028_studio_security",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1792790250434,
+      "tag": "0029_ai_calls",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1792790251035,
+      "tag": "0030_ai_calls_security",
+      "breakpoints": true
     }
   ]
 }

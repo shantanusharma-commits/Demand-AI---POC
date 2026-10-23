@@ -12,7 +12,7 @@ import { seedBasics, type Basics } from './fixtures.ts';
 
 // Tables shared by every unit; everything else must carry business_unit_id and row-level security.
 const GLOBAL_TABLES = ['business_units', 'email_tokens', 'rate_limits', 'sessions', 'user_owner_aliases', 'user_role_history', 'users'];
-const APPEND_ONLY = ['audit_log', 'brand_versions', 'config_changes', 'config_signoffs', 'corrections', 'decision_log', 'drafts', 'readout_signoffs', 'readouts', 'segment_pauses', 'signal_type_changes', 'studio_messages', 'user_role_history'];
+const APPEND_ONLY = ['ai_calls', 'audit_log', 'brand_versions', 'config_changes', 'config_signoffs', 'corrections', 'decision_log', 'drafts', 'readout_signoffs', 'readouts', 'segment_pauses', 'signal_type_changes', 'studio_messages', 'user_role_history'];
 
 let db: TestDatabase, owner: pg.Pool, appPool: pg.Pool, app: Db, ids: Basics;
 const ctxA = (): TenantContext => ({ userId: ids.adminA, businessUnitId: ids.buA, scope: 'all', ownerEmails: [] });
