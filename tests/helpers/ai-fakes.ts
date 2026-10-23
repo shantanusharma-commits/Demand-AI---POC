@@ -25,3 +25,28 @@ export const sensibleClassifier = classifier(it => {
   if (/crude|refiner/.test(t)) return { vertical: 'Refining', confidence: 'medium' };
   return { vertical: 'Out of ICP', reason: 'Not one of the pilot verticals.' };
 });
+
+export type WhyNowItem = { ref: number; role: string; rows: { row: number; type: string; date: string; detail: string }[] };
+
+/** The prospects of a why-now request, as sent. */
+export function whyNowItems(req: ModelRequest): WhyNowItem[] {
+  const block = req.messages.find(m => m.role === 'user')!.content.match(/<prospects>\n([\s\S]*?)\n<\/prospects>/)?.[1] ?? '';
+  const out: WhyNowItem[] = [];
+  for (const line of block.split('\n')) {
+    const head = line.match(/^(\d+)\. role: (".*?") \(/);
+    if (head) { out.push({ ref: Number(head[1]), role: JSON.parse(head[2]), rows: [] }); continue; }
+    const r = line.match(/^ {3}row (\d+) · (".*?") · (".*?") · (".*?") · source/);
+    if (r && out.length) out.at(-1)!.rows.push({ row: Number(r[1]), type: JSON.parse(r[2]), date: JSON.parse(r[3]), detail: JSON.parse(r[4]) });
+  }
+  return out;
+}
+
+/** A writer that words each line from its strongest row, or with `line` when given. */
+export function whyNowWriter(line?: (it: WhyNowItem) => { line: string; rows?: number[] } | null): Step {
+  return req => json({ items: whyNowItems(req).map(it => {
+    const own = line?.(it);
+    const top = it.rows[0];
+    return own ? { ref: it.ref, line: own.line, rows: own.rows ?? [top.row] }
+      : { ref: it.ref, line: `${top.detail === '(no detail)' ? top.type : top.detail} on ${top.date}.`, rows: [top.row] };
+  }) });
+}

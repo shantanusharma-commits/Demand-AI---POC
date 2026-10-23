@@ -12,8 +12,11 @@ import { createAppWorker } from '../../lib/server/jobs/handlers.ts';
 import { getJob } from '../../lib/server/jobs/queue.ts';
 import { receiveUpload } from '../../lib/server/services/uploads.ts';
 import { addCorrections } from '../../lib/server/services/corrections.ts';
+import { saveList } from '../../lib/server/services/lists.ts';
+import { getRun, startScoringRun } from '../../lib/server/services/scoring.ts';
+import { AS_OF } from '../helpers/answer-key.ts';
 import { DATASET } from '../helpers/answer-key.ts';
-import { sensibleClassifier } from '../helpers/ai-fakes.ts';
+import { sensibleClassifier, whyNowWriter } from '../helpers/ai-fakes.ts';
 import { FakeModel, json } from '../helpers/fake-model.ts';
 import { limits } from './pilot.ts';
 import { freshDatabase, type TestDatabase } from './harness.ts';
@@ -127,5 +130,29 @@ test("a person can still set the vertical of an account the classifier chose, an
     const after = (await owner.query(`SELECT data->>'vertical' vertical, data->>'aiAssisted' ai, data->>'classReason' reason FROM accounts WHERE list_id = $1 AND name = $2`, [next, a.name])).rows[0];
     assert.deepEqual([after.vertical, after.ai], ['Refining', null]);
     assert.match(after.reason, /^Set by a person: /);
+  } finally { setAiGatewayForTests(undefined); }
+});
+
+/* ─── The why-now line in the scoring job (spec 4.14, G-025) ─── */
+
+test('the scoring job words the tier A and B why-now lines from their own rows, and says how many', async () => {
+  const fake = new FakeModel([], { otherwise: whyNowWriter() });
+  setAiGatewayForTests(fakeGateway(app, fake, { ...ALL_ON, classify: false }));
+  try {
+    const listId = await uploadSample();
+    const actor = { userId: ids.adminA, role: 'Admin' as const };
+    await withTenant(app, unitA(), s => saveList(s, actor, listId, { name: 'Why-now sample' }));
+    const sig = await withTenant(app, unitA(), s => receiveUpload(s, { kind: 'signal', fileName: 'Lead_Research_Sample_Dataset.xlsx', mediaType: XLSX_TYPE, bytes: readFileSync(DATASET) }, limits));
+    const started = await withTenant(app, unitA(), s => startScoringRun(s, actor, { listId, signalUploadId: sig.uploadId, asOf: AS_OF }));
+    await createAppWorker(app, limits).drain();
+    const rows = (await owner.query(`SELECT tier, data->'person'->'whyNowAi' ai, data->'person'->>'whyNow' rules, data->'summary'->>'whyNowAi' shown
+      FROM prospect_scores WHERE run_id = $1 AND data->'person' IS NOT NULL AND jsonb_array_length(data->'person'->'signals') > 0`, [started.runId])).rows;
+    const ab = rows.filter(r => r.tier === 'A' || r.tier === 'B');
+    assert.equal(ab.length, 144);
+    assert.ok(ab.every(r => r.ai && r.ai.line === r.shown && r.ai.rows.length && ['High', 'Medium', 'Low'].includes(r.ai.confidence) && r.rules), 'each tier A and B prospect has a grounded line and keeps the rules\' one');
+    assert.ok(rows.filter(r => r.tier !== 'A' && r.tier !== 'B').every(r => r.ai === null), 'tier C and the watch list keep the rules\' line only');
+    assert.equal(fake.requests.length, 15);
+    const run = await withTenant(app, unitA(), s => getRun(s, actor, started.runId));
+    assert.deepEqual(run.stats.aiWhyNow, { asked: 144, worded: 144, fallbacks: {} });
   } finally { setAiGatewayForTests(undefined); }
 });

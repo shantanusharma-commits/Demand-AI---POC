@@ -16,6 +16,8 @@ import type { JobRun } from '../jobs/worker.ts';
 import { readUpload, UploadReadError, type FileNote } from '../uploads/parse.ts';
 import { badRequest, conflict, forbidden, notFound } from '../http/errors.ts';
 import { logger } from '../logger.ts';
+import { aiGateway } from '../ai.ts';
+import { whyNowStep, type WhyNowStats } from './why-now-ai.ts';
 import { loadUpload, type UploadLimits } from './uploads.ts';
 import { chunks, containsPattern, deleteUnusedUploads, isManager, loadLeadList, NBA_KEEPS, ownerOnly, PAGE_DEFAULT, PAGE_MAX, type Actor, type Page, type PageQuery } from './lists.ts';
 
@@ -122,6 +124,8 @@ const lower = (s: string | undefined | null) => (s ? s.trim().toLowerCase() : ''
 export type ProspectSummary = {
   name: string; jobTitle: string; company: string; vertical: string; country: string;
   excluded: boolean; excludedReason: string; belowFloor: boolean; whyNow: string; types: string[];
+  /** The AI-worded why-now line, when there is one (Phase 6). */
+  whyNowAi?: string;
 };
 type StoredPerson = Omit<PersonScore, 'contact'>;
 type StoredResult = Omit<ScoreResult, 'account' | 'contacts' | 'people'>;
@@ -154,11 +158,14 @@ export function createScoringJob(limits: UploadLimits) {
     await run.stage('score', { signals: sig.signals.length });
     const scored = scoreList(list, sig);
     const prospects = buildProspects(scored);
+    // The tier A and B prospects' why-now lines, worded by AI from their own signal rows when it is on (spec 4.14).
+    const aiWhyNow = await whyNowStep(aiGateway(), ctx, prospects, run.deadline - Date.now() - 15_000);
     const checks = signalStepResults(sig, scored, prospects);
     const tiers = Object.fromEntries(TIERS.map(t => [t, prospects.filter(p => p.tier === t).length]));
     const stats = {
       rowsRead: sig.rowsRead, qualified: sig.signals.filter(s => s.status === 'Qualified').length, rejected: sig.signals.filter(s => s.status === 'Rejected').length,
       scored: prospects.filter(sendable).length, A: tiers.A, tiers, prospects: prospects.length, signals: sig.signals.length,
+      ...(aiWhyNow ? { aiWhyNow } : {}),
     };
     await run.stage('save', { prospects: prospects.length, scored: stats.scored });
     await withTenant(db, ctx, async s => {
@@ -184,7 +191,7 @@ export function createScoringJob(limits: UploadLimits) {
         const person: StoredPerson | null = x.p ? (({ contact: _contact, ...p }) => { void _contact; return p; })(x.p) : null;
         const summary: ProspectSummary = {
           name: x.c.name, jobTitle: x.c.jobTitle, company: x.r.account.name, vertical: x.r.account.vertical, country: x.r.account.country,
-          excluded: x.r.excluded, excludedReason: x.r.excludedReason, belowFloor: !!x.r.belowFloor, whyNow: x.p?.whyNow ?? '',
+          excluded: x.r.excluded, excludedReason: x.r.excludedReason, belowFloor: !!x.r.belowFloor, whyNow: x.p?.whyNow ?? '', ...(x.p?.whyNowAi ? { whyNowAi: x.p.whyNowAi.line } : {}),
           types: x.p ? [...new Set(x.p.signals.map(g => g.type))].slice(0, 2) : [],
         };
         return {
@@ -215,7 +222,9 @@ function noteIssues(notes: FileNote[], file: string, sheet: string): Issue[] {
 
 /* ─── Reading runs ─── */
 
-export type RunStats = { rowsRead: number; qualified: number; rejected: number; scored: number; A: number; tiers: Record<Tier, number>; prospects: number; signals: number };
+export type RunStats = { rowsRead: number; qualified: number; rejected: number; scored: number; A: number; tiers: Record<Tier, number>; prospects: number; signals: number;
+  /** How many tier A and B why-now lines the AI worded, and why the rest kept the rules' line (Phase 6). */
+  aiWhyNow?: WhyNowStats };
 
 const runColumns = {
   id: scoringRuns.id, name: scoringRuns.name, status: scoringRuns.status, listId: scoringRuns.listId, listName: leadLists.name,

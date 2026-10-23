@@ -242,6 +242,8 @@ export interface PersonScore {
   final?: number;
   tier?: Tier;
   whyNow?: string;
+  /** The why-now line worded by AI from the cited signal rows (Phase 6); whyNow stays the rules' line. */
+  whyNowAi?: { line: string; rows: number[]; confidence: 'High' | 'Medium' | 'Low'; callId: string };
 }
 
 export interface ScoreResult {

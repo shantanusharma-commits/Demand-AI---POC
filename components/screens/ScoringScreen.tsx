@@ -22,6 +22,7 @@ import { useDebounced } from '@/lib/client/use-debounced';
 import { usePaged } from '@/lib/client/use-paged';
 import { RenameField } from '@/components/RenameField';
 import { RoutingTab } from '@/components/RoutingTab';
+import { AiTag, aiShare } from '@/components/AiTag';
 import { useCan } from '@/components/SessionContext';
 import type { ListDetail as ServerListDetail, ListSummary as ServerListSummary } from '@/lib/server/services/lists';
 import type { ActiveSignalSettings, ProspectDetail, ProspectRow, RunDetail as ServerRunDetail, RunSummary as ServerRunSummary } from '@/lib/server/services/scoring';
@@ -503,7 +504,7 @@ export function ScoringScreen() {
               <td className="num" style={sx('color:var(--i1);font-weight:600')}>{num(x.score)}</td>
               <td className="num">{num(x.fit)}</td>
               <td className="num">{num(x.timing)}</td>
-              <td className="wrap">{s.excluded ? <span style={sx('color:var(--i3)')}>{s.excludedReason}</span> : s.belowFloor ? <span style={sx('color:var(--i3)')}>{`Company fit ${fmt1(x.fit)} is below the floor of ${DemandAI.CONFIG.fitFloor}`}</span> : s.whyNow ? <><div className="tags" style={sx('margin-bottom:5px')}>{s.types.map((t2, i) => tagChip(t2, i))}</div><span className="clamp2" title={s.whyNow} style={sx('font-size:12px;color:var(--i2)')}>{upperFirst(s.whyNow)}</span></> : <span style={sx('color:var(--i3)')}>No live signal for this person</span>}</td>
+              <td className="wrap">{s.excluded ? <span style={sx('color:var(--i3)')}>{s.excludedReason}</span> : s.belowFloor ? <span style={sx('color:var(--i3)')}>{`Company fit ${fmt1(x.fit)} is below the floor of ${DemandAI.CONFIG.fitFloor}`}</span> : s.whyNow ? <><div className="tags" style={sx('margin-bottom:5px')}>{s.types.map((t2, i) => tagChip(t2, i))}{s.whyNowAi ? <AiTag title="Worded by AI from this person's own signal rows; open the prospect for the rows and the rules' line." /> : null}</div><span className="clamp2" title={s.whyNowAi ?? s.whyNow} style={sx('font-size:12px;color:var(--i2)')}>{upperFirst(s.whyNowAi ?? s.whyNow)}</span></> : <span style={sx('color:var(--i3)')}>No live signal for this person</span>}</td>
             </tr>;
           }), visibleProspects ? 'No prospects match.' : 'Loading…')}</div>
         {visibleProspects ? moreButton(prospects, rs.length, total) : null}</div>
@@ -578,6 +579,7 @@ export function ScoringScreen() {
         {r.signalSettings.off.length || r.signalSettings.custom.length ? <div style={sx('font-size:11.5px;color:var(--i3);margin:-4px 0 12px')}>{[
           r.signalSettings.off.length ? `Scored with ${r.signalSettings.off.join(', ')} switched off in Setup: those rows are rejected (OFF).` : '',
           r.signalSettings.custom.length ? `Signal types added in Setup: ${r.signalSettings.custom.map(c => c.name).join(', ')}.` : ''].filter(Boolean).join(' ')}</div> : null}
+        {r.stats.aiWhyNow ? <div style={sx('font-size:11.5px;color:var(--i3);margin:-4px 0 12px')}>{aiShare('Why-now lines for tier A and B', r.stats.aiWhyNow) + ' Tier C and the watch list keep the rules\' line.'}</div> : null}
         {view === 'ranked' ? rankedTab(r) : view === 'routing' ? <RoutingTab runId={r.id} /> : evidenceTab(r)}
       </div>
     </>;
@@ -693,7 +695,11 @@ export function ScoringScreen() {
       {nextTierPanel(x)}
       {p && p.whyNow ? <div className="panel" style={sx('margin-bottom:12px')}><div className="panel-hdr"><span className="panel-ttl">Why now</span></div><div className="panel-body">
         <div className="tags" style={sx('margin-bottom:8px')}>{[...new Set(p.signals.map(s => s.type))].map((t, i) => tagChip(t, i))}</div>
-        <div style={sx('font-size:12.5px;color:var(--i1);line-height:1.55')}>{upperFirst(p.whyNow)}</div></div></div> : null}
+        {p.whyNowAi ? <>
+          <div style={sx('font-size:12.5px;color:var(--i1);line-height:1.55')}>{p.whyNowAi.line}</div>
+          <div style={sx('display:flex;align-items:center;gap:8px;margin-top:8px;font-size:11.5px;color:var(--i3)')}><AiTag confidence={p.whyNowAi.confidence} title={`Worded by AI from signal ${p.whyNowAi.rows.length === 1 ? 'row' : 'rows'} ${p.whyNowAi.rows.join(', ')} only; every name, number and date in it was checked against them. The confidence is the strength of the strongest signal it cites.`} /><span>{`From signal ${p.whyNowAi.rows.length === 1 ? 'row' : 'rows'} ${p.whyNowAi.rows.join(', ')}`}</span></div>
+          <div style={sx('font-size:11.5px;color:var(--i3);line-height:1.5;margin-top:6px')}>{`The rules' line: ${upperFirst(p.whyNow)}`}</div>
+        </> : <div style={sx('font-size:12.5px;color:var(--i1);line-height:1.55')}>{upperFirst(p.whyNow)}</div>}</div></div> : null}
       {p && p.signals.length ? <div className="panel" style={sx('margin-bottom:12px')}><div className="panel-hdr"><span className="panel-ttl">Signals</span><span style={sx('font-size:10.5px;color:var(--i3)')}>{p.signals.length}</span></div><div className="panel-body" style={sx('display:flex;flex-direction:column;gap:8px')}>
         {p.signals.map((s, i) => <div key={i} style={sx('padding:9px 11px;background:var(--s50);border-radius:var(--rsm)')}>
           <div style={sx('display:flex;align-items:center;gap:6px;margin-bottom:4px')}><div style={sx('flex:1')}>{tagChip(s.type, undefined, s.segment)}</div><span style={sx('font-family:var(--fm);font-size:11.5px;font-weight:600;color:var(--i1)')}>{fmt1(s.weight)}</span></div>
