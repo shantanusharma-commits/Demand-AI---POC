@@ -471,10 +471,12 @@ export function draftText(d: Partial<Draft>): string {
   return [d.task, s && s.opener, s && s.questions.join(' '), s && s.response, s && s.ask].filter(Boolean).join('\n');
 }
 
-export type CheckResult = { flags: { rule: string; detail: string }[]; claims: { text: string; source: string; verified: boolean }[]; unsupported: { text: string; source: string; verified: boolean }[] };
+type CheckedClaim = { text: string; source: string; verified: boolean; reason?: string };
+export type CheckResult = { flags: { rule: string; detail: string }[]; claims: CheckedClaim[]; unsupported: CheckedClaim[] };
 
-// 5.16 Brand and rule checks, 5.17 claim verification.
-export function checkDraft(d: Partial<Draft>, brand: BrandPack = defaultBrand()): CheckResult {
+// 5.16 Brand and rule checks, 5.17 claim verification. With `asOf` (YYYY-MM-DD), an approved claim counts only up to
+// its expiry date (G-009): cited after it, the sentence is unsupported, with the reason.
+export function checkDraft(d: Partial<Draft>, brand: BrandPack = defaultBrand(), asOf?: string): CheckResult {
   const text = draftText(d), low = text.toLowerCase(), flags: CheckResult['flags'] = [];
   const vc = brand.voice;
   for (const w of brand.negative) if (w && low.includes(w.toLowerCase())) flags.push({ rule: 'Banned claim', detail: `"${w}"` });
@@ -493,7 +495,7 @@ export function checkDraft(d: Partial<Draft>, brand: BrandPack = defaultBrand())
   }
   if (d.channel === 'LinkedIn' && (d.note || '').length > CONFIG.brand.maxNote) flags.push({ rule: 'Length', detail: `Connection note is ${d.note!.length} characters (limit ${CONFIG.brand.maxNote})` });
   // Claims: anything citing a source, or that reads like a product claim. A claim is verified only when it is an
-  // approved item's claim, word for word, with that item's citation.
+  // approved, unexpired item's claim, word for word, with that item's citation.
   const sentences = text.split(/\n+/).flatMap(l => l.split(/(?<=[.?!]|\d{4}\])\s+(?!\[)/)).map(s => s.trim()).filter(Boolean);
   const claimLike = /(\d+\s?%|\b(reduces?|reduced|improves?|improved|increases?|increased|cuts? (downtime|costs?)|savings|uptime|faster|proven|within one|guarantee\w*)\b)/i;
   const claims: CheckResult['claims'] = [];
@@ -502,14 +504,15 @@ export function checkDraft(d: Partial<Draft>, brand: BrandPack = defaultBrand())
     if (!m && !claimLike.test(s)) continue;
     const bare = s.replace(/\s*\[[^\]]+, \d{4}\]\s*$/, '');
     const src = approvedClaims(brand).find(c => cite(c) === `[${m ? m[1] : ''}]` && c.claim === bare);
-    claims.push({ text: bare, source: src ? `${src.id} · ${src.title}` : '', verified: !!src });
+    const expired = !!(src && asOf && src.expiry < asOf);
+    claims.push({ text: bare, source: src ? `${src.id} · ${src.title}` : '', verified: !!src && !expired, ...(expired ? { reason: `${src!.id} expired on ${src!.expiry}` } : {}) });
   }
   const seen = new Set<string>();
   const uniq = claims.filter(c => !seen.has(c.text) && !!seen.add(c.text));
   return { flags, claims: uniq, unsupported: uniq.filter(c => !c.verified) };
 }
 // The same brand and claim checks for long-form content from the Content studio (blogs, whitepapers, posts).
-export function checkContent(text: string, brand: BrandPack = defaultBrand()): CheckResult { return checkDraft({ channel: 'Content', text: String(text || '') }, brand); }
+export function checkContent(text: string, brand: BrandPack = defaultBrand(), asOf?: string): CheckResult { return checkDraft({ channel: 'Content', text: String(text || '') }, brand, asOf); }
 
 // 5.18 Confidence from grounding, open flags and signal strength.
 export function confidenceFor(rec: Rec, _d: Partial<Draft>, chk: CheckResult, action?: string): { level: 'High' | 'Medium' | 'Low'; reason: string } {
