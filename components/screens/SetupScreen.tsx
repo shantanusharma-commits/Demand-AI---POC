@@ -1,472 +1,316 @@
 'use client';
 
-/* Port of legacy/09-setup.html. The original kept its data in module-level arrays that the handlers mutated and then
-   re-rendered #mainArea with innerHTML (renderMain). Here the same data lives in a ref (mutated the same way) and
-   renderMain() bumps a counter; the rendered content is keyed by that counter so every renderMain recreates the DOM,
-   exactly like innerHTML did (inputs reset to the data, focus lost, no CSS transitions on the toggles).
-   fitFloor is changed without a re-render, as in the original — the summary text picks it up on the next render. */
+/* Setup (was legacy/09-setup.html), on the server (G-002, D-13). One screen, two modes: View shows what the scoring
+   runs on; Edit (Admin) signs sections off and switches signal types, each change kept with who, when and why.
+   The rubric, fit floor and personas are fixed for the pilot (D-13) and shown read-only. A signal switch, or a type
+   added or removed, makes the next configuration version: new runs name it, runs already made keep theirs (G-023).
+   The export is a real JSON file of the active version (it was a toast). */
 import Link from 'next/link';
-import { Fragment, useEffect, useRef, useState, type MouseEvent, type ReactNode, type RefObject } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { DemandAI } from '@/lib/demandai-engine';
+import { DemandAISample } from '@/lib/demandai-sample-data';
 import { showToast } from '@/lib/ui';
 import { sx } from '@/lib/sx';
+import { ApiError, api, errorText, type WireDeep } from '@/lib/client/api';
+import { useCan, useSessionUser } from '@/components/SessionContext';
+import type { SetupState } from '@/lib/server/services/setup';
+import type { SignalTypeConfig } from '@/types/demandai';
 
-type StepStatus = 'todo' | 'review' | 'done';
-type StepId = 'scope' | 'rubric' | 'personas' | 'signals' | 'actions' | 'brand' | 'users';
-interface Step { id: StepId; num: number; title: string; status: StepStatus }
-interface RubricRow { name: string; levels: string; weight: number }
-type SignalGroup = 'Ready' | 'Needs data' | 'Needs enabling';
-interface Signal { code: string; name: string; group: SignalGroup; on: boolean }
-interface SetupUser { name: string; role: string; email: string; status?: 'active' | 'invited' }
+type Setup = WireDeep<SetupState>;
+type SectionId = keyof Setup['sections'];
+type Mode = 'view' | 'edit';
+type Modal = { kind: 'switch'; name: string; isOff: boolean } | { kind: 'add'; name: string } | { kind: 'remove'; name: string };
 
-interface SetupData {
-  expandedWorking: Set<string>;
-  STEPS: Step[];
-  RUBRIC: RubricRow[];
-  fitFloor: number;
-  SIGNALS: Signal[];
-  PERSONAS: string[];
-  USERS: SetupUser[];
-  ACTIONS_LIB: Record<string, string[]>;
+const STEPS: { id: SectionId; num: number; title: string }[] = [
+  { id: 'scope', num: 1, title: 'Scope' }, { id: 'rubric', num: 2, title: 'ICP and rubric' }, { id: 'personas', num: 3, title: 'Personas' },
+  { id: 'signals', num: 4, title: 'Signals' }, { id: 'actions', num: 5, title: 'Actions' }, { id: 'brand', num: 6, title: 'Brand' }, { id: 'users', num: 7, title: 'Users' },
+];
+
+// What each rubric level means (the rubric itself is DemandAI.CONFIG.rubric, fixed for the pilot, D-13).
+const LEVELS: Record<string, string> = {
+  vertical: 'Core (100) · Adjacent (50) · Other (0)', size: 'Above target (100) · In target (70) · Below (20)', site: 'Suits the product (100) · Partly (50) · Unknown (30)',
+  relationship: 'Customer on another line (100) · Past (70) · None (40)', accountType: 'Owner-operator (100) · EPC or integrator (60) · Distributor (20)', contacts: 'Buying role present (100) · Other roles (40) · None (0)',
+};
+const RUBRIC = DemandAI.CONFIG.rubric.map(r => ({ key: r.key, name: r.label, weight: r.weight, levels: LEVELS[r.key] || '' }));
+// Fixed order, validated for colour-blind separation; every slice also carries a visible label and value.
+const SERIES = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300'];
+const KNOCKOUTS = ['Out of the pilot region', 'Pilot product already installed', 'Managed separately (strategic account)', 'No contact left after opt-outs'];
+const PERSONAS = ['Head of Instrumentation / I&C', 'Automation or DCS manager', 'Control systems lead', 'Plant manager', 'Operations or maintenance lead', 'Procurement lead'];
+
+/* Signals: exactly the types the client's signal file carries (DemandAI.CONFIG.signalTypes), plus those added here. */
+const SIG_INFO: Record<string, { about: string; data: string }> = {
+  'Inquiry or RFQ': { about: 'Someone asked the client for information, a quote or a call.', data: 'Who asked, what they asked about, when' },
+  'Installed system near end of support': { about: 'A control system at the site reaches end of support.', data: 'The installed product and version, the site, the end-of-support date' },
+  'Service contract renewal': { about: 'A service contract with the client is coming up for renewal.', data: 'The contract, its end date' },
+  'Capital project': { about: 'A new unit, expansion or revamp at the site.', data: 'The project, its stage, when the control-system decision falls' },
+  'Leadership change': { about: 'A new person in a buying role.', data: 'Who, the role, when they started' },
+  'Webinar attended': { about: "Attended one of the client's webinars.", data: 'The webinar topic, the date' },
+  'Webinar registered': { about: 'Registered for a webinar (did not attend yet).', data: 'The webinar topic, the date' },
+  'Content download': { about: 'Downloaded a guide, case study or white paper.', data: 'The piece downloaded, the date' },
+  'Email clicked': { about: "Clicked a link in one of the client's emails.", data: 'The email and link, the date' },
+  'Installed system (current)': { about: 'The pilot product is already installed.', data: 'The product at the site' },
+  'Newsletter sign-up': { about: 'Signed up for the newsletter.', data: 'The date' },
+};
+// One example of each from the fictional sample files: the detail and where it came from.
+const SIG_EX: Record<string, { detail?: string; source?: string }> = (() => {
+  const out: Record<string, { detail?: string; source?: string }> = {};
+  DemandAISample.SIGNALS.slice(2).forEach(r => { const t = String(r[2] ?? ''); if (t && !out[t]) out[t] = { detail: String(r[4] ?? ''), source: String(r[5] ?? '') }; });
+  try {
+    const g = DemandAISample.nbaWeekGrid(DemandAISample.SAMPLE_AS_OF), h = g[0].map(x => String(x).toLowerCase());
+    const ti = h.indexOf('signal_type'), di = h.indexOf('detail'), si = h.indexOf('source');
+    g.slice(1).forEach(r => { const t = String(r[ti] ?? ''); if (t && !out[t]) out[t] = { detail: String(r[di] ?? ''), source: String(r[si] ?? '') }; });
+  } catch { /* the examples are optional */ }
+  return out;
+})();
+const REASONS = ['Legal hold', 'Data quality issue', 'Source not available', 'Client request'];
+const strength = (c: Pick<SignalTypeConfig, 'tier' | 'strength'>): [string, number] => { const w = (c.tier || 0) * (c.strength || 0); return w >= 80 ? ['Strong', 3] : w >= 45 ? ['Medium', 2] : ['Light', 1]; };
+const fmtWhen = (t: string) => new Date(t).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
+const fmtDate = (t: string) => new Date(t).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+const OVERLAY = sx('position:fixed;inset:0;background:rgba(20,26,33,.45);z-index:600;display:flex;align-items:center;justify-content:center;padding:16px');
+
+function statusBadge(status: 'done' | 'review'): ReactNode {
+  return status === 'done' ? <span className="sc sc-h">Signed off</span> : <span className="sc sc-m">Draft · needs sign-off</span>;
 }
 
-function initData(): SetupData {
-  return {
-    expandedWorking: new Set(),
-    STEPS: [
-      { id: 'scope', num: 1, title: 'Scope', status: 'done' },
-      { id: 'rubric', num: 2, title: 'ICP and rubric', status: 'review' },
-      { id: 'personas', num: 3, title: 'Personas', status: 'done' },
-      { id: 'signals', num: 4, title: 'Signals', status: 'review' },
-      { id: 'actions', num: 5, title: 'Actions', status: 'todo' },
-      { id: 'brand', num: 6, title: 'Brand', status: 'done' },
-      { id: 'users', num: 7, title: 'Users', status: 'done' },
-    ],
-    RUBRIC: [
-      { name: 'Vertical', levels: 'Core (100) · Adjacent (50) · Other (0)', weight: 30 },
-      { name: 'Company size', levels: 'Above target (100) · In target (70) · Below (20)', weight: 20 },
-      { name: 'Site profile', levels: 'Suits product (100) · Partly (50) · Unknown (30)', weight: 20 },
-      { name: 'Relationship', levels: 'Other-line customer (100) · Past (70) · None (40)', weight: 15 },
-      { name: 'Account type', levels: 'Owner-operator (100) · EPC (60) · Distributor (20)', weight: 10 },
-      { name: 'Contact coverage', levels: 'Buying role present (100) · Other roles (40) · None (0)', weight: 5 },
-    ],
-    fitFloor: 50,
-    SIGNALS: [
-      { code: 'C1a', name: 'Financing / project finance', group: 'Ready', on: true },
-      { code: 'C1b', name: 'Hiring surge, control/automation roles', group: 'Ready', on: true },
-      { code: 'C1c', name: 'New executive in a buying role', group: 'Ready', on: true },
-      { code: 'C1i', name: 'Capital project / expansion announcement', group: 'Ready', on: true },
-      { code: 'C1q', name: 'LinkedIn posts from target-account people', group: 'Ready', on: true },
-      { code: 'C1g', name: 'Compliance deadline', group: 'Needs data', on: true },
-      { code: 'C1n', name: 'Champion changes jobs', group: 'Needs data', on: true },
-      { code: 'C1w', name: 'Content download / webinar attendance', group: 'Needs data', on: false },
-      { code: 'C1j', name: 'Competitor contract at the site', group: 'Needs enabling', on: true },
-      { code: 'C1t / C1v', name: 'Researching us / a competitor on G2', group: 'Needs enabling', on: false },
-      { code: 'C1u', name: 'Visited Client’s website', group: 'Needs enabling', on: false },
-    ],
-    PERSONAS: ['Plant Manager / Owner-operator', 'Head of Process Safety', 'Director of Automation', 'VP / Director of Operations', 'Chief Digital Officer'],
-    USERS: [
-      { name: 'Pavan Kumar', role: 'Sales manager', email: 'pavan.kumar@client.com', status: 'active' },
-      { name: 'Sofia Ahlgren', role: 'Sales rep', email: 'sofia.ahlgren@client.com', status: 'active' },
-      { name: 'Marcus Webb', role: 'Sales rep', email: 'marcus.webb@client.com', status: 'active' },
-      { name: 'Elena Vogel', role: 'Viewer', email: 'elena.vogel@client.com', status: 'invited' },
-      { name: 'Rajiv Nair', role: 'Admin', email: 'rajiv.nair@client.com', status: 'active' },
-      { name: 'Shantanu Rao', role: 'Platform admin', email: 'shantanu.rao@partner.com', status: 'active' },
-    ],
-    ACTIONS_LIB: {}, // segment -> [actions], starts empty ('todo')
+/* ─── The donut: weights add up to 100%, so the parts of a whole read at a glance ─── */
+const RUBRIC_TOTAL = RUBRIC.reduce((a, r) => a + r.weight, 0) || 1;
+// Each slice's start and end angle, clockwise from the top, with a small gap between slices.
+const SLICES: [number, number][] = (() => {
+  const gap = 0.012;
+  let a0 = -Math.PI / 2;
+  return RUBRIC.map(r => { const a = r.weight / RUBRIC_TOTAL * Math.PI * 2, span: [number, number] = [a0 + gap, a0 + a - gap]; a0 += a; return span; });
+})();
+function Donut({ size, hover, onHover }: { size: number; hover: number; onHover: (i: number) => void }) {
+  const total = RUBRIC_TOTAL, R = size / 2, r0 = R * 0.62;
+  const arc = (a1: number, a2: number) => {
+    const p = (a: number, rad: number) => [R + rad * Math.cos(a), R + rad * Math.sin(a)], large = a2 - a1 > Math.PI ? 1 : 0;
+    const [x1, y1] = p(a1, R - 1), [x2, y2] = p(a2, R - 1), [x3, y3] = p(a2, r0), [x4, y4] = p(a1, r0);
+    return `M${x1} ${y1} A${R - 1} ${R - 1} 0 ${large} 1 ${x2} ${y2} L${x3} ${y3} A${r0} ${r0} 0 ${large} 0 ${x4} ${y4}Z`;
   };
-}
-
-function statusBadge(status: StepStatus): ReactNode {
-  if (status === 'done') return <span className="sc sc-h">Signed off</span>;
-  if (status === 'review') return <span className="sc sc-m">Draft — needs sign-off</span>;
-  return <span className="sc sc-l">Not started</span>;
-}
-
-const NUM_STYLE = 'width:56px;border:1px solid var(--bdk);border-radius:6px;padding:4px 6px;font-size:11.5px;text-align:center';
-const DIM_ROW = 'border:none;padding:4px 0';
-const DIM_L = 'font-size:11.5px;color:var(--i3)';
-const DIM_R = 'font-size:11.5px;color:var(--i1);margin-left:auto;font-weight:600';
-const MODAL_TITLE = 'font-family:var(--fd);font-size:15px;font-weight:700;color:var(--i1);margin-bottom:14px';
-const FIELD_LABEL = 'font-size:11px;font-weight:600;color:var(--i2);margin-bottom:5px';
-
-/** A number input that reports the native `change` event (commit on blur / Enter / spinner), as the original onchange did. */
-function NumberInput({ value, onCommit }: { value: number; onCommit: (v: string) => void }) {
-  const ref = useRef<HTMLInputElement>(null);
-  const cb = useRef(onCommit);
-  useEffect(() => { cb.current = onCommit; });
-  useEffect(() => {
-    const el = ref.current!;
-    const h = () => cb.current(el.value);
-    el.addEventListener('change', h);
-    return () => el.removeEventListener('change', h);
-  }, []);
-  return <input ref={ref} type="number" defaultValue={String(value)} min="0" max="100" style={sx(NUM_STYLE)} />;
-}
-
-function modalField(id: string, label: string, value: string, placeholder: string, ref: RefObject<HTMLInputElement | null>): ReactNode {
-  return (
-    <div style={sx('margin-bottom:12px')}>
-      <div style={sx(FIELD_LABEL)}>{label}</div>
-      <input id={id} ref={ref} defaultValue={value || ''} placeholder={placeholder || ''}
-        style={sx('width:100%;border:1px solid var(--bdk);border-radius:8px;padding:8px 10px;font-size:12.5px;font-family:var(--fb);outline:none')}
-        onFocus={e => { e.currentTarget.style.borderColor = 'var(--brand-mid)'; }}
-        onBlur={e => { e.currentTarget.style.borderColor = 'var(--bdk)'; }} />
-    </div>
-  );
-}
-
-function roleSelect(id: string, value: string, ref: RefObject<HTMLSelectElement | null>): ReactNode {
-  const roles = ['Admin', 'Reviewer', 'Compliance approver', 'Business-unit lead', 'Viewer'];
-  return (
-    <div style={sx('margin-bottom:12px')}>
-      <div style={sx(FIELD_LABEL)}>Role</div>
-      <select id={id} ref={ref} defaultValue={roles.includes(value) ? value : roles[0]}
-        style={sx('width:100%;border:1px solid var(--bdk);border-radius:8px;padding:8px 10px;font-size:12.5px;font-family:var(--fb);outline:none;background:var(--surf)')}>
-        {roles.map(r => <option key={r}>{r}</option>)}
-      </select>
-    </div>
-  );
+  const slices = RUBRIC.map((r, i) => {
+    const [s, e] = SLICES[i];
+    return r.weight ? <path key={r.key} d={arc(s, Math.max(s + 0.001, e))} fill={SERIES[i]} className="dn-s" style={{ opacity: hover < 0 || hover === i ? 1 : 0.35 }}
+      onMouseEnter={() => onHover(i)} onMouseLeave={() => onHover(-1)}><title>{`${r.name}: ${r.weight}%`}</title></path> : null;
+  });
+  return <div className="dn" style={{ width: size, height: size }}>
+    <svg viewBox={`0 0 ${size} ${size}`} width={size} height={size} role="img" aria-label={`Rubric weights: ${RUBRIC.map(r => `${r.name} ${r.weight}%`).join(', ')}`}>{slices}</svg>
+    <div className="dn-c">{hover < 0 ? <><b>{`${total}%`}</b><span>of the fit score</span></> : <><b>{`${RUBRIC[hover].weight}%`}</b><span>{RUBRIC[hover].name}</span></>}</div>
+  </div>;
 }
 
 export function SetupScreen() {
-  const D = useRef<SetupData | null>(null);
-  if (!D.current) D.current = initData();
-  const d = D.current;
-  const [gen, setGen] = useState(0);
-  const renderMain = () => setGen(g => g + 1);
+  const user = useSessionUser();
+  const canSignOff = useCan('setup.signOff'), canSwitch = useCan('setup.signals');
+  const canEdit = canSignOff || canSwitch;
+  const [setup, setSetup] = useState<Setup | null>(null);
+  const [loadError, setLoadError] = useState('');
+  const [mode, setMode] = useState<Mode>('view');
+  const [sigQ, setSigQ] = useState('');
+  const [auditOpen, setAuditOpen] = useState(false);
+  const [hover, setHover] = useState(-1);
+  const [modal, setModal] = useState<Modal | null>(null);
+  const [modalError, setModalError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const formRef = useRef<HTMLDivElement>(null);
 
-  /* Modal: the overlay is created on first open and afterwards only hidden (display:none), like the original. */
-  const [modal, setModal] = useState<{ html: ReactNode; seq: number } | null>(null);
-  const [modalOpen, setModalOpen] = useState(false);
-  const ovRef = useRef<HTMLDivElement>(null);
-  const nameRef = useRef<HTMLInputElement>(null);
-  const emailRef = useRef<HTMLInputElement>(null);
-  const roleRef = useRef<HTMLSelectElement>(null);
+  useEffect(() => {
+    let live = true;
+    api<{ setup: Setup }>('/api/config').then(r => { if (live) setSetup(r.setup); }, e => { if (live) setLoadError(errorText(e)); });
+    return () => { live = false; };
+  }, []);
+  const reload = async () => { setSetup((await api<{ setup: Setup }>('/api/config')).setup); };
 
-  function openModal(html: ReactNode) {
-    setModal(m => ({ html, seq: (m ? m.seq : 0) + 1 }));
-    setModalOpen(true);
-    setTimeout(() => {
-      const firstInput = ovRef.current?.querySelector<HTMLInputElement | HTMLSelectElement>('input,select');
-      if (firstInput) setTimeout(() => firstInput.focus(), 50);
-    }, 0);
+  /* ─── Sign-offs ─── */
+  async function signOff(id: SectionId, action: 'sign-off' | 'reopen') {
+    try {
+      await api(`/api/config/sections/${id}/${action}`, { body: {} });
+      await reload();
+      showToast(`${STEPS.find(s => s.id === id)!.title} ${action === 'sign-off' ? 'signed off' : 'reopened'}`);
+    } catch (e) { showToast(errorText(e)); }
   }
-  function closeModal() { setModalOpen(false); }
-  function modalActions(onSave: () => void): ReactNode {
-    return (
-      <div style={sx('display:flex;justify-content:flex-end;gap:8px;margin-top:16px')}>
-        <button className="btn btn-ghost btn-sm" onClick={closeModal}>Cancel</button>
-        <button className="btn btn-primary btn-sm" onClick={onSave}>Save</button>
-      </div>
-    );
-  }
-  const step = (id: StepId) => d.STEPS.find(x => x.id === id)!;
 
-  function toggleWorking(id: string) {
-    if (d.expandedWorking.has(id)) d.expandedWorking.delete(id); else d.expandedWorking.add(id);
-    renderMain();
+  /* ─── Signal changes: the server makes the next configuration version ─── */
+  const openModal = (m: Modal) => { setModal(m); setModalError(''); };
+  const field = (id: string) => (formRef.current?.querySelector<HTMLInputElement | HTMLSelectElement>('#' + id)?.value ?? '').trim();
+  async function submit(url: string, body: Record<string, unknown>, done: (versionNo: number) => string) {
+    setBusy(true);
+    try {
+      const r = await api<{ versionNo: number }>(url, { body });
+      setModal(null); setAuditOpen(true);
+      await reload();
+      showToast(done(r.versionNo));
+    } catch (e) {
+      if (e instanceof ApiError && (e.status === 400 || e.status === 409)) setModalError(e.fields ? Object.values(e.fields).flat()[0] ?? errorText(e) : errorText(e));
+      else showToast(errorText(e));
+    }
+    setBusy(false);
   }
-  function signOff(id: StepId) {
-    const s = step(id);
+  const doToggle = (name: string, isOff: boolean) => {
+    const reason = field('sgWhy');
+    if (!isOff && !reason) { setModalError('Say why, so the audit trail explains it.'); return; }
+    void submit('/api/config/signals/switch', { type: name, on: isOff, reason }, v => `${name} switched ${isOff ? 'on' : 'off'} · Config v${v}`);
+  };
+  const saveSignal = () => {
+    const name = field('nsName');
+    void submit('/api/config/signals', { name, about: field('nsAbout'), data: field('nsData'), source: field('nsSource'), segment: field('nsSeg'), level: field('nsLevel'), full: field('nsFull'), zero: field('nsZero') },
+      v => `${name} added · Config v${v}`);
+  };
+  const removeCustom = (name: string) => { void submit('/api/config/signals/remove', { name, reason: field('rmWhy') }, v => `${name} removed · Config v${v}`); };
+
+  if (!setup) return <main className="main" id="mainArea"><div className="topbar"><div className="topbar-l"><span className="tb-title">Setup</span></div></div>
+    <div className="canvas"><div style={sx('font-size:12.5px;color:var(--i3)')} role={loadError ? 'alert' : 'status'}>{loadError || 'Loading…'}</div></div></main>;
+
+  const S = setup, edit = mode === 'edit';
+  const done = STEPS.filter(s => S.sections[s.id].status === 'done').length, N = STEPS.length, rem = N - done;
+  const off = new Set(S.signals.off);
+  const allTypes = [
+    ...Object.entries(DemandAI.CONFIG.signalTypes).map(([name, c]) => ({ name, c, cu: null as Setup['signals']['custom'][number] | null })),
+    ...S.signals.custom.map(cu => ({ name: cu.name, c: { segment: cu.segment, full: cu.full, zero: cu.zero, ...(DemandAI.CONFIG.customStrength[cu.level] ?? DemandAI.CONFIG.customStrength.Medium) } as SignalTypeConfig, cu })),
+  ].map(x => ({ ...x, info: SIG_INFO[x.name] || { about: x.cu?.about ?? '', data: x.cu?.data ?? '' }, ex: SIG_EX[x.name] || { source: x.cu?.source } }))
+    .sort((a, b) => (a.c.knockout ? 1 : a.c.reject ? 2 : 0) - (b.c.knockout ? 1 : b.c.reject ? 2 : 0));
+  const scored = allTypes.filter(x => !x.c.knockout && !x.c.reject);
+  const q = sigQ.toLowerCase();
+  const shown = allTypes.filter(x => !q || `${x.name} ${x.info.about} ${x.ex.source ?? ''} ${x.c.segment ?? ''}`.toLowerCase().includes(q));
+  const lastChange = (name: string) => S.changes.find(c => c.type === name);
+  const word = { off: 'Switched off', on: 'Switched on', added: 'Added', removed: 'Removed' } as const;
+
+  function stepBody(id: SectionId): ReactNode {
+    if (id === 'scope') return <div className="kvs">
+      <div><span>Pilot product</span><b>Process control DCS platform</b></div>
+      <div><span>Business unit</span><b>{user.activeBusinessUnit?.name ?? '—'}</b></div>
+      <div><span>Region</span><b>{DemandAI.CONFIG.pilotCountries.join(', ')}</b></div></div>;
     if (id === 'rubric') {
-      const total = d.RUBRIC.reduce((a, r) => a + r.weight, 0);
-      if (total !== 100) { showToast('Weights must total 100 before sign-off'); return; }
+      const total = RUBRIC.reduce((a, r) => a + r.weight, 0);
+      return <div className="ru">
+        <div className="ru-chart"><Donut size={184} hover={hover} onHover={setHover} />
+          <div className="ru-floor">Fit floor <b>{DemandAI.CONFIG.fitFloor}</b><span>Accounts scoring below it drop out before timing is scored.</span></div></div>
+        <div className="ru-list">
+          <div className="ru-lead">{"The "}<b>fit score</b>{" says how well an account matches the client's ideal customer. It is built from six parts; the bigger the slice, the more that part counts."}</div>
+          {RUBRIC.map((r, i) => <div key={r.key} className={`rl ${hover === i ? 'on' : ''}`} onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(-1)}>
+            <span className="rl-dot" style={{ background: SERIES[i] }}></span>
+            <div className="rl-b"><div className="rl-h"><b>{r.name}</b><span className="rl-w">{`${r.weight}%`}</span></div>
+              <div className="rl-bar"><i style={{ width: `${r.weight}%`, background: SERIES[i] }}></i></div><div className="rl-l">{r.levels}</div></div></div>)}
+          <div className={`ru-tot ${total === 100 ? 'ok' : 'bad'}`}>{total === 100 ? '✓ Adds up to 100%' : `Adds up to ${total}%: it must be 100% to sign off`}</div>
+          <div className="ru-ko"><span>Knock-outs, before any scoring:</span>{KNOCKOUTS.map(k => <em key={k}>{k}</em>)}</div>
+          {edit ? <div className="su-note">The weights, the fit floor and the personas are fixed for the pilot, so every score in it can be compared. A change would make a new configuration version.</div> : null}
+        </div></div>;
     }
-    s.status = 'done';
-    showToast(s.title + ' signed off');
-    renderMain();
-  }
-  function reopenStep(id: StepId) {
-    step(id).status = 'review';
-    renderMain();
-  }
-  function updateWeight(i: number, val: string) { d.RUBRIC[i].weight = parseInt(val) || 0; renderMain(); }
-  function toggleSignal(code: string) {
-    const s = d.SIGNALS.find(x => x.code === code)!;
-    s.on = !s.on;
-    renderMain();
-  }
-  // Not called from anywhere in the original UI; kept for parity.
-  function startActions() {
-    step('actions').status = 'review';
-    showToast('Draft action library started — add 3–5 actions per segment, then sign off');
-    renderMain();
-  }
-
-  /* Personas */
-  function addPersona() {
-    openModal(<>
-      <div style={sx(MODAL_TITLE)}>Add a persona</div>
-      {modalField('mPersonaName', 'Role + typical title', '', 'e.g. Head of OT Security', nameRef)}
-      {modalActions(savePersona)}
-    </>);
-  }
-  function savePersona() {
-    const name = nameRef.current!.value.trim();
-    if (!name) { showToast('Enter a persona name'); return; }
-    d.PERSONAS.push(name);
-    const s = step('personas'); if (s.status === 'done') s.status = 'review';
-    closeModal(); showToast('Persona added'); renderMain();
-  }
-  function removePersona(i: number) {
-    d.PERSONAS.splice(i, 1);
-    const s = step('personas'); if (s.status === 'done') s.status = 'review';
-    renderMain();
-  }
-
-  /* Actions library */
-  function addSegment() {
-    openModal(<>
-      <div style={sx(MODAL_TITLE)}>Add a micro-segment</div>
-      {modalField('mSegName', 'Segment name', '', 'e.g. Modernisation, Regulation, Tender', nameRef)}
-      {modalActions(saveSegment)}
-    </>);
-  }
-  function saveSegment() {
-    const name = nameRef.current!.value.trim();
-    if (!name) { showToast('Enter a segment name'); return; }
-    if (d.ACTIONS_LIB[name]) { showToast('That segment already exists'); return; }
-    d.ACTIONS_LIB[name] = [];
-    closeModal(); showToast('Segment added'); renderMain();
-  }
-  function removeSegment(seg: string) {
-    delete d.ACTIONS_LIB[seg];
-    renderMain();
-  }
-  function addAction(seg: string) {
-    if (d.ACTIONS_LIB[seg].length >= 5) { showToast('Maximum 5 actions per segment'); return; }
-    openModal(<>
-      <div style={sx('font-family:var(--fd);font-size:15px;font-weight:700;color:var(--i1);margin-bottom:4px')}>Add an action</div>
-      <div style={sx('font-size:11.5px;color:var(--i3);margin-bottom:14px')}>For the <b>{seg}</b> segment — something Client&apos;s team can actually deliver</div>
-      {modalField('mActionName', 'Action', '', 'e.g. Offer a site assessment', nameRef)}
-      {modalActions(() => saveAction(seg))}
-    </>);
-  }
-  function saveAction(seg: string) {
-    const name = nameRef.current!.value.trim();
-    if (!name) { showToast('Enter an action'); return; }
-    d.ACTIONS_LIB[seg].push(name);
-    const s = step('actions'); if (s.status === 'todo') s.status = 'review';
-    closeModal(); showToast('Action added to ' + seg); renderMain();
-  }
-  function removeAction(seg: string, i: number) {
-    d.ACTIONS_LIB[seg].splice(i, 1);
-    renderMain();
-  }
-
-  /* Users — like the original, nothing on this screen calls these (the Users section links to Users and roles). */
-  function addUser() {
-    openModal(<>
-      <div style={sx(MODAL_TITLE)}>Add a user</div>
-      {modalField('mUserName', 'Name', '', 'e.g. Sofia Ahlgren', nameRef)}
-      {roleSelect('mUserRole', 'Reviewer', roleRef)}
-      {modalField('mUserEmail', 'Email', '', 'name@client.com', emailRef)}
-      {modalActions(saveNewUser)}
-    </>);
-  }
-  function saveNewUser() {
-    const name = nameRef.current!.value.trim();
-    const role = roleRef.current!.value;
-    const email = emailRef.current!.value.trim();
-    if (!name || !email) { showToast('Name and email are required'); return; }
-    d.USERS.push({ name, role, email });
-    const s = step('users'); if (s.status === 'done') s.status = 'review';
-    closeModal(); showToast('User added'); renderMain();
-  }
-  function editUser(i: number) {
-    const u = d.USERS[i];
-    openModal(<>
-      <div style={sx(MODAL_TITLE)}>Edit user</div>
-      {modalField('mUserName', 'Name', u.name, '', nameRef)}
-      {roleSelect('mUserRole', u.role, roleRef)}
-      {modalField('mUserEmail', 'Email', u.email, '', emailRef)}
-      {modalActions(() => saveEditUser(i))}
-    </>);
-  }
-  function saveEditUser(i: number) {
-    const name = nameRef.current!.value.trim();
-    const role = roleRef.current!.value;
-    const email = emailRef.current!.value.trim();
-    if (!name || !email) { showToast('Name and email are required'); return; }
-    d.USERS[i] = { name, role, email };
-    const s = step('users'); if (s.status === 'done') s.status = 'review';
-    closeModal(); showToast('User updated'); renderMain();
-  }
-  function removeUser(i: number) {
-    d.USERS.splice(i, 1);
-    const s = step('users'); if (s.status === 'done') s.status = 'review';
-    renderMain();
-  }
-  void [startActions, addUser, editUser, removeUser];
-
-  function renderStep(s: Step): ReactNode {
-    let body: ReactNode = null;
-    if (s.id === 'scope') body = <>
-      <div className="dim-row" style={sx(DIM_ROW)}><span style={sx(DIM_L)}>Pilot product</span><span style={sx(DIM_R)}>Process control DCS platform</span></div>
-      <div className="dim-row" style={sx(DIM_ROW)}><span style={sx(DIM_L)}>Business unit</span><span style={sx(DIM_R)}>Industrial Automation — EMEA</span></div>
-      <div className="dim-row" style={sx(DIM_ROW)}><span style={sx(DIM_L)}>Region</span><span style={sx(DIM_R)}>EMEA + North America</span></div>
+    if (id === 'personas') return <>
+      <div className="chips">{PERSONAS.map(p => <span key={p} className="chip">{p}</span>)}</div>
+      <div className="su-sub">The first contact approached is someone in these roles; anyone else is a fallback and lowers confidence.</div></>;
+    if (id === 'signals') return <>
+      <div className="sg-top"><div className="sg-sum"><b>{`${scored.filter(x => !off.has(x.name)).length} of ${scored.length}`}</b> signal types are on. These are the types the client&apos;s signal file carries; each row in the file is one event.</div>
+        <div className="sg-tools"><input className="sg-q" placeholder="Search signals" aria-label="Search signals" value={sigQ} onChange={e => setSigQ(e.currentTarget.value)} /><Link className="btn btn-sec btn-sm" href="/scoring?tab=monitor" style={sx('text-decoration:none')}>Signal monitoring →</Link></div></div>
+      {S.signals.problem ? <div role="alert" style={sx('font-size:12px;color:var(--neg);margin-bottom:10px')}>{S.signals.problem}</div> : null}
+      <table className="sg"><thead><tr><th style={sx('width:24%')}>Signal</th><th style={sx('width:30%')}>What comes through</th><th style={sx('width:15%')}>From</th><th style={sx('width:15%')}>How long it counts</th><th style={sx('width:16%')}>Status</th></tr></thead><tbody>
+        {shown.length ? shown.map(x => {
+          const c = x.c, isOff = off.has(x.name), l = lastChange(x.name), [st, n] = c.knockout || c.reject ? ['', 0] : strength(c);
+          return <tr key={x.name} className={isOff ? 'is-off' : ''}>
+            <td><b>{x.name}</b>{x.cu ? <><span className="pill nr" style={sx('margin-left:6px')}>Added</span><div className="sg-m">{`By ${x.cu.by ?? '—'}${x.cu.at ? ' · ' + fmtWhen(x.cu.at) : ''}`}{edit && canSwitch ? <>{' · '}<button className="link" onClick={() => openModal({ kind: 'remove', name: x.name })}>Remove</button></> : null}</div></> : null}
+              {c.segment ? <div className="sg-m">Feeds <span className="seg">{c.segment}</span></div> : null}
+              {n ? <div className="sg-st" title="How much it counts">{[0, 1, 2].map(k => <i key={k} className={k < n ? 'on' : ''}></i>)}<span>{st}</span></div> : null}</td>
+            <td>{x.info.about}<div className="sg-m"><b>Data:</b> {x.info.data}</div>{x.ex.detail ? <div className="sg-ex">{`e.g. “${x.ex.detail}”`}</div> : null}</td>
+            <td>{x.ex.source || '—'}</td>
+            <td>{c.full ? <>{`Full weight for ${c.full} days`}<div className="sg-m">{`Gone after ${c.zero} days`}</div></> : <span className="sg-m">—</span>}</td>
+            <td>{c.knockout ? <><span className="pill ko">Knock-out</span><div className="sg-m">Removes the account before scoring</div></>
+              : c.reject ? <><span className="pill nr">Not scored</span><div className="sg-m">Too weak to act on</div></>
+              : <>{edit && canSwitch ? <button className={`sw ${isOff ? '' : 'on'}`} role="switch" aria-checked={!isOff} aria-label={x.name} onClick={() => openModal({ kind: 'switch', name: x.name, isOff })}><i></i></button> : null}
+                <span className={`pill ${isOff ? 'off' : 'on'}`}>{isOff ? 'Off' : 'On'}</span>
+                {l ? <div className="sg-m">{`${word[l.change]} · ${l.by} · ${fmtWhen(l.at)}`}{l.reason ? <><br />{`“${l.reason}”`}</> : null}</div> : null}</>}</td>
+          </tr>;
+        }) : <tr><td colSpan={5} className="su-sub" style={sx('padding:14px')}>No signal matches that search.</td></tr>}
+      </tbody></table>
+      {edit && canSwitch ? <div className="sg-add"><button className="btn btn-sec btn-sm" onClick={() => openModal({ kind: 'add', name: '' })}>+ Add a signal</button>
+        {S.unknownTags.map(t => <span key={t.tag} className="sg-sugg">Seen in a file but not a signal type yet: <b>{t.tag}</b>{` (${t.rows} row${t.rows === 1 ? '' : 's'}) `}<button className="link" onClick={() => openModal({ kind: 'add', name: t.tag })}>Add it</button></span>)}</div> : null}
+      <div className="sg-file"><span>Every row in the signal file carries:</span>{DemandAI.SIGNAL_COLUMNS.map(c => <code key={c}>{c}</code>)}</div>
+      <div className="sg-audit"><button className="sg-audit-h" onClick={() => setAuditOpen(o => !o)} aria-expanded={auditOpen}><span>{`${auditOpen ? '▾' : '▸'} Audit trail`}</span><em>{`${S.changes.length} change${S.changes.length === 1 ? '' : 's'}`}</em></button>
+        {auditOpen ? S.changes.length ? <table className="au"><thead><tr><th>When</th><th>Signal</th><th>Change</th><th>Who</th><th>Why</th><th>Version</th></tr></thead><tbody>
+          {S.changes.map((a, i) => <tr key={i}><td>{fmtWhen(a.at)}</td><td>{a.type}</td><td><span className={`pill ${a.change === 'added' ? 'nr' : a.change === 'on' ? 'on' : 'off'}`}>{word[a.change]}</span></td><td>{a.by}</td><td>{a.reason || '—'}</td><td>{`v${a.versionNo}`}</td></tr>)}
+        </tbody></table> : <div className="su-sub" style={sx('padding:8px 2px')}>No signal has been switched on or off yet.</div> : null}</div>
     </>;
+    if (id === 'actions') return <>
+      <div className="su-sub" style={sx('margin-bottom:10px')}>The actions the system may recommend, per micro-segment. It only chooses from this list; the first is the usual recommendation.</div>
+      <div className="ac-grid">{Object.entries(DemandAI.CONFIG.segmentLibrary).map(([seg, acts]) => <div key={seg} className="ac"><div className="ac-h">{seg}<span>{acts.length}</span></div>{acts.map((a, i) => <div key={i} className="ac-i">{i === 0 ? <em>Usual</em> : null}{a}</div>)}</div>)}</div>
+      {edit ? <div className="su-note">The client approves this list. Changes go to them as a proposal.</div> : null}</>;
+    if (id === 'brand') return <><div className="su-sub" style={sx('margin-bottom:10px')}>Brand guidelines, approved claims and messaging frameworks live in the Content library.</div><Link href="/content" className="btn btn-sec btn-sm" style={sx('text-decoration:none;display:inline-flex')}>Open Content library →</Link></>;
+    return <><div className="su-sub" style={sx('margin-bottom:10px')}>Who uses DemandAI and what each role can see.</div><Link href="/users" className="btn btn-sec btn-sm" style={sx('text-decoration:none;display:inline-flex')}>Open Users and roles →</Link></>;
+  }
 
-    if (s.id === 'rubric') {
-      const total = d.RUBRIC.reduce((a, r) => a + r.weight, 0);
-      const expanded = d.expandedWorking.has('rubric');
-      body = <>
-        <div style={sx('font-size:11.5px;color:var(--i2);margin-bottom:10px')}>{`The ICP in plain words: mid-to-large process-industry operators in the pilot region, evaluated against ${d.RUBRIC.length} weighted criteria (total ${total}/100), a fit floor of ${d.fitFloor}, and 4 knock-out rules.`}</div>
-        {' '}<button className="btn btn-ghost btn-sm" onClick={() => toggleWorking('rubric')} style={sx(`margin-bottom:${expanded ? '12' : '0'}px`)}>{expanded ? 'Hide the working' : 'Show the working'}</button>{' '}
-        {expanded ? <>
-          <div style={sx('font-size:11px;color:var(--i3);margin-bottom:10px')}>Knock-outs: out of region · pilot product already installed · strategic account · sanctioned country</div>
-          <div className="score-list" style={sx('border:1px solid var(--border);margin-bottom:10px')}>
-            <div className="sl-head" style={sx('grid-template-columns:1.5fr 2fr 90px;padding:8px 12px')}><div className="sl-th">Criterion</div><div className="sl-th">Levels</div><div className="sl-th">Weight</div></div>
-            {d.RUBRIC.map((r, i) => (
-              <div key={i} className="sl-row" style={sx('grid-template-columns:1.5fr 2fr 90px;padding:6px 12px')}>
-                <div style={sx('font-size:11.5px')}>{r.name}</div>
-                <div style={sx('font-size:10.5px;color:var(--i3)')}>{r.levels}</div>
-                <div><NumberInput value={r.weight} onCommit={v => updateWeight(i, v)} /></div>
-              </div>
-            ))}
+  function modalBody(m: Modal): ReactNode {
+    const title = sx('font-family:var(--fd);font-size:15px;font-weight:700;color:var(--i1);margin-bottom:4px');
+    const err = <div id="sgErr" role="alert" style={sx('font-size:12px;color:var(--neg);min-height:16px;margin-top:4px')}>{modalError}</div>;
+    if (m.kind === 'switch') return <>
+      <div style={title}>{`${m.isOff ? 'Switch on' : 'Switch off'} “${m.name}”?`}</div>
+      <div style={sx('font-size:12.5px;color:var(--i2);line-height:1.55;margin-bottom:14px')}>{m.isOff ? 'New scoring runs will use it again. Lists already scored are not changed.' : 'New scoring runs will skip its rows and list them as switched off. Lists already scored keep it.'}</div>
+      <label htmlFor="sgWhy" style={sx('display:block;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--i3);margin-bottom:6px')}>{`Why${m.isOff ? '' : ' (required)'}`}</label>
+      {m.isOff ? null : <div className="chips" style={sx('margin-bottom:8px')}>{REASONS.map(r => <button key={r} className="chip" onClick={() => { const el = formRef.current?.querySelector<HTMLInputElement>('#sgWhy'); if (el) el.value = r; }}>{r}</button>)}</div>}
+      <input id="sgWhy" autoFocus placeholder={m.isOff ? 'Optional, e.g. legal cleared it' : 'e.g. Legal hold on webinar data'} maxLength={500} style={sx('width:100%;padding:9px 11px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:13px')} onKeyDown={e => { if (e.key === 'Enter') doToggle(m.name, m.isOff); }} />
+      {err}
+      <div style={sx('display:flex;gap:8px;justify-content:flex-end;margin-top:8px')}><button className="btn btn-ghost btn-sm" onClick={() => setModal(null)}>Cancel</button><button className={`btn ${m.isOff ? 'btn-primary' : 'btn-danger'} btn-sm`} disabled={busy} onClick={() => doToggle(m.name, m.isOff)}>{m.isOff ? 'Switch on' : 'Switch off'}</button></div></>;
+    if (m.kind === 'remove') return <>
+      <div style={title}>{`Remove “${m.name}”?`}</div>
+      <div style={sx('font-size:12.5px;color:var(--i2);line-height:1.55;margin-bottom:14px')}>New scoring runs will treat it as an unknown tag again. Lists already scored keep it.</div>
+      <input id="rmWhy" autoFocus placeholder="Why (optional)" maxLength={500} style={sx('width:100%;padding:9px 11px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:13px')} />
+      {err}
+      <div style={sx('display:flex;gap:8px;justify-content:flex-end;margin-top:8px')}><button className="btn btn-ghost btn-sm" onClick={() => setModal(null)}>Cancel</button><button className="btn btn-danger btn-sm" disabled={busy} onClick={() => removeCustom(m.name)}>Remove</button></div></>;
+    const fld = (id: string, label: string, ph: string, v = '') => <label className="af"><span>{label}</span><input id={id} placeholder={ph} defaultValue={v} maxLength={300} /></label>;
+    return <>
+      <div style={title}>Add a signal</div>
+      <div style={sx('font-size:12px;color:var(--i3);line-height:1.5;margin-bottom:12px')}>New scoring runs recognise it in the signal file from now on. Lists already scored are not changed.</div>
+      {fld('nsName', 'Name, exactly as in the signal_type column', 'e.g. Trade show visit', m.name)}
+      {fld('nsAbout', 'What it means', "e.g. Visited the client's stand at a trade show")}
+      {fld('nsData', 'What data comes through', 'e.g. The event, the date, who visited')}
+      {fld('nsSource', 'Where it comes from', 'e.g. Events team')}
+      <div className="af-row"><label className="af"><span>Feeds micro-segment</span><select id="nsSeg" defaultValue=""><option value="">Pick one…</option>{Object.keys(DemandAI.CONFIG.segmentLibrary).map(x => <option key={x}>{x}</option>)}</select></label>
+        <label className="af"><span>How much it counts</span><select id="nsLevel" defaultValue="Medium"><option>Strong</option><option>Medium</option><option>Light</option></select></label></div>
+      <div className="af-row"><label className="af"><span>Full weight for (days)</span><input id="nsFull" type="number" min="1" defaultValue="30" /></label>
+        <label className="af"><span>Gone after (days)</span><input id="nsZero" type="number" min="2" defaultValue="120" /></label></div>
+      {err}
+      <div style={sx('display:flex;gap:8px;justify-content:flex-end;margin-top:6px')}><button className="btn btn-ghost btn-sm" onClick={() => setModal(null)}>Cancel</button><button className="btn btn-primary btn-sm" disabled={busy} onClick={saveSignal}>Add signal</button></div></>;
+  }
+
+  const v = S.version;
+  return <>
+    <main className="main" id="mainArea">
+      <div className="topbar">
+        <div className="topbar-l"><span className="tb-title">Setup</span><span className={`tb-badge ${done === N ? 'badge-live' : 'badge-neutral'}`}>{`${done} of ${N} signed off`}</span></div>
+        <div className="topbar-r">
+          <div className="mode" role="tablist" aria-label="Mode">
+            <button role="tab" aria-selected={!edit} className={!edit ? 'on' : ''} onClick={() => setMode('view')}>View</button>
+            <button role="tab" aria-selected={edit} className={edit ? 'on' : ''} disabled={!canEdit} title={canEdit ? 'Change the setup and sign it off' : 'Only an admin can change the setup'} onClick={() => setMode('edit')}>Edit</button>
           </div>
-          <div style={sx(`font-size:11px;color:${total === 100 ? 'var(--pos)' : 'var(--neg)'};font-weight:600;margin-bottom:8px`)} id="weightTotal">{`Total: ${total} / 100 ${total === 100 ? '✓' : '— must equal 100'}`}</div>
-          <div style={sx('display:flex;align-items:center;gap:8px')}>
-            <span style={sx('font-size:11.5px;color:var(--i3)')}>Fit floor</span>
-            <NumberInput value={d.fitFloor} onCommit={v => { d.fitFloor = parseInt(v); }} />
-            <span style={sx('font-size:10.5px;color:var(--i3)')}>— accounts below this drop out before scoring</span>
-          </div>
-        </> : null}
-      </>;
-    }
-
-    if (s.id === 'personas') body = (
-      <div style={sx('display:flex;flex-wrap:wrap;gap:6px')}>
-        {d.PERSONAS.map((p, i) => (
-          <span key={i} style={sx('background:var(--s75);padding:4px 6px 4px 10px;border-radius:999px;font-size:11px;display:inline-flex;align-items:center;gap:6px')}>{p}<span onClick={() => removePersona(i)} style={sx('cursor:pointer;color:var(--i3);font-weight:700;padding:0 2px')} title="Remove">×</span></span>
-        ))}
-        <span style={sx('background:var(--surf);border:1px dashed var(--brand-mid);padding:4px 10px;border-radius:999px;font-size:11px;color:var(--brand-dk);cursor:pointer;font-weight:600')} onClick={addPersona}>+ Add persona</span>
-      </div>
-    );
-
-    if (s.id === 'signals') {
-      const groups: SignalGroup[] = ['Ready', 'Needs data', 'Needs enabling'];
-      const onCount = d.SIGNALS.filter(x => x.on).length;
-      const expanded = d.expandedWorking.has('signals');
-      // In the original the toggle's spans were clicked inside a label that innerHTML had already detached, so the
-      // label never forwarded the click to the checkbox. preventDefault keeps that: one toggle per click.
-      const spanClick = (e: MouseEvent, code: string) => { e.preventDefault(); toggleSignal(code); };
-      body = <>
-        <div style={sx('font-size:11.5px;color:var(--i2);margin-bottom:10px')}>{`${onCount} of ${d.SIGNALS.length} signal types enabled — only the ones Client's data actually supports, plus a plain note of how long each counts.`}</div>
-        {' '}<button className="btn btn-ghost btn-sm" onClick={() => toggleWorking('signals')} style={sx(`margin-bottom:${expanded ? '12' : '0'}px`)}>{expanded ? 'Hide the working' : 'Show the working'}</button>{' '}
-        {expanded ? groups.map(g => (
-          <div key={g} style={sx('margin-bottom:12px')}>
-            <div style={sx('font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--i3);margin-bottom:6px')}>{g + (g === 'Ready' ? ' — works on our sources alone' : g === 'Needs data' ? ' — needs a Client export' : ' — needs a subscription Client owns')}</div>
-            {d.SIGNALS.filter(x => x.group === g).map(x => (
-              <div key={x.code} style={sx('display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--s75)')}>
-                <label style={sx('position:relative;display:inline-block;width:32px;height:18px;flex-shrink:0')}>
-                  <input type="checkbox" defaultChecked={x.on} onChange={() => toggleSignal(x.code)} style={sx('opacity:0;width:0;height:0')} />
-                  <span onClick={e => spanClick(e, x.code)} style={sx(`position:absolute;cursor:pointer;inset:0;background:${x.on ? 'var(--brand)' : 'var(--s200)'};border-radius:999px;transition:.15s`)}></span>
-                  <span onClick={e => spanClick(e, x.code)} style={sx(`position:absolute;height:14px;width:14px;left:${x.on ? '16px' : '2px'};bottom:2px;background:#fff;border-radius:50%;cursor:pointer;transition:.15s;box-shadow:0 1px 2px rgba(0,0,0,.2)`)}></span>
-                </label>
-                <span style={sx('font-family:var(--fm);font-size:10px;color:var(--i3);width:60px;flex-shrink:0')}>{x.code}</span>
-                <span style={sx('font-size:11.5px;color:var(--i2)')}>{x.name}</span>
-              </div>
-            ))}
-          </div>
-        )) : null}
-      </>;
-    }
-
-    if (s.id === 'actions') {
-      const segs = Object.keys(d.ACTIONS_LIB);
-      body = <>
-        <div style={sx('font-size:11.5px;color:var(--i2);margin-bottom:12px')}>3–5 approved actions per micro-segment — the LLM can only choose from this library. Nothing here yet: Client hasn’t confirmed what their team can actually deliver per segment.</div>
-        {segs.length ? segs.map(seg => (
-          <div key={seg} style={sx('margin-bottom:14px')}>
-            <div style={sx('display:flex;align-items:center;gap:8px;margin-bottom:6px')}>
-              <span style={sx('font-size:11px;font-weight:700;color:var(--i1)')}>{seg}</span>
-              <span style={sx('font-size:10px;color:var(--i3)')}>{`${d.ACTIONS_LIB[seg].length}/5`}</span>
-              <span onClick={() => removeSegment(seg)} style={sx('cursor:pointer;color:var(--i4);font-size:10px;margin-left:auto')}>Remove segment</span>
-            </div>
-            {d.ACTIONS_LIB[seg].map((a, i) => (
-              <div key={i} style={sx('display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--s50);border-radius:7px;margin-bottom:4px')}>
-                <span style={sx('font-size:11.5px;color:var(--i2);flex:1')}>{a}</span>
-                <span onClick={() => removeAction(seg, i)} style={sx('cursor:pointer;color:var(--i3);font-weight:700;padding:0 2px')}>×</span>
-              </div>
-            ))}
-            {d.ACTIONS_LIB[seg].length < 5 ? <button className="btn btn-ghost btn-sm" style={sx('padding:4px 0;font-size:11px')} onClick={() => addAction(seg)}>{`+ Add action to ${seg}`}</button> : null}
-          </div>
-        )) : <div style={sx('font-size:11px;color:var(--i4);font-style:italic;margin-bottom:10px')}>No segments defined yet.</div>}
-        {' '}<button className="btn btn-sec btn-sm" onClick={addSegment}>+ Add micro-segment</button>
-      </>;
-    }
-
-    if (s.id === 'brand') body = <>
-      <div style={sx('font-size:11.5px;color:var(--i2);margin-bottom:10px')}>Brand pack, approved claims, and 3 collateral items uploaded, each with an owner. 3 of 8 enabled actions have approved proof.</div>
-      {' '}<Link href="/content" className="btn btn-sec btn-sm" style={sx('text-decoration:none;display:inline-flex')}>Open content library →</Link>
-    </>;
-
-    if (s.id === 'users') body = <>
-      <div style={sx('font-size:11.5px;color:var(--i2);margin-bottom:10px')}>{`${d.USERS.length} users — ${d.USERS.filter(u => u.status === 'active').length} active, ${d.USERS.filter(u => u.status === 'invited').length} invited.`}</div>
-      {' '}<Link href="/users" className="btn btn-sec btn-sm" style={sx('text-decoration:none;display:inline-flex')}>Open users and roles →</Link>
-    </>;
-
-    const actionBtn = s.status === 'done'
-      ? <button className="btn btn-ghost btn-sm" onClick={() => reopenStep(s.id)}>Reopen to edit</button>
-      : s.status === 'review'
-        ? <button className="btn btn-primary btn-sm" onClick={() => signOff(s.id)}>Sign off this section</button>
-        : null;
-
-    return (
-      <div key={s.id} className="panel" style={sx('margin-bottom:12px')}>
-        <div className="panel-hdr">
-          <span className="panel-ttl">{`${s.num} · ${s.title}`}</span>
-          <div style={sx('display:flex;align-items:center;gap:8px')}>{statusBadge(s.status)}{actionBtn}</div>
+          <a className="btn btn-sec btn-sm" href="/api/config/export" style={sx('text-decoration:none')}>Export config</a>
         </div>
-        <div className="panel-body">{body}</div>
       </div>
-    );
-  }
-
-  const done = d.STEPS.filter(s => s.status === 'done').length;
-  const N = d.STEPS.length;
-  const rem = N - done;
-  return (
-    <>
-      <main className="main" id="mainArea">
-        <Fragment key={gen}>
-          <div className="topbar">
-            <div className="topbar-l">
-              <span className="tb-title">Setup</span>
-              {' '}<span className={`tb-badge ${done === N ? 'badge-live' : 'badge-neutral'}`}>{`${done} of ${N} signed off`}</span>
-            </div>
-            <div className="topbar-r"><button className="btn btn-sec btn-sm" onClick={() => showToast('Config v1 exported as JSON')}>Export config</button></div>
+      <div className="canvas">
+        <div className={`su-intro ${edit ? 'edit' : ''}`}>{edit
+          ? <><b>Edit mode.</b> Sign off each section once it is right, and switch signals as the pilot needs. Prospecting, Scoring and Micro-segments read this configuration; every list and run names the version it used.</>
+          : <><b>How DemandAI is set up for this pilot.</b>{` What it scores on, which signals it listens to and who it targets.${canEdit ? ' Switch to Edit to change it.' : ' Only an admin can change it.'}`}</>}</div>
+        {STEPS.map(s => {
+          const st = S.sections[s.id];
+          const action = !edit || !canSignOff ? null : st.status === 'done'
+            ? <button className="btn btn-ghost btn-sm" onClick={() => void signOff(s.id, 'reopen')}>Reopen to edit</button>
+            : <button className="btn btn-primary btn-sm" onClick={() => void signOff(s.id, 'sign-off')}>Sign off this section</button>;
+          return <div key={s.id} className="panel su-p" id={`sec-${s.id}`}>
+            <div className="panel-hdr"><span className="panel-ttl">{`${s.num} · ${s.title}`}</span>
+              <div style={sx('display:flex;align-items:center;gap:8px')}>{st.by && st.at ? <span className="sg-m" style={sx('margin:0')}>{`${st.status === 'done' ? 'Signed off' : 'Reopened'} by ${st.by} · ${fmtWhen(st.at)}${st.note ? ` · ${st.note}` : ''}`}</span> : null}{statusBadge(st.status)}{action}</div></div>
+            <div className="panel-body">{stepBody(s.id)}</div></div>;
+        })}
+        <div className="panel" style={sx(`border:2px solid ${done === N ? 'var(--pos)' : 'var(--border)'}`)}>
+          <div className="panel-hdr"><span className="panel-ttl">{`8 · Config v${v.versionNo}`}</span>{done === N ? <span className="sc sc-h">Signed off</span> : <span className="sc sc-m">{`${rem} section${rem > 1 ? 's' : ''} remaining`}</span>}</div>
+          <div className="panel-body" style={sx('font-size:12px;color:var(--i2);line-height:1.6')}>
+            {done === N ? `All seven sections signed off. Every score, segment and draft from here names this version. A later change makes v${v.versionNo + 1}, and v${v.versionNo} is kept for the audit trail.`
+              : `Config v${v.versionNo} is in use: every list and run names it. Sign off the remaining ${rem} section${rem > 1 ? 's' : ''} to confirm it.`}
+            <table className="au" style={sx('margin-top:10px')}><thead><tr><th>Version</th><th>In use from</th><th>By</th><th>What changed</th></tr></thead><tbody>
+              {S.versions.map(r => <tr key={r.versionNo}><td>{`v${r.versionNo}${r.status === 'active' ? ' · in use' : ''}`}</td><td>{r.activatedAt ? fmtDate(r.activatedAt) : '—'}</td><td>{r.activatedBy ?? '—'}</td><td>{r.changes.length ? r.changes.join('; ') : r.versionNo === 1 ? 'Starting values' : '—'}</td></tr>)}
+            </tbody></table>
           </div>
-          <div className="canvas">
-            <div className="panel" style={sx('margin-bottom:18px;background:var(--brand-lt);border-color:transparent')}>
-              <div className="panel-body" style={sx('font-size:12.5px;color:var(--brand-dk);line-height:1.6')}>
-                <b>What to do here:</b> review each section below against what Client has provided. Edit anything that needs adjusting, then sign off. <b>Nothing downstream runs until every section is signed off</b> — Prospecting, Scoring and NBA all read this exact configuration.
-              </div>
-            </div>
-
-            {d.STEPS.map(s => renderStep(s))}
-
-            <div className="panel" style={sx(`border:2px solid ${done === N ? 'var(--pos)' : 'var(--border)'}`)}>
-              <div className="panel-hdr">
-                <span className="panel-ttl">8 · Config v1</span>
-                {done === N ? <span className="sc sc-h">Active</span> : <span className="sc sc-m">{`${rem} section${rem > 1 ? 's' : ''} remaining`}</span>}
-              </div>
-              <div className="panel-body" style={sx('font-size:11.5px;color:var(--i2);line-height:1.6')}>
-                {done === N
-                  ? 'All seven sections signed off. Config v1 is active — every score, segment and draft from here names this version. A future change produces v2, with v1 kept for the audit trail.'
-                  : `Sign off the remaining ${rem} section${rem > 1 ? 's' : ''} above to activate Config v1. Nothing can run against an incomplete configuration.`}
-              </div>
-            </div>
-          </div>
-        </Fragment>
-      </main>
-      {modal ? (
-        <div id="setupModalOverlay" ref={ovRef} onClick={e => { if (e.target === e.currentTarget) closeModal(); }}
-          style={sx(`position:fixed;inset:0;background:rgba(20,26,33,.45);z-index:600;display:${modalOpen ? 'flex' : 'none'};align-items:center;justify-content:center;`)}>
-          <div key={modal.seq} style={sx('background:var(--surf);border-radius:var(--rlg);box-shadow:var(--sh-lg);width:440px;max-width:90vw;padding:22px;')} onClick={e => e.stopPropagation()}>{modal.html}</div>
         </div>
-      ) : null}
-    </>
-  );
+      </div>
+    </main>
+    {modal ? <div id="setupModalOverlay" style={OVERLAY} onClick={e => { if (e.target === e.currentTarget) setModal(null); }}>
+      <div ref={formRef} role="dialog" aria-modal="true" aria-label={modal.kind === 'add' ? 'Add a signal' : modal.kind === 'remove' ? `Remove ${modal.name}` : `Switch ${modal.name}`}
+        style={sx(`background:var(--surf);border-radius:var(--rlg);box-shadow:var(--sh-lg);width:${modal.kind === 'add' ? 520 : 440}px;max-width:100%;padding:22px`)}>{modalBody(modal)}</div>
+    </div> : null}
+  </>;
 }

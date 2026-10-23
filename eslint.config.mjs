@@ -8,7 +8,6 @@ import nextTs from 'eslint-config-next/typescript';
 const PROTOTYPE_SCREENS = [
   'components/screens/NbaScreen.tsx',
   'components/screens/ReviewScreen.tsx',
-  'components/screens/SetupScreen.tsx',
   'components/screens/TodayScreen.tsx',
 ];
 

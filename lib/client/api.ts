@@ -53,6 +53,8 @@ export async function uploadFile<T = unknown>(path: string, fields: Record<strin
 
 /** Server types as they arrive over JSON: dates are ISO strings. */
 export type Wire<T> = { [K in keyof T]: T[K] extends Date ? string : T[K] extends Date | null ? string | null : T[K] };
+/** Wire, all the way down (dates inside nested objects and arrays arrive as strings too). */
+export type WireDeep<T> = T extends Date ? string : T extends (infer U)[] ? WireDeep<U>[] : T extends object ? { [K in keyof T]: WireDeep<T[K]> } : T;
 
 export type JobState = {
   id: string; kind: string; status: 'queued' | 'running' | 'succeeded' | 'failed' | 'cancelled'; stage: string | null;

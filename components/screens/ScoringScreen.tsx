@@ -21,6 +21,7 @@ import { ApiError, api, errorText, uploadFile, waitForJob, type JobState, type W
 import { useDebounced } from '@/lib/client/use-debounced';
 import { usePaged } from '@/lib/client/use-paged';
 import { RenameField } from '@/components/RenameField';
+import { useCan } from '@/components/SessionContext';
 import type { ListDetail as ServerListDetail, ListSummary as ServerListSummary } from '@/lib/server/services/lists';
 import type { ActiveSignalSettings, ProspectDetail, ProspectRow, RunDetail as ServerRunDetail, RunSummary as ServerRunSummary } from '@/lib/server/services/scoring';
 import type { MonitoredFile, MonitoredType, SignalMonitoring, SignalTypeStatus } from '@/lib/server/services/signal-monitoring';
@@ -130,6 +131,7 @@ const fetchStart = (): Promise<StartData> => Promise.all([api<{ lists: ListSumma
 /* ═══════════════ SCREEN ═══════════════ */
 export function ScoringScreen() {
   const router = useRouter();
+  const canSetup = useCan('setup.view');
   const [screen, setScreen] = useState<'none' | 'start' | 'results'>('none');
   const [srcMode, setSrcMode] = useState<SrcMode>('saved');
   const [tab, setTab] = useState<StartTab>('new');
@@ -443,7 +445,8 @@ export function ScoringScreen() {
     return <div style={sx('max-width:1100px')}>
       <div style={sx('display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin-bottom:14px;flex-wrap:wrap')}>
         <div><div style={sx('font-family:var(--fd);font-size:18px;font-weight:700;color:var(--i1)')}>What has come in, per signal</div>
-          <div style={sx('font-size:12.5px;color:var(--i3);margin-top:3px;line-height:1.5')}>In the POC the client sends signals as files, so this counts the rows in every signal file scored so far, each file once. Once the data connectors are in, it shows the live stream.</div></div></div>
+          <div style={sx('font-size:12.5px;color:var(--i3);margin-top:3px;line-height:1.5')}>In the POC the client sends signals as files, so this counts the rows in every signal file scored so far, each file once. Once the data connectors are in, it shows the live stream.</div></div>
+        {canSetup ? <Link href="/setup#sec-signals" className="btn btn-sec btn-sm" style={sx('text-decoration:none')}>Switch signals on or off in Setup →</Link> : null}</div>
       {m.scope === 'own' ? <div style={sx('font-size:11.5px;color:var(--i3);margin:-4px 0 12px')}>You see the signal rows about the accounts you own.</div> : null}
       {m.settingsProblem ? <div role="alert" style={sx('font-size:12px;color:var(--neg);margin:-4px 0 12px')}>{m.settingsProblem}</div> : null}
       <div className="mon-tiles">{tile('Records received', T.records.toLocaleString('en-US'), `${T.files} file${T.files === 1 ? '' : 's'}`)}{tile('Size', kb(T.size), 'all signal rows')}{tile('Signal types seen', `${T.knownSeen} of ${T.known}`, 'known tags')}{tile('Not a known tag', T.unknownRecords, T.unknownTypes.length ? T.unknownTypes.join(', ') : 'every row uses a known tag')}</div>
