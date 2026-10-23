@@ -239,6 +239,20 @@
       "when": 1792791643774,
       "tag": "0033_draft_ai_call",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1792793484960,
+      "tag": "0034_autopilot",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1792793485589,
+      "tag": "0035_autopilot_security",
+      "breakpoints": true
     }
   ]
 }

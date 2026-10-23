@@ -8,6 +8,11 @@ import { setAiGatewayForTests } from '../../lib/server/ai.ts';
 import { createDb, type Db, type TenantContext } from '../../lib/server/db/tenant.ts';
 import { HttpError } from '../../lib/server/http/errors.ts';
 import { askCopilot, BUDGET, type CopilotInput } from '../../lib/server/services/copilot.ts';
+import { runAutopilot, undoAutopilot } from '../../lib/server/services/autopilot.ts';
+import { drawSpotChecks } from '../../lib/server/services/review.ts';
+import { logFacts } from '../../lib/server/services/recommendations.ts';
+import { withTenant } from '../../lib/server/db/tenant.ts';
+import * as R from '../../lib/engine/review.ts';
 import type { CopilotBlock } from '../../lib/copilot/types.ts';
 import { FakeModel, reply } from '../helpers/fake-model.ts';
 import { ALL_ON, fakeGateway } from './ai-fixtures.ts';
@@ -109,4 +114,54 @@ test('a model that fails, or keeps claiming it acted, ends in the rules\' "can\'
     assert.deepEqual([r.source, r.fallback], ['none', "the AI's answer broke Copilot's rules, so it was not shown"]);
     assert.equal(fake.requests.length, 2, 'one repair');
   } finally { setAiGatewayForTests(undefined); }
+});
+
+/* ─── Autopilot: a plan the person confirms, checked again, logged, not counted, undoable ─── */
+
+test('Autopilot rates the spot-checks that still pass, logs each under the person outside G2, and its runner can undo it once', async () => {
+  const actor = { userId: ids.adminA, role: 'Admin' as const };
+  await withTenant(app, admin(), s => drawSpotChecks(s, actor));
+  const pending = (await owner.query(`SELECT id FROM recommendations WHERE nba_run_id = $1 AND spot = 'pending'`, [built.runId])).rows.map(r => r.id);
+  assert.ok(pending.length > 0, 'the week\'s spot-checks were drawn');
+  const asked = await ask(admin(), { question: 'Approve all spot-checks that passed every check' });
+  const plan = (asked.blocks.find(b => b.t === 'plan') as Extract<CopilotBlock, { t: 'plan' }>).plan;
+  assert.equal(plan.kind, 'spot');
+  assert.deepEqual([...plan.will.map(w => w.id), ...plan.left.map(l => l.id)].sort(), [...pending].sort());
+  const g2 = async () => R.measure([], await withTenant(app, admin(), s => logFacts(s))).pooled;
+  const before = await g2();
+  // An exception with an unsupported claim slipped into the plan is still left for a person.
+  const [risky] = (await owner.query(`SELECT id FROM recommendations WHERE nba_run_id = $1 AND status = 'Waiting' AND spot IS NULL LIMIT 1`, [built.runId])).rows;
+  const ran = await withTenant(app, admin(), s => runAutopilot(s, actor, { kind: 'spot', ids: [...plan.will.map(w => w.id), risky.id], instruction: plan.instruction }));
+  assert.deepEqual(ran.done.map(d => d.id).sort(), plan.will.map(w => w.id).sort());
+  assert.ok(ran.skipped.some(x => x.id === risky.id && /not a spot-check/.test(x.why)));
+  const rows = (await owner.query(`SELECT r.spot, l.kind, l.decisive, l.created_by, l.note FROM recommendations r JOIN decision_log l ON l.recommendation_id = r.id AND l.decision = 'Accepted by Autopilot' WHERE r.id = ANY($1)`, [ran.done.map(d => d.id)])).rows;
+  assert.equal(rows.length, ran.done.length);
+  for (const r of rows) assert.deepEqual([r.spot, r.kind, r.decisive, r.created_by], ['accepted', 'autopilot', false, ids.adminA]);
+  assert.match(rows[0].note, /instruction: "Approve all spot-checks that passed every check" · checked again before acting · not counted toward G2/);
+  assert.deepEqual(await g2(), before, 'G2 is untouched');
+  await assert.rejects(withTenant(app, rep(), s => undoAutopilot(s, { userId: ids.repA, role: 'Sales rep' }, ran.runId)), (e: HttpError) => e.status === 404, 'only its runner undoes it');
+  const undone = await withTenant(app, admin(), s => undoAutopilot(s, actor, ran.runId));
+  assert.equal(undone.restored, ran.done.length);
+  assert.equal(Number((await owner.query(`SELECT count(*) n FROM recommendations WHERE id = ANY($1) AND spot = 'pending'`, [ran.done.map(d => d.id)])).rows[0].n), ran.done.length);
+  assert.equal(Number((await owner.query(`SELECT count(*) n FROM decision_log WHERE decision = 'Autopilot run undone'`)).rows[0].n), ran.done.length);
+  await assert.rejects(withTenant(app, admin(), s => undoAutopilot(s, actor, ran.runId)), (e: HttpError) => e.status === 409);
+  // The record stays: the app role may only mark a run undone; nobody deletes one.
+  const appRole = db.pool('demandai_app');
+  await assert.rejects(appRole.query(`DELETE FROM autopilot_runs`), /permission denied/);
+  await assert.rejects(appRole.query(`UPDATE autopilot_runs SET instruction = 'x'`), /permission denied/);
+  await assert.rejects(owner.query(`DELETE FROM autopilot_runs`), /append-only/);
+});
+
+test("Autopilot never takes risky or sensitive exceptions, nor another rep's items", async () => {
+  const rows = (await owner.query(`SELECT id, owner_email FROM recommendations WHERE nba_run_id = $1 AND status IN ('Waiting', 'Awaiting approval') AND spot IS DISTINCT FROM 'pending'`, [built.runId])).rows;
+  const mine = rows.filter(r => r.owner_email === repEmail).map(r => r.id), others = rows.filter(r => r.owner_email !== repEmail).map(r => r.id).slice(0, 3);
+  const ran = await withTenant(app, rep(), s => runAutopilot(s, { userId: ids.repA, role: 'Sales rep' }, { kind: 'exception', ids: [...mine, ...others], instruction: 'accept everything' }));
+  for (const id of others) assert.ok(ran.skipped.some(x => x.id === id && x.why === 'not yours, or not there any more'));
+  const live = (await owner.query(`SELECT r.id, r.status, d.checks FROM recommendations r JOIN drafts d ON d.recommendation_id = r.id AND d.version = r.draft_version WHERE r.id = ANY($1)`, [ran.done.map(d => d.id)])).rows;
+  for (const r of live) {
+    assert.equal(r.status, 'Released');
+    assert.ok(!R.isSensitive(r.checks), 'nothing sensitive is released by Autopilot');
+  }
+  const why = ran.skipped.filter(x => mine.includes(x.id)).map(x => x.why);
+  assert.ok(why.every(w => /needs a person|already decided|no way to reach|paused/.test(w)), why.join(' | '));
 });

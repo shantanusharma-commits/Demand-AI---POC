@@ -819,7 +819,7 @@ export const drafts = pgTable('drafts', {
   index('drafts_bu_idx').on(t.businessUnitId),
 ]);
 
-export const LOG_KINDS = ['exception', 'spot', 'alternative', 'intervention', 'system', 'manager_check'] as const;
+export const LOG_KINDS = ['exception', 'spot', 'alternative', 'intervention', 'system', 'manager_check', 'autopilot'] as const;
 
 /** Who decided what about a recommendation, when and why (plan §7). Append-only: a manager's check of a flagged
  *  decision is a new row linked to it. The measures (G1, G2) are computed from it. */
@@ -1131,4 +1131,24 @@ export const aiVerticals = pgTable('ai_verticals', {
 }, t => [
   check('ai_verticals_confidence_check', sql`${t.confidence} in ('high', 'medium', 'low')`),
   uniqueIndex('ai_verticals_bu_key_version_key').on(t.businessUnitId, t.industryKey, t.templateVersion),
+]);
+
+/** A run of Autopilot (G-013, the legacy Copilot contract): what a person asked it to do, what it did and what it
+ *  left, and what each item was before, so the person who ran it can undo it. Only the undo columns ever change. */
+export const autopilotRuns = pgTable('autopilot_runs', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  businessUnitId: uuid('business_unit_id').notNull().references(() => businessUnits.id),
+  kind: text('kind').notNull(),
+  instruction: text('instruction').notNull(),
+  /** [{ id, before: { status, released, spot, decidedAt, decidedBy, holdWhy, holdNote, holdAt, holdBy } }] */
+  items: jsonb('items').notNull(),
+  /** [{ id, why }] */
+  skipped: jsonb('skipped').notNull(),
+  undoneAt: tsz('undone_at'),
+  undoneBy: uuid('undone_by').references((): AnyPgColumn => users.id),
+  createdAt: createdAt(),
+  createdBy: createdBy(),
+}, t => [
+  check('autopilot_runs_kind_check', sql`${t.kind} in ('spot', 'exception')`),
+  index('autopilot_runs_bu_idx').on(t.businessUnitId, t.createdAt),
 ]);
