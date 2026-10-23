@@ -806,12 +806,15 @@ export const drafts = pgTable('drafts', {
   /** Why this version exists ("Generated from the action", "Edited before accepting (minor: …)"). */
   reason: text('reason').notNull(),
   aiAssisted: boolean('ai_assisted').notNull().default(false),
+  /** The AI call that wrote this version (Phase 6), when it was written with AI. */
+  aiCallId: uuid('ai_call_id'),
   brandVersionId: uuid('brand_version_id').notNull().references(() => brandVersions.id),
   createdAt: createdAt(),
   createdBy: createdBy(),
 }, t => [
   check('drafts_channel_check', sql`${t.channel} in ('Email', 'LinkedIn', 'Task')`),
   check('drafts_version_check', sql`${t.version} > 0`),
+  check('drafts_ai_check', sql`(${t.aiCallId} is null) or ${t.aiAssisted}`),
   uniqueIndex('drafts_recommendation_version_key').on(t.recommendationId, t.version),
   index('drafts_bu_idx').on(t.businessUnitId),
 ]);

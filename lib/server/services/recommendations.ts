@@ -89,7 +89,9 @@ export async function addDraftVersion(scope: TenantScope, item: Item, d: Draft, 
   const { checks, confidence } = assess(item, d);
   await scope.tx.insert(drafts).values({
     businessUnitId: scope.ctx.businessUnitId, recommendationId: item.row.id, version, channel: d.channel, action: R.chosenAction(item.rec, item.state),
-    contactRow: R.liveRec(item.rec, item.state).contact.row ?? null, draft: d, checks, confidence, reason, brandVersionId: item.run.brandVersionId, createdBy: by,
+    contactRow: R.liveRec(item.rec, item.state).contact.row ?? null, draft: d, checks, confidence, reason, brandVersionId: item.run.brandVersionId,
+    // A person's edit of an AI draft is still AI-assisted (Phase 6).
+    aiAssisted: !!d.ai, aiCallId: d.ai?.callId ?? null, createdBy: by,
   });
   await scope.tx.update(recommendations).set({ draftVersion: version }).where(eq(recommendations.id, item.row.id));
   item.row = { ...item.row, draftVersion: version };

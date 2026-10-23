@@ -75,10 +75,9 @@ const pl = (n: number, w: string) => `${n} ${w}${n === 1 ? '' : 's'}`;
 
 /* ─── Building ─── */
 
-/** Builds micro-segments from a stored hand-off, or from a saved scoring run's tier A and B prospects (a hand-off is
- *  made for it first). */
-export async function buildNbaRun(scope: TenantScope, actor: Actor, input: { handoffId?: string; scoringRunId?: string }): Promise<{ runId: string; name: string; stats: Record<string, unknown>; checks: BuildStep[] }> {
-  const started = performance.now();
+/** What a build is made of, before anything is written: the hand-off, its accounts grouped into micro-segments, and
+ *  the brand pack and date the drafts are checked against. A build from a saved scoring run makes its hand-off here. */
+export async function planNbaBuild(scope: TenantScope, actor: Actor, input: { handoffId?: string; scoringRunId?: string }, now = new Date()) {
   let handoffId = input.handoffId;
   if (!handoffId) {
     if (!input.scoringRunId) throw badRequest('Choose the prospects to group.');
@@ -89,9 +88,7 @@ export async function buildNbaRun(scope: TenantScope, actor: Actor, input: { han
   const [run] = await scope.tx.select({ asOf: scoringRuns.asOf, name: scoringRuns.name, listName: leadLists.name }).from(scoringRuns)
     .innerJoin(leadLists, eq(leadLists.id, scoringRuns.listId)).where(eq(scoringRuns.id, scoringRunId));
   const brand = await liveBrand(scope), pack = brand.pack;
-  const configVersionId = await activeConfigVersionId(scope);
-  const runId = randomUUID(), asOf = run.asOf, checkDate = checkDateOf(asOf);
-  const now = new Date();
+  const asOf = run.asOf, checkDate = checkDateOf(asOf);
   // 5.9 Engage-once, across the whole unit: accounts released or rejected as already engaged in an earlier build.
   const names = [...new Set(results.map(r => r.account.name.toLowerCase()))];
   const { rows: hits } = await scope.tx.execute<{ name: string; run_name: string; engaged_at: string | Date }>(
@@ -99,17 +96,41 @@ export async function buildNbaRun(scope: TenantScope, actor: Actor, input: { han
   const engaged = new Map(hits.map(e => [e.name, `${e.run_name}, ${new Date(e.engaged_at).toISOString().slice(0, 10)}`]));
   const seg = buildSegments(results, { keys: [...keys.keys()], engaged });
   if (!seg.recs.length && !seg.engagedOnce.length) throw badRequest('No prospects with a live signal to group.');
+  return { handoffId, scoringRunId, keys, run, brand, pack, asOf, checkDate, seg };
+}
+
+/** AI drafts written for a build before it is stored, keyed by aiDraftKey(); and why the rest stayed with the rules. */
+export type AiDrafts = { drafts: ReadonlyMap<string, Draft>; missed: ReadonlyMap<string, string>; stats?: { asked: number; written: number; fallbacks: Record<string, number> } };
+/** The same recommendation, action, channel and person: an AI draft is used only for exactly what it was written for. */
+export const aiDraftKey = (rec: Rec, rules: Pick<Draft, 'channel'>) => `${rec.key}|${rec.action}|${rules.channel}|${rec.contact.row ?? ''}`;
+
+/** Builds micro-segments from a stored hand-off, or from a saved scoring run's tier A and B prospects (a hand-off is
+ *  made for it first). With `ai`, an item's first message is the AI draft written for it, when there is one. */
+export async function buildNbaRun(scope: TenantScope, actor: Actor, input: { handoffId?: string; scoringRunId?: string }, ai?: AiDrafts): Promise<{ runId: string; name: string; stats: Record<string, unknown>; checks: BuildStep[] }> {
+  const started = performance.now();
+  const now = new Date();
+  const { handoffId, scoringRunId, keys, run, brand, pack, asOf, checkDate, seg } = await planNbaBuild(scope, actor, input, now);
+  const configVersionId = await activeConfigVersionId(scope);
+  const runId = randomUUID();
   const name = `${run.name || run.listName} · ${now.toISOString().slice(0, 10)}`;
   const ordered = queueOrder(seg.recs, runId);
 
   // Route each item (step 1): a draft that fails a brand or rule check is regenerated once on its own first (5.16).
+  // An AI draft (written before the build, already through the same checks) comes second, after the rules' one.
   type Built = { id: string; rec: Rec; key: HandoffKey; st: R.RecState; versions: { d: Draft; reason: string }[]; logs: { decision: string; note: string }[] };
   const built: Built[] = ordered.map(rec => {
     const st = R.initialState();
     const first = R.generatedDraft(rec, st, pack, checkDate);
     const versions = [{ d: first, reason: 'Generated from the action' }];
     const logs: Built['logs'] = [];
-    const flags = checkDraft(first, pack, checkDate).flags.filter(f => f.rule !== 'Sensitive term');
+    const written = ai?.drafts.get(aiDraftKey(rec, first)), missed = ai?.missed.get(aiDraftKey(rec, first));
+    const flags = written ? [] : checkDraft(first, pack, checkDate).flags.filter(f => f.rule !== 'Sensitive term');
+    if (written) {
+      versions.push({ d: written, reason: 'Written with AI from the action and the approved claims' });
+      logs.push({ decision: 'Written with AI', note: `${written.ai?.template ?? 'AI'}: passed the brand, claim and grounding checks` });
+    } else if (missed) {
+      logs.push({ decision: 'AI draft not used', note: `${missed}; the rules' draft is used` });
+    }
     if (flags.length) {
       st.variant = 'clean';
       const again = R.generatedDraft(rec, st, pack, checkDate);
@@ -162,6 +183,8 @@ export async function buildNbaRun(scope: TenantScope, actor: Actor, input: { han
   const stats = {
     accountsConsidered: seg.accountsConsidered, segments: seg.segments.length, prospects: recs.length, auto, exceptions: recs.length - auto - approvals, approvals,
     engagedOnce: seg.engagedOnce.length, tasks, channels, confidence: conf,
+    // How many first messages the AI wrote (only those used: the same recommendation, action, channel and person).
+    ...(ai?.stats ? { aiDrafts: { ...ai.stats, written: built.filter(b => b.versions.some(v => v.d.ai)).length } } : {}),
   };
 
   await scope.tx.insert(nbaRuns).values({
@@ -181,7 +204,7 @@ export async function buildNbaRun(scope: TenantScope, actor: Actor, input: { han
     await scope.tx.insert(drafts).values(part.flatMap(b => b.versions.map((v, i) => {
       const c = checkDraft(v.d, pack, checkDate);
       return { businessUnitId: bu, recommendationId: b.id, version: i + 1, channel: v.d.channel, action: b.rec.action, contactRow: b.rec.contact.row ?? null, draft: v.d,
-        checks: c, confidence: confidenceFor(b.rec, v.d, c, b.rec.action), reason: v.reason, brandVersionId: brand.id, createdBy: SYSTEM_USER_ID };
+        checks: c, confidence: confidenceFor(b.rec, v.d, c, b.rec.action), reason: v.reason, brandVersionId: brand.id, aiAssisted: !!v.d.ai, aiCallId: v.d.ai?.callId ?? null, createdBy: SYSTEM_USER_ID };
     })));
     await scope.tx.insert(decisionLog).values(part.flatMap(b => b.logs.map((l, i) => ({
       businessUnitId: bu, nbaRunId: runId, recommendationId: b.id, actorRole: 'System', kind: 'system', decision: l.decision, note: l.note,

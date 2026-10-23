@@ -64,8 +64,10 @@ export function groundingProblems(line: string, cited: EvidenceRow[]): string[] 
   if (/!/.test(line)) out.push('No exclamation marks.');
   if (/@/.test(line)) out.push('No email addresses.');
   for (const n of new Set(line.match(NUMBER) ?? [])) if (!text.includes(n)) out.push(`"${n}" is not in the rows it cites.`);
+  // A capitalised word that opens a sentence is just the start of the sentence.
+  const openers = new Set([...line.matchAll(/(?:^|[.?!;:]\s+)([A-Z][A-Za-z0-9-]*)/g)].map(m => m[1]));
   const words = line.match(PROPER) ?? [];
-  for (const w of new Set(words.filter((w, i) => !(i === 0 && line.trimStart().startsWith(w)) && !FREE.has(w)))) {
+  for (const w of new Set(words.filter(w => !openers.has(w) && !FREE.has(w)))) {
     if (!new RegExp(`\\b${w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`).test(text)) out.push(`"${w}" is not in the rows it cites.`);
   }
   for (const q of line.match(/"([^"]{3,})"/g) ?? []) if (!text.includes(q.slice(1, -1))) out.push(`The quote ${q} is not in the rows it cites.`);

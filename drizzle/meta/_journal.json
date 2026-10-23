@@ -232,6 +232,13 @@
       "when": 1792790582036,
       "tag": "0032_ai_verticals_security",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1792791643774,
+      "tag": "0033_draft_ai_call",
+      "breakpoints": true
     }
   ]
 }

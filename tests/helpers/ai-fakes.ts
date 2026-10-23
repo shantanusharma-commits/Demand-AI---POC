@@ -50,3 +50,21 @@ export function whyNowWriter(line?: (it: WhyNowItem) => { line: string; rows?: n
       : { ref: it.ref, line: `${top.detail === '(no detail)' ? top.type : top.detail} on ${top.date}.`, rows: [top.row] };
   }) });
 }
+
+/** What a drafting request offered: its channel and the claim IDs it may pick. */
+export function draftAsk(req: ModelRequest): { channel: string; claimIds: string[]; signal: string } {
+  const u = req.messages.find(m => m.role === 'user')!.content;
+  return { channel: u.match(/^Channel: (\w+)/m)?.[1] ?? '', claimIds: [...u.matchAll(/^- ([A-Z]{2}-\d{2}): /gm)].map(m => m[1]), signal: u.match(/^Signal: (".*")$/m)?.[1] ?? '' };
+}
+
+/** A drafter that writes plain, grounded copy and picks the first approved claim, or answers with `over`. */
+export function draftWriter(over?: (ask: ReturnType<typeof draftAsk>, n: number) => Record<string, unknown> | null): Step {
+  return (req, n) => {
+    const a = draftAsk(req);
+    const own = over?.(a, n);
+    if (own) return json(own);
+    return json(a.channel === 'LinkedIn' ? { note: 'thanks for the interest in this topic; it would be good to compare notes on how sites approach it.' }
+      : { subject: 'about your question', opening: 'Thanks for getting in touch about this.', bridge: 'A short conversation is usually the quickest way to work out what fits your site.',
+        ask: 'Would a short call next week help?', claimId: a.claimIds[0] });
+  };
+}

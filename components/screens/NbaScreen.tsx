@@ -12,7 +12,8 @@ import { CONFIG } from '@/lib/demandai-engine';
 import * as R from '@/lib/engine/review';
 import { sx } from '@/lib/sx';
 import { MessageBar } from '@/components/ContentPicker';
-import { api, errorText, type WireDeep } from '@/lib/client/api';
+import { api, errorText, waitForJob, type WireDeep } from '@/lib/client/api';
+import { AiTag, aiShare } from '@/components/AiTag';
 import { showToast, initials, avColor } from '@/lib/ui';
 import { useCan } from '@/components/SessionContext';
 import { RenameField } from '@/components/RenameField';
@@ -24,8 +25,15 @@ type Runs = { runs: WireDeep<NbaRunSummary>[]; sources: WireDeep<BuildSource>[];
 type Run = WireDeep<Awaited<ReturnType<typeof getNbaRun>>>;
 type Rec = WireDeep<RecRowView>;
 type Item = WireDeep<ItemDetail>;
-type Built = { runId: string; name: string; stats: Record<string, number>; checks: BuildStep[] };
-type Checks = { phase: 'running' | 'done' | 'failed'; label: string; built?: Built; error?: string };
+type AiDraftStats = { asked: number; written: number; fallbacks: Record<string, number> };
+type Built = { runId: string; name: string; stats: Record<string, number> & { aiDrafts?: AiDraftStats }; checks: BuildStep[] };
+/** `ai`: the first messages are being written with AI (the build runs as a job); `status`: the job's current stage. */
+type Checks = { phase: 'running' | 'done' | 'failed'; label: string; built?: Built; error?: string; ai?: boolean; status?: string };
+export const AI_DRAFT = 'Written with AI from the action, the brief and an approved claim (put in word for word), then passed the same brand, claim and grounding checks as the rules\' drafts.';
+const JOB_STAGE: Record<string, string> = {
+  queued: 'Waiting for its turn…', prepare: 'Grouping the prospects into micro-segments…',
+  draft: 'Writing each first message with AI, then checking it against the brand pack and the approved claims…', save: 'Checking and routing each recommendation…',
+};
 
 export const SEG_TONE: Record<string, string> = { Inquiry: 'tag-blue', Modernisation: 'tag-violet', 'Service renewal': 'tag-teal', Project: 'tag-amber', Leadership: 'tag-pink', Engagement: 'tag-green' };
 const SHOW_LABEL: Record<string, string> = { proceeded: 'Went ahead on their own', waiting: 'Waiting for a person', meeting: 'Meeting booked', released: 'Released: ready to use', rejected: 'Not accepted' };
@@ -87,12 +95,25 @@ export function NbaScreen() {
   async function build(key: string) {
     const [kind, id] = key.split(':');
     const s = runs?.sources.find(x => srcKey(x) === key);
-    setChecks({ phase: 'running', label: s?.label ?? 'Sent from Scoring' });
+    const label = s?.label ?? 'Sent from Scoring';
+    setChecks({ phase: 'running', label });
     try {
-      const built = await api<Built>('/api/nba-runs', { body: kind === 'handoff' ? { handoffId: id } : { scoringRunId: id } });
-      setChecks({ phase: 'done', label: s?.label ?? built.name, built });
+      const started = await api<Built | { jobId: string }>('/api/nba-runs', { body: kind === 'handoff' ? { handoffId: id } : { scoringRunId: id } });
+      let built: Built;
+      if ('jobId' in started) {
+        // AI drafting is on: the build is a job; follow it, then read the build it made.
+        setChecks({ phase: 'running', label, ai: true, status: JOB_STAGE.queued });
+        const job = await waitForJob(started.jobId, j => setChecks(c => (c && c.phase === 'running' ? { ...c, status: JOB_STAGE[j.stage ?? ''] ?? c.status } : c)), 700);
+        if (job.status !== 'succeeded' || !job.progress.result?.runId) {
+          setChecks({ phase: 'failed', label, ai: true, error: job.error?.message ?? 'The build did not finish. Try again.' });
+          return;
+        }
+        const { run: r } = await api<{ run: Run }>(`/api/nba-runs/${encodeURIComponent(job.progress.result.runId)}`);
+        built = { runId: r.id, name: r.name, stats: r.stats as Built['stats'], checks: r.checks };
+      } else built = started;
+      setChecks({ phase: 'done', label: s?.label ?? built.name, built, ai: !!built.stats.aiDrafts });
       void reloadRuns();
-    } catch (err) { setChecks({ phase: 'failed', label: s?.label ?? '', error: errorText(err) }); }
+    } catch (err) { setChecks({ phase: 'failed', label, error: errorText(err) }); }
   }
   async function openRun(id: string, opts: { show?: string | null; rec?: string | null } = {}) {
     try {
@@ -218,7 +239,7 @@ export function NbaScreen() {
       <div role="dialog" aria-modal="true" aria-label="Building micro-segments" style={sx('background:var(--surf);border-radius:var(--rlg);box-shadow:var(--sh-lg);width:560px;max-width:100%;max-height:90vh;display:flex;flex-direction:column')}>
         <div style={sx('padding:20px 22px 12px')}>
           <div style={sx('font-family:var(--fd);font-size:15px;font-weight:700;color:var(--i1)')}>Building micro-segments</div>
-          <div style={sx('font-size:12px;color:var(--i3);margin-top:3px')}>{ck.built ? ck.built.name : ck.label} · fixed rules</div>
+          <div style={sx('font-size:12px;color:var(--i3);margin-top:3px')}>{ck.built ? ck.built.name : ck.label}{ck.ai ? ' · fixed rules, first messages written with AI' : ' · fixed rules'}</div>
           <div style={sx('height:4px;background:var(--s75);border-radius:2px;margin-top:12px;overflow:hidden')}><div style={{ ...sx('height:100%;background:var(--brand);transition:width .3s var(--ease)'), width: done ? '100%' : '15%' }}></div></div>
         </div>
         <div style={sx('padding:0 22px;overflow-y:auto')}>{SEG_STEPS.map(([k, name, what]) => {
@@ -231,13 +252,14 @@ export function NbaScreen() {
           </div>;
         })}</div>
         <div style={sx('padding:14px 22px 18px;display:flex;align-items:center;gap:8px;border-top:1px solid var(--border);margin-top:4px')}>{done && ck.built ? <>
-          <span style={sx('flex:1;font-size:12px;color:var(--i2)')}><b>{st.segments}</b> micro-segment{st.segments === 1 ? '' : 's'} · <b>{st.auto}</b> went ahead · <b>{(st.prospects ?? 0) - (st.auto ?? 0)}</b> to For Review</span>
+          <span style={sx('flex:1;font-size:12px;color:var(--i2)')}><b>{st.segments}</b> micro-segment{st.segments === 1 ? '' : 's'} · <b>{st.auto}</b> went ahead · <b>{(st.prospects ?? 0) - (st.auto ?? 0)}</b> to For Review
+            {st.aiDrafts ? <span style={sx('display:block;margin-top:4px;color:var(--i3)')}>{aiShare('First messages', st.aiDrafts)}</span> : null}</span>
           <button className="btn btn-ghost btn-sm" onClick={() => { setChecks(null); setTab('new'); }}>Back</button>
           <button className="btn btn-primary btn-sm" onClick={() => { const id = ck.built!.runId; setChecks(null); void openRun(id); }}>View the micro-segments →</button>
         </> : ck.phase === 'failed' ? <>
           <span role="alert" style={sx('flex:1;font-size:12px;color:var(--neg)')}>{ck.error}</span>
           <button className="btn btn-primary btn-sm" onClick={() => setChecks(null)}>Back</button>
-        </> : <span role="status" style={sx('flex:1;font-size:12px;color:var(--i3)')}>Grouping, drafting and checking each recommendation…</span>}</div>
+        </> : <span role="status" style={sx('flex:1;font-size:12px;color:var(--i3)')}>{ck.status ?? 'Grouping, drafting and checking each recommendation…'}</span>}</div>
       </div>
     </div>;
   }
@@ -412,6 +434,7 @@ export function NbaScreen() {
       <details className="panel ar-details"><summary>Details <span>checks, track record, brief, owner and history</span></summary><div className="panel-body">
         {kv('Checks', <span className="tags" style={sx('display:inline-flex;flex-wrap:wrap;gap:4px')}>{it.fourChecks.map(f => <span key={f.name} className={`tag ${f.ok ? 'tag-green' : 'tag-red'}`}>{f.ok ? '✓' : '✗'} {f.name}</span>)}</span>)}
         {kv('Confidence', <><span className={`tag ${conf === 'High' ? 'tag-green' : conf === 'Medium' ? 'tag-amber' : 'tag-red'}`}>{conf}</span> <span style={sx('color:var(--i3)')}>{it.confidence.reason.replace(/^\w+:\s*/, '')}</span></>)}
+        {it.draft.ai ? kv('Written by', <><AiTag confidence={conf} title={AI_DRAFT} /> <span style={sx('color:var(--i3)')}>the action, the brief and an approved claim; the same checks as every draft</span></>) : null}
         {kv('Track record', all.n ? (s1 && s1.n ? <>Reps agreed <b>{s1.a} of {s1.n}</b> times in {it.segment}</> : `${all.a} of ${all.n} across all`) : <span style={sx('color:var(--i3)')}>No decisions yet</span>)}
         {kv('Micro-segment', <><SegTag seg={seg} /> <span style={sx('color:var(--i3)')}>{seg ? R.SEG_MEANS[seg] || '' : ''}{it.segSince ? ` · since ${fmtDate(it.segSince)}` : ''}</span></>)}
         {kv('Proof', it.brief.proof ? <>{it.brief.proof.title} <span style={sx('color:var(--i3)')}>· {it.brief.proof.type}, {it.brief.proof.year}</span></> : <span style={sx('color:var(--i3)')}>No approved proof</span>)}

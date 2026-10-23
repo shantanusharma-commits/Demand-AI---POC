@@ -18,7 +18,8 @@ import { avColor, initials, showToast } from '@/lib/ui';
 import { useCan, useSessionUser } from '@/components/SessionContext';
 import type { LogRow, QueueRow } from '@/lib/server/services/review';
 import type { ItemDetail } from '@/lib/server/services/recommendations';
-import { SegTag } from './NbaScreen';
+import { AI_DRAFT, SegTag } from './NbaScreen';
+import { AiTag } from '@/components/AiTag';
 import { MessageBar } from '@/components/ContentPicker';
 
 type Row = WireDeep<QueueRow>;
@@ -575,7 +576,7 @@ export function ReviewScreen() {
     const facts = <div className="ws-card ws-kf"><div className="ws-card-h"><span>Key facts</span></div>
       {fact('Why now', <><b>{it.signal.type || 'Signal'}</b>{it.signal.age !== undefined ? <span className="ws-sub"> · {it.signal.age} days ago</span> : null}<div className="ws-sub">{String(it.reason).replace(/^[^:]{3,40}:\s*/, '').replace(/^./, m2 => m2.toUpperCase())}</div></>)}
       {fact('Checks', failing.length ? <>{failing.map(z => <span key={z.name} className="tag tag-red">✗ {z.name}</span>)} <span className="ws-sub">the rest pass</span></> : <span className="tag tag-green">✓ All pass</span>)}
-      {fact('Confidence', <span className={`tag ${it.confidence.level === 'High' ? 'tag-green' : it.confidence.level === 'Medium' ? 'tag-amber' : 'tag-red'}`}>{it.confidence.level}</span>)}
+      {fact('Confidence', <><span className={`tag ${it.confidence.level === 'High' ? 'tag-green' : it.confidence.level === 'Medium' ? 'tag-amber' : 'tag-red'}`}>{it.confidence.level}</span>{it.draft.ai ? <> <AiTag confidence={it.confidence.level} title={AI_DRAFT} /></> : null}</>)}
       {fact('Track record', tr.n ? <>Reps agreed <b>{tr.a} of {tr.n}</b> times{it.trackRecord.segment ? ` in ${it.segment}` : ''}{tr.early ? <span className="ws-sub"> · early days</span> : null}</> : <span className="ws-sub">No decisions yet</span>)}
       {fact('Owner', it.owner.name || it.owner.email || 'Unassigned')}
       <details className="kf-more"><summary style={sx('cursor:pointer;color:var(--brand);font-weight:600')}>Show the working</summary>

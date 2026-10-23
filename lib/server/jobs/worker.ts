@@ -32,6 +32,8 @@ export type WorkerOptions = {
   handlers: Partial<Record<JobKind, JobHandler>>;
   pollMs?: number;
   timeLimitMs?: number;
+  /** A longer limit for some kinds (a build whose drafts are written by AI). */
+  timeLimits?: Partial<Record<JobKind, number>>;
   staleAfterMinutes?: number;
   workerId?: string;
 };
@@ -66,7 +68,8 @@ export function createWorker(opts: WorkerOptions) {
   async function execute(job: ClaimedJob): Promise<void> {
     const handler = handlers[job.kind];
     const started = performance.now();
-    const deadline = Date.now() + timeLimitMs;
+    const limitMs = opts.timeLimits?.[job.kind] ?? timeLimitMs;
+    const deadline = Date.now() + limitMs;
     const progress: JobProgress = { ...job.progress, done: 0, counts: {} };
     let stageName = 'starting', stageStarted = performance.now();
     const stage = async (name: string, counts: Record<string, number> = {}) => {
@@ -75,7 +78,7 @@ export function createWorker(opts: WorkerOptions) {
         progress.done++;
       }
       progress.counts = { ...progress.counts, ...counts };
-      if (Date.now() > deadline) throw new JobError('time_limit', `Processing took longer than ${Math.round(timeLimitMs / 1000)} seconds, so it was stopped. Try a smaller file.`);
+      if (Date.now() > deadline) throw new JobError('time_limit', `Processing took longer than ${Math.round(limitMs / 1000)} seconds, so it was stopped. Try a smaller file.`);
       stageName = name;
       stageStarted = performance.now();
       await reportProgress(db, job, name, progress);

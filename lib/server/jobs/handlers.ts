@@ -6,15 +6,17 @@ import { createDb, type Db } from '../db/tenant.ts';
 import { logger } from '../logger.ts';
 import { createLeadJob } from '../services/lists.ts';
 import { createScoringJob } from '../services/scoring.ts';
+import { createNbaBuildJob, NBA_BUILD_TIME_LIMIT_MS } from '../services/nba-ai.ts';
 import { uploadLimits, type UploadLimits } from '../services/uploads.ts';
 import { createWorker } from './worker.ts';
 
 export function jobHandlers(limits: UploadLimits) {
-  return { 'lead.process': createLeadJob(limits), 'scoring.run': createScoringJob(limits) };
+  return { 'lead.process': createLeadJob(limits), 'scoring.run': createScoringJob(limits), 'nba.build': createNbaBuildJob() };
 }
 
 export function createAppWorker(db: Db, limits: UploadLimits, pollMs?: number) {
-  return createWorker({ db, handlers: jobHandlers(limits), pollMs, timeLimitMs: limits.timeLimitMs });
+  return createWorker({ db, handlers: jobHandlers(limits), pollMs, timeLimitMs: limits.timeLimitMs,
+    timeLimits: { 'nba.build': Math.max(limits.timeLimitMs, NBA_BUILD_TIME_LIMIT_MS) } });
 }
 
 let started: ReturnType<typeof createAppWorker> | undefined;

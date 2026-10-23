@@ -425,6 +425,8 @@ export function briefFor(rec: Rec, action: string, opts: { asOf?: string; channe
 export interface Draft {
   channel: string; why: string; proof: Claim | null; noProof: boolean; unreachable: boolean;
   subject?: string; body?: string; words?: number; note?: string; task?: string; text?: string; script?: ReturnType<typeof callScript>;
+  /** Written with AI (Phase 6): the call and the prompt template; absent for the rules' drafts. */
+  ai?: { callId: string; template: string };
 }
 
 /* 5.12–5.15 The draft. D-10: with no approved, unexpired proof point for the case, the action is a task for the account

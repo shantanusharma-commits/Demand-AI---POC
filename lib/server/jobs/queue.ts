@@ -6,7 +6,7 @@ import { and, eq, sql } from 'drizzle-orm';
 import { jobs, SYSTEM_USER_ID } from '../db/schema.ts';
 import { withTenant, type Db, type TenantContext, type TenantScope } from '../db/tenant.ts';
 
-export type JobKind = 'lead.process' | 'scoring.run';
+export type JobKind = 'lead.process' | 'scoring.run' | 'nba.build';
 
 /** What a job tells the screen while it runs and when it is done. */
 export type JobProgress = {
