@@ -6,10 +6,19 @@ import type pg from 'pg';
 import { z } from 'zod';
 import { createDb, withTenant, type Db, type TenantContext } from '../../lib/server/db/tenant.ts';
 import { aiCalls } from '../../lib/server/db/schema.ts';
+import { readFileSync } from 'node:fs';
+import { setAiGatewayForTests } from '../../lib/server/ai.ts';
+import { createAppWorker } from '../../lib/server/jobs/handlers.ts';
+import { getJob } from '../../lib/server/jobs/queue.ts';
+import { receiveUpload } from '../../lib/server/services/uploads.ts';
+import { addCorrections } from '../../lib/server/services/corrections.ts';
+import { DATASET } from '../helpers/answer-key.ts';
+import { sensibleClassifier } from '../helpers/ai-fakes.ts';
 import { FakeModel, json } from '../helpers/fake-model.ts';
+import { limits } from './pilot.ts';
 import { freshDatabase, type TestDatabase } from './harness.ts';
 import { seedBasics, type Basics } from './fixtures.ts';
-import { fakeGateway } from './ai-fixtures.ts';
+import { ALL_ON, fakeGateway } from './ai-fixtures.ts';
 
 let db: TestDatabase, owner: pg.Pool, app: Db, ids: Basics;
 const unitA = (): TenantContext => ({ userId: ids.adminA, businessUnitId: ids.buA, scope: 'all', ownerEmails: [] });
@@ -59,4 +68,64 @@ test('a record that cannot be stored never breaks the call', async () => {
   const r = await gw.json('classify', { id: 'classify.industry', version: 1 }, { system: 'S', messages: [{ role: 'user', content: 'x' }], maxTokens: 50 }, Schema,
     { businessUnitId: '00000000-0000-4000-8000-00000000dead', userId: ids.adminA });
   assert.equal(r.ok, true, 'the answer is used even though the unit does not exist');
+});
+
+/* ─── Industry classification in the lead job (spec 3.4, G-021) ─── */
+
+const XLSX_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+async function uploadSample(): Promise<string> {
+  const up = await withTenant(app, unitA(), s => receiveUpload(s, { kind: 'lead', fileName: 'Lead_Research_Sample_Dataset.xlsx', mediaType: XLSX_TYPE, bytes: readFileSync(DATASET) }, limits));
+  await createAppWorker(app, limits).drain();
+  const job = await withTenant(app, unitA(), s => getJob(s, up.jobId!));
+  assert.equal(job?.status, 'succeeded', JSON.stringify(job));
+  return job!.progress.result!.listId;
+}
+const listAccounts = async (listId: string) => (await owner.query(`SELECT count(*)::int n, count(*) FILTER (WHERE data->>'aiAssisted' = 'true')::int ai,
+  count(*) FILTER (WHERE needs_review)::int review FROM accounts WHERE list_id = $1`, [listId])).rows[0];
+
+test('with the flag off the lead job sends nothing and the rules stand', async () => {
+  const fake = new FakeModel([], { otherwise: sensibleClassifier });
+  setAiGatewayForTests(fakeGateway(app, fake, { ...ALL_ON, classify: false }));
+  try {
+    const counts = await listAccounts(await uploadSample());
+    assert.deepEqual([counts.n, counts.ai, counts.review], [1401, 0, 698]);
+    assert.equal(fake.requests.length, 0);
+  } finally { setAiGatewayForTests(undefined); }
+});
+
+test('the lead job asks about each unmatched industry text once, keeps the answers, and a later list reuses them', async () => {
+  const fake = new FakeModel([], { otherwise: sensibleClassifier });
+  setAiGatewayForTests(fakeGateway(app, fake));
+  try {
+    const before = (await owner.query(`SELECT coalesce(max(seq), 0) n FROM ai_calls`)).rows[0].n;
+    const first = await listAccounts(await uploadSample());
+    const texts = (await owner.query(`SELECT count(*)::int n FROM ai_verticals WHERE business_unit_id = $1`, [ids.buA])).rows[0].n;
+    assert.ok(texts > 50, `${texts} industry texts kept`);
+    assert.equal(fake.requests.length, Math.ceil(texts / 25), 'batches of 25');
+    assert.deepEqual([first.n, first.ai], [1401, 698]);
+    assert.ok(first.review < 100, `needs review now ${first.review}`);
+    const calls = (await owner.query(`SELECT outcome, count(*)::int n FROM ai_calls WHERE capability = 'classify' AND template_id = 'classify.industry' AND seq > $1 GROUP BY 1`, [before])).rows;
+    assert.deepEqual(calls, [{ outcome: 'ok', n: fake.requests.length }]);
+    const sample = (await owner.query(`SELECT data->>'classReason' reason, data->>'vertical' vertical FROM accounts WHERE data->>'aiAssisted' = 'true' LIMIT 1`)).rows[0];
+    assert.match(sample.reason, /^AI-assisted \((high|medium) confidence\): /);
+    const asked = fake.requests.length;
+    const second = await listAccounts(await uploadSample());
+    assert.equal(fake.requests.length, asked, 'no new model call: the kept answers are used');
+    assert.deepEqual([second.ai, second.review], [first.ai, first.review], 'the same answers');
+  } finally { setAiGatewayForTests(undefined); }
+});
+
+test("a person can still set the vertical of an account the classifier chose, and the person's choice is kept", async () => {
+  const fake = new FakeModel([], { otherwise: sensibleClassifier });
+  setAiGatewayForTests(fakeGateway(app, fake));
+  try {
+    const listId = await uploadSample();
+    const a = (await owner.query(`SELECT name, (data->'contactIds'->>0)::int row FROM accounts WHERE list_id = $1 AND data->>'aiAssisted' = 'true' AND NOT needs_review ORDER BY seq LIMIT 1`, [listId])).rows[0];
+    const { jobId } = await withTenant(app, unitA(), s => addCorrections(s, { userId: ids.adminA, role: 'Admin' }, listId, { row: a.row, changes: { vertical: 'Refining' }, reason: 'Wrong industry', source: 'Known from the account team', note: '' }));
+    await createAppWorker(app, limits).drain();
+    const next = (await withTenant(app, unitA(), s => getJob(s, jobId)))!.progress.result!.listId;
+    const after = (await owner.query(`SELECT data->>'vertical' vertical, data->>'aiAssisted' ai, data->>'classReason' reason FROM accounts WHERE list_id = $1 AND name = $2`, [next, a.name])).rows[0];
+    assert.deepEqual([after.vertical, after.ai], ['Refining', null]);
+    assert.match(after.reason, /^Set by a person: /);
+  } finally { setAiGatewayForTests(undefined); }
 });

@@ -3,11 +3,11 @@
    as written in the Stage_Input_Reasoning_Output sheet and the lead/signal templates.
    No AI runs here: validation, knock-outs, fit and signal weighting are fixed code.
    The two places the spec hands to AI (classification with no lookup match, and the
-   wording of the why-now line) are marked below and fall back to rules.
+   wording of the why-now line) take the AI's answers as inputs (lib/ai) and fall back to rules.
 
    TypeScript port of demandai-engine.js: same rules, thresholds, messages and output shapes. */
 import type {
-  Account, AccountTypeKey, Cell, Classification, Contact, DqCode, Fit, FitBreakdownRow, FitLevel, Grid, Issue, LeadList,
+  Account, AccountTypeKey, Cell, Classification, Confidence, Contact, DqCode, Fit, FitBreakdownRow, FitLevel, Grid, Issue, LeadList,
   LeadResult, LeadStats, PersonScore, RubricRow, ScoredSignalType, ScoreResult, Severity, Signal,
   SignalResult, SignalTypeConfig, SuggestedContact, TableRecord, TableResult, Tier, VerticalLevel,
 } from '../types/demandai';
@@ -430,8 +430,11 @@ function mergeDuplicate(into: Contact, from: Contact, optState: Map<Contact, Opt
  *  accounts whose vertical a person set (the account holding the row), applied after classification. */
 export type LeadDecisions = { removed?: ReadonlyMap<number, string>; verticals?: readonly VerticalChoice[] };
 export type VerticalChoice = { row: number; vertical: string; reason: string };
+/** The AI classifier's answer for an industry text the mapping table doesn't match (Phase 6), keyed by industryKey(). */
+export type AiVertical = { vertical: string; confidence: Confidence; reason: string };
+export type AiVerticals = ReadonlyMap<string, AiVertical>;
 
-export function processLeads(grid: Grid, { file = 'lead file', sheet = 'Sheet1', mapping, removed, verticals }: { file?: string; sheet?: string; mapping?: ColumnMapping } & LeadDecisions = {}): LeadResult {
+export function processLeads(grid: Grid, { file = 'lead file', sheet = 'Sheet1', mapping, removed, verticals, aiVerticals }: { file?: string; sheet?: string; mapping?: ColumnMapping; aiVerticals?: AiVerticals } & LeadDecisions = {}): LeadResult {
   const table = readTable(grid, { file, sheet, columns: LEAD_COLUMNS, required: LEAD_REQUIRED, anchor: 'company_name', mapping });
   const issues = table.issues.slice();
   const at = (row: Issue['row'], field: string, issue: string, outcome: string, code: Issue['code'], fix: string, severity: Severity = 'flag') =>
@@ -631,7 +634,7 @@ export function processLeads(grid: Grid, { file = 'lead file', sheet = 'Sheet1',
 
   const chosen = new Map<Contact, VerticalChoice>();
   for (const v of verticals ?? []) { const c = personAt(v.row); if (c) { chosen.delete(c); chosen.set(c, v); } }
-  const accounts = buildAccounts(contacts, issues, { file, sheet }, managedState, chosen);
+  const accounts = buildAccounts(contacts, issues, { file, sheet }, managedState, chosen, aiVerticals);
   const stats: LeadStats = {
     rowsRead: table.records.length, notLoaded, merged, contacts: contacts.length,
     accounts: accounts.length, accountsPass: accounts.filter(a => !a.excluded).length,
@@ -680,7 +683,18 @@ function verticalHit(s: string) {
   return CONFIG.verticalMap.find(m => m.pattern.test(s)) ?? null;
 }
 
-export function classify(industry: string, siteProcess: string): Classification {
+/** The key the AI classifier's answers are kept under: the industry and site process texts, as the lookup reads them. */
+export function industryKey(industry: string, siteProcess: string): string {
+  const n = (s: string) => clean(s).toLowerCase().replace(/\s+/g, ' ');
+  return `${n(industry)}|${n(siteProcess)}`;
+}
+
+/** Whether the mapping table (or an exclusion) decides this account's vertical; if not, the AI classifier may. */
+export function lookupDecides(industry: string, siteProcess: string): boolean {
+  return verticalHit(industry) !== null || verticalHit(siteProcess) !== null;
+}
+
+export function classify(industry: string, siteProcess: string, ai?: AiVerticals): Classification {
   const raw = (s: string) => verticalHit(s);
   const excluded = [industry, siteProcess].find(x => raw(x) === 'excluded');
   if (excluded) {
@@ -695,12 +709,18 @@ export function classify(industry: string, siteProcess: string): Classification 
     const m = (a || b)!, src = a ? `industry "${industry}"` : `site process "${siteProcess}"`;
     return { vertical: m.vertical, level: m.level, confidence: 'medium', reason: `From the ${src} only` };
   }
-  // Spec: with no lookup match, the AI classifier chooses. Not connected in this prototype.
+  // Spec 3.4: with no lookup match, the AI classifier chooses (when it is switched on and answered). It never overrides
+  // an exclusion or the table, and anything below high confidence stays in "needs review" for a person.
+  const suggested = ai?.get(industryKey(industry, siteProcess));
+  if (suggested && VERTICAL_CHOICES.includes(suggested.vertical)) {
+    return { vertical: suggested.vertical, level: verticalLevelOf(suggested.vertical), confidence: suggested.confidence, aiAssisted: true,
+      needsReview: suggested.confidence !== 'high', reason: `AI-assisted (${suggested.confidence} confidence): ${suggested.reason}` };
+  }
   return { vertical: 'Other', level: 'other', confidence: 'low', needsReview: true,
-    reason: `"${industry || '—'}" has no match in the mapping table. The AI classifier would decide here; it isn't connected yet, so this is held as other for review` };
+    reason: `"${industry || '—'}" has no match in the mapping table, so this is held as other for review` };
 }
 
-function buildAccounts(contacts: Contact[], issues: Issue[], { file, sheet }: { file: string; sheet: string }, managedState: Map<Contact, OptState>, chosen: Map<Contact, VerticalChoice>): Account[] {
+function buildAccounts(contacts: Contact[], issues: Issue[], { file, sheet }: { file: string; sheet: string }, managedState: Map<Contact, OptState>, chosen: Map<Contact, VerticalChoice>, aiVerticals?: AiVerticals): Account[] {
   // Rows group into one account when their company's base name agrees and so does the domain (G-038): "X" and "X Group"
   // on x.com are one company. A row with no domain joins the base name's only domain. A different company on the same
   // domain stays separate and is flagged.
@@ -767,11 +787,11 @@ function buildAccounts(contacts: Contact[], issues: Issue[], { file, sheet }: { 
     const choice = [...chosen.entries()].filter(([c]) => cs.includes(c)).map(([, v]) => v).pop();
     const cls: Classification = choice
       ? { vertical: choice.vertical, level: verticalLevelOf(choice.vertical), confidence: 'high', reason: `Set by a person: ${choice.reason}` }
-      : classify(derived.industry, derived.siteProcess);
+      : classify(derived.industry, derived.siteProcess, aiVerticals);
     const a = {
       id: 'acc-' + accounts.length, key, names: [...new Set(cs.map(c => c.companyKey))], name: f.company, ...derived,
       vertical: cls.vertical, verticalLevel: cls.level, confidence: cls.confidence,
-      classReason: cls.reason, needsReview: !!cls.needsReview, contactIds: cs.map(c => c.row),
+      classReason: cls.reason, needsReview: !!cls.needsReview, ...(cls.aiAssisted ? { aiAssisted: true } : {}), contactIds: cs.map(c => c.row),
     } as Account;
     // Stage 4: yes-or-no rules, in order. The installed-base rule needs the signal file, so it runs in Scoring.
     const inRegion = CONFIG.pilotCountries.some(p => p.toLowerCase() === a.country.toLowerCase());

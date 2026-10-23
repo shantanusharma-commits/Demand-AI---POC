@@ -112,6 +112,8 @@ export interface Account {
   confidence: Confidence;
   classReason: string;
   needsReview: boolean;
+  /** The vertical was chosen by the AI classifier (Phase 6); shown with an "AI-assisted" label and its confidence. */
+  aiAssisted?: boolean;
   contactIds: number[];
   checks: KnockoutCheck[];
   excluded: boolean;
@@ -143,6 +145,8 @@ export interface Classification {
   confidence: Confidence;
   reason: string;
   needsReview?: boolean;
+  /** Chosen by the AI classifier (Phase 6), for an industry the mapping table doesn't match. */
+  aiAssisted?: boolean;
 }
 
 export interface SignalTypeConfig {

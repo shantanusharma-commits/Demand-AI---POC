@@ -1109,3 +1109,23 @@ export const aiCalls = pgTable('ai_calls', {
   index('ai_calls_bu_seq_idx').on(t.businessUnitId, t.seq),
   index('ai_calls_bu_capability_idx').on(t.businessUnitId, t.capability, t.createdAt),
 ]);
+
+/** The AI classifier's answer for an industry text the mapping table doesn't match, kept per unit and template
+ *  version so every rebuild of a list (corrections replayed) reads the same answer instead of asking again. */
+export const aiVerticals = pgTable('ai_verticals', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  businessUnitId: uuid('business_unit_id').notNull().references(() => businessUnits.id),
+  /** industryKey(industry, site process): the two texts as the lookup reads them. */
+  industryKey: text('industry_key').notNull(),
+  templateVersion: integer('template_version').notNull(),
+  vertical: text('vertical').notNull(),
+  confidence: text('confidence').notNull(),
+  reason: text('reason').notNull(),
+  /** The call that answered (no foreign key: a record that failed to store must not lose the answer). */
+  aiCallId: uuid('ai_call_id').notNull(),
+  createdAt: createdAt(),
+  createdBy: createdBy(),
+}, t => [
+  check('ai_verticals_confidence_check', sql`${t.confidence} in ('high', 'medium', 'low')`),
+  uniqueIndex('ai_verticals_bu_key_version_key').on(t.businessUnitId, t.industryKey, t.templateVersion),
+]);

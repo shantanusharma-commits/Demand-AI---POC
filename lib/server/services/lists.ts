@@ -6,7 +6,7 @@ import 'server-only';
 import { randomUUID } from 'node:crypto';
 import { and, asc, desc, eq, gt, inArray, isNull, like, notExists, or, sql, type SQL } from 'drizzle-orm';
 import type { AnyPgColumn } from 'drizzle-orm/pg-core';
-import { CODES, LEAD_COLUMNS, LEAD_REQUIRED, missingColumns, processLeads, readTable, toCSV } from '../../demandai-engine.ts';
+import { CODES, LEAD_COLUMNS, LEAD_REQUIRED, missingColumns, processLeads, readTable, toCSV, type AiVerticals } from '../../demandai-engine.ts';
 import { ENGINE_VERSION } from '../../engine/config.ts';
 import { LEAD_SHEET } from '../../engine/sheets.ts';
 import { CHECKS, STEPS, checkOf, groupIssues, stepResult, type CheckKey, type StepResult } from '../../prospecting/checks.ts';
@@ -26,6 +26,8 @@ import { logger } from '../logger.ts';
 import { LEAD_STAGES, loadUpload, type UploadLimits } from './uploads.ts';
 import { getMapping } from './mappings.ts';
 import { enqueueJob } from '../jobs/queue.ts';
+import { aiGateway } from '../ai.ts';
+import { classifyStep } from './industry-ai.ts';
 
 export type Actor = { userId: string; role: BuRole };
 export type ContactGroup = (typeof CONTACT_GROUPS)[number];
@@ -102,13 +104,19 @@ export function createLeadJob(limits: UploadLimits) {
     // Every correction made to this upload, replayed in order onto the file as received (G-015).
     const opts = { file: upload.fileName, sheet: read.sheet, mapping: mapping ?? undefined };
     const fixed = applyCorrections(read.grid, fixes, opts);
-    const whole = withNotes(processLeads(fixed.grid, { ...opts, removed: fixed.removed, verticals: fixed.verticals }), read.notes, upload.fileName, read.sheet);
+    const build = (aiVerticals?: AiVerticals) =>
+      withNotes(processLeads(fixed.grid, { ...opts, removed: fixed.removed, verticals: fixed.verticals, aiVerticals }), read.notes, upload.fileName, read.sheet);
+    let whole = build();
+    // Industries the mapping table can't match go to the AI classifier when it is on (spec 3.4), leaving time to save.
+    const classified = await classifyStep(db, ctx, aiGateway(), whole, run.deadline - Date.now() - 15_000);
+    if (classified?.verticals.size) whole = build(classified.verticals);
     // Each data row's owner (read through the same column mapping), so issues on rows that never became contacts are
     // scoped to that owner too.
     const rawOwners = new Map(readTable(fixed.grid, { ...opts, columns: LEAD_COLUMNS, required: LEAD_REQUIRED, anchor: 'company_name' })
       .records.map(r => [r.__row, lower(r.owner_email)]));
     const raw = rowValues(fixed.grid, whole.contacts.map(c => c.row), opts.mapping);
-    await run.stage('save', { rowsRead: whole.stats.rowsRead, contacts: whole.stats.contacts, accounts: whole.stats.accounts, issues: whole.issues.length });
+    await run.stage('save', { rowsRead: whole.stats.rowsRead, contacts: whole.stats.contacts, accounts: whole.stats.accounts, issues: whole.issues.length,
+      ...(classified ? { aiAsked: classified.asked, aiClassified: whole.accounts.filter(a => a.aiAssisted).length } : {}) });
     const listId = await withTenant(db, ctx, async s => {
       // A correction rebuilds the list it was made on: the new version takes its place (name, status, uploader, and
       // for a saved selection the same people); the old one points to it.

@@ -21,6 +21,8 @@ export type JobRun = {
   job: ClaimedJob;
   /** Ends the current stage and starts the next: the screen sees it at once. Throws once the time limit is spent. */
   stage: (name: string, counts?: Record<string, number>) => Promise<void>;
+  /** When the time limit runs out (epoch ms): slow optional work (AI calls) stops in time for the job to finish. */
+  deadline: number;
 };
 
 export type JobHandler = (run: JobRun) => Promise<Record<string, string>>;
@@ -83,7 +85,7 @@ export function createWorker(opts: WorkerOptions) {
     try {
       if (!handler) throw new JobError('unknown_kind', 'This kind of job is not handled here.');
       logger.info({ event: 'job.started', kind: job.kind, attempt: job.attempts }, 'Job started');
-      const result = await handler({ db, job, stage });
+      const result = await handler({ db, job, stage, deadline });
       progress.done = progress.stages.length;
       progress.result = result;
       await finish(job, { status: 'succeeded', stage: 'done', progress, finishedAt: sql`now()`, errorCode: null, errorMessage: null });

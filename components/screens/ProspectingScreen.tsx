@@ -21,6 +21,7 @@ import { ApiError, api, errorText, uploadFile, waitForJob, type JobState, type W
 import { useDebounced } from '@/lib/client/use-debounced';
 import { usePaged } from '@/lib/client/use-paged';
 import { RenameField } from '@/components/RenameField';
+import { AiTag } from '@/components/AiTag';
 import type { AccountRow as AccountRowData, ContactRow as ContactRowData, ListDetail as ServerListDetail, ListSummary as ServerListSummary } from '@/lib/server/services/lists';
 import type { CorrectionRow, CorrectionSummary, EditRow } from '@/lib/server/services/corrections';
 import type { Account, Contact, DqCode, Issue } from '@/types/demandai';
@@ -137,7 +138,7 @@ const AccountRow = memo(function AccountRow({ r, onFix }: { r: AccountRowData; o
       <td><div className="person"><div className="co-av" style={{ background: avColor(a.name) }}>{initials(a.name)}</div><div>{cell(a.name, a.domain || '', 'dt-main')}</div></div></td>
       <td>{cell([a.city, a.country].filter(Boolean).join(', '))}</td>
       <td>{cell(a.industry)}</td>
-      <td>{cell(a.vertical, upperFirst(a.verticalLevel))}{a.needsReview && onFix ? <button className="btn btn-ghost btn-sm" style={sx('margin-top:4px;padding:2px 8px')} onClick={() => onFix(a.contactIds[0])}>Set the vertical…</button> : null}</td>
+      <td>{cell(a.vertical, upperFirst(a.verticalLevel))}{a.aiAssisted ? <div style={sx('margin-top:4px')}><AiTag confidence={a.confidence} title={`Chosen by the AI classifier, with ${a.confidence} confidence, because the mapping table has no match for this industry.${a.needsReview ? ' Held for review: set the vertical to confirm or change it.' : ''}`} /></div> : null}{(a.needsReview || a.aiAssisted) && onFix ? <button className="btn btn-ghost btn-sm" style={sx('margin-top:4px;padding:2px 8px')} onClick={() => onFix(a.contactIds[0])}>Set the vertical…</button> : null}</td>
       <td>{CONF_TAG[a.confidence]}</td>
       <td className="wrap"><span className="clamp2" title={a.classReason} style={sx('font-size:12px')}>{a.classReason}</span></td>
       <td>{cell((accountTypes[a.accountType] || {}).label || 'Other')}</td>
@@ -680,11 +681,11 @@ export function ProspectingScreen() {
         : d.pending ? <div style={sx('font-size:12px;color:var(--warn);margin-bottom:10px')}>A correction to this list is still being checked. Try again in a moment.</div> : null}
       <div style={sx('font-size:12px;color:var(--i2);line-height:1.55;margin-bottom:12px')}>{"Change what's wrong; the checks run again on this row. Employees and industry change for the whole account."}</div>
       {EDIT_FIELDS.map(([f, label]) => inp(f, label))}
-      {c.optOutUnknown || !c.optOut || d.account.managedHeld || d.account.needsReview || d.account.verticalByPerson ? <div style={sx('padding:12px;border:1px solid var(--border);border-radius:var(--rmd);margin:6px 0 12px')}>
+      {c.optOutUnknown || !c.optOut || d.account.managedHeld || d.account.needsReview || d.account.verticalByPerson || d.account.aiAssisted ? <div style={sx('padding:12px;border:1px solid var(--border);border-radius:var(--rmd);margin:6px 0 12px')}>
         <div style={sx('font-size:12px;font-weight:700;color:var(--i1);margin-bottom:8px')}>What the checks held</div>
         {c.optOutUnknown || !c.optOut ? <label style={sx('display:block;margin-bottom:9px')}><span style={small}>{c.optOutUnknown ? 'Opt-out (not confirmed)' : 'Opt-out'}</span>{select('edOptOut', e.values.opt_out ?? '', optOutChoices, pick('opt_out'), 'Opt-out')}{err('opt_out')}</label> : null}
         {d.account.managedHeld ? <label style={sx('display:block;margin-bottom:9px')}><span style={small}>Managed separately (whole account, not confirmed)</span>{select('edManaged', e.values.managed_separately ?? '', [['', 'Not confirmed'], ['N', 'N: not managed separately'], ['Y', 'Y: managed separately']], pick('managed_separately'), 'Managed separately')}{err('managed_separately')}</label> : null}
-        {d.account.needsReview || d.account.verticalByPerson ? <label style={sx('display:block;margin-bottom:9px')}><span style={small}>{`Vertical (whole account${d.account.needsReview ? ', needs review' : ''})`}</span>{select('edVertical', e.values.vertical ?? '', VERTICAL_CHOICES.map(v => [v, v] as [string, string]), pick('vertical'), 'Vertical')}{err('vertical')}</label> : null}
+        {d.account.needsReview || d.account.verticalByPerson || d.account.aiAssisted ? <label style={sx('display:block;margin-bottom:9px')}><span style={small}>{`Vertical (whole account${d.account.needsReview ? ', needs review' : d.account.aiAssisted ? ', chosen by the AI classifier' : ''})`}</span>{select('edVertical', e.values.vertical ?? '', VERTICAL_CHOICES.map(v => [v, v] as [string, string]), pick('vertical'), 'Vertical')}{err('vertical')}</label> : null}
         <div style={sx('font-size:11px;color:var(--i3);line-height:1.5')}>Confirming that someone has not opted out, or that an account is not managed separately, needs how you know. It is kept with your name.</div>
       </div> : null}
       <div style={sx('padding:12px;background:var(--s50);border-radius:var(--rmd);margin:6px 0 12px')}>

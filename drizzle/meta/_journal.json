@@ -218,6 +218,20 @@
       "when": 1792790251035,
       "tag": "0030_ai_calls_security",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1792790581431,
+      "tag": "0031_ai_verticals",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1792790582036,
+      "tag": "0032_ai_verticals_security",
+      "breakpoints": true
     }
   ]
 }

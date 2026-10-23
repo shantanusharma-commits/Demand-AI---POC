@@ -80,7 +80,7 @@ export async function addCorrections(scope: TenantScope, actor: Actor, listId: s
       // what the checks held; the safe direction (Y) is always allowed.
       ?? (f === 'opt_out' && to === 'N' && !x.contact.optOutUnknown ? "This person's opt-out is already given in the file; it can only be changed to Y." : null)
       ?? (f === 'managed_separately' && to === 'N' && !managedHeld(x.account) ? "This account's managed status is already given in the file; it can only be changed to Y." : null)
-      ?? (f === 'vertical' && !x.account.needsReview && !verticalByPerson(x.account) ? 'The mapping table classified this account; correct its industry instead.' : null)
+      ?? (f === 'vertical' && !x.account.needsReview && !verticalByPerson(x.account) && !x.account.aiAssisted ? 'The mapping table classified this account; correct its industry instead.' : null)
       ?? ((f === 'opt_out' || f === 'managed_separately') && to === 'N' && !input.source ? 'Say how you know: a confirmation is kept with who made it and why.' : null);
     if (problem) { problems[f] = [problem]; continue; }
     changes.push({ field: f, from, to });
@@ -147,7 +147,7 @@ export type EditRow = {
   contact: Contact;
   /** The editable fields as the file (with its corrections) has them. */
   raw: Record<string, string>;
-  account: { name: string; vertical: string; needsReview: boolean; verticalByPerson: boolean; managedHeld: boolean };
+  account: { name: string; vertical: string; needsReview: boolean; verticalByPerson: boolean; aiAssisted: boolean; managedHeld: boolean };
   /** Whether the caller may correct this list (uploader or manager), and whether a correction is still being checked. */
   canEdit: boolean;
   pending: boolean;
@@ -161,7 +161,7 @@ export async function getEditRow(scope: TenantScope, actor: Actor, listId: strin
   const history = (await listCorrections(scope, { listId, row, limit: PAGE_MAX })).rows;
   return {
     contact: x.contact, raw: x.raw, history, pending: await rebuildPending(scope, listId),
-    account: { name: x.account.name, vertical: x.account.vertical, needsReview: x.account.needsReview, verticalByPerson: verticalByPerson(x.account), managedHeld: !!managedHeld(x.account) },
+    account: { name: x.account.name, vertical: x.account.vertical, needsReview: x.account.needsReview, verticalByPerson: verticalByPerson(x.account), aiAssisted: !!x.account.aiAssisted, managedHeld: !!managedHeld(x.account) },
     canEdit: list.status !== 'replaced' && list.canEdit,
   };
 }
