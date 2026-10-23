@@ -21,7 +21,7 @@ import { todayUtc } from './scoring.ts';
 /** An item waiting on someone, as Today lists it. */
 export type TodayRow = {
   id: string; runId: string; who: string; account: string; action: string; channel: string; cats: string[]; reason: string; whyHere: string;
-  routedAt: Date; segment: string | null; spot: string | null; ownerName: string | null;
+  routedAt: Date; segment: string | null; spot: string | null; why: string | null; ownerName: string | null;
 };
 export type ReadyRow = { id: string; runId: string; who: string; account: string; action: string; channel: string; releasedAt: Date | null; outcome: string | null };
 export type Blocker = { title: string; detail: string; href: string; cta: string; who: string };
@@ -33,7 +33,7 @@ const ago = (t: Date, now: Date) => { const h = (+now - +t) / 36e5; return h < 1
 const toRow = (q: QueueRow): TodayRow => ({
   id: q.id, runId: q.runId, who: q.contact.name, account: q.account.name, action: q.chosenAction, channel: q.channel, cats: q.cats,
   reason: R.REASON_CATS[q.cats[0]] || 'Exception', whyHere: R.whyHere({ spot: q.spot as R.RecState['spot'], why: q.why as R.RecState['why'] }),
-  routedAt: q.routedAt, segment: q.formedSegment, spot: q.spot, ownerName: q.ownerName,
+  routedAt: q.routedAt, segment: q.formedSegment, spot: q.spot, why: q.why, ownerName: q.ownerName,
 });
 
 export async function today(scope: TenantScope, actor: Actor) {

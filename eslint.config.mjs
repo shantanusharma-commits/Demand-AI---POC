@@ -2,25 +2,11 @@ import { defineConfig, globalIgnores } from 'eslint/config';
 import nextVitals from 'eslint-config-next/core-web-vitals';
 import nextTs from 'eslint-config-next/typescript';
 
-// Screens carried over from the prototype break the React Compiler hook rules (refs read during render,
-// impure render, setState in effects). They are rewired to server data in Phases 3-5; until each one is,
-// these rules only warn there. Remove a file from this list when its screen is rewritten.
-const PROTOTYPE_SCREENS = [
-  'components/screens/TodayScreen.tsx',
-];
-
+// Every screen now runs on server data (Phases 3-5), so the React Compiler hook rules apply everywhere: the
+// prototype screens' relaxed list is gone.
 export default defineConfig([
   ...nextVitals,
   ...nextTs,
-  {
-    files: PROTOTYPE_SCREENS,
-    rules: {
-      'react-hooks/refs': 'warn',
-      'react-hooks/purity': 'warn',
-      'react-hooks/set-state-in-effect': 'warn',
-      'react/no-unescaped-entities': 'warn',
-    },
-  },
   globalIgnores([
     '.next/**',
     'out/**',
