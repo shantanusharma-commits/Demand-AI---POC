@@ -89,6 +89,18 @@ const EXPECTED: Record<string, Policy> = {
   'POST /api/recommendations/:id/outcome': { auth: 'unit', permission: 'review.decide' },
   'GET /api/review/queue': { auth: 'unit', permission: 'review.decide' },
   'GET /api/today': { auth: 'unit', permission: 'today.view' },
+  'GET /api/analytics/areas': { auth: 'unit', permission: 'analytics.view' },
+  'GET /api/analytics/gates': { auth: 'unit', permission: 'analytics.view' },
+  'GET /api/analytics/funnel': { auth: 'unit', permission: 'analytics.view' },
+  'GET /api/analytics/evidence': { auth: 'unit', permission: 'analytics.view' },
+  'GET /api/analytics/weekly': { auth: 'unit', permission: 'analytics.view' },
+  'GET /api/analytics/weekly.md': { auth: 'unit', permission: 'analytics.view' },
+  'GET /api/analytics/readout': { auth: 'unit', permission: 'analytics.view' },
+  'GET /api/analytics/readout.md': { auth: 'unit', permission: 'analytics.view' },
+  'GET /api/analytics/learning-loop': { auth: 'unit', permission: 'analytics.view' },
+  'GET /api/analytics/validation': { auth: 'unit', permission: 'analytics.view' },
+  'PATCH /api/analytics/validation': { auth: 'unit', permission: 'validation.edit' },
+  'GET /api/exports/outcome-log.csv': { auth: 'unit', permission: 'review.decide' },
   'GET /api/routing-rules': { auth: 'unit', permission: 'lists.view' },
   'POST /api/routing-rules': { auth: 'unit', permission: 'routing.manage' },
   'PATCH /api/routing-rules/:id': { auth: 'unit', permission: 'routing.manage' },
@@ -285,6 +297,35 @@ test('switching business unit changes the role at once; signing out ends the ses
   assert.equal((await rep.post('/api/auth/logout', {})).status, 200);
   const replay = await fetch(`${srv.base}/api/me`, { headers: { cookie: oldCookie } });
   assert.equal(replay.status, 401, 'the old cookie no longer works');
+});
+
+test('Analytics and Today: a Viewer reads aggregates without records; the reports download as Markdown; a rep can’t change the settings', async () => {
+  const viewer = new Browser(srv.base);
+  await viewer.signIn(people.Viewer);
+  const areas = await viewer.get('/api/analytics/areas');
+  assert.equal(areas.status, 200);
+  assert.deepEqual((areas.json.areas as { key: string }[]).map(a => a.key), ['discovery', 'qualification', 'intent', 'routing', 'content', 'value']);
+  assert.equal((await viewer.get('/api/analytics/learning-loop')).json.records, null, 'no account or contact records for a Viewer');
+  const weekly = await viewer.get('/api/analytics/weekly.md');
+  assert.equal(weekly.status, 200);
+  assert.equal(weekly.headers.get('content-type'), 'text/markdown; charset=utf-8');
+  assert.match(weekly.headers.get('content-disposition')!, /^attachment; filename="weekly_summary_\d{4}-W\d{2}\.md"/);
+  assert.match(weekly.text, /^# Weekly summary · \d{4}-W\d{2}\n/);
+  const readout = await viewer.get('/api/analytics/readout.md');
+  assert.match(readout.headers.get('content-disposition')!, /filename="pilot_readout\.md"/);
+  assert.match(readout.text, /^# Pilot readout\n/);
+  assert.equal((await viewer.get('/api/analytics/gates?rep=rep.a2@demandai.test')).status, 403, 'only managers look at one rep');
+  assert.equal((await viewer.get('/api/analytics/weekly?week=last')).status, 400);
+  const rep = new Browser(srv.base);
+  await rep.signIn(people['Sales rep']);
+  assert.equal((await rep.request('PATCH', '/api/analytics/validation', { g2Threshold: 75 })).status, 403);
+  const today = await rep.get('/api/today');
+  assert.equal(today.status, 200);
+  assert.equal(typeof today.json.nothing, 'boolean');
+  const manager = new Browser(srv.base);
+  await manager.signIn(people['Sales manager']);
+  assert.equal((await manager.request('PATCH', '/api/analytics/validation', { g2Threshold: 140 })).status, 400);
+  assert.equal((await manager.request('PATCH', '/api/analytics/validation', { surprise: 1 })).status, 400, 'unknown settings are refused');
 });
 
 test('logs: one access line per API request with request ID and status, and no email addresses anywhere', async () => {

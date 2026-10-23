@@ -223,6 +223,26 @@ export const signalTypeChanges = pgTable('signal_type_changes', {
   index('signal_type_changes_version_idx').on(t.configVersionId),
 ]);
 
+/** A change to the success-gate settings (D-21: G1 baseline and threshold, G2 threshold, the "too early to call"
+ *  number, the spot-check share) and the configuration version it made: the change in words, and the settings before
+ *  and after. Append-only; Setup's version history and Analytics' validation tab show it. */
+export const configChanges = pgTable('config_changes', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  seq: bigint('seq', { mode: 'number' }).generatedAlwaysAsIdentity(),
+  businessUnitId: uuid('business_unit_id').notNull().references(() => businessUnits.id),
+  configVersionId: uuid('config_version_id').notNull().references(() => configVersions.id),
+  kind: text('kind').notNull(),
+  changes: text('changes').array().notNull(),
+  before: jsonb('before').notNull(),
+  after: jsonb('after').notNull(),
+  createdAt: createdAt(),
+  createdBy: createdBy(),
+}, t => [
+  check('config_changes_kind_check', sql`${t.kind} in ('validation')`),
+  index('config_changes_bu_seq_idx').on(t.businessUnitId, t.seq),
+  index('config_changes_version_idx').on(t.configVersionId),
+]);
+
 /* ─── Content library (G-009): brand-pack versions, the unit's working draft, guideline documents ─── */
 
 /** Every saved brand pack, append-only: the highest version is the one new drafts follow; earlier ones are kept for

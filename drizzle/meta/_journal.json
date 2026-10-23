@@ -162,6 +162,20 @@
       "when": 1792758788207,
       "tag": "0022_routing_security",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1792774114138,
+      "tag": "0023_config_changes",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1792774114846,
+      "tag": "0024_config_changes_security",
+      "breakpoints": true
     }
   ]
 }

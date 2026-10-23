@@ -6,7 +6,7 @@ import 'server-only';
 import { and, asc, desc, eq, max, sql } from 'drizzle-orm';
 import { CONFIG, type CustomSignalType } from '../../demandai-engine.ts';
 import { ENGINE_VERSION } from '../../engine/config.ts';
-import { CONFIG_SECTIONS, configSignoffs, configVersions, signalTypeChanges, users, type ConfigSection } from '../db/schema.ts';
+import { CONFIG_SECTIONS, configChanges, configSignoffs, configVersions, signalTypeChanges, users, type ConfigSection } from '../db/schema.ts';
 import type { TenantScope } from '../db/tenant.ts';
 import { recordAudit } from '../db/audit.ts';
 import { badRequest, conflict } from '../http/errors.ts';
@@ -60,6 +60,9 @@ export async function getSetup(scope: TenantScope): Promise<SetupState> {
     .from(configVersions).leftJoin(users, eq(users.id, configVersions.activatedBy))
     .where(eq(configVersions.businessUnitId, scope.ctx.businessUnitId)).orderBy(desc(configVersions.versionNo));
   const word = { off: 'switched off', on: 'switched on', added: 'added', removed: 'removed' } as const;
+  // Changes to the success-gate settings (Analytics › Validation) make versions too.
+  const gateChanges = await scope.tx.select({ versionNo: configVersions.versionNo, changes: configChanges.changes }).from(configChanges)
+    .innerJoin(configVersions, eq(configVersions.id, configChanges.configVersionId)).where(eq(configChanges.businessUnitId, scope.ctx.businessUnitId));
   const monitoring = await signalMonitoring(scope);
   return {
     version: { versionNo: v.versionNo, activatedAt: v.activatedAt, activatedBy: activator?.name ?? null, engineVersion: v.engineVersion },
@@ -67,7 +70,7 @@ export async function getSetup(scope: TenantScope): Promise<SetupState> {
     signals: { off, custom: custom.map(c => ({ ...c, by: addedBy(c.name)?.by ?? null, at: addedBy(c.name)?.at ?? null })), problem },
     changes,
     versions: versionRows.map(r => ({ versionNo: r.versionNo, status: r.status, activatedAt: r.activatedAt, activatedBy: r.by, engineVersion: r.engineVersion,
-      changes: changes.filter(c => c.versionNo === r.versionNo).map(c => `${c.type} ${word[c.change]}`) })),
+      changes: [...changes.filter(c => c.versionNo === r.versionNo).map(c => `${c.type} ${word[c.change]}`), ...gateChanges.filter(c => c.versionNo === r.versionNo).flatMap(c => c.changes)] })),
     unknownTags: monitoring.types.filter(t => t.status === 'Not a known tag').map(t => ({ tag: t.type, rows: t.records })),
   };
 }
@@ -93,7 +96,7 @@ export async function signOffSection(scope: TenantScope, actor: Actor, section: 
 /* ─── Signal switches and added types: each makes the next configuration version ─── */
 
 /** Retires the active version and activates the next one with the changed body; returns it. */
-async function nextVersion(scope: TenantScope, actor: Actor, change: (body: Record<string, unknown>) => Record<string, unknown>) {
+export async function nextVersion(scope: TenantScope, actor: Actor, change: (body: Record<string, unknown>) => Record<string, unknown>) {
   const cur = await activeVersion(scope, true);
   const [{ top }] = await scope.tx.select({ top: max(configVersions.versionNo) }).from(configVersions).where(eq(configVersions.businessUnitId, scope.ctx.businessUnitId));
   await scope.tx.update(configVersions).set({ status: 'retired' }).where(eq(configVersions.id, cur.id));

@@ -35,3 +35,9 @@ export function pageQuery<T extends z.ZodRawShape>(request: Request, extra: T) {
   }
   return parsed.data;
 }
+
+/** Analytics options: one rep's results (managers only, checked in the service) and the week of a weekly summary. */
+export function analyticsQuery(request: Request): { rep?: string; week?: string } {
+  const q = pageQuery(request, { rep: z.string().trim().email().max(254).optional(), week: z.string().regex(/^\d{4}-W\d{2}$/, 'A week such as 2026-W43.').optional() });
+  return { rep: q.rep, week: q.week };
+}

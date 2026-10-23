@@ -11,6 +11,11 @@ export function jsonDownload(fileName: string, json: string): Response {
   return download(fileName, json, 'application/json; charset=utf-8');
 }
 
+/** A Markdown report (the weekly summary, the pilot readout). */
+export function markdownDownload(fileName: string, text: string): Response {
+  return download(fileName, text, 'text/markdown; charset=utf-8');
+}
+
 function download(fileName: string, body: string, type: string): Response {
   const ascii = fileName.replace(/[^\x20-\x7e]/g, '_').replace(/["\\]/g, '');
   return new Response(body, {
