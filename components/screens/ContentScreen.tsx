@@ -3,9 +3,9 @@
 /* Content library (was legacy/07-content.html), on the server (G-009): the brand pack every draft is checked against.
    Changes wait in the unit's draft; "Save as vN" makes the next version and earlier ones are kept, and can be
    restored. Approved claims carry an owner and an expiry: an expired claim fails the draft checks. Admin and Sales
-   manager change it; everyone else with the screen sees it. Not ported yet: the Content tab (Content studio, Phase 5e)
-   and where each claim was used (micro-segment drafts, Phase 5b). The "after the pilot" calls to action are not
-   shown (dead controls, G-063). */
+   manager change it; everyone else with the screen sees it. Each claim shows where it was used in micro-segment drafts,
+   and "From For Review" lists sentences people approved that are not claims yet. Not ported yet: the Content tab
+   (Content studio, Phase 5e). The "after the pilot" calls to action are not shown (dead controls, G-063). */
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { VOICE_PRESETS, type BrandPack, type Claim, type Framework } from '@/lib/engine/nba';
 import { CLAIM_TYPES, applySuggestion, claimFits, claimStatus, nextClaimId, readRules, type ClaimStatus, type RuleSuggestion } from '@/lib/content/brand';
@@ -13,12 +13,13 @@ import { showToast } from '@/lib/ui';
 import { sx } from '@/lib/sx';
 import { ApiError, api, errorText, uploadFile, type WireDeep } from '@/lib/client/api';
 import { useCan, useSessionUser } from '@/components/SessionContext';
-import type { BrandState } from '@/lib/server/services/brand';
+import type { BrandState, ClaimUse, FromReview } from '@/lib/server/services/brand';
 
 type Brand = WireDeep<BrandState>;
 type Tab = 'guidelines' | 'framework' | 'voice' | 'negative' | 'claims' | 'versions';
 type Guideline = { documentId: string; name: string; size: number; at: string; by: string };
-type Modal = { kind: 'changes' } | { kind: 'discard' } | { kind: 'restore'; versionNo: number } | { kind: 'claim' } | { kind: 'framework'; index: number } | { kind: 'sample'; id: string };
+type Modal = { kind: 'changes' } | { kind: 'discard' } | { kind: 'restore'; versionNo: number } | { kind: 'claim'; pre?: string } | { kind: 'fromReview' } | { kind: 'framework'; index: number } | { kind: 'sample'; id: string };
+type Usage = WireDeep<{ use: Record<string, ClaimUse[]>; fromReview: FromReview[] }>;
 
 const TABS: [Tab, string][] = [['guidelines', 'Brand guidelines'], ['framework', 'Messaging frameworks'], ['voice', 'Voice and tone'], ['negative', 'Negative keywords'], ['claims', 'Approved claims'], ['versions', 'Versions']];
 const SECTION_OF: Record<string, Tab> = { 'Brand guidelines': 'guidelines', 'Messaging frameworks': 'framework', 'Voice and tone': 'voice', 'Negative keywords': 'negative', 'Approved claims': 'claims' };
@@ -177,12 +178,15 @@ export function ContentScreen() {
   const [clq, setClq] = useState(''), [clt, setClt] = useState(''), [cls, setCls] = useState(''), [clsel, setClsel] = useState<string | null>(null);
   const [fwf, setFwf] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [usage, setUsage] = useState<Usage | null>(null);
   const formRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const t = new URLSearchParams(window.location.search).get('tab');
     let live = true;
     api<{ brand: Brand }>('/api/brand').then(r => { if (live) { setBrand(r.brand); if (TABS.some(([k]) => k === t)) setTab(t as Tab); } }, e => { if (live) setLoadError(errorText(e)); });
+    // Where each claim was used in micro-segment drafts (5b); the tab works without it.
+    api<Usage>('/api/brand/claims/usage').then(u => { if (live) setUsage(u); }, () => { /* shown as not used yet */ });
     return () => { live = false; };
   }, []);
   const reload = async () => setBrand((await api<{ brand: Brand }>('/api/brand')).brand);
@@ -329,25 +333,37 @@ export function ContentScreen() {
         <select aria-label="Topic" value={clt} onChange={e => { setClt(e.currentTarget.value); setClsel(null); }}><option value="">All topics</option>{topics.map(t => <option key={t}>{t}</option>)}</select>
         <select aria-label="Status" value={cls} onChange={e => { setCls(e.currentTarget.value); setClsel(null); }}><option value="">All statuses</option>{['Approved', 'Expired', 'Draft', 'Retired'].map(s => <option key={s}>{s}</option>)}</select>
         <span style={sx('flex:1')}></span>
-        {canEdit ? <button className="btn btn-primary btn-sm" onClick={() => openModal({ kind: 'claim' })}>Add a claim</button> : null}
+        {canEdit ? <><button className="btn btn-sec btn-sm" onClick={() => openModal({ kind: 'fromReview' })}>From For Review{usage?.fromReview.length ? <> <span className="cnt">{usage.fromReview.length}</span></> : null}</button>
+          <button className="btn btn-primary btn-sm" onClick={() => openModal({ kind: 'claim' })}>Add a claim</button></> : null}
       </div>
       <div className="cl-grid">
-        <div className="panel" style={sx('margin:0;overflow:hidden')}><table className="cl-t"><thead><tr><th style={sx('width:52%')}>Claim</th><th style={sx('width:22%')}>Topics</th><th style={sx('width:13%')}>Expires</th><th style={sx('width:13%')}>Status</th></tr></thead><tbody>
+        <div className="panel" style={sx('margin:0;overflow:hidden')}><table className="cl-t"><thead><tr><th style={sx('width:44%')}>Claim</th><th style={sx('width:20%')}>Topics</th><th style={sx('width:12%')}>Expires</th><th style={sx('width:13%')}>Last used</th><th style={sx('width:11%')}>Status</th></tr></thead><tbody>
           {list.length ? list.map(c => { const st = claimStatus(c, today); return <tr key={c.id} className={sel && c.id === sel.id ? 'sel' : ''} onClick={() => setClsel(c.id)}>
             <td><div className="cl-c">{c.claim}</div><div className="cl-s">{`${c.id} · ${c.type}, ${c.year} · ${c.title}`}</div></td>
             <td>{(c.segments || []).slice(0, 2).map(t => <span key={t} className="tag tag-grey" style={sx('margin-right:4px')}>{t}</span>)}{(c.segments || []).length > 2 ? <span className="cl-s">{`+${c.segments.length - 2}`}</span> : null}</td>
-            <td>{c.expiry}</td><td><span className={`tag ${STATUS_TONE[st]}`}>{st}</span></td></tr>; }) : <tr><td colSpan={4} className="cl-s" style={sx('padding:18px')}>No claim matches.</td></tr>}
+            <td>{c.expiry}</td><td>{lastUsed(c)}</td><td><span className={`tag ${STATUS_TONE[st]}`}>{st}</span></td></tr>; }) : <tr><td colSpan={5} className="cl-s" style={sx('padding:18px')}>No claim matches.</td></tr>}
         </tbody></table></div>
         {sel ? claimPane(sel, claimStatus(sel, today)) : null}
       </div>
     </>;
+  }
+  const usesOf = (c: Claim) => usage?.use[c.id] ?? [];
+  const fmtDay = (t: string) => new Date(t).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+  const afterExpiry = (c: Claim) => usesOf(c).filter(u => u.at.slice(0, 10) > c.expiry).length;
+  function lastUsed(c: Claim): ReactNode {
+    const uses = usesOf(c), af = afterExpiry(c);
+    if (!uses.length) return <span className="cl-s">Not used yet</span>;
+    return <>{fmtDay(uses[0].at)}<div className="cl-s">{`${uses.length} message${uses.length === 1 ? '' : 's'}`}</div>{af ? <div className="cl-warn">{`${af} after expiry`}</div> : null}</>;
   }
   function claimPane(c: Claim, st: ClaimStatus): ReactNode {
     const setClaim = (f: (x: Claim) => void, msg: string) => change(d => { const x = d.claims.find(y => y.id === c.id); if (x) f(x); }, msg);
     return <div className="panel cl-pane" style={sx('margin:0')}><div className="panel-hdr"><span className="panel-ttl">{c.id}</span><span className={`tag ${STATUS_TONE[st]}`}>{st}</span></div><div className="panel-body">
       <div className="cl-c" style={sx('font-size:13.5px;line-height:1.55;margin-bottom:12px')}>{`“${c.claim}”`}</div>
       {([['Source', `${c.title} · ${c.type}, ${c.year}`], ['Topics it fits', (c.segments || []).join(', ')], ['Owner', c.owner || '—'], ['Expires', c.expiry]] as [string, string][]).map(([k, v]) => <div key={k} className="cl-kv"><span>{k}</span><b>{v}</b></div>)}
-      {st === 'Expired' ? <div className="cl-alert">{`Expired on ${c.expiry}: drafts that cite it fail the claim check. Renew the source and its date, or retire the claim.`}</div> : null}
+      {(() => { const uses = usesOf(c), out = uses.filter(u => u.out); return <div className="cl-kv"><span>Where it was used</span><b>{uses.length ? `${uses.length} drafted message${uses.length === 1 ? '' : 's'}, ${out.length} sent` : 'Not used yet'}</b>
+        {uses.slice(0, 5).map((u, k) => <div key={k} className="cl-u">{`${u.who} · ${u.account}`}<span>{`${fmtDay(u.at)}${u.out ? ' · sent' : ''}`}</span></div>)}{uses.length > 5 ? <div className="cl-s">{`and ${uses.length - 5} more`}</div> : null}</div>; })()}
+      {afterExpiry(c) ? <div className="cl-alert">{`Used ${afterExpiry(c)} time${afterExpiry(c) === 1 ? '' : 's'} after it expired on ${c.expiry}. Renew the source or retire the claim.`}</div>
+        : st === 'Expired' ? <div className="cl-alert">{`Expired on ${c.expiry}: drafts that cite it fail the claim check. Renew the source and its date, or retire the claim.`}</div> : null}
       {canEdit ? <div className="cl-act">
         <select aria-label="Claim status" value={c.status} onChange={e => { const s = e.currentTarget.value; setClaim(x => { x.status = s; }, 'Status changed. Save to make it a new version'); }}>{['approved', 'draft', 'retired'].map(s => <option key={s} value={s}>{s[0].toUpperCase() + s.slice(1)}</option>)}</select>
         <label>Expires <input key={`exp-${c.id}-${c.expiry}`} type="date" defaultValue={c.expiry} onBlur={e => { const v = e.currentTarget.value; if (v && v !== c.expiry) setClaim(x => { x.expiry = v; }, 'Expiry changed. Save to make it a new version'); }} /></label>
@@ -423,8 +439,14 @@ export function ContentScreen() {
       <div style={sx('display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px')}><div style={sx('font-family:var(--fd);font-size:16px;font-weight:700;color:var(--i1)')}>{s.title}</div><button className="btn btn-sec btn-sm" onClick={() => saveText(s.file, s.text)}>↓ Download</button></div>
       <div className="md">{md(s.text)}</div>
       <div style={sx('display:flex;justify-content:flex-end;margin-top:14px')}><button className="btn btn-ghost btn-sm" onClick={() => setModal(null)}>Close</button></div></>; }
+    if (m.kind === 'fromReview') { const F = usage?.fromReview ?? []; return <>{title('Approved in For Review')}
+      <div style={sx('font-size:12px;color:var(--i3);margin:-6px 0 12px;line-height:1.5')}>Sentences a person approved in a message that are not approved claims yet. Add one here and it is checked as approved from the next version, so it isn&apos;t approved again.</div>
+      {F.length ? F.map((f, k) => <div key={k} className="rv-c" style={sx('padding:10px 0;border-top:1px solid var(--s75)')}><div className="cl-c">{`“${f.text}”`}</div><div className="cl-s">{`${f.account}${f.by ? ` · approved by ${f.by}` : ''} · ${fmtDay(f.at)}`}</div>
+        <button className="btn btn-sec btn-sm" style={sx('margin-top:6px')} onClick={() => openModal({ kind: 'claim', pre: f.text })}>Add as a claim</button></div>)
+        : <div className="cl-s" style={sx('padding:10px 0')}>Nothing yet. When someone edits a message in For Review, adds a claim and approves it, the claim shows up here.</div>}
+      <div style={sx('display:flex;justify-content:flex-end;margin-top:12px')}><button className="btn btn-ghost btn-sm" onClick={() => setModal(null)}>Close</button></div></>; }
     if (m.kind === 'claim') return <>{title('Add a claim')}
-      <label className="af"><span>The claim, exactly as a draft may say it</span><textarea id="cClaim" rows={3} maxLength={600} placeholder="A comparable site … within one planned shutdown." /></label>
+      <label className="af"><span>The claim, exactly as a draft may say it</span><textarea id="cClaim" rows={3} maxLength={600} defaultValue={m.pre ?? ''} placeholder="A comparable site … within one planned shutdown." /></label>
       <div className="af-row"><label className="af" style={sx('flex:2')}><span>Source title</span><input id="cTitle" maxLength={200} placeholder="Case study title" /></label>
         <label className="af"><span>Type</span><select id="cType">{CLAIM_TYPES.map(t => <option key={t}>{t}</option>)}</select></label></div>
       <div className="af-row"><label className="af"><span>Year</span><input id="cYear" type="number" defaultValue={new Date().getFullYear()} /></label><label className="af"><span>Expires</span><input id="cExp" type="date" /></label>
@@ -453,7 +475,7 @@ export function ContentScreen() {
       </div>
     </main>
     {modal ? <div style={OVERLAY} onClick={e => { if (e.target === e.currentTarget) setModal(null); }}>
-      <div ref={formRef} role="dialog" aria-modal="true" aria-label={modal.kind === 'claim' ? 'Add a claim' : modal.kind === 'framework' ? 'Framework' : 'Content library'}
+      <div ref={formRef} role="dialog" aria-modal="true" aria-label={modal.kind === 'claim' ? 'Add a claim' : modal.kind === 'fromReview' ? 'Approved in For Review' : modal.kind === 'framework' ? 'Framework' : 'Content library'}
         style={sx(`background:var(--surf);border-radius:var(--rlg);box-shadow:var(--sh-lg);width:${modal.kind === 'sample' || modal.kind === 'framework' ? 680 : modal.kind === 'claim' ? 620 : 560}px;max-width:100%;max-height:88vh;overflow:auto;padding:22px`)}>{modalBody(modal)}</div>
     </div> : null}
   </>;

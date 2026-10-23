@@ -69,6 +69,7 @@ const EXPECTED: Record<string, Policy> = {
   'POST /api/config/signals/switch': { auth: 'unit', permission: 'setup.signals' },
   'POST /api/config/signals/remove': { auth: 'unit', permission: 'setup.signals' },
   'GET /api/brand': { auth: 'unit', permission: 'content.view' },
+  'GET /api/brand/claims/usage': { auth: 'unit', permission: 'content.view' },
   'PUT /api/brand/draft': { auth: 'unit', permission: 'brand.manage' },
   'DELETE /api/brand/draft': { auth: 'unit', permission: 'brand.manage' },
   'POST /api/brand/publish': { auth: 'unit', permission: 'brand.manage' },

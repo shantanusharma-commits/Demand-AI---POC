@@ -7,14 +7,14 @@ import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import { and, desc, eq, max, sql } from 'drizzle-orm';
 import { CONFIG } from '../../demandai-engine.ts';
-import { defaultBrand, FRAMEWORK_ACTIONS, VOICE_PRESETS, type BrandPack } from '../../engine/nba.ts';
+import { defaultBrand, FRAMEWORK_ACTIONS, VOICE_PRESETS, type BrandPack, type CheckResult, type Rec } from '../../engine/nba.ts';
 import { diffSummary, type BrandDiff } from '../../content/brand.ts';
-import { brandDocuments, brandDrafts, brandVersions, SYSTEM_USER_ID, users } from '../db/schema.ts';
+import { brandDocuments, brandDrafts, brandVersions, drafts, nbaRuns, recommendations, SYSTEM_USER_ID, users } from '../db/schema.ts';
 import type { TenantScope } from '../db/tenant.ts';
 import { recordAudit } from '../db/audit.ts';
 import { badRequest, conflict, HttpError, notFound } from '../http/errors.ts';
 import { logger } from '../logger.ts';
-import type { Actor } from './lists.ts';
+import { ownerOnly, type Actor } from './lists.ts';
 
 /* ─── What a pack may contain (the server keeps the playbook, the version and the history itself) ─── */
 
@@ -206,4 +206,29 @@ export async function getDocument(scope: TenantScope, id: string): Promise<{ fil
     .where(and(eq(brandDocuments.id, id), eq(brandDocuments.businessUnitId, scope.ctx.businessUnitId)));
   if (!doc) throw notFound('That document is not there any more.');
   return doc;
+}
+
+/* ─── Where each claim was used, and what For Review approved that isn't a claim yet ─── */
+
+export type ClaimUse = { who: string; account: string; at: Date; out: boolean; list: string };
+export type FromReview = { text: string; account: string; by: string; at: Date };
+
+/** Every message drafted in the unit's micro-segment builds (the caller's own, for a rep): the approved claims each
+ *  current draft cites, whether it went out, and the learning loop's candidates: sentences a person edited into a
+ *  message that was then released, which read like a claim but are not an approved one. */
+export async function claimUsage(scope: TenantScope): Promise<{ use: Record<string, ClaimUse[]>; fromReview: FromReview[] }> {
+  const rows = await scope.tx.select({ rec: recommendations.rec, contactRow: recommendations.contactRow, status: recommendations.status, edited: recommendations.edited,
+    decidedAt: recommendations.decidedAt, checks: drafts.checks, list: nbaRuns.name, built: nbaRuns.createdAt, by: sql<string>`coalesce(${users.displayName}, '')` })
+    .from(recommendations).innerJoin(drafts, and(eq(drafts.recommendationId, recommendations.id), eq(drafts.version, recommendations.draftVersion)))
+    .innerJoin(nbaRuns, eq(nbaRuns.id, recommendations.nbaRunId)).leftJoin(users, eq(users.id, recommendations.decidedBy))
+    .where(and(eq(recommendations.businessUnitId, scope.ctx.businessUnitId), ownerOnly(scope, recommendations.ownerEmail)));
+  const use: Record<string, ClaimUse[]> = {}, fromReview: FromReview[] = [];
+  for (const r of rows) {
+    const rec = r.rec as Rec, chk = r.checks as CheckResult, at = r.decidedAt ?? r.built, out = r.status === 'Released';
+    const who = ((rec.result.people || []).find(p => p.contact.row === r.contactRow)?.contact ?? rec.contact).name;
+    for (const cl of chk.claims.filter(c => c.verified)) (use[cl.source.split(' · ')[0]] ??= []).push({ who, account: rec.account.name, at, out, list: r.list });
+    if (out && r.edited) for (const u of chk.unsupported) if (!fromReview.some(f => f.text === u.text)) fromReview.push({ text: u.text, account: rec.account.name, by: r.by, at });
+  }
+  for (const k of Object.keys(use)) use[k].sort((a, b) => +b.at - +a.at);
+  return { use, fromReview };
 }

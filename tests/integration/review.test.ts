@@ -20,6 +20,7 @@ import { itemDetail, openItem } from '../../lib/server/services/recommendations.
 import {
   acceptItem, approveItem, checkFlagged, chooseAction, decisionLogRows, drawSpotChecks, fixItem, holdItem, isoWeek, reassign, rejectItem, reviewExport, reviewQueue, sendBack, stepIn, teach,
 } from '../../lib/server/services/review.ts';
+import { claimUsage } from '../../lib/server/services/brand.ts';
 import { HttpError } from '../../lib/server/http/errors.ts';
 import { freshDatabase, type TestDatabase } from './harness.ts';
 import { seedBasics, type Basics } from './fixtures.ts';
@@ -303,3 +304,22 @@ test('a spot-check went out on its own; if the rep’s edit adds sensitive conte
   const l = await lastLog(s.id);
   assert.deepEqual([l.kind, l.accepted, /Sensitive: sent to the sales manager/.test(l.note)], ['spot', true, true]);
 });
+
+test('Content library: where each claim was used, and what For Review approved that is not a claim yet', async () => {
+  const v = await one(`SELECT r.id FROM recommendations r JOIN drafts d ON d.recommendation_id = r.id AND d.version = r.draft_version
+    WHERE r.nba_run_id = $1 AND r.owner_email = ANY($2) AND r.status = 'Waiting' AND d.channel = 'Email' AND NOT (d.draft->>'unreachable')::boolean
+      AND NOT r.reasons && ARRAY['Sensitive content'] ORDER BY r.position LIMIT 1`, [runId, repEmails]);
+  const d = await draftOf(v.id);
+  const res = await as(rep(), s => acceptItem(s, repActor(), v.id, { draft: { body: d.draft.body + '\n\nIt reduces downtime by 40%.' } }));
+  assert.equal(res.status, 'Released');
+  const all = await as(admin(), s => claimUsage(s));
+  const cited = await one(`SELECT count(*)::int n FROM recommendations r JOIN drafts d ON d.recommendation_id = r.id AND d.version = r.draft_version,
+    jsonb_array_elements(d.checks->'claims') c WHERE r.nba_run_id = $1 AND (c->>'verified')::boolean`, [runId]);
+  assert.equal(Object.values(all.use).reduce((t, u) => t + u.length, 0), cited.n, 'every verified citation in a current draft is counted');
+  assert.ok(Object.keys(all.use).every(id => /^[A-Z]{2}-\d{2}$/.test(id)));
+  assert.ok(all.fromReview.some(f => f.text === 'It reduces downtime by 40%.' && f.by === 'rep.a'), 'an approved sentence that is not a claim yet');
+  const mine = await as(rep(), s => claimUsage(s));
+  const n = (u: typeof all) => Object.values(u.use).reduce((t, x) => t + x.length, 0);
+  assert.ok(n(mine) > 0 && n(mine) < n(all), 'a rep sees the use in their own items');
+});
+
