@@ -51,7 +51,7 @@ const uuids = (ids: string[]) => sql`string_to_array(${ids.join(',')}, ',')::uui
 /* ─── What the measures read: the items and the log in view, and the lists, runs and builds behind them ─── */
 
 type ItemFact = {
-  id: string; runId: string; passed: boolean; status: string; released: string | null; outcome: string | null; spot: string | null; segment: string | null;
+  id: string; runId: string; accountId: string; passed: boolean; status: string; released: string | null; outcome: string | null; spot: string | null; segment: string | null;
   assigned: string | null; ownerEmail: string | null; alternativeUsed: boolean; tier: string | null; account: NbaAccount; confidence: string | null; signals: string[];
   channel: string; noProof: boolean;
 };
@@ -62,7 +62,7 @@ type LogFact = R.LogFacts & {
 async function load(scope: TenantScope, lens: Lens): Promise<{ items: ItemFact[]; logs: LogFact[] }> {
   const bu = scope.ctx.businessUnitId;
   const items = await scope.tx.select({
-    id: recommendations.id, runId: recommendations.nbaRunId, passed: recommendations.passed, status: recommendations.status, released: recommendations.released,
+    id: recommendations.id, runId: recommendations.nbaRunId, accountId: recommendations.accountId, passed: recommendations.passed, status: recommendations.status, released: recommendations.released,
     outcome: recommendations.outcome, spot: recommendations.spot, segment: recommendations.segment, assigned: recommendations.assignedSegment,
     ownerEmail: recommendations.ownerEmail, alternativeUsed: recommendations.alternativeUsed,
     tier: sql<string | null>`"recommendations"."rec"->'person'->>'tier'`,
@@ -134,8 +134,9 @@ function funnelStages(p: Pipeline, items: ItemFact[], logs: LogFact[]): Stage[] 
     { k: 'Accounts in scope', of: 0, n: sum(p.lists, l => l.stats.accountsPass), sub: 'after the checks and knock-outs' },
     { k: 'Signals found', n: found, sub: `${qualified} qualified · ${rejected} rejected · ${found - qualified - rejected} not used`, note: `${found ? Math.round(qualified / found * 100) : 0}% qualified`, nobase: true },
     { k: 'Accounts scored', of: 1, n: t('A') + t('B') + t('C'), sub: `with a live signal: ${t('A')} A · ${t('B')} B · ${t('C')} C` },
-    { k: 'Accounts in micro-segments', of: 3, n: sum(p.builds, b => sum(b.segments as { accounts: number }[], s => s.accounts)),
-      sub: `${sum(p.builds, b => (b.segments as unknown[]).length)} micro-segments formed · ${items.filter(x => !x.segment).length} with no micro-segment · ${sum(p.builds, b => (b.engaged as unknown[]).length)} set aside by engage-once` },
+    // Each build forms its own micro-segments; an account recommended in several builds counts once.
+    { k: 'Accounts in micro-segments', of: 3, n: new Set(items.filter(x => x.segment).map(x => x.accountId)).size,
+      sub: `${sum(p.builds, b => (b.segments as unknown[]).length)} micro-segments formed in ${pl(p.builds.length, 'build')} · ${items.filter(x => !x.segment).length} with no micro-segment · ${sum(p.builds, b => (b.engaged as unknown[]).length)} set aside by engage-once` },
     { k: 'Actions and drafts', of: 3, n: items.length, sub: `${items.filter(x => x.channel !== 'Task').length} drafts · ${items.filter(x => x.channel === 'Task').length} tasks · ${logs.filter(l => /^Regenerated once/.test(l.decision)).length} regenerated once` },
     { k: 'Completed on their own', of: 5, n: items.filter(x => x.passed).length, sub: `${items.filter(x => !x.passed).length} went to a person` },
     { k: 'Decided by a person', n: decided.length, sub: `${decided.filter(l => l.kind === 'exception').length} exceptions · ${decided.filter(l => l.kind === 'spot').length} spot-checks · ${decided.filter(l => l.kind === 'alternative').length} alternatives`, nobase: true },
@@ -291,7 +292,7 @@ async function areasOf(scope: TenantScope, x: Pilot): Promise<Area[]> {
     ]),
     area('routing', null, [
       { label: 'Micro-segments formed', value: String(sum(p.builds, b => (b.segments as unknown[]).length)),
-        sub: `${stages[4].n} accounts in them · ${items.filter(i => !i.segment).length} recommendations with none · ${sum(p.builds, b => (b.engaged as unknown[]).length)} set aside by engage-once` },
+        sub: `in ${pl(p.builds.length, 'build')} · ${stages[4].n} accounts in them · ${items.filter(i => !i.segment).length} recommendations with none · ${sum(p.builds, b => (b.engaged as unknown[]).length)} set aside by engage-once` },
       { label: 'Active routing rules', value: String(rules) },
       { label: 'Prospects given an owner by a routing rule', value: String(ruled), sub: 'at hand-off, where the lead file named nobody' },
       { label: 'Accounts moved to another business unit', value: String(moved.out), sub: `${moved.in} received from other units` },

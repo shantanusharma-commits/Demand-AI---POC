@@ -117,7 +117,7 @@ test('the funnel and the evidence read the stored lists, runs, builds and log', 
     'Completed on their own', 'Decided by a person', 'Released, ready to use']);
   assert.deepEqual([stage('Records received').n, stage('Accounts in scope').n, stage('Signals found').n], [list.rowsRead, list.accountsPass, run.signals]);
   assert.equal(stage('Accounts in micro-segments').n, build.segments.reduce((t: number, x: { accounts: number }) => t + x.accounts, 0));
-  assert.match(stage('Accounts in micro-segments').sub, new RegExp(`^${build.segments.length} micro-segments formed · \\d+ with no micro-segment · ${build.engaged.length} set aside by engage-once$`));
+  assert.match(stage('Accounts in micro-segments').sub, new RegExp(`^${build.segments.length} micro-segments formed in 1 build · \\d+ with no micro-segment · ${build.engaged.length} set aside by engage-once$`));
   assert.deepEqual([stage('Actions and drafts').n, stage('Completed on their own').n, stage('Decided by a person').n], [c.auto + c.exc, c.auto, 10]);
   const sendable = (await one(`SELECT count(DISTINCT account_id)::int n FROM prospect_scores WHERE sendable`)).n;
   assert.equal(stage('Accounts scored').n, sendable);
