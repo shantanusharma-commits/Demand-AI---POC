@@ -91,7 +91,9 @@ test('origin check: production accepts only APP_BASE_URL; development also accep
 test('.env.example lists every configuration variable, and nothing the app does not read', () => {
   const listed = new Set(readFileSync(new URL('../.env.example', import.meta.url), 'utf8').split('\n')
     .map(l => l.match(/^([A-Z][A-Z0-9_]*)=/)?.[1]).filter((k): k is string => !!k));
-  const schemaKeys = Object.keys(envSchema.shape);
+  // Read only to refuse them (Bedrock authenticates by IAM role), so the template never offers them.
+  const refused = ['AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY'];
+  const schemaKeys = Object.keys(envSchema.shape).filter(k => !refused.includes(k));
   const composeOnly = ['POSTGRES_USER', 'POSTGRES_PASSWORD', 'POSTGRES_DB', 'DEMANDAI_OWNER_PASSWORD', 'DEMANDAI_APP_PASSWORD',
     'DEMANDAI_OPS_PASSWORD', 'BACKUP_RETAIN', 'APP_PORT', 'DB_PORT', 'DEMANDAI_IMAGE', 'NEXT_TELEMETRY_DISABLED', 'DEV_SEED_PASSWORD'];
   assert.deepEqual(schemaKeys.filter(k => !listed.has(k)), [], 'missing from .env.example');

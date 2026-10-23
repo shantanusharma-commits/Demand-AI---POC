@@ -1,0 +1,389 @@
+{
+  "_about": "Azure OpenAI chat-completions responses (API version 2024-06-01, gpt-4o 2024-05-13), written by hand from Microsoft's documented response and error formats. They are not captures of a live call; replace them with real captures once the Client's endpoint is available (tests/ai-live-smoke.test.ts).",
+  "ok_json": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json",
+      "apim-request-id": "4f0c1d2e-0000-4000-8000-000000000001",
+      "x-request-id": "8e7d6c5b-0000-4000-8000-000000000002",
+      "x-ratelimit-remaining-requests": "59",
+      "x-ratelimit-remaining-tokens": "79000"
+    },
+    "body": {
+      "id": "chatcmpl-fixture",
+      "object": "chat.completion",
+      "created": 1729000000,
+      "model": "gpt-4o-2024-05-13",
+      "prompt_filter_results": [
+        {
+          "prompt_index": 0,
+          "content_filter_results": {
+            "hate": {
+              "filtered": false,
+              "severity": "safe"
+            },
+            "self_harm": {
+              "filtered": false,
+              "severity": "safe"
+            },
+            "sexual": {
+              "filtered": false,
+              "severity": "safe"
+            },
+            "violence": {
+              "filtered": false,
+              "severity": "safe"
+            }
+          }
+        }
+      ],
+      "choices": [
+        {
+          "index": 0,
+          "finish_reason": "stop",
+          "logprobs": null,
+          "message": {
+            "role": "assistant",
+            "content": "{\"vertical\":\"Oil refining\",\"confidence\":\"high\",\"reason\":\"Crude distillation and hydrotreating are refining processes.\"}"
+          },
+          "content_filter_results": {
+            "hate": {
+              "filtered": false,
+              "severity": "safe"
+            },
+            "self_harm": {
+              "filtered": false,
+              "severity": "safe"
+            },
+            "sexual": {
+              "filtered": false,
+              "severity": "safe"
+            },
+            "violence": {
+              "filtered": false,
+              "severity": "safe"
+            }
+          }
+        }
+      ],
+      "usage": {
+        "completion_tokens": 38,
+        "prompt_tokens": 312,
+        "total_tokens": 350
+      },
+      "system_fingerprint": "fp_fixture"
+    }
+  },
+  "ok_text": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json",
+      "apim-request-id": "4f0c1d2e-0000-4000-8000-000000000001",
+      "x-request-id": "8e7d6c5b-0000-4000-8000-000000000002",
+      "x-ratelimit-remaining-requests": "59",
+      "x-ratelimit-remaining-tokens": "79000"
+    },
+    "body": {
+      "id": "chatcmpl-fixture",
+      "object": "chat.completion",
+      "created": 1729000000,
+      "model": "gpt-4o-2024-05-13",
+      "prompt_filter_results": [
+        {
+          "prompt_index": 0,
+          "content_filter_results": {
+            "hate": {
+              "filtered": false,
+              "severity": "safe"
+            },
+            "self_harm": {
+              "filtered": false,
+              "severity": "safe"
+            },
+            "sexual": {
+              "filtered": false,
+              "severity": "safe"
+            },
+            "violence": {
+              "filtered": false,
+              "severity": "safe"
+            }
+          }
+        }
+      ],
+      "choices": [
+        {
+          "index": 0,
+          "finish_reason": "stop",
+          "logprobs": null,
+          "message": {
+            "role": "assistant",
+            "content": "Three items are due today; start with the overdue one."
+          },
+          "content_filter_results": {
+            "hate": {
+              "filtered": false,
+              "severity": "safe"
+            },
+            "self_harm": {
+              "filtered": false,
+              "severity": "safe"
+            },
+            "sexual": {
+              "filtered": false,
+              "severity": "safe"
+            },
+            "violence": {
+              "filtered": false,
+              "severity": "safe"
+            }
+          }
+        }
+      ],
+      "usage": {
+        "completion_tokens": 18,
+        "prompt_tokens": 900,
+        "total_tokens": 918
+      },
+      "system_fingerprint": "fp_fixture"
+    }
+  },
+  "completion_filtered": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json",
+      "apim-request-id": "4f0c1d2e-0000-4000-8000-000000000001",
+      "x-request-id": "8e7d6c5b-0000-4000-8000-000000000002",
+      "x-ratelimit-remaining-requests": "59",
+      "x-ratelimit-remaining-tokens": "79000"
+    },
+    "body": {
+      "id": "chatcmpl-fixture",
+      "object": "chat.completion",
+      "created": 1729000000,
+      "model": "gpt-4o-2024-05-13",
+      "prompt_filter_results": [
+        {
+          "prompt_index": 0,
+          "content_filter_results": {
+            "hate": {
+              "filtered": false,
+              "severity": "safe"
+            },
+            "self_harm": {
+              "filtered": false,
+              "severity": "safe"
+            },
+            "sexual": {
+              "filtered": false,
+              "severity": "safe"
+            },
+            "violence": {
+              "filtered": false,
+              "severity": "safe"
+            }
+          }
+        }
+      ],
+      "choices": [
+        {
+          "index": 0,
+          "finish_reason": "content_filter",
+          "logprobs": null,
+          "message": {
+            "role": "assistant",
+            "content": null
+          },
+          "content_filter_results": {
+            "hate": {
+              "filtered": false,
+              "severity": "safe"
+            },
+            "self_harm": {
+              "filtered": false,
+              "severity": "safe"
+            },
+            "sexual": {
+              "filtered": false,
+              "severity": "safe"
+            },
+            "violence": {
+              "filtered": true,
+              "severity": "medium"
+            }
+          }
+        }
+      ],
+      "usage": {
+        "completion_tokens": 0,
+        "prompt_tokens": 312,
+        "total_tokens": 312
+      },
+      "system_fingerprint": "fp_fixture"
+    }
+  },
+  "truncated": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json",
+      "apim-request-id": "4f0c1d2e-0000-4000-8000-000000000001",
+      "x-request-id": "8e7d6c5b-0000-4000-8000-000000000002",
+      "x-ratelimit-remaining-requests": "59",
+      "x-ratelimit-remaining-tokens": "79000"
+    },
+    "body": {
+      "id": "chatcmpl-fixture",
+      "object": "chat.completion",
+      "created": 1729000000,
+      "model": "gpt-4o-2024-05-13",
+      "prompt_filter_results": [
+        {
+          "prompt_index": 0,
+          "content_filter_results": {
+            "hate": {
+              "filtered": false,
+              "severity": "safe"
+            },
+            "self_harm": {
+              "filtered": false,
+              "severity": "safe"
+            },
+            "sexual": {
+              "filtered": false,
+              "severity": "safe"
+            },
+            "violence": {
+              "filtered": false,
+              "severity": "safe"
+            }
+          }
+        }
+      ],
+      "choices": [
+        {
+          "index": 0,
+          "finish_reason": "length",
+          "logprobs": null,
+          "message": {
+            "role": "assistant",
+            "content": "{\"vertical\":\"Oil re"
+          },
+          "content_filter_results": {
+            "hate": {
+              "filtered": false,
+              "severity": "safe"
+            },
+            "self_harm": {
+              "filtered": false,
+              "severity": "safe"
+            },
+            "sexual": {
+              "filtered": false,
+              "severity": "safe"
+            },
+            "violence": {
+              "filtered": false,
+              "severity": "safe"
+            }
+          }
+        }
+      ],
+      "usage": {
+        "completion_tokens": 8,
+        "prompt_tokens": 312,
+        "total_tokens": 320
+      },
+      "system_fingerprint": "fp_fixture"
+    }
+  },
+  "prompt_filtered": {
+    "status": 400,
+    "headers": {
+      "content-type": "application/json",
+      "apim-request-id": "4f0c1d2e-0000-4000-8000-000000000001"
+    },
+    "body": {
+      "error": {
+        "message": "The response was filtered due to the prompt triggering Azure OpenAI's content management policy. Please modify your prompt and retry.",
+        "type": null,
+        "param": "prompt",
+        "code": "content_filter",
+        "status": 400,
+        "innererror": {
+          "code": "ResponsibleAIPolicyViolation",
+          "content_filter_result": {
+            "hate": {
+              "filtered": false,
+              "severity": "safe"
+            },
+            "self_harm": {
+              "filtered": false,
+              "severity": "safe"
+            },
+            "sexual": {
+              "filtered": false,
+              "severity": "safe"
+            },
+            "violence": {
+              "filtered": false,
+              "severity": "safe"
+            },
+            "jailbreak": {
+              "filtered": true,
+              "detected": true
+            }
+          }
+        }
+      }
+    }
+  },
+  "rate_limited": {
+    "status": 429,
+    "headers": {
+      "content-type": "application/json",
+      "retry-after": "6",
+      "retry-after-ms": "6000",
+      "apim-request-id": "4f0c1d2e-0000-4000-8000-000000000001"
+    },
+    "body": {
+      "error": {
+        "code": "429",
+        "message": "Requests to the ChatCompletions_Create Operation under Azure OpenAI API version 2024-06-01 have exceeded token rate limit of your current OpenAI S0 pricing tier. Please retry after 6 seconds."
+      }
+    }
+  },
+  "server_error": {
+    "status": 500,
+    "headers": {
+      "content-type": "application/json"
+    },
+    "body": {
+      "error": {
+        "code": "InternalServerError",
+        "message": "The server had an error while processing your request. Sorry about that!"
+      }
+    }
+  },
+  "apim_denied": {
+    "status": 401,
+    "headers": {
+      "content-type": "application/json"
+    },
+    "body": {
+      "statusCode": 401,
+      "message": "Access denied due to invalid subscription key. Make sure to provide a valid key for an active subscription."
+    }
+  },
+  "deployment_missing": {
+    "status": 404,
+    "headers": {
+      "content-type": "application/json"
+    },
+    "body": {
+      "error": {
+        "code": "DeploymentNotFound",
+        "message": "The API deployment for this resource does not exist."
+      }
+    }
+  }
+}

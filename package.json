@@ -28,10 +28,12 @@
     "user:create-admin": "node --env-file-if-exists=.env.local scripts/users/create-admin.mjs"
   },
   "dependencies": {
+    "@aws-sdk/client-bedrock-runtime": "3.1152.0",
     "bcryptjs": "3.0.3",
     "drizzle-orm": "0.45.4",
     "next": "16.4.2",
     "nodemailer": "10.1.0",
+    "openai": "7.34.0",
     "pg": "8.23.1",
     "pino": "10.4.0",
     "react": "^19.3.0",

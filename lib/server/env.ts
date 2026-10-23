@@ -7,6 +7,10 @@ const flag = (fallback: boolean) =>
   z.enum(['0', '1', 'true', 'false']).optional().transform(v => (v === undefined ? fallback : v === '1' || v === 'true'));
 const int = (fallback: number, min = 0, max = Number.MAX_SAFE_INTEGER) => z.coerce.number().int().min(min).max(max).default(fallback);
 const postgresUrl = z.string().regex(/^postgres(ql)?:\/\//, 'must be a postgres:// or postgresql:// URL');
+const LOOPBACK = new Set(['127.0.0.1', 'localhost', '[::1]']);
+// https, except to this machine (a local stand-in for the model service: the key never crosses a network).
+const modelUrl = z.url({ protocol: /^https?$/ }).refine(u => u.startsWith('https:') || LOOPBACK.has(new URL(u).hostname), 'must be an https:// URL');
+const price = z.coerce.number().min(0).max(10_000);
 
 export const LOG_LEVELS = ['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'] as const;
 export const AI_PROVIDERS = ['none', 'azure-openai', 'bedrock'] as const;
@@ -63,7 +67,7 @@ export const envSchema = z
     AI_FEATURE_CLASSIFY: flag(false),
     AI_FEATURE_COPILOT: flag(false),
     AI_FEATURE_CONTENT_STUDIO: flag(false),
-    AZURE_OPENAI_ENDPOINT: z.url({ protocol: /^https$/ }).optional(),
+    AZURE_OPENAI_ENDPOINT: modelUrl.optional(),
     AZURE_OPENAI_API_KEY: z.string().optional(),
     AZURE_OPENAI_DEPLOYMENT: z.string().optional(),
     AZURE_OPENAI_API_VERSION: z.string().default('2024-06-01'),
@@ -71,6 +75,14 @@ export const envSchema = z
     AZURE_OPENAI_AUTH_HEADER: z.enum(['api-key', 'Ocp-Apim-Subscription-Key']).default('api-key'),
     AWS_REGION: z.string().optional(),
     BEDROCK_MODEL_ID: z.string().optional(),
+    // Read only to refuse them: Bedrock authenticates by the IAM role the app runs under (D-35).
+    AWS_ACCESS_KEY_ID: z.string().optional(),
+    AWS_SECRET_ACCESS_KEY: z.string().optional(),
+    // USD per million tokens, for the cost estimate on each call (gpt-4o 2024-05-13 list prices; set your agreement's).
+    AI_PRICE_INPUT_PER_MTOK: price.default(5),
+    AI_PRICE_OUTPUT_PER_MTOK: price.default(15),
+    // Lets the optional live smoke test call the configured model (never in CI).
+    AI_LIVE_SMOKE: flag(false),
 
     // Data lifecycle (D-20, provisional)
     RETENTION_DAYS_AFTER_READOUT: int(30, 1),
@@ -92,6 +104,9 @@ export const envSchema = z
     if (env.AI_PROVIDER === 'bedrock') {
       need('AWS_REGION', 'when AI_PROVIDER=bedrock');
       need('BEDROCK_MODEL_ID', 'when AI_PROVIDER=bedrock');
+      for (const k of ['AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY'] as const) {
+        if (env[k]) ctx.addIssue({ code: 'custom', path: [k], message: 'must not be set: Bedrock uses the IAM role the app runs under (EKS Pod Identity, IRSA or an EC2 instance profile), never static keys' });
+      }
     }
   });
 
