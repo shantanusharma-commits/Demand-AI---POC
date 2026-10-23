@@ -1,7 +1,7 @@
 // The ranked prospects of a scoring run: one row per person who hasn't opted out, in the order the Scoring screen
 // shows them (tier, then score, then fit). Same rules as the original page's prospects(); the server stores the
 // result so every screen and the hand-off read one ranking.
-import { CONFIG, canContact, suppressed } from '../demandai-engine.ts';
+import { CONFIG, canContact, round1, stack, suppressed, tierFor } from '../demandai-engine.ts';
 import type { Contact, PersonScore, ScoreResult, Signal, SignalResult, Tier } from '../../types/demandai';
 
 export interface Prospect {
@@ -43,6 +43,28 @@ export function handoffSelection(prospects: Prospect[], keys?: Set<string>): { i
   const candidates = prospects.filter(x => sendable(x) && (keys ? keys.has(x.key) : x.tier === 'A' || x.tier === 'B'));
   const items = candidates.filter(x => canContact(x.c));
   return { items, heldBack: candidates.length - items.length };
+}
+
+/* ─── What would move a prospect up (G-023, legacy "What would move … to tier A"): computed, not assumed ─── */
+
+/** A person's score from the company's fit and the weights of their qualified signals, as scoreList works it out. */
+export function personScore(fit: number, weights: number[]): { timing: number; score: number; tier: Tier } {
+  const timing = round1(stack(weights) / CONFIG.timingMax * 100);
+  const score = round1(fit * timing / 100);
+  return { timing, score, tier: tierFor(score, weights.length > 0) };
+}
+
+/** The strong signal types the original named as the way to tier A. */
+export const MOVE_TYPES = ['Inquiry or RFQ', 'Installed system near end of support', 'Capital project'];
+
+/** What one new signal of each type, arriving today (full weight), would make this person's score and tier. Types
+ *  they already have are left out, as the original did. */
+export function nextTierMoves(fit: number, weights: number[], have: string[] = [], types: string[] = MOVE_TYPES): { type: string; score: number; tier: Tier }[] {
+  return types.filter(t => !have.includes(t) && CONFIG.signalTypes[t]?.tier !== undefined).map(t => {
+    const c = CONFIG.signalTypes[t];
+    const { score, tier } = personScore(fit, [...weights, (c.tier as number) * (c.strength as number)]);
+    return { type: t, score, tier };
+  });
 }
 
 /* ─── The signal checks pop-up: the same ten steps and wording as the original page ─── */
