@@ -5,13 +5,15 @@
    ranked prospects: tiers, filters, the detail drawer, saving the run and the hand-off to Micro-segments & NBA.
    Markup and text match the original page. Scoring runs on the server as a job whose real stages drive the pop-up
    (G-043); runs are stored, read a page at a time with server search (G-022), and the as-of date is validated,
-   never silently replaced by today (G-061). The hand-off is stored with a UUID per prospect (G-049). */
+   never silently replaced by today (G-061). The hand-off is stored with a UUID per prospect (G-049). Phase 4c (G-023):
+   the signal settings each run was scored with, Signal monitoring, the unused-rows drawer, the tier explainer and
+   what would move a prospect to tier A (worked out with the engine's own scoring). */
 import { useCallback, useEffect, useRef, useState, type DragEvent, type ReactNode } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { DemandAI } from '@/lib/demandai-engine';
 import { DemandAISample } from '@/lib/demandai-sample-data';
-import { SIG_STEPS } from '@/lib/engine/prospects';
+import { SIG_STEPS, nextTierMoves } from '@/lib/engine/prospects';
 import { showToast, avColor } from '@/lib/ui';
 import { download } from '@/lib/download';
 import { sx } from '@/lib/sx';
@@ -20,7 +22,8 @@ import { useDebounced } from '@/lib/client/use-debounced';
 import { usePaged } from '@/lib/client/use-paged';
 import { RenameField } from '@/components/RenameField';
 import type { ListDetail as ServerListDetail, ListSummary as ServerListSummary } from '@/lib/server/services/lists';
-import type { ProspectDetail, ProspectRow, RunDetail as ServerRunDetail, RunSummary as ServerRunSummary } from '@/lib/server/services/scoring';
+import type { ActiveSignalSettings, ProspectDetail, ProspectRow, RunDetail as ServerRunDetail, RunSummary as ServerRunSummary } from '@/lib/server/services/scoring';
+import type { MonitoredFile, MonitoredType, SignalMonitoring, SignalTypeStatus } from '@/lib/server/services/signal-monitoring';
 import type { DqCode, Signal, Tier } from '@/types/demandai';
 
 /* ═══════════════ TYPES ═══════════════ */
@@ -29,7 +32,9 @@ type RunSummary = Wire<ServerRunSummary>;
 type RunDetail = Wire<ServerRunDetail>;
 type SignalRow = Signal & { seq: number };
 type SrcMode = 'saved' | 'upload';
-type StartTab = 'new' | 'saved';
+type StartTab = 'new' | 'saved' | 'monitor';
+type NewRunSettings = Omit<ActiveSignalSettings, 'configVersionId'>;
+type Monitoring = Omit<SignalMonitoring, 'types' | 'files'> & { types: Wire<MonitoredType>[]; files: Wire<MonitoredFile>[] };
 type View = 'ranked' | 'evidence';
 interface ChecksState { phase: 'running' | 'done' | 'failed'; stage: string; done: number; total: number; listName: string; fileName: string; asOf: string; run: RunDetail | null; error: string }
 
@@ -44,6 +49,9 @@ function esc(s: unknown): string {
 function todayIso(): string { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
 const fmt1 = (n: number | undefined | null): string => n === undefined || n === null ? '—' : (Math.round(n * 10) / 10).toLocaleString('en-US', { minimumFractionDigits: n % 1 ? 1 : 0, maximumFractionDigits: 1 });
 const fmtDate = (t: string | number): string => new Date(t).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+/** A YYYY-MM-DD day as written, whatever the browser's time zone. */
+const fmtDay = (iso: string): string => new Date(iso + 'T00:00:00Z').toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+const kb = (b: number): string => b < 1024 ? `${b} B` : `${(b / 1024).toFixed(1)} KB`;
 const upperFirst = (s: string): string => s.replace(/^./, m => m.toUpperCase());
 const query = (o: Record<string, string | number | undefined>) =>
   Object.entries(o).filter(([, v]) => v !== undefined && v !== '').map(([k, v]) => `${k}=${encodeURIComponent(String(v))}`).join('&');
@@ -80,9 +88,10 @@ function table(cols: Col[], rows: ReactNode[], empty: ReactNode): ReactNode {
 }
 
 const SEG_TONE: Record<string, string> = { Inquiry: 'tag-blue', Modernisation: 'tag-violet', 'Service renewal': 'tag-teal', Project: 'tag-amber', Leadership: 'tag-pink', Engagement: 'tag-green' };
-function tagChip(t: string, key?: string | number): ReactNode {
-  const c = DemandAI.CONFIG.signalTypes[t];
-  return <span key={key} className={`tag ${(c && c.segment && SEG_TONE[c.segment]) || 'tag-grey'}`}>{t}</span>;
+/** A signal tag, coloured by the micro-segment it feeds (`segment` for a type added in Setup). */
+function tagChip(t: string, key?: string | number, segment?: string): ReactNode {
+  const seg = DemandAI.CONFIG.signalTypes[t]?.segment ?? segment;
+  return <span key={key} className={`tag ${(seg && SEG_TONE[seg]) || 'tag-grey'}`}>{t}</span>;
 }
 function tierPill(t: Tier): ReactNode {
   const m = ({ A: ['tag-green', 'Tier A'], B: ['tag-amber', 'Tier B'], C: ['tag-blue', 'Tier C'], 'Watch list': ['tag-grey', 'Watch list'], 'Below fit floor': ['tag-grey', 'Below floor'], Excluded: ['tag-red', 'Excluded'] } as Record<Tier, [string, string]>)[t];
@@ -100,11 +109,23 @@ function kv(k: string, v: ReactNode, title: string): ReactNode {
 
 const SEARCH_ICON = <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={sx('color:var(--i3);flex-shrink:0')}><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>;
 const OVERLAY_STYLE = sx('position:fixed;inset:0;background:rgba(20,26,33,.45);z-index:600;display:flex;align-items:center;justify-content:center;padding:16px');
+const STATUS_TAG: Record<SignalTypeStatus, ReactNode> = {
+  'Not a known tag': <span className="tag tag-amber">Not a known tag</span>, 'Knock-out': <span className="tag tag-grey">Knock-out</span>,
+  'Not scored': <span className="tag tag-grey">Not scored</span>, Off: <span className="tag tag-red">Off</span>, On: <span className="tag tag-green">On</span>,
+};
+// The tier explainer is open on the first visit and folded after (a screen preference, not personal data).
+const TIER_KEY = 'demandai_scoring_tiers_v1';
+// What one new signal of each type looks like, in the original's words.
+const MOVE_TEXT: Record<string, (first: string) => string> = {
+  'Inquiry or RFQ': first => `${first} asks a question or for a quote`,
+  'Installed system near end of support': () => 'News that their control system is nearing end of support',
+  'Capital project': () => 'A new project or expansion announced at the site',
+};
 const STAGE_TEXT: Record<string, string> = { queued: 'Waiting to start…', parse: 'Reading the signal file…', check: 'Checking the signals…', score: 'Scoring the prospects…', save: 'Saving the scores…' };
 const PAGE = 200;
 
-type StartData = [{ lists: ListSummary[] }, { runs: RunSummary[] }];
-const fetchStart = (): Promise<StartData> => Promise.all([api<{ lists: ListSummary[] }>('/api/lists'), api<{ runs: RunSummary[] }>('/api/scoring-runs')]);
+type StartData = [{ lists: ListSummary[] }, { runs: RunSummary[]; signalSettings: NewRunSettings }];
+const fetchStart = (): Promise<StartData> => Promise.all([api<{ lists: ListSummary[] }>('/api/lists'), api<{ runs: RunSummary[]; signalSettings: NewRunSettings }>('/api/scoring-runs')]);
 
 /* ═══════════════ SCREEN ═══════════════ */
 export function ScoringScreen() {
@@ -130,6 +151,10 @@ export function ScoringScreen() {
   const [saveKey, setSaveKey] = useState(0);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawer, setDrawer] = useState<Wire<ProspectDetail> | null>(null);
+  const [drawerMode, setDrawerMode] = useState<'prospect' | 'unused'>('prospect');
+  const [newSettings, setNewSettings] = useState<NewRunSettings | null>(null);
+  const [monitoring, setMonitoring] = useState<Monitoring | null>(null);
+  const [tiersOpen, setTiersOpen] = useState(() => { try { return localStorage.getItem(TIER_KEY) !== 'closed'; } catch { return true; } });
   const runNameRef = useRef<HTMLInputElement>(null);
   const nAllRef = useRef<HTMLInputElement>(null);
 
@@ -139,7 +164,7 @@ export function ScoringScreen() {
 
   /* ─── START: New scoring | Scored lists ─── */
   const applyStart = useCallback(([l, r]: StartData, wantList?: string | null) => {
-    setLists(l.lists); setRuns(r.runs);
+    setLists(l.lists); setRuns(r.runs); setNewSettings(r.signalSettings);
     setSelListId(cur => {
       const want = wantList ?? cur;
       return want && l.lists.some(x => x.id === want) ? want : l.lists[0]?.id ?? null;
@@ -153,7 +178,7 @@ export function ScoringScreen() {
     if (t) setTab(t);
     setScreen('start');
     void loadStart();
-    router.replace('/scoring', { scroll: false });
+    router.replace(t === 'monitor' ? '/scoring?tab=monitor' : '/scoring', { scroll: false });
   };
   const chooseList = (id: string) => {
     setSelListId(id);
@@ -218,8 +243,10 @@ export function ScoringScreen() {
   const runId = run?.id;
   const rankedUrl = runId && screen === 'results' && view === 'ranked' ? `/api/scoring-runs/${runId}/prospects?` + query({ tier: filt === 'all' ? undefined : filt, q: dq, limit: PAGE }) : null;
   const evidenceUrl = runId && screen === 'results' && view === 'evidence' ? `/api/scoring-runs/${runId}/signals?` + query({ status: filt === 'all' ? undefined : filt, q: dq, limit: PAGE }) : null;
+  const unusedUrl = runId && screen === 'results' && drawerOpen && drawerMode === 'unused' ? `/api/scoring-runs/${runId}/signals?` + query({ status: 'unused', limit: PAGE }) : null;
   const prospects = usePaged<ProspectRow>(rankedUrl);
   const evidence = usePaged<SignalRow>(evidenceUrl);
+  const unused = usePaged<SignalRow>(unusedUrl);
   const visibleProspects = prospects.rows;
   const visibleSignals = evidence.rows;
 
@@ -273,9 +300,27 @@ export function ScoringScreen() {
     if (!run) return;
     try {
       const { prospect } = await api<{ prospect: Wire<ProspectDetail> }>(`/api/scoring-runs/${run.id}/prospects/${contactId}`);
-      setDrawer(prospect); setDrawerOpen(true);
+      setDrawer(prospect); setDrawerMode('prospect'); setDrawerOpen(true);
     } catch (e) { showToast(errorText(e)); }
   }
+  /* ─── UNUSED ROWS: every row of the signal file that didn't count, and why ─── */
+  const openUnused = () => { setDrawerMode('unused'); setDrawerOpen(true); };
+
+  /* ─── TIERS EXPLAINED: open on the first visit, folded away after that ─── */
+  const toggleTiers = () => setTiersOpen(open => {
+    try { localStorage.setItem(TIER_KEY, open ? 'closed' : 'open'); } catch { /* storage blocked: the choice lasts this visit */ }
+    return !open;
+  });
+
+  /* ─── SIGNAL MONITORING: read when its tab is shown ─── */
+  useEffect(() => {
+    if (screen !== 'start' || tab !== 'monitor') return;
+    let live = true;
+    api<{ monitoring: Monitoring }>('/api/signal-monitoring')
+      .then(r => { if (live) setMonitoring(r.monitoring); })
+      .catch(e => { if (live) showToast(errorText(e)); });
+    return () => { live = false; };
+  }, [screen, tab]);
 
   // Indeterminate state of the select-all box, as updateNBar set it.
   useEffect(() => {
@@ -288,7 +333,7 @@ export function ScoringScreen() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const runParam = params.get('run');
-    const toStart = () => fetchStart().then(d => { applyStart(d, params.get('list')); setScreen('start'); });
+    const toStart = () => fetchStart().then(d => { applyStart(d, params.get('list')); if (params.get('tab') === 'monitor') setTab('monitor'); setScreen('start'); });
     const boot = runParam
       ? api<{ run: RunDetail }>(`/api/scoring-runs/${encodeURIComponent(runParam)}`).then(({ run: detail }) => { setRun(detail); setScreen('results'); })
       : toStart();
@@ -305,11 +350,15 @@ export function ScoringScreen() {
   function startView(): ReactNode {
     const L = lists.find(l => l.id === selListId);
     const ft = (id: StartTab, label: string, n?: number) => <div className={`ftab ${tab === id ? 'active' : ''}`} onClick={() => renderStart(id)}>{label}{n !== undefined ? <>{' '}<span className="ftab-cnt">{n}</span></> : null}</div>;
-    const types = Object.keys(DemandAI.CONFIG.signalTypes).filter(k => !DemandAI.CONFIG.signalTypes[k].knockout && !DemandAI.CONFIG.signalTypes[k].reject);
+    // The tags a new run scores: the starting types and those added in Setup; a switched-off one is struck through.
+    const added = newSettings?.custom ?? [], off = new Set(newSettings?.off ?? []);
+    const segOf = Object.fromEntries(added.map(c => [c.name, c.segment]));
+    const types = [...Object.keys(DemandAI.CONFIG.signalTypes).filter(k => !DemandAI.CONFIG.signalTypes[k].knockout && !DemandAI.CONFIG.signalTypes[k].reject), ...added.map(c => c.name)];
+    const settingsNote = [off.size ? `Switched off in Setup, so not scored: ${[...off].join(', ')}.` : '', added.length ? `Added in Setup: ${added.map(c => c.name).join(', ')}.` : ''].filter(Boolean).join(' ');
     return <>
       <div className="topbar"><div className="topbar-l"><span className="tb-title">Account Scoring</span><span className="tb-badge badge-neutral">Fit × Timing · rules only</span></div></div>
-      <div className="ftabs">{ft('new', 'New scoring')}{ft('saved', 'Scored lists', runs.length)}</div>
-      <div className="canvas">{tab === 'new' ? (
+      <div className="ftabs">{ft('new', 'New scoring')}{ft('saved', 'Scored lists', runs.length)}{ft('monitor', 'Signal monitoring')}</div>
+      <div className="canvas">{tab === 'monitor' ? monitorView() : tab === 'new' ? (
         <div style={sx('max-width:640px;margin:24px auto 0')}>
           <div style={sx('font-family:var(--fd);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--brand);margin-bottom:8px')}>Step 2 · Scoring</div>
           <div style={sx('font-family:var(--fd);font-size:22px;font-weight:700;color:var(--i1);margin-bottom:6px')}>Score a prospect list</div>
@@ -355,7 +404,11 @@ export function ScoringScreen() {
                 <button className="btn btn-sec btn-sm" onClick={() => { void download('signal_template.csv', DemandAI.toCSV([DemandAI.SIGNAL_COLUMNS])); }}>Download signal template (.csv)</button>
               </div>
               <div style={sx('font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--i3);margin:16px 0 8px')}>Signal tags the file can use</div>
-              <div className="tags">{types.map((t, i) => tagChip(t, i))}</div>
+              <div className="tags">{types.map((t, i) => off.has(t)
+                ? <span key={i} className="tag tag-grey" title="Switched off in Setup: rows with this tag are not scored" style={sx('text-decoration:line-through')}>{t}</span>
+                : tagChip(t, i, segOf[t]))}</div>
+              {settingsNote ? <div style={sx('font-size:11px;color:var(--i3);margin-top:8px;line-height:1.5')}>{settingsNote}</div> : null}
+              {newSettings?.problem ? <div role="alert" style={sx('font-size:12px;color:var(--neg);margin-top:8px;line-height:1.5')}>{newSettings.problem}</div> : null}
             </div>
           </div>
         </div>
@@ -379,6 +432,34 @@ export function ScoringScreen() {
       )}
       </div>
     </>;
+  }
+
+  /* ─── SIGNAL MONITORING: what has come in, per signal type ─── */
+  function monitorView(): ReactNode {
+    const m = monitoring;
+    if (!m) return <div style={sx('font-size:12.5px;color:var(--i3)')} role="status">Loading…</div>;
+    const T = m.totals, max = Math.max(1, ...m.types.map(t => t.records));
+    const tile = (k: string, v: string | number, sub: string) => <div className="stat"><div className="stat-l">{k}</div><div className="stat-v">{v}</div><div className="stat-s" title={sub}>{sub}</div></div>;
+    return <div style={sx('max-width:1100px')}>
+      <div style={sx('display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin-bottom:14px;flex-wrap:wrap')}>
+        <div><div style={sx('font-family:var(--fd);font-size:18px;font-weight:700;color:var(--i1)')}>What has come in, per signal</div>
+          <div style={sx('font-size:12.5px;color:var(--i3);margin-top:3px;line-height:1.5')}>In the POC the client sends signals as files, so this counts the rows in every signal file scored so far, each file once. Once the data connectors are in, it shows the live stream.</div></div></div>
+      {m.scope === 'own' ? <div style={sx('font-size:11.5px;color:var(--i3);margin:-4px 0 12px')}>You see the signal rows about the accounts you own.</div> : null}
+      {m.settingsProblem ? <div role="alert" style={sx('font-size:12px;color:var(--neg);margin:-4px 0 12px')}>{m.settingsProblem}</div> : null}
+      <div className="mon-tiles">{tile('Records received', T.records.toLocaleString('en-US'), `${T.files} file${T.files === 1 ? '' : 's'}`)}{tile('Size', kb(T.size), 'all signal rows')}{tile('Signal types seen', `${T.knownSeen} of ${T.known}`, 'known tags')}{tile('Not a known tag', T.unknownRecords, T.unknownTypes.length ? T.unknownTypes.join(', ') : 'every row uses a known tag')}</div>
+      <div className="score-list">{table([['Signal', '26%'], ['Records received', '22%'], ['Size', '9%', 'num'], ['Files', '8%', 'num'], ['Latest event', '12%'], ['Last received', '12%'], ['Status', '11%']],
+        m.types.map(t => <tr key={t.type} style={t.records ? undefined : sx('opacity:.6')}>
+          <td>{cell(t.type, t.segment ? escSub(`Feeds ${t.segment}${t.added ? ' · added in Setup' : ''}`) : null)}</td>
+          <td>{t.records ? <div style={sx('display:flex;align-items:center;gap:8px')}><span style={sx('flex:1;height:6px;border-radius:3px;background:var(--s75);overflow:hidden')}><i style={{ ...sx('display:block;height:100%;background:var(--brand);border-radius:3px'), width: `${t.records / max * 100}%` }}></i></span><b style={sx('min-width:22px;text-align:right;color:var(--i1)')}>{t.records}</b></div> : <span className="muted">None yet</span>}</td>
+          <td className="num">{t.records ? kb(t.size) : '—'}</td><td className="num">{t.records ? t.files : '—'}</td>
+          <td>{t.latestEvent ? cell(fmtDay(t.latestEvent)) : <span className="muted">—</span>}</td><td>{t.lastReceived ? cell(fmtDate(t.lastReceived)) : <span className="muted">—</span>}</td><td>{STATUS_TAG[t.status]}</td>
+        </tr>), 'No signal files yet.')}</div>
+      {m.files.length ? <>
+        <div style={sx('font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--i3);margin:20px 0 8px')}>Files received</div>
+        <div className="score-list">{table([['File', '34%'], ['Used in', '20%'], ['Rows', '10%', 'num'], ['Size', '10%', 'num'], ['Received', '26%']],
+          m.files.map(f => <tr key={f.uploadId}><td>{cell(f.fileName)}</td><td>{cell(f.usedIn)}</td><td className="num">{f.rows}</td><td className="num">{kb(f.byteSize)}</td><td>{cell(fmtDate(f.receivedAt))}</td></tr>), '')}</div>
+      </> : null}
+    </div>;
   }
 
   function searchBox(ph: string): ReactNode {
@@ -420,7 +501,8 @@ export function ScoringScreen() {
             </tr>;
           }), visibleProspects ? 'No prospects match.' : 'Loading…')}</div>
         {visibleProspects ? moreButton(prospects, rs.length, total) : null}</div>
-      <div style={sx('font-size:11px;color:var(--i3);margin-top:10px')}>Each prospect is scored on their own signals: Score = company Fit × their Timing ÷ 100, all on 0–100. Click a prospect for the reasoning.</div>
+      <div className="rk-foot"><span>Each prospect is scored on their own signals: Score = company Fit × their Timing ÷ 100, all on 0–100. Click a prospect for the reasoning.</span>
+        {r.visible.unused ? <a href="#" onClick={e => { e.preventDefault(); openUnused(); }}>{`${r.visible.unused.toLocaleString('en-US')} row${r.visible.unused === 1 ? '' : 's'} of the signal file weren't used: see why →`}</a> : null}</div>
     </>;
   }
 
@@ -435,15 +517,29 @@ export function ScoringScreen() {
             <td>{cell(s.id, escSub('Row ' + s.row))}</td>
             <td>{cell(s.company)}</td>
             <td>{cell(s.personName || s.personRef, s.assigned && s.assigned !== 'Named in the file' ? { node: <span style={sx('color:var(--warn)')}>Auto-assigned</span>, title: 'Auto-assigned' } : null)}</td>
-            <td>{tagChip(s.type)}</td>
+            <td>{tagChip(s.type, undefined, s.segment)}</td>
             <td style={sx('font-family:var(--fm);font-variant-numeric:tabular-nums')}>{s.date ? s.date : <span className="muted">—</span>}</td>
             <td className="num">{s.age !== undefined ? s.age + 'd' : <span className="muted">—</span>}</td>
             <td>{stTag[s.status]}</td>
             <td className="wrap">{s.status === 'Qualified' ? <><span style={sx('font-family:var(--fm);font-weight:600;color:var(--i1)')}>{fmt1(s.weight)}</span><span className="sub">{`${s.tier} × ${s.strength} × ${s.decay!.toFixed(2)}`}</span></> : <span className="clamp2" title={s.reason} style={sx('font-size:12px')}>{s.status === 'Rejected' ? <><b style={sx('color:var(--i1)')}>{`${s.code} ${DemandAI.CODES[s.code as DqCode]}`}</b>{' · ' + s.reason}</> : s.reason}</span>}</td>
           </tr>), visibleSignals ? 'No signals match.' : 'Loading…')}</div>
         {visibleSignals ? moreButton(evidence, ss.length, dq || filt !== 'all' ? null : r.visible.signals) : null}</div>
-      <div style={sx('font-size:11px;color:var(--i3);margin-top:10px')}>Every row of the signal file, in file order. People not in the lead file are rejected (D4) and come back as suggested new contacts.</div>
+      <div style={sx('font-size:11px;color:var(--i3);margin-top:10px')}>Every row of the signal file, in file order. People not in the lead file are rejected (D4): add them to the lead file to count their signals.</div>
     </>;
+  }
+
+  /* ─── TIERS EXPLAINED ─── */
+  function tiersInfo(): ReactNode {
+    const T = DemandAI.CONFIG.tierThresholds, pct = (v: number) => v + '%';
+    if (!tiersOpen) return <button className="ti-closed" onClick={toggleTiers} aria-expanded="false"><span className="ti-i">i</span><b>How the tiers work</b><span>{`Score = Fit × Timing ÷ 100 · A from ${T.A} · B from ${T.B}`}</span><span className="ti-x">Show ▾</span></button>;
+    return <div className="ti"><div className="ti-h"><span className="ti-i">i</span><b>How the tiers work</b><button className="btn btn-ghost btn-sm" onClick={toggleTiers} aria-expanded="true">Hide ▴</button></div>
+      <div className="ti-eq"><div className="ti-q"><b>Fit</b><span>How well the company matches the ideal customer: vertical, size, site, relationship (0–100)</span></div><span className="ti-op">×</span>
+        <div className="ti-q"><b>Timing</b><span>{"How strong and how recent this person's signals are: an inquiry this week counts far more than a webinar months ago (0–100)"}</span></div><span className="ti-op">÷ 100 =</span>
+        <div className="ti-q ti-sc"><b>Score</b><span>0–100, sets the tier</span></div></div>
+      <div className="ti-bar"><div className="ti-z ti-c" style={{ width: pct(T.B) }}><b>C</b><span>{`below ${T.B}`}</span></div><div className="ti-z ti-b" style={{ width: pct(T.A - T.B) }}><b>B</b><span>{`${T.B}–${T.A - 1}`}</span></div><div className="ti-z ti-a" style={{ width: pct(100 - T.A) }}><b>A</b><span>{`${T.A} and above · acted on first`}</span></div></div>
+      <div className="ti-mv"><div><b>C → B</b><span>A strong, recent signal: an inquiry, a system reaching end of support or a capital project. Or a better fit, such as a contact in the primary persona.</span></div>
+        <div><b>B → A</b><span>A second recent signal from the same person, or a stronger one. Signals fade with time, so an account also slips down if nothing new happens.</span></div>
+        <div><b>Watch list</b><span>A good fit with no live signal yet: it moves into a tier as soon as one arrives.</span></div></div></div>;
   }
 
   function resultsView(r: RunDetail): ReactNode {
@@ -463,6 +559,7 @@ export function ScoringScreen() {
       </div>
       <div className="ftabs">{ft('ranked', 'Ranked prospects', r.visible.prospects)}{ft('evidence', 'Signal evidence', r.visible.signals)}</div>
       <div className="canvas">
+        {tiersInfo()}
         <div className="stats">
           <div className="stat"><div className="stat-lbl">Tier A</div><div className="stat-val" style={sx('color:var(--pos)')}>{t.A}</div><div className="stat-sub">{`score ${T.A} and above`}</div></div>
           <div className="stat"><div className="stat-lbl">Tier B</div><div className="stat-val" style={sx('color:var(--warn)')}>{t.B}</div><div className="stat-sub">{`score ${T.B}–${T.A - 1}`}</div></div>
@@ -471,6 +568,9 @@ export function ScoringScreen() {
           <div className="stat"><div className="stat-lbl">Not scored</div><div className="stat-val sv3">{t['Below fit floor'] + t.Excluded}</div><div className="stat-sub">{`${t['Below fit floor']} below fit floor · ${t.Excluded} excluded`}</div></div>
         </div>
         {r.scope === 'own' ? <div style={sx('font-size:11.5px;color:var(--i3);margin:-4px 0 12px')}>You see the prospects you own.</div> : null}
+        {r.signalSettings.off.length || r.signalSettings.custom.length ? <div style={sx('font-size:11.5px;color:var(--i3);margin:-4px 0 12px')}>{[
+          r.signalSettings.off.length ? `Scored with ${r.signalSettings.off.join(', ')} switched off in Setup: those rows are rejected (OFF).` : '',
+          r.signalSettings.custom.length ? `Signal types added in Setup: ${r.signalSettings.custom.map(c => c.name).join(', ')}.` : ''].filter(Boolean).join(' ')}</div> : null}
         {view === 'ranked' ? rankedTab(r) : evidenceTab(r)}
       </div>
     </>;
@@ -526,13 +626,49 @@ export function ScoringScreen() {
     </div>;
   }
 
+  function unusedBody(r: RunDetail): ReactNode {
+    const ss = unused.rows;
+    return <>
+      <div style={sx('font-size:12px;color:var(--i2);margin-bottom:10px;line-height:1.5')}>{"Every row of the signal file is checked. These didn't count towards any score, and why."}</div>
+      {ss ? ss.map(s => <div key={s.seq} className="un"><div className="un-h">{tagChip(s.type)}<span>{'Row ' + s.row}</span></div>
+        <div className="un-t">{s.company}{s.personName || s.personRef ? ` · ${s.personName || s.personRef}` : ''}</div>
+        <div className="un-r"><b>{s.status === 'Rejected' ? `${s.code} ${DemandAI.CODES[s.code as DqCode]}` : s.status}</b>{' · ' + s.reason}</div></div>)
+        : <div role="status" style={sx('font-size:12px;color:var(--i3)')}>Loading…</div>}
+      {ss ? moreButton(unused, ss.length, r.visible.unused) : null}
+    </>;
+  }
+
+  /** What one new strong signal would make this person's score (worked out, G-023), for tier B, C and the watch list. */
+  function nextTierPanel(x: Wire<ProspectDetail>): ReactNode {
+    const T = DemandAI.CONFIG.tierThresholds, c = x.contact, a = x.account, p = x.person, first = c.firstName || c.name;
+    if (x.result.excluded || x.result.belowFloor || x.fit === null || !(x.tier === 'B' || x.tier === 'C' || x.tier === 'Watch list')) return null;
+    const signals = p ? p.signals : [];
+    const moves = nextTierMoves(x.fit, signals.map(s => s.weight ?? 0), signals.map(s => s.type));
+    const again = signals.length ? nextTierMoves(x.fit, signals.map(s => s.weight ?? 0), [], [signals[0].type])[0] : null;
+    const outcome = (m: { score: number; tier: string }) => ` (score ${fmt1(m.score)}: ${m.tier === 'A' ? 'tier A' : `tier ${m.tier}, not yet A`})`;
+    return <div className="panel" style={sx('margin-bottom:12px')}><div className="panel-body"><details className="lt-more" style={sx('border-top:none;padding-top:0')}>
+      <summary>{`What would move ${a.name} to tier A`}</summary><div>
+        {x.tier === 'Watch list' ? <p>{'It has no recent signal yet. The first strong one, such as a question or a request for a quote, puts it in a tier straight away' + (moves[0] ? outcome(moves[0]) : '') + '.'}</p> : <>
+          <p>{`It is ${fmt1(T.A - (x.score ?? 0))} points short. One new signal today would make it:`}</p>
+          <ul>
+            {moves.map(m => <li key={m.type}>{(MOVE_TEXT[m.type]?.(first) ?? m.type) + outcome(m)}</li>)}
+            {again && signals[0] ? <li>{`Another ${signals[0].type} from ${first} today` + outcome(again)}</li> : null}
+            {c.persona !== 'Primary' ? <li>A contact in an instrumentation, automation or control systems role would also raise the company’s fit</li> : null}
+          </ul>
+          <p>Signals fade with time, so it can also drop a tier if nothing new comes in.</p></>}
+      </div></details></div></div>;
+  }
+
   function drawerBody(): ReactNode {
+    if (drawerMode === 'unused') return run ? unusedBody(run) : null;
     const x = drawer;
     if (!x) return <div className="detail-empty" style={sx('padding:40px 0')}>
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--i4)" strokeWidth="1.5" strokeLinecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg>
       <div style={sx('font-size:11.5px;color:var(--i4);line-height:1.5;text-align:center')}>Click any row<br />to see the breakdown</div>
     </div>;
-    const c = x.contact, r = x.result, a = x.account, p = x.person, unused = x.unused;
+    const c = x.contact, r = x.result, a = x.account, p = x.person, notCounted = x.unused;
+    const T = DemandAI.CONFIG.tierThresholds;
+    const next: [string, number] | null = x.score === null ? null : x.score < T.B ? ['B', T.B] : x.score < T.A ? ['A', T.A] : null;
     const emailHtml = c.emailRaw ? esc(c.emailRaw) + (c.email && c.emailVerified ? '' : ' (not used)') : '—';
     const liText = c.linkedinRaw ? c.linkedinRaw.replace(/^https?:\/\/(www\.)?/, '') : '—';
     const loc = [c.city, c.country].filter(Boolean).join(', ') || '—';
@@ -542,14 +678,17 @@ export function ScoringScreen() {
         <div className="panel-hdr"><span className="panel-ttl">Priority</span>{tierPill(x.tier)}</div>
         {r.excluded ? <div className="panel-body" style={sx('font-size:12px;color:var(--neg);background:var(--neg-lt)')}><b>Not scored.</b>{` ${r.excludedReason}.`}</div>
           : r.belowFloor ? <div className="panel-body" style={sx('font-size:12px;color:var(--warn);background:var(--warn-lt)')}><b>Not scored.</b>{` ${a.name}'s fit of ${fmt1(r.fit)} is below the floor of ${DemandAI.CONFIG.fitFloor}.`}</div>
-          : <div style={sx('display:flex')}>{miniStat('Score', x.score !== null ? fmt1(x.score) : '—', 'of 100')}{miniStat('Fit', fmt1(x.fit), 'company')}{miniStat('Timing', x.timing !== null ? fmt1(x.timing) : '—', (p ? p.signals.length : 0) + ' signal' + (p && p.signals.length === 1 ? '' : 's'))}</div>}
+          : <><div style={sx('display:flex')}>{miniStat('Score', x.score !== null ? fmt1(x.score) : '—', 'of 100')}{miniStat('Fit', fmt1(x.fit), 'company')}{miniStat('Timing', x.timing !== null ? fmt1(x.timing) : '—', (p ? p.signals.length : 0) + ' signal' + (p && p.signals.length === 1 ? '' : 's'))}</div>
+            {next ? <div className="fs-next" style={sx('margin:0;padding:8px 12px;border-top:1px solid var(--border)')}>{`${fmt1(next[1] - x.score!)} points short of tier ${next[0]} (${next[1]}).`}</div>
+              : x.score !== null ? <div className="fs-next" style={sx('margin:0;padding:8px 12px;border-top:1px solid var(--border);color:var(--pos)')}>In the top tier: acted on first.</div> : null}</>}
       </div>
+      {nextTierPanel(x)}
       {p && p.whyNow ? <div className="panel" style={sx('margin-bottom:12px')}><div className="panel-hdr"><span className="panel-ttl">Why now</span></div><div className="panel-body">
         <div className="tags" style={sx('margin-bottom:8px')}>{[...new Set(p.signals.map(s => s.type))].map((t, i) => tagChip(t, i))}</div>
         <div style={sx('font-size:12.5px;color:var(--i1);line-height:1.55')}>{upperFirst(p.whyNow)}</div></div></div> : null}
       {p && p.signals.length ? <div className="panel" style={sx('margin-bottom:12px')}><div className="panel-hdr"><span className="panel-ttl">Signals</span><span style={sx('font-size:10.5px;color:var(--i3)')}>{p.signals.length}</span></div><div className="panel-body" style={sx('display:flex;flex-direction:column;gap:8px')}>
         {p.signals.map((s, i) => <div key={i} style={sx('padding:9px 11px;background:var(--s50);border-radius:var(--rsm)')}>
-          <div style={sx('display:flex;align-items:center;gap:6px;margin-bottom:4px')}><div style={sx('flex:1')}>{tagChip(s.type)}</div><span style={sx('font-family:var(--fm);font-size:11.5px;font-weight:600;color:var(--i1)')}>{fmt1(s.weight)}</span></div>
+          <div style={sx('display:flex;align-items:center;gap:6px;margin-bottom:4px')}><div style={sx('flex:1')}>{tagChip(s.type, undefined, s.segment)}</div><span style={sx('font-family:var(--fm);font-size:11.5px;font-weight:600;color:var(--i1)')}>{fmt1(s.weight)}</span></div>
           <div style={sx('font-size:12px;color:var(--i1);line-height:1.45')}>{s.detail || s.type}</div>
           <div style={sx('font-size:10.5px;color:var(--i3);margin-top:2px')}>{`${s.source || 'No source'} · ${s.date} · ${ago(s.age!)}` + (s.assigned && s.assigned !== 'Named in the file' ? ' · ' : '')}{s.assigned && s.assigned !== 'Named in the file' ? <><span style={sx('color:var(--warn)')}>auto-assigned</span></> : null}</div>
         </div>)}
@@ -566,8 +705,8 @@ export function ScoringScreen() {
           <div className="dim-track" style={sx('margin-top:4px')}><div className="dim-fill" style={{ width: b.level + '%', background: 'var(--sec)' }}></div></div>
         </div>)}
       </div></div> : null}
-      {unused.length ? <div className="panel"><div className="panel-hdr"><span className="panel-ttl">Not counted</span><span style={sx('font-size:10.5px;color:var(--i3)')}>{unused.length}</span></div><div className="panel-body" style={sx('padding:0')}>
-        {unused.map((s, i) => <div key={i} style={sx('padding:9px 14px;border-bottom:1px solid var(--border)')}><div style={sx('margin-bottom:4px')}>{tagChip(s.type)}</div><div style={sx('font-size:11px;color:var(--i2)')}><b>{s.status === 'Rejected' ? s.code + ' ' + DemandAI.CODES[s.code as DqCode] : s.status}</b>{' · ' + s.reason}</div></div>)}
+      {notCounted.length ? <div className="panel"><div className="panel-hdr"><span className="panel-ttl">Not counted</span><span style={sx('font-size:10.5px;color:var(--i3)')}>{notCounted.length}</span></div><div className="panel-body" style={sx('padding:0')}>
+        {notCounted.map((s, i) => <div key={i} style={sx('padding:9px 14px;border-bottom:1px solid var(--border)')}><div style={sx('margin-bottom:4px')}>{tagChip(s.type)}</div><div style={sx('font-size:11px;color:var(--i2)')}><b>{s.status === 'Rejected' ? s.code + ' ' + DemandAI.CODES[s.code as DqCode] : s.status}</b>{' · ' + s.reason}</div></div>)}
       </div></div> : null}
     </>;
   }
@@ -578,12 +717,15 @@ export function ScoringScreen() {
       {screen === 'start' ? startView() : screen === 'results' && run ? resultsView(run) : null}
     </main>
 
-    <div className={'detail-drawer' + (drawerOpen ? ' open' : '')} id="detailDrawer" style={drawer ? { width: '440px' } : undefined}>
+    <div className={'detail-drawer' + (drawerOpen ? ' open' : '')} id="detailDrawer" style={drawerMode === 'unused' ? { width: '460px' } : drawer ? { width: '440px' } : undefined}>
       <div className="drawer-hdr">
-        <div>
+        {drawerMode === 'unused' && run ? <div>
+          <div className="drawer-title" id="detTitle">Signal rows not used</div>
+          <div className="drawer-sub" id="detSub">{`${run.sourceFile} · ${run.visible.unused.toLocaleString('en-US')} of ${run.visible.signals.toLocaleString('en-US')} rows`}</div>
+        </div> : <div>
           <div className="drawer-title" id="detTitle">{x ? x.contact.name : 'Score detail'}</div>
           <div className="drawer-sub" id="detSub">{x ? [x.contact.jobTitle, x.account.name].filter(Boolean).join(' · ') : '—'}</div>
-        </div>
+        </div>}
         <div className="drawer-close" role="button" tabIndex={0} aria-label="Close" onClick={closeDrawer} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') closeDrawer(); }}>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
         </div>
