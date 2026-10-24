@@ -56,8 +56,27 @@ jobs:
       - name: Legacy engine tests
         run: npm run test:legacy
 
-      - name: Build
+      # Built with known dummy secrets, then the output is searched for them (prompt §9 item 8): the same values in
+      # both steps. None is real; nothing connects to the database during a build.
+      - name: Build (with dummy secrets)
         run: npm run build
+        env:
+          SESSION_SECRET: ci-dummy-session-secret-0123456789abcdef
+          AZURE_OPENAI_API_KEY: ci-dummy-azure-openai-key-0123456789
+          NOTIFICATION_APP_PASSWORD: ci-dummy-smtp-app-password
+          DATABASE_URL: postgresql://demandai_app:ci-dummy-app-db-password@127.0.0.1:1/demandai
+          DATABASE_MIGRATION_URL: postgresql://demandai_owner:ci-dummy-owner-db-password@127.0.0.1:1/demandai
+          DATABASE_OPS_URL: postgresql://demandai_ops:ci-dummy-ops-db-password@127.0.0.1:1/demandai
+
+      - name: No secret in the build output (browser bundle, server output, standalone)
+        run: npm run check:bundle
+        env:
+          SESSION_SECRET: ci-dummy-session-secret-0123456789abcdef
+          AZURE_OPENAI_API_KEY: ci-dummy-azure-openai-key-0123456789
+          NOTIFICATION_APP_PASSWORD: ci-dummy-smtp-app-password
+          DATABASE_URL: postgresql://demandai_app:ci-dummy-app-db-password@127.0.0.1:1/demandai
+          DATABASE_MIGRATION_URL: postgresql://demandai_owner:ci-dummy-owner-db-password@127.0.0.1:1/demandai
+          DATABASE_OPS_URL: postgresql://demandai_ops:ci-dummy-ops-db-password@127.0.0.1:1/demandai
 
       - name: Dependency audit gate (no high or critical in production dependencies)
         run: npm run audit:gate
@@ -108,3 +127,70 @@ jobs:
 
       - name: HTTP tests on the standalone server (route inventory, role x route matrix, CSRF, sign-in, pages)
         run: npm run test:http
+
+  # The image that ships, run as the Compose stack (db -> backup -> migrate -> app) from environment variables only:
+  # the container smoke test (/api/ready 200, no env file in the image), then the end-to-end, accessibility and
+  # performance tests (Playwright, Chromium) on it (plan §9 gates 7 and 11).
+  e2e:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install (exactly the lockfile)
+        run: npm ci
+
+      - name: Docker build
+        run: docker build --build-arg APP_BUILD_VERSION="${GITHUB_SHA::7}" -t demandai-app:e2e .
+
+      - name: Playwright version
+        id: playwright
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Playwright browser cache
+        id: browser-cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-shell-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+
+      - name: Chromium for Playwright (headless shell) and its system libraries
+        if: steps.browser-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps --only-shell chromium
+
+      - name: System libraries for the cached browser
+        if: steps.browser-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
+      - name: Compose stack from environment variables only, and the container smoke test
+        run: e2e/compose.sh up
+        env:
+          DEMANDAI_IMAGE: demandai-app:e2e
+
+      - name: End-to-end, accessibility and performance tests on the Compose stack
+        run: E2E_PLATFORM_LINK="$(cat e2e/.state/platform-link)" npx playwright test
+        env:
+          E2E_BASE_URL: http://127.0.0.1:3100
+
+      - name: Stack logs
+        if: failure()
+        run: e2e/compose.sh logs
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+
+      - name: Remove the stack
+        if: always()
+        run: e2e/compose.sh down
+

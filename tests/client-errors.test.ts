@@ -99,3 +99,14 @@ test('.env.example lists every configuration variable, and nothing the app does 
   assert.deepEqual(schemaKeys.filter(k => !listed.has(k)), [], 'missing from .env.example');
   assert.deepEqual([...listed].filter(k => !schemaKeys.includes(k) && !composeOnly.includes(k)), [], 'unknown to the schema');
 });
+
+test('compose.yaml passes every runtime setting to the app container, so the stack is configured from its env file alone', () => {
+  const yml = readFileSync(new URL('../compose.yaml', import.meta.url), 'utf8');
+  const app = yml.slice(yml.indexOf('\n  app:'), yml.indexOf('\nvolumes:'));
+  const passed = new Set([...app.matchAll(/^ {6}([A-Z][A-Z0-9_]*):/gm)].map(m => m[1]));
+  // Set by the image (PORT, APP_BUILD_VERSION), used by the migrate service and the ops commands only, refused, or for
+  // the live smoke test on a developer's machine.
+  const notForTheApp = ['PORT', 'APP_BUILD_VERSION', 'DATABASE_MIGRATION_URL', 'DATABASE_OPS_URL', 'AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'AI_LIVE_SMOKE'];
+  assert.deepEqual(Object.keys(envSchema.shape).filter(k => !notForTheApp.includes(k) && !passed.has(k)), [], 'not passed to the app');
+  assert.match(app, /AZURE_OPENAI_API_VERSION: \$\{AZURE_OPENAI_API_VERSION:-2025-04-01-preview\}/, 'the API version D-44 settled on');
+});
