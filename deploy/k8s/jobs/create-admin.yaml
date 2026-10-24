@@ -1,0 +1,39 @@
+# One-off: the first platform administrator (there is no self sign-up). Not part of the kustomization; apply it with
+# the release's image and the person's details (docs/devops/DEPLOY-EKS.md §4), read the one-time link from its log,
+# send it, then delete the Job. Runs with the owner role, like the migrate Job.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: demandai-create-admin
+  namespace: demandai
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 3600
+  template:
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: create-admin
+          image: IMAGE
+          command: ["node", "scripts/users/create-admin.mjs", "--platform", "--email", "EMAIL", "--name", "NAME"]
+          envFrom:
+            - configMapRef: { name: demandai-config }
+            - secretRef: { name: demandai-migrate }
+          resources:
+            requests: { cpu: 50m, memory: 64Mi }
+            limits: { memory: 128Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: ["ALL"] }
+          volumeMounts:
+            - { name: rds-ca, mountPath: /etc/ssl/rds, readOnly: true }
+      volumes:
+        - name: rds-ca
+          configMap: { name: demandai-rds-ca }

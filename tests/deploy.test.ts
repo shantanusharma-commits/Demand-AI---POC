@@ -83,7 +83,7 @@ test('Kubernetes: the app never holds the owner or ops credentials; the migrate 
 });
 
 test('Kubernetes: every pod is non-root with a read-only root filesystem, no privilege escalation and no capabilities', () => {
-  for (const f of ['deployment.yaml', 'migrate-job.yaml', 'purge-cronjob.yaml']) {
+  for (const f of ['deployment.yaml', 'migrate-job.yaml', 'purge-cronjob.yaml', '../jobs/create-admin.yaml']) {
     const y = read(`${K8S}/${f}`);
     for (const re of [/runAsNonRoot: true/, /runAsUser: 10001/, /readOnlyRootFilesystem: true/, /allowPrivilegeEscalation: false/, /drop: \["ALL"\]/, /seccompProfile: \{ type: RuntimeDefault \}/, /automountServiceAccountToken: false/]) {
       assert.match(y, re, `${f}: ${re}`);

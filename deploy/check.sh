@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Validates the deployment files without deploying anything (CI's checks job runs it; it also runs locally):
-#  - the Kubernetes overlay builds with kustomize and every resource is valid for Kubernetes 1.33 (kubeconform,
-#    strict, with the External Secrets CRD schema from the community catalogue);
+#  - the Kubernetes overlay builds with kustomize and every resource, and the one-off create-admin Job, is valid for
+#    Kubernetes 1.33 (kubeconform, strict, with the External Secrets CRD schema from the community catalogue);
 #  - the Compose stack is valid on its own, with the EC2 proxy, and with the proxy and RDS (docker compose config).
 # Tools run from their images, pinned by digest. Needs Docker and network access for the images and schemas.
 set -euo pipefail
@@ -16,6 +16,8 @@ docker run --rm -v "$work:/m:ro" "$kubeconform" -strict -summary -kubernetes-ver
   -schema-location default \
   -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json' \
   /m/pilot.yaml
+sed 's#image: IMAGE#image: demandai-app:check#' deploy/k8s/jobs/create-admin.yaml > "$work/create-admin.yaml"
+docker run --rm -v "$work:/m:ro" "$kubeconform" -strict -summary -kubernetes-version 1.33.0 /m/create-admin.yaml
 
 # Placeholder values only: what Compose needs to resolve every variable.
 cat > "$work/check.env" <<'EOF'
