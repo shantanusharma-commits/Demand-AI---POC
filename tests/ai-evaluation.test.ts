@@ -46,3 +46,16 @@ test('a classifier that knows the answers meets the target; one that calls every
   assert.equal(oracle.whyNow.worded, oracle.whyNow.asked);
   assert.equal(oracle.drafts.passing, oracle.drafts.written);
 });
+
+test('a draft whose only flag is the sensitive term the rules\' draft also has is counted apart, not as failing', async () => {
+  // The gate lets such a draft through (it goes to a person, as the rules' draft would); the first live evaluation
+  // counted it as not passing, which read as a broken promise.
+  const { BRAND_RULES } = await import('../lib/engine/nba.ts');
+  const echo = draftWriter(a => (a.channel === 'Email' && BRAND_RULES.sensitive.test(a.signal) ? { subject: 'about your question', opening: 'Thanks for looking at the security material.',
+    bridge: 'A short conversation is usually the quickest way to work out what fits your site.', ask: 'Would a short call next week help?', claimId: a.claimIds[0] } : null));
+  const m = new FakeModel([], { otherwise: (req, n) => (/classify the industry/.test(req.system) ? classifier(() => ({ vertical: 'Other' })) : /why now/.test(req.system) ? whyNowWriter() : echo)(req, n) });
+  const r = await evaluate(gw(m), CTX, input, { drafts: 12 });
+  assert.ok(r.drafts.sensitive > 0, JSON.stringify(r.drafts));
+  assert.equal(r.drafts.passing + r.drafts.sensitive, r.drafts.written, JSON.stringify(r.drafts));
+  assert.match(evaluationMarkdown(r, 'fake'), new RegExp(`\\| ${r.drafts.written} of ${r.drafts.asked} / ${r.drafts.passing} / ${r.drafts.sensitive} `));
+});

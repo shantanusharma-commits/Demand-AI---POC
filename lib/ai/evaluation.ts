@@ -5,7 +5,9 @@
 //   (target to agree with the Client: at least 95%), and out-of-ICP accounts classified core (target: none).
 // - Why-now lines for tier A and B: how many the model wrote that passed grounding (every name, number and date in
 //   the cited rows), and how many fell back to the rules' line.
-// - First messages: how many AI drafts passed the brand, claim and grounding checks, and how many fell back.
+// - First messages: how many AI drafts passed the brand, claim and grounding checks, how many carry only the sensitive
+//   term the rules' draft also has (the gate lets those through to a person, as it would the rules' draft), and how
+//   many fell back.
 import 'server-only';
 import * as E from '../demandai-engine.ts';
 import { buildProspects } from '../engine/prospects.ts';
@@ -26,7 +28,7 @@ export type EvalResult = {
   classification: { asked: number; answered: number; fallbacks: Record<string, number>; inIcp: number; inIcpCorrect: number; inIcpPct: number; outOfIcpCore: number;
     unmatchedCorrect: { n: number; ok: number }; needsReviewBefore: number; needsReviewAfter: number; met: boolean };
   whyNow: { asked: number; worded: number; fallbacks: Record<string, number> };
-  drafts: { asked: number; written: number; fallbacks: Record<string, number>; passing: number };
+  drafts: { asked: number; written: number; fallbacks: Record<string, number>; passing: number; sensitive: number };
 };
 
 /** The key's vertical as the pilot's choices: core verticals as they are, influencers as Other, the rest Out of ICP. */
@@ -65,13 +67,15 @@ export async function evaluate(gw: AiGateway, ctx: CallContext, data: EvalInput,
   const pack = defaultBrand();
   const recs = buildSegments(scored as unknown as NbaResult[]).recs;
   const asks = recs.map(rec => ({ rec, rules: R.generatedDraft(rec, R.initialState(), pack, data.asOf) })).filter(a => eligible(a.rules)).slice(0, opts.drafts ?? 40);
-  const drafts = { asked: asks.length, written: 0, fallbacks: {} as Record<string, number>, passing: 0 };
+  const drafts = { asked: asks.length, written: 0, fallbacks: {} as Record<string, number>, passing: 0, sensitive: 0 };
   await Promise.all(asks.map(async a => {
     const r = await writeDraft(gw, ctx, { rec: a.rec, action: a.rec.action, pack, checkDate: data.asOf, rules: a.rules });
     if (r.ok === true) {
       drafts.written++;
       const c = checkDraft(r.draft, pack, data.asOf);
+      const rulesSensitive = checkDraft(a.rules, pack, data.asOf).flags.some(f => f.rule === 'Sensitive term');
       if (!c.flags.length && !c.unsupported.length) drafts.passing++;
+      else if (rulesSensitive && !c.unsupported.length && c.flags.every(f => f.rule === 'Sensitive term')) drafts.sensitive++;
     } else drafts.fallbacks[r.reason] = (drafts.fallbacks[r.reason] ?? 0) + 1;
   }));
 
@@ -94,6 +98,6 @@ export function evaluationMarkdown(r: EvalResult, label: string): string {
     `| Industry texts asked / answered | ${c.asked} / ${c.answered} (rules kept: ${f(c.fallbacks)}) | report |`,
     `| Accounts needing review, before → after | ${c.needsReviewBefore} → ${c.needsReviewAfter} | report |`,
     `| Why-now lines worded (tier A and B) | ${r.whyNow.worded} of ${r.whyNow.asked} (rules kept: ${f(r.whyNow.fallbacks)}) | report; every line shown is grounded |`,
-    `| First messages written / passing every check | ${r.drafts.written} of ${r.drafts.asked} / ${r.drafts.passing} (rules kept: ${f(r.drafts.fallbacks)}) | every AI draft shown passes |`,
+    `| First messages written / passing every check / sensitive like the rules' draft (to a person) | ${r.drafts.written} of ${r.drafts.asked} / ${r.drafts.passing} / ${r.drafts.sensitive} (rules kept: ${f(r.drafts.fallbacks)}) | every AI draft passes, or carries only the rules' own sensitive flag |`,
     '', `Classification target ${c.met ? 'met' : 'not met'}.`].join('\n');
 }
