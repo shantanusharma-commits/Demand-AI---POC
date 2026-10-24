@@ -14,14 +14,14 @@ All model calls go through one server-only module, `lib/ai/gateway.ts`. No other
 | `AZURE_OPENAI_ENDPOINT` | The resource endpoint, or the API Management gateway in front of it. An endpoint whose path ends in `/openai` is used as the base URL as it is. https only (http is accepted for 127.0.0.1, for a local stand-in). |
 | `AZURE_OPENAI_API_KEY` | The key. Never logged, never shown; the Setup panel shows only the header name. |
 | `AZURE_OPENAI_AUTH_HEADER` | `api-key` (default) or `Ocp-Apim-Subscription-Key` for API Management front doors. The key is sent in that header only. |
-| `AZURE_OPENAI_DEPLOYMENT`, `AZURE_OPENAI_API_VERSION` | The chat deployment (`gpt-4o`, model 2024-05-13) and API version (`2024-06-01`, D-40). |
+| `AZURE_OPENAI_DEPLOYMENT`, `AZURE_OPENAI_API_VERSION` | The chat deployment (`gpt-4o`) and API version (`2024-06-01`, D-40). D-40 assumed model 2024-05-13; on 24 Oct 2026 the deployment answered as `gpt-4o-2024-08-06` (its `x-ms-served-model` header). |
 | `AWS_REGION`, `BEDROCK_MODEL_ID` | Bedrock through the Converse API (D-35). Credentials come from the IAM role the app runs under (EKS Pod Identity or IRSA, an EC2 instance profile); with `AI_PROVIDER=bedrock` the app refuses to start if `AWS_ACCESS_KEY_ID` or `AWS_SECRET_ACCESS_KEY` is set. |
 | `AI_TIMEOUT_MS`, `AI_MAX_CONCURRENCY` | 30 s per attempt; at most 4 calls at once per process (a big job can't starve the screens). |
-| `AI_PRICE_INPUT_PER_MTOK`, `AI_PRICE_OUTPUT_PER_MTOK` | USD per million tokens for the cost estimate kept with each call (defaults 5 and 15, gpt-4o 2024-05-13 list prices; set the agreed price). |
+| `AI_PRICE_INPUT_PER_MTOK`, `AI_PRICE_OUTPUT_PER_MTOK` | USD per million tokens for the cost estimate kept with each call (defaults 5 and 15, gpt-4o 2024-05-13 list prices; 2024-08-06 lists at 2.50 and 10; set the agreed price). |
 
-API version 2024-06-01 with gpt-4o 2024-05-13 has no `json_schema` structured outputs, so JSON calls use JSON mode and the gateway validates every reply with zod.
+API version 2024-06-01 has no `json_schema` structured outputs (they need a later API version as well as gpt-4o 2024-08-06), so JSON calls use JSON mode and the gateway validates every reply with zod.
 
-**Hosting and training.** The Azure OpenAI resource (or the Bedrock region) is the Client's or the delivery team's choice; record its region here once it is known. Microsoft's data-privacy terms for Azure OpenAI, and AWS's for Bedrock, say prompts and completions are not used to train the models; confirm against the current terms and the resource's abuse-monitoring settings before the pilot.
+**Hosting and training.** The Azure OpenAI resource (or the Bedrock region) is the Client's or the delivery team's choice; record its region here once it is known (the API Management gateway used on 24 Oct 2026 doesn't report it). That gateway allowed 4,500 requests and 450,000 tokens a minute, and sends no request-ID header, so `providerRequestId` stays empty in `ai_calls` behind it. Microsoft's data-privacy terms for Azure OpenAI, and AWS's for Bedrock, say prompts and completions are not used to train the models; confirm against the current terms and the resource's abuse-monitoring settings before the pilot.
 
 ## 2. What the gateway does on every call
 
@@ -41,7 +41,7 @@ Every prompt is in the code, with its template ID and version; a new wording is 
 |---|---|---|---|---|---|---|
 | Industry classification (spec 3.4) | `AI_FEATURE_CLASSIFY` | `classify.industry` v1 (`lib/ai/classify.ts`) | The lead job, for accounts the mapping table doesn't match | Picks one of Refining, Petrochemicals, Gas processing, Other, Out of ICP, with a confidence | The industry and site-process texts only, 25 per call; no company or person | Every item answered once, from the list. The table and the exclusions always decide first; a person's choice always wins; below high confidence the account stays in "needs review". Answers are kept per unit and text (`ai_verticals`) so rebuilds agree. Fallback: "Other, for review". |
 | Why-now line (spec 4.14) | `AI_FEATURE_WHY_NOW` | `whynow.line` v1 (`lib/ai/why-now.ts`) | The scoring job, for tier A and B prospects with a live signal | One sentence on why to contact them now | Job title, persona, the three strongest signal rows (row, type, date, detail, source); 10 prospects per call | The line must cite rows it was given, and every name, number, date and quote in it must be in those rows; no exclamation marks. One repair, then each line stands or falls alone. Fallback: the rules' line (always kept underneath). |
-| First messages (spec 5.12–5.14) | `AI_FEATURE_DRAFTING` | `draft.message` v1 (`lib/ai/draft.ts`) | The micro-segment build (a job when this is on) | Subject, opening, bridge and ask, and the proof by claim ID | The action, job title, persona, vertical, existing customer or not, the evidence signal, the brief, the approved unexpired claims for the case | The claim goes in word for word with its citation; greeting and sign-off come from the brand voice; `checkDraft` (banned words, competitors, tone, pricing, length, unsupported claims) and a grounding check. A sensitive term fails unless the rules' draft is sensitive too. One regeneration, then the rules' draft, with the reason in the decision log. Never for a task (no proof, D-10) or someone who can't be contacted. |
+| First messages (spec 5.12–5.14) | `AI_FEATURE_DRAFTING` | `draft.message` v2 (`lib/ai/draft.ts`) | The micro-segment build (a job when this is on) | Subject, opening, bridge and ask, and the proof by claim ID | The action, job title, persona, vertical, existing customer or not, the evidence signal, the brief, the approved unexpired claims for the case | The claim goes in word for word with its citation; greeting and sign-off come from the brand voice; `checkDraft` (banned words, competitors, tone, pricing, length, unsupported claims) and a grounding check. A sensitive term fails unless the rules' draft is sensitive too. One regeneration, then the rules' draft, with the reason in the decision log. Never for a task (no proof, D-10) or someone who can't be contacted. |
 | Content studio writing (D-36) | `AI_FEATURE_CONTENT_STUDIO` | `content.piece` v1, `content.rewrite` v1 (`lib/ai/studio.ts`) | New pieces; chat requests the rules don't understand | Words each part of the layout; rewrites the parts asked about | The brief (topic, audience, type, length, tone, framework) and the text being changed | The layout, headings and proof are the writer's (approved claims word for word); `checkContent` and a numbers check (no statistic the brief doesn't give). A refusal (an unbacked claim) stays a refusal. One repair, then the rules' writer. |
 | Copilot free text (G-013) | `AI_FEATURE_COPILOT` | `copilot.answer` v1 (`lib/ai/copilot.ts`) | Every working screen, for questions the rule answers don't cover | Answers in a few sentences from the screen's data | The screen's data as rows within row budgets (queue 60, approvals 40, recommendations 80, accounts 40, contacts 40, prospects 40), saying how many of how many were shown; people as tokens (P1, R1), also in the question and the last 8 turns; no emails or LinkedIn URLs | The answer must not claim to have changed, sent or approved anything, hold an email address or name someone not shown. One repair, then "I can't answer that from the data on this screen yet", with the reason. |
 
@@ -73,7 +73,35 @@ A request to approve becomes an **Autopilot** plan the person confirms: it rates
 
 ### Results
 
-No live run yet: the Azure OpenAI values are not in `.env.local` (a pending input). **Every capability stays switched off in production until its live evaluation is run, recorded here, and agreed.**
+**Every capability stays switched off in production until its results are agreed with the Client (section 5, step 3).**
+
+#### Live runs, 24 Oct 2026
+
+Azure OpenAI through an API Management gateway (`.env.local`; the URL is not kept in the repository): deployment `gpt-4o`, served model `gpt-4o-2024-08-06`, API version `2024-06-01`, `AI_MAX_CONCURRENCY` 4, `AI_TIMEOUT_MS` 30000. Templates `classify.industry` v1 and `whynow.line` v1 in every run; `draft.message` v1 in run 1, v2 in runs 2 and 3. The sample in `test-data/`, as of 2026-09-30; the first 40 first messages that could be written with AI.
+
+Smoke test (`npm run test:ai-live`): 4 of 4 passed (health check, classification, why-now, Copilot), about 1.5 s a call after a first call of 6.9 s.
+
+| Measure | Run 1 | Run 2 | Run 3 | Target |
+|---|---|---|---|---|
+| In-ICP accounts with the right core vertical | 642 of 643 (99.8%) | 642 of 643 (99.8%) | 642 of 643 (99.8%) | ≥ 95% |
+| Out-of-ICP accounts classified core | 0 | 0 | 0 | 0 |
+| AI-classified accounts matching the key (Other for influencers) | 636 of 698 | 675 of 698 | 636 of 698 | report |
+| Industry texts asked / answered | 99 / 99 | 99 / 99 | 99 / 99 | report |
+| Accounts needing review, before → after | 698 → 11 | 698 → 5 | 698 → 8 | report |
+| Why-now lines worded (tier A and B) | 131 of 144 (rules kept: grounding 3, timeout 10) | 141 of 144 (grounding 3) | 144 of 144 | report; every line shown is grounded |
+| First messages written / passing every check / sensitive like the rules' draft | 28 of 40 / 23 / 5 (rules kept: checks failed 11, timeout 1) | 40 of 40 / 32 / 8 | 40 of 40 / 32 / 8 | every AI draft passes, or carries only the rules' own sensitive flag |
+| Calls; tokens in / out | 59; 51,092 / 11,008 | 59; 47,289 / 11,518 | 59; 46,915 / 10,916 | report |
+| Wall time (4 calls at a time) | 66 s | 35 s | 33 s | report |
+
+What the runs showed, and what changed:
+
+- **Classification met its target in every run.** The answers that differ from the key are all between Other and Out of ICP (neither is core), and they move from run to run: the in-ICP and out-of-ICP figures don't.
+- **First messages (run 1): 11 of 40 fell back** because gpt-4o wrote headline-style subjects ("Control Systems Follow-Up") whose capitalised words failed grounding as names, and the regeneration changed the words but kept the capitals. `draft.message` v2 asks for subjects in sentence case, and a regeneration now says why capitalised words failed. Runs 2 and 3: none fell back. The grounding check itself is unchanged.
+- **Run 1 counted 5 written drafts as not passing.** A repeat with the problems printed showed that each carried only the sensitive term the rules' draft for the same item also has; the gate lets those through to a person, as it would the rules' draft. The evaluation now counts them apart (the third figure).
+- **Why-now:** one batch of 10 lines ran past the 30 s timeout in run 1 (not in runs 2 and 3); 3 lines in 144 fail grounding and keep the rules' line. With 4 calls at a time, a why-now or draft call took about 7.5 s from asking to answer (median, including the wait for a slot) and at most 15 s in runs 2 and 3.
+- **Cost:** about 47,000 tokens in and 11,000 out a run: USD 0.40 at the default prices, about 0.23 at gpt-4o 2024-08-06 list prices.
+- **Content studio** (not in the evaluation; a scripted check the same day): 6 pieces (blog and whitepaper, each length) and 4 rewrites were written on the first attempt with every check passing (1.3 to 5 s a call). A rewrite's reply named parts by their internal IDs ("… to part 872e4c92"); replies now name the part ("the opening").
+- **Copilot** has only the smoke test's call so far: watch its fallback reasons on Setup › AI service in the first week.
 
 On the sample, with the rules only: 698 of 1,401 accounts need review (no table match). Of those, 697 are influencers or out of ICP by the key and 1 is in-ICP (Refining); the rules already put no out-of-ICP account in a core vertical. So the classifier's job on this data is mostly to say "Other" or "Out of ICP" with confidence, and never to call an out-of-ICP account core.
 
