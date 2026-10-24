@@ -10,3 +10,8 @@ useDefault = true
 description = "Browser-storage key names in the legacy prototype (at the repository root in early commits): constants named *_KEY whose value is a storage key such as 'demandai_nba_runs_v1', not a secret"
 regexTarget = "match"
 regexes = ['''^[A-Z_]+_KEY = 'demandai_[a-z_]+_v\d+'$''']
+
+[[allowlists]]
+description = "The name (not the value) of the AWS Secrets Manager secret the EC2 host reads, in deploy docs and tests: DEMANDAI_SECRET_ID set to a path such as 'demandai/pilot/ec2'"
+regexTarget = "match"
+regexes = ['''DEMANDAI_SECRET_ID[=:] ?'?demandai/[a-z0-9/-]+'?''']
