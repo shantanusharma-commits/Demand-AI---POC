@@ -6,7 +6,7 @@ import 'server-only';
 import { randomUUID } from 'node:crypto';
 import { and, asc, desc, eq, gt, inArray, isNull, like, notExists, or, sql, type SQL } from 'drizzle-orm';
 import type { AnyPgColumn } from 'drizzle-orm/pg-core';
-import { CODES, LEAD_COLUMNS, LEAD_REQUIRED, missingColumns, processLeads, readTable, toCSV, type AiVerticals } from '../../demandai-engine.ts';
+import { CODES, LEAD_COLUMNS, LEAD_REQUIRED, missingColumns, processLeads, readTable, toCSV, type AiVerticals, type CsvText } from '../../demandai-engine.ts';
 import { ENGINE_VERSION } from '../../engine/config.ts';
 import { LEAD_SHEET } from '../../engine/sheets.ts';
 import { CHECKS, STEPS, checkOf, groupIssues, stepResult, type CheckKey, type StepResult } from '../../prospecting/checks.ts';
@@ -408,7 +408,7 @@ export async function issuesForCheck(scope: TenantScope, listId: string, check: 
   return { rows: page.map(r => r.data as Issue), next: rows.length > limit ? page[page.length - 1].seq : null, total: n };
 }
 
-export type CsvFile = { fileName: string; csv: string };
+export type CsvFile = { fileName: string; csv: CsvText };
 const fileBase = (sourceFile: string) => sourceFile.replace(/\.[^.]+$/, '') || 'lead-file';
 const ISSUE_HEADER = ['Row', 'Field', 'Issue', 'What happens', 'How to fix', 'Severity'];
 const issueCells = (i: Issue) => [i.row, i.field || '', i.issue, i.outcome || '', i.fix || '', i.severity];

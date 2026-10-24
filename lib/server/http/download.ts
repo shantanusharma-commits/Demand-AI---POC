@@ -1,8 +1,10 @@
 // A generated file sent as a download. The name is kept readable for the browser (RFC 6266 with an RFC 5987
 // UTF-8 form for names that aren't plain ASCII); the byte-order mark lets spreadsheet programs read UTF-8.
 import 'server-only';
+import type { CsvText } from '../../demandai-engine.ts';
 
-export function csvDownload(fileName: string, csv: string): Response {
+/** A CSV file. It takes only toCSV's output, so every CSV the server sends has its formulas neutralised (G-052). */
+export function csvDownload(fileName: string, csv: CsvText): Response {
   return download(fileName, '\ufeff' + csv, 'text/csv; charset=utf-8');
 }
 

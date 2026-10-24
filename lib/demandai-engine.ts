@@ -273,12 +273,15 @@ export function parseCSV(text: string, delimiter = ','): string[][] {
    Plain numbers, negative ones included, stay as they are. Cells are trimmed, so no leading tab or CR survives. */
 const FORMULA_START = /^[=+\-@]/;
 const PLAIN_NUMBER = /^-?\d+(\.\d+)?$/;
-export function toCSV(rows: unknown[][]): string {
+/** CSV text that came out of toCSV, so its formulas are neutralised (G-052): the only kind the server sends. */
+export type CsvText = string & { readonly __csv: 'neutralised' };
+
+export function toCSV(rows: unknown[][]): CsvText {
   return rows.map(r => r.map(v => {
     let s = clean(v);
     if (FORMULA_START.test(s) && !PLAIN_NUMBER.test(s)) s = "'" + s;
     return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
-  }).join(',')).join('\r\n');
+  }).join(',')).join('\r\n') as CsvText;
 }
 
 function cellToString(v: Cell): string {

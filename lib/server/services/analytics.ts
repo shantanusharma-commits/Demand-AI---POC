@@ -7,7 +7,7 @@
 import 'server-only';
 import { and, asc, desc, eq, inArray, sql, type SQL } from 'drizzle-orm';
 import type { AnyPgColumn } from 'drizzle-orm/pg-core';
-import { CODES, CONFIG, toCSV } from '../../demandai-engine.ts';
+import { CODES, CONFIG, toCSV, type CsvText } from '../../demandai-engine.ts';
 import { estimateDealSize, type Draft, type NbaAccount, type Rec } from '../../engine/nba.ts';
 import * as G from '../../engine/gates.ts';
 import * as R from '../../engine/review.ts';
@@ -486,7 +486,7 @@ const OUTCOME_COLUMNS: [string, keyof OutcomeRecord][] = [['list', 'list'], ['ac
   ['outcome', 'outcome'], ['final_status', 'finalStatus'], ['owner', 'owner'], ['config_version', 'config'], ['brand_version', 'brand']];
 
 /** The outcome log as a file: one record per recommendation, through the CSV writer that neutralises formulas (G-052). */
-export async function outcomeLogCsv(scope: TenantScope, actor: Actor, rep?: string | null): Promise<{ fileName: string; csv: string; rows: number }> {
+export async function outcomeLogCsv(scope: TenantScope, actor: Actor, rep?: string | null): Promise<{ fileName: string; csv: CsvText; rows: number }> {
   const x = await pilot(scope, actor, rep);
   const rs = await outcomeRecords(scope, x);
   const cell = (v: unknown) => (Array.isArray(v) ? v.join('; ') : v === null ? '' : typeof v === 'boolean' ? (v ? 'yes' : 'no') : v);

@@ -6,7 +6,7 @@
 import 'server-only';
 import { randomInt } from 'node:crypto';
 import { and, desc, eq, inArray, isNull, lt, or, sql, type SQL } from 'drizzle-orm';
-import { toCSV } from '../../demandai-engine.ts';
+import { toCSV, type CsvText } from '../../demandai-engine.ts';
 import { briefFor, callScript, type Draft, type Rec } from '../../engine/nba.ts';
 import * as R from '../../engine/review.ts';
 import { decisionLog, drafts, nbaRuns, recommendations, reviewViews, SYSTEM_USER_ID, spotChecks, users } from '../db/schema.ts';
@@ -455,7 +455,7 @@ const iso = (d: Date | null | undefined) => (d ? new Date(d).toISOString() : '')
 
 /** Step 8 · What was released, as files: messages ready to use, tasks for the team, and the decision log. Each goes
  *  through the CSV writer that neutralises formulas (G-052). */
-export async function reviewExport(scope: TenantScope, actor: Actor, kind: 'released-messages' | 'tasks' | 'decision-log'): Promise<{ fileName: string; csv: string; rows: number }> {
+export async function reviewExport(scope: TenantScope, actor: Actor, kind: 'released-messages' | 'tasks' | 'decision-log'): Promise<{ fileName: string; csv: CsvText; rows: number }> {
   if (kind === 'decision-log') {
     const out: unknown[][] = [['when', 'who', 'role', 'prospect', 'company', 'micro_segment', 'decision', 'item', 'first_pass', 'reason', 'tags', 'action', 'channel', 'version', 'opened_at', 'seconds', 'queue_position', 'flag', 'checked', 'linked_to', 'note']];
     let before: number | undefined, total = 0;
