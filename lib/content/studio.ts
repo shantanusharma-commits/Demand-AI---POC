@@ -18,6 +18,19 @@ export type ContentType = keyof typeof TYPES;
 export const CONTENT_TYPES = Object.keys(TYPES) as ContentType[];
 export const TONES = ['Direct', 'Formal', 'Warm'] as const;
 export type Tone = (typeof TONES)[number];
+
+const NOT = String.raw`\b(?:less|not(?: so| too)?)\s+`;
+/** The tone a request asks for, with "less formal", "informal" or "not so warm" read the right way round; null for none.
+ *  (The original page matched "formal" first, so "warmer and less formal" came out formal.) */
+export function toneAsked(text: string): Tone | null {
+  const t = text.toLowerCase();
+  if (new RegExp(`${NOT}(?:formal|professional)|\\binformal|\\bcasual|\\brelaxed|\\bconversational`).test(t)) return 'Warm';
+  if (new RegExp(`${NOT}(?:warm|friendl)`).test(t)) return 'Direct';
+  if (/\b(?:formal|professional)/.test(t)) return 'Formal';
+  if (/\b(?:warm|friendl)/.test(t)) return 'Warm';
+  if (/\b(?:direct|crisp|punch)/.test(t)) return 'Direct';
+  return null;
+}
 export const LENGTHS = ['Short', 'Medium', 'Long'] as const;
 export type Length = (typeof LENGTHS)[number];
 export const AUDIENCE: Record<string, string> = {
@@ -177,7 +190,9 @@ export function parseBrief(q: string, typeHint: ContentType, brandTone: string):
   topic = topic.replace(/^(on|about)\s+/i, '').replace(/[.?!]+$/, '').trim();
   const hay = s + ' ' + (forM ? forM[1] : '');
   const seg = (SEG_WORDS.find(([, re]) => re.test(hay)) || ['Modernisation'])[0];
-  const tone: Tone = /\bformal|professional\b/i.test(s) ? 'Formal' : /\bwarm|friendly\b/i.test(s) ? 'Warm' : ((TONES as readonly string[]).includes(brandTone) ? brandTone as Tone : 'Direct');
+  // Only Formal or Warm from the brief's words: "direct" is as likely to be part of the topic (direct digital control).
+  const asked = toneAsked(s);
+  const tone: Tone = asked === 'Formal' || asked === 'Warm' ? asked : ((TONES as readonly string[]).includes(brandTone) ? brandTone as Tone : 'Direct');
   const length: Length = /\b(short|brief|quick)\b/i.test(s) ? 'Short' : /\b(long|detailed|in-depth|comprehensive|thorough)\b/i.test(s) ? 'Long' : 'Medium';
   return { type, topic, seg, tone, length, audienceText: forM ? forM[1].trim() : '', ok: topic.split(/\s+/).filter(w => w.length > 2).length >= 2 };
 }
@@ -342,9 +357,8 @@ export function change(p: Piece, q: string, pack: BrandPack, target?: string | n
     }
     return { ...same, reply: "Every approved source for this audience is already cited. Add another one in the Content library and I'll use it word for word." };
   }
-  if (/formal|professional/.test(low)) return setTone(p, 'Formal', pack, el?.id);
-  if (/warm|friendl/.test(low)) return setTone(p, 'Warm', pack, el?.id);
-  if (/\b(direct|crisp|punch)/.test(low)) return setTone(p, 'Direct', pack, el?.id);
+  const tone = toneAsked(low);
+  if (tone) return setTone(p, tone, pack, el?.id);
   if (/short|concise|\bcut\b|trim|tighten/.test(low)) {
     const targets = el ? [el] : p.blocks.filter(b => b.tag === 'p' || b.tag === 'ul' || b.tag === 'ol');
     let n = 0, blocks = p.blocks;

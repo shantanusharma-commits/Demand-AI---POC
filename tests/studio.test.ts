@@ -53,6 +53,21 @@ test('tone: formal writes contractions out; warm adds a line to the opening and 
   assert.match(one.reply, /^Made that part formal\. The rest is still direct\.$/);
 });
 
+test('tone words read with their negation: "less formal" or "informal" is warmer, never formal', () => {
+  // Found in the Phase 7 browser check: "make it warmer and less formal" switched the piece to the formal tone,
+  // because "formal" was matched first (the original page had the same order).
+  const p = piece('A blog on planning a control system migration for plant managers');
+  const toneOf = (q: string) => S.change(p, q, pack).tone;
+  assert.equal(toneOf('make it read like one engineer talking to another, warmer and less formal'), 'Warm');
+  for (const q of ['less formal please', 'make it informal', 'not so formal', 'more casual and relaxed', 'more conversational']) assert.equal(toneOf(q), 'Warm', q);
+  for (const q of ['make it more formal', 'more professional', 'formal tone']) assert.equal(toneOf(q), 'Formal', q);
+  for (const q of ['less warm', 'not so friendly, more to the point']) assert.equal(toneOf(q), 'Direct', q);
+  assert.equal(toneOf('warmer'), 'Warm');
+  assert.notEqual(brief('A blog on alarm management for plant managers, not too formal').tone, 'Formal');
+  assert.equal(brief('A blog on alarm management for plant managers, informal and friendly').tone, 'Warm');
+  assert.equal(brief('A formal blog on alarm management for plant managers').tone, 'Formal');
+});
+
 test('a product claim only from an approved source: an unbacked claim is refused; asked-for proof is cited word for word', () => {
   const p = piece('A blog on settling control scope early in a new project');
   const refused = S.change(p, 'say it reduces downtime by 30%', pack);
