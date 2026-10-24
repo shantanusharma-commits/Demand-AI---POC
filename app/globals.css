@@ -15,9 +15,9 @@
   --bg:#F5F6F9;--surf:#fff;--border:#E5E9EE;--bdk:#D1D7DE;
   --i1:#141A21;--i2:#4A5664;--i3:#9DA8B5;--i4:#C9D1DA;
   --s50:#F4F6F8;--s75:#ECEFF3;--s100:#E1E6EC;--s200:#C9D1DA;--s300:#9DA8B5;
-  --fd:"Sora",system-ui,sans-serif;
-  --fb:"Plus Jakarta Sans",-apple-system,sans-serif;
-  --fm:"JetBrains Mono",monospace;
+  --fd:var(--font-display),system-ui,sans-serif;
+  --fb:var(--font-body),-apple-system,sans-serif;
+  --fm:var(--font-mono),monospace;
   --rsm:8px;--rmd:12px;--rlg:16px;
   --ease:cubic-bezier(.4,0,.2,1);--fast:120ms;--base:200ms;
   --sh:0 2px 8px rgba(20,26,33,.07),0 1px 3px rgba(20,26,33,.05);

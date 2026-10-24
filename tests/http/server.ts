@@ -1,7 +1,7 @@
 // Starts the production build's standalone server (what the image runs) against a fresh test database, and
 // gives tests a small cookie-keeping HTTP client per "browser". Needs `npm run build` first.
 import { spawn, type ChildProcess } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { cpSync, existsSync, rmSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { join } from 'node:path';
 import bcrypt from 'bcryptjs';
@@ -27,6 +27,11 @@ export type TestServer = { base: string; db: TestDatabase; ids: Basics; logs: st
 export async function startServer(label: string, extraEnv: Record<string, string> = {}): Promise<TestServer> {
   const serverJs = join(REPO, '.next', 'standalone', 'server.js');
   if (!existsSync(serverJs)) throw new Error('No production build: run `npm run build` before the HTTP tests');
+  // As the Dockerfile does: the standalone server serves the static files and public/ from beside itself.
+  for (const [from, to] of [[join(REPO, '.next', 'static'), join(REPO, '.next', 'standalone', '.next', 'static')], [join(REPO, 'public'), join(REPO, '.next', 'standalone', 'public')]]) {
+    rmSync(to, { recursive: true, force: true });
+    cpSync(from, to, { recursive: true });
+  }
   const db = await freshDatabase(label);
   const ids = await seedBasics(db.pool('demandai_owner'));
   await db.pool('demandai_owner').query(`UPDATE users SET password_hash = $1 WHERE kind = 'person'`, [bcrypt.hashSync(PASSWORD, 4)]);
