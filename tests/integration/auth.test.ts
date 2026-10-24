@@ -14,6 +14,7 @@ import { inviteMember, issueResetLink, listMembers, removeMember, resendInvite, 
 import { createUnit, inviteUnitAdmin, listUnits } from '../../lib/server/services/platform.ts';
 import type { MailMessage, Mailer } from '../../lib/server/mail/mailer.ts';
 import { HttpError } from '../../lib/server/http/errors.ts';
+import { hit, pruneRateLimits } from '../../lib/server/auth/rate-limit.ts';
 import { createAdmin } from '../../scripts/users/create-admin.mjs';
 import { freshDatabase, type TestDatabase } from './harness.ts';
 import { seedBasics, type Basics } from './fixtures.ts';
@@ -61,16 +62,34 @@ test(`${MAX_FAILED_LOGINS} wrong passwords lock the account for ${LOCK_MINUTES} 
 });
 
 test('sign-in attempts are rate-limited per email, whoever sends them', async () => {
-  // Limits count in fixed 15-minute windows; attempts that straddle a boundary are split between two windows (a
-  // known property of fixed windows, to revisit in Phase 7). Start clear of the next boundary so the test is stable.
-  const toBoundary = 15 * 60_000 - (Date.now() % (15 * 60_000));
-  if (toBoundary < 15_000) await new Promise(r => setTimeout(r, toBoundary + 100));
   let last;
   for (let i = 0; i < 11; i++) last = await login(deps(), { email: 'nobody.else@demandai.test', password: 'x', ip: `192.0.2.${i}` });
   assert.equal(last!.ok, false);
   assert.equal((last as { reason: string }).reason, 'rate_limited');
   const keys = (await owner.query(`SELECT key FROM rate_limits`)).rows.map(r => r.key).join(' ');
   assert.ok(!keys.includes('@') && !keys.includes('192.0.2'), 'keys hold hashes, not emails or addresses');
+});
+
+test('limits slide: a burst across a window boundary gets no more than the limit through, and the wait is told', async () => {
+  // Phase 7: with fixed windows, 10 hits at the end of one window and 10 at the start of the next all passed.
+  const limit = { name: 'test:slide', limit: 10, windowSeconds: 60 };
+  const at = (s: number) => new Date(Date.UTC(2030, 0, 1, 0, 0, 0) + s * 1000);
+  for (let i = 0; i < 10; i++) assert.equal((await hit(app, limit, 'u1', at(59))).allowed, true, `hit ${i + 1}`);
+  const next = await hit(app, limit, 'u1', at(61));
+  assert.equal(next.allowed, false, 'one second into the next window, the last minute still holds 10 hits');
+  // 10 × (1 − 1/60) + 1 = 10.8; one more fits once 10 × (1 − t/60) + 2 ≤ 10, i.e. 12 s into the window: 11 s from now.
+  assert.equal(next.retryAfterSeconds, 11);
+  assert.equal((await hit(app, limit, 'u1', at(72))).allowed, true, 'as the old hits slide out, room comes back');
+  assert.equal((await hit(app, limit, 'u2', at(61))).allowed, true, 'each subject has its own count');
+  // A full window refused outright waits into the next one.
+  for (let i = 0; i < 12; i++) await hit(app, limit, 'u3', at(130));
+  const full = await hit(app, limit, 'u3', at(131));
+  assert.equal(full.allowed, false);
+  assert.ok(full.retryAfterSeconds > 60 - 11, `${full.retryAfterSeconds} s`);
+  // Old windows are pruned (the job worker calls this every hour).
+  await owner.query(`INSERT INTO rate_limits (key, window_start, count) VALUES ('test:old:x', now() - interval '2 days', 3)`);
+  assert.ok((await pruneRateLimits(app)) >= 1);
+  assert.equal((await owner.query(`SELECT count(*)::int n FROM rate_limits WHERE key = 'test:old:x'`)).rows[0].n, 0);
 });
 
 test('sessions: valid cookie works; tampered, revoked, idle-expired or deactivated-user sessions do not', async () => {

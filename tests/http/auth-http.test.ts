@@ -147,6 +147,15 @@ const EXPECTED: Record<string, Policy> = {
 // Infrastructure endpoints outside withApi: no session by design, nothing private, own safeguards.
 const INFRA = ['GET /api/health', 'GET /api/ready', 'POST /api/client-errors'];
 
+// Routes that start heavy jobs or model calls carry a per-person rate limit (Phase 7; LIMITS in
+// lib/server/auth/rate-limit.ts). A route that takes on such work must be listed here, or the inventory fails.
+const LIMITED: Record<string, string> = {
+  'POST /api/uploads': 'upload', 'POST /api/uploads/sample': 'upload', 'POST /api/uploads/:id/recheck': 'upload',
+  'POST /api/lists/:id/corrections': 'correction', 'POST /api/scoring-runs': 'scoringRun', 'POST /api/nba-runs': 'nbaBuild',
+  'POST /api/studio/items': 'studioWrite', 'POST /api/studio/items/:id/change': 'studioWrite', 'POST /api/copilot': 'copilot',
+  'POST /api/admin/ai/healthcheck': 'aiHealthcheck',
+};
+
 function routeFiles(dir: string): string[] {
   return readdirSync(dir).flatMap(name => {
     const p = join(dir, name);
@@ -154,8 +163,8 @@ function routeFiles(dir: string): string[] {
   });
 }
 
-test('route inventory: every API route is wrapped in withApi with the expected policy, or is listed infrastructure', () => {
-  const found: Record<string, Policy> = {};
+test('route inventory: every API route is wrapped in withApi with the expected policy and rate limit, or is listed infrastructure', () => {
+  const found: Record<string, Policy> = {}, limited: Record<string, string> = {};
   const raw: string[] = [];
   for (const file of routeFiles(join(REPO, 'app', 'api'))) {
     const path = '/' + relative(join(REPO, 'app'), file).replace(/\/route\.ts$/, '').replace(/\[(\w+)\]/g, ':$1');
@@ -168,14 +177,20 @@ test('route inventory: every API route is wrapped in withApi with the expected p
       const opt = (k: string) => new RegExp(`${k}: '([^']+)'`).exec(m[1])?.[1];
       assert.equal(opt('route'), `${method} ${path}`, `${file}: the route label must match the file`);
       found[`${method} ${path}`] = { auth: opt('auth') as Policy['auth'], ...(opt('permission') ? { permission: opt('permission') as Action } : {}) };
+      const limit = /limit: LIMITS\.(\w+)/.exec(m[1])?.[1];
+      if (limit) limited[`${method} ${path}`] = limit;
     }
   }
   assert.deepEqual(raw.sort(), [...INFRA].sort(), 'only the listed infrastructure routes may skip withApi');
   assert.deepEqual(found, EXPECTED);
+  assert.deepEqual(limited, LIMITED);
 });
 
 let srv: TestServer;
 const people: Record<string, string> = {};
+// One signed-in Admin shared by the tests that need any Admin: every sign-in counts against the per-address limit
+// (30 in 15 minutes), and all of this file's requests come from 127.0.0.1.
+let admin: Browser;
 before(async () => {
   srv = await startServer('http_auth');
   const owner = srv.db.pool('demandai_owner');
@@ -187,6 +202,8 @@ before(async () => {
     await owner.query(`INSERT INTO business_unit_members (business_unit_id, user_id, role, created_by, updated_by) VALUES ($1, $2, $3, $2, $2)`, [srv.ids.buA, id, role]);
   }
   Object.assign(people, { Admin: 'admin.a@demandai.test', 'Sales manager': 'manager.a@demandai.test', 'Sales rep': 'rep.a2@demandai.test', Viewer: 'viewer.a@demandai.test' });
+  admin = new Browser(srv.base);
+  await admin.signIn(people.Admin);
 });
 after(async () => { await srv?.stop(); });
 
@@ -232,8 +249,6 @@ test('role × route matrix: each role is refused exactly where the permission ta
 });
 
 test('writes from another site, or without an Origin header, are refused (CSRF)', async () => {
-  const admin = new Browser(srv.base);
-  await admin.signIn(people.Admin);
   const body = { email: 'csrf@demandai.test', displayName: 'Csrf', role: 'Viewer' };
   const evil = await admin.request('POST', '/api/users', body, { origin: 'https://evil.example' });
   assert.equal(evil.status, 403);
@@ -241,6 +256,38 @@ test('writes from another site, or without an Origin header, are refused (CSRF)'
   assert.equal(res.status, 403, 'no Origin header');
   const count = (await srv.db.pool('demandai_owner').query(`SELECT count(*)::int n FROM users WHERE email = 'csrf@demandai.test'`)).rows[0].n;
   assert.equal(count, 0);
+});
+
+test('every mutating route, public ones included, refuses a request from another site or without an Origin (CSRF)', async () => {
+  const writes = Object.keys(EXPECTED).filter(r => !r.startsWith('GET '));
+  assert.ok(writes.length > 60, `${writes.length} mutating routes`);
+  for (const route of writes) {
+    const { method, path } = concrete(route);
+    for (const origin of ['https://evil.example', `${srv.base}.evil.example`, 'null']) {
+      const r = await admin.request(method, path, {}, { origin });
+      assert.equal(r.status, 403, `${route} from ${origin}: ${r.status}`);
+      assert.match(String(r.json.error), /did not come from DemandAI/, route);
+    }
+    const res = await fetch(srv.base + path, { method, headers: { cookie: admin.cookie, 'content-type': 'application/json' }, body: '{}' });
+    assert.equal(res.status, 403, `${route} without an Origin header`);
+  }
+});
+
+test('a route that starts model calls refuses a person past its limit, with Retry-After, and others are unaffected', async () => {
+  const owner = srv.db.pool('demandai_owner');
+  const id = randomUUID();
+  await owner.query(`INSERT INTO users (id, email, display_name, status, password_hash, created_by, updated_by)
+    SELECT $1, 'limit.admin@demandai.test', 'Limit Admin', 'active', password_hash, created_by, created_by FROM users WHERE id = $2`, [id, srv.ids.adminA]);
+  await owner.query(`INSERT INTO business_unit_members (business_unit_id, user_id, role, created_by, updated_by) VALUES ($1, $2, 'Admin', $2, $2)`, [srv.ids.buA, id]);
+  const b = new Browser(srv.base);
+  await b.signIn('limit.admin@demandai.test');
+  for (let i = 1; i <= 10; i++) assert.notEqual((await b.post('/api/admin/ai/healthcheck')).status, 429, `check ${i}`);
+  const r = await b.post('/api/admin/ai/healthcheck');
+  assert.equal(r.status, 429);
+  assert.equal(r.json.code, 'rate_limited');
+  assert.match(String(r.json.error), /^Too many health checks in a short time\. Try again in \d+ minutes?\.$/);
+  assert.ok(Number(r.headers.get('retry-after')) > 0);
+  assert.notEqual((await admin.post('/api/admin/ai/healthcheck')).status, 429, 'the limit is per person');
 });
 
 test('sign-in: cookie flags, one reply for wrong password and unknown email, then 429 with Retry-After', async () => {
@@ -272,16 +319,12 @@ test('pages: no session redirects to sign-in; a Viewer gets Analytics only; Admi
   const home = await viewer.get('/');
   assert.equal(home.headers.get('location'), '/analytics');
   assert.doesNotMatch((await viewer.get('/analytics')).text, /Not available for your role/);
-  const admin = new Browser(srv.base);
-  await admin.signIn(people.Admin);
   const review = await admin.get('/review');
   assert.doesNotMatch(review.text, /Not available for your role/, 'G-034: Admin can open For Review');
   assert.doesNotMatch(review.text, /Switch role/, 'the demo role switcher is gone');
 });
 
 test('invite with email off: the Admin gets a copy link, the new person sets a password and lands in the unit', async () => {
-  const admin = new Browser(srv.base);
-  await admin.signIn(people.Admin);
   const inv = await admin.post('/api/users', { email: 'fresh.rep@demandai.test', displayName: 'Fresh Rep', role: 'Sales rep' });
   assert.equal(inv.status, 201);
   assert.equal(inv.json.emailed, false);

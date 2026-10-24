@@ -5,7 +5,8 @@ import 'server-only';
  * The client address, for rate limiting and pseudonymous session records only. The left-hand entries of
  * X-Forwarded-For are whatever the client sent, so they can't be trusted; the entry added by our own outermost
  * trusted proxy is `trustedHops` from the right (1 = one reverse proxy such as Caddy, nginx or an ALB in front of
- * the app). Next.js fills the header with the socket address when no proxy set it.
+ * the app). Next.js fills the header with the socket address only when the request has none, so a client that
+ * reaches the app directly, not through the proxies, chooses its own address (docs/SECURITY.md: deploy behind them).
  */
 export function clientAddress(request: Request, trustedHops = Number(process.env.TRUSTED_PROXY_HOPS) || 1): string {
   const entries = (request.headers.get('x-forwarded-for') ?? '').split(',').map(e => e.trim()).filter(Boolean);

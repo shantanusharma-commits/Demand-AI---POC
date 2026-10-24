@@ -13,7 +13,6 @@ import { inspectUpload, type UploadFormat } from '../uploads/inspect.ts';
 import { DEFAULT_ZIP_LIMITS, type ZipLimits } from '../uploads/zip.ts';
 import { HttpError } from '../http/errors.ts';
 import { logger } from '../logger.ts';
-import type { Limit } from '../auth/rate-limit.ts';
 import { DemandAISample } from '../../demandai-sample-data.ts';
 import type { Env } from '../env.ts';
 
@@ -25,9 +24,6 @@ export function uploadLimits(e: Pick<Env, 'UPLOAD_MAX_BYTES' | 'UPLOAD_MAX_ROWS'
 }
 
 export const LEAD_STAGES = ['parse', 'check', 'save'];
-
-/** Uploads per person: generous for real work, a brake on scripted floods (plan Phase 7: rate limits on uploads). */
-export const UPLOAD_RATE: Limit = { name: 'upload:user', limit: 60, windowSeconds: 10 * 60 };
 
 /** The name as shown back to people: no folders, no control characters, at most 200 characters. */
 export function cleanFileName(name: string): string {

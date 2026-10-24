@@ -4,18 +4,20 @@
 //  3. loads the session (re-read from the database on every request) unless the route is public;
 //  4. requires an active business unit and checks the role's permission, with a 403 that names the reason;
 //  5. builds the tenant context (owner scoping for reps) for the row-level security policies;
-//  6. reads a size-capped JSON body and validates it with zod;
-//  7. maps errors to { error, code, requestId } without stack traces, and logs one access line per request.
+//  6. counts the call against the route's per-person rate limit, if it has one (429 with Retry-After);
+//  7. reads a size-capped JSON body and validates it with zod;
+//  8. maps errors to { error, code, requestId } without stack traces, and logs one access line per request.
 import 'server-only';
 import { randomUUID } from 'node:crypto';
 import type { ZodType } from 'zod';
 import { ACTION_LABELS, can, scopeFor, type Action, type BuRole } from '../../auth/permissions.ts';
 import { appDeps, type AppDeps } from '../deps.ts';
 import { loadSession, SESSION_COOKIE, type LoadedSession } from '../auth/sessions.ts';
+import { hit, type Limit } from '../auth/rate-limit.ts';
 import type { TenantContext } from '../db/tenant.ts';
 import { ownerEmailsOf } from '../services/users.ts';
 import { addLogContext, logger, withLogContext } from '../logger.ts';
-import { badRequest, forbidden, HttpError, unauthorized } from './errors.ts';
+import { badRequest, forbidden, HttpError, tooMany, unauthorized } from './errors.ts';
 import { clientAddress, isSameOrigin, readBodyText } from './request.ts';
 
 /** public: no session. user: any signed-in person. unit: signed in with an active business unit. platform: platform admin. */
@@ -28,6 +30,8 @@ export type ApiOptions<B> = {
   permission?: Action;
   body?: ZodType<B>;
   maxBodyBytes?: number;
+  /** A per-person limit (LIMITS in lib/server/auth/rate-limit.ts), for routes that start heavy jobs or model calls. */
+  limit?: Limit;
 };
 
 export type ApiContext<B, P> = {
@@ -44,7 +48,7 @@ export type ApiContext<B, P> = {
   role: BuRole | null;
 };
 
-export type ApiPolicy = { route: string; auth: AuthMode; permission?: Action };
+export type ApiPolicy = { route: string; auth: AuthMode; permission?: Action; limit?: string };
 export type ApiHandler = ((request: Request, ctx?: { params?: Promise<Record<string, string>> }) => Promise<Response>) & { apiPolicy: ApiPolicy };
 
 const MUTATIONS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
@@ -97,6 +101,13 @@ export function withApi<B = undefined, P = Record<string, string>>(options: ApiO
             ownerEmails: scope === 'own' ? await ownerEmailsOf(deps.db, session!.user.id, session!.user.email) : [],
           };
         }
+        if (options.limit && session) {
+          const h = await hit(deps.db, options.limit, session.user.id);
+          if (!h.allowed) {
+            const minutes = Math.ceil(h.retryAfterSeconds / 60);
+            throw tooMany(`Too many ${options.limit.what ?? 'requests'} in a short time. Try again in ${minutes} minute${minutes === 1 ? '' : 's'}.`, h.retryAfterSeconds);
+          }
+        }
         let body = undefined as B;
         if (options.body) {
           const text = await readBodyText(request, options.maxBodyBytes ?? 64 * 1024);
@@ -122,7 +133,7 @@ export function withApi<B = undefined, P = Record<string, string>>(options: ApiO
           status = err.status;
           if (status >= 500) logger.error({ event: 'api.error', code: err.code, err }, 'Request failed');
           return Response.json({ error: err.message, code: err.code, ...(err.fields ? { fields: err.fields } : {}), requestId },
-            { status, headers: { 'x-request-id': requestId, 'cache-control': 'no-store' } });
+            { status, headers: { ...err.headers, 'x-request-id': requestId, 'cache-control': 'no-store' } });
         }
         status = 500;
         logger.error({ event: 'api.error', err }, 'Unhandled error in an API route');
@@ -135,5 +146,5 @@ export function withApi<B = undefined, P = Record<string, string>>(options: ApiO
       }
     });
   };
-  return Object.assign(fn, { apiPolicy: { route: options.route, auth: options.auth, permission: options.permission } });
+  return Object.assign(fn, { apiPolicy: { route: options.route, auth: options.auth, permission: options.permission, limit: options.limit?.name } });
 }

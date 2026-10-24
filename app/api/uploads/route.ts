@@ -1,21 +1,20 @@
 import { withApi } from '@/lib/server/http/api';
-import { badRequest, HttpError, tooMany } from '@/lib/server/http/errors';
+import { LIMITS } from '@/lib/server/auth/rate-limit';
+import { badRequest, HttpError } from '@/lib/server/http/errors';
 import { readBodyBytes } from '@/lib/server/http/request';
 import { isUuid } from '@/lib/server/http/schemas';
 import { withTenant } from '@/lib/server/db/tenant';
 import { env } from '@/lib/server/env';
-import { hit } from '@/lib/server/auth/rate-limit';
-import { receiveUpload, UPLOAD_RATE, uploadLimits } from '@/lib/server/services/uploads';
+import { receiveUpload, uploadLimits } from '@/lib/server/services/uploads';
 
 // A lead or signal file, as multipart/form-data with `kind` and `file`. The proxy doesn't buffer this route (N-06):
 // the body is read here with a byte cap before anything parses it.
 const MULTIPART_OVERHEAD = 64 * 1024;
 
-export const POST = withApi({ route: 'POST /api/uploads', auth: 'unit', permission: 'data.upload' }, async ({ request, deps, tenant }) => {
+export const POST = withApi({ route: 'POST /api/uploads', auth: 'unit', permission: 'data.upload', limit: LIMITS.upload }, async ({ request, deps, tenant }) => {
   const limits = uploadLimits(env());
   const type = request.headers.get('content-type') ?? '';
   if (!/^multipart\/form-data;/i.test(type)) throw new HttpError(415, 'unsupported_type', 'Send the file as a form upload (multipart/form-data).');
-  if (!(await hit(deps.db, UPLOAD_RATE, tenant!.userId)).allowed) throw tooMany('Too many uploads in a short time. Wait a few minutes and try again.');
   const raw = await readBodyBytes(request, limits.maxBytes + MULTIPART_OVERHEAD);
   if (raw === null) throw new HttpError(413, 'too_large', `The file is larger than ${Math.floor(limits.maxBytes / (1024 * 1024))} MB. Split it, or keep only the template sheet.`);
   let form: FormData;

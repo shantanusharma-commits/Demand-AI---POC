@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { withApi } from '@/lib/server/http/api';
+import { LIMITS } from '@/lib/server/auth/rate-limit';
 import { withTenant } from '@/lib/server/db/tenant';
 import { createItemWithAi, listItems } from '@/lib/server/services/studio';
 
@@ -13,6 +14,6 @@ export const GET = withApi({ route: 'GET /api/studio/items', auth: 'unit', permi
 const Body = z.object({ text: z.string().max(2000), type: z.enum(['blog', 'whitepaper']) });
 
 // A new piece from a request in the person's own words; a request too vague to write gets a question back.
-export const POST = withApi<z.infer<typeof Body>>({ route: 'POST /api/studio/items', auth: 'unit', permission: 'studio.use', body: Body }, async ({ deps, tenant, role, body }) => {
+export const POST = withApi<z.infer<typeof Body>>({ route: 'POST /api/studio/items', auth: 'unit', permission: 'studio.use', body: Body, limit: LIMITS.studioWrite }, async ({ deps, tenant, role, body }) => {
   return createItemWithAi(deps.db, tenant!, { userId: tenant!.userId, role: role! }, body);
 });

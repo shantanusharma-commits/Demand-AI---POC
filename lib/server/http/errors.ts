@@ -4,12 +4,15 @@ export class HttpError extends Error {
   readonly status: number;
   readonly code: string;
   readonly fields?: Record<string, string[]>;
-  constructor(status: number, code: string, message: string, fields?: Record<string, string[]>) {
+  /** Response headers the error needs, such as Retry-After. */
+  readonly headers?: Record<string, string>;
+  constructor(status: number, code: string, message: string, fields?: Record<string, string[]>, headers?: Record<string, string>) {
     super(message);
     this.name = 'HttpError';
     this.status = status;
     this.code = code;
     this.fields = fields;
+    this.headers = headers;
   }
 }
 
@@ -19,4 +22,5 @@ export const forbidden = (message: string) => new HttpError(403, 'forbidden', me
 /** Also used when a record exists but is outside the caller's scope, so its existence isn't confirmed. */
 export const notFound = (message = 'Not found.') => new HttpError(404, 'not_found', message);
 export const conflict = (message: string) => new HttpError(409, 'conflict', message);
-export const tooMany = (message: string) => new HttpError(429, 'rate_limited', message);
+export const tooMany = (message: string, retryAfterSeconds?: number) =>
+  new HttpError(429, 'rate_limited', message, undefined, retryAfterSeconds ? { 'retry-after': String(retryAfterSeconds) } : undefined);

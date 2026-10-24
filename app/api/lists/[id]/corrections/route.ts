@@ -1,10 +1,10 @@
 import { z } from 'zod';
 import { withApi } from '@/lib/server/http/api';
-import { notFound, tooMany } from '@/lib/server/http/errors';
+import { LIMITS } from '@/lib/server/auth/rate-limit';
+import { notFound } from '@/lib/server/http/errors';
 import { isUuid, pageQuery } from '@/lib/server/http/schemas';
 import { withTenant } from '@/lib/server/db/tenant';
-import { hit } from '@/lib/server/auth/rate-limit';
-import { addCorrections, CORRECTION_RATE, listCorrections } from '@/lib/server/services/corrections';
+import { addCorrections, listCorrections } from '@/lib/server/services/corrections';
 import { CORRECTION_FIELDS, EDIT_REASONS, EDIT_SOURCES } from '@/lib/engine/corrections';
 
 type P = { id: string };
@@ -27,9 +27,8 @@ const Body = z.object({
 
 // A person's corrections to one row, with what was wrong and how they know; the list is then checked again from the
 // stored file (a job) and the new version replaces it. Uploader or manager only.
-export const POST = withApi<z.infer<typeof Body>, P>({ route: 'POST /api/lists/:id/corrections', auth: 'unit', permission: 'lists.write', body: Body }, async ({ deps, tenant, role, params, body }) => {
+export const POST = withApi<z.infer<typeof Body>, P>({ route: 'POST /api/lists/:id/corrections', auth: 'unit', permission: 'lists.write', body: Body, limit: LIMITS.correction }, async ({ deps, tenant, role, params, body }) => {
   if (!isUuid(params.id)) throw notFound();
-  if (!(await hit(deps.db, CORRECTION_RATE, tenant!.userId)).allowed) throw tooMany('Too many corrections in a short time. Wait a few minutes and try again.');
   const result = await withTenant(deps.db, tenant!, s => addCorrections(s, { userId: tenant!.userId, role: role! }, params.id, body));
   return Response.json(result, { status: 201 });
 });

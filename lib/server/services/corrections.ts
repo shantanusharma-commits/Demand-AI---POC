@@ -17,9 +17,6 @@ import { logger } from '../logger.ts';
 import { LEAD_STAGES } from './uploads.ts';
 import { editableList, getList, ownerOnly, PAGE_MAX, rebuildPending, type Actor, type Page } from './lists.ts';
 
-/** Corrections per person: each queues a rebuild of the list, so a brake on scripted floods. */
-export const CORRECTION_RATE = { name: 'correct:user', limit: 60, windowSeconds: 10 * 60 };
-
 export type CorrectionInput = {
   row: number;
   changes: Partial<Record<CorrectionField, string>>;

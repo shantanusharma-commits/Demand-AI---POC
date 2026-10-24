@@ -9,6 +9,7 @@ import type { PgUpdateSetSource } from 'drizzle-orm/pg-core';
 import { jobs } from '../db/schema.ts';
 import { withTenant, type Db } from '../db/tenant.ts';
 import { logger, withLogContext } from '../logger.ts';
+import { pruneRateLimits } from '../auth/rate-limit.ts';
 import { JobError, jobContext, onJobQueued, reportProgress, type JobKind, type JobProgress } from './queue.ts';
 
 export type ClaimedJob = {
@@ -48,7 +49,7 @@ export function createWorker(opts: WorkerOptions) {
   const kinds = Object.keys(handlers);
   let running = false, stopRequested = false, busy = false;
   let timer: NodeJS.Timeout | undefined;
-  let lastRecovery = 0;
+  let lastRecovery = 0, lastPrune = 0;
 
   async function claim(): Promise<ClaimedJob | null> {
     const r = await db.execute<Record<string, unknown>>(sql`select * from claim_job(${workerId}, string_to_array(${kinds.join(',')}, ','))`);
@@ -116,6 +117,11 @@ export function createWorker(opts: WorkerOptions) {
         lastRecovery = Date.now();
         const r = await db.execute<{ n: number }>(sql`select recover_stale_jobs(make_interval(mins => ${opts.staleAfterMinutes ?? 5})) as n`);
         if (Number(r.rows[0].n)) logger.warn({ event: 'job.recovered', count: Number(r.rows[0].n) }, 'Jobs left running by a stopped process were recovered');
+      }
+      if (Date.now() - lastPrune > 60 * 60_000) {
+        lastPrune = Date.now();
+        const n = await pruneRateLimits(db);
+        if (n) logger.debug({ event: 'rate_limits.pruned', count: n }, 'Old rate-limit windows removed');
       }
       const job = await claim();
       if (!job) return n;
