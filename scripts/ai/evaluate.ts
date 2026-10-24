@@ -4,20 +4,22 @@
 // No call is recorded in the database (the run belongs to no business unit). Never run in CI.
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
-import { AiGateway, createModelClient } from '../../lib/ai/gateway.ts';
-import { evaluate, evaluationMarkdown } from '../../lib/ai/evaluation.ts';
+import { AiGateway, type AiCallRecord } from '../../lib/ai/gateway.ts';
+import { callSummary, evaluate, evaluationMarkdown } from '../../lib/ai/evaluation.ts';
 import { CAPABILITIES } from '../../lib/ai/types.ts';
 import { parseEnv } from '../../lib/server/env.ts';
-import { providerConfig } from '../../lib/server/ai.ts';
+import { gatewayOptions } from '../../lib/server/ai.ts';
 
 const parsed = parseEnv(process.env);
 if (parsed.ok === false) { console.error(`Configuration problems: ${parsed.errors.join('; ')}`); process.exit(1); }
 const e = parsed.env;
 if (!e.AI_LIVE_SMOKE) { console.error('Set AI_LIVE_SMOKE=1 to run the evaluation: it calls the configured model and spends tokens.'); process.exit(1); }
-const client = createModelClient(providerConfig(e));
-if (!client) { console.error('No AI provider is configured (AI_PROVIDER, and its settings in .env.local).'); process.exit(1); }
-const gw = new AiGateway({ client, flags: Object.fromEntries(CAPABILITIES.map(c => [c, true])), timeoutMs: e.AI_TIMEOUT_MS, maxConcurrency: e.AI_MAX_CONCURRENCY,
-  prices: { inputPerMTok: e.AI_PRICE_INPUT_PER_MTOK, outputPerMTok: e.AI_PRICE_OUTPUT_PER_MTOK } });
+const opts = gatewayOptions(e);
+if (!opts.client) { console.error('No AI provider is configured (AI_PROVIDER, and its settings in .env.local).'); process.exit(1); }
+// The run's own call records (kept in memory only), for the per-capability summary.
+const records: AiCallRecord[] = [];
+const gw = new AiGateway({ ...opts, flags: Object.fromEntries(CAPABILITIES.map(c => [c, true])), record: r => { records.push(r); } });
+const d = gw.describe();
 
 const require = createRequire(import.meta.url);
 const XLSX = require('xlsx');
@@ -26,5 +28,7 @@ const grid = (n: string) => XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, 
 const started = Date.now();
 const r = await evaluate(gw, { businessUnitId: '00000000-0000-4000-8000-000000000000', userId: '00000000-0000-0000-0000-000000000001', deadlineMs: 120_000 },
   { leadGrid: grid('Lead template'), signalGrid: grid('Signal template'), accountKey: XLSX.utils.sheet_to_json(wb.Sheets['Account key'], { range: 1, defval: '' }), asOf: '2026-09-30' });
-console.log(evaluationMarkdown(r, `${client.provider} · ${client.deployment} · ${new Date().toISOString().slice(0, 10)} (${Math.round((Date.now() - started) / 1000)} s)`));
+const models = `${d.deployment}${d.small ? `, ${d.small.deployment} for ${d.small.for.join(', ')}` : ''}${Object.keys(d.reasoning).length ? ` · effort ${Object.entries(d.reasoning).map(([k, v]) => `${k}=${v}`).join(', ')}` : ''}`;
+console.log(evaluationMarkdown(r, `${d.provider} · ${models} · ${new Date().toISOString().slice(0, 10)} (${Math.round((Date.now() - started) / 1000)} s)`));
+console.log(`\n${callSummary(records)}`);
 process.exit(r.classification.met ? 0 : 2);

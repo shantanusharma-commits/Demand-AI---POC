@@ -14,38 +14,52 @@ All model calls go through one server-only module, `lib/ai/gateway.ts`. No other
 | `AZURE_OPENAI_ENDPOINT` | The resource endpoint, or the API Management gateway in front of it. An endpoint whose path ends in `/openai` is used as the base URL as it is. https only (http is accepted for 127.0.0.1, for a local stand-in). |
 | `AZURE_OPENAI_API_KEY` | The key. Never logged, never shown; the Setup panel shows only the header name. |
 | `AZURE_OPENAI_AUTH_HEADER` | `api-key` (default) or `Ocp-Apim-Subscription-Key` for API Management front doors. The key is sent in that header only. |
-| `AZURE_OPENAI_DEPLOYMENT`, `AZURE_OPENAI_API_VERSION` | The chat deployment (`gpt-4o`) and API version (`2024-06-01`, D-40). D-40 assumed model 2024-05-13; on 24 Oct 2026 the deployment answered as `gpt-4o-2024-08-06` (its `x-ms-served-model` header). |
-| `AWS_REGION`, `BEDROCK_MODEL_ID` | Bedrock through the Converse API (D-35). Credentials come from the IAM role the app runs under (EKS Pod Identity or IRSA, an EC2 instance profile); with `AI_PROVIDER=bedrock` the app refuses to start if `AWS_ACCESS_KEY_ID` or `AWS_SECRET_ACCESS_KEY` is set. |
+| `AZURE_OPENAI_DEPLOYMENT`, `AZURE_OPENAI_API_VERSION` | The main chat deployment (`gpt-5.4`, serving `gpt-5.4-2026-03-05`) and the API version (`2025-04-01-preview`), D-44. The model that answers each call is recorded (`ai_calls.model`), because a deployment can serve another version than expected: D-40's `gpt-4o` served `gpt-4o-2024-08-06`, not 2024-05-13. |
+| `AZURE_OPENAI_DEPLOYMENT_SMALL`, `AI_SMALL_MODEL_FOR` | The small model's deployment (`gpt-5.4-mini`, serving `gpt-5.4-mini-2026-03-17`) and the capabilities that use it (default `classify`). Without a small deployment every call goes to the main one. Each model has its own circuit breaker. |
+| `AI_REASONING_EFFORT` | Reasoning effort per capability over each template's own (section 3), for tuning without a code change, e.g. `draft_message=low`. Every call records the effort it asked for. |
+| `AWS_REGION`, `BEDROCK_MODEL_ID`, `BEDROCK_MODEL_ID_SMALL` | Bedrock through the Converse API (D-35); the small model ID plays the small deployment's part. Credentials come from the IAM role the app runs under (EKS Pod Identity or IRSA, an EC2 instance profile); with `AI_PROVIDER=bedrock` the app refuses to start if `AWS_ACCESS_KEY_ID` or `AWS_SECRET_ACCESS_KEY` is set. |
 | `AI_TIMEOUT_MS`, `AI_MAX_CONCURRENCY` | 30 s per attempt; at most 4 calls at once per process (a big job can't starve the screens). |
-| `AI_PRICE_INPUT_PER_MTOK`, `AI_PRICE_OUTPUT_PER_MTOK` | USD per million tokens for the cost estimate kept with each call (defaults 5 and 15, gpt-4o 2024-05-13 list prices; 2024-08-06 lists at 2.50 and 10; set the agreed price). |
+| `AI_PRICE_INPUT_PER_MTOK`, `AI_PRICE_OUTPUT_PER_MTOK`, `AI_PRICE_SMALL_INPUT_PER_MTOK`, `AI_PRICE_SMALL_OUTPUT_PER_MTOK` | USD per million tokens for the cost estimate kept with each call: defaults 2.50 / 15 (gpt-5.4) and 0.75 / 4.50 (gpt-5.4-mini), list prices as published by third-party price lists in Oct 2026. Set the Client's agreed Azure prices. Reasoning tokens are billed as output and counted in the estimate. |
 
-API version 2024-06-01 has no `json_schema` structured outputs (they need a later API version as well as gpt-4o 2024-08-06), so JSON calls use JSON mode and the gateway validates every reply with zod.
+**API version (D-44).** Microsoft's newest API is the v1 API (`/openai/v1/…`, no `api-version`, since August 2025), but the pilot's API Management gateway doesn't expose it (404), and dated versions after `2025-04-01-preview` (the last one Microsoft published) return 404 too. So the app uses `2025-04-01-preview` on the deployment path. With it, gpt-5.4 and gpt-5.4-mini take:
 
-**Hosting and training.** The Azure OpenAI resource (or the Bedrock region) is the Client's or the delivery team's choice; record its region here once it is known (the API Management gateway used on 24 Oct 2026 doesn't report it). That gateway allowed 4,500 requests and 450,000 tokens a minute, and sends no request-ID header, so `providerRequestId` stays empty in `ai_calls` behind it. Microsoft's data-privacy terms for Azure OpenAI, and AWS's for Bedrock, say prompts and completions are not used to train the models; confirm against the current terms and the resource's abuse-monitoring settings before the pilot.
+- `json_schema` structured outputs in strict mode: every JSON call sends its reply's schema, made from the capability's zod schema (`lib/ai/schema.ts`), so the model can't answer in another shape. Constraints strict mode doesn't take (lengths, counts, ranges) stay with zod, which still checks every reply; a schema strict mode can't express falls back to JSON mode.
+- `reasoning_effort` (`none` … `xhigh`) and `max_completion_tokens`, with room added for the reasoning (it counts against the same limit). They refuse `max_tokens`, and refuse `temperature` unless the effort is `none`, so the app sends a temperature only then.
+
+**Hosting and training.** The Azure OpenAI resource (or the Bedrock region) is the Client's or the delivery team's choice; record its region here once it is known (the API Management gateway used on 24 Oct 2026 doesn't report it). That gateway balances calls over three backends, allowed 4,500 requests and 450,000 tokens a minute for gpt-4o, and sends no request-ID header, so `providerRequestId` stays empty in `ai_calls` behind it. It sometimes answers 400 "API operation not supported for token authentication … not supported for CheckAccess" from one of its backends (on 24 Oct 2026: about one call in five during a burst, none in 120 calls at other times); the same call succeeds when repeated, so the app retries it like a server error. Worth raising with whoever runs the gateway (it looks like an access check failing on one backend). Microsoft's data-privacy terms for Azure OpenAI, and AWS's for Bedrock, say prompts and completions are not used to train the models; confirm against the current terms and the resource's abuse-monitoring settings before the pilot.
 
 ## 2. What the gateway does on every call
 
 1. The capability's switch and a configured provider, or nothing is sent and nothing is recorded.
 2. A circuit breaker: after 5 failed calls in a row the rules answer for 60 s, then one trial call decides.
 3. The per-process concurrency limit; a caller that can't get a slot before its deadline gets the rules ("busy").
-4. A timeout per attempt, and up to 3 retries on 429 and 5xx with full-jitter backoff that honours `retry-after` (a wait longer than 20 s is not taken), all inside the caller's overall deadline. 400s and refused keys are not retried.
-5. A content-filter result (on the prompt or the reply) is a known outcome: the rules answer, and only the category names are logged.
-6. JSON is parsed and validated, then the capability's own checks run. One repair call quotes what was wrong; if that fails too, the rules answer and the reason is recorded.
-7. One row in `ai_calls` and one log line (`event: ai.call`) per call: capability, template ID and version, provider and deployment, latency, tokens, attempts, outcome (`ok`, `fallback`, `filtered`, `error`), fallback reason, filter categories, cost estimate, our request ID and the provider's. No prompt, no reply (D-6).
+4. A timeout per attempt, and up to 3 retries on 429 and 5xx (and the gateway's CheckAccess 400, section 1) with full-jitter backoff that honours `retry-after` (a wait longer than 20 s is not taken), all inside the caller's overall deadline. Other 400s and refused keys are not retried.
+5. A content-filter result (on the prompt or the reply) or a model's refusal is a known outcome: the rules answer, and only the category names are logged (`refusal` for a refusal).
+6. JSON calls carry the reply's strict schema (section 1). Every reply is parsed and validated, then the capability's own checks run. One repair call quotes what was wrong (a reply cut off at the token limit also gets twice the room: under a strict schema the provider reports it as a 400); if that fails too, the rules answer and the reason is recorded.
+7. One row in `ai_calls` and one log line (`event: ai.call`) per call: capability, template ID and version, provider and deployment, the model that answered, the reasoning effort, latency, tokens, attempts, outcome (`ok`, `fallback`, `filtered`, `error`), fallback reason, filter categories, cost estimate, our request ID and the provider's. No prompt, no reply (D-6).
 
 ## 3. The capabilities
 
-Every prompt is in the code, with its template ID and version; a new wording is a new version, recorded on every call.
+Every prompt is in the code, with its template ID and version; a new wording is a new version, recorded on every call. Each template also sets its model and reasoning effort (D-44), chosen from the live runs in section 4:
+
+| Capability | Model (default) | Reasoning effort |
+|---|---|---|
+| Industry classification | gpt-5.4-mini | `low` |
+| Why-now line | gpt-5.4 | `none` |
+| First messages | gpt-5.4 | `none` |
+| Content studio writing | gpt-5.4 | `none` |
+| Copilot free text | gpt-5.4 | `low` |
+| Health check | each model in turn | `none` |
 
 | Capability | Switch | Template | Where | What the model does | What it is sent | Checks, then fallback |
 |---|---|---|---|---|---|---|
 | Industry classification (spec 3.4) | `AI_FEATURE_CLASSIFY` | `classify.industry` v1 (`lib/ai/classify.ts`) | The lead job, for accounts the mapping table doesn't match | Picks one of Refining, Petrochemicals, Gas processing, Other, Out of ICP, with a confidence | The industry and site-process texts only, 25 per call; no company or person | Every item answered once, from the list. The table and the exclusions always decide first; a person's choice always wins; below high confidence the account stays in "needs review". Answers are kept per unit and text (`ai_verticals`) so rebuilds agree. Fallback: "Other, for review". |
 | Why-now line (spec 4.14) | `AI_FEATURE_WHY_NOW` | `whynow.line` v1 (`lib/ai/why-now.ts`) | The scoring job, for tier A and B prospects with a live signal | One sentence on why to contact them now | Job title, persona, the three strongest signal rows (row, type, date, detail, source); 10 prospects per call | The line must cite rows it was given, and every name, number, date and quote in it must be in those rows; no exclamation marks. One repair, then each line stands or falls alone. Fallback: the rules' line (always kept underneath). |
 | First messages (spec 5.12–5.14) | `AI_FEATURE_DRAFTING` | `draft.message` v2 (`lib/ai/draft.ts`) | The micro-segment build (a job when this is on) | Subject, opening, bridge and ask, and the proof by claim ID | The action, job title, persona, vertical, existing customer or not, the evidence signal, the brief, the approved unexpired claims for the case | The claim goes in word for word with its citation; greeting and sign-off come from the brand voice; `checkDraft` (banned words, competitors, tone, pricing, length, unsupported claims) and a grounding check. A sensitive term fails unless the rules' draft is sensitive too. One regeneration, then the rules' draft, with the reason in the decision log. Never for a task (no proof, D-10) or someone who can't be contacted. |
-| Content studio writing (D-36) | `AI_FEATURE_CONTENT_STUDIO` | `content.piece` v1, `content.rewrite` v1 (`lib/ai/studio.ts`) | New pieces; chat requests the rules don't understand | Words each part of the layout; rewrites the parts asked about | The brief (topic, audience, type, length, tone, framework) and the text being changed | The layout, headings and proof are the writer's (approved claims word for word); `checkContent` and a numbers check (no statistic the brief doesn't give). A refusal (an unbacked claim) stays a refusal. One repair, then the rules' writer. |
+| Content studio writing (D-36) | `AI_FEATURE_CONTENT_STUDIO` | `content.piece` v1, `content.rewrite` v2 (`lib/ai/studio.ts`; v2 names every open part, null where it stays as it is, so structured outputs can enforce the reply) | New pieces; chat requests the rules don't understand | Words each part of the layout; rewrites the parts asked about | The brief (topic, audience, type, length, tone, framework) and the text being changed | The layout, headings and proof are the writer's (approved claims word for word); `checkContent` and a numbers check (no statistic the brief doesn't give). A refusal (an unbacked claim) stays a refusal. One repair, then the rules' writer. |
 | Copilot free text (G-013) | `AI_FEATURE_COPILOT` | `copilot.answer` v1 (`lib/ai/copilot.ts`) | Every working screen, for questions the rule answers don't cover | Answers in a few sentences from the screen's data | The screen's data as rows within row budgets (queue 60, approvals 40, recommendations 80, accounts 40, contacts 40, prospects 40), saying how many of how many were shown; people as tokens (P1, R1), also in the question and the last 8 turns; no emails or LinkedIn URLs | The answer must not claim to have changed, sent or approved anything, hold an email address or name someone not shown. One repair, then "I can't answer that from the data on this screen yet", with the reason. |
 
-The health check (`POST /api/admin/ai/healthcheck`, Admin) makes one tiny call and reports ok, provider, deployment and latency.
+The health check (`POST /api/admin/ai/healthcheck`, Admin) makes one tiny call to each model and reports ok, provider, deployment and latency for each.
 
 ### What people see
 
@@ -75,7 +89,42 @@ A request to approve becomes an **Autopilot** plan the person confirms: it rates
 
 **Every capability stays switched off in production until its results are agreed with the Client (section 5, step 3).**
 
-#### Live runs, 24 Oct 2026
+#### Live runs with gpt-5.4 and gpt-5.4-mini, 24 Oct 2026 (D-44)
+
+Azure OpenAI through the same API Management gateway: deployments `gpt-5.4` (served `gpt-5.4-2026-03-05`) and `gpt-5.4-mini` (served `gpt-5.4-mini-2026-03-17`), API version `2025-04-01-preview`, structured outputs, `AI_MAX_CONCURRENCY` 4, `AI_TIMEOUT_MS` 30000. Templates `classify.industry` v1, `whynow.line` v1, `draft.message` v2. The sample in `test-data/`, as of 2026-09-30; the first 40 first messages that could be written with AI. Runs A to C tried the models and efforts; run D is the configuration the app now uses by default.
+
+Smoke test (`npm run test:ai-live`): 4 of 4 passed (both models' health checks, classification, why-now, Copilot).
+
+| Run | Classification | Why-now | First messages |
+|---|---|---|---|
+| A | mini, `low` | gpt-5.4, `low` | gpt-5.4, `low` |
+| B | mini, `low` | gpt-5.4, `none` | gpt-5.4, `none` |
+| C | mini, `none` | mini, `none` | mini, `none` |
+| **D (default)** | mini, `low` | gpt-5.4, `none` | gpt-5.4, `none` |
+
+| Measure | A | B | C | D | Target |
+|---|---|---|---|---|---|
+| In-ICP accounts with the right core vertical | 642 of 643 (99.8%) | 642 of 643 | 642 of 643 | 642 of 643 | ≥ 95% |
+| Out-of-ICP accounts classified core | 0 | 0 | 0 | 0 | 0 |
+| AI-classified accounts matching the key (Other for influencers) | 647 of 698 | 658 of 698 | 630 of 698 | 636 of 698 | report |
+| Accounts needing review, before → after | 698 → 25 | 698 → 22 | 698 → 24 | 698 → 21 | report |
+| Why-now lines worded (tier A and B) | 144 of 144 | 144 of 144 | 144 of 144 | 144 of 144 | report; every line shown is grounded |
+| First messages written / passing / sensitive like the rules' draft | 40 / 32 / 8 | 40 / 32 / 8 | 40 / 32 / 8 | 40 / 32 / 8 | every AI draft passes, or carries only the rules' own sensitive flag |
+| Why-now call latency, median / max | 12.6 / 22.3 s | 7.2 / 14.0 s | 5.8 / 10.5 s | 7.1 / 14.9 s | report |
+| First-message latency, median / max | 15.3 / 29.7 s | 9.0 / 17.4 s | 7.5 / 15.1 s | 8.9 / 16.8 s | report |
+| Tokens in / out (all calls) | 45,849 / 19,572 | 44,402 / 11,988 | 43,717 / 10,623 | 44,426 / 11,973 | report |
+| Cost estimate (USD, list prices) | 0.37 | 0.25 | 0.08 | 0.25 | report |
+| Wall time (4 calls at a time) | 60 s | 40 s | 35 s | 40 s | report |
+
+Latencies include the wait for one of the 4 slots. What the runs showed:
+
+- **Every configuration met every target**, with no fallback at all: no grounding failure, no check failure, no timeout (gpt-4o had up to 3 grounding failures in 144 why-now lines, a timed-out batch, and, before `draft.message` v2, 11 failed drafts).
+- **Reasoning effort `low` bought nothing measurable for why-now and drafts** and made them slower: the slowest draft at `low` took 29.7 s against a 30 s timeout. They run at `none`. Classification stays at `low`: its matches with the key were a little higher (647 and 658 of 698 against 630), at the same speed.
+- **gpt-5.4-mini passed every check for why-now and drafts too** (run C), faster and at a third of the cost. The checks can't judge how good the writing is, so the defaults keep the writing people read (why-now, first messages, studio, Copilot) on gpt-5.4, the main model (D-44); moving any of them to the small model is one setting (`AI_SMALL_MODEL_FOR`), best decided by the reviewers after reading both models' drafts.
+- **Content studio** (a scripted check the same day, gpt-5.4): 6 pieces (blog and whitepaper, each length) and 4 rewrites at `none` and again at `low`, all passing every check (one piece in each set needed its repair). `none` took 2 to 7.5 s a call, `low` 3.5 to 15 s. Rewrites now answer every open part (`content.rewrite` v2).
+- **The answers that differ from the key** are again all between Other and Out of ICP (neither is core) and change from run to run.
+
+#### Live runs with gpt-4o, 24 Oct 2026 (before D-44)
 
 Azure OpenAI through an API Management gateway (`.env.local`; the URL is not kept in the repository): deployment `gpt-4o`, served model `gpt-4o-2024-08-06`, API version `2024-06-01`, `AI_MAX_CONCURRENCY` 4, `AI_TIMEOUT_MS` 30000. Templates `classify.industry` v1 and `whynow.line` v1 in every run; `draft.message` v1 in run 1, v2 in runs 2 and 3. The sample in `test-data/`, as of 2026-09-30; the first 40 first messages that could be written with AI.
 
@@ -107,7 +156,7 @@ On the sample, with the rules only: 698 of 1,401 accounts need review (no table 
 
 ## 5. Switching a capability on
 
-1. Configure the provider (section 1) and run the health check on Setup › AI service.
+1. Configure the provider (section 1), including the small model and `AI_SMALL_MODEL_FOR` if one is used, and run the health check on Setup › AI service (it calls each model).
 2. Run the live evaluation and the smoke test; record the results in section 4 with the date, the deployment and the template versions.
 3. Agree the targets with the Client (classification: ≥ 95% in-ICP correct and no out-of-ICP core; why-now and drafts: the fallback share the reviewers accept).
 4. Set its `AI_FEATURE_*` switch to 1 in the deployment's configuration and restart. Watch Setup › AI service for fallback reasons and cost in the first week; G2 measures how often people accept AI drafts.

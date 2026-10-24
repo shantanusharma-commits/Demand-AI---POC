@@ -16,7 +16,7 @@ import * as R from '../engine/review.ts';
 import type { Grid } from '../../types/demandai';
 import { classifyIndustries } from './classify.ts';
 import { eligible, writeDraft } from './draft.ts';
-import type { AiGateway, CallContext } from './gateway.ts';
+import type { AiCallRecord, AiGateway, CallContext } from './gateway.ts';
 import { wordWhyNow } from './why-now.ts';
 
 export const TARGETS = { inIcpCorrect: 95, outOfIcpCore: 0 };
@@ -86,6 +86,21 @@ export async function evaluate(gw: AiGateway, ctx: CallContext, data: EvalInput,
     whyNow: { asked: ab.length, worded: wn.lines.size, fallbacks: wn.fallbacks as Record<string, number> },
     drafts,
   };
+}
+
+/** The calls of a run per capability (D-44): which model answered at what effort, how fast, and what it used. */
+export function callSummary(records: AiCallRecord[]): string {
+  const caps = [...new Set(records.map(r => r.capability))];
+  const median = (xs: number[]) => { const v = xs.slice().sort((a, b) => a - b); return v.length ? v[Math.floor((v.length - 1) / 2)] : 0; };
+  const rows = caps.map(cap => {
+    const rs = records.filter(r => r.capability === cap), lat = rs.map(r => r.latencyMs);
+    const models = [...new Set(rs.map(r => r.model ?? `${r.deployment} (no answer)`))].join(', ');
+    const efforts = [...new Set(rs.map(r => r.reasoningEffort ?? 'not sent'))].join(', ');
+    const sum = (k: 'promptTokens' | 'completionTokens') => rs.reduce((t, r) => t + r[k], 0);
+    const cost = rs.reduce((t, r) => t + (r.estCostUsd ?? 0), 0);
+    return `| ${cap} | ${models} | ${efforts} | ${rs.length} (${rs.filter(r => r.outcome === 'ok').length} ok) | ${(median(lat) / 1000).toFixed(1)} s / ${(Math.max(0, ...lat) / 1000).toFixed(1)} s | ${sum('promptTokens').toLocaleString('en-US')} / ${sum('completionTokens').toLocaleString('en-US')} | ${cost.toFixed(3)} |`;
+  });
+  return ['| Capability | Model that answered | Reasoning effort | Calls | Latency median / max | Tokens in / out | Cost (USD) |', '|---|---|---|---|---|---|---|', ...rows].join('\n');
 }
 
 /** The result as the Markdown table docs/AI.md keeps. */

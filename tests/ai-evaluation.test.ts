@@ -4,8 +4,8 @@
 // --conditions=react-server.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { AiGateway } from '../lib/ai/gateway.ts';
-import { evaluate, evaluationMarkdown, expectedVertical } from '../lib/ai/evaluation.ts';
+import { AiGateway, type AiCallRecord } from '../lib/ai/gateway.ts';
+import { callSummary, evaluate, evaluationMarkdown, expectedVertical } from '../lib/ai/evaluation.ts';
 import * as E from '../lib/demandai-engine.ts';
 import { AS_OF, loadDataset } from './helpers/answer-key.ts';
 import { FakeModel, type StepFn } from './helpers/fake-model.ts';
@@ -58,4 +58,15 @@ test('a draft whose only flag is the sensitive term the rules\' draft also has i
   assert.ok(r.drafts.sensitive > 0, JSON.stringify(r.drafts));
   assert.equal(r.drafts.passing + r.drafts.sensitive, r.drafts.written, JSON.stringify(r.drafts));
   assert.match(evaluationMarkdown(r, 'fake'), new RegExp(`\\| ${r.drafts.written} of ${r.drafts.asked} / ${r.drafts.passing} / ${r.drafts.sensitive} `));
+});
+
+test('the call summary shows, per capability, the model that answered, the effort, latency, tokens and cost', () => {
+  const rec = (capability: AiCallRecord['capability'], model: string | null, latencyMs: number, outcome: AiCallRecord['outcome'] = 'ok'): AiCallRecord => ({
+    id: 'x', capability, templateId: 't', templateVersion: 1, provider: 'azure-openai', deployment: model ? model.replace(/-2026.*/, '') : 'gpt-5.4', model,
+    reasoningEffort: 'low', latencyMs, promptTokens: 1000, completionTokens: 200, attempts: 1, outcome, fallbackReason: outcome === 'ok' ? null : 'timeout',
+    filterCategories: [], estCostUsd: 0.005, requestId: null, providerRequestId: null, businessUnitId: 'b', userId: 'u' });
+  const md = callSummary([rec('classify', 'gpt-5.4-mini-2026-03-17', 900), rec('classify', 'gpt-5.4-mini-2026-03-17', 1500), rec('classify', 'gpt-5.4-mini-2026-03-17', 3000),
+    rec('why_now', null, 30_000, 'error')]);
+  assert.match(md, /\| classify \| gpt-5\.4-mini-2026-03-17 \| low \| 3 \(3 ok\) \| 1\.5 s \/ 3\.0 s \| 3,000 \/ 600 \| 0\.015 \|/);
+  assert.match(md, /\| why_now \| gpt-5\.4 \(no answer\) \| low \| 1 \(0 ok\) \| 30\.0 s \/ 30\.0 s \|/);
 });

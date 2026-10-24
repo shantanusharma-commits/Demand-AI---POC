@@ -3,27 +3,31 @@
 // is skipped. CI never sets it. It sends only fictional text, and nothing is stored. Run with --conditions=react-server.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { AiGateway, createModelClient } from '../lib/ai/gateway.ts';
+import { AiGateway } from '../lib/ai/gateway.ts';
 import { classifyIndustries } from '../lib/ai/classify.ts';
 import { wordWhyNow } from '../lib/ai/why-now.ts';
 import { Aliases, answerCopilot } from '../lib/ai/copilot.ts';
 import { CAPABILITIES } from '../lib/ai/types.ts';
 import { parseEnv } from '../lib/server/env.ts';
-import { providerConfig } from '../lib/server/ai.ts';
+import { gatewayOptions } from '../lib/server/ai.ts';
 
 const parsed = parseEnv(process.env);
 const env = parsed.ok ? parsed.env : null;
-const client = env?.AI_LIVE_SMOKE ? createModelClient(providerConfig(env)) : null;
-const skip = !client ? 'set AI_LIVE_SMOKE=1 and an AI provider in .env.local to run the live smoke test' : false;
-const gw = client ? new AiGateway({ client, flags: Object.fromEntries(CAPABILITIES.map(c => [c, true])), timeoutMs: env!.AI_TIMEOUT_MS, maxConcurrency: 2 }) : null;
+const opts = env?.AI_LIVE_SMOKE ? gatewayOptions(env) : null;
+const skip = !opts?.client ? 'set AI_LIVE_SMOKE=1 and an AI provider in .env.local to run the live smoke test' : false;
+// Built as the app builds it (D-44: the small model for its capabilities), every capability on.
+const gw = opts?.client ? new AiGateway({ ...opts, flags: Object.fromEntries(CAPABILITIES.map(c => [c, true])), maxConcurrency: 2 }) : null;
 const CTX = { businessUnitId: '00000000-0000-4000-8000-000000000000', userId: '00000000-0000-0000-0000-000000000001', deadlineMs: 60_000 };
 
-test('the model answers a one-word check', { skip }, async () => {
-  const r = await gw!.text('healthcheck', { id: 'healthcheck', version: 1 }, { system: 'Reply with the single word OK.', messages: [{ role: 'user', content: 'Reply with OK.' }], maxTokens: 5 }, CTX);
-  assert.equal(r.ok, true, JSON.stringify(r));
+test('each configured model answers a one-word check', { skip }, async () => {
+  for (const route of gw!.small ? (['main', 'small'] as const) : (['main'] as const)) {
+    const r = await gw!.text('healthcheck', { id: 'healthcheck', version: 1 }, { system: 'Reply with the single word OK.', messages: [{ role: 'user', content: 'Reply with OK.' }],
+      maxTokens: 16, reasoning: 'none', route }, CTX);
+    assert.equal(r.ok, true, `${route}: ${JSON.stringify(r)}`);
+  }
 });
 
-test('JSON mode, validation and the checks work end to end: three industry texts classified', { skip }, async () => {
+test('structured outputs, validation and the checks work end to end: three industry texts classified', { skip }, async () => {
   const r = await classifyIndustries(gw!, CTX, [{ key: 'a', industry: 'Crude oil refinery', siteProcess: 'Atmospheric distillation' },
     { key: 'b', industry: 'EPC contractor', siteProcess: '' }, { key: 'c', industry: 'Pulp and paper', siteProcess: 'Tissue' }]);
   assert.equal(r.answers.size, 3, JSON.stringify(r.fallbacks));
