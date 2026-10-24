@@ -23,7 +23,15 @@ jobs:
       # Actions are pinned by commit SHA; the comment names the release.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 0 # the dependency-age check compares with the base branch's lockfile
+          fetch-depth: 0 # the dependency-age check compares with the base branch's lockfile; gitleaks reads every commit
+
+      # gitleaks' own image, pinned by digest (v8.30.1). Every commit is scanned; values are redacted in the output.
+      # Known false positives are allowlisted, with reasons, in .gitleaks.toml.
+      - name: Secret scan of the whole history (gitleaks)
+        run: >-
+          docker run --rm -u "$(id -u):$(id -g)" -v "$PWD":/repo:ro
+          zricethezav/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f
+          git /repo --config /repo/.gitleaks.toml --redact --no-banner --exit-code 1
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:

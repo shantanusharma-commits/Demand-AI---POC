@@ -1,0 +1,12 @@
+# Secret scanning (gitleaks, run in CI over the whole history; docs/SECURITY.md). The default rules, plus the false
+# positives this repository is known to have. Add to the allowlist only with a reason, never for a real secret: a
+# leaked secret is rotated first, then removed.
+title = "DemandAI"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Browser-storage key names in the legacy prototype (at the repository root in early commits): constants named *_KEY whose value is a storage key such as 'demandai_nba_runs_v1', not a secret"
+regexTarget = "match"
+regexes = ['''^[A-Z_]+_KEY = 'demandai_[a-z_]+_v\d+'$''']
