@@ -6,14 +6,15 @@
   --brand:#7D52A2;--brand-dk:#5E3A80;--brand-lt:#F0EBF8;--brand-mid:#C9B3E8;
   --sec:#0094DA;--sec-lt:#E6F4FC;--sec-dk:#005E8E;
   --ter:#FF8820;--ter-lt:#FFF0E0;--ter-dk:#B85800;
-  --pos:#2E7D5A;--pos-lt:#EAF5F0;
-  --warn:#C4751A;--warn-lt:#FDF6E8;
+  --pos:#2A7553;--pos-lt:#EAF5F0;
+  --warn:#9A5B12;--warn-lt:#FDF6E8;
   --neg:#B23F3F;--neg-lt:#FBECEC;
   --rail:#130D1C;--rb:rgba(255,255,255,.07);
-  --r1:#fff;--r2:rgba(255,255,255,.76);--r3:rgba(255,255,255,.43);--r4:rgba(255,255,255,.21);
+  --r1:#fff;--r2:rgba(255,255,255,.76);--r3:rgba(255,255,255,.55);--r4:rgba(255,255,255,.5);
   --rhov:rgba(255,255,255,.05);--ract:rgba(125,82,162,.22);
   --bg:#F5F6F9;--surf:#fff;--border:#E5E9EE;--bdk:#D1D7DE;
-  --i1:#141A21;--i2:#4A5664;--i3:#9DA8B5;--i4:#C9D1DA;
+  /* Text colours meet WCAG 2.1 AA (4.5:1) on the surfaces they are used on (G-035); --i4 is for lines and marks, not text. */
+  --i1:#141A21;--i2:#4A5664;--i3:#5B6774;--i4:#C9D1DA;
   --s50:#F4F6F8;--s75:#ECEFF3;--s100:#E1E6EC;--s200:#C9D1DA;--s300:#9DA8B5;
   --fd:var(--font-display),system-ui,sans-serif;
   --fb:var(--font-body),-apple-system,sans-serif;
@@ -93,8 +94,10 @@ input,textarea,select{font:inherit;}
 .ftabs{height:var(--tabs-h);padding:0 20px;display:flex;align-items:stretch;gap:0;border-bottom:1px solid var(--border);background:var(--surf);flex-shrink:0;}
 .ftab{display:flex;align-items:center;gap:6px;padding:0 16px;font-size:13px;font-weight:500;color:var(--i3);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;transition:color var(--fast) var(--ease);}
 .ftab:hover{color:var(--i2);}
+button.ftab{background:none;border-top:0;border-left:0;border-right:0;font-family:inherit;}
+.ftab:focus-visible{outline:2px solid var(--brand);outline-offset:-3px;border-radius:4px;}
 .ftab.active{color:var(--i1);border-bottom-color:var(--brand);}
-.ftab-cnt{font-family:var(--fm);font-size:10.5px;color:var(--i4);}
+.ftab-cnt{font-family:var(--fm);font-size:10.5px;color:var(--i3);}
 .ftab.active .ftab-cnt{color:var(--brand);}
 
 /* Canvas */
@@ -308,7 +311,7 @@ input,textarea,select{font:inherit;}
 .msg-bub em{font-style:normal;color:var(--i2);background:var(--s100);padding:1px 5px;border-radius:3px;font-size:12px;}
 .msg-u{display:flex;justify-content:flex-end;}
 .msg-ub{background:var(--brand);color:#fff;border-radius:var(--rmd);padding:10px 12px;font-size:12.5px;line-height:1.6;max-width:86%;}
-.msg-time{font-size:9.5px;color:var(--i4);margin-top:3px;padding:0 2px;}
+.msg-time{font-size:9.5px;color:var(--i3);margin-top:3px;padding:0 2px;}
 
 /* Chat action chips */
 .chat-acts{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;}
@@ -346,7 +349,7 @@ input,textarea,select{font:inherit;}
 .send-btn{width:32px;height:32px;border-radius:9px;background:var(--brand);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:background var(--fast),transform var(--fast);}
 .send-btn:hover{background:var(--brand-dk);transform:scale(1.04);}
 .send-btn.off{background:var(--s200);cursor:default;transform:none;}
-.composer-hint{font-size:10px;color:var(--i4);margin-top:5px;text-align:center;}
+.composer-hint{font-size:10px;color:var(--i3);margin-top:5px;text-align:center;}
 
 /* Dropdown */
 .dd{position:relative;display:inline-block;}
@@ -378,7 +381,7 @@ input,textarea,select{font:inherit;}
 .dt .dt-main{color:var(--i1);font-weight:600;overflow:hidden;text-overflow:ellipsis;}
 .dt .val{color:var(--i1);overflow:hidden;text-overflow:ellipsis;}
 .dt .sub{display:block;font-size:11px;color:var(--i3);margin-top:2px;overflow:hidden;text-overflow:ellipsis;}
-.dt .muted{color:var(--i4);}
+.dt .muted{color:var(--i3);}
 .dt .person{display:flex;align-items:center;gap:10px;min-width:0;}
 .dt .person > div:last-child{min-width:0;}
 .clamp2{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;white-space:normal;}
@@ -386,7 +389,7 @@ input,textarea,select{font:inherit;}
 .tag{display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 10px;border-radius:999px;font-family:var(--fb);font-size:11px;font-weight:600;letter-spacing:0;text-transform:none;white-space:nowrap;background:var(--s75);color:var(--i2);vertical-align:middle;}
 .tag::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0;}
 .tag-green{background:#E8F5EE;color:#24704F;}
-.tag-amber{background:#FDF2E1;color:#A8620F;}
+.tag-amber{background:#FDF2E1;color:#94550B;}
 .tag-red{background:#FBEAEA;color:#A83A3A;}
 .tag-blue{background:#E4F2FB;color:#00659A;}
 .tag-violet{background:#F0EAF8;color:#6A4290;}
@@ -422,7 +425,7 @@ input,textarea,select{font:inherit;}
 /* ─── Prospecting: data quality card and check panes (legacy 10-prospecting.html) ─── */
 .stat-link{position:relative;cursor:pointer;display:block;text-decoration:none;transition:background var(--fast) var(--ease);}
 .stat-link:hover{background:var(--brand-lt);}
-.stat-link::after{content:'›';position:absolute;top:10px;right:14px;font-size:17px;color:var(--i4);}
+.stat-link::after{content:'›';position:absolute;top:10px;right:14px;font-size:17px;color:var(--i3);}
 .stat-link:hover .stat-lbl{color:var(--brand);}
 .dq-link{text-decoration:none;color:var(--i1);display:block;}
 .dqp-nav{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px;}
@@ -469,8 +472,8 @@ input,textarea,select{font:inherit;}
 .ti-sc{flex:.6;background:var(--brand-lt);} .ti-op{align-self:center;color:var(--i3);font-weight:700;white-space:nowrap;}
 .ti-bar{display:flex;height:44px;border-radius:9px;overflow:hidden;margin-bottom:12px;}
 .ti-z{display:flex;flex-direction:column;justify-content:center;padding:0 10px;font-size:11px;color:#fff;min-width:0;}
-.ti-z b{font-size:14px;} .ti-z span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.9;}
-.ti-c{background:#8C6BB1;} .ti-b{background:#D9822B;} .ti-a{background:#2E7D5A;}
+.ti-z b{font-size:14px;} .ti-z span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ti-c{background:#7A57A0;} .ti-b{background:#A65F14;} .ti-a{background:#2A7553;}
 .ti-mv{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
 .ti-mv div{font-size:12px;color:var(--i2);line-height:1.5;padding:8px 10px;border:1px solid var(--s75);border-radius:9px;}
 .ti-mv b{display:block;color:var(--i1);font-size:12.5px;margin-bottom:2px;}
@@ -1037,7 +1040,7 @@ mark.k-brand{background:#E8DDF4;color:inherit;border-radius:3px;box-shadow:0 0 0
 .studio .canvas2-saved .stats{margin-bottom:18px;}
 .studio .stat-link{position:relative;cursor:pointer;display:block;text-decoration:none;color:inherit;transition:background var(--fast) var(--ease);}
 .studio .stat-link:hover, .studio .stat-link.on{background:var(--brand-lt);}
-.studio .stat-link::after{content:'›';position:absolute;top:10px;right:14px;font-size:17px;color:var(--i4);}
+.studio .stat-link::after{content:'›';position:absolute;top:10px;right:14px;font-size:17px;color:var(--i3);}
 .studio .stat-link:hover .stat-lbl, .studio .stat-link.on .stat-lbl{color:var(--brand);}
 .studio .seg-pill-a{display:inline-flex;align-items:center;font-size:11px;font-weight:600;padding:3px 10px;border-radius:999px;cursor:pointer;background:var(--brand);color:#fff;}
 .studio .sv-list{background:var(--surf);border:1px solid var(--border);border-radius:var(--rmd);overflow:hidden;}
@@ -1155,3 +1158,10 @@ mark.k-brand{background:#E8DDF4;color:inherit;border-radius:3px;box-shadow:0 0 0
 .copilot .cpp-send{width:32px;height:32px;border-radius:10px;border:none;background:var(--brand);color:#fff;cursor:pointer;flex-shrink:0;}
 .copilot .cpp-send.busy{background:var(--i1);}
 .copilot .cpp-foot{font-size:10.5px;color:var(--i3);margin-top:6px;text-align:center;}
+
+/* Upload fields (G-035): the file input is hidden from sight but not from the keyboard, so Tab reaches it and Enter or
+   Space opens the file chooser; the drop zone around it shows where focus is. */
+.file-input{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0;opacity:0;}
+label:has(> .file-input){position:relative;}
+label:has(> .file-input:focus-visible){outline:2px solid var(--brand);outline-offset:2px;}
+

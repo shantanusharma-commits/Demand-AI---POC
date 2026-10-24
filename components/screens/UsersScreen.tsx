@@ -223,13 +223,13 @@ export function UsersScreen() {
                 <div role="cell" style={sx('font-size:11.5px;color:var(--i2)')}>{u.role}</div>
                 <div role="cell" style={sx('font-size:11.5px;color:var(--i3)')}>{u.managerName ?? '—'}</div>
                 <div role="cell"><span className={`sc ${statusClass(statusOf(u))}`}>{statusOf(u).toUpperCase()}</span></div>
-                <div role="cell" style={sx('font-size:10.5px;color:var(--i4)')}>{when(u.lastLoginAt)}</div>
+                <div role="cell" style={sx('font-size:10.5px;color:var(--i3)')}>{when(u.lastLoginAt)}</div>
               </div>))}
           </div>
         </div>
       </main>
 
-      <div className={`detail-drawer${du ? ' open' : ''}`} id="detailDrawer" role="dialog" aria-label="User detail" aria-hidden={!du}>
+      <div className={`detail-drawer${du ? ' open' : ''}`} id="detailDrawer" role="dialog" aria-label="User detail" aria-hidden={!du} inert={!du}>
         <div className="drawer-hdr">
           <div><div className="drawer-title" id="detTitle">{du ? du.displayName : 'User detail'}</div><div className="drawer-sub" id="detSub">{du ? du.email : '—'}</div></div>
           <button type="button" className="drawer-close" aria-label="Close" onClick={closeDrawer} style={sx('border:none;background:none')}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg></button>
@@ -247,7 +247,7 @@ export function UsersScreen() {
             <div className="panel-hdr"><span className="panel-ttl">Owner addresses in lead files</span></div>
             <div className="panel-body">
               <div style={sx('font-size:11px;color:var(--i3);margin-bottom:8px;line-height:1.5')}>Accounts whose owner_email is one of these, or their sign-in email, are theirs.</div>
-              {du.aliases.length ? du.aliases.map(a => <div key={a} style={sx('font-size:11.5px;color:var(--i2);padding:3px 0;font-family:var(--fm)')}>{a}</div>) : <div style={sx('font-size:11.5px;color:var(--i4)')}>None besides their sign-in email.</div>}
+              {du.aliases.length ? du.aliases.map(a => <div key={a} style={sx('font-size:11.5px;color:var(--i2);padding:3px 0;font-family:var(--fm)')}>{a}</div>) : <div style={sx('font-size:11.5px;color:var(--i3)')}>None besides their sign-in email.</div>}
               {du.membershipStatus === 'active' ? <div style={sx('display:flex;gap:6px;margin-top:8px')}>
                 <input aria-label="Add an owner address" placeholder="owner@company.com" value={form.alias} onChange={e => setForm(f => ({ ...f, alias: e.target.value }))} style={sx(INPUT_STYLE + ';flex:1')} />
                 <button className="btn btn-sec btn-sm" disabled={busy || !form.alias.trim()} onClick={() => addAlias(du)}>Add</button>
@@ -258,8 +258,8 @@ export function UsersScreen() {
           <div className="panel" style={sx('margin-bottom:12px')}>
             <div className="panel-hdr"><span className="panel-ttl">Change history</span></div>
             <div className="panel-body">
-              {history === null ? <div style={sx('font-size:11.5px;color:var(--i4)')}>Loading…</div> : history.length === 0 ? <div style={sx('font-size:11.5px;color:var(--i4)')}>No changes recorded.</div>
-                : history.map((h, i) => <div key={i} style={sx('font-size:11.5px;color:var(--i2);padding:6px 0;border-bottom:1px solid var(--s75)')}><span style={sx('color:var(--i4);font-size:10.5px')}>{when(h.at)}</span>{` — ${historyText(h)} · by ${h.changedBy}`}{h.reason && h.field !== 'membership' ? <div style={sx('color:var(--i3);font-size:10.5px')}>{`Reason: ${h.reason}`}</div> : null}</div>)}
+              {history === null ? <div style={sx('font-size:11.5px;color:var(--i3)')}>Loading…</div> : history.length === 0 ? <div style={sx('font-size:11.5px;color:var(--i3)')}>No changes recorded.</div>
+                : history.map((h, i) => <div key={i} style={sx('font-size:11.5px;color:var(--i2);padding:6px 0;border-bottom:1px solid var(--s75)')}><span style={sx('color:var(--i3);font-size:10.5px')}>{when(h.at)}</span>{` — ${historyText(h)} · by ${h.changedBy}`}{h.reason && h.field !== 'membership' ? <div style={sx('color:var(--i3);font-size:10.5px')}>{`Reason: ${h.reason}`}</div> : null}</div>)}
             </div>
           </div>
           <div style={sx('display:flex;gap:8px;flex-wrap:wrap')}>

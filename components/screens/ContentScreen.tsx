@@ -16,6 +16,7 @@ import { ApiError, api, errorText, uploadFile, type WireDeep } from '@/lib/clien
 import { useCan, useSessionUser } from '@/components/SessionContext';
 import type { BrandState, ClaimUse, FromReview } from '@/lib/server/services/brand';
 import type { ItemSummary } from '@/lib/server/services/studio';
+import { Tab, Tabs } from '@/components/Tabs';
 
 type Brand = WireDeep<BrandState>;
 type Tab = 'guidelines' | 'framework' | 'voice' | 'negative' | 'claims' | 'content' | 'versions';
@@ -272,7 +273,7 @@ export function ContentScreen() {
           <a className="btn btn-sec btn-sm" href={`/api/brand/documents/${g.documentId}`} style={sx('text-decoration:none')}>Download</a>
           {canEdit ? <button className="btn btn-ghost btn-sm" onClick={() => { setSuggest(null); change(d => { d.guideline = null; }, 'Removed. Save to make it a new version'); }}>Remove</button> : null}</div> : null}
         {canEdit ? <label htmlFor="gFile" style={sx('display:block;border:1.5px dashed var(--bdk);border-radius:var(--rmd);padding:20px;cursor:pointer;background:var(--s50);text-align:center')}>
-          <input type="file" id="gFile" accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.md" style={sx('display:none')} onChange={e => { void onGuideline(e.currentTarget.files?.[0]); e.currentTarget.value = ''; }} />
+          <input type="file" id="gFile" accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.md" className="file-input" onChange={e => { void onGuideline(e.currentTarget.files?.[0]); e.currentTarget.value = ''; }} />
           <div style={sx('font-size:13px;font-weight:600;color:var(--i1)')}>{g ? 'Replace the guideline document' : 'Upload the brand guideline document'}</div>
           <div style={sx('font-size:11px;color:var(--i3);margin-top:3px')}>PDF, Word or PowerPoint up to 5 MB is kept as the reference. A .txt or .md file is also read for rules you can add in one click.</div></label> : null}
         {label('Key rules from the guidelines, in your words')}
@@ -501,7 +502,7 @@ export function ContentScreen() {
   return <>
     <main className="main" id="mainArea">
       <div className="topbar"><div className="topbar-l"><span className="tb-title">Content library</span><span className="tb-badge badge-neutral">{`Brand v${liveV}`}</span></div></div>
-      <div className="ftabs">{TABS.map(([k, l]) => <div key={k} className={`ftab ${tab === k ? 'active' : ''}`} onClick={() => go(k)}>{l}{changed.some(c => SECTION_OF[c.section] === k) ? <>{' '}<span className="chg-dot" title="Changed, not saved yet"></span></> : null}</div>)}</div>
+      <Tabs label="Content library sections">{TABS.map(([k, l]) => <Tab key={k} active={tab === k} onSelect={() => go(k)}>{l}{changed.some(c => SECTION_OF[c.section] === k) ? <>{' '}<span className="chg-dot" title="Changed, not saved yet"></span></> : null}</Tab>)}</Tabs>
       <div className="canvas cl-canvas">
         {saveBar}
         {!canEdit ? <div style={sx('font-size:12px;color:var(--i3);margin-bottom:14px')}>View only: the admin and the sales manager maintain the brand pack.</div> : null}

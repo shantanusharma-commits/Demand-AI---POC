@@ -22,6 +22,7 @@ import { AI_DRAFT, SegTag } from './NbaScreen';
 import { AiTag } from '@/components/AiTag';
 import { MessageBar } from '@/components/ContentPicker';
 import { CopilotButton } from '@/components/Copilot';
+import { Tab, Tabs } from '@/components/Tabs';
 
 type Row = WireDeep<QueueRow>;
 type Item = WireDeep<ItemDetail>;
@@ -412,7 +413,7 @@ export function ReviewScreen() {
   }
   function listScreen(): ReactNode {
     const queueRows = myQueue(), appr = approvals(), m = queue?.measure;
-    const ft = (id: View, label: string, n: number) => <div className={'ftab' + (view === id ? ' active' : '')} role="tab" aria-selected={view === id} onClick={() => { setView(id); setQ(''); setMenu(null); }}>{label} <span className="ftab-cnt">{n}</span></div>;
+    const ft = (id: View, label: string, n: number) => <Tab active={view === id} onSelect={() => { setView(id); setQ(''); setMenu(null); }}>{label} <span className="ftab-cnt">{n}</span></Tab>;
     const tile = (lbl: string, val: string, sub: string, onClick: () => void, tip: string, tone?: string) => <a className="stat stat-link" href="#" title={tip} onClick={e => { e.preventDefault(); onClick(); }}>
       <div className="stat-lbl">{lbl}</div><div className="stat-val" style={sx(tone ? `color:${tone}` : 'color:var(--i1)')}>{val}</div><div className="stat-sub">{sub}</div></a>;
     const total = queue?.total ?? 0;
@@ -428,7 +429,7 @@ export function ReviewScreen() {
           </div> : null}
         </div></div>
       </div>
-      <div className="ftabs">{mgr ? ft('approvals', 'Approvals', appr.length) : null}{ft('queue', mgr ? 'Queue' : 'My queue', queueRows.length)}{ft('log', 'Decision log', log?.rows.length ?? 0)}</div>
+      <Tabs label="For Review views">{mgr ? ft('approvals', 'Approvals', appr.length) : null}{ft('queue', mgr ? 'Queue' : 'My queue', queueRows.length)}{ft('log', 'Decision log', log?.rows.length ?? 0)}</Tabs>
       <div className="canvas">
         {loadError ? <div role="alert" style={sx('color:var(--neg);font-size:12.5px;margin-bottom:12px')}>{loadError}</div> : null}
         {!queue ? <div style={sx('font-size:12.5px;color:var(--i3)')}>Loading…</div> : total ? (view === 'log' ? <div className="tab-why"><b>Decision log</b>: who decided what, when and why.{mgr ? '' : ' You see the decisions you made.'}</div> : <div className="purpose">

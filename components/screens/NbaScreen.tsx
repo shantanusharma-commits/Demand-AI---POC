@@ -21,6 +21,7 @@ import { CopilotButton } from '@/components/Copilot';
 import type { BuildSource, BuildStep, NbaRunSummary, RecRowView } from '@/lib/server/services/nba';
 import type { getNbaRun } from '@/lib/server/services/nba';
 import type { ItemDetail } from '@/lib/server/services/recommendations';
+import { Tab, Tabs } from '@/components/Tabs';
 
 type Runs = { runs: WireDeep<NbaRunSummary>[]; sources: WireDeep<BuildSource>[]; meetings: { count: number; runId: string | null } };
 type Run = WireDeep<Awaited<ReturnType<typeof getNbaRun>>>;
@@ -178,11 +179,11 @@ export function NbaScreen() {
 
   /* ═══════════════ START ═══════════════ */
   function startScreen(): ReactNode {
-    const ft = (id: 'new' | 'saved', label: string, n?: number) => <div className={'ftab' + (tab === id ? ' active' : '')} onClick={() => setTab(id)} role="tab" aria-selected={tab === id}>{label}{n !== undefined ? <> <span className="ftab-cnt">{n}</span></> : null}</div>;
+    const ft = (id: 'new' | 'saved', label: string, n?: number) => <Tab active={tab === id} onSelect={() => setTab(id)}>{label}{n !== undefined ? <> <span className="ftab-cnt">{n}</span></> : null}</Tab>;
     const s = runs?.sources.find(x => srcKey(x) === src);
     return <>
       <div className="topbar"><div className="topbar-l"><span className="tb-title">Micro-segments &amp; NBA</span></div></div>
-      <div className="ftabs">{ft('new', 'New')}{ft('saved', 'Saved', runs?.runs.length ?? 0)}</div>
+      <Tabs label="Micro-segment builds">{ft('new', 'New')}{ft('saved', 'Saved', runs?.runs.length ?? 0)}</Tabs>
       <div className="canvas">
         {meetingBanner()}
         {loadError ? <div role="alert" style={sx('color:var(--neg);font-size:12.5px')}>{loadError}</div> : null}
@@ -256,7 +257,7 @@ export function NbaScreen() {
           <span style={sx('flex:1;font-size:12px;color:var(--i2)')}><b>{st.segments}</b> micro-segment{st.segments === 1 ? '' : 's'} · <b>{st.auto}</b> went ahead · <b>{(st.prospects ?? 0) - (st.auto ?? 0)}</b> to For Review
             {st.aiDrafts ? <span style={sx('display:block;margin-top:4px;color:var(--i3)')}>{aiShare('First messages', st.aiDrafts)}</span> : null}</span>
           <button className="btn btn-ghost btn-sm" onClick={() => { setChecks(null); setTab('new'); }}>Back</button>
-          <button className="btn btn-primary btn-sm" onClick={() => { const id = ck.built!.runId; setChecks(null); void openRun(id); }}>View the micro-segments →</button>
+          <button className="btn btn-primary btn-sm" autoFocus onClick={() => { const id = ck.built!.runId; setChecks(null); void openRun(id); }}>View the micro-segments →</button>
         </> : ck.phase === 'failed' ? <>
           <span role="alert" style={sx('flex:1;font-size:12px;color:var(--neg)')}>{ck.error}</span>
           <button className="btn btn-primary btn-sm" onClick={() => setChecks(null)}>Back</button>
@@ -281,8 +282,8 @@ export function NbaScreen() {
     const recs = r.recs, waiting = recs.filter(needsPerson).length, auto = recs.filter(x => x.passed).length;
     const exc = recs.filter(x => x.status === 'Waiting' || x.status === 'Awaiting approval').length;
     const pausedNames = Object.keys(r.paused);
-    const ft = (id: 'grid' | 'list', label: string, n: number) => <div className={'ftab' + (view === id ? ' active' : '')} role="tab" aria-selected={view === id}
-      onClick={() => { setView(id); if (id === 'grid') { setSegFilt(null); setVertFilt(null); } setQ(''); }}>{label} <span className="ftab-cnt">{n}</span></div>;
+    const ft = (id: 'grid' | 'list', label: string, n: number) => <Tab active={view === id}
+      onSelect={() => { setView(id); if (id === 'grid') { setSegFilt(null); setVertFilt(null); } setQ(''); }}>{label} <span className="ftab-cnt">{n}</span></Tab>;
     return <>
       <div className="topbar">
         <div className="topbar-l"><span className="tb-title">{r.name}</span><span className="tb-badge badge-neutral">{`Config v${r.configVersionNo ?? '—'} · Brand v${r.brandVersionNo} · as of ${r.asOf}`}</span></div>
@@ -290,7 +291,7 @@ export function NbaScreen() {
           onChanged={() => { void loadRun(r.id); if (drawer) void loadItem(drawer.id); }} /><button className="btn btn-sec btn-sm" onClick={() => { setScreen('start'); setRun(null); setDrawer(null); setTab('new'); void reloadRuns(); }}>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="15 18 9 12 15 6" /></svg>Group another list</button></div>
       </div>
-      <div className="ftabs">{ft('grid', 'Micro-segments', r.segments.length)}{ft('list', 'Recommendations', recs.length)}</div>
+      <Tabs label="Build views">{ft('grid', 'Micro-segments', r.segments.length)}{ft('list', 'Recommendations', recs.length)}</Tabs>
       <div className="canvas">
         <div style={sx(`display:flex;align-items:center;gap:12px;padding:12px 16px;background:${waiting ? 'var(--brand-lt)' : 'var(--pos-lt)'};border-radius:var(--rmd);margin-bottom:16px`)}>
           <span style={sx(`width:26px;height:26px;border-radius:50%;background:${waiting ? 'var(--brand)' : 'var(--pos)'};color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0`)}>{waiting ? '→' : '✓'}</span>
@@ -481,7 +482,7 @@ export function NbaScreen() {
   return <>
     <main className="main" id="mainArea">{screen === 'results' && run ? resultsScreen(run) : startScreen()}</main>
     {checks ? checksOverlay(checks) : null}
-    <div className={'detail-drawer' + (drawer ? ' open' : '')} id="detailDrawer" style={drawer ? { width: '520px' } : undefined} aria-hidden={!drawer}>
+    <div className={'detail-drawer' + (drawer ? ' open' : '')} id="detailDrawer" style={drawer ? { width: '520px' } : undefined} aria-hidden={!drawer} inert={!drawer}>
       <div className="drawer-hdr">
         <div><div className="drawer-title">{it ? it.contact.name : 'Recommendation'}</div><div className="drawer-sub">{it ? [it.contact.jobTitle, it.account.name].filter(Boolean).join(' · ') : '—'}</div></div>
         <div className="drawer-close" role="button" tabIndex={0} aria-label="Close" onClick={() => setDrawer(null)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setDrawer(null); }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg></div>

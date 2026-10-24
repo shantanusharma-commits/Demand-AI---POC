@@ -14,6 +14,7 @@ import { AiTag } from '@/components/AiTag';
 import { api, ApiError, errorText, type WireDeep } from '@/lib/client/api';
 import { showToast } from '@/lib/ui';
 import type { ItemSummary, ItemView } from '@/lib/server/services/studio';
+import { Tab, Tabs } from '@/components/Tabs';
 
 type Summary = WireDeep<ItemSummary>;
 type Item = WireDeep<ItemView>;
@@ -195,8 +196,8 @@ export function StudioScreen({ initialItem }: { initialItem?: string }) {
     const list = items ?? [];
     const top = <div className="topbar"><div className="topbar-l"><span className="tb-title">Content studio</span><span className="sub" style={sx('margin-left:10px')}>Blogs and whitepapers in the Client&apos;s brand voice</span></div>
       <div className="topbar-r">{tab === 'saved' ? <button className="btn btn-primary btn-sm" onClick={() => setTab('new')}>+ New blog or whitepaper</button> : null}</div></div>;
-    const ft = (id: 'new' | 'saved', label: string, n?: number) => <div className={'ftab' + (tab === id ? ' active' : '')} role="tab" aria-selected={tab === id} onClick={() => setTab(id)}>{label}{n !== undefined ? <> <span className="ftab-cnt">{n}</span></> : null}</div>;
-    if (tab === 'new') return <>{top}<div className="ftabs">{ft('new', 'Write')}{ft('saved', 'Saved content', list.length)}</div>
+    const ft = (id: 'new' | 'saved', label: string, n?: number) => <Tab active={tab === id} onSelect={() => setTab(id)}>{label}{n !== undefined ? <> <span className="ftab-cnt">{n}</span></> : null}</Tab>;
+    if (tab === 'new') return <>{top}<Tabs label="Content studio">{ft('new', 'Write')}{ft('saved', 'Saved content', list.length)}</Tabs>
       <div className="cs"><div className="home"><div className="home-in">
         <h1>What should we write?</h1>
         <p className="lead">Describe it in your own words. It&apos;s written in a canvas beside the chat, and you change it by talking to it.</p>
@@ -213,7 +214,7 @@ export function StudioScreen({ initialItem }: { initialItem?: string }) {
     const tile = (f: string, lbl: string, v: number, sub: string, tone: string) => <a key={f || 'all'} className={'stat stat-link' + (libF === f || (!libF && !f) ? ' on' : '')} href="#"
       onClick={e => { e.preventDefault(); setLibF(libF === f || !f ? null : f); }}><div className="stat-lbl">{lbl}</div><div className="stat-val" style={sx(`color:${tone}`)}>{v}</div><div className="stat-sub">{sub}</div></a>;
     const label: Record<string, string> = { ready: 'In Content library', draft: 'Drafts', fix: 'Checks to fix', used: 'In messages', blog: 'Blogs', whitepaper: 'Whitepapers' };
-    return <>{top}<div className="ftabs">{ft('new', 'Write')}{ft('saved', 'Saved content', list.length)}</div>
+    return <>{top}<Tabs label="Content studio">{ft('new', 'Write')}{ft('saved', 'Saved content', list.length)}</Tabs>
       <div className="cs"><div className="canvas2-saved">
         <div className="sv-k">What your content led to</div>
         <div className="stats" style={sx('grid-template-columns:repeat(5,1fr)')}>

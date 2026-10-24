@@ -16,6 +16,7 @@ import { showToast } from '@/lib/ui';
 import { useSessionUser } from '@/components/SessionContext';
 import type { areasView, evidenceView, funnelView, gatesView, learningLoopView, readoutView, validationView, weeklyView } from '@/lib/server/services/analytics';
 import type { LogRow } from '@/lib/server/services/review';
+import { Tab, Tabs } from '@/components/Tabs';
 
 type Tab = 'areas' | 'gates' | 'funnel' | 'evidence' | 'weekly' | 'readout' | 'log' | 'loop' | 'validation';
 type Areas = WireDeep<Awaited<ReturnType<typeof areasView>>>;
@@ -222,7 +223,7 @@ export function AnalyticsScreen({ initialTab }: { initialTab?: string }) {
         // With several builds an account can have a recommendation in each, so a share can pass 100%: say so instead.
         const lbl = share !== null ? (share > 100 ? `${s.n} across ${d.builds} builds, against ${base!.n} ${base!.k.toLowerCase()}` : `${share}% of ${base!.k.toLowerCase()}`)
           : s.note || (s.nobase ? 'decisions on exceptions, spot-checks and alternatives' : '');
-        return <div key={s.k}>{i ? <div style={sx('display:flex;align-items:center;gap:8px;padding:2px 0 2px 22px;font-size:10.5px;color:var(--i3)')}><span style={sx('font-size:13px;color:var(--i4)')}>↓</span>{lbl}</div> : null}
+        return <div key={s.k}>{i ? <div style={sx('display:flex;align-items:center;gap:8px;padding:2px 0 2px 22px;font-size:10.5px;color:var(--i3)')}><span style={sx('font-size:13px;color:var(--i3)')}>↓</span>{lbl}</div> : null}
           <div style={sx('display:grid;grid-template-columns:220px 1fr 70px;gap:14px;align-items:center;padding:6px 0')}>
             <div><div style={sx('font-size:12.5px;font-weight:600;color:var(--i1)')}>{i + 1} · {s.k}</div><div style={sx('font-size:10.5px;color:var(--i3);margin-top:2px')}>{s.sub}</div></div>
             <div style={sx('height:12px;background:var(--s75);border-radius:6px;overflow:hidden')}><div style={sx(`height:100%;width:${Math.max(2, s.n / max * 100)}%;background:${s.nobase ? 'var(--sec)' : 'var(--brand)'};border-radius:6px`)} /></div>
@@ -421,7 +422,7 @@ export function AnalyticsScreen({ initialTab }: { initialTab?: string }) {
   const viewerRole = me.activeBusinessUnit?.role === 'Viewer';
   return <main className="main" id="mainArea">
     <div className="topbar"><div className="topbar-l"><span className="tb-title">Analytics</span><span className="tb-badge badge-neutral">From live decisions</span></div></div>
-    <div className="ftabs" role="tablist">{TABS.filter(([k]) => !(viewerRole && k === 'log')).map(([k, l]) => <div key={k} role="tab" aria-selected={tab === k} className={'ftab' + (tab === k ? ' active' : '')} onClick={() => pick(k)}>{l}</div>)}</div>
+    <Tabs label="Analytics views">{TABS.filter(([k]) => !(viewerRole && k === 'log')).map(([k, l]) => <Tab key={k} active={tab === k} onSelect={() => pick(k)}>{l}</Tab>)}</Tabs>
     <div className="canvas">{content()}</div>
   </main>;
 }

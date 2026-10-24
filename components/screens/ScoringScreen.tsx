@@ -29,6 +29,7 @@ import type { ListDetail as ServerListDetail, ListSummary as ServerListSummary }
 import type { ActiveSignalSettings, ProspectDetail, ProspectRow, RunDetail as ServerRunDetail, RunSummary as ServerRunSummary } from '@/lib/server/services/scoring';
 import type { MonitoredFile, MonitoredType, SignalMonitoring, SignalTypeStatus } from '@/lib/server/services/signal-monitoring';
 import type { DqCode, Signal, Tier } from '@/types/demandai';
+import { Tab, Tabs } from '@/components/Tabs';
 
 /* ═══════════════ TYPES ═══════════════ */
 type ListSummary = Wire<ServerListSummary>;
@@ -357,7 +358,7 @@ export function ScoringScreen({ aiWhyNow = false }: { aiWhyNow?: boolean }) {
 
   function startView(): ReactNode {
     const L = lists.find(l => l.id === selListId);
-    const ft = (id: StartTab, label: string, n?: number) => <div className={`ftab ${tab === id ? 'active' : ''}`} onClick={() => renderStart(id)}>{label}{n !== undefined ? <>{' '}<span className="ftab-cnt">{n}</span></> : null}</div>;
+    const ft = (id: StartTab, label: string, n?: number) => <Tab active={tab === id} onSelect={() => renderStart(id)}>{label}{n !== undefined ? <>{' '}<span className="ftab-cnt">{n}</span></> : null}</Tab>;
     // The tags a new run scores: the starting types and those added in Setup; a switched-off one is struck through.
     const added = newSettings?.custom ?? [], off = new Set(newSettings?.off ?? []);
     const segOf = Object.fromEntries(added.map(c => [c.name, c.segment]));
@@ -365,7 +366,7 @@ export function ScoringScreen({ aiWhyNow = false }: { aiWhyNow?: boolean }) {
     const settingsNote = [off.size ? `Switched off in Setup, so not scored: ${[...off].join(', ')}.` : '', added.length ? `Added in Setup: ${added.map(c => c.name).join(', ')}.` : ''].filter(Boolean).join(' ');
     return <>
       <div className="topbar"><div className="topbar-l"><span className="tb-title">Account Scoring</span><span className="tb-badge badge-neutral">{aiWhyNow ? 'Fit × Timing · rules · why-now worded with AI' : 'Fit × Timing · rules only'}</span></div></div>
-      <div className="ftabs">{ft('new', 'New scoring')}{ft('saved', 'Scored lists', runs.length)}{ft('monitor', 'Signal monitoring')}</div>
+      <Tabs label="Account Scoring">{ft('new', 'New scoring')}{ft('saved', 'Scored lists', runs.length)}{ft('monitor', 'Signal monitoring')}</Tabs>
       <div className="canvas">{tab === 'monitor' ? monitorView() : tab === 'new' ? (
         <div style={sx('max-width:640px;margin:24px auto 0')}>
           <div style={sx('font-family:var(--fd);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--brand);margin-bottom:8px')}>Step 2 · Scoring</div>
@@ -380,7 +381,7 @@ export function ScoringScreen({ aiWhyNow = false }: { aiWhyNow?: boolean }) {
               </div>
               {srcMode === 'upload' ? <>
                 <label id="leadDrop" htmlFor="leadInput" style={sx('display:block;border:1.5px dashed var(--bdk);border-radius:var(--rmd);padding:22px 20px;cursor:pointer;background:var(--s50);text-align:center')} {...dropHandlers(f => { void onLeadFile(f); })}>
-                  <input type="file" id="leadInput" accept=".csv,.xlsx,.xls" style={sx('display:none')} onChange={e => { void onLeadFile(e.currentTarget.files ? e.currentTarget.files[0] : undefined); e.currentTarget.value = ''; }} />
+                  <input type="file" id="leadInput" accept=".csv,.xlsx,.xls" className="file-input" onChange={e => { void onLeadFile(e.currentTarget.files ? e.currentTarget.files[0] : undefined); e.currentTarget.value = ''; }} />
                   <div style={sx('font-size:13px;font-weight:600;color:var(--i1)')}>Click to choose the prospect file, or drop it here</div>
                   <div style={sx('font-size:11px;color:var(--i3);margin-top:4px')}>.xlsx or .csv · the lead template, one row per contact · checked like in Prospecting, then saved as a list</div>
                 </label>
@@ -402,7 +403,7 @@ export function ScoringScreen({ aiWhyNow = false }: { aiWhyNow?: boolean }) {
             <div className="panel-body">
               {asOfError ? <div id="asOfError" role="alert" style={sx('font-size:12px;color:var(--neg);margin-bottom:10px')}>{asOfError}</div> : null}
               <label id="dropZone" htmlFor="fileInput" style={sx('display:block;border:1.5px dashed var(--bdk);border-radius:var(--rmd);padding:26px 20px;cursor:pointer;background:var(--s50);text-align:center')} {...dropHandlers(f => onFile(f))}>
-                <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" style={sx('display:none')} onChange={e => { onFile(e.currentTarget.files ? e.currentTarget.files[0] : undefined); e.currentTarget.value = ''; }} />
+                <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" className="file-input" onChange={e => { onFile(e.currentTarget.files ? e.currentTarget.files[0] : undefined); e.currentTarget.value = ''; }} />
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--i3)" strokeWidth="1.5" strokeLinecap="round" style={sx('margin-bottom:6px')}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg>
                 <div style={sx('font-size:13px;font-weight:600;color:var(--i1)')}>Click to choose the signal file, or drop it here</div>
                 <div style={sx('font-size:11px;color:var(--i3);margin-top:4px')}>.xlsx or .csv · one row per signal, naming the person by email or LinkedIn URL</div>
@@ -553,7 +554,7 @@ export function ScoringScreen({ aiWhyNow = false }: { aiWhyNow?: boolean }) {
 
   function resultsView(r: RunDetail): ReactNode {
     const t = r.visible.tiers;
-    const ft = (id: View, label: string, n: number) => <div className={`ftab ${view === id ? 'active' : ''}`} onClick={() => { setView(id); setFilt('all'); setQ(''); }}>{label} <span className="ftab-cnt">{n}</span></div>;
+    const ft = (id: View, label: string, n: number) => <Tab active={view === id} onSelect={() => { setView(id); setFilt('all'); setQ(''); }}>{label} <span className="ftab-cnt">{n}</span></Tab>;
     const T = DemandAI.CONFIG.tierThresholds;
     const n = nsel.size;
     return <>
@@ -568,8 +569,8 @@ export function ScoringScreen({ aiWhyNow = false }: { aiWhyNow?: boolean }) {
           <button className="btn btn-primary btn-sm" onClick={() => void sendToNBA()}>{`Send ${n ? n + ' selected' : 'tier A and B'} to NBA →`}</button>
         </div>
       </div>
-      <div className="ftabs">{ft('ranked', 'Ranked prospects', r.visible.prospects)}{ft('evidence', 'Signal evidence', r.visible.signals)}
-        <div className={`ftab ${view === 'routing' ? 'active' : ''}`} onClick={() => { setView('routing'); setFilt('all'); setQ(''); }}>Routing</div></div>
+      <Tabs label="Scoring run views">{ft('ranked', 'Ranked prospects', r.visible.prospects)}{ft('evidence', 'Signal evidence', r.visible.signals)}
+        <Tab active={view === 'routing'} onSelect={() => { setView('routing'); setFilt('all'); setQ(''); }}>Routing</Tab></Tabs>
       <div className="canvas">
         {tiersInfo()}
         <div className="stats">
@@ -615,10 +616,10 @@ export function ScoringScreen({ aiWhyNow = false }: { aiWhyNow?: boolean }) {
         <div id="ckFoot" style={sx('padding:14px 22px 18px;display:flex;align-items:center;gap:8px;border-top:1px solid var(--border);margin-top:4px')}>{ck.phase === 'done' && r ? <>
           <span style={sx('flex:1;font-size:12px;color:var(--i2)')}><b>{r.stats.qualified}</b> signals qualified · <b>{r.stats.rejected}</b> rejected · <b>{r.stats.A}</b> prospects in tier A</span>
           <button className="btn btn-ghost btn-sm" onClick={() => { setChecks(null); renderStart('new'); }}>Use a different file</button>
-          <button className="btn btn-primary btn-sm" onClick={() => { setChecks(null); setScreen('results'); }}>View the scores →</button>
+          <button className="btn btn-primary btn-sm" autoFocus onClick={() => { setChecks(null); setScreen('results'); }}>View the scores →</button>
         </> : ck.phase === 'failed' ? <>
           <span style={sx('flex:1;font-size:12px;color:var(--neg)')} role="alert">{ck.error}</span>
-          <button className="btn btn-primary btn-sm" onClick={() => setChecks(null)}>Use a different file</button>
+          <button className="btn btn-primary btn-sm" autoFocus onClick={() => setChecks(null)}>Use a different file</button>
         </> : <span style={sx('flex:1;font-size:12px;color:var(--i3)')} role="status">{STAGE_TEXT[ck.stage] ?? 'Running checks…'}</span>}</div>
       </div>
     </div>;
@@ -678,7 +679,7 @@ export function ScoringScreen({ aiWhyNow = false }: { aiWhyNow?: boolean }) {
     const x = drawer;
     if (!x) return <div className="detail-empty" style={sx('padding:40px 0')}>
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--i4)" strokeWidth="1.5" strokeLinecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg>
-      <div style={sx('font-size:11.5px;color:var(--i4);line-height:1.5;text-align:center')}>Click any row<br />to see the breakdown</div>
+      <div style={sx('font-size:11.5px;color:var(--i3);line-height:1.5;text-align:center')}>Click any row<br />to see the breakdown</div>
     </div>;
     const c = x.contact, r = x.result, a = x.account, p = x.person, notCounted = x.unused;
     const T = DemandAI.CONFIG.tierThresholds;
@@ -735,7 +736,7 @@ export function ScoringScreen({ aiWhyNow = false }: { aiWhyNow?: boolean }) {
       {screen === 'start' ? startView() : screen === 'results' && run ? resultsView(run) : null}
     </main>
 
-    <div className={'detail-drawer' + (drawerOpen ? ' open' : '')} id="detailDrawer" style={drawerMode === 'unused' ? { width: '460px' } : drawer ? { width: '440px' } : undefined}>
+    <div className={'detail-drawer' + (drawerOpen ? ' open' : '')} id="detailDrawer" style={drawerMode === 'unused' ? { width: '460px' } : drawer ? { width: '440px' } : undefined} aria-hidden={!drawerOpen} inert={!drawerOpen}>
       <div className="drawer-hdr">
         {drawerMode === 'unused' && run ? <div>
           <div className="drawer-title" id="detTitle">Signal rows not used</div>

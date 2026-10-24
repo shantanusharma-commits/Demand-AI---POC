@@ -26,6 +26,7 @@ import { CopilotButton } from '@/components/Copilot';
 import type { AccountRow as AccountRowData, ContactRow as ContactRowData, ListDetail as ServerListDetail, ListSummary as ServerListSummary } from '@/lib/server/services/lists';
 import type { CorrectionRow, CorrectionSummary, EditRow } from '@/lib/server/services/corrections';
 import type { Account, Contact, DqCode, Issue } from '@/types/demandai';
+import { Tab, Tabs } from '@/components/Tabs';
 
 /* ═══════════════ STATE SHAPES ═══════════════ */
 type ListDetail = Wire<ServerListDetail>;
@@ -104,7 +105,7 @@ const ContactRow = memo(function ContactRow({ r, selected, onToggle, onEdit }: {
   const emailSubTitle = c.emailRaw ? (c.email ? (c.emailVerified ? 'Verified' : 'Not verified') : 'Malformed') : '';
   return (
     <tr style={selected ? sx('background:var(--brand-lt)') : undefined}>
-      <td>{selectable(c) ? <input type="checkbox" checked={selected} onChange={e => onToggle(c, e.target.checked)} style={sx('cursor:pointer;vertical-align:middle')} /> : <span className="muted" title="Not in the list">—</span>}</td>
+      <td>{selectable(c) ? <input type="checkbox" checked={selected} aria-label={`Select ${c.name}`} onChange={e => onToggle(c, e.target.checked)} style={sx('cursor:pointer;vertical-align:middle')} /> : <span className="muted" title="Not in the list">—</span>}</td>
       <td><button className="btn btn-sec btn-sm" title="Correct this person's details" onClick={() => onEdit(c.row)}>Edit</button></td>
       <td><div className="person"><div className="co-av" style={{ background: avColor(c.company) }}>{initials(c.name)}</div><div>{cell(c.name, r.corrected ? <>{'Row ' + c.row + ' · '}<span style={sx('color:var(--brand);font-weight:600')}>Corrected</span></> : 'Row ' + c.row, 'dt-main', 'Row ' + c.row + (r.corrected ? ' · Corrected' : ''))}</div></div></td>
       <td>{cell(c.company)}</td>
@@ -185,11 +186,11 @@ function ChecksOverlay({ ck, onDifferent, onView }: { ck: ChecksState; onDiffere
           {ck.phase === 'running' ? <span style={sx('flex:1;font-size:12px;color:var(--i3)')} role="status">{STAGE_TEXT[ck.stage] ?? 'Running checks…'}</span>
             : ck.phase === 'failed' ? <>
               <span style={sx('flex:1;font-size:12px;color:var(--neg)')} role="alert">{ck.error}</span>
-              <button className="btn btn-primary btn-sm" onClick={onDifferent}>Upload a different file</button>
+              <button className="btn btn-primary btn-sm" autoFocus onClick={onDifferent}>Upload a different file</button>
             </> : <>
               <span style={sx('flex:1;font-size:12px;color:var(--i2)')}><b>{s!.issues}</b>{` issue${s!.issues === 1 ? '' : 's'} · `}<b>{s!.accountsPass}</b>{` of ${s!.accounts} accounts pass · `}<b>{s!.inFinalList}</b> contacts in the list</span>
               <button className="btn btn-ghost btn-sm" onClick={onDifferent}>Upload a different file</button>
-              <button className="btn btn-primary btn-sm" onClick={onView}>View the list →</button>
+              <button className="btn btn-primary btn-sm" autoFocus onClick={onView}>View the list →</button>
             </>}
         </div>
       </div>
@@ -449,18 +450,18 @@ export function ProspectingScreen({ aiClassify = false }: { aiClassify?: boolean
   /* ═══════════════ RENDER ═══════════════ */
   function renderStartView(): ReactNode {
     const t = (id: StartTab, label: string, n?: number) => (
-      <div className={`ftab ${startTab === id ? 'active' : ''}`} onClick={() => renderStart(id)}>{n !== undefined ? <>{label + ' '}<span className="ftab-cnt">{n}</span></> : label}</div>
+      <Tab active={startTab === id} onSelect={() => renderStart(id)}>{n !== undefined ? <>{label + ' '}<span className="ftab-cnt">{n}</span></> : label}</Tab>
     );
     return <>
       <div className="topbar"><div className="topbar-l"><span className="tb-title">Lead discovery and research</span><span className="tb-badge badge-neutral">{aiClassify ? 'Stages 1–5 · rules, with AI for industries the table can\'t match' : 'Stages 1–5 · rules only'}</span></div></div>
-      <div className="ftabs">{t('upload', 'Upload')}{t('saved', 'Saved lists', lists.length)}{t('corrections', 'Corrections', unitCorrections)}</div>
+      <Tabs label="Prospecting">{t('upload', 'Upload')}{t('saved', 'Saved lists', lists.length)}{t('corrections', 'Corrections', unitCorrections)}</Tabs>
       <div className="canvas">{startTab === 'corrections' ? correctionsTable() : startTab === 'upload' ? (
         <div style={sx('max-width:640px;margin:24px auto 0')}>
           <div style={sx('font-family:var(--fd);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--brand);margin-bottom:8px')}>Step 1 · Prospecting</div>
           <div style={sx('font-family:var(--fd);font-size:22px;font-weight:700;color:var(--i1);margin-bottom:6px')}>Upload the lead file</div>
           <div style={sx('font-size:13px;color:var(--i3);margin-bottom:18px;line-height:1.55')}>One row per contact, in the lead template&apos;s columns (any order). Every row is checked by fixed rules, not AI: validation, classification, knock-outs and suppression. Nothing is fixed silently.</div>
           <label id="dropZone" htmlFor="fileInput" ref={dropRef} onDragOver={dzOver} onDragLeave={dzLeave} onDrop={dzDrop} style={sx('display:block;border:1.5px dashed var(--bdk);border-radius:var(--rlg);padding:34px 24px;cursor:pointer;background:var(--surf);text-align:center')}>
-            <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" style={sx('display:none')} onChange={e => { onFile(e.target.files ? e.target.files[0] : undefined); e.target.value = ''; }} />
+            <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" className="file-input" onChange={e => { onFile(e.target.files ? e.target.files[0] : undefined); e.target.value = ''; }} />
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--i3)" strokeWidth="1.5" strokeLinecap="round" style={sx('margin-bottom:8px')}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
             <div style={sx('font-size:13px;font-weight:600;color:var(--i1)')}>Click to choose a file, or drop it here</div>
             <div style={sx('font-size:11px;color:var(--i3);margin-top:4px')}>.xlsx or .csv · the lead template, filled in</div>
@@ -510,7 +511,7 @@ export function ProspectingScreen({ aiClassify = false }: { aiClassify?: boolean
 
   function renderRunView(r: ListDetail): ReactNode {
     const s = r.stats, v = r.visible;
-    const tab = (id: View, label: string, n: number) => <div className={`ftab ${view === id ? 'active' : ''}`} onClick={() => { setView(id); setFilt('all'); setQ(''); }}>{label + ' '}<span className="ftab-cnt">{n}</span></div>;
+    const tab = (id: View, label: string, n: number) => <Tab active={view === id} onSelect={() => { setView(id); setFilt('all'); setQ(''); }}>{label + ' '}<span className="ftab-cnt">{n}</span></Tab>;
     const off = v.accounts.pass ? {} : { disabled: true, style: sx('opacity:.5;cursor:not-allowed') };
     const n = sel.size;
     return <>
@@ -524,7 +525,7 @@ export function ProspectingScreen({ aiClassify = false }: { aiClassify?: boolean
           <button id="goScoring" className="btn btn-primary btn-sm" onClick={() => openSave(true, sel.size > 0)} {...off}>{n ? `Send ${n} selected to Scoring →` : 'Save and go to Scoring →'}</button>
         </div>
       </div>
-      <div className="ftabs">{tab('list', 'Final list', v.contacts.all)}{tab('accounts', 'Accounts', v.accounts.all)}{tab('corrections', 'Corrections', r.corrections)}</div>
+      <Tabs label="List views">{tab('list', 'Final list', v.contacts.all)}{tab('accounts', 'Accounts', v.accounts.all)}{tab('corrections', 'Corrections', r.corrections)}</Tabs>
       <div className="canvas">
         <div className="stats">
           {statLink('Rows read', 'sv1', s.rowsRead, `${s.notLoaded} not loaded · ${s.merged} merged duplicate${s.merged === 1 ? '' : 's'}`, 'Show every contact', () => go('list', 'all'))}
@@ -752,7 +753,7 @@ export function ProspectingScreen({ aiClassify = false }: { aiClassify?: boolean
   return <>
     <main className="main" id="mainArea">{screen === 'run' && run ? renderRunView(run) : renderStartView()}</main>
 
-    <div className={'detail-drawer' + (paneOpen ? ' open' : '')} id="detailDrawer" style={{ width: '480px' }}>
+    <div className={'detail-drawer' + (paneOpen ? ' open' : '')} id="detailDrawer" style={{ width: '480px' }} aria-hidden={!paneOpen} inert={!paneOpen}>
       <div className="drawer-hdr">
         <div>
           <div className="drawer-title" id="detTitle">{drawerMode === 'edit' ? (edit ? 'Correct ' + edit.data.contact.name : '') : pane ? CHECKS.find(c => c[0] === pane.check)![1] : ''}</div>
