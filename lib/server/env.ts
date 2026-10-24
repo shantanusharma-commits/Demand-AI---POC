@@ -29,6 +29,8 @@ export const envSchema = z
     // Database (D-28). Required once the app stores data (Phase 2).
     DATABASE_URL: postgresUrl.optional(),
     DATABASE_MIGRATION_URL: postgresUrl.optional(),
+    // The ops role, for the data purge and export commands only (scripts/data); the app never connects with it.
+    DATABASE_OPS_URL: postgresUrl.optional(),
     DATABASE_SSL_MODE: z.enum(['disable', 'require', 'verify-full']).optional(),
     DATABASE_SSL_CA_FILE: z.string().optional(),
     DATABASE_POOL_MAX: int(10, 1, 100),

@@ -58,6 +58,9 @@ services:
         condition: service_completed_successfully
     environment:
       DATABASE_MIGRATION_URL: postgresql://demandai_owner:${DEMANDAI_OWNER_PASSWORD:?}@db:5432/${POSTGRES_DB:?}
+      # For the data commands run through this service: docker compose run --rm migrate node scripts/data/purge.mjs …
+      DATABASE_OPS_URL: postgresql://demandai_ops:${DEMANDAI_OPS_PASSWORD:?}@db:5432/${POSTGRES_DB:?}
+      RETENTION_DAYS_AFTER_READOUT: ${RETENTION_DAYS_AFTER_READOUT:-30}
       DATABASE_SSL_MODE: disable
       MIGRATIONS_DIR: /app/drizzle
     command: ["node", "scripts/db/migrate.mjs"]

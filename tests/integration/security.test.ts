@@ -55,7 +55,7 @@ test('the app role cannot change schema, and has no UPDATE, DELETE or TRUNCATE o
   for (const r of roles) assert.deepEqual([r.rolsuper, r.rolbypassrls, r.rolcreaterole, r.rolcreatedb], [false, false, false, false], r.rolname);
 });
 
-test('append-only: the app role is refused UPDATE and DELETE; the owner is stopped by the trigger', async () => {
+test('append-only: the app role is refused UPDATE and DELETE; the owner is stopped by the trigger, purge setting or not', async () => {
   await withTenant(app, ctxA(), s => recordAudit(s, { action: 'test.probe', details: { n: 1 } }));
   await assert.rejects(appPool.query(`UPDATE audit_log SET action = 'x'`), pgCode('42501'));
   await assert.rejects(appPool.query(`DELETE FROM audit_log`), pgCode('42501'));
@@ -63,20 +63,44 @@ test('append-only: the app role is refused UPDATE and DELETE; the owner is stopp
   await assert.rejects(owner.query(`DELETE FROM audit_log`), /append-only: DELETE is not allowed/);
   await assert.rejects(owner.query(`TRUNCATE audit_log`), /append-only: TRUNCATE is not allowed/);
   // Even the app role setting the purge flag gets nowhere: it has no DELETE privilege, and the trigger wants the owner.
-  await assert.rejects(appPool.query(`BEGIN; SELECT set_config('app.allow_purge', 'on', true); DELETE FROM audit_log; COMMIT;`), pgCode('42501'));
-  await appPool.query('ROLLBACK').catch(() => {});
-  // The purge path (owner with app.allow_purge) may delete; done in a rolled-back transaction.
+  const a = await appPool.connect();
+  try {
+    await a.query('BEGIN');
+    await a.query(`SELECT set_config('app.allow_purge', 'on', true)`);
+    await assert.rejects(a.query(`DELETE FROM audit_log`), pgCode('42501'));
+  } finally {
+    await a.query('ROLLBACK');
+    a.release();
+  }
+  // Nor the owner: since Phase 7 the trigger also wants a session signed in as the ops role, which reaches the data only
+  // through purge_pilot_data() (tests/integration/purge.test.ts). The audit log is never purged.
   const c = await owner.connect();
   try {
     await c.query('BEGIN');
     await c.query(`SELECT set_config('app.allow_purge', 'on', true)`);
-    const r = await c.query(`DELETE FROM audit_log WHERE action = 'test.probe'`);
-    assert.equal(r.rowCount, 1);
-    await c.query('ROLLBACK');
+    await assert.rejects(c.query(`DELETE FROM audit_log WHERE action = 'test.probe'`), /audit_log is append-only: DELETE is not allowed/);
   } finally {
+    await c.query('ROLLBACK');
     c.release();
   }
   assert.equal((await owner.query(`SELECT count(*)::int n FROM audit_log WHERE action = 'test.probe'`)).rows[0].n, 1);
+});
+
+test('SECURITY DEFINER functions: owned by the owner role, search_path pinned, never PUBLIC, each run only by its role', async () => {
+  const fns = (await owner.query(`SELECT p.proname, pg_get_userbyid(p.proowner) AS owner, p.proconfig, p.oid::regprocedure::text AS sig,
+      has_function_privilege('demandai_app', p.oid, 'EXECUTE') AS app, has_function_privilege('demandai_ops', p.oid, 'EXECUTE') AS ops,
+      coalesce(p.proacl::text, '') LIKE '%=X/%' AND coalesce(p.proacl::text, '') ~ '(^|[{,])=X/' AS public
+    FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname = 'public' AND p.prosecdef ORDER BY 1`)).rows;
+  const who = Object.fromEntries(fns.map(f => [f.proname, f.app && f.ops ? 'both' : f.app ? 'app' : f.ops ? 'ops' : 'owner only']));
+  assert.deepEqual(who, {
+    claim_job: 'app', export_pilot_files: 'ops', export_pilot_rows: 'ops', nba_engaged_accounts: 'app', pilot_retention: 'ops', pilot_scope: 'owner only',
+    purge_pilot_data: 'ops', recover_stale_jobs: 'app', upload_has_corrections: 'app',
+  });
+  for (const f of fns) {
+    assert.equal(f.owner, 'demandai_owner', f.sig);
+    assert.ok((f.proconfig ?? []).includes('search_path=public, pg_temp'), `${f.sig}: search_path not pinned`);
+    assert.equal(f.public, false, `${f.sig}: PUBLIC may execute it`);
+  }
 });
 
 test('business units are isolated: rows of one unit are invisible and unwritable from another', async () => {

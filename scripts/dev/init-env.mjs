@@ -21,6 +21,7 @@ const values = {
   ...pw,
   DATABASE_URL: `postgresql://demandai_app:${pw.DEMANDAI_APP_PASSWORD}@127.0.0.1:55432/demandai`,
   DATABASE_MIGRATION_URL: `postgresql://demandai_owner:${pw.DEMANDAI_OWNER_PASSWORD}@127.0.0.1:55432/demandai`,
+  DATABASE_OPS_URL: `postgresql://demandai_ops:${pw.DEMANDAI_OPS_PASSWORD}@127.0.0.1:55432/demandai`,
   DATABASE_SSL_MODE: 'disable',
   SESSION_SECRET: randomBytes(48).toString('base64url'),
   NOTIFICATION_DISABLED: '1',

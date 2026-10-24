@@ -227,15 +227,15 @@ test('a scored list keeps its old version for the runs made on it; a saved selec
   assert.equal((await owner.query(`SELECT count(*)::int n FROM lead_lists WHERE id = ANY($1)`, [[listId, scored]])).rows[0].n, 0, 'every version is gone');
   assert.equal((await owner.query(`SELECT count(*)::int n FROM uploads WHERE kind = 'lead'`)).rows[0].n, uploadsBefore, 'the upload stays (the saved selection and the corrections use it)');
   assert.ok((await owner.query(`SELECT count(*)::int n FROM corrections`)).rows[0].n > 0);
-  // The purge path (owner with app.allow_purge, Phase 7) may remove an upload with its corrections; rolled back here.
-  const c = await owner.connect();
+  // The purge (purge_pilot_data, run by the ops role, Phase 7) removes an upload with its corrections; rolled back here.
+  const c = await db.pool('demandai_ops').connect();
   try {
     await c.query('BEGIN');
-    await c.query(`SELECT set_config('app.allow_purge', 'on', true)`);
-    await c.query(`DELETE FROM lead_lists`);
-    assert.ok((await c.query(`DELETE FROM uploads WHERE kind = 'lead'`)).rowCount! > 0);
+    const r = await c.query(`SELECT rows FROM purge_pilot_data(p_before => now() + interval '1 day', p_dry_run => false) WHERE item = 'corrections'`);
+    assert.ok(Number(r.rows[0].rows) > 0);
     await c.query('ROLLBACK');
   } finally { c.release(); }
+  assert.ok((await owner.query(`SELECT count(*)::int n FROM corrections`)).rows[0].n > 0, 'rolled back');
 });
 
 test('a rep deleting their own list whose upload others corrected leaves the upload (the check sees the whole unit)', async () => {

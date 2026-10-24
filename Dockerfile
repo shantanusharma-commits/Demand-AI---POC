@@ -34,6 +34,7 @@ COPY --from=build /app/public ./public
 COPY --from=build /app/drizzle ./drizzle
 COPY --from=build /app/scripts/db/migrate.mjs /app/scripts/db/pg-ssl.mjs ./scripts/db/
 COPY --from=build /app/scripts/users/create-admin.mjs ./scripts/users/
+COPY --from=build /app/scripts/data/ops-db.mjs /app/scripts/data/purge.mjs /app/scripts/data/export.mjs ./scripts/data/
 USER demandai
 EXPOSE 3000
 HEALTHCHECK --interval=10s --timeout=5s --start-period=20s --retries=6 \
