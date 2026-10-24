@@ -207,7 +207,7 @@ test('with AI drafting on, the build job writes each eligible first message with
     for (const d of ai) {
       assert.deepEqual([d.version, d.draft_version, d.outcome, d.capability], [2, 2, 'ok', 'draft_message']);
       assert.deepEqual([d.checks.flags, d.checks.unsupported], [[], []], 'an AI draft is stored only once it passes');
-      assert.equal(d.draft.ai.template, 'draft.message@1');
+      assert.equal(d.draft.ai.template, 'draft.message@2');
     }
     const logged = (await owner.query(`SELECT count(*)::int n FROM decision_log WHERE nba_run_id = $1 AND decision = 'Written with AI'`, [nbaRunId])).rows[0].n;
     assert.equal(logged, ai.length);

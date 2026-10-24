@@ -83,13 +83,27 @@ test('a failing draft gets one regeneration that quotes the failure; failing aga
   assert.equal(r1.ok, true);
   assert.equal(fixed.requests.length, 2);
   assert.match(fixed.requests[1].messages.at(-1)!.content, /reads like a product claim/);
-  if (r1.ok) assert.equal(r1.draft.ai?.template, 'draft.message@1');
+  if (r1.ok) assert.equal(r1.draft.ai?.template, 'draft.message@2');
   const never = new FakeModel([], { otherwise: draftWriter(() => ({ subject: 'best in class', opening: 'Hope you are well.', bridge: 'Best-in-class results!', ask: 'Call?', claimId: 'CS-01' })) });
   const r2 = await writeDraft(gateway(never), CTX, a);
   assert.deepEqual([r2.ok, r2.ok === false && r2.reason, never.requests.length], [false, 'checks_failed', 2]);
   const foreign = new FakeModel([], { otherwise: draftWriter(() => ({ subject: 'about this', opening: 'Thanks.', bridge: 'A short talk helps.', ask: 'Would a call help?', claimId: 'XX-99' })) });
   const r3 = await writeDraft(gateway(foreign), CTX, a);
   assert.deepEqual([r3.ok, r3.ok === false && r3.reason], [false, 'schema'], 'a claim ID outside the list is refused');
+});
+
+test('a subject in title case reads as invented names: the prompt asks for sentence case, and the regeneration says why', async () => {
+  // Found by the first live evaluation (24 Oct 2026): gpt-4o wrote headline-style subjects ("Control Systems Follow-Up")
+  // and every capitalised word failed grounding as a name; the regeneration changed the words but kept the capitals.
+  const a = emailAsk();
+  assert.match(draftPrompt(a).system, /subject[^.]*sentence case/);
+  const titled = new FakeModel([draftWriter(x => ({ subject: 'Your Roadmap Question Answered', opening: 'Thanks for getting in touch about this.',
+    bridge: 'A short conversation is usually the quickest way to work out what fits your site.', ask: 'Would a short call next week help?', claimId: x.claimIds[0] })), draftWriter()]);
+  const r = await writeDraft(gateway(titled), CTX, a);
+  assert.equal(r.ok, true);
+  const repair = titled.requests[1].messages.at(-1)!.content;
+  assert.match(repair, /"Roadmap" is not in the signal or the brief/);
+  assert.match(repair, /sentence case/);
 });
 
 test('a connection note is written without a claim and kept within its length; tasks and the switched-off flag send nothing', async () => {

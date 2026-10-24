@@ -14,7 +14,9 @@ import { asData } from './classify.ts';
 import { groundingProblems } from './why-now.ts';
 import type { Template } from './types.ts';
 
-export const DRAFT_TEMPLATE: Template = { id: 'draft.message', version: 1 };
+// v2 (24 Oct 2026): subjects in sentence case. The first live evaluation found gpt-4o writing headline-style subjects
+// whose capitalised words all failed grounding as names, so 11 of 40 drafts fell back to the rules.
+export const DRAFT_TEMPLATE: Template = { id: 'draft.message', version: 2 };
 
 export type DraftAsk = { rec: Rec; action: string; pack: BrandPack; checkDate: string; rules: Draft };
 export type AiDraftResult = { ok: true; draft: Draft; callId: string } | { ok: false; reason: FallbackReason | 'not_eligible' };
@@ -34,7 +36,7 @@ function system(channel: 'Email' | 'LinkedIn', pack: BrandPack) {
   const v = pack.voice, preset = VOICE_PRESETS[v.preset] || VOICE_PRESETS.Direct;
   const avoid = [...pack.negative, ...(v.bannedOpeners || [])].filter(Boolean).map(w => `"${w}"`).join(', ');
   const shape = channel === 'Email'
-    ? `an email. Write the subject (at most ${CONFIG.brand.maxSubjectWords} words, specific to their signal), the opening (their own signal, one sentence), the bridge (why it matters now, one or two sentences) and the ask (one easy question). The greeting, the proof line and the sign-off are added for you; the whole body stays under ${Math.min(80, v.maxWords || 80)} words.`
+    ? `an email. Write the subject (at most ${CONFIG.brand.maxSubjectWords} words, specific to their signal, in sentence case: a capital only on the first word and on names from the signal or the brief), the opening (their own signal, one sentence), the bridge (why it matters now, one or two sentences) and the ask (one easy question). The greeting, the proof line and the sign-off are added for you; the whole body stays under ${Math.min(80, v.maxWords || 80)} words.`
     : `a LinkedIn connection note: one or two sentences on their signal and a reason to connect, under ${CONFIG.brand.maxNote - 25} characters. The greeting is added for you; no proof point, no follow-up message.`;
   return `You write the first outreach message from an industrial automation supplier's account team to one prospect: ${shape}
 
@@ -97,7 +99,10 @@ export function draftProblems(ask: DraftAsk, d: Draft, written: string, facts: s
   const out = chk.flags.filter(f => f.rule !== 'Sensitive term' || !sensitiveOk).map(f => `${f.rule}: ${f.detail}.`);
   for (const c of chk.unsupported) out.push(`"${c.text}" reads like a product claim without an approved source: remove it${d.channel === 'Email' ? ' (the chosen claim carries the proof)' : ''}.`);
   const cited = facts.split(' \n ').map(t => ({ row: 0, type: '', date: '', detail: t, source: '', weight: 0 }));
-  for (const p of groundingProblems(written.replace(/\s+/g, ' '), cited)) if (!/one sentence|characters; keep it/.test(p)) out.push(p.replace('the rows it cites', 'the signal or the brief'));
+  const grounding = groundingProblems(written.replace(/\s+/g, ' '), cited).filter(p => !/one sentence|characters; keep it/.test(p));
+  for (const p of grounding) out.push(p.replace('the rows it cites', 'the signal or the brief'));
+  // Without the reason, a regeneration swaps the words and keeps the capitals.
+  if (grounding.some(p => /^"[A-Z][^"]*" is not/.test(p))) out.push('A capitalised word reads as a name: write the subject and the text in sentence case (a capital only on the first word and on names from the signal or the brief).');
   return out;
 }
 
