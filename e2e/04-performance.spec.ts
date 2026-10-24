@@ -1,9 +1,10 @@
 // Performance at volume (plan §9 item 5; prompt §9 item 5): lead files of 7,500 and 20,000 rows (fictional, made
 // from the sample's own rows by tests/helpers/volume.ts) are checked on the server, then the list opens with its first
 // rows on screen in under 2 s, and each keystroke in its search is handled in under 200 ms (Event Timing: from the key
-// to the next frame). Also recorded: the server's time to check the file, the search request's time on the server,
-// and the time from the last keystroke to the matching rows (that one includes the 250 ms debounce).
-import { mkdirSync, writeFileSync } from 'node:fs';
+// to the next frame). Each list is then saved and scored with the sample's signals (audit checklist: "a 20,000-row
+// file saves and scores"). Also recorded: the server's time to check the file and to score it, the search request's
+// time on the server, and the time from the last keystroke to the matching rows (that one includes the 250 ms debounce).
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import * as XLSX from 'xlsx';
 import { expect, test } from '@playwright/test';
@@ -22,7 +23,7 @@ test.afterAll(() => {
 });
 
 for (const rows of [7_500, 20_000]) {
-  test(`${rows.toLocaleString('en-US')} rows: checked on the server, first rows on screen under 2 s, each search keystroke under 200 ms`, async ({ browser }) => {
+  test(`${rows.toLocaleString('en-US')} rows: checked, first rows on screen under 2 s, each search keystroke under 200 ms, then saved and scored`, async ({ browser }) => {
     test.setTimeout(300_000);
     const { context, page } = await as(browser, 'admin');
     await page.goto('/prospecting');
@@ -67,7 +68,20 @@ for (const rows of [7_500, 20_000]) {
     const keys = events.filter(e => /^key|^input|^beforeinput/.test(e.name));
     const slowestKeystrokeMs = keys.length ? Math.max(...keys.map(e => e.duration)) : 16;
 
-    results[rows] = { rows, serverCheckMs, firstRenderMs, slowestKeystrokeMs: keys.length ? slowestKeystrokeMs : '< 16', serverSearchMs, toResultsMs };
+    // Saved, then scored with the sample's signal sheet as of its date (the copies' people don't match the signals, so
+    // this is the full file's scoring work on the server with the sample's signal rows).
+    const saved = await page.request.post(`/api/lists/${listId}/save`, { headers: { origin }, data: { name: `Volume ${rows}` } });
+    expect(saved.status(), await saved.text()).toBe(200);
+    const sig = await page.request.post('/api/uploads', { headers: { origin }, multipart: { kind: 'signal', file: { name: 'signals.xlsx',
+      mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', buffer: readFileSync(SAMPLE) } } });
+    expect(sig.status(), await sig.text()).toBe(201);
+    const scoring = await page.request.post('/api/scoring-runs', { headers: { origin }, data: { listId, signalUploadId: (await sig.json()).uploadId, asOf: '2026-09-30' } });
+    expect(scoring.status(), await scoring.text()).toBe(201);
+    const scored = await waitForJob(page, (await scoring.json()).jobId, 240_000) as { status: string; createdAt: string; finishedAt: string };
+    expect(scored.status).toBe('succeeded');
+    const serverScoreMs = Date.parse(scored.finishedAt) - Date.parse(scored.createdAt);
+
+    results[rows] = { rows, serverCheckMs, serverScoreMs, firstRenderMs, slowestKeystrokeMs: keys.length ? slowestKeystrokeMs : '< 16', serverSearchMs, toResultsMs };
     console.log(`performance ${rows} rows: ${JSON.stringify(results[rows])}`);
     expect(firstRenderMs).toBeLessThan(FIRST_RENDER_MS);
     expect(slowestKeystrokeMs).toBeLessThan(KEYSTROKE_MS);
