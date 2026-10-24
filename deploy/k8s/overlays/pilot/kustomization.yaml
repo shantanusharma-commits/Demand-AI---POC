@@ -1,0 +1,46 @@
+# The pilot environment on EKS. DevOps fills in the values marked REPLACE (they are AWS identifiers, not secrets) and
+# sets the release's image digest for each deploy; secrets stay in AWS Secrets Manager. Build and check with
+#   kubectl kustomize deploy/k8s/overlays/pilot
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: demandai
+resources:
+  - namespace.yaml
+  - ../../base
+images:
+  # The release built by CI (.github/workflows/release.yml), pinned by digest; the tag is for people to read.
+  - name: demandai-app
+    newName: ACCOUNT.dkr.ecr.REGION.amazonaws.com/demandai-app # REPLACE: the ECR repository (or ghcr.io/OWNER/demandai-app)
+    newTag: REPLACE-version
+    digest: sha256:0000000000000000000000000000000000000000000000000000000000000000 # REPLACE: the release's digest
+patches:
+  - target: { kind: ConfigMap, name: demandai-config }
+    patch: |-
+      - op: replace
+        path: /data/APP_BASE_URL
+        value: https://demandai.pilot.example.com # REPLACE: the pilot's address
+  - target: { kind: Ingress, name: demandai-app }
+    patch: |-
+      - op: replace
+        path: /spec/rules/0/host
+        value: demandai.pilot.example.com # REPLACE: the same host
+      - op: replace
+        path: /metadata/annotations/alb.ingress.kubernetes.io~1certificate-arn
+        value: arn:aws:acm:REGION:ACCOUNT:certificate/CERTIFICATE-ID # REPLACE: the ACM certificate for that host
+  - target: { kind: NetworkPolicy, name: demandai-app-ingress }
+    patch: |-
+      - op: replace
+        path: /spec/ingress/0/from/0/ipBlock/cidr
+        value: 10.0.0.0/16 # REPLACE: the VPC CIDR the ALB sends from
+  # With Amazon Bedrock through IRSA (Pod Identity needs no annotation):
+  # - target: { kind: ServiceAccount, name: demandai-app }
+  #   patch: |-
+  #     - op: add
+  #       path: /metadata/annotations
+  #       value: { eks.amazonaws.com/role-arn: arn:aws:iam::ACCOUNT:role/demandai-app }
+  # Once the Client has agreed the retention period, the daily purge stops being a dry run:
+  # - target: { kind: CronJob, name: demandai-purge-due }
+  #   patch: |-
+  #     - op: add
+  #       path: /spec/jobTemplate/spec/template/spec/containers/0/command/-
+  #       value: --yes

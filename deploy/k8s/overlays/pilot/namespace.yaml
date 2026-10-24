@@ -1,0 +1,8 @@
+# The pilot's namespace, with the restricted Pod Security Standard enforced (every DemandAI pod meets it).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: demandai
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: latest

@@ -1,0 +1,32 @@
+# RDS for PostgreSQL 16 instead of the db container (the recommended production database, D-37). The db and backup
+# containers are left out (backups are RDS's automated backups and the snapshot taken before each release); migrate and
+# app connect to RDS_HOST over TLS, checked against the RDS CA bundle, with the same three role passwords as the local
+# stack (db/bootstrap-roles.sql creates the roles on RDS). The env file comes from deploy/ec2/sync-secrets.sh, which
+# also sets the unused local superuser variables Compose insists on. Use together with compose.proxy.yaml:
+#   docker compose -f compose.yaml -f deploy/ec2/compose.proxy.yaml -f deploy/ec2/compose.rds.yaml --env-file … up -d --no-build
+services:
+  db:
+    profiles: ["local-db"]
+  backup:
+    profiles: ["local-db"]
+
+  migrate:
+    depends_on:
+      backup:
+        condition: service_completed_successfully
+        required: false
+    environment:
+      DATABASE_MIGRATION_URL: postgresql://demandai_owner:${DEMANDAI_OWNER_PASSWORD:?}@${RDS_HOST:?}:5432/${POSTGRES_DB:?}
+      DATABASE_OPS_URL: postgresql://demandai_ops:${DEMANDAI_OPS_PASSWORD:?}@${RDS_HOST:?}:5432/${POSTGRES_DB:?}
+      DATABASE_SSL_MODE: verify-full
+      DATABASE_SSL_CA_FILE: /etc/ssl/rds/global-bundle.pem
+    volumes:
+      - /etc/demandai/rds-global-bundle.pem:/etc/ssl/rds/global-bundle.pem:ro
+
+  app:
+    environment:
+      DATABASE_URL: postgresql://demandai_app:${DEMANDAI_APP_PASSWORD:?}@${RDS_HOST:?}:5432/${POSTGRES_DB:?}
+      DATABASE_SSL_MODE: verify-full
+      DATABASE_SSL_CA_FILE: /etc/ssl/rds/global-bundle.pem
+    volumes:
+      - /etc/demandai/rds-global-bundle.pem:/etc/ssl/rds/global-bundle.pem:ro

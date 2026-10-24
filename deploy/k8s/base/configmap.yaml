@@ -1,0 +1,31 @@
+# Settings that are not secrets (lib/server/env.ts; .env.example explains each). Secrets come from AWS Secrets Manager
+# (externalsecrets.yaml). A setting left out takes the app's default. Every AI switch stays off until its evaluation
+# is agreed with the Client (docs/AI.md §5).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: demandai-config
+data:
+  APP_BASE_URL: https://demandai.example.com
+  LOG_LEVEL: info
+  # The ALB adds one X-Forwarded-For entry; the app is reachable only through it (docs/SECURITY.md S5).
+  TRUSTED_PROXY_HOPS: "1"
+  # RDS for PostgreSQL 16 over TLS, checked against the RDS CA bundle (mounted from the demandai-rds-ca ConfigMap).
+  DATABASE_SSL_MODE: verify-full
+  DATABASE_SSL_CA_FILE: /etc/ssl/rds/global-bundle.pem
+  DATABASE_POOL_MAX: "10"
+  # Until SMTP is set up (D-29), invite and reset links are copied from the screen.
+  NOTIFICATION_DISABLED: "1"
+  RETENTION_DAYS_AFTER_READOUT: "30"
+  AI_PROVIDER: none
+  AI_FEATURE_CLASSIFY: "0"
+  AI_FEATURE_WHY_NOW: "0"
+  AI_FEATURE_DRAFTING: "0"
+  AI_FEATURE_CONTENT_STUDIO: "0"
+  AI_FEATURE_COPILOT: "0"
+  # The pilot's API Management gateway answers in 1 to 30 s; 45 s per attempt leaves room (docs/AI.md §4).
+  AI_TIMEOUT_MS: "45000"
+  AZURE_OPENAI_DEPLOYMENT: gpt-5.4
+  AZURE_OPENAI_DEPLOYMENT_SMALL: gpt-5.4-mini
+  AZURE_OPENAI_API_VERSION: 2025-04-01-preview
+  AZURE_OPENAI_AUTH_HEADER: api-key

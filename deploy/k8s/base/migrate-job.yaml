@@ -1,0 +1,46 @@
+# Applies the database migrations of the release's image, with the owner role, before the new app pods can become
+# ready (their readiness check waits for every migration their build expects). Forward-only; an older image's
+# migrate finds nothing to do. A Job can't be changed in place: delete the previous one before each release
+# (docs/devops/DEPLOY-EKS.md). Take an RDS snapshot first.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: demandai-migrate
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 900
+  ttlSecondsAfterFinished: 604800
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: demandai-migrate
+    spec:
+      restartPolicy: Never
+      serviceAccountName: demandai-app
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: migrate
+          image: demandai-app
+          command: ["node", "scripts/db/migrate.mjs"]
+          envFrom:
+            - configMapRef: { name: demandai-config }
+            - secretRef: { name: demandai-migrate }
+          env:
+            - { name: MIGRATIONS_DIR, value: /app/drizzle }
+          resources:
+            requests: { cpu: 100m, memory: 128Mi }
+            limits: { memory: 256Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: ["ALL"] }
+          volumeMounts:
+            - { name: rds-ca, mountPath: /etc/ssl/rds, readOnly: true }
+      volumes:
+        - name: rds-ca
+          configMap: { name: demandai-rds-ca }

@@ -1,0 +1,30 @@
+# The reverse proxy in front of DemandAI on an EC2 host (compose.proxy.yaml): HTTPS with a certificate from Let's
+# Encrypt, renewed by Caddy itself (ports 80 and 443 open to the internet, DNS pointing at the host). It is the only
+# way in: the app listens on the Compose network and on 127.0.0.1 only. Caddy ignores a client's own X-Forwarded-For
+# and sends the client's address, so the app trusts one hop (TRUSTED_PROXY_HOPS=1).
+{
+	email {$ACME_EMAIL}
+	servers {
+		timeouts {
+			read_body 120s
+		}
+	}
+}
+
+{$DEMANDAI_HOST} {
+	encode zstd gzip
+	# Uploads are refused by the app above 25 MB (UPLOAD_MAX_BYTES); the proxy allows a little more for the form.
+	request_body {
+		max_size 30MB
+	}
+	reverse_proxy app:3000 {
+		transport http {
+			read_timeout 120s
+		}
+	}
+	header -Server
+	log {
+		output stdout
+		format json
+	}
+}

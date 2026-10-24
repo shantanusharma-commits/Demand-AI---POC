@@ -1,0 +1,11 @@
+# Inside the cluster only; the Ingress (an ALB) is the one way in.
+apiVersion: v1
+kind: Service
+metadata:
+  name: demandai-app
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: demandai-app
+  ports:
+    - { name: http, port: 80, targetPort: http }

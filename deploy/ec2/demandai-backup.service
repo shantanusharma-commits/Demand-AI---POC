@@ -1,0 +1,12 @@
+# A daily pg_dump of the local database (the db container), kept on the pg_backups volume, newest 20 (BACKUP_RETAIN).
+# Not used with RDS, whose automated backups and snapshots do this. The dump's exit status and size are checked
+# (db/backup.sh); a failure fails this unit, which the host's monitoring should alert on.
+[Unit]
+Description=DemandAI daily database backup
+Requires=docker.service
+After=docker.service demandai.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/demandai
+ExecStart=/usr/bin/docker compose -p demandai -f compose.yaml -f deploy/ec2/compose.proxy.yaml --env-file /etc/demandai/demandai.env run --rm -T backup

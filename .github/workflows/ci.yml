@@ -78,6 +78,9 @@ jobs:
           DATABASE_MIGRATION_URL: postgresql://demandai_owner:ci-dummy-owner-db-password@127.0.0.1:1/demandai
           DATABASE_OPS_URL: postgresql://demandai_ops:ci-dummy-ops-db-password@127.0.0.1:1/demandai
 
+      - name: Deployment files are valid (Kubernetes overlay with kubeconform, Compose stacks for EC2)
+        run: deploy/check.sh
+
       - name: Dependency audit gate (no high or critical in production dependencies)
         run: npm run audit:gate
 

@@ -64,6 +64,8 @@ services:
       DATABASE_SSL_MODE: disable
       MIGRATIONS_DIR: /app/drizzle
     command: ["node", "scripts/db/migrate.mjs"]
+    read_only: true
+    cap_drop: [ALL]
 
   app:
     image: ${DEMANDAI_IMAGE:-demandai-app:local}
@@ -128,6 +130,14 @@ services:
     ports:
       # Loopback only: a reverse proxy on the host (TLS) forwards to it.
       - "127.0.0.1:${APP_PORT:-3100}:3000"
+    # As the Kubernetes pod runs (deploy/k8s): a read-only root filesystem with only /tmp and Next's cache writable, and
+    # no capabilities. Add security_opt ["no-new-privileges:true"] on hosts where it works (docs/devops/DEPLOY-EC2.md):
+    # on one test host (Docker 29.8, kernel 7.0, AppArmor) every program, in any image, was refused with it.
+    read_only: true
+    tmpfs:
+      - /tmp:size=512m,uid=10001,gid=10001,mode=0700
+      - /app/.next/cache:size=256m,uid=10001,gid=10001,mode=0700
+    cap_drop: [ALL]
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
       interval: 10s

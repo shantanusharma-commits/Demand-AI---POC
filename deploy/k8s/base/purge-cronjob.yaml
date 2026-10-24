@@ -1,0 +1,49 @@
+# The end-of-pilot purge (D-20, migration 0037): every business unit whose retention period has passed since the
+# sponsor's closing decision. As shipped it is a dry run that logs what is due and changes nothing; add --yes in the
+# overlay once the Client has agreed the retention period (docs/devops/DEPLOY-EKS.md). Runs as the ops role only.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: demandai-purge-due
+spec:
+  schedule: "30 2 * * *"
+  timeZone: Etc/UTC
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      activeDeadlineSeconds: 1800
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: demandai-purge
+        spec:
+          restartPolicy: Never
+          serviceAccountName: demandai-app
+          automountServiceAccountToken: false
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            seccompProfile: { type: RuntimeDefault }
+          containers:
+            - name: purge
+              image: demandai-app
+              command: ["node", "scripts/data/purge.mjs", "--due"]
+              envFrom:
+                - configMapRef: { name: demandai-config }
+                - secretRef: { name: demandai-ops }
+              resources:
+                requests: { cpu: 100m, memory: 128Mi }
+                limits: { memory: 256Mi }
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities: { drop: ["ALL"] }
+              volumeMounts:
+                - { name: rds-ca, mountPath: /etc/ssl/rds, readOnly: true }
+          volumes:
+            - name: rds-ca
+              configMap: { name: demandai-rds-ca }

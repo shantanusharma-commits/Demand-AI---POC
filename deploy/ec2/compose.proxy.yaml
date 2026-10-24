@@ -1,0 +1,31 @@
+# The EC2 deployment (D-37): the stack in compose.yaml plus Caddy for TLS. Run from the repository's root:
+#   docker compose -f compose.yaml -f deploy/ec2/compose.proxy.yaml --env-file /etc/demandai/demandai.env up -d --no-build
+# Add -f deploy/ec2/compose.rds.yaml to use RDS for PostgreSQL instead of the db container (docs/devops/DEPLOY-EC2.md).
+services:
+  proxy:
+    image: caddy:2.10.2-alpine@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    environment:
+      DEMANDAI_HOST: ${DEMANDAI_HOST:?}
+      ACME_EMAIL: ${ACME_EMAIL:?}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./deploy/ec2/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE]
+
+  app:
+    environment:
+      TRUSTED_PROXY_HOPS: "1"
+
+volumes:
+  caddy_data:
+  caddy_config:

@@ -1,0 +1,20 @@
+# DemandAI on Kubernetes (EKS, D-37): the app, its migrate Job, the ops CronJob and their configuration. The overlay
+# (overlays/pilot) sets the namespace, the image by digest, the host name, the certificate and the AWS identifiers.
+# Deploy and roll back as in docs/devops/DEPLOY-EKS.md; nothing here is applied by the delivery team.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+labels:
+  - includeSelectors: false
+    pairs:
+      app.kubernetes.io/part-of: demandai
+resources:
+  - serviceaccount.yaml
+  - configmap.yaml
+  - externalsecrets.yaml
+  - migrate-job.yaml
+  - deployment.yaml
+  - service.yaml
+  - ingress.yaml
+  - pdb.yaml
+  - networkpolicy.yaml
+  - purge-cronjob.yaml

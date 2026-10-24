@@ -1,0 +1,79 @@
+# The app: the Next.js standalone server, which also runs the background job worker (uploads, scoring, builds; jobs are
+# claimed with SKIP LOCKED, so every replica can work). Non-root, read-only root filesystem (Next's cache and /tmp are
+# emptyDirs), no Kubernetes API access. A new pod takes traffic only once /api/ready says the database answers and has
+# every migration its build expects, so a rollout waits for the migrate Job.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demandai-app
+spec:
+  replicas: 2
+  revisionHistoryLimit: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: { maxUnavailable: 0, maxSurge: 1 }
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: demandai-app
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: demandai-app
+    spec:
+      serviceAccountName: demandai-app
+      automountServiceAccountToken: false
+      # A job in flight is checkpointed at its stages; give it time to reach one on shutdown.
+      terminationGracePeriodSeconds: 60
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile: { type: RuntimeDefault }
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels: { app.kubernetes.io/name: demandai-app }
+      containers:
+        - name: app
+          image: demandai-app
+          ports:
+            - { name: http, containerPort: 3000 }
+          envFrom:
+            - configMapRef: { name: demandai-config }
+            - secretRef: { name: demandai-app }
+          startupProbe:
+            httpGet: { path: /api/health, port: http }
+            periodSeconds: 2
+            failureThreshold: 30
+          livenessProbe:
+            httpGet: { path: /api/health, port: http }
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 4
+          readinessProbe:
+            httpGet: { path: /api/ready, port: http }
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          # A 20,000-row file is parsed in memory; measure in the pilot and adjust.
+          resources:
+            requests: { cpu: 250m, memory: 512Mi }
+            limits: { memory: 1536Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: ["ALL"] }
+          volumeMounts:
+            - { name: next-cache, mountPath: /app/.next/cache }
+            - { name: tmp, mountPath: /tmp }
+            - { name: rds-ca, mountPath: /etc/ssl/rds, readOnly: true }
+      volumes:
+        - name: next-cache
+          emptyDir: { sizeLimit: 256Mi }
+        - name: tmp
+          emptyDir: { sizeLimit: 512Mi }
+        - name: rds-ca
+          configMap: { name: demandai-rds-ca }

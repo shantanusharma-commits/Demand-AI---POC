@@ -1,0 +1,28 @@
+# An Application Load Balancer through the AWS Load Balancer Controller: TLS with an ACM certificate (the overlay sets
+# its ARN and the host), HTTP redirected to HTTPS, pods as IP targets, the ALB health check on /api/health. The idle
+# timeout covers an upload's checks and an AI call (45 s per attempt). The app trusts one proxy hop (the ALB).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: demandai-app
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS13-1-2-2021-06
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:REGION:ACCOUNT:certificate/CERTIFICATE-ID
+    alb.ingress.kubernetes.io/healthcheck-path: /api/health
+    alb.ingress.kubernetes.io/load-balancer-attributes: idle_timeout.timeout_seconds=120,routing.http.drop_invalid_header_fields.enabled=true
+spec:
+  ingressClassName: alb
+  rules:
+    - host: demandai.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: demandai-app
+                port: { name: http }
