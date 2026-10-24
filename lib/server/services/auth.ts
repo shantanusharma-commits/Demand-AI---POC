@@ -58,6 +58,7 @@ export async function login(deps: AuthDeps, input: { email: string; password: st
       lockedUntil: sql`case when ${users.failedLoginCount} + 1 >= ${MAX_FAILED_LOGINS} then now() + make_interval(mins => ${LOCK_MINUTES}) else ${users.lockedUntil} end`,
     }).where(eq(users.id, user.id)).returning({ lockedUntil: users.lockedUntil });
     const locked = !!after?.lockedUntil && after.lockedUntil.getTime() > Date.now();
+    if (locked) await deps.db.transaction(tx => platformAudit(tx, user.id, 'auth.locked', { minutes: LOCK_MINUTES }));
     logger.info({ event: locked ? 'auth.sign_in.locked_now' : 'auth.sign_in.failed', reason: 'wrong_password', userId: user.id }, 'Sign-in failed');
     return { ok: false, reason: 'invalid' };
   }
@@ -70,6 +71,7 @@ export async function login(deps: AuthDeps, input: { email: string; password: st
 
 export async function logout(deps: AuthDeps, sessionId: string, userId: string): Promise<void> {
   await revokeSession(deps.db, sessionId, 'sign_out');
+  await deps.db.transaction(tx => platformAudit(tx, userId, 'auth.sign_out'));
   logger.info({ event: 'auth.sign_out', userId }, 'Signed out');
 }
 
@@ -122,7 +124,11 @@ export async function requestPasswordReset(deps: AuthDeps, input: { email: strin
     logger.info({ event: 'auth.reset.ignored', reason: user ? 'not_active' : 'unknown_email' }, 'Password reset not sent');
     return;
   }
-  const token = await deps.db.transaction(tx => issueToken(tx, { userId: user.id, purpose: 'password_reset', createdBy: user.id }));
+  const token = await deps.db.transaction(async tx => {
+    const t = await issueToken(tx, { userId: user.id, purpose: 'password_reset', createdBy: user.id });
+    await platformAudit(tx, user.id, 'auth.reset_requested');
+    return t;
+  });
   const sent = await deps.mailer.send(passwordResetMessage(user.email, { link: linkFor(deps.appBaseUrl, 'password_reset', token), expiresMinutes: RESET_MINUTES, support: deps.supportEmail }));
   logger.info({ event: 'auth.reset.requested', userId: user.id, emailed: sent.delivered }, 'Password reset requested');
 }

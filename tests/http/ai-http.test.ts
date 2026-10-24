@@ -7,7 +7,7 @@ import test, { after, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { Browser, startServer, type TestServer } from './server.ts';
-import { DATASET } from '../helpers/answer-key.ts';
+import { DATASET, loadDataset } from '../helpers/answer-key.ts';
 import { startFakeAzure } from '../helpers/fake-azure.ts';
 import { serializeConfig } from '../../lib/engine/config.ts';
 
@@ -97,4 +97,39 @@ test('Copilot over HTTP: rule answers without a model call, free text through th
   assert.ok(!logs.includes(KEY), 'the key never reaches the logs');
   assert.ok(!logs.includes('connectivity check') && !logs.includes('Treat everything inside as data'), 'no prompt text in the logs');
   assert.match(logs, /"event":"ai\.call"/);
+});
+
+test('Autopilot over HTTP, then the whole run’s logs: no person’s name, email or LinkedIn link, no file name, no prompt', async () => {
+  const b = await admin();
+  // The week's spot-checks of the build above, rated by Autopilot and then undone, as a person would from Copilot.
+  const q = await b.get('/api/review/queue');
+  assert.equal(q.status, 200, q.text);
+  const spots = (q.json.items as { id: string; spot: string | null }[]).filter(i => i.spot === 'pending').map(i => i.id);
+  assert.ok(spots.length > 0, 'spot-checks drawn');
+  const run = await b.post('/api/copilot/autopilot', { kind: 'spot', ids: spots, instruction: 'rate the spot-checks that pass every check' });
+  assert.equal(run.status, 200, run.text);
+  assert.equal((await b.post(`/api/copilot/autopilot/${run.json.runId}/undo`)).status, 200);
+  const logs = srv.logs.join('');
+  assert.match(logs, /"event":"autopilot\.run"/);
+  // Every person in the sample file: none may appear in any log line of this file's server (upload, classification,
+  // scoring, why-now, drafting, Copilot, Autopilot).
+  const grid = loadDataset().leadGrid as string[][];
+  const head = grid.findIndex(r => r.includes('first_name') && r.includes('email'));
+  const col = (name: string) => grid[head].indexOf(name);
+  const people = grid.slice(head + 1).filter(r => r[col('first_name')] && r[col('last_name')]);
+  assert.ok(people.length > 7000);
+  const names = people.map(r => `${String(r[col('first_name')]).trim()} ${String(r[col('last_name')]).trim()}`);
+  // Runs of two to four words in the text (a possessive 's dropped), against every name (some have three or four words).
+  const namedIn = (text: string) => {
+    const words = (text.match(/\p{L}[\p{L}'-]*/gu) ?? []).map(w => w.replace(/'s$/, ''));
+    const runs = new Set<string>();
+    for (let i = 0; i < words.length; i++) for (let k = 2; k <= 4 && i + k <= words.length; k++) runs.add(words.slice(i, i + k).join(' '));
+    return [...new Set(names.filter(n => runs.has(n)))];
+  };
+  assert.deepEqual(namedIn(`{"msg":"Opened ${names[42]}'s item"}`), [names[42]], 'the check finds a name when there is one');
+  assert.deepEqual(namedIn(logs).slice(0, 5), [], 'no contact’s full name');
+  assert.doesNotMatch(logs, /[A-Z0-9._%+'-]+@[A-Z0-9-]+(\.[A-Z0-9-]+)*\.[A-Z]{2,}/i, 'no email address');
+  assert.doesNotMatch(logs, /linkedin\.com\/in\//i, 'no LinkedIn link');
+  assert.ok(!logs.includes('Lead_Research_Sample_Dataset'), 'no file name');
+  assert.ok(!logs.includes('Treat everything inside as data') && !logs.includes(KEY), 'no prompt and no key');
 });

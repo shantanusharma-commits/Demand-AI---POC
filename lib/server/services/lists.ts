@@ -419,6 +419,7 @@ export async function checkCsv(scope: TenantScope, listId: string, check: CheckK
   if (!l) throw notFound('That list is not there any more.');
   const rows = await scope.tx.select({ data: issues.data }).from(issues)
     .where(and(eq(issues.listId, listId), eq(issues.checkKey, check), visibleIssues(scope))).orderBy(asc(issues.seq));
+  await recordAudit(scope, { action: 'list.exported', targetType: 'list', targetId: listId, details: { file: 'issues', check, rows: rows.length } });
   return { fileName: `${fileBase(l.sourceFile)}-${check}-issues.csv`, csv: toCSV([ISSUE_HEADER, ...rows.map(r => issueCells(r.data as Issue))]) };
 }
 
@@ -433,6 +434,7 @@ export async function reportCsv(scope: TenantScope, listId: string): Promise<Csv
     const i = r.data as Issue;
     return [...issueCells(i), checkName.get(r.check) ?? r.check, i.code === '—' ? '' : i.code, i.code === '—' ? '' : CODES[i.code as DqCode]];
   });
+  await recordAudit(scope, { action: 'list.exported', targetType: 'list', targetId: listId, details: { file: 'validation-report', rows: body.length } });
   return { fileName: `${fileBase(l.sourceFile)}-validation-report.csv`, csv: toCSV([[...ISSUE_HEADER, 'Check', 'D-code', 'What the code means'], ...body]) };
 }
 

@@ -9,7 +9,7 @@ import type pg from 'pg';
 import { createDb, withTenant, withUser, type Db, type TenantContext } from '../../lib/server/db/tenant.ts';
 import { signSessionId } from '../../lib/server/auth/crypto.ts';
 import { loadSession, type SessionConfig } from '../../lib/server/auth/sessions.ts';
-import { acceptInvite, login, LOCK_MINUTES, MAX_FAILED_LOGINS, requestPasswordReset, resetPassword, type AuthDeps } from '../../lib/server/services/auth.ts';
+import { acceptInvite, login, LOCK_MINUTES, logout, MAX_FAILED_LOGINS, requestPasswordReset, resetPassword, type AuthDeps } from '../../lib/server/services/auth.ts';
 import { inviteMember, issueResetLink, listMembers, removeMember, resendInvite, restoreMember, updateMember, type UsersDeps } from '../../lib/server/services/users.ts';
 import { createUnit, inviteUnitAdmin, listUnits } from '../../lib/server/services/platform.ts';
 import type { MailMessage, Mailer } from '../../lib/server/mail/mailer.ts';
@@ -56,6 +56,8 @@ test(`${MAX_FAILED_LOGINS} wrong passwords lock the account for ${LOCK_MINUTES} 
   for (let i = 0; i < MAX_FAILED_LOGINS; i++) await login(deps(), { email: 'rep.a2@demandai.test', password: 'wrong', ...client, ip: `198.51.100.${i}` });
   const locked = await login(deps(), { email: 'rep.a2@demandai.test', password: PASSWORD, ...client });
   assert.deepEqual(locked, { ok: false, reason: 'invalid' }, 'even the right password is refused while locked, with the same reply');
+  const audit = (await owner.query(`SELECT business_unit_id, details FROM audit_log WHERE action = 'auth.locked' AND actor_user_id = $1`, [ids.repA2])).rows;
+  assert.deepEqual(audit, [{ business_unit_id: null, details: { minutes: LOCK_MINUTES } }], 'the lockout is in the audit log');
   await owner.query(`UPDATE users SET locked_until = now() - interval '1 second' WHERE email = 'rep.a2@demandai.test'`);
   assert.equal((await login(deps(), { email: 'rep.a2@demandai.test', password: PASSWORD, ...client })).ok, true);
   assert.equal((await owner.query(`SELECT failed_login_count n FROM users WHERE email = 'rep.a2@demandai.test'`)).rows[0].n, 0);
@@ -90,6 +92,16 @@ test('limits slide: a burst across a window boundary gets no more than the limit
   await owner.query(`INSERT INTO rate_limits (key, window_start, count) VALUES ('test:old:x', now() - interval '2 days', 3)`);
   assert.ok((await pruneRateLimits(app)) >= 1);
   assert.equal((await owner.query(`SELECT count(*)::int n FROM rate_limits WHERE key = 'test:old:x'`)).rows[0].n, 0);
+});
+
+test('signing out ends the session and is audited', async () => {
+  const r = await login(deps(), { email: 'admin.a@demandai.test', password: PASSWORD, ...client });
+  assert.ok(r.ok === true);
+  const loaded = (await loadSession(app, session, r.cookie))!;
+  await logout(deps(), loaded.sessionId, loaded.user.id);
+  assert.equal(await loadSession(app, session, r.cookie), null);
+  const rows = (await owner.query(`SELECT action FROM audit_log WHERE actor_user_id = $1 AND action LIKE 'auth.sign%' ORDER BY occurred_at`, [ids.adminA])).rows.map(x => x.action);
+  assert.deepEqual(rows.slice(-2), ['auth.sign_in', 'auth.sign_out']);
 });
 
 test('sessions: valid cookie works; tampered, revoked, idle-expired or deactivated-user sessions do not', async () => {
@@ -151,6 +163,8 @@ test('reset: same reply for unknown emails; the link works once and ends every s
   assert.ok(s1.ok && s2.ok);
   await requestPasswordReset(deps(), { email: 'rep.b@demandai.test', ...client });
   assert.equal(sent.length, 1);
+  assert.equal((await owner.query(`SELECT count(*)::int n FROM audit_log WHERE action = 'auth.reset_requested' AND actor_user_id = $1`, [ids.repB])).rows[0].n, 1);
+  assert.equal((await owner.query(`SELECT count(*)::int n FROM audit_log WHERE action = 'auth.reset_requested'`)).rows[0].n, 1, 'nothing for an unknown email');
   const token = tokenFrom(sent[0]);
   assert.deepEqual(await resetPassword(deps(), { token, password: 'orange tram at midnight', ...client }), { ok: true });
   assert.equal(sent.at(-1)!.kind, 'password_changed');

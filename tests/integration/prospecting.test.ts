@@ -185,6 +185,10 @@ test('G-015 CSV: per-check findings as the original pane wrote them, and the val
   assert.equal(rl.filter(l => l.endsWith(',D5,Duplicate')).length, leads.issues.filter(i => i.code === 'D5').length);
   const mine = await as(repCtx([someOwner]), s => reportCsv(s, listId));
   assert.ok(mine.csv.split('\r\n').length < rl.length, 'a rep’s report holds only what they can see');
+  // Each download is a data-access event in the audit log: who, which list, which file, how many rows (Phase 7).
+  const audit = (await owner.query(`SELECT target_id, details FROM audit_log WHERE action = 'list.exported' ORDER BY occurred_at`)).rows;
+  assert.deepEqual(audit.map(a => [a.target_id, a.details.file, a.details.rows]), [[listId, 'issues', lines.length - 1], [listId, 'validation-report', rl.length - 1],
+    [listId, 'validation-report', mine.csv.split('\r\n').length - 1]]);
 });
 
 test('G-052 in the check CSV: a column name written as a formula in the uploaded file is neutralised', async () => {
