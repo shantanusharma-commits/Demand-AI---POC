@@ -7,7 +7,9 @@
   },
   "include": [
     "./**/*.ts",
-    "../types/**/*.ts"
+    "../types/**/*.ts",
+    "../e2e/**/*.ts",
+    "../playwright.config.ts"
   ],
   "exclude": []
 }

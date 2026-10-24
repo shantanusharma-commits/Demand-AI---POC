@@ -24,6 +24,7 @@ next-env.d.ts
 legacy/
 tests/
 e2e/
+playwright.config.ts
 test-data/
 test reports/
 docs/

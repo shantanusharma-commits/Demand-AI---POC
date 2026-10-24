@@ -14,6 +14,12 @@ next-env.d.ts
 .idea/
 .playwright-mcp/
 
+# End-to-end test output and the local sessions it keeps
+/e2e/.state/
+/test-results/
+/playwright-report/
+/blob-report/
+
 # Environment files hold secrets; only the template is tracked
 .env*
 !.env.example

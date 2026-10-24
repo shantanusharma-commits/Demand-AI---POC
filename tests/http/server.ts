@@ -23,19 +23,19 @@ async function freePort(): Promise<number> {
 }
 
 export type TestServer = { base: string; db: TestDatabase; ids: Basics; logs: string[]; stop: () => Promise<void> };
+export type Standalone = { base: string; logs: string[]; stop: () => Promise<void> };
 
-export async function startServer(label: string, extraEnv: Record<string, string> = {}): Promise<TestServer> {
+/** Starts the standalone server (what the image runs) on a database, with only the environment given: the HTTP tests
+ *  and the end-to-end stack (e2e/stack.ts) both use it. */
+export async function startStandalone(db: TestDatabase, extraEnv: Record<string, string> = {}, port?: number): Promise<Standalone> {
   const serverJs = join(REPO, '.next', 'standalone', 'server.js');
-  if (!existsSync(serverJs)) throw new Error('No production build: run `npm run build` before the HTTP tests');
+  if (!existsSync(serverJs)) throw new Error('No production build: run `npm run build` first');
   // As the Dockerfile does: the standalone server serves the static files and public/ from beside itself.
   for (const [from, to] of [[join(REPO, '.next', 'static'), join(REPO, '.next', 'standalone', '.next', 'static')], [join(REPO, 'public'), join(REPO, '.next', 'standalone', 'public')]]) {
     rmSync(to, { recursive: true, force: true });
     cpSync(from, to, { recursive: true });
   }
-  const db = await freshDatabase(label);
-  const ids = await seedBasics(db.pool('demandai_owner'));
-  await db.pool('demandai_owner').query(`UPDATE users SET password_hash = $1 WHERE kind = 'person'`, [bcrypt.hashSync(PASSWORD, 4)]);
-  const port = await freePort();
+  port ??= await freePort();
   const base = `http://127.0.0.1:${port}`;
   const logs: string[] = [];
   const child: ChildProcess = spawn(process.execPath, [serverJs], {
@@ -59,13 +59,22 @@ export async function startServer(label: string, extraEnv: Record<string, string
     await new Promise(r => setTimeout(r, 200));
   }
   return {
-    base, db, ids, logs,
+    base, logs,
     stop: async () => {
+      if (child.exitCode !== null) return;
       child.kill('SIGTERM');
       await new Promise(r => child.once('exit', r));
-      await db.drop();
     },
   };
+}
+
+export async function startServer(label: string, extraEnv: Record<string, string> = {}): Promise<TestServer> {
+  if (!existsSync(join(REPO, '.next', 'standalone', 'server.js'))) throw new Error('No production build: run `npm run build` before the HTTP tests');
+  const db = await freshDatabase(label);
+  const ids = await seedBasics(db.pool('demandai_owner'));
+  await db.pool('demandai_owner').query(`UPDATE users SET password_hash = $1 WHERE kind = 'person'`, [bcrypt.hashSync(PASSWORD, 4)]);
+  const srv = await startStandalone(db, extraEnv);
+  return { base: srv.base, db, ids, logs: srv.logs, stop: async () => { await srv.stop(); await db.drop(); } };
 }
 
 /** A browser-like client: keeps its cookie, sends a same-origin Origin header on writes. */

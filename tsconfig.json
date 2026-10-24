@@ -40,6 +40,8 @@
   "exclude": [
     "node_modules",
     "legacy",
-    "tests"
+    "tests",
+    "e2e",
+    "playwright.config.ts"
   ]
 }
