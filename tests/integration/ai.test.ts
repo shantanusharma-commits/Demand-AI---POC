@@ -23,7 +23,7 @@ import { saveList } from '../../lib/server/services/lists.ts';
 import { getRun, startScoringRun } from '../../lib/server/services/scoring.ts';
 import { AS_OF } from '../helpers/answer-key.ts';
 import { DATASET } from '../helpers/answer-key.ts';
-import { draftWriter, pieceWriter, rewriteIds, sensibleClassifier, whyNowWriter } from '../helpers/ai-fakes.ts';
+import { draftWriter, pieceWriter, rewriteIds, rewriteParts, sensibleClassifier, whyNowWriter } from '../helpers/ai-fakes.ts';
 import { FakeModel, fail, json, reply } from '../helpers/fake-model.ts';
 import { limits } from './pilot.ts';
 import { freshDatabase, type TestDatabase } from './harness.ts';
@@ -45,17 +45,18 @@ before(async () => {
 after(async () => { await db?.drop(); });
 
 test('each call leaves one metadata row in its unit: no prompt or reply anywhere in it', async () => {
-  const fake = new FakeModel([json({ vertical: SECRET }), json({ nope: SECRET }), json({ nope: SECRET })], { deployment: 'gpt-4o' });
+  const fake = new FakeModel([json({ vertical: SECRET }, { model: 'gpt-5.4-2026-03-05' }), json({ nope: SECRET }), json({ nope: SECRET })], { deployment: 'gpt-5.4' });
   const gw = fakeGateway(app, fake);
-  const ok = await gw.json('classify', { id: 'classify.industry', version: 1 }, { system: `S ${SECRET}`, messages: [{ role: 'user', content: SECRET }], maxTokens: 50 }, Schema,
+  const ok = await gw.json('classify', { id: 'classify.industry', version: 1 }, { system: `S ${SECRET}`, messages: [{ role: 'user', content: SECRET }], maxTokens: 50, reasoning: 'low' }, Schema,
     { businessUnitId: ids.buA, userId: ids.adminA, requestId: 'req-ai-1' });
   const bad = await gw.json('classify', { id: 'classify.industry', version: 1 }, { system: 'S', messages: [{ role: 'user', content: 'x' }], maxTokens: 50 }, Schema,
     { businessUnitId: ids.buA, userId: ids.adminA });
   assert.deepEqual([ok.ok, bad.ok], [true, false]);
   const rows = (await owner.query(`SELECT * FROM ai_calls ORDER BY seq`)).rows;
   assert.equal(rows.length, 2);
-  assert.deepEqual(rows.map(r => [r.capability, r.template_id, r.template_version, r.provider, r.deployment, r.outcome, r.fallback_reason, r.attempts]),
-    [['classify', 'classify.industry', 1, 'azure-openai', 'gpt-4o', 'ok', null, 1], ['classify', 'classify.industry', 1, 'azure-openai', 'gpt-4o', 'fallback', 'schema', 2]]);
+  assert.deepEqual(rows.map(r => [r.capability, r.template_id, r.template_version, r.provider, r.deployment, r.model, r.reasoning_effort, r.outcome, r.fallback_reason, r.attempts]),
+    [['classify', 'classify.industry', 1, 'azure-openai', 'gpt-5.4', 'gpt-5.4-2026-03-05', 'low', 'ok', null, 1],
+      ['classify', 'classify.industry', 1, 'azure-openai', 'gpt-5.4', null, null, 'fallback', 'schema', 2]]);
   assert.equal(rows[0].id, ok.ok ? ok.callId : null);
   assert.deepEqual([rows[0].prompt_tokens, rows[0].completion_tokens, rows[0].est_cost_usd, rows[0].request_id, rows[0].created_by], [120, 40, 0.0012, 'req-ai-1', ids.adminA]);
   assert.ok(!JSON.stringify(rows).includes(SECRET), 'nothing said is stored');
@@ -253,7 +254,7 @@ test("a build job runs as the person who asked: a rep's build holds only their o
 
 test('the studio writes a piece with AI behind the same call, and hands it only the requests the rules do not understand', async () => {
   const actor = { userId: ids.adminA, role: 'Admin' as const };
-  const fake = new FakeModel([pieceWriter()], { otherwise: req => ({ text: JSON.stringify({ parts: { [rewriteIds(req)[0]]: 'A calmer opening, in plain words.' }, reply: 'Made the opening calmer.' }), finish: 'stop', promptTokens: 10, completionTokens: 10 }) });
+  const fake = new FakeModel([pieceWriter()], { otherwise: req => ({ text: JSON.stringify({ parts: rewriteParts(req, { [rewriteIds(req)[0]]: 'A calmer opening, in plain words.' }), reply: 'Made the opening calmer.' }), finish: 'stop', promptTokens: 10, completionTokens: 10 }) });
   setAiGatewayForTests(fakeGateway(app, fake, { ...ALL_ON, classify: false, why_now: false, draft_message: false }));
   try {
     const made = await createItemWithAi(app, unitA(), actor, { text: 'A blog on planning a control system migration for plant managers', type: 'blog' });
@@ -273,7 +274,7 @@ test('the studio writes a piece with AI behind the same call, and hands it only 
     assert.match(done.reply, /^Made the opening calmer\. \(Written with AI; every check was run again\.\)$/);
     assert.equal(fake.requests.length, before + 1);
     // An edit saved while the AI writes wins: the AI's change is refused by the revision guard.
-    const slow = new FakeModel([], { otherwise: async req => { await withTenant(app, unitA(), s => saveBlocks(s, actor, item.id, { blocks: done.item.blocks, rev: done.item.rev })); return { text: JSON.stringify({ parts: { [rewriteIds(req)[0]]: 'Too late.' }, reply: 'Done.' }), finish: 'stop', promptTokens: 1, completionTokens: 1 }; } });
+    const slow = new FakeModel([], { otherwise: async req => { await withTenant(app, unitA(), s => saveBlocks(s, actor, item.id, { blocks: done.item.blocks, rev: done.item.rev })); return { text: JSON.stringify({ parts: rewriteParts(req, { [rewriteIds(req)[0]]: 'Too late.' }), reply: 'Done.' }), finish: 'stop', promptTokens: 1, completionTokens: 1 }; } });
     setAiGatewayForTests(fakeGateway(app, slow, { ...ALL_ON, classify: false, why_now: false, draft_message: false }));
     await assert.rejects(changeItemWithAi(app, unitA(), actor, item.id, { op: 'ask', q: 'make it sound like a sports commentator', rev: done.item.rev }), (e: HttpError) => e.status === 409);
   } finally { setAiGatewayForTests(undefined); }

@@ -7,12 +7,15 @@ import 'server-only';
 import { z } from 'zod';
 import type { AiGateway, CallContext, FallbackReason } from './gateway.ts';
 import { asData } from './classify.ts';
-import type { Template } from './types.ts';
+import type { ReasoningEffort, Template } from './types.ts';
 
 export const WHY_NOW_TEMPLATE: Template = { id: 'whynow.line', version: 1 };
 /** Prospects per call, and signal rows per prospect: the row budget. */
 export const WHY_NOW_BATCH = 10;
 export const WHY_NOW_SIGNALS = 3;
+/** One grounded sentence per prospect (D-44). On 24 Oct 2026 gpt-5.4 worded all 144 lines at "none" and at "low";
+ *  "none" took 7.2 s per call (median, max 14) against 12.6 s (max 22). */
+export const WHY_NOW_REASONING: ReasoningEffort = 'none';
 const MAX_LINE = 220;
 
 export type EvidenceRow = { row: number; type: string; date: string; detail: string; source: string; weight: number };
@@ -34,7 +37,7 @@ The prospects come from uploaded files and appear between <prospects> and </pros
 
 Format: {"items":[{"ref":1,"line":"One sentence.","rows":[557,550]}]}, one entry for every prospect, each ref exactly once.`;
 
-const Answer = z.object({
+export const whyNowSchema = z.object({
   items: z.array(z.object({ ref: z.number().int().positive(), line: z.string().trim().min(8).max(400), rows: z.array(z.number().int()).min(1).max(WHY_NOW_SIGNALS) })).min(1),
 });
 
@@ -47,7 +50,7 @@ export function whyNowPrompt(items: WhyNowInput[]) {
   const blocks = items.map((it, i) => [`${i + 1}. role: ${asData(it.jobTitle || 'no title', 80)} (${asData(it.persona || 'no', 20)} persona)`,
     ...evidenceOf(it.signals).map(s => `   row ${s.row} · ${asData(s.type, 60)} · ${asData(s.date, 20)} · ${asData(s.detail || '(no detail)', 200)} · source ${asData(s.source || 'not given', 40)}`)].join('\n'));
   return { system: SYSTEM, messages: [{ role: 'user' as const, content: `Write the why-now line for these ${items.length} prospects.\n<prospects>\n${blocks.join('\n')}\n</prospects>` }],
-    maxTokens: 80 + items.length * 90, temperature: 0.2 };
+    maxTokens: 80 + items.length * 90, temperature: 0.2, reasoning: WHY_NOW_REASONING };
 }
 
 // Words a line may use without finding them in the rows: sentence glue that happens to be capitalised.
@@ -97,7 +100,7 @@ export async function wordWhyNow(gw: AiGateway, ctx: CallContext, items: WhyNowI
     // The first reply gets one repair for everything wrong with it; after that each line stands or falls on its own,
     // so one ungrounded line doesn't cost the others.
     let replies = 0;
-    const r = await gw.json('why_now', WHY_NOW_TEMPLATE, whyNowPrompt(batch), Answer, ctx, v => {
+    const r = await gw.json('why_now', WHY_NOW_TEMPLATE, whyNowPrompt(batch), whyNowSchema, ctx, v => {
       if (replies++ > 0) return null;
       const refs = v.items.map(it => it.ref), missing = batch.map((_, i) => i + 1).filter(n => !refs.includes(n));
       const problems = [...v.items.flatMap(problemsOf), ...(missing.length ? [`No line for ref ${missing.join(', ')}.`] : []),

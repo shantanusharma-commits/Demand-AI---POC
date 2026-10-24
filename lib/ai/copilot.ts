@@ -9,10 +9,12 @@
 // the tokens it was given; one repair, then the rules' "can't answer from this screen" with the reason.
 import 'server-only';
 import type { AiGateway, CallContext, FallbackReason } from './gateway.ts';
-import type { Template } from './types.ts';
+import type { ReasoningEffort, Template } from './types.ts';
 import type { CopilotBlock, CopilotTurn } from '../copilot/types.ts';
 
 export const COPILOT_TEMPLATE: Template = { id: 'copilot.answer', version: 1 };
+/** A short answer from the screen's rows while someone waits (D-44). */
+export const COPILOT_REASONING: ReasoningEffort = 'low';
 export const MAX_TURNS = 8;
 const TURN_CHARS = 600;
 
@@ -78,7 +80,7 @@ export async function answerCopilot(gw: AiGateway, ctx: CallContext, c: CopilotC
   const chat = turns.slice(-MAX_TURNS).map(t => `${t.role === 'you' ? 'Q' : 'A'}: ${aliases.hide(String(t.text || '')).replace(/[<>]/g, ' ').slice(0, TURN_CHARS)}`);
   const data = c.data.replace(/<\/?(data|chat|question)>/gi, ' ');
   const user = `<data>\n${data}\n</data>\n${chat.length ? `<chat>\n${chat.join('\n')}\n</chat>\n` : ''}<question>\n${aliases.hide(question).replace(/[<>]/g, ' ').slice(0, 1000)}\n</question>`;
-  const r = await gw.text('copilot', COPILOT_TEMPLATE, { system: SYSTEM(c), messages: [{ role: 'user', content: user }], maxTokens: 400, temperature: 0.2 }, ctx, text => {
+  const r = await gw.text('copilot', COPILOT_TEMPLATE, { system: SYSTEM(c), messages: [{ role: 'user', content: user }], maxTokens: 400, temperature: 0.2, reasoning: COPILOT_REASONING }, ctx, text => {
     const problems: string[] = [];
     if (ACTED.test(text)) problems.push('Never say you changed, sent or approved anything: you can only answer.');
     if (EMAIL.test(text)) problems.push('Do not include email addresses.');

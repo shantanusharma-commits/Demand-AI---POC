@@ -1091,6 +1091,10 @@ export const aiCalls = pgTable('ai_calls', {
   templateVersion: integer('template_version').notNull(),
   provider: text('provider').notNull(),
   deployment: text('deployment').notNull(),
+  /** The model that answered, as the provider named it (D-44); null when none did, and on calls before migration 0038. */
+  model: text('model'),
+  /** The reasoning effort asked for (GPT-5 models); null for a model that doesn't reason. */
+  reasoningEffort: text('reasoning_effort'),
   latencyMs: integer('latency_ms').notNull(),
   promptTokens: integer('prompt_tokens').notNull(),
   completionTokens: integer('completion_tokens').notNull(),

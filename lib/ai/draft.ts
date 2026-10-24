@@ -12,11 +12,15 @@ import { approvedClaims, briefFor, checkDraft, segmentOfAction, VOICE_PRESETS, t
 import type { AiGateway, CallContext, FallbackReason } from './gateway.ts';
 import { asData } from './classify.ts';
 import { groundingProblems } from './why-now.ts';
-import type { Template } from './types.ts';
+import type { ReasoningEffort, Template } from './types.ts';
 
 // v2 (24 Oct 2026): subjects in sentence case. The first live evaluation found gpt-4o writing headline-style subjects
 // whose capitalised words all failed grounding as names, so 11 of 40 drafts fell back to the rules.
 export const DRAFT_TEMPLATE: Template = { id: 'draft.message', version: 2 };
+
+/** A short message with several rules to keep at once (D-44). On 24 Oct 2026 gpt-5.4 wrote 40 of 40 passing drafts at
+ *  "none" and at "low"; "none" took 9.0 s per draft (median, max 17) against 15.3 s (max 30, the timeout). */
+export const DRAFT_REASONING: ReasoningEffort = 'none';
 
 export type DraftAsk = { rec: Rec; action: string; pack: BrandPack; checkDate: string; rules: Draft };
 export type AiDraftResult = { ok: true; draft: Draft; callId: string } | { ok: false; reason: FallbackReason | 'not_eligible' };
@@ -66,7 +70,7 @@ export function draftPrompt(ask: DraftAsk) {
     ...(claims.length ? ['Approved claims (choose one by ID):', ...claims.map(c => `- ${c.id}: ${asData(c.title, 100)} · ${asData(c.claim, 240)}`)] : []),
   ];
   return { system: system(channel, pack), messages: [{ role: 'user' as const, content: `Write the ${channel === 'Email' ? 'email' : 'connection note'}.\n<prospect>\n${lines.join('\n')}\n</prospect>` }],
-    maxTokens: 420, temperature: 0.4, facts: [brief.whyNow, brief.angle, brief.ask, rec.account.vertical, rec.contact.jobTitle, action].join(' \n '), claims };
+    maxTokens: 420, temperature: 0.4, reasoning: DRAFT_REASONING, facts: [brief.whyNow, brief.angle, brief.ask, rec.account.vertical, rec.contact.jobTitle, action].join(' \n '), claims };
 }
 
 /** The message as it would go out: greeting and sign-off from the brand voice, the claim word for word. */
@@ -86,11 +90,11 @@ export function assemble(ask: DraftAsk, v: { subject?: string; opening?: string;
   return { ...rules, proof: claim, subject: String(v.subject || '').trim(), body, words: body.split(/\s+/).filter(Boolean).length, ai } as Draft;
 }
 
-const Email = (ids: string[]) => z.object({
+export const emailSchema = (ids: string[]) => z.object({
   subject: z.string().trim().min(2).max(80), opening: z.string().trim().min(5).max(400), bridge: z.string().trim().min(5).max(500),
   ask: z.string().trim().min(5).max(200), claimId: z.enum(ids as [string, ...string[]]),
 });
-const Note = z.object({ note: z.string().trim().min(10).max(400) });
+export const noteSchema = z.object({ note: z.string().trim().min(10).max(400) });
 
 /** What fails in an assembled draft: the brand and claim checks, then grounding of the words the model wrote. */
 export function draftProblems(ask: DraftAsk, d: Draft, written: string, facts: string): string[] {
@@ -113,7 +117,7 @@ export async function writeDraft(gw: AiGateway, ctx: CallContext, ask: DraftAsk)
   const p = draftPrompt(ask);
   const email = ask.rules.channel === 'Email';
   if (email && !p.claims.length) return { ok: false, reason: 'not_eligible' };
-  const schema: z.ZodType<Record<string, string>> = email ? Email(p.claims.map(c => c.id)) : Note;
+  const schema: z.ZodType<Record<string, string>> = email ? emailSchema(p.claims.map(c => c.id)) : noteSchema;
   let built: Draft | null = null;
   const r = await gw.json('draft_message', DRAFT_TEMPLATE, p, schema, ctx, v => {
     const d = assemble(ask, v, p.claims, '');

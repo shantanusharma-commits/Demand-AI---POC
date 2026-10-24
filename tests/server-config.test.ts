@@ -21,7 +21,7 @@ test('an empty environment gives development defaults with every AI flag off', (
   assert.equal(r.env.NODE_ENV, 'development');
   assert.equal(r.env.PORT, 3000);
   assert.equal(r.env.AI_PROVIDER, 'none');
-  assert.equal(r.env.AZURE_OPENAI_API_VERSION, '2024-06-01');
+  assert.equal(r.env.AZURE_OPENAI_API_VERSION, '2025-04-01-preview');
   assert.equal(r.env.UPLOAD_MAX_BYTES, 25 * 1024 * 1024);
   assert.equal(r.env.UPLOAD_MAX_ROWS, 50_000);
   assert.deepEqual(describeConfig(r.env).aiFeatures, []);

@@ -8,7 +8,7 @@ import { rewritePiece, writePiece } from '../lib/ai/studio.ts';
 import * as W from '../lib/content/studio.ts';
 import * as N from '../lib/engine/nba.ts';
 import { FakeModel } from './helpers/fake-model.ts';
-import { pieceRoles, pieceWriter, rewriteIds } from './helpers/ai-fakes.ts';
+import { pieceRoles, pieceWriter, rewriteIds, rewriteParts } from './helpers/ai-fakes.ts';
 
 const CTX = { businessUnitId: '00000000-0000-4000-8000-0000000000b1', userId: '00000000-0000-4000-8000-0000000000a1' };
 const gateway = (client: FakeModel, on = true) => new AiGateway({ client, flags: { draft_content: on }, timeoutMs: 5_000, maxConcurrency: 4, sleep: async () => {} });
@@ -47,7 +47,7 @@ test('an invented statistic or claim gets one repair; after that the rules\' pie
 test('a rewrite changes only the parts it was given, keeps lists as lists, and leaves a person\'s edits alone', async () => {
   const edited = rules.blocks.map((b, i) => (i === 1 ? { ...b, edited: true, text: 'My own words.' } : b));
   const p = { ...rules, blocks: edited };
-  const fake = new FakeModel([req => { const ids = rewriteIds(req); return { text: JSON.stringify({ parts: { [ids[0]]: 'A calmer opening for the piece.' }, reply: 'Rewrote the opening.' }), finish: 'stop', promptTokens: 1, completionTokens: 1 }; }]);
+  const fake = new FakeModel([req => { const ids = rewriteIds(req); return { text: JSON.stringify({ parts: rewriteParts(req, { [ids[0]]: 'A calmer opening for the piece.' }), reply: 'Rewrote the opening.' }), finish: 'stop', promptTokens: 1, completionTokens: 1 }; }]);
   const r = await rewritePiece(gateway(fake), CTX, p, 'make it sound calmer', null, pack, asOf);
   assert.equal(r.ok, true);
   const offered = rewriteIds(fake.requests[0]);
@@ -62,13 +62,17 @@ test('a rewrite changes only the parts it was given, keeps lists as lists, and l
   const bad = new FakeModel([], { otherwise: () => ({ text: JSON.stringify({ parts: { [list.id]: 'not a list', nope: 'some words' }, reply: 'Reworded them.' }), finish: 'stop', promptTokens: 1, completionTokens: 1 }) });
   const r2 = await rewritePiece(gateway(bad), CTX, rules, 'reword the questions', list.id, pack, asOf);
   assert.deepEqual([r2.ok, r2.ok === false && r2.reason], [false, 'schema']);
-  assert.match(bad.requests[1].messages.at(-1)!.content, /Unknown part ids: nope/);
-  assert.match(bad.requests[1].messages.at(-1)!.content, /must keep their form/);
+  assert.match(bad.requests[1].messages.at(-1)!.content, /nope/, 'an unknown part is named');
+  assert.match(bad.requests[1].messages.at(-1)!.content, new RegExp(`parts\\.${list.id}: .*expected array`), 'a list must stay a list');
+  const none = new FakeModel([], { otherwise: req => ({ text: JSON.stringify({ parts: rewriteParts(req, {}), reply: 'Nothing to change.' }), finish: 'stop', promptTokens: 1, completionTokens: 1 }) });
+  const r3 = await rewritePiece(gateway(none), CTX, rules, 'reword the questions', list.id, pack, asOf);
+  assert.deepEqual([r3.ok, r3.ok === false && r3.reason], [false, 'schema']);
+  assert.match(none.requests[1].messages.at(-1)!.content, /Nothing was rewritten/);
 });
 
 test('the reply names parts by what they are, never by their internal ids', async () => {
   // Found live (24 Oct 2026): gpt-4o answered "Added a sentence about the migration duration to part 872e4c92."
-  const fake = new FakeModel([req => { const ids = rewriteIds(req); return { text: JSON.stringify({ parts: { [ids[0]]: 'A calmer headline', [ids[1]]: 'A calmer opening for the piece.' },
+  const fake = new FakeModel([req => { const ids = rewriteIds(req); return { text: JSON.stringify({ parts: rewriteParts(req, { [ids[0]]: 'A calmer headline', [ids[1]]: 'A calmer opening for the piece.' }),
     reply: `Changed part ${ids[0]} and [${ids[1]}], as asked.` }), finish: 'stop', promptTokens: 1, completionTokens: 1 }; }]);
   const r = await rewritePiece(gateway(fake), CTX, rules, 'make it calmer', null, pack, asOf);
   assert.equal(r.ok, true);

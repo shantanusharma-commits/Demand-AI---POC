@@ -33,7 +33,8 @@ export async function classifyStep(db: Db, ctx: TenantContext, ai: AiGateway, re
   if (!ai.enabled('classify')) return null;
   const ask = unmatchedIndustries(result);
   if (!ask.length) return null;
-  const keys = ask.map(a => a.key), d = ai.describe(), model = `${d.provider}:${d.deployment ?? ''}`;
+  // Keyed by the deployment classification goes to (D-44: it can be the small model), so another model asks again.
+  const keys = ask.map(a => a.key), model = `${ai.describe().provider}:${ai.deploymentFor('classify') ?? ''}`;
   const kept = await withTenant(db, ctx, async s => {
     const rows: { key: string; vertical: string; confidence: string; reason: string }[] = [];
     for (const part of chunks(keys, 500)) {

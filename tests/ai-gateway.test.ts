@@ -261,7 +261,7 @@ test('JSON is read out of a code fence or a sentence; anything else is reported'
   assert.equal(retryAfterMs(n => ({ 'retry-after': new Date(10_000).toUTCString() } as Record<string, string>)[n], 4_000), 6000);
 });
 
-/* ─── Azure OpenAI adapter, against responses in Azure's documented format ─── */
+/* ─── Azure OpenAI adapter, against captured and documented responses (the GPT-5 request shape: tests/ai-models.test.ts) ─── */
 
 type Fx = { status: number; headers: Record<string, string>; body: unknown };
 const AZ: Record<string, Fx> = JSON.parse(readFileSync(join(repo, 'tests/fixtures/ai/azure-openai.json'), 'utf8'));
@@ -275,28 +275,30 @@ function azure(fx: Fx | Fx[], over: { authHeader?: 'api-key' | 'Ocp-Apim-Subscri
     const f = queue.shift() ?? queue[0];
     return new Response(JSON.stringify(f.body), { status: f.status, headers: f.headers });
   }) as typeof fetch;
-  const client = createAzureClient({ endpoint: over.endpoint ?? 'https://apim.example.test/', apiKey: KEY, deployment: 'gpt-4o', apiVersion: '2024-06-01',
+  const client = createAzureClient({ endpoint: over.endpoint ?? 'https://apim.example.test/', apiKey: KEY, deployment: 'gpt-5.4', apiVersion: '2025-04-01-preview',
     authHeader: over.authHeader ?? 'api-key', fetch: fetchFn });
   return { client, sent };
 }
 const req = (json = true): ModelRequest => ({ system: 'sys', messages: [{ role: 'user', content: 'hi JSON' }], json, maxTokens: 150, temperature: 0.2, signal: new AbortController().signal });
 
-test('Azure: the deployment path, api-version 2024-06-01, JSON mode, max_tokens and the api-key header', async () => {
+test('Azure: the deployment path, the configured api-version, JSON mode without a schema, and the api-key header', async () => {
   const { client, sent } = azure(AZ.ok_json);
   const r = await client.complete(req());
   assert.equal(sent.length, 1);
   const u = new URL(sent[0].url);
-  assert.equal(u.pathname, '/openai/deployments/gpt-4o/chat/completions');
-  assert.equal(u.searchParams.get('api-version'), '2024-06-01');
+  assert.equal(u.pathname, '/openai/deployments/gpt-5.4/chat/completions');
+  assert.equal(u.searchParams.get('api-version'), '2025-04-01-preview');
   assert.equal(sent[0].headers.get('api-key'), KEY);
   assert.equal(sent[0].headers.get('authorization'), null);
   assert.deepEqual(sent[0].body.response_format, { type: 'json_object' });
-  assert.equal(sent[0].body.max_tokens, 150);
+  assert.deepEqual([sent[0].body.max_tokens, sent[0].body.max_completion_tokens], [undefined, 150]);
   assert.deepEqual((sent[0].body.messages as { role: string }[]).map(m => m.role), ['system', 'user']);
   assert.equal(r.finish, 'stop');
-  assert.match(r.text, /Oil refining/);
-  assert.deepEqual([r.promptTokens, r.completionTokens], [312, 38]);
-  assert.equal(r.providerRequestId, '8e7d6c5b-0000-4000-8000-000000000002');
+  assert.match(r.text, /"vertical":"Refining"/);
+  assert.equal(r.model, 'gpt-5.4-2026-03-05');
+  assert.ok(r.promptTokens > 0 && r.completionTokens > 0);
+  assert.equal(r.providerRequestId, undefined, 'the pilot\'s gateway sends no request ID');
+  assert.equal((await azure(AZ.ok_text).client.complete(req(false))).providerRequestId, '8e7d6c5b-0000-4000-8000-000000000002', 'a resource endpoint\'s is kept');
   const text = azure(AZ.ok_text);
   await text.client.complete(req(false));
   assert.equal(text.sent[0].body.response_format, undefined, 'no JSON mode for a text answer');
@@ -307,7 +309,7 @@ test('Azure behind API Management: the key goes as Ocp-Apim-Subscription-Key onl
   await client.complete(req());
   assert.equal(sent[0].headers.get('ocp-apim-subscription-key'), KEY);
   assert.equal(sent[0].headers.get('api-key'), null);
-  assert.equal(new URL(sent[0].url).pathname, '/ai-gateway/openai/deployments/gpt-4o/chat/completions');
+  assert.equal(new URL(sent[0].url).pathname, '/ai-gateway/openai/deployments/gpt-5.4/chat/completions');
   assert.deepEqual(azureBase('https://r.openai.azure.com/'), { endpoint: 'https://r.openai.azure.com/' });
   assert.deepEqual(azureBase('https://apim.example.test/x/openai/'), { baseURL: 'https://apim.example.test/x/openai' });
 });

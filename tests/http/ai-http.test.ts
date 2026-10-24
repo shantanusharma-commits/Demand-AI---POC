@@ -1,5 +1,6 @@
-// AI over HTTP on the production build (Phase 6), with every capability switched on and Azure OpenAI played by a
-// stand-in on 127.0.0.1 (tests/helpers/fake-azure.ts): the real SDK, routes, jobs and records. The Admin health check
+// AI over HTTP on the production build (Phase 6, D-44), with every capability switched on and Azure OpenAI played by a
+// stand-in on 127.0.0.1 (tests/helpers/fake-azure.ts) that refuses what the GPT-5 deployments refuse: the real SDK,
+// routes, jobs and records, with classification routed to the small model. The Admin health check
 // and status (never the key), Copilot, and the sample's whole flow: classification in the lead job, why-now in the
 // scoring job, and a build that becomes a job writing first messages. The key reaches the model service only, in the
 // configured header; the logs hold no key and no prompt text. Needs `npm run build` first.
@@ -18,7 +19,8 @@ let srv: TestServer, azure: Awaited<ReturnType<typeof startFakeAzure>>;
 before(async () => {
   azure = await startFakeAzure();
   srv = await startServer('http_ai', {
-    AI_PROVIDER: 'azure-openai', AZURE_OPENAI_ENDPOINT: `${azure.base}/`, AZURE_OPENAI_API_KEY: KEY, AZURE_OPENAI_DEPLOYMENT: 'gpt-4o',
+    AI_PROVIDER: 'azure-openai', AZURE_OPENAI_ENDPOINT: `${azure.base}/`, AZURE_OPENAI_API_KEY: KEY, AZURE_OPENAI_DEPLOYMENT: 'gpt-5.4',
+    AZURE_OPENAI_DEPLOYMENT_SMALL: 'gpt-5.4-mini', AI_SMALL_MODEL_FOR: 'classify',
     AI_FEATURE_CLASSIFY: '1', AI_FEATURE_WHY_NOW: '1', AI_FEATURE_DRAFTING: '1', AI_FEATURE_CONTENT_STUDIO: '1', AI_FEATURE_COPILOT: '1',
   });
   await srv.db.pool('demandai_owner').query(`INSERT INTO config_versions (business_unit_id, version_no, status, body, engine_version, created_by, activated_at, activated_by)
@@ -29,19 +31,28 @@ after(async () => { await srv?.stop(); await azure?.stop(); });
 const admin = async () => { const b = new Browser(srv.base); await b.signIn('admin.a@demandai.test'); return b; };
 const form = (kind: string, name: string, bytes: Buffer, type = '') => { const f = new FormData(); f.set('kind', kind); f.set('file', new Blob([new Uint8Array(bytes)], { type }), name); return f; };
 
-test('the Admin health check reaches the model with the key in its header, and never shows the key', async () => {
+test('the Admin health check reaches both models with the key in its header, and never shows the key', async () => {
   const b = await admin();
+  const n = azure.received.length;
   const r = await b.post('/api/admin/ai/healthcheck');
   assert.equal(r.status, 200, r.text);
-  assert.deepEqual([r.json.ok, r.json.provider, r.json.deployment, typeof r.json.latencyMs], [true, 'azure-openai', 'gpt-4o', 'number']);
+  const small = r.json.small as { ok: boolean; deployment: string };
+  assert.deepEqual([r.json.ok, r.json.provider, r.json.deployment, typeof r.json.latencyMs, small.ok, small.deployment],
+    [true, 'azure-openai', 'gpt-5.4', 'number', true, 'gpt-5.4-mini']);
   assert.ok(!r.text.includes(KEY));
-  const call = azure.received.at(-1)!;
-  assert.equal(call.path, '/openai/deployments/gpt-4o/chat/completions');
-  assert.equal(call.query.get('api-version'), '2024-06-01');
-  assert.equal(call.headers['api-key'], KEY);
+  const calls = azure.received.slice(n);
+  assert.deepEqual(calls.map(c => c.path), ['/openai/deployments/gpt-5.4/chat/completions', '/openai/deployments/gpt-5.4-mini/chat/completions']);
+  for (const call of calls) {
+    assert.equal(call.query.get('api-version'), '2025-04-01-preview');
+    assert.equal(call.headers['api-key'], KEY);
+    assert.deepEqual([call.body.max_tokens, call.body.reasoning_effort], [undefined, 'none']);
+  }
   const s = await b.get('/api/admin/ai');
   assert.equal(s.status, 200);
-  assert.deepEqual([s.json.provider, s.json.deployment, s.json.apiVersion, s.json.authHeader], ['azure-openai', 'gpt-4o', '2024-06-01', 'api-key']);
+  const st = s.json as { small: { deployment: string; for: string[] }; capabilities: { key: string; models: string[] }[] };
+  assert.deepEqual([s.json.provider, s.json.deployment, s.json.apiVersion, s.json.authHeader, st.small.deployment, st.small.for],
+    ['azure-openai', 'gpt-5.4', '2025-04-01-preview', 'api-key', 'gpt-5.4-mini', ['classify']]);
+  assert.deepEqual(st.capabilities.find(c => c.key === 'healthcheck')!.models, ['gpt-5.4-mini-stand-in', 'gpt-5.4-stand-in']);
   assert.ok(!s.text.includes(KEY));
   const rep = new Browser(srv.base);
   await rep.signIn('rep.a@demandai.test');
@@ -74,8 +85,13 @@ test('the sample through every capability: classified, why-now worded, and a bui
   assert.deepEqual(bj.progress.stages, ['prepare', 'draft', 'save']);
   const nba = (await b.get(`/api/nba-runs/${bj.progress.result!.runId}`)).json.run as { stats: { aiDrafts: { asked: number; written: number } } };
   assert.ok(nba.stats.aiDrafts.written > 0 && nba.stats.aiDrafts.written === nba.stats.aiDrafts.asked, JSON.stringify(nba.stats.aiDrafts));
-  const calls = (await srv.db.pool('demandai_owner').query(`SELECT capability, outcome, count(*)::int n FROM ai_calls GROUP BY 1, 2 ORDER BY 1, 2`)).rows;
-  for (const cap of ['classify', 'why_now', 'draft_message']) assert.ok(calls.some(c => c.capability === cap && c.outcome === 'ok'), `${cap} recorded`);
+  const calls = (await srv.db.pool('demandai_owner').query(`SELECT capability, outcome, deployment, model, reasoning_effort, count(*)::int n FROM ai_calls
+    WHERE capability <> 'healthcheck' GROUP BY 1, 2, 3, 4, 5 ORDER BY 1, 2`)).rows;
+  assert.deepEqual(calls.filter(c => c.outcome !== 'ok'), [], 'every call answered: no request the GPT-5 stand-in refused');
+  assert.deepEqual(calls.map(c => [c.capability, c.deployment, c.model, c.reasoning_effort]), [
+    ['classify', 'gpt-5.4-mini', 'gpt-5.4-mini-stand-in', 'low'], ['draft_message', 'gpt-5.4', 'gpt-5.4-stand-in', 'none'], ['why_now', 'gpt-5.4', 'gpt-5.4-stand-in', 'none']]);
+  const json = azure.received.filter(r => r.body.response_format);
+  assert.ok(json.length > 0 && json.every(r => r.body.response_format?.type === 'json_schema' && r.body.response_format.json_schema?.strict === true), 'every JSON call sends a strict schema');
 });
 
 test('Copilot over HTTP: rule answers without a model call, free text through the model with tokens, the key and prompts out of the logs', async () => {

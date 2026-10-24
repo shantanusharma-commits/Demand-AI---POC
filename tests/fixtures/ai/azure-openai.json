@@ -1,19 +1,56 @@
 {
-  "_about": "Azure OpenAI chat-completions responses (API version 2024-06-01, gpt-4o 2024-05-13), written by hand from Microsoft's documented response and error formats. They are not captures of a live call; replace them with real captures once the Client's endpoint is available (tests/ai-live-smoke.test.ts).",
+  "_about": "Azure OpenAI chat-completions responses. Entries marked \"captured\" were recorded on 24 Oct 2026 from the API Management gateway the pilot uses (deployment gpt-5.4, served model gpt-5.4-2026-03-05, API version 2025-04-01-preview), with fictional prompts; only the content-type and served-model headers are kept. The others are hand-written from Microsoft's documented formats: content filters can't be triggered on purpose, and this gateway sends no request-ID header.",
   "ok_json": {
+    "_source": "captured",
     "status": 200,
     "headers": {
       "content-type": "application/json",
-      "apim-request-id": "4f0c1d2e-0000-4000-8000-000000000001",
-      "x-request-id": "8e7d6c5b-0000-4000-8000-000000000002",
-      "x-ratelimit-remaining-requests": "59",
-      "x-ratelimit-remaining-tokens": "79000"
+      "x-ms-served-model": "gpt-5.4-2026-03-05"
     },
     "body": {
-      "id": "chatcmpl-fixture",
+      "choices": [
+        {
+          "content_filter_results": {
+            "hate": {
+              "filtered": false,
+              "severity": "safe"
+            },
+            "protected_material_code": {
+              "detected": false,
+              "filtered": false
+            },
+            "protected_material_text": {
+              "detected": false,
+              "filtered": false
+            },
+            "self_harm": {
+              "filtered": false,
+              "severity": "safe"
+            },
+            "sexual": {
+              "filtered": false,
+              "severity": "safe"
+            },
+            "violence": {
+              "filtered": false,
+              "severity": "safe"
+            }
+          },
+          "finish_reason": "stop",
+          "index": 0,
+          "logprobs": null,
+          "message": {
+            "annotations": [],
+            "content": "{\"items\":[{\"ref\":1,\"vertical\":\"Refining\",\"confidence\":\"high\",\"reason\":\"The industry is explicitly stated as oil refining, and the site processes listed—crude distillation and hydrotreating—are core refining operations.\"}]}",
+            "refusal": null,
+            "role": "assistant"
+          }
+        }
+      ],
+      "created": 1792817377,
+      "id": "chatcmpl-EcNzFK3X2DTUfe9ZY61VvB4fCqKsz",
+      "model": "gpt-5.4-2026-03-05",
       "object": "chat.completion",
-      "created": 1729000000,
-      "model": "gpt-4o-2024-05-13",
       "prompt_filter_results": [
         {
           "prompt_index": 0,
@@ -22,6 +59,10 @@
               "filtered": false,
               "severity": "safe"
             },
+            "jailbreak": {
+              "detected": false,
+              "filtered": false
+            },
             "self_harm": {
               "filtered": false,
               "severity": "safe"
@@ -37,20 +78,101 @@
           }
         }
       ],
+      "routing": {
+        "serving_pipereplica": "d20261013230826-66c81d51-default-r1-dp0-default"
+      },
+      "service_tier": "default",
+      "system_fingerprint": null,
+      "usage": {
+        "completion_tokens": 60,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": 0,
+          "audio_tokens": 0,
+          "reasoning_tokens": 0,
+          "rejected_prediction_tokens": 0
+        },
+        "latency_checkpoint": {
+          "engine_tbt_ms": 10,
+          "engine_ttft_ms": 78,
+          "engine_ttlt_ms": 658,
+          "pre_inference_ms": 78,
+          "service_tbt_ms": 10,
+          "service_ttft_ms": 248,
+          "service_ttlt_ms": 823,
+          "user_visible_ttft_ms": 170
+        },
+        "prompt_tokens": 149,
+        "prompt_tokens_details": {
+          "audio_tokens": 0,
+          "cached_tokens": 0
+        },
+        "total_tokens": 209
+      }
+    }
+  },
+  "reasoning_low": {
+    "_source": "captured",
+    "status": 200,
+    "headers": {
+      "content-type": "application/json",
+      "x-ms-served-model": "gpt-5.4-2026-03-05"
+    },
+    "body": {
       "choices": [
         {
-          "index": 0,
-          "finish_reason": "stop",
-          "logprobs": null,
-          "message": {
-            "role": "assistant",
-            "content": "{\"vertical\":\"Oil refining\",\"confidence\":\"high\",\"reason\":\"Crude distillation and hydrotreating are refining processes.\"}"
-          },
           "content_filter_results": {
             "hate": {
               "filtered": false,
               "severity": "safe"
             },
+            "protected_material_code": {
+              "detected": false,
+              "filtered": false
+            },
+            "protected_material_text": {
+              "detected": false,
+              "filtered": false
+            },
+            "self_harm": {
+              "filtered": false,
+              "severity": "safe"
+            },
+            "sexual": {
+              "filtered": false,
+              "severity": "safe"
+            },
+            "violence": {
+              "filtered": false,
+              "severity": "safe"
+            }
+          },
+          "finish_reason": "stop",
+          "index": 0,
+          "logprobs": null,
+          "message": {
+            "annotations": [],
+            "content": "{\"items\":[{\"ref\":1,\"vertical\":\"Refining\",\"confidence\":\"high\",\"reason\":\"The industry is explicitly listed as oil refining, and the site processes—crude distillation and hydrotreating—are core refining operations.\"}]}",
+            "refusal": null,
+            "role": "assistant"
+          }
+        }
+      ],
+      "created": 1792817380,
+      "id": "chatcmpl-EcNzI9K3IRTZrbhRVtQsi8zaT1Yqp",
+      "model": "gpt-5.4-2026-03-05",
+      "object": "chat.completion",
+      "prompt_filter_results": [
+        {
+          "prompt_index": 0,
+          "content_filter_results": {
+            "hate": {
+              "filtered": false,
+              "severity": "safe"
+            },
+            "jailbreak": {
+              "detected": false,
+              "filtered": false
+            },
             "self_harm": {
               "filtered": false,
               "severity": "safe"
@@ -66,15 +188,150 @@
           }
         }
       ],
-      "usage": {
-        "completion_tokens": 38,
-        "prompt_tokens": 312,
-        "total_tokens": 350
+      "routing": {
+        "serving_pipereplica": "d20261014000135-c2d824e7-default-r2-dp0-default"
       },
-      "system_fingerprint": "fp_fixture"
+      "service_tier": "default",
+      "system_fingerprint": null,
+      "usage": {
+        "completion_tokens": 71,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": 0,
+          "audio_tokens": 0,
+          "reasoning_tokens": 6,
+          "rejected_prediction_tokens": 0
+        },
+        "latency_checkpoint": {
+          "engine_tbt_ms": 9,
+          "engine_ttft_ms": 86,
+          "engine_ttlt_ms": 700,
+          "pre_inference_ms": 204,
+          "service_tbt_ms": 8,
+          "service_ttft_ms": 845,
+          "service_ttlt_ms": 1447,
+          "user_visible_ttft_ms": 641
+        },
+        "prompt_tokens": 149,
+        "prompt_tokens_details": {
+          "audio_tokens": 0,
+          "cached_tokens": 0
+        },
+        "total_tokens": 220
+      }
+    }
+  },
+  "ok_text_live": {
+    "_source": "captured",
+    "status": 200,
+    "headers": {
+      "content-type": "application/json",
+      "x-ms-served-model": "gpt-5.4-2026-03-05"
+    },
+    "body": {
+      "choices": [
+        {
+          "content_filter_results": {
+            "hate": {
+              "filtered": false,
+              "severity": "safe"
+            },
+            "protected_material_code": {
+              "detected": false,
+              "filtered": false
+            },
+            "protected_material_text": {
+              "detected": false,
+              "filtered": false
+            },
+            "self_harm": {
+              "filtered": false,
+              "severity": "safe"
+            },
+            "sexual": {
+              "filtered": false,
+              "severity": "safe"
+            },
+            "violence": {
+              "filtered": false,
+              "severity": "safe"
+            }
+          },
+          "finish_reason": "stop",
+          "index": 0,
+          "logprobs": null,
+          "message": {
+            "annotations": [],
+            "content": "Do the overdue item first, then the three due today by urgency/impact.",
+            "refusal": null,
+            "role": "assistant"
+          }
+        }
+      ],
+      "created": 1792817379,
+      "id": "chatcmpl-EcNzHkPVe92mOJSgVkh4VbgGQnoWs",
+      "model": "gpt-5.4-2026-03-05",
+      "object": "chat.completion",
+      "prompt_filter_results": [
+        {
+          "prompt_index": 0,
+          "content_filter_results": {
+            "hate": {
+              "filtered": false,
+              "severity": "safe"
+            },
+            "jailbreak": {
+              "detected": false,
+              "filtered": false
+            },
+            "self_harm": {
+              "filtered": false,
+              "severity": "safe"
+            },
+            "sexual": {
+              "filtered": false,
+              "severity": "safe"
+            },
+            "violence": {
+              "filtered": false,
+              "severity": "safe"
+            }
+          }
+        }
+      ],
+      "routing": {
+        "serving_pipereplica": "d20261023045537-de86907b-default-r2-dp0-default"
+      },
+      "service_tier": "default",
+      "system_fingerprint": null,
+      "usage": {
+        "completion_tokens": 19,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": 0,
+          "audio_tokens": 0,
+          "reasoning_tokens": 0,
+          "rejected_prediction_tokens": 0
+        },
+        "latency_checkpoint": {
+          "engine_tbt_ms": 12,
+          "engine_ttft_ms": 74,
+          "engine_ttlt_ms": 319,
+          "pre_inference_ms": 95,
+          "service_tbt_ms": 13,
+          "service_ttft_ms": 352,
+          "service_ttlt_ms": 592,
+          "user_visible_ttft_ms": 257
+        },
+        "prompt_tokens": 30,
+        "prompt_tokens_details": {
+          "audio_tokens": 0,
+          "cached_tokens": 0
+        },
+        "total_tokens": 49
+      }
     }
   },
   "ok_text": {
+    "_source": "hand-written: documented format with the request-ID headers a resource endpoint sends (this gateway sends none)",
     "status": 200,
     "headers": {
       "content-type": "application/json",
@@ -87,7 +344,7 @@
       "id": "chatcmpl-fixture",
       "object": "chat.completion",
       "created": 1729000000,
-      "model": "gpt-4o-2024-05-13",
+      "model": "gpt-5.4-2026-03-05",
       "prompt_filter_results": [
         {
           "prompt_index": 0,
@@ -148,7 +405,76 @@
       "system_fingerprint": "fp_fixture"
     }
   },
-  "completion_filtered": {
+  "truncated_strict": {
+    "_source": "captured",
+    "status": 400,
+    "headers": {
+      "content-type": "application/json"
+    },
+    "body": {
+      "error": {
+        "message": "Could not finish the message because max_tokens or model output limit was reached. Please try again with higher max_tokens.",
+        "type": "invalid_request_error",
+        "param": null,
+        "code": null
+      }
+    }
+  },
+  "temperature_refused": {
+    "_source": "captured",
+    "status": 400,
+    "headers": {
+      "content-type": "application/json"
+    },
+    "body": {
+      "error": {
+        "message": "Unsupported value: 'temperature' does not support 0.2 with this model. Only the default (1) value is supported.",
+        "type": "invalid_request_error",
+        "param": "temperature",
+        "code": "unsupported_value"
+      }
+    }
+  },
+  "gateway_check_access": {
+    "_source": "captured (24 Oct 2026, intermittent: about 1 call in 5 to 1 in 20 at times, none in 120 at others)",
+    "status": 400,
+    "headers": {
+      "content-type": "application/json"
+    },
+    "body": {
+      "error": {
+        "code": "API operation not supported for token authentication",
+        "message": "ApiId openai-api-latest OperationId chatcompletions_create not supported for CheckAccess."
+      }
+    }
+  },
+  "deployment_missing": {
+    "_source": "captured",
+    "status": 404,
+    "headers": {
+      "content-type": "text/html"
+    },
+    "body": {
+      "error": {
+        "type": "invalid_request_error",
+        "code": "DeploymentNotFound",
+        "message": "The API deployment for this resource does not exist. If you created the deployment within the last 5 minutes, please wait a moment and try again."
+      }
+    }
+  },
+  "apim_denied": {
+    "_source": "captured (a made-up key)",
+    "status": 401,
+    "headers": {
+      "content-type": "application/json"
+    },
+    "body": {
+      "statusCode": 401,
+      "message": "Access denied due to invalid subscription key. Make sure to provide a valid key for an active subscription."
+    }
+  },
+  "refusal": {
+    "_source": "hand-written: documented structured-outputs refusal (message.refusal); a refusal cannot be triggered on purpose with fictional data",
     "status": 200,
     "headers": {
       "content-type": "application/json",
@@ -161,7 +487,7 @@
       "id": "chatcmpl-fixture",
       "object": "chat.completion",
       "created": 1729000000,
-      "model": "gpt-4o-2024-05-13",
+      "model": "gpt-5.4-2026-03-05",
       "prompt_filter_results": [
         {
           "prompt_index": 0,
@@ -188,11 +514,12 @@
       "choices": [
         {
           "index": 0,
-          "finish_reason": "content_filter",
+          "finish_reason": "stop",
           "logprobs": null,
           "message": {
             "role": "assistant",
-            "content": null
+            "content": null,
+            "refusal": "I can’t help with that request."
           },
           "content_filter_results": {
             "hate": {
@@ -208,21 +535,22 @@
               "severity": "safe"
             },
             "violence": {
-              "filtered": true,
-              "severity": "medium"
+              "filtered": false,
+              "severity": "safe"
             }
           }
         }
       ],
       "usage": {
-        "completion_tokens": 0,
+        "completion_tokens": 9,
         "prompt_tokens": 312,
-        "total_tokens": 312
+        "total_tokens": 321
       },
       "system_fingerprint": "fp_fixture"
     }
   },
   "truncated": {
+    "_source": "hand-written: documented finish_reason length without a schema",
     "status": 200,
     "headers": {
       "content-type": "application/json",
@@ -235,7 +563,7 @@
       "id": "chatcmpl-fixture",
       "object": "chat.completion",
       "created": 1729000000,
-      "model": "gpt-4o-2024-05-13",
+      "model": "gpt-5.4-2026-03-05",
       "prompt_filter_results": [
         {
           "prompt_index": 0,
@@ -296,7 +624,83 @@
       "system_fingerprint": "fp_fixture"
     }
   },
+  "completion_filtered": {
+    "_source": "hand-written: documented completion filter",
+    "status": 200,
+    "headers": {
+      "content-type": "application/json",
+      "apim-request-id": "4f0c1d2e-0000-4000-8000-000000000001",
+      "x-request-id": "8e7d6c5b-0000-4000-8000-000000000002",
+      "x-ratelimit-remaining-requests": "59",
+      "x-ratelimit-remaining-tokens": "79000"
+    },
+    "body": {
+      "id": "chatcmpl-fixture",
+      "object": "chat.completion",
+      "created": 1729000000,
+      "model": "gpt-5.4-2026-03-05",
+      "prompt_filter_results": [
+        {
+          "prompt_index": 0,
+          "content_filter_results": {
+            "hate": {
+              "filtered": false,
+              "severity": "safe"
+            },
+            "self_harm": {
+              "filtered": false,
+              "severity": "safe"
+            },
+            "sexual": {
+              "filtered": false,
+              "severity": "safe"
+            },
+            "violence": {
+              "filtered": false,
+              "severity": "safe"
+            }
+          }
+        }
+      ],
+      "choices": [
+        {
+          "index": 0,
+          "finish_reason": "content_filter",
+          "logprobs": null,
+          "message": {
+            "role": "assistant",
+            "content": null
+          },
+          "content_filter_results": {
+            "hate": {
+              "filtered": false,
+              "severity": "safe"
+            },
+            "self_harm": {
+              "filtered": false,
+              "severity": "safe"
+            },
+            "sexual": {
+              "filtered": false,
+              "severity": "safe"
+            },
+            "violence": {
+              "filtered": true,
+              "severity": "medium"
+            }
+          }
+        }
+      ],
+      "usage": {
+        "completion_tokens": 0,
+        "prompt_tokens": 312,
+        "total_tokens": 312
+      },
+      "system_fingerprint": "fp_fixture"
+    }
+  },
   "prompt_filtered": {
+    "_source": "hand-written: documented prompt filter",
     "status": 400,
     "headers": {
       "content-type": "application/json",
@@ -338,6 +742,7 @@
     }
   },
   "rate_limited": {
+    "_source": "hand-written: documented 429",
     "status": 429,
     "headers": {
       "content-type": "application/json",
@@ -348,11 +753,12 @@
     "body": {
       "error": {
         "code": "429",
-        "message": "Requests to the ChatCompletions_Create Operation under Azure OpenAI API version 2024-06-01 have exceeded token rate limit of your current OpenAI S0 pricing tier. Please retry after 6 seconds."
+        "message": "Requests to the ChatCompletions_Create Operation under Azure OpenAI API version 2025-04-01-preview have exceeded token rate limit of your current OpenAI S0 pricing tier. Please retry after 6 seconds."
       }
     }
   },
   "server_error": {
+    "_source": "hand-written: documented 500",
     "status": 500,
     "headers": {
       "content-type": "application/json"
@@ -361,28 +767,6 @@
       "error": {
         "code": "InternalServerError",
         "message": "The server had an error while processing your request. Sorry about that!"
-      }
-    }
-  },
-  "apim_denied": {
-    "status": 401,
-    "headers": {
-      "content-type": "application/json"
-    },
-    "body": {
-      "statusCode": 401,
-      "message": "Access denied due to invalid subscription key. Make sure to provide a valid key for an active subscription."
-    }
-  },
-  "deployment_missing": {
-    "status": 404,
-    "headers": {
-      "content-type": "application/json"
-    },
-    "body": {
-      "error": {
-        "code": "DeploymentNotFound",
-        "message": "The API deployment for this resource does not exist."
       }
     }
   }

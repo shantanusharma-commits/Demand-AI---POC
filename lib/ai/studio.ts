@@ -11,10 +11,15 @@ import { checkContent, PLAYBOOK, VOICE_PRESETS, type BrandPack } from '../engine
 import { AUDIENCE, aiRoles, isListRole, layoutWith, ROLE_PURPOSE, textOf, TYPES, type Block, type Piece } from '../content/studio.ts';
 import type { AiGateway, CallContext, FallbackReason, Problem } from './gateway.ts';
 import { asData } from './classify.ts';
-import type { Template } from './types.ts';
+import type { ReasoningEffort, Template } from './types.ts';
 
 export const PIECE_TEMPLATE: Template = { id: 'content.piece', version: 1 };
-export const REWRITE_TEMPLATE: Template = { id: 'content.rewrite', version: 1 };
+// v2 (24 Oct 2026, D-44): every open part is named in the reply, null for a part left as it is, so the reply has a
+// fixed shape that structured outputs can enforce (v1 returned only the parts it changed, under any key).
+export const REWRITE_TEMPLATE: Template = { id: 'content.rewrite', version: 2 };
+/** Writing to a brief within the brand rules (D-44). On 24 Oct 2026 six pieces and four rewrites passed every check at
+ *  "none" and at "low"; "none" took 2 to 7.5 s a call against 3.5 to 15 s. */
+export const STUDIO_REASONING: ReasoningEffort = 'none';
 
 export type Written = { ok: true; blocks: Block[]; callId: string; reply?: string } | { ok: false; reason: FallbackReason };
 
@@ -44,6 +49,13 @@ function problemsOf(blocks: Block[], pack: BrandPack, asOf: string, allowed: str
 
 const part = (list: boolean) => (list ? z.array(z.string().trim().min(3).max(300)).min(2).max(7) : z.string().trim().min(3).max(1500));
 
+/** A new piece's reply: every part of its layout, each a paragraph or a list. */
+export const pieceSchema = (roles: string[]) => z.object({ parts: z.object(Object.fromEntries(roles.map(r => [r, part(isListRole(r))]))) });
+
+/** A rewrite's reply: every open part by its id, as new text in the part's own form or null where it stays as it is. */
+export const rewriteSchema = (open: { id: string; list: boolean }[]) =>
+  z.object({ parts: z.strictObject(Object.fromEntries(open.map(b => [b.id, part(b.list).nullable()]))), reply: z.string().trim().min(3).max(300) });
+
 /** A new piece: the model words each part; the layout, headings and proof are the writer's. */
 export async function writePiece(gw: AiGateway, ctx: CallContext, p: Pick<Piece, 'type' | 'length' | 'title' | 'topic' | 'seg' | 'sources' | 'tone'>, pack: BrandPack, asOf: string): Promise<Written> {
   if (!gw.enabled('draft_content')) return { ok: false, reason: 'disabled' };
@@ -53,13 +65,13 @@ export async function writePiece(gw: AiGateway, ctx: CallContext, p: Pick<Piece,
     `Audience: ${asData(AUDIENCE[p.seg] || p.seg, 120)}`, `Tone: ${p.tone}`, `Angle: ${asData(fw.angle, 200)}`, `A common objection: ${asData(fw.objection, 200)}`,
     `The answer to it: ${asData(fw.response, 300)}`, `Questions worth asking: ${fw.questions.map(q => asData(q, 160)).join('; ')}`].join('\n');
   const shape = roles.map(r => `"${r}": ${isListRole(r) ? '["…", "…"]' : '"…"'} (${ROLE_PURPOSE[r] ?? r})`).join(', ');
-  const schema = z.object({ parts: z.object(Object.fromEntries(roles.map(r => [r, part(isListRole(r))]))) });
+  const schema = pieceSchema(roles);
   const allowed = `${p.topic} ${brief}`;
   let blocks: Block[] = [];
   const r = await gw.json('draft_content', PIECE_TEMPLATE, {
     system: `You write ${TYPES[p.type].label.toLowerCase()}s for an industrial automation supplier's marketing team, in the brand voice, one part at a time.\n\n${rules(pack)}\n\nFormat: {"parts":{${shape}}}`,
     messages: [{ role: 'user', content: `Write the parts of this ${TYPES[p.type].label.toLowerCase()}.\n<brief>\n${brief}\n</brief>` }],
-    maxTokens: p.length === 'Long' ? 2200 : p.length === 'Medium' ? 1500 : 900, temperature: 0.5,
+    maxTokens: p.length === 'Long' ? 2200 : p.length === 'Medium' ? 1500 : 900, temperature: 0.5, reasoning: STUDIO_REASONING,
   }, schema, ctx, v => {
     blocks = layoutWith(p, pack, v.parts as Record<string, string | string[]>);
     return problemsOf(blocks, pack, asOf, allowed);
@@ -80,22 +92,17 @@ export async function rewritePiece(gw: AiGateway, ctx: CallContext, p: Piece, as
   const open = p.blocks.filter(b => (target ? b.id === target : !b.edited) && b.role !== 'proof' && !b.role.startsWith('h:') && b.role !== 'free');
   if (!open.length) return { ok: false, reason: 'unusable' };
   const lines = open.map(b => `[${b.id}] (${ROLE_PURPOSE[b.role] ?? b.role}${Array.isArray(b.text) ? ', a list' : ''}): ${Array.isArray(b.text) ? b.text.map(t => asData(t, 300)).join(' | ') : asData(b.text, 1500)}`);
-  const ids = open.map(b => b.id);
-  const schema = z.object({ parts: z.record(z.string(), z.union([z.string().trim().min(3).max(1500), z.array(z.string().trim().min(3).max(300)).min(2).max(7)])), reply: z.string().trim().min(3).max(300) });
+  const schema = rewriteSchema(open.map(b => ({ id: b.id, list: Array.isArray(b.text) })));
   const allowed = `${p.topic} ${ask} ${textOf(p.blocks)}`;
   let blocks: Block[] = [], reply = '';
   const r = await gw.json('draft_content', REWRITE_TEMPLATE, {
-    system: `You edit a ${TYPES[p.type].label.toLowerCase()} for an industrial automation supplier's marketing team. Rewrite only the parts the request is about, keep everything else as it is, and keep each part's purpose.\n\n${rules(pack)}\n\nFormat: {"parts":{"<part id>":"new text" or ["item", "item"] for a list},"reply":"one sentence telling the person what you changed"}. Use only the part ids given.`,
+    system: `You edit a ${TYPES[p.type].label.toLowerCase()} for an industrial automation supplier's marketing team. Rewrite only the parts the request is about, keep everything else as it is, and keep each part's purpose.\n\n${rules(pack)}\n\nFormat: {"parts":{"<part id>":"new text", or ["item", "item"] for a list, or null to leave the part as it is},"reply":"one sentence telling the person what you changed"}. Name every part id given, and only those; a list stays a list and a paragraph a paragraph.`,
     messages: [{ role: 'user', content: `Request: ${asData(ask, 600)}\n<piece>\nTitle: ${asData(p.title, 200)}\n${lines.join('\n')}\n</piece>` }],
-    maxTokens: 1800, temperature: 0.4,
+    maxTokens: 1800, temperature: 0.4, reasoning: STUDIO_REASONING,
   }, schema, ctx, v => {
-    const bad = Object.keys(v.parts).filter(k => !ids.includes(k));
-    const shape = Object.entries(v.parts).filter(([k, t]) => ids.includes(k) && Array.isArray(t) !== Array.isArray(open.find(b => b.id === k)!.text)).map(([k]) => k);
-    if (bad.length || shape.length || !Object.keys(v.parts).length) {
-      return { reason: 'schema', problems: [...(bad.length ? [`Unknown part ids: ${bad.join(', ')}. Use only: ${ids.join(', ')}.`] : []),
-        ...(shape.length ? [`Parts ${shape.join(', ')} must keep their form (a list stays a list, a paragraph a paragraph).`] : []), ...(!Object.keys(v.parts).length ? ['Nothing was rewritten.'] : [])] };
-    }
-    blocks = p.blocks.map(b => (v.parts[b.id] !== undefined ? { ...b, text: v.parts[b.id], ai: true } : b));
+    const parts = v.parts as Record<string, string | string[] | null>;
+    if (!Object.values(parts).some(t => t !== null)) return { reason: 'schema', problems: ['Nothing was rewritten: give new text for the parts the request is about.'] };
+    blocks = p.blocks.map(b => (parts[b.id] != null ? { ...b, text: parts[b.id]!, ai: true } : b));
     reply = named(v.reply, open);
     return problemsOf(blocks, pack, asOf, allowed);
   });

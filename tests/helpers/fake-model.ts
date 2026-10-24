@@ -18,12 +18,20 @@ export class FakeModel implements ModelClient {
   readonly deployment: string;
   readonly requests: ModelRequest[] = [];
   private readonly steps: Step[];
-  private readonly fallback: Step | null;
+  private fallback: Step | null;
   constructor(steps: Step[] = [], opts: { deployment?: string; provider?: ProviderName; otherwise?: Step } = {}) {
     this.steps = steps.slice();
     this.provider = opts.provider ?? 'azure-openai';
     this.deployment = opts.deployment ?? 'fake-deployment';
     this.fallback = opts.otherwise ?? null;
+  }
+  /** Adds answers for the next requests, ahead of the standing answer. */
+  queue(...steps: Step[]): void {
+    this.steps.push(...steps);
+  }
+  /** Sets the answer for every request with nothing queued. */
+  otherwise(step: Step): void {
+    this.fallback = step;
   }
   async complete(req: ModelRequest): Promise<ModelResponse> {
     this.requests.push(req);

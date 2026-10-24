@@ -1,6 +1,7 @@
-// The AI service as an Admin sees it (Phase 6; plan §8): where calls go (provider, deployment, API version; never a
-// key), which capabilities are switched on, whether the circuit breaker has opened, the last 30 days of calls from
-// the metadata record, and a health check that makes one tiny call.
+// The AI service as an Admin sees it (Phase 6; plan §8; D-44): where calls go (provider, the main and small
+// deployments and which capabilities use the small one, API version; never a key), which capabilities are switched
+// on, whether a circuit breaker has opened, the last 30 days of calls from the metadata record (with the models that
+// answered), and a health check that makes one tiny call to each model.
 import 'server-only';
 import { and, eq, gt, sql } from 'drizzle-orm';
 import type { AiGateway } from '../../ai/gateway.ts';
@@ -29,6 +30,7 @@ export async function aiStatus(scope: TenantScope, gw: AiGateway) {
     capability: aiCalls.capability, outcome: aiCalls.outcome, reason: aiCalls.fallbackReason, n: sql<number>`count(*)::int`,
     tokens: sql<number>`coalesce(sum(${aiCalls.promptTokens} + ${aiCalls.completionTokens}), 0)::int`, cost: sql<number>`coalesce(sum(${aiCalls.estCostUsd}), 0)::float8`,
     latency: sql<number>`coalesce(avg(${aiCalls.latencyMs}), 0)::int`,
+    models: sql<string[]>`coalesce(array_agg(distinct ${aiCalls.model}) filter (where ${aiCalls.model} is not null), '{}')`,
   }).from(aiCalls).where(and(eq(aiCalls.businessUnitId, scope.ctx.businessUnitId), gt(aiCalls.createdAt, sql`now() - interval '30 days'`)))
     .groupBy(aiCalls.capability, aiCalls.outcome, aiCalls.fallbackReason);
   const capabilities = [...AI_CAPABILITY_LABELS, { key: 'healthcheck' as Capability, label: 'Health checks', flag: '', what: 'This panel' }].map(c => {
@@ -37,30 +39,44 @@ export async function aiStatus(scope: TenantScope, gw: AiGateway) {
     const reasons: Record<string, number> = {};
     for (const r of mine) if (r.reason) reasons[r.reason] = (reasons[r.reason] ?? 0) + Number(r.n);
     const calls = sum('n');
-    return { ...c, on: c.key === 'healthcheck' ? d.provider !== 'none' : gw.enabled(c.key), calls, ok: by('ok'), fallback: by('fallback'), filtered: by('filtered'), error: by('error'),
+    const models = [...new Set(mine.flatMap(r => r.models ?? []))].sort();
+    return { ...c, deployment: c.key === 'healthcheck' ? null : gw.deploymentFor(c.key), models, on: c.key === 'healthcheck' ? d.provider !== 'none' : gw.enabled(c.key), calls, ok: by('ok'), fallback: by('fallback'), filtered: by('filtered'), error: by('error'),
       tokens: sum('tokens'), costUsd: Math.round(sum('cost') * 100) / 100, avgLatencyMs: calls ? Math.round(mine.reduce((t, r) => t + Number(r.latency) * Number(r.n), 0) / calls) : null,
       reasons: Object.entries(reasons).sort((a, b) => b[1] - a[1]).map(([reason, n]) => ({ reason, n, words: fallbackWords(reason) })) };
   });
   return {
-    provider: d.provider, deployment: d.deployment, breaker: d.breaker,
+    provider: d.provider, deployment: d.deployment, breaker: d.breaker, small: d.small, reasoning: d.reasoning,
     apiVersion: d.provider === 'azure-openai' ? e.AZURE_OPENAI_API_VERSION : null, authHeader: d.provider === 'azure-openai' ? e.AZURE_OPENAI_AUTH_HEADER : null,
     region: d.provider === 'bedrock' ? e.AWS_REGION ?? null : null, timeoutMs: e.AI_TIMEOUT_MS, maxConcurrency: e.AI_MAX_CONCURRENCY,
-    prices: { inputPerMTok: e.AI_PRICE_INPUT_PER_MTOK, outputPerMTok: e.AI_PRICE_OUTPUT_PER_MTOK }, capabilities, days: 30,
+    prices: { inputPerMTok: e.AI_PRICE_INPUT_PER_MTOK, outputPerMTok: e.AI_PRICE_OUTPUT_PER_MTOK },
+    smallPrices: d.small ? { inputPerMTok: e.AI_PRICE_SMALL_INPUT_PER_MTOK, outputPerMTok: e.AI_PRICE_SMALL_OUTPUT_PER_MTOK } : null, capabilities, days: 30,
   };
 }
 
-/** One tiny call through the gateway: whether the configured model answers, and how fast. Never shows the key. The
- *  call runs with no transaction open; the audit entry is written after it. */
+/** One tiny call to a model: whether it answers, and how fast. */
+async function ping(gw: AiGateway, tenant: TenantContext, route: 'main' | 'small', deployment: string) {
+  const started = Date.now();
+  const r = await gw.text('healthcheck', HEALTH_TEMPLATE, { system: 'You are a connectivity check. Reply with the single word OK.', messages: [{ role: 'user', content: 'Reply with OK.' }],
+    maxTokens: 16, temperature: 0, reasoning: 'none', route }, callContext(tenant, { deadlineMs: 20_000 }),
+  t => (/\bok\b/i.test(t) ? null : { reason: 'unusable', problems: ['Reply with the single word OK.'] }));
+  const latencyMs = Date.now() - started;
+  return r.ok === true
+    ? { ok: true as const, deployment, latencyMs, message: `The model answered in ${latencyMs} ms.` }
+    : { ok: false as const, deployment, latencyMs, reason: r.reason, message: `The model did not answer: ${fallbackWords(r.reason)}.` };
+}
+
+/** One tiny call to each configured model through the gateway: whether it answers, and how fast. Never shows the key.
+ *  The calls run with no transaction open; the audit entry is written after them. */
 export async function healthCheck(db: Db, tenant: TenantContext, actor: Actor, gw: AiGateway) {
   const d = gw.describe();
-  if (d.provider === 'none') return { ok: false, provider: 'none', deployment: null, latencyMs: null, message: 'No AI provider is configured (AI_PROVIDER=none), so every capability uses its rules.' };
-  const started = Date.now();
-  const r = await gw.text('healthcheck', HEALTH_TEMPLATE, { system: 'You are a connectivity check. Reply with the single word OK.', messages: [{ role: 'user', content: 'Reply with OK.' }], maxTokens: 5, temperature: 0 },
-    callContext(tenant, { deadlineMs: 20_000 }), t => (/\bok\b/i.test(t) ? null : { reason: 'unusable', problems: ['Reply with the single word OK.'] }));
-  const latencyMs = Date.now() - started;
-  await withTenant(db, tenant, s => recordAudit(s, { action: 'ai.healthcheck', actorRole: actor.role, targetType: 'ai', details: { provider: d.provider, ok: r.ok, latencyMs, ...(r.ok === false ? { reason: r.reason } : {}) } }));
-  logger.info({ event: 'ai.healthcheck', provider: d.provider, ok: r.ok, latencyMs }, 'AI health check');
-  return r.ok === true
-    ? { ok: true, provider: d.provider, deployment: d.deployment, latencyMs, message: `The model answered in ${latencyMs} ms.` }
-    : { ok: false, provider: d.provider, deployment: d.deployment, latencyMs, reason: r.reason, message: `The model did not answer: ${fallbackWords(r.reason)}.` };
+  if (d.provider === 'none' || !d.deployment) return { ok: false, provider: 'none', deployment: null, latencyMs: null, small: null, message: 'No AI provider is configured (AI_PROVIDER=none), so every capability uses its rules.' };
+  const main = await ping(gw, tenant, 'main', d.deployment);
+  const small = d.small ? await ping(gw, tenant, 'small', d.small.deployment) : null;
+  const ok = main.ok && (small?.ok ?? true);
+  await withTenant(db, tenant, s => recordAudit(s, { action: 'ai.healthcheck', actorRole: actor.role, targetType: 'ai', details: {
+    provider: d.provider, ok, latencyMs: main.latencyMs, ...(main.ok === false ? { reason: main.reason } : {}),
+    ...(small ? { small: { ok: small.ok, latencyMs: small.latencyMs, ...(small.ok === false ? { reason: small.reason } : {}) } } : {}) } }));
+  logger.info({ event: 'ai.healthcheck', provider: d.provider, ok, latencyMs: main.latencyMs, ...(small ? { smallOk: small.ok, smallLatencyMs: small.latencyMs } : {}) }, 'AI health check');
+  const message = small ? `${main.deployment}: ${main.message} ${small.deployment}: ${small.message}` : main.message;
+  return { ...main, ok, provider: d.provider, small, message };
 }

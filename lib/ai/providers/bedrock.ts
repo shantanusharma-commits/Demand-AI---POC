@@ -1,7 +1,8 @@
 // Amazon Bedrock through the Converse API (D-35), so one adapter serves any chat model the account has access to.
 // Credentials come from the IAM role the app runs under (EKS Pod Identity or IRSA, an EC2 instance profile) through
 // the SDK's default chain; static keys are refused at start-up (lib/server/env.ts). Converse has no JSON mode, so a
-// JSON call relies on the prompt's instruction and the gateway's validation. Only the gateway uses this module.
+// JSON call relies on the prompt's instruction and the gateway's validation; a request's schema and reasoning effort
+// (D-44, for Azure's GPT-5 models) are not sent. Only the gateway uses this module.
 import 'server-only';
 import { BedrockRuntimeClient, ConverseCommand, type ConverseCommandOutput } from '@aws-sdk/client-bedrock-runtime';
 import { ModelError, type ModelClient, type ModelRequest, type ModelResponse } from '../types.ts';
@@ -32,7 +33,7 @@ export function createBedrockClient(cfg: BedrockConfig): ModelClient {
         return {
           text, finish, promptTokens: out.usage?.inputTokens ?? 0, completionTokens: out.usage?.outputTokens ?? 0,
           ...(finish === 'content_filter' ? { filtered: [r === 'guardrail_intervened' ? 'guardrail' : 'content_filtered'] } : {}),
-          ...(out.$metadata?.requestId ? { providerRequestId: out.$metadata.requestId } : {}),
+          ...(out.$metadata?.requestId ? { providerRequestId: out.$metadata.requestId } : {}), model: cfg.modelId,
         };
       } catch (err) {
         throw toModelError(err);

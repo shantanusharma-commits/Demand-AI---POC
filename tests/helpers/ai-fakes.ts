@@ -82,3 +82,5 @@ export function pieceWriter(over: Record<string, string | string[]> = {}): StepF
 }
 /** The part IDs a rewrite request offers. */
 export const rewriteIds = (req: ModelRequest) => [...req.messages[0].content.matchAll(/^\[([\w-]+)\] \(/gm)].map(m => m[1]);
+/** A rewrite's parts as content.rewrite v2 answers: every offered part, null where it stays as it is. */
+export const rewriteParts = (req: ModelRequest, changes: Record<string, string | string[]>) => Object.fromEntries(rewriteIds(req).map(id => [id, changes[id] ?? null]));

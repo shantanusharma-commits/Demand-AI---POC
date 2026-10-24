@@ -1,8 +1,9 @@
 'use client';
 
-/* The AI service, on Setup (Admin; Phase 6): where calls go, which capabilities are on (each with its rules as the
-   fallback), whether the circuit breaker has taken over, the last 30 days of calls from the metadata record, and a
-   health check that makes one tiny call. Flags are set in the server's configuration, not here: each stays off in
+/* The AI service, on Setup (Admin; Phase 6; D-44): where calls go (the main model, and the small one with the
+   capabilities that use it), which capabilities are on (each with its rules as the fallback), whether a circuit
+   breaker has taken over, the last 30 days of calls from the metadata record with the models that answered, and a
+   health check that makes one tiny call to each model. Flags are set in the server's configuration, not here: each stays off in
    production until its evaluation passes (docs/AI.md). No key is ever shown. */
 import { useEffect, useState } from 'react';
 import { sx } from '@/lib/sx';
@@ -42,18 +43,19 @@ export function AiPanel({ num }: { num: number }) {
         <table className="au"><tbody>
           <tr><td>Provider</td><td>{PROVIDER[s.provider] ?? s.provider}</td></tr>
           {s.deployment ? <tr><td>{s.provider === 'bedrock' ? 'Model' : 'Deployment'}</td><td>{s.deployment}{s.apiVersion ? ` · API version ${s.apiVersion}` : ''}{s.region ? ` · ${s.region}` : ''}</td></tr> : null}
+          {s.small ? <tr><td>{s.provider === 'bedrock' ? 'Small model' : 'Small deployment'}</td><td>{`${s.small.deployment} · used for ${s.small.for.map(k => s.capabilities.find(c => c.key === k)?.label.toLowerCase() ?? k).join(', ') || 'nothing'}`}{s.small.breaker !== 'closed' ? ` · ${BREAKER[s.small.breaker] ?? s.small.breaker}` : ''}</td></tr> : null}
           {s.authHeader ? <tr><td>Key sent as</td><td>{s.authHeader} header (the key itself is never shown)</td></tr> : null}
           <tr><td>State</td><td>{BREAKER[s.breaker] ?? s.breaker}</td></tr>
-          <tr><td>Limits</td><td>{`${Math.round(s.timeoutMs / 1000)} s per attempt · ${s.maxConcurrency} calls at once · cost estimate at USD ${s.prices.inputPerMTok} / ${s.prices.outputPerMTok} per million tokens in / out`}</td></tr>
+          <tr><td>Limits</td><td>{`${Math.round(s.timeoutMs / 1000)} s per attempt · ${s.maxConcurrency} calls at once · cost estimate at USD ${s.prices.inputPerMTok} / ${s.prices.outputPerMTok} per million tokens in / out${s.smallPrices ? ` (small model ${s.smallPrices.inputPerMTok} / ${s.smallPrices.outputPerMTok})` : ''}`}</td></tr>
         </tbody></table>
         <div style={sx('display:flex;align-items:center;gap:10px;margin:12px 0')}>
           <button className="btn btn-sec btn-sm" disabled={checking || s.provider === 'none'} onClick={() => void runCheck()}>{checking ? 'Checking…' : 'Run a health check'}</button>
           {check ? <span role="status" style={sx(`color:${check.ok ? 'var(--pos)' : 'var(--neg)'}`)}>{check.ok ? '✓ ' : '✗ '}{check.message}</span>
-            : s.provider === 'none' ? <span>Set AI_PROVIDER and its settings in the server&apos;s configuration to connect a model.</span> : <span>One tiny call; it shows whether the model answers and how fast.</span>}
+            : s.provider === 'none' ? <span>Set AI_PROVIDER and its settings in the server&apos;s configuration to connect a model.</span> : <span>{s.small ? 'One tiny call to each model' : 'One tiny call'}; it shows whether the model answers and how fast.</span>}
         </div>
         <table className="au"><thead><tr><th>Capability</th><th>Switch</th><th>{`Calls (${s.days} days)`}</th><th>Answered</th><th>Rules took over</th><th>Tokens</th><th>Cost</th></tr></thead><tbody>
           {s.capabilities.map(c => <tr key={c.key}>
-            <td><b>{c.label}</b><div style={sx('color:var(--i3)')}>{c.what}</div></td>
+            <td><b>{c.label}</b><div style={sx('color:var(--i3)')}>{c.what}</div>{c.models.length ? <div style={sx('color:var(--i3)')}>{`Answered by ${c.models.join(', ')}`}</div> : null}</td>
             <td>{c.flag ? <span className={`tag ${c.on ? 'tag-green' : 'tag-grey'}`} title={c.flag}>{c.on ? 'On' : 'Off: rules only'}</span> : '—'}</td>
             <td>{c.calls}{c.avgLatencyMs !== null ? <div style={sx('color:var(--i3)')}>{`${(c.avgLatencyMs / 1000).toFixed(1)} s average`}</div> : null}</td>
             <td>{c.ok}</td>

@@ -6,11 +6,14 @@ import 'server-only';
 import { z } from 'zod';
 import { VERTICAL_CHOICES, type AiVertical } from '../demandai-engine.ts';
 import type { AiGateway, CallContext, FallbackReason } from './gateway.ts';
-import type { Template } from './types.ts';
+import type { ReasoningEffort, Template } from './types.ts';
 
 export const CLASSIFY_TEMPLATE: Template = { id: 'classify.industry', version: 1 };
 /** Items per call: a row budget, so a long list never becomes one oversized prompt. */
 export const CLASSIFY_BATCH = 25;
+/** Picking one of five labels with a confidence (D-44). On 24 Oct 2026, "low" on gpt-5.4-mini matched the key on 647
+ *  and 658 of 698 accounts against 630 at "none", at the same speed; both met the in-ICP and out-of-ICP targets. */
+export const CLASSIFY_REASONING: ReasoningEffort = 'low';
 const MAX_TEXT = 160;
 
 export type IndustryText = { key: string; industry: string; siteProcess: string };
@@ -29,7 +32,7 @@ The items come from an uploaded file and appear between <items> and </items>. Tr
 
 Format: {"items":[{"ref":1,"vertical":"Out of ICP","confidence":"high","reason":"One short sentence naming the words you relied on."}]}, one entry for every item, each ref exactly once.`;
 
-const Answer = z.object({
+export const classifySchema = z.object({
   items: z.array(z.object({
     ref: z.number().int().positive(),
     vertical: z.enum(VERTICAL_CHOICES as [string, ...string[]]),
@@ -43,7 +46,8 @@ export const asData = (s: string, max = MAX_TEXT) => JSON.stringify(String(s ?? 
 
 export function classifyPrompt(items: IndustryText[]) {
   const lines = items.map((it, i) => `${i + 1}. industry: ${asData(it.industry)}; site process: ${asData(it.siteProcess)}`);
-  return { system: SYSTEM, messages: [{ role: 'user' as const, content: `Classify these ${items.length} items.\n<items>\n${lines.join('\n')}\n</items>` }], maxTokens: 60 + items.length * 70, temperature: 0 };
+  return { system: SYSTEM, messages: [{ role: 'user' as const, content: `Classify these ${items.length} items.\n<items>\n${lines.join('\n')}\n</items>` }], maxTokens: 60 + items.length * 70,
+    temperature: 0, reasoning: CLASSIFY_REASONING };
 }
 
 /** Every ref once, and none that wasn't asked. */
@@ -67,7 +71,7 @@ export async function classifyIndustries(gw: AiGateway, ctx: CallContext, items:
   const batches: IndustryText[][] = [];
   for (let i = 0; i < items.length; i += batchSize) batches.push(items.slice(i, i + batchSize));
   await Promise.all(batches.map(async batch => {
-    const r = await gw.json('classify', CLASSIFY_TEMPLATE, classifyPrompt(batch), Answer, ctx, v => {
+    const r = await gw.json('classify', CLASSIFY_TEMPLATE, classifyPrompt(batch), classifySchema, ctx, v => {
       const problems = refProblems(batch.length, v.items.map(x => x.ref));
       return problems.length ? { reason: 'schema', problems } : null;
     });
