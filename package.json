@@ -17,6 +17,7 @@
     "test:http": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --conditions=react-server --test --test-concurrency=1 tests/http/*.test.ts",
     "audit:gate": "node scripts/audit-gate.mjs",
     "deps:age": "node scripts/check-dependency-age.mjs",
+    "check:bundle": "node scripts/check-bundle-secrets.mjs",
     "setup:env": "node scripts/dev/init-env.mjs",
     "db:up": "docker compose --env-file .env.local -f compose.yaml -f compose.dev.yaml up -d --wait db",
     "db:down": "docker compose --env-file .env.local -f compose.yaml -f compose.dev.yaml down",
