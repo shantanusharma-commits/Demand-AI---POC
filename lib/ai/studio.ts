@@ -67,6 +67,13 @@ export async function writePiece(gw: AiGateway, ctx: CallContext, p: Pick<Piece,
   return r.ok === false ? { ok: false, reason: r.reason } : { ok: true, blocks, callId: r.callId };
 }
 
+/** What a part is called in a reply to a person (the model sees ids; people never should). */
+const PART_NAME: Record<string, string> = {
+  title: 'the title', intro: 'the opening', why: 'the "why now" section', questions: 'the questions', objection: 'the common concern', cta: 'the close',
+  steps: 'the steps', pitfalls: 'the pitfalls', summary: 'the summary', challenge: 'the challenge', good: 'the outcome section',
+};
+const named = (reply: string, open: Block[]) => open.reduce((t, b) => t.replace(new RegExp(`(?:\\bpart\\s+)?\\[?${b.id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\]?`, 'gi'), PART_NAME[b.role] ?? 'that part'), reply);
+
 /** A request the rules don't understand: the model rewrites the selected part, or the piece's parts nobody edited. */
 export async function rewritePiece(gw: AiGateway, ctx: CallContext, p: Piece, ask: string, target: string | null, pack: BrandPack, asOf: string): Promise<Written> {
   if (!gw.enabled('draft_content')) return { ok: false, reason: 'disabled' };
@@ -89,7 +96,7 @@ export async function rewritePiece(gw: AiGateway, ctx: CallContext, p: Piece, as
         ...(shape.length ? [`Parts ${shape.join(', ')} must keep their form (a list stays a list, a paragraph a paragraph).`] : []), ...(!Object.keys(v.parts).length ? ['Nothing was rewritten.'] : [])] };
     }
     blocks = p.blocks.map(b => (v.parts[b.id] !== undefined ? { ...b, text: v.parts[b.id], ai: true } : b));
-    reply = v.reply;
+    reply = named(v.reply, open);
     return problemsOf(blocks, pack, asOf, allowed);
   });
   return r.ok === false ? { ok: false, reason: r.reason } : { ok: true, blocks, callId: r.callId, reply };
