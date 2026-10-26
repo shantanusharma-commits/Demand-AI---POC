@@ -32,7 +32,8 @@ for (const f of man.files) {
   } else if (f.kind.startsWith('signal')) {
     const g = pick(grids(path.join(pack, f.path)), /signal template/i, 'signal_type');
     out[f.id] = { sheet: g.sheet, runs: f.asOf.map(asOf => {
-      const list = { accounts: base.accounts, contacts: base.contacts };
+      const own = f.list_path ? leadsOf(f.list_path).r : base;
+      const list = { accounts: own.accounts, contacts: own.contacts };
       const S = E.processSignals(g.grid, list, { file: f.file, sheet: g.sheet, asOf });
       const R = E.scoreList(list, S);
       return { asOf, rowsRead: S.rowsRead, tiers: tierCount(R), suggested: S.suggested,

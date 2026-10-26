@@ -6,6 +6,8 @@ Set **Score as of** to **2026-10-20** for every Scoring upload, unless the workb
 
 ## 1-Prospecting: drop on the Prospecting upload box
 
+Each list has its own signal file, with the same name plus `_SIGNALS` (one signal for each person on that list), for carrying the list on into Account Scoring. P16, P19 and P20 load nothing, so they have none. `../Prospect_to_Signal_Map.xlsx` pairs every prospect list in all three packs with its signal file.
+
 | File | Use case |
 |---|---|
 | P01 | A clean list: nothing flagged |

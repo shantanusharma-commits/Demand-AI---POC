@@ -138,6 +138,8 @@ lines = [
     f"{len(man['files'])} files, one use case each. Nothing to edit: drag a file onto the upload box and compare what the POC shows with this workbook.",
     '',
     '1-Prospecting (P01-P22): drop each file on the Prospecting upload box. Compare the check pane and the final list with "Prospecting rows" and "Prospecting accounts".',
+    '   To carry a list on into Scoring, use its own signal file, named the same with _SIGNALS on the end (P01_clean_list.xlsx > P01_clean_list_SIGNALS.xlsx).',
+    '   In Account Scoring: "Upload a prospect file" = the P list, then drop its _SIGNALS file on box 2. P16, P19 and P20 load nothing, so they have no signal file.',
     '2-Account-Scoring (S01-S07) and 3-Signal-rules (G01-G14): these all use one prospect list, S00.',
     '   Once: Account Scoring > New scoring > 1 · Prospect list > "Upload a prospect file" > drop S00_prospect_list_for_scoring_and_signals.csv. It is saved as a list.',
     f"   Then for each S or G file: choose that S00 list, set \"Score as of\" to {man['asOf']}, and drop the file on box 2. Compare with \"Signal rows\" and \"Scoring accounts\".",

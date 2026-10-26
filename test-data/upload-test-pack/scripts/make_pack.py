@@ -34,6 +34,7 @@ def person(company, first, last, title='Instrumentation Manager', seniority='Man
     return d
 
 files = []          # every file in the pack, in order
+LISTS = {}          # Prospecting list id -> its contact rows, for the matching signal files
 def write_book(path, header, rows, sheets=None):
     """Writes one Excel workbook. Values are written as they are:
     text stays text, so a badly written date or number reaches the POC exactly as typed. sheets: extra (name, header, rows)."""
@@ -55,6 +56,7 @@ def lead_file(fid, name, title, why, rows, expect, header=None, pre=None, cols=N
     path = f'1-Prospecting/{fid}_{name}.xlsx'
     body = [list(p) for p in (pre or [])] + [[r.get(c, '') for c in cols] for r, _ in rows]
     write_book(path, header or cols, body)
+    LISTS[fid] = [r for r, _ in rows]
     first_data = 2 + len(pre or [])
     files.append(dict(id=fid, folder='1-Prospecting', file=os.path.basename(path), path=path, kind='lead', title=title, why=why, expect=expect,
                       steps=steps or f'Prospecting: drop {os.path.basename(path)} on the upload box.',
@@ -228,6 +230,7 @@ hints = ['Text*', 'Text*', 'Text*', 'Text', 'Email* (or LinkedIn URL)', 'Y/N', '
 rows15 = [(person(Y, 'Ana', 'Lim'), 'Data row 1'), (person(Y, 'Ben', 'Tan', job_title='Plant Manager'), 'Data row 2')]
 write_book('1-Prospecting/P17_template_style_headers.xlsx', None,
           [['DemandAI lead template'] + [''] * 25, tmpl_header, hints] + [[r.get(c, '') for c in LEAD_COLS] + ['met at a trade show', '87'] for r, _ in rows15])
+LISTS['P17'] = [r for r, _ in rows15]
 files.append(dict(id='P17', folder='1-Prospecting', file='P17_template_style_headers.xlsx', path='1-Prospecting/P17_template_style_headers.xlsx', kind='lead',
                   title='Template layout: title row, headers with * and spaces, format-hints row, extra columns',
                   why='A file filled in on the template as people really do: a title above the headers, "First Name*" style headers, the hints row left in, and two columns of their own.',
@@ -237,7 +240,8 @@ files.append(dict(id='P17', folder='1-Prospecting', file='P17_template_style_hea
 wb = Workbook(); ws = wb.active; ws.title = 'Instructions'; ws.append(['Fill in the Lead template sheet. company_name and signal_type are explained below.'])
 ws2 = wb.create_sheet('Lead template'); ws2.append(LEAD_COLS)
 Z = co('Zenith Refining')
-for r in [person(Z, 'Ana', 'Lim'), person(Z, 'Ben', 'Tan', job_title='Plant Manager')]: ws2.append([r.get(c, '') for c in LEAD_COLS])
+LISTS['P18'] = [person(Z, 'Ana', 'Lim'), person(Z, 'Ben', 'Tan', job_title='Plant Manager')]
+for r in LISTS['P18']: ws2.append([r.get(c, '') for c in LEAD_COLS])
 ws3 = wb.create_sheet('Lookups'); ws3.append(['account_type']); [ws3.append([t]) for t in ['Owner-operator', 'EPC contractor', 'Distributor']]
 os.makedirs(os.path.join(PACK, '1-Prospecting'), exist_ok=True)
 wb.save(os.path.join(PACK, '1-Prospecting', 'P18_excel_with_several_sheets.xlsx'))
@@ -465,6 +469,28 @@ sig_file(SG, 'G14', 'signals_for_excluded_and_below_floor_accounts', 'Signals fo
     (S_('Kingsbridge Fuels', A['kings'][0], 'Inquiry or RFQ', 5, INQ), 'Below the fit floor: not used'),
     (S_('Apex Refining', APEX_P, 'Inquiry or RFQ', 5, INQ), 'Control: qualified'),
 ], 'Rows 2 and 3 show "Not used" with the reason; row 4 qualified.')
+
+# ═════════════ Matching signal files for the Prospecting lists ═════════════
+# One signal per person on the list, naming them the way the list does (email, else LinkedIn, else nobody), so each list
+# can be carried on into Account Scoring and the effect of each row's problem shows up there too.
+for fid, people in LISTS.items():
+    lf = next(f for f in files if f['id'] == fid)
+    if fid in ('P16', 'P19', 'P20'): continue          # these lists load nothing, so there is nothing to score
+    rows = []
+    for i, r in enumerate(people):
+        if not r.get('company_name'): continue
+        t, dt = TYPES[i % len(TYPES)]
+        ref = r.get('email') or r.get('linkedin_url') or ''
+        who = ' '.join(x for x in (r.get('first_name'), r.get('last_name')) if x) or '(no name)'
+        rows.append((S_(r['company_name'], ref, t, 3 + (i * 5) % 40, dt), f"{who}, {r['company_name']}: {t}" + ('' if ref else ' (no person named: auto-assigned)')))
+    sid = fid + 'S'
+    path = f"1-Prospecting/{lf['file'].replace('.xlsx', '')}_SIGNALS.xlsx"
+    write_book(path, SIG_COLS, [r for r, _ in rows])
+    files.insert(files.index(lf) + 1, dict(id=sid, folder='1-Prospecting', file=os.path.basename(path), path=path, list_path=lf['path'], kind='signal', asOf=[AS_OF],
+        title=f"Signals for {fid}", why=f"The matching signal file for {lf['file']}: one signal for each person on that list.",
+        expect='See "Signal rows" and "Scoring accounts" for this file.',
+        steps=f"Account Scoring: \"Upload a prospect file\" = {lf['file']}; Score as of {AS_OF}; drop {os.path.basename(path)} on box 2.",
+        rows=[dict(row=i + 2, tests=t) for i, (_, t) in enumerate(rows)]))
 
 # ═════════════ 4 · Micro-segments and For Review: chained pairs from the scenario sets ═════════════
 if SCEN:
