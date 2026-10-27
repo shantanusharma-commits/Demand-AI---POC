@@ -4,7 +4,7 @@
    page, then a chat beside the document. Results in any chat (tables, sequences) come back as cards that open in a canvas
    beside the chat. Replies are scripted against mock-data.js. */
 (function () {
-  const { USERS, REPS, ACCOUNTS, SEGMENTS, LISTS, CONTENT, CAMPAIGNS, REPLIES, BLOCKERS, LEARNED, SCHEDULED, TEAM_STATS } = window.MOCK;
+  const { USERS, REPS, ACCOUNTS, SEGMENTS, LISTS, CONTENT, CAMPAIGNS, REPLIES, BLOCKERS, LEARNED, TEAM_STATS } = window.MOCK;
 
   /* ─── Session (storage can be blocked; the mock still works without it) ─── */
   const store = {
@@ -19,6 +19,12 @@
   try { saved = JSON.parse(store.get(STATE_KEY, true) || '{}'); } catch (e) { saved = {}; }
   const S = Object.assign({ chats: null, cur: 'home', mchat: {}, studio: { doc: null, thread: [] }, decisions: {}, todosDone: {}, notes: {}, outcomes: {}, drafts: {}, runs: [], camp: {}, handled: {}, lists: [], seq: {}, content: [], enrollOK: {}, starred: {} }, saved);
   const save = () => store.set(STATE_KEY, JSON.stringify(S), true);
+  /* Shared across sign-ins in this tab: what the manager assigns shows up for the rep */
+  let shared = {};
+  try { shared = JSON.parse(store.get('dmock_shared', true) || '{}'); } catch (e) { shared = {}; }
+  shared = Object.assign({ assign: {}, tasks: [] }, shared);
+  const saveShared = () => store.set('dmock_shared', JSON.stringify(shared), true);
+  Object.keys(shared.assign).forEach(id => { const a = ACCOUNTS.find(x => x.id === id); if (a) a.owner = shared.assign[id]; });
   const FIND_STEPS = () => ['Turned your request into an ICP filter: refining, petrochemicals and gas · SEA · 500+ staff · reliability, operations and I&amp;C leaders', 'Searched the primary contact provider, then the fallback for the misses', 'Cross-checked fallback hits and gave everyone an identity tier', 'Removed 4 existing customers and 3 accounts another rep owns (CRM, read-only)', 'Ranked by similarity to your last 10 wins'];
   if (!S.chats) {
     S.chats = [
@@ -26,7 +32,7 @@
       { id: 'cedar', title: 'Cedar renewal prep', when: 'Fri', thread: [{ who: 'me', text: 'What should I do with Cedar?' }, { who: 'ai', kind: 'nba', id: 'cedar' }] },
     ];
   }
-  let expanded = false, ctx = null, art = null, recId = null, recTab = 'engage', listSel = 'all', campSel = null, campTab = 'enroll', segSel = null, segTab = 'accounts', apprTab = isMgr ? 'needs' : 'todo', apprRep = 'all', scope = isMgr ? 'team' : 'mine', studioTab = 'write', studioType = 'Blog', actOpen = null, artMore = false;
+  let thrId = null, ownerF = 'all', inboxTab = 'needs', homeMet = 'team', showProc = false, loadTok = 0, expanded = false, ctx = null, art = null, recId = null, recTab = 'engage', listSel = 'all', campSel = null, campTab = 'enroll', segSel = null, segTab = 'accounts', apprTab = isMgr ? 'needs' : 'todo', apprRep = 'all', scope = isMgr ? 'team' : 'mine', studioTab = 'write', studioType = 'Blog', actOpen = null, artMore = false;
 
   /* ─── Helpers ─── */
   const $ = id => document.getElementById(id);
@@ -40,6 +46,7 @@
   const segOf = id => SEGMENTS.find(s => s.id === id);
   const campOf = id => CAMPAIGNS.find(c => c.id === id);
   const mine = a => isMgr || a.owner === me.id;
+  const visible = a => isMgr ? ownerF === 'all' || a.owner === ownerF : a.owner === me.id;
   const fmt = n => Number(n).toLocaleString('en-US');
   const pct = (n, d) => d ? Math.round(n / d * 1000) / 10 + '%' : '--';
   const toast = msg => { document.querySelectorAll('.toast').forEach(t => t.remove()); const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 3200); };
@@ -81,6 +88,8 @@
     dots: '<circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/>',
     doc: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>',
     edit: '<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>',
+    inbox: '<polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>',
+    bars: '<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>',
     hour: '<path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.17a2 2 0 0 0-.59-1.42L12 12l-4.41 4.41A2 2 0 0 0 7 17.83V22"/><path d="M7 2v4.17a2 2 0 0 0 .59 1.42L12 12l4.41-4.41A2 2 0 0 0 17 6.17V2"/>',
   };
   const ic = (n, sz = 15, sw = 2) => `<svg width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[n]}</svg>`;
@@ -124,7 +133,7 @@
 
   function todos() {
     const t = [];
-    myReplies().filter(r => r.kind === 'Positive').forEach(r => t.push({ id: 'rep-' + r.id, t: `Reply to ${r.from}: said yes`, d: `${acct(r.acc).name} · ${r.sourceKind === 'Campaign' ? 'campaign: ' + r.source : 'your action'}${isMgr ? ' · ' + first(USERS[r.owner].name) : ''}`, due: r.at.startsWith('Today') ? 'By 11:00' : 'Overdue', cls: 'hot', go: () => openRecord(r.acc, 'activity') }));
+    myReplies().filter(r => r.kind === 'Positive').forEach(r => t.push({ id: 'rep-' + r.id, t: `Reply to ${r.from}: said yes`, d: `${acct(r.acc).name} · ${r.sourceKind === 'Campaign' ? 'campaign: ' + r.source : 'your action'}${isMgr ? ' · ' + first(USERS[r.owner].name) : ''}`, due: r.at.startsWith('Today') ? 'By 11:00' : 'Overdue', cls: 'hot', go: () => openThread(r.id) }));
     if (isMgr) {
       const sens = apprItems('needs');
       if (sens.length) t.push({ id: 'm1', t: `Sign off ${sens.length} sensitive message${sens.length > 1 ? 's' : ''}`, d: sens.map(a => `${a.name} (${first(USERS[a.owner].name)})`).join(' · '), due: 'Today 15:00', cls: 'hot', go: () => openMod('approvals') });
@@ -134,6 +143,7 @@
       t.push({ id: 'm5', t: 'Read the weekly pilot readout', d: 'Ready Friday 16:00', due: 'Fri', cls: 'ok', go: () => ask('What did we learn this week?') });
       return t;
     }
+    shared.tasks.forEach((x, i) => { if (x.to === me.id) t.push({ id: 'as-' + i, t: x.t, d: x.acc ? acct(x.acc).name : 'Assigned to you', due: x.due, cls: x.due === 'Today' ? 'soon' : 'ok', from: 'Pavan', go: () => x.acc ? openRecord(x.acc, 'engage') : toast('Assigned by Pavan') }); });
     const ready = apprItems('todo').filter(a => !a.nba.reason);
     if (ready.length) t.push({ id: 't2', t: `Approve ${ready.length} ready action${ready.length > 1 ? 's' : ''}`, d: ready.map(a => a.name).join(' · '), due: 'Today 12:00', cls: 'soon', go: () => openMod('approvals') });
     const unsure = apprItems('todo').filter(a => a.nba.reason && !a.nba.sensitive);
@@ -146,7 +156,7 @@
   }
   function updates() {
     const u = [];
-    myReplies().filter(r => r.kind === 'Positive' || r.kind === 'Meeting booked').forEach(r => u.push({ k: 'pos', icon: 'reply', when: r.at, t: `${r.from} ${r.kind === 'Positive' ? 'replied: interested' : 'booked a meeting'}`, d: `${acct(r.acc).name} · ${r.sourceKind === 'Campaign' ? 'campaign' : 'your action'}${isMgr ? ' · ' + first(USERS[r.owner].name) : ''}`, on: `App.openRecord('${r.acc}','activity')` }));
+    myReplies().filter(r => r.kind === 'Positive' || r.kind === 'Meeting booked').forEach(r => u.push({ k: 'pos', icon: 'reply', when: r.at, t: `${r.from} ${r.kind === 'Positive' ? 'replied: interested' : 'booked a meeting'}`, d: `${acct(r.acc).name} · ${r.sourceKind === 'Campaign' ? 'campaign' : 'your action'}${isMgr ? ' · ' + first(USERS[r.owner].name) : ''}`, on: `App.openThread('${r.id}')` }));
     if (!S.camp.c1) u.push({ k: 'brand', icon: 'megaphone', when: 'Today 06:05', t: 'New campaign proposed: Turnaround season 2027', d: isMgr ? '11 accounts crossed the threshold. Needs your confirmation.' : '5 of your accounts are in it. Pavan confirms.', on: "App.goCampaign('c1')" });
     u.push({ k: 'info', icon: 'bolt', when: 'Today 06:00', t: isMgr ? '3 accounts moved into tier A' : 'Juniper Petrochem moved into tier A', d: 'New VP Reliability plus pricing-page visits. A warm path was found through a champion who moved.', on: "App.openRecord('juniper','overview')" });
     myBlockers().filter(b => b.k === 'neg').forEach(b => u.push({ k: 'neg', icon: 'alert', when: 'Now', t: b.t, d: b.d, on: b.go ? `App.goTo(${js(b.go)})` : '' }));
@@ -156,12 +166,12 @@
   }
 
   /* ─── Routing: #today or a module; a result or a record opens in the canvas beside the chat ─── */
-  const MODULES = { accounts: 'Accounts', segments: 'Segments', campaigns: 'Campaigns', approvals: 'Approvals', studio: 'Content studio' };
-  const MOD_IC = { accounts: 'users', segments: 'layers', campaigns: 'megaphone', approvals: 'task', studio: 'pen' };
+  const MODULES = Object.assign({ inbox: 'Inbox', accounts: 'Accounts', segments: 'Segments', campaigns: 'Campaigns', approvals: 'Approvals', studio: 'Content studio' }, isMgr ? { analytics: 'Analytics' } : {});
+  const MOD_IC = { inbox: 'inbox', accounts: 'users', segments: 'layers', campaigns: 'megaphone', approvals: 'task', studio: 'pen', analytics: 'bars' };
   function view() { const r = (location.hash || '').slice(1); return MODULES[r] ? r : null; }
   function go(r) { if (view() === r || (!r && !view())) renderAll(); else location.hash = r ? '#' + r : '#today'; }
-  function nav(r) { art = null; recId = null; ctx = null; expanded = false; if (!r) S.cur = 'home'; if (r === 'campaigns') campSel = null; if (r === 'segments') segSel = null; if (r === 'studio') S.studio.doc = null; go(r); }
-  function openMod(r) { art = null; recId = null; expanded = true; go(r); }
+  function nav(r) { art = null; recId = null; thrId = null; ctx = null; expanded = false; if (!r) S.cur = 'home'; if (r === 'campaigns') campSel = null; if (r === 'segments') segSel = null; if (r === 'studio') S.studio.doc = null; go(r); }
+  function openMod(r) { art = null; recId = null; thrId = null; expanded = true; go(r); }
   window.addEventListener('hashchange', () => renderAll());
 
   /* ─── Side navigation ─── */
@@ -172,10 +182,9 @@
       <button class="side-new" onclick="App.newChat()">${ic('plus', 14)}<span>New chat</span></button>
       <a class="side-item ${!v ? 'on' : ''}" href="#today" onclick="App.nav(null);return false" title="Today">${ic('home', 16)}<span class="lbl-t">Today</span></a>
       <div class="side-sec">Modules · each with its own chat</div>
-      <nav class="side-nav" aria-label="Modules">${Object.keys(MODULES).map(k => `<a class="side-item ${v === k ? 'on' : ''}" href="#${k}" onclick="App.nav('${k}');return false" title="${MODULES[k]}">${ic(MOD_IC[k], 16)}<span class="lbl-t">${MODULES[k]}</span>${k === 'approvals' && n ? `<span class="cnt">${n}</span>` : ''}</a>`).join('')}</nav>
+      <nav class="side-nav" aria-label="Modules">${Object.keys(MODULES).map(k => `<a class="side-item ${v === k ? 'on' : ''}" href="#${k}" onclick="App.nav('${k}');return false" title="${MODULES[k]}">${ic(MOD_IC[k], 16)}<span class="lbl-t">${MODULES[k]}</span>${(k === 'approvals' ? n : k === 'inbox' ? threads().filter(needsReply).length : 0) ? `<span class="cnt">${k === 'approvals' ? n : threads().filter(needsReply).length}</span>` : ''}</a>`).join('')}</nav>
       <div class="side-sec">Recent chats</div>
       <div class="side-recent">${S.chats.map(c => `<button class="${!v && c.id === S.cur ? 'on' : ''}" onclick="App.openChat('${c.id}')" title="${esc(c.title)}">${ic('chat', 13)}<span>${esc(c.title)}</span><i>${esc(c.when)}</i></button>`).join('')}</div>
-      <button class="side-item side-runs" onclick="App.openRuns()" title="Scheduled runs">${ic('clock', 16)}<span class="lbl-t">Scheduled runs</span><span class="cnt grey">${SCHEDULED.length + S.runs.length}</span></button>
       <div class="side-foot">
         <div class="side-user">${avatar(me, 30)}<div class="lbl-t"><div class="nm">${esc(me.name)}</div><div class="rl">${isMgr ? 'Sales manager · 4 reps' : 'Sales rep'}</div></div></div>
         <div class="side-links lbl-t"><button onclick="App.switchUser('${isMgr ? 'sofia' : 'pavan'}')">Switch to ${isMgr ? 'Sofia (rep)' : 'Pavan (manager)'}</button><a href="story.html">What we're selling</a><a href="index.html" onclick="App.signOut()">Sign out</a></div>
@@ -184,12 +193,16 @@
 
   /* ─── Chats: Today sessions, one chat per module, one per document ─── */
   const MOD_INTRO = {
+    inbox: () => `Replies from email and LinkedIn in one place${isMgr ? ', for the whole team' : ''}. Each comes with a suggested answer; when someone replies, their remaining campaign steps pause.`,
+    analytics: () => 'How the team is doing against the pilot targets: the funnel, each rep, each campaign, and what the system learned. Pick a rep to see their numbers.',
     accounts: () => `This is every account ${isMgr ? 'on the team' : 'you own'}, ranked by Fit × Timing. Saved lists are the tabs above the table. Ask me to find more, score a list, or save what you're looking at.`,
     segments: () => 'Accounts grouped by why they\'re ready. Campaign segments (NBC) run as one sequence; the rest are next best actions (NBA). Open one, or ask me.',
     campaigns: () => `${CAMPAIGNS.filter(c => c.status === 'Running').length} campaigns running, ${CAMPAIGNS.filter(c => /Ready|Draft/.test(c.status)).length} waiting to start. Email and LinkedIn only. Ask me to build one, change a sequence, or explain the results.`,
     approvals: () => isMgr ? 'Sensitive messages and campaigns wait here for you. Ask me why any item needs a person.' : 'Only the items that need you. Everything else went ahead on its own. Ask me why any item is here.',
   };
   const MOD_HINTS = {
+    inbox: ['Any replies?', 'Which replies are objections?', 'Draft a reply to Dian with 3 times next week', 'What should I do with Greystone?'],
+    analytics: ['How is my team doing?', 'Where is the funnel leaking?', 'Which campaigns work best?', 'What did we learn this week?'],
     accounts: ['Find prospects like my last 10 wins', 'Score this list', 'Save as a list', 'Who should I call first?'],
     segments: ['Which segments are campaigns?', 'Create micro-segments', 'What\'s close to becoming a campaign?', 'Why is Juniper ranked first?'],
     campaigns: ['How are the campaigns doing?', 'Build the campaign', 'Add a LinkedIn touch to the turnaround campaign', 'Any replies?'],
@@ -203,7 +216,7 @@
     return S.chats.find(c => c.id === S.cur) || S.chats[0];
   }
   const lastKind = () => { const c = chat(); const t = c ? c.thread.filter(m => m.who === 'ai') : []; return t.length ? t[t.length - 1].kind : null; };
-  const NEXT = { prospects: ['Score this list', 'Save as a list'], rankedList: ['Create micro-segments', 'Save the scored list'], listSegments: ['Prepare the next actions', 'Build the campaign'], nbaList: ['Build the campaign', 'How are the campaigns doing?'], flowCampaign: ['How are the campaigns doing?', 'What did we learn this week?'], campaigns: ['What did we learn this week?', 'Any replies?'] };
+  const NEXT = { prospects: ['Score this list', 'Save as a list'], rankedList: ['Route to NBA and NBC', 'Save the scored list'], listSegments: ['Approve all ready', 'Send the campaign to Pavan'], nbaList: ['Build the campaign', 'How are the campaigns doing?'], flowCampaign: ['How are the campaigns doing?', 'What did we learn this week?'], campaigns: ['What did we learn this week?', 'Any replies?'] };
   function hints() {
     const v = view(), nx = NEXT[lastKind()] || [];
     if (v === 'studio') return ['Make it shorter', 'Add proof', 'More formal', 'Rewrite the intro', 'Add a section on lifecycle planning'];
@@ -219,7 +232,7 @@
         <span class="ai-mark">${ic('spark', 13)}</span>
         <div class="ttl">${v === 'studio' ? `<button class="back-l" onclick="App.nav('studio')">${ic('left', 13)} Content studio</button>` : esc(c.title)}</div>
         <div class="sp"></div>
-        ${v && v !== 'studio' && !expanded ? `<button class="btn sm" onclick="App.expand()">${ic('expand', 12)} Open ${MODULES[v]}</button>` : ''}${v ? '' : `<button class="ic-btn" title="Scheduled runs" onclick="App.openRuns()">${ic('clock', 15)}</button>`}
+        ${v && v !== 'studio' && !expanded ? `<button class="btn sm" onclick="App.expand()">${ic('expand', 12)} Open ${MODULES[v]}</button>` : ''}
         <button class="ic-btn" title="${v && v !== 'studio' ? 'Clear this chat' : 'New chat'}" onclick="App.newChat()">${ic('plus', 15)}</button>
       </div>
       <div class="thread" id="thread"><div class="thread-in">${c.thread.map(renderMsg).join('')}</div></div>
@@ -247,7 +260,7 @@
     if (m.who === 'me') return `<div class="msg me"><div class="bub">${esc(m.text)}</div></div>`;
     if (m.who === 'typing') return `<div class="msg"><span class="ai-av">${ic('spark', 14)}</span><div class="bub">${m.step ? `<div class="steps"><div class="st"><span class="typing"><i></i><i></i><i></i></span><span>${m.step}</span></div></div>` : '<span class="typing"><i></i><i></i><i></i></span>'}</div></div>`;
     const R = RENDER[m.kind] || RENDER.text;
-    return `<div class="msg"><span class="ai-av">${ic('spark', 14)}</span><div class="bub">${stepsHtml(m.steps)}${R(m)}${m.kind === 'modIntro' ? '' : fbHtml()}</div></div>`;
+    return `<div class="msg${m.fresh ? ' enter' : ''}"><span class="ai-av">${ic('spark', 14)}</span><div class="bub">${stepsHtml(m.steps)}${R(m)}${m.kind === 'modIntro' ? '' : fbHtml()}</div></div>`;
   }
   const btn = (label, q, pri) => `<button class="btn sm ${pri ? 'pri' : ''}" onclick="App.ask(${js(q)})">${label}</button>`;
   const openBtn = (label, call) => `<button class="btn sm" onclick="${call}">${ic('expand', 12)} ${label}</button>`;
@@ -297,7 +310,7 @@
       const c1 = campOf('c1'), mineIn = ACCOUNTS.filter(a => a.campaign === 'c1' && a.owner === me.id).length, bld = SEGMENTS.find(x => x.mode === 'Building');
       return `${stepsHtml(isMgr ? ['Overnight sweep 06:00 · 61 new signals across the team, 24 qualified', 'Re-scored 81 accounts and re-built 9 micro-segments', '31 next actions prepared · 22 went ahead on their own'] : ['Overnight sweep 06:00 · 23 new signals on your accounts, 9 qualified', 'Re-scored your accounts · Juniper Petrochem moved into tier A', `Prepared your next actions · ${auto} went ahead on their own`])}
         <p>${isMgr ? `Here's the team's day. <b>${today.length}</b> action${today.length === 1 ? ' needs' : 's need'} you today, <b>${hot.length}</b> prospects said yes, and <b>one new campaign</b> is ready for you to confirm.` : `Here's your day. <b>${today.length}</b> action${today.length === 1 ? '' : 's'} to decide today and <b>${hot.length}</b> prospect${hot.length === 1 ? '' : 's'} to answer. Everything else went ahead on its own.`}</p>
-        ${hot.length ? `<div class="ccard" style="border-color:#F1D3D3"><div class="ccard-h"><span class="t" style="color:var(--neg)">${ic('flame', 14)} Answer first · they said yes</span><span class="muted" style="font-size:11px">fast lane</span></div><div class="ccard-b" style="padding:2px 14px">${hot.map(r => `<div class="mini-row"><div class="grow row-link" onclick="App.openRecord('${r.acc}','activity')"><div class="nm">${esc(r.from)} · ${esc(acct(r.acc).name)}${isMgr ? ` <span class="muted" style="font-weight:400">· ${esc(first(USERS[r.owner].name))}</span>` : ''}</div><div class="sm">"${esc(r.text)}"</div></div><span class="due ${r.at.startsWith('Today') ? 'hot' : 'soon'}" style="font-size:11px">${esc(r.at)}</span>${isMgr ? '' : btn('Draft reply', r.acc === 'eastgate' ? 'Draft a reply to Dian with 3 times next week' : 'What should I do with ' + acct(r.acc).name.split(' ')[0] + '?', true)}</div>`).join('')}</div></div>` : ''}
+        ${hot.length ? `<div class="ccard" style="border-color:#F1D3D3"><div class="ccard-h"><span class="t" style="color:var(--neg)">${ic('flame', 14)} Answer first · they said yes</span><span class="muted" style="font-size:11px">fast lane</span></div><div class="ccard-b" style="padding:2px 14px">${hot.map(r => `<div class="mini-row"><div class="grow row-link" onclick="App.openThread('${r.id}')"><div class="nm">${esc(r.from)} · ${esc(acct(r.acc).name)}${isMgr ? ` <span class="muted" style="font-weight:400">· ${esc(first(USERS[r.owner].name))}</span>` : ''}</div><div class="sm">"${esc(r.text)}"</div></div><span class="due ${r.at.startsWith('Today') ? 'hot' : 'soon'}" style="font-size:11px">${esc(r.at)}</span><button class="btn sm pri" onclick="App.openThread('${r.id}')">${isMgr ? 'Open' : 'Reply'}</button></div>`).join('')}</div></div>` : ''}
         <div class="ccard"><div class="ccard-h"><span class="t">${ic('bolt', 14)} Next best actions · due today</span><span class="badge b-sec nodot">${today.length}</span></div>
           <div class="ccard-b" style="padding:0">${today.length ? `<div class="tbl-wrap"><table class="tbl nba-tbl"><thead><tr><th>Account · contact</th><th>Action</th><th>Why it needs you</th><th></th></tr></thead><tbody>${today.map(a => { const d = S.decisions[a.id]; return `<tr><td class="row-link" onclick="App.openRecord('${a.id}','engage')"><div class="nm">${esc(a.name)}</div><div class="sm">${esc(a.contact.name)}${isMgr ? ' · ' + esc(first(USERS[a.owner].name)) : ''}</div></td><td>${esc(a.nba.action)}<div class="sm">${a.nba.channel} · ${esc(a.segment)}</div></td><td><span class="badge ${REASON[reasonOf(a)]}">${reasonOf(a)}</span></td><td style="white-space:nowrap">${d ? `<span class="badge b-grey nodot">${decLabel(d)}</span>` : `${!a.nba.reason || (isMgr && a.nba.sensitive) ? `<button class="btn sm pri" onclick="App.approve('${a.id}')">${isMgr && a.nba.sensitive ? 'Sign off' : 'Approve'}</button> ` : ''}<button class="btn sm" onclick="App.openRecord('${a.id}','engage')">Review</button>`}</td></tr>`; }).join('')}</tbody></table></div>` : '<div class="empty">Nothing to decide today.</div>'}</div>
           <div class="ccard-f"><span class="muted" style="font-size:11.5px">${auto} went ahead on their own${later ? ` · ${later} more due later this week` : ''}</span><div style="flex:1"></div>${today.some(a => !a.nba.reason && !S.decisions[a.id]) && !isMgr ? '<button class="btn sm pri" onclick="App.approveAll()">Approve all ready</button>' : ''}${openBtn('Approvals', "App.openMod('approvals')")}</div></div>
@@ -312,13 +325,19 @@
     },
     prospects: () => `<p>I found <b>24 people at ${listAccounts().length} accounts</b> that match your ICP and look like your recent wins. <b>2 are held</b> for a person to check, and I removed 4 existing customers.</p>${tableCard('prospects')}<div class="next-row">${btn('Score this list', 'Score this list', true)}${btn('Save as a list', 'Save as a list')}</div>`,
     savedList: m => `<p>Saved as <b>${esc(m.name)}</b>. It's a tab in Accounts now, ready to score, segment or use in a campaign.</p><div class="next-row">${openBtn('Open in Accounts', `App.openList('${m.id}')`)}${btn(m.next || 'Score this list', m.next || 'Score this list', true)}</div>`,
-    rankedList: () => { const n = listAccounts().filter(a => a.score > 0).length; return `<p>Scored by <b>Fit × Timing</b>. ${n} of ${listAccounts().length} have a live signal; the one with none waits and stays watched.</p>${tableCard('scored')}<div class="next-row">${btn('Create micro-segments', 'Create micro-segments', true)}${btn('Save the scored list', 'Save the scored list')}</div>`; },
+    rankedList: () => { const ls = listAccounts().slice().sort((p, q) => q.score - p.score), n = ls.filter(a => a.score > 0).length; return `<p>Scored with the Score flow. ${n} of ${ls.length} have a live signal; the one with none scores zero and stays watched. Here's the process, with the top account worked through:</p>${scoreProcess(ls[0])}${tableCard('scored')}<div class="next-row">${btn('Route to NBA and NBC', 'Route to NBA and NBC', true)}${btn('Save the scored list', 'Save the scored list')}</div>`; },
     listSegments: () => {
-      const by = {};
-      listAccounts().forEach(a => { const k = a.seg || 'none'; (by[k] = by[k] || []).push(a); });
-      return `<p>Grouped by each account's strongest trigger. <b>10 accounts share a control-systems hiring surge</b>, which crosses the campaign threshold, so I drafted one campaign. The rest get their own next best action.</p>
-        <div class="ccard"><div class="ccard-b" style="padding:2px 14px">${Object.entries(by).map(([k, v]) => { const s = segOf(k); return `<div class="mini-row ${s ? 'row-link' : ''}" ${s ? `onclick="App.openSegment('${k}')"` : ''}><div class="grow"><div class="nm">${s ? esc(s.name) : 'No live signal'}</div><div class="sm">${v.length} account${v.length > 1 ? 's' : ''} · ${v.slice(0, 3).map(a => esc(a.name)).join(', ')}${v.length > 3 ? '…' : ''}</div></div>${s ? (s.mode === 'NBC' ? '<span class="badge b-brand">Campaign · NBC</span>' : '<span class="badge b-sec">Next best action · NBA</span>') : '<span class="badge b-grey nodot">Watch</span>'}</div>`; }).join('')}</div></div>
-        ${tableCard('segmented')}<div class="next-row">${btn('Prepare the next actions', 'Prepare the next actions', true)}${btn('Build the campaign', 'Build the campaign')}</div>`;
+      const accs = listAccounts(), c = campOf('c5'), nbc = accs.filter(a => a.campaign === 'c5'), nba = accs.filter(a => a.nba && a.campaign !== 'c5'), watch = accs.filter(a => !a.nba && !a.campaign);
+      return `<p>Grouped the scored list by each account's strongest trigger, then routed it. <b>${nbc.length} accounts share a control-systems hiring surge</b>, which crosses the threshold (10 in 7 days), so they go to <b>one campaign (NBC)</b>. <b>${nba.length}</b> get their own <b>next best action (NBA)</b>${watch.length ? `; ${watch.length} with no live signal stay${watch.length === 1 ? 's' : ''} watched` : ''}.</p>
+        <div class="route">
+          <div class="route-col"><div class="route-h"><span class="badge b-brand">NBC · one campaign</span><b>${nbc.length} accounts</b></div>
+            <div class="nm">${esc(c.name)}</div><div class="touch-mini">${seqOf(c).map(t => `<span>${chIc(t.ch)} <b>Day ${t.day}</b> ${esc(t.fmt)}</span>`).join('')}</div>
+            <div class="sm">${nbc.slice(0, 4).map(a => esc(a.name)).join(', ')}${nbc.length > 4 ? ` and ${nbc.length - 4} more` : ''}</div>
+            <div class="next-row">${openBtn('Open campaign', "App.goCampaign('c5')")}${isMgr ? `<button class="btn sm pri" onclick="App.confirmCampaign('c5')">Confirm</button>` : S.camp.c5 ? `<span class="badge b-ter">${esc(S.camp.c5)}</span>` : `<button class="btn sm pri" onclick="App.sendForConfirm('c5')">Send to Pavan</button>`}</div></div>
+          <div class="route-col"><div class="route-h"><span class="badge b-sec">NBA · one at a time</span><b>${nba.length} accounts</b></div>
+            ${nba.map(a => `<div class="mini-row row-link" onclick="App.openRecord('${a.id}','engage')">${chIc(a.nba.channel)}<div class="grow"><div class="nm">${esc(a.name)}</div><div class="sm">${esc(a.nba.action)}</div></div>${stepBadge(a)}</div>`).join('')}
+            <div class="next-row">${isMgr ? '' : '<button class="btn sm pri" onclick="App.approveAll()">Approve all ready</button>'}${openBtn('Approvals', "App.openMod('approvals')")}</div></div>
+        </div>${tableCard('segmented')}`;
     },
     nbaList: () => {
       const accs = listAccounts().filter(a => a.nba);
@@ -329,7 +348,7 @@
     flowCampaign: () => seqCard(campOf('c5'), `Here's the campaign for the 10 hiring-surge accounts: <b>${seqOf(campOf('c5')).length} touches</b>, email and LinkedIn, personalised per person. Add, remove, reorder or rewrite any touch.`),
     campaign: m => seqCard(campOf(m.id), esc(segOf(campOf(m.id).seg).why)),
     seqChanged: m => seqCard(campOf(m.id), m.note),
-    ranked: () => `<p>Ranked by <b>Fit × Timing</b>. A great fit with no live signal scores zero.</p>${tableCard('ranked')}`,
+    ranked: () => `<p>Ranked by <b>Fit × Timing</b>. A great fit with no live signal scores zero.</p>${tableCard('ranked')}${scoreProcess()}`,
     why: m => {
       const a = acct(m.id), sig = a.signals.slice().sort((p, q) => q.weight - p.weight);
       return `<p><b>${esc(a.name)}</b> is #${a.rank}: it fits well <i>and</i> something changed.</p>
@@ -345,26 +364,26 @@
     },
     campaigns: () => `<p>${CAMPAIGNS.filter(c => c.status === 'Running').length} campaigns running, ${CAMPAIGNS.filter(c => /Ready|Draft/.test(c.status)).length} waiting to start.</p>
       ${CAMPAIGNS.filter(c => c.status !== 'Completed').map(c => { const st = campStats(c); return `<div class="ccard row-link" onclick="App.goCampaign('${c.id}')"><div class="ccard-h"><span class="t">${esc(c.name)}</span>${campBadge(c)}</div><div class="ccard-b"><div class="sm" style="font-size:12px;color:var(--i2)">${progressText(c)}</div><div class="mstats">${[['Enrolled', st.total], ['Replies', st.replies], ['Positive', st.positive], ['Meetings', st.meetings], ['Reply rate', pct(st.replies, st.started)]].map(([k, v]) => `<div><b>${v}</b><span>${k}</span></div>`).join('')}</div><div class="sm" style="font-size:11.5px;color:var(--i3);margin-top:6px">Latest: ${esc(c.updates[0].x)}</div></div></div>`; }).join('')}`,
-    replies: () => { const rp = myReplies(); return rp.length ? `<p>${rp.length} repl${rp.length === 1 ? 'y' : 'ies'}, newest first:</p><div class="ccard"><div class="ccard-b" style="padding:2px 14px">${rp.map(r => `<div class="mini-row row-link" onclick="App.openRecord('${r.acc}','activity')"><span class="badge ${KIND_B[r.kind]}">${r.kind}</span><div class="grow"><div class="nm">${esc(r.from)} · ${esc(acct(r.acc).name)}</div><div class="sm">"${esc(r.text)}"</div></div></div>`).join('')}</div></div>` : '<p>No new replies.</p>'; },
+    replies: () => { const rp = myReplies(); return rp.length ? `<p>${rp.length} repl${rp.length === 1 ? 'y' : 'ies'}, newest first:</p><div class="ccard"><div class="ccard-b" style="padding:2px 14px">${rp.map(r => `<div class="mini-row row-link" onclick="App.openThread('${r.id}')"><span class="badge ${KIND_B[r.kind]}">${r.kind}</span><div class="grow"><div class="nm">${esc(r.from)} · ${esc(acct(r.acc).name)}</div><div class="sm">"${esc(r.text)}"</div></div></div>`).join('')}</div></div>` : '<p>No new replies.</p>'; },
     blockers: () => { const b = myBlockers(); return b.length ? `<p>What's in the way right now:</p><div class="ccard"><div class="ccard-b" style="padding:2px 14px">${b.map(x => `<div class="mini-row"><span class="badge b-${x.k === 'neg' ? 'neg' : 'warn'} nodot">!</span><div class="grow"><div class="nm">${esc(x.t)}</div><div class="sm" style="white-space:normal">${esc(x.d)}</div></div></div>`).join('')}</div></div>` : '<p>Nothing is blocked.</p>'; },
     nba: m => nbaCard(acct(m.id), m.note),
     learned: () => `<p>What the system learned from this month's outcomes (misses count too):</p>
       <div class="ccard"><div class="ccard-b" style="padding:2px 14px">${LEARNED.map(l => `<div class="mini-row"><span class="badge b-${l.k} nodot">${l.k === 'pos' ? '↑' : l.k === 'neg' ? '↓' : l.k === 'warn' ? '!' : 'i'}</span><div class="grow"><div class="nm">${esc(l.t)}</div><div class="sm" style="white-space:normal">${esc(l.d)}</div></div></div>`).join('')}</div></div>`,
     team: () => `<p>Your team this week: <b>7 meetings booked</b> against a target of 15; reps accepted <b>77%</b> of recommendations first time. <b>Kenji</b> is behind: 3 overdue, no meetings. I suggest moving Banyan Gas and Coral Bay Refining to Aisha.</p>
       <div class="ccard"><div class="ccard-b" style="padding:2px 14px">${REPS.map(r => { const t = TEAM_STATS[r]; return `<div class="mini-row row-link" onclick="App.repApprovals('${r}')">${avatar(USERS[r], 24)}<div class="grow"><div class="nm">${esc(USERS[r].name)}</div><div class="sm">${t.todo} to do · ${t.replies} replies · ${t.meetings}/${t.target} meetings</div></div>${t.overdue ? `<span class="badge b-neg">${t.overdue} overdue</span>` : '<span class="badge b-pos">On track</span>'}</div>`; }).join('')}</div>
-      <div class="ccard-f"><button class="btn sm pri" onclick="App.toast('Banyan Gas and Coral Bay Refining moved to Aisha (mock)')">Move 2 to Aisha</button><button class="btn sm" onclick="App.toast('Nudge sent to Kenji (mock)')">Nudge Kenji</button></div></div>`,
+      <div class="ccard-f"><button class="btn sm pri" onclick="App.reassign(['banyan','coralbay'],'aisha')">Move 2 to Aisha</button><button class="btn sm" onclick="App.toast('Nudge sent to Kenji (mock)')">Nudge Kenji</button></div></div>`,
     todo: () => `<p>Your list, most urgent first:</p><div class="ccard"><div class="ccard-b" style="padding:2px 14px">${todos().map(x => `<div class="mini-row row-link" onclick="App.runTodo('${x.id}')"><div class="grow"><div class="nm">${esc(x.t)}</div><div class="sm">${esc(x.d)}</div></div><span class="due ${x.cls}" style="font-size:11px">${esc(x.due)}</span></div>`).join('')}</div></div>`,
-    scheduled: m => `<p>Done. I'll run this on a schedule and put the results in your brief.</p>
-      <div class="ccard"><div class="ccard-b"><b style="font-size:13px">${esc(m.name)}</b><div class="sm" style="font-size:12px;color:var(--i2);margin:4px 0">${esc(m.prompt)}</div><div class="sm" style="font-size:11px;color:var(--i3)">${esc(m.freq)} · next run ${esc(m.next)}</div></div><div class="ccard-f"><button class="btn sm" onclick="App.openRuns()">Scheduled runs</button></div></div>`,
     approvalsList: () => { const items = apprItems(isMgr ? 'needs' : 'todo'); return items.length ? `<p>${isMgr ? 'These need your sign-off:' : 'Waiting for you:'}</p><div class="ccard"><div class="ccard-b" style="padding:2px 14px">${items.map(apprMini).join('')}</div></div>` : '<p>Nothing is waiting for you right now.</p>'; },
     docCard: () => { const d = S.studio.doc; return d ? `<button class="doc-card" onclick="App.focusDoc()"><span class="doc-ic">${ic(d.type === 'Whitepaper' ? 'doc' : 'pen', 18)}</span><span><b>${esc(d.title)}</b><span class="sm">${esc(d.type)} · Open in the canvas</span></span></button>` : ''; },
-    help: () => `<p>I can run the whole flow. Try:</p><div class="hints" style="margin:4px 0">${['Find prospects like my last 10 wins', 'Score this list', 'Create micro-segments', 'Prepare the next actions', 'Build the campaign', 'How are the campaigns doing?', 'What did we learn this week?', 'Write a blog on planning a control system migration', 'Every weekday at 7am, check my accounts for new signals'].map(h => `<button class="chip" onclick="App.ask(${js(h)})">${esc(h)}</button>`).join('')}</div>`,
+    help: () => `<p>I can run the whole flow. Try:</p><div class="hints" style="margin:4px 0">${['Find prospects like my last 10 wins', 'Score this list', 'Create micro-segments', 'Prepare the next actions', 'Build the campaign', 'How are the campaigns doing?', 'What did we learn this week?', 'Write a blog on planning a control system migration'].map(h => `<button class="chip" onclick="App.ask(${js(h)})">${esc(h)}</button>`).join('')}</div>`,
   };
   function modCard(v) {
     const card = (title, count, rows) => `<div class="tcard"><div class="tcard-h"><span class="t">${ic(MOD_IC[v], 15)} ${title}</span><span class="muted" style="font-size:12px;white-space:nowrap">${count}</span><div class="sp"></div><button class="ic-btn" title="Open beside the chat" onclick="App.expand()">${ic('expand', 15)}</button></div><div style="padding:2px 14px">${rows}</div><button class="tcard-more" onclick="App.expand()">Open ${MODULES[v]} beside the chat ${ic('expand', 12)}</button></div>`;
     if (v === 'accounts') { const acc = ACCOUNTS.filter(mine).filter(a => a.score > 0).sort((p, q) => q.score - p.score); return card(isMgr ? 'Team accounts' : 'Your accounts', `${acc.length} with a live signal · ${S.lists.length + LISTS.length} saved lists`, acc.slice(0, 5).map(a => `<div class="mini-row row-link" onclick="App.openRecord('${a.id}','overview')">${tierBadge(a.tier)}<div class="grow"><div class="nm">${esc(a.name)} <span class="muted" style="font-weight:400">· ${esc(a.contact.name)}</span></div><div class="sm">${a.whyNow ? esc(a.whyNow.type) + ' · ' + ago(a.whyNow.age) : ''}</div></div>${stepBadge(a)}</div>`).join('')); }
     if (v === 'segments') return card('Micro-segments', `${SEGMENTS.length} segments`, SEGMENTS.slice(0, 6).map(s => `<div class="mini-row row-link" onclick="App.openSegment('${s.id}')"><div class="grow"><div class="nm">${esc(s.name)}</div><div class="sm">${ACCOUNTS.filter(a => a.seg === s.id).length} accounts · ${esc(s.trigger)}</div></div>${modeBadge(s)}</div>`).join(''));
     if (v === 'campaigns') return card('Campaigns', `${CAMPAIGNS.length} campaigns`, CAMPAIGNS.map(c => `<div class="mini-row row-link" onclick="App.goCampaign('${c.id}')"><div class="grow"><div class="nm">${esc(c.name)}</div><div class="sm">${esc(progressText(c))}</div></div>${campBadge(c)}</div>`).join(''));
+    if (v === 'inbox') { const th = threads(); return card('Inbox', `${th.filter(needsReply).length} need a reply`, th.slice(0, 6).map(r => `<div class="mini-row row-link" onclick="App.openThread('${r.id}')">${chIc(r.ch)}<div class="grow"><div class="nm">${esc(r.from)} <span class="muted" style="font-weight:400">· ${esc(acct(r.acc).name)}</span></div><div class="sm">"${esc(r.text)}"</div></div><span class="badge ${KIND_B[r.kind]}">${r.kind}</span></div>`).join('') || '<div class="empty">No replies yet.</div>'); }
+    if (v === 'analytics') return card('Pilot week 3', 'whole team', (sum => [['Meetings this week', `${sum('meetings')} / ${sum('target')}`], ['Reply rate', pct(sum('replies'), sum('sent'))], ['Accepted first time', Math.round(sum('accept') / REPS.length) + '%'], ['Overdue items', sum('overdue')]])(k => REPS.reduce((x, r) => x + TEAM_STATS[r][k], 0)).map(([k, x]) => `<div class="mini-row"><div class="grow nm">${k}</div><b class="mono">${x}</b></div>`).join(''));
     const items = apprItems(isMgr ? 'needs' : 'todo');
     return card('Approvals', `${items.length} waiting`, items.length ? items.map(apprMini).join('') : '<div class="empty">Nothing is waiting for you.</div>');
   }
@@ -414,8 +433,12 @@
       const name = scored ? 'Lookalikes of my last 10 wins · scored 27 Oct' : 'Lookalikes of my last 10 wins · 27 Oct';
       return { kind: 'savedList', id: addList(name, scored ? 'Scored list' : 'Prospect list', scored ? '16 of 17 accounts with a live signal, ranked' : '24 people at 17 accounts', listAccounts().map(a => a.id)), name, next: scored ? 'Create micro-segments' : 'Score this list' };
     }
-    if (/score (this|the|that|these|them)|rank (this|them|these)|score (my )?list/.test(t)) return { kind: 'rankedList', steps: ['Pulled live signals for the 17 list accounts from 23 sources', 'Kept 21 of 30 signals (observable, predictive, time-bound)', 'Applied tier, decay and stacking', 'Fit × Timing = Score'] };
-    if (/micro|segment (this|the|them)|create.*segment|group (this|them|the list)/.test(t)) return { kind: 'listSegments', steps: ['Tagged each account by its strongest trigger', 'Checked each group against the campaign threshold (10 in 7 days)', 'Checked the outcome cache for a proven message structure per group'] };
+    if (/score (this|the|that|these|them)|rank (this|them|these)|score (my )?list/.test(t)) return { kind: 'rankedList', steps: ['Collected live signals for the 17 list accounts from 23 sources', 'Qualified 21 of 30 signals: observable, predictive, time-bound', 'Weighed by tier (100 / 60 / 30) and applied decay', 'Stacked into Timing: strongest + ½ second + ¼ third', 'Fit × Timing = Score, then tiers A / B / C'] };
+    if (/send (the campaign|it) to pavan/.test(t)) { S.camp.c5 = 'Sent for confirmation'; return { kind: 'text', html: 'Sent <b>Control-systems hiring surge</b> to Pavan to confirm. You\'ll see it in Today once he decides.' }; }
+    if (/confirm the campaign/.test(t) && isMgr) { S.camp.c5 = 'Confirmed'; return { kind: 'text', html: 'Confirmed <b>Control-systems hiring surge</b>. Step 1 goes out tomorrow 09:00 (placeholder: nothing is sent).' }; }
+    if (/objection/.test(t)) { const ob = threads().filter(r => r.kind === 'Objection'); return { kind: 'text', html: ob.length ? `${ob.length} objection${ob.length > 1 ? 's' : ''}: ${ob.map(r => `<a href="#inbox" onclick="App.openThread('${r.id}');return false">${esc(r.from)} · ${esc(acct(r.acc).name)}</a>`).join(', ')}. Each has a suggested reply that doesn't push.` : 'No objections right now.' }; }
+    if (/funnel|leak/.test(t)) return { kind: 'text', html: 'The biggest drop is <b>with a live signal → contacted</b>: 33 accounts had a signal but only 24 were contacted within 2 days, mostly because 3 rep mailboxes aren\'t connected. Replies to positive is healthy (8 of 15).' };
+    if (/route|nba and nbc|nbc and nba|micro|segment (this|the|them)|create.*segment|group (this|them|the list)/.test(t)) return { kind: 'listSegments', steps: ['Tagged each account by its strongest trigger', 'Checked each micro-segment against the campaign threshold (10 in 7 days)', 'Routed: 10 accounts → one campaign (NBC), 6 → next best actions (NBA)', 'Drafted the campaign sequence and the next actions · brand checks passed'] };
     if (/prepare.*(next )?action|next actions|\bnba\b/.test(t) && !/which/.test(t)) return { kind: 'nbaList', steps: ['De-dup check: no open opportunities, owners confirmed', 'Read CRM history and warm paths', 'Chose email or LinkedIn per contact and wrote the drafts', 'Brand, claims and banned-word checks passed'] };
     if (/build.*campaign|create.*campaign|draft.*campaign|\bnbc\b/.test(t) && !/which/.test(t)) return { kind: 'flowCampaign', steps: ['Used the structure closest to this trigger (provisional: no outcomes yet)', 'Planned 4 steps across email and LinkedIn', 'Personalised each step per person', 'Checked nobody is already in another sequence'] };
     if (/draft a reply|reply to dian/.test(t)) return { kind: 'text', html: 'Here\'s a reply with three times from your calendar:<div class="draft" style="margin-top:8px">Hi Dian,\n\nGreat to hear from you. I can do Tuesday 3 Nov at 10:00, Wednesday 4 Nov at 14:00 or Thursday 5 Nov at 09:30 (Jakarta time). I\'ll bring our lead engineer for hydrocracker projects.\n\nBest,\nSofia</div><div class="next-row"><button class="btn sm pri" onclick="App.handleReply(\'reastgate\')">Approve &amp; send</button></div>', steps: ['Read the reply: positive, asks for times next week', 'Checked your calendar for free slots', 'Wrote the reply'] };
@@ -423,17 +446,13 @@
     const a = findAccount(t) || (ctx ? acct(ctx) : null);
     if (/close to|almost/.test(t)) { const b = SEGMENTS.find(s => s.mode === 'Building'); return { kind: 'text', html: `<b>${esc(b.name)}</b> has ${b.building} of the 10 accounts it needs in the 7-day window. If two more arrive this week, it becomes a campaign; until then each account has its own next best action.` }; }
     if (/which.*(segment|campaign)|segments|segment/.test(t) && !a) return { kind: 'segments', steps: ['Re-built micro-segments from each account\'s strongest trigger', 'Checked each segment against the campaign threshold (10 in 7 days)'] };
-    if (/campaign/.test(t) && /how|status|doing|running|track|working/.test(t) || /^track/.test(t)) return { kind: 'campaigns', steps: ['Pulled send, open, reply and meeting counts for every campaign'] };
+    if (/campaign/.test(t) && /how|status|doing|running|track|working|best/.test(t) || /^track/.test(t)) return { kind: 'campaigns', steps: ['Pulled send, open, reply and meeting counts for every campaign'] };
     if (/repl/.test(t)) return { kind: 'replies' };
     if (/block|stuck|in the way/.test(t)) return { kind: 'blockers' };
     if (isMgr && /team|reps?\b|overdue|coach|kenji|marco|aisha/.test(t) && !/rank/.test(t)) return { kind: 'team', steps: ['Pulled each rep\'s queue, outcomes and approvals this week'] };
     if (/approv|waiting|needs me|needs my/.test(t) && !/approve all/.test(t)) return { kind: 'approvalsList' };
     if (/campaign|sequence|turnaround/.test(t)) return { kind: 'campaign', id: findCampaign(t) || 'c1' };
     if (/learn|worked|working|what changed|readout/.test(t)) return { kind: 'learned', steps: ['Read 214 outcomes logged this month (wins and misses)', 'Re-ran pattern promotion and demotion', 'Compared signal sources by conversion'] };
-    if (/schedul|every (day|weekday|mon|tue|wed|thu|fri|week|morning)|each (day|morning)|7am/.test(t)) {
-      const run = { name: /prospect/.test(t) ? 'Monday prospect refresh' : 'Weekday signal check', prompt: text, freq: /mon/.test(t) ? 'Every Mon at 07:00' : 'Every weekday at 07:00', next: /mon/.test(t) ? 'Mon 2 Nov 07:00' : 'Tomorrow 07:00' };
-      S.runs.push(run); return Object.assign({ kind: 'scheduled' }, run);
-    }
     if (/to ?do|what should i do first|my day|first today/.test(t)) return { kind: 'todo' };
     if (/approve all/.test(t)) { approveAll(true); return { kind: 'text', html: 'Done. Every ready, high-confidence item is approved and scheduled for the next send window (a placeholder in the mock).' }; }
     if (/find|prospect|look ?alike|new accounts|like my|like our|more accounts/.test(t)) return { kind: 'prospects', steps: FIND_STEPS() };
@@ -467,15 +486,22 @@
     c.thread.push({ who: 'me', text });
     const reply = respond(text);
     const steps = reply.steps || [];
-    save(); renderChat(); renderNav();
-    let i = 0;
-    const tick = () => {
-      c.thread = c.thread.filter(m => m.who !== 'typing');
-      if (i < steps.length) { c.thread.push({ who: 'typing', step: steps[i] }); i++; renderChat(); setTimeout(tick, 340); return; }
-      c.thread.push(Object.assign({ who: 'ai' }, reply));
-      save(); renderAll();
-    };
-    c.thread.push({ who: 'typing' }); renderChat(); setTimeout(tick, steps.length ? 240 : 520);
+    save(); renderAll();
+    const finish = () => { c.thread = c.thread.filter(m => m.who !== 'typing'); const m = Object.assign({ who: 'ai', fresh: true }, reply); c.thread.push(m); save(); renderAll(); m.fresh = false; };
+    const box = document.querySelector('#thread .thread-in'), th = $('thread');
+    if (!box) { finish(); return; }
+    /* Steps appear one by one in place, then the answer fades in: no full redraw while thinking */
+    const el = document.createElement('div');
+    el.className = 'msg think';
+    el.innerHTML = `<span class="ai-av pulse">${ic('spark', 14)}</span><div class="bub"><div class="steps live"></div></div>`;
+    box.appendChild(el);
+    const list = el.querySelector('.steps');
+    const tickAll = () => list.querySelectorAll('.typing').forEach(x => { x.outerHTML = '<span class="ok">✓</span>'; });
+    const row = txt => { tickAll(); const d = document.createElement('div'); d.className = 'st'; d.innerHTML = `<span class="typing"><i></i><i></i><i></i></span><span>${txt}</span>`; list.appendChild(d); th.scrollTop = th.scrollHeight; };
+    row(steps.length ? steps[0] : 'Thinking…');
+    let i = 1;
+    const tick = () => { if (i < steps.length) { row(steps[i++]); setTimeout(tick, 420); return; } tickAll(); setTimeout(finish, 240); };
+    setTimeout(tick, steps.length ? 420 : 520);
   }
 
   /* ─── Campaign sequences: email and LinkedIn steps, personalised per person ─── */
@@ -507,12 +533,16 @@
   const seqSpan = c => { const sq = seqOf(c); return `${sq.length} steps · ${sq.length ? sq[sq.length - 1].day + 1 : 0} days`; };
 
   /* ─── Home (Today): the greeting and the chat box first; the brief, to-do and numbers below ─── */
+  function metrics() {
+    const own = a => a.owner === me.id, ts = TEAM_STATS, sum = k => REPS.reduce((n, r) => n + ts[r][k], 0);
+    if (!isMgr) return [['users', 'Sequenced', ACCOUNTS.filter(a => a.campaign && own(a)).length, 30], ['mail', 'Emails sent', ts[me.id].sent, 40], ['li', 'LinkedIn touches', 5, 20], ['reply', 'Replies to answer', myReplies().filter(r => r.kind !== 'Out of office').length, null], ['task', 'To decide today', todayNBA().length, null], ['check', 'Meetings this week', ts[me.id].meetings, ts[me.id].target], ['up', 'Accepted first time', ts[me.id].accept + '%', null]];
+    if (homeMet === 'mine') return [['task', 'Sign-offs waiting', apprItems('needs').length, null], ['megaphone', 'Campaigns to confirm', CAMPAIGNS.filter(c => (c.status === 'Ready to confirm' || S.camp[c.id] === 'Sent for confirmation') && S.camp[c.id] !== 'Confirmed').length, null], ['check', 'Decided today', Object.keys(S.decisions).length, null], ['users', 'Work reassigned', Object.keys(shared.assign).length, null], ['pen', 'Tasks assigned', shared.tasks.length, null], ['reply', 'Replies across the team', myReplies().length, null]];
+    return [['mail', 'Emails sent', sum('sent'), 160], ['reply', 'Replies', sum('replies'), null], ['check', 'Meetings this week', sum('meetings'), sum('target')], ['up', 'Accepted first time', Math.round(sum('accept') / REPS.length) + '%', null], ['task', 'Open items', sum('todo'), null], ['alert', 'Overdue', sum('overdue'), null]];
+  }
   function renderHome() {
     const td = todos(), blk = myBlockers().find(b => b.k === 'neg');
-    const my = a => isMgr || a.owner === me.id;
-    const met = [['users', 'Sequenced', ACCOUNTS.filter(a => a.campaign && my(a)).length, isMgr ? 120 : 30], ['mail', 'Emails sent', isMgr ? 38 : 9, isMgr ? 160 : 40], ['li', 'LinkedIn touches', isMgr ? 21 : 5, isMgr ? 80 : 20], ['reply', 'Replies to answer', myReplies().length, null], ['task', 'To decide today', todayNBA().length, null], ['check', 'Meetings this week', isMgr ? 7 : 2, isMgr ? 15 : 4]];
-    const board = REPS.slice().sort((p, q) => TEAM_STATS[q].meetings - TEAM_STATS[p].meetings);
     const q = ($('todoQ') && $('todoQ').value || '').toLowerCase();
+    const tdRows = td.filter(x => !q || (x.t + x.d).toLowerCase().includes(q));
     $('main').className = 'home-pg';
     $('main').innerHTML = `<div class="hm"><div class="hm-main">
         <h1 class="hm-greet">${greeting()}, ${esc(first(me.name))}. ${isMgr ? 'Here\'s your team\'s day.' : 'Ready to prospect?'}</h1>
@@ -524,17 +554,106 @@
         <section class="hm-card"><div class="hm-card-h"><span class="hm-ic">${ic('spark', 15)}</span><b>Today's brief</b><span class="muted">prepared overnight · 06:00</span></div><div class="hm-brief">${RENDER.brief({ home: true })}</div></section>
         <section class="hm-card"><div class="hm-card-h"><span class="hm-ic">${ic('task', 15)}</span><b>To do</b><span class="badge b-grey nodot">${td.filter(x => !S.todosDone[x.id]).length} open</span><div class="sp"></div><div class="search">${ic('search', 14)}<label class="sr" for="todoQ">Search</label><input id="todoQ" placeholder="Search…" value="${esc(q)}" oninput="App.renderAll()"></div></div>
           <div class="tbl-wrap"><table class="tbl todo-tbl"><thead><tr><th style="width:34px"><span class="sr">Done</span></th><th>Task</th><th>Details</th><th>Due</th></tr></thead><tbody>
-          ${td.filter(x => !q || (x.t + x.d).toLowerCase().includes(q)).map(x => `<tr class="${S.todosDone[x.id] ? 'done' : ''}"><td><button class="ck" aria-label="Mark done" onclick="App.doneTodo('${x.id}')">${S.todosDone[x.id] ? ic('check', 11, 3) : ''}</button></td><td class="row-link" onclick="App.runTodo('${x.id}')"><div class="nm">${esc(x.t)}</div></td><td class="row-link" onclick="App.runTodo('${x.id}')"><div class="sm">${esc(x.d)}</div></td><td><span class="due ${x.cls}">${esc(x.due)}</span></td></tr>`).join('') || '<tr><td colspan="4" class="empty">No tasks match.</td></tr>'}
+          ${tdRows.map(x => `<tr class="${S.todosDone[x.id] ? 'done' : ''}"><td><button class="ck" aria-label="Mark done" onclick="App.doneTodo('${x.id}')">${S.todosDone[x.id] ? ic('check', 11, 3) : ''}</button></td><td class="row-link" onclick="App.runTodo('${x.id}')"><div class="nm">${esc(x.t)}</div>${x.from ? `<span class="badge b-ter nodot" style="margin-top:4px">From ${esc(x.from)}</span>` : ''}</td><td class="row-link" onclick="App.runTodo('${x.id}')"><div class="sm">${esc(x.d)}</div></td><td><span class="due ${x.cls}">${esc(x.due)}</span></td></tr>`).join('') || '<tr><td colspan="4" class="empty">No tasks match.</td></tr>'}
           </tbody></table></div></section>
+        ${isMgr ? teamCard() : ''}
       </div>
       <aside class="hm-side">
-        <section class="hm-card"><div class="hm-card-h"><b>${isMgr ? 'Team metrics' : 'Your metrics'}</b><div class="sp"></div><label class="sr" for="metP">Period</label><select class="sel" id="metP"><option>Today</option><option>This week</option></select></div>
-          ${met.map(([i, k, v, t]) => `<div class="met"><span class="met-ic">${ic(i, 15)}</span><span class="grow">${k}</span><b>${v}${t ? `<i> / ${t}</i>` : ''}</b></div>`).join('')}</section>
+        <section class="hm-card"><div class="hm-card-h"><b>${isMgr ? (homeMet === 'mine' ? 'My metrics' : 'Team metrics') : 'My metrics'}</b><div class="sp"></div>${isMgr ? `<div class="seg">${[['team', 'Team'], ['mine', 'Mine']].map(([k, l]) => `<button class="${homeMet === k ? 'on' : ''}" onclick="App.setHomeMet('${k}')">${l}</button>`).join('')}</div>` : '<span class="muted" style="font-size:12px">This week</span>'}</div>
+          ${metrics().map(([i, k, v, t]) => `<div class="met"><span class="met-ic">${ic(i, 15)}</span><span class="grow">${k}</span><b>${v}${t ? `<i> / ${t}</i>` : ''}</b></div>`).join('')}</section>
         <section class="hm-card"><div class="hm-card-h"><b>Most important updates</b></div><div style="padding:2px 14px 6px">${updates().slice(0, 5).map(u => `<button class="upd-i" ${u.on ? `onclick="${u.on}"` : ''}><span class="ic k-${u.k}">${ic(u.icon, 13)}</span><div class="grow"><div class="nm">${esc(u.t)}</div><div class="sm">${esc(u.d)}</div></div><span class="when">${esc(u.when)}</span></button>`).join('')}</div></section>
-        <section class="hm-card"><div class="hm-card-h"><b>Weekly leaderboard</b><div class="sp"></div><span class="muted" style="font-size:12px">Meetings booked</span></div>
-          ${board.map((r, i) => `<div class="met ${r === me.id ? 'me' : ''}"><span class="rank">${i + 1}</span>${avatar(USERS[r], 24)}<span class="grow">${esc(USERS[r].name)}</span><b>${TEAM_STATS[r].meetings}</b></div>`).join('')}</section>
       </aside></div>`;
     if (q) { const s = $('todoQ'); s.focus(); s.setSelectionRange(q.length, q.length); }
+  }
+  /* The manager's team card: each rep's work, and assigning work to anyone */
+  function teamCard() {
+    const opts = sel => REPS.map(r => `<option value="${r}" ${sel === r ? 'selected' : ''}>${esc(USERS[r].name)}</option>`).join('');
+    const overdue = ACCOUNTS.filter(a => a.owner === 'kenji' && a.nba && /ready|review/.test(a.nba.status) && !S.decisions[a.id]).slice(0, 2);
+    return `<section class="hm-card"><div class="hm-card-h"><span class="hm-ic">${ic('users', 15)}</span><b>Team</b><span class="muted">each rep's work · assign to anyone</span></div>
+      <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Rep</th><th>Open</th><th>Overdue</th><th>Replies</th><th>Meetings</th><th>Accepted</th><th></th></tr></thead><tbody>
+        ${REPS.map(r => { const t = TEAM_STATS[r]; return `<tr><td><div style="display:flex;gap:8px;align-items:center">${avatar(USERS[r], 24)}<span class="nm">${esc(USERS[r].name)}</span></div></td><td>${t.todo + shared.tasks.filter(x => x.to === r).length}</td><td>${t.overdue ? `<span class="badge b-neg">${t.overdue}</span>` : '0'}</td><td>${t.replies}</td><td>${t.meetings} / ${t.target}</td><td>${t.accept}%</td><td style="white-space:nowrap"><button class="btn sm" onclick="App.viewRep('${r}')">View work</button></td></tr>`; }).join('')}
+      </tbody></table></div>
+      ${overdue.length ? `<div class="assign-sug">${ic('spark', 14)}<div class="grow"><b>Kenji is behind.</b> Move ${overdue.map(a => esc(a.name)).join(' and ')} to Aisha?</div><button class="btn sm pri" onclick="App.reassign(${js(overdue.map(a => a.id))},'aisha')">Move to Aisha</button></div>` : ''}
+      <div class="assign-f"><div class="lbl">Assign a task</div>
+        <div class="assign-row"><label class="sr" for="asT">Task</label><input class="edit" id="asT" placeholder="e.g. Call back Larkspur about the comparison" style="flex:2 1 220px">
+          <label class="sr" for="asR">Rep</label><select class="sel" id="asR">${opts('kenji')}</select>
+          <label class="sr" for="asA">Account</label><select class="sel" id="asA"><option value="">No account</option>${ACCOUNTS.filter(a => !a.generated || a.nba).slice(0, 30).map(a => `<option value="${a.id}">${esc(a.name)}</option>`).join('')}</select>
+          <label class="sr" for="asD">Due</label><select class="sel" id="asD"><option>Today</option><option>Tomorrow</option><option>Fri 30 Oct</option></select>
+          <button class="btn sm pri" onclick="App.assignTask()">Assign</button></div>
+        ${shared.tasks.length ? `<div style="margin-top:10px">${shared.tasks.map(x => `<div class="mini-row"><span class="badge b-ter nodot">${esc(first(USERS[x.to].name))}</span><div class="grow"><div class="nm">${esc(x.t)}</div><div class="sm">${x.acc ? esc(acct(x.acc).name) + ' · ' : ''}due ${esc(x.due)}</div></div><span class="muted" style="font-size:11px">${x.done ? 'Done' : 'Open'}</span></div>`).join('')}</div>` : ''}
+      </div></section>`;
+  }
+
+  /* ─── Scoring, shown as the process it follows ─── */
+  const RAW = { 1: 100, 2: 60, 3: 30 };
+  function scoreProcess(a) {
+    const sig = a ? a.signals.slice().sort((p, q) => q.weight - p.weight) : [];
+    return `<div class="ccard proc"><div class="ccard-h"><span class="t">${ic('layers', 14)} How the score is calculated</span><span class="muted" style="font-size:11px">thresholds v2026.10</span></div>
+      <div class="ccard-b"><ol class="proc-steps">
+        <li><b>Collect signals</b><span>23 sources: hiring, news, website visits, tech stack, CRM</span></li>
+        <li><b>Qualify</b><span>Keep a signal only if it's observable, predictive and time-bound</span></li>
+        <li><b>Weigh by tier</b><span>Tier 1 = 100 · Tier 2 = 60 · Tier 3 = 30 points</span></li>
+        <li><b>Decay</b><span>Older signals count for less</span></li>
+        <li><b>Stack into Timing</b><span>Strongest + ½ × second + ¼ × third</span></li>
+        <li><b>Fit × Timing = Score</b><span>Tier A ≥ 8,000 · B ≥ 4,000 · C above 0</span></li>
+      </ol>
+      ${a ? `<div class="proc-ex"><div class="lbl">Worked example · ${esc(a.name)}</div>
+        ${sig.map((x, i) => `<div class="pe-r"><span class="badge ${x.tier === 1 ? 'b-pos' : x.tier === 2 ? 'b-sec' : 'b-grey'} nodot">T${x.tier}</span><span class="grow">${esc(x.type)} <span class="muted">· ${ago(x.age)}</span></span><span class="mono">${RAW[x.tier]} → ${x.weight}</span><span class="mono pe-m">${i === 0 ? '× 1' : i === 1 ? '× ½' : '× ¼'}</span></div>`).join('')}
+        <div class="pe-sum mono">Timing ${a.timing} · Fit ${a.fit} × ${a.timing} = <b>${fmt(a.score)}</b> → tier ${a.tier}</div></div>` : ''}
+      </div></div>`;
+  }
+
+  /* ─── Inbox: replies from email and LinkedIn in one place ─── */
+  REPLIES.forEach((r, i) => { if (!r.ch) r.ch = r.acc === 'eastgate' ? 'Email' : i % 3 === 1 ? 'LinkedIn' : 'Email'; });
+  const threads = () => REPLIES.filter(r => isMgr ? ownerF === 'all' || r.owner === ownerF : r.owner === me.id);
+  const needsReply = r => !S.handled[r.id] && r.kind !== 'Out of office';
+  function suggestReply(r, a) {
+    const f = first(r.from), me1 = first(USERS[a.owner].name);
+    if (r.kind === 'Positive') return `Hi ${f},\n\nGreat to hear from you. I can do Tuesday 3 Nov at 10:00, Wednesday 4 Nov at 14:00 or Thursday 5 Nov at 09:30. I'll bring a short comparison for ${a.name} so we can use the time well.\n\nBest,\n${me1}`;
+    if (r.kind === 'Objection') return `Hi ${f},\n\nThanks for being straight with me, that's helpful. I won't push. Would it be useful if I checked in closer to your next planning cycle with a one-page view of what comparable sites did?\n\nBest,\n${me1}`;
+    if (r.kind === 'Meeting booked') return `Hi ${f},\n\nThanks for booking. I'll send a short agenda the day before. Anything you'd like us to cover first?\n\nBest,\n${me1}`;
+    return 'No reply needed. The remaining steps resume when they\'re back (4 Nov).';
+  }
+  function renderInbox() {
+    const tabs = [['all', 'All'], ['needs', 'Needs a reply'], ['Positive', 'Positive'], ['Objection', 'Objection'], ['Out of office', 'Out of office']];
+    const all = threads(), list = all.filter(r => inboxTab === 'all' ? true : inboxTab === 'needs' ? needsReply(r) : r.kind === inboxTab);
+    const cv = frame('Inbox', `${all.filter(needsReply).length} need a reply · email and LinkedIn`, isMgr ? ownerSel() : '');
+    cv.innerHTML = `<div class="dtabs" style="margin-top:0">${tabs.map(([k, l]) => `<button class="${inboxTab === k ? 'on' : ''}" onclick="App.setInboxTab('${k}')">${l} <i>${k === 'all' ? all.length : k === 'needs' ? all.filter(needsReply).length : all.filter(r => r.kind === k).length}</i></button>`).join('')}</div>
+      <div class="card">${list.map(r => { const a = acct(r.acc); return `<button class="ib-row ${needsReply(r) ? 'unread' : ''}" onclick="App.openThread('${r.id}')"><span class="ib-dot"></span>${pAvatar(a, 34)}<div class="grow"><div class="ib-t"><b>${esc(r.from)}</b><span class="muted">· ${esc(a.name)}</span>${isMgr ? `<span class="muted">· ${esc(first(USERS[r.owner].name))}</span>` : ''}</div><div class="ib-p">"${esc(r.text)}"</div><div class="ib-s">${chIc(r.ch)} ${r.ch} · ${r.sourceKind === 'Campaign' ? 'campaign: ' + esc(r.source) : 'your action'}</div></div><div class="ib-m"><span class="when">${esc(r.at)}</span><span class="badge ${KIND_B[r.kind]}">${r.kind}</span>${S.handled[r.id] ? '<span class="badge b-grey nodot">Answered</span>' : ''}</div></button>`; }).join('') || '<div class="empty">Nothing here.</div>'}</div>`;
+  }
+  function renderThread() {
+    const r = REPLIES.find(x => x.id === thrId), a = acct(r.acc), out = a.activity.filter(x => x.msg).pop(), done = S.handled[r.id];
+    $('focus').innerHTML = `<div class="tv">
+      <div class="tv-h"><button class="ic-btn" title="Close" onclick="App.closeFocus()">${ic('x', 16)}</button>${pAvatar(a, 38)}<div class="grow"><div class="nm">${esc(r.from)} <span class="badge ${KIND_B[r.kind]}">${r.kind}</span></div><div class="sm">${esc(a.contact.title)} · ${esc(a.name)} · ${chIc(r.ch)} ${r.ch}</div></div><button class="btn sm" onclick="App.openRecord('${a.id}','activity')">Open account</button></div>
+      <div class="tv-b"><div class="tv-in">
+        <div class="tv-note">${ic('megaphone', 13)} ${r.sourceKind === 'Campaign' ? `From the campaign <b>${esc(r.source)}</b>. Their remaining steps are paused while you answer.` : `Reply to your action: ${esc(r.source)}.`}</div>
+        ${out ? `<div class="bubble out"><div class="bh"><b>${esc(USERS[a.owner].name)}</b> to ${esc(r.from)}<span>${esc(out.when)}</span></div>${r.ch === 'Email' ? `<div class="subj">${esc(out.msg.subject)}</div>` : ''}<div class="bt">${esc(out.msg.body)}</div></div>` : ''}
+        <div class="bubble in"><div class="bh"><b>${esc(r.from)}</b><span>${esc(r.at)}</span></div><div class="bt">${esc(r.text)}</div></div>
+        ${done ? `<div class="bubble out"><div class="bh"><b>${esc(USERS[a.owner].name)}</b><span>Just now · ${r.ch}</span></div><div class="bt">${esc(S.drafts['thr-' + r.id] || suggestReply(r, a))}</div></div><div class="tv-note ok">${ic('check', 13)} Answered. Logged to the account and the learning loop.</div>`
+        : `<div class="tv-reply"><div class="lbl">${ic('spark', 13)} Suggested reply · ${r.ch}</div><label class="sr" for="thrBody">Reply</label><textarea class="edit" id="thrBody" onchange="App.saveThread('${r.id}')">${esc(S.drafts['thr-' + r.id] || suggestReply(r, a))}</textarea>
+          <div class="checks"><span class="badge b-pos">Brand voice</span><span class="badge b-pos">Approved claims only</span></div>
+          <div class="tv-act">${r.kind === 'Out of office' ? `<button class="btn pri" onclick="App.handleReply('${r.id}','Steps resume on 4 Nov')">Resume on 4 Nov</button>` : `<button class="btn pri" onclick="App.saveThread('${r.id}');App.handleReply('${r.id}','Reply sent (placeholder: nothing is sent)')">Send by ${r.ch}</button>`}<button class="btn" onclick="App.handleReply('${r.id}','Marked as handled')">Mark handled</button>${isMgr ? `<span class="muted" style="font-size:12px;margin-left:auto">Owner</span><label class="sr" for="thrOwner">Owner</label><select class="sel" id="thrOwner" onchange="App.reassign(['${a.id}'],this.value)">${REPS.map(x => `<option value="${x}" ${a.owner === x ? 'selected' : ''}>${esc(USERS[x].name)}</option>`).join('')}</select>` : ''}</div></div>`}
+      </div></div></div>`;
+  }
+
+  /* ─── Analytics (sales manager) ─── */
+  function renderAnalytics() {
+    const reps = ownerF === 'all' ? REPS : [ownerF], sum = k => reps.reduce((n, r) => n + TEAM_STATS[r][k], 0);
+    const cv = frame('Analytics', `Pilot week 3 · ${ownerF === 'all' ? 'whole team' : USERS[ownerF].name}`, ownerSel());
+    const card = (k, v, d) => `<div class="mcard"><div class="k">${k}</div><div class="v">${v}</div><div class="d">${d}</div></div>`;
+    const f = ownerF === 'all' ? 1 : 0.27, funnel = [['People found', 412], ['Identity checked', 368], ['Accounts scored', 81], ['With a live signal', 33], ['Next actions (NBA)', 31], ['In campaigns (NBC)', 44], ['Contacted', 58], ['Replied', 15], ['Positive', 8], ['Meetings', sum('meetings')]].map(([k, v], i) => [k, i === 9 ? v : Math.round(v * f)]);
+    cv.innerHTML = `<div class="mcards">${card('Meetings this week', `${sum('meetings')} / ${sum('target')}`, 'G1 target: 15 a week')}${card('Reply rate', pct(sum('replies'), sum('sent')), `${sum('replies')} of ${sum('sent')} sent`)}${card('Accepted first time', Math.round(sum('accept') / reps.length) + '%', 'G2 target: 70%')}${card('Went ahead on their own', '71%', '22 of 31 next actions')}${card('Overdue', sum('overdue'), 'items past due')}</div>
+      <div class="an-grid">
+        <section class="card"><div class="card-h"><span class="lbl">Funnel · this month</span></div><div class="card-b">${funnel.map(([k, v]) => `<div class="fn-r"><span>${k}</span><div class="fn-b"><i style="width:${Math.max(3, v / funnel[0][1] * 100)}%"></i></div><b class="mono">${v}</b></div>`).join('')}</div></section>
+        <section class="card"><div class="card-h"><span class="lbl">By rep</span></div><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Rep</th><th>Sent</th><th>Replies</th><th>Meetings</th><th>Accepted</th><th>Overdue</th></tr></thead><tbody>${REPS.map(r => { const t = TEAM_STATS[r]; return `<tr class="row-link ${ownerF === r ? 'sel-row' : ''}" onclick="App.setOwner('${r}')"><td><div style="display:flex;gap:8px;align-items:center">${avatar(USERS[r], 22)}${esc(USERS[r].name)}</div></td><td>${t.sent}</td><td>${t.replies}</td><td>${t.meetings}/${t.target}</td><td>${t.accept}%</td><td>${t.overdue ? `<span class="badge b-neg">${t.overdue}</span>` : '0'}</td></tr>`; }).join('')}</tbody></table></div></section>
+      </div>
+      <section class="card" style="margin-top:14px"><div class="card-h"><span class="lbl">Campaigns</span></div><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Campaign</th><th>Status</th><th>Accounts</th><th>Reply rate</th><th>Positive</th><th>Meetings</th></tr></thead><tbody>${CAMPAIGNS.map(c => { const st = campStats(c); return `<tr class="row-link" onclick="App.goCampaign('${c.id}')"><td class="nm">${esc(c.name)}</td><td>${campBadge(c)}</td><td>${st.total}</td><td>${pct(st.replies, st.started)}</td><td>${st.positive}</td><td>${st.meetings}</td></tr>`; }).join('')}</tbody></table></div></section>
+      <section class="card" style="margin-top:14px"><div class="card-h"><span class="lbl">What the system learned</span></div><div class="card-b" style="padding:2px 16px">${LEARNED.map(l => `<div class="mini-row"><span class="badge b-${l.k} nodot">${l.k === 'pos' ? '↑' : l.k === 'neg' ? '↓' : l.k === 'warn' ? '!' : 'i'}</span><div class="grow"><div class="nm">${esc(l.t)}</div><div class="sm" style="white-space:normal">${esc(l.d)}</div></div></div>`).join('')}</div></section>`;
+  }
+  function ownerSel() { return isMgr ? `<label class="sr" for="ownF">Rep</label><select class="sel" id="ownF" onchange="App.setOwner(this.value)"><option value="all">All reps</option>${REPS.map(r => `<option value="${r}" ${ownerF === r ? 'selected' : ''}>${esc(USERS[r].name)}</option>`).join('')}</select>` : ''; }
+  function skeleton() {
+    $('main').className = 'canvas';
+    $('main').innerHTML = `<div class="cv-h"><div class="sk" style="width:220px;height:20px"></div><div class="sk" style="width:90px;height:28px"></div></div><div class="cv-b"><div class="mcards">${'<div class="sk" style="height:84px"></div>'.repeat(5)}</div><div class="sk" style="height:20px;width:180px;margin:22px 0 12px"></div>${'<div class="sk" style="height:46px;margin-bottom:8px"></div>'.repeat(6)}</div>`;
   }
 
   /* ─── Module and canvas frames ─── */
@@ -562,17 +681,18 @@
   function renderAccounts() {
     const lists = [{ id: 'all', name: 'All accounts' }].concat(S.lists, LISTS);
     const l = lists.find(x => x.id === listSel) || lists[0];
-    let rows = l.id === 'all' ? ACCOUNTS.filter(a => isMgr || scope === 'team' || a.owner === me.id) : l.ids ? l.ids.map(acct) : l.seg ? ACCOUNTS.filter(a => a.seg === l.seg) : l.id === 'L1' ? listAccounts() : ACCOUNTS.filter(a => a.score > 0);
+    let rows = l.id === 'all' ? ACCOUNTS : l.ids ? l.ids.map(acct) : l.seg ? ACCOUNTS.filter(a => a.seg === l.seg) : l.id === 'L1' ? listAccounts() : ACCOUNTS.filter(a => a.score > 0);
     const q = ($('accQ') && $('accQ').value || '').toLowerCase(), tf = ($('accT') && $('accT').value) || 'all';
-    rows = rows.filter(a => (!q || (a.name + a.contact.name + a.country + a.segment).toLowerCase().includes(q)) && (tf === 'all' || a.tier === tf));
+    rows = rows.filter(a => visible(a) && (!q || (a.name + a.contact.name + a.country + a.segment).toLowerCase().includes(q)) && (tf === 'all' || a.tier === tf));
     const cv = frame('Accounts', `${rows.length} accounts${l.id === 'all' ? '' : ' in this list'} · Score = Fit × Timing`, `<button class="btn sm" onclick="App.saveView()">${ic('savei', 13)} Save as a list</button><button class="btn sm pri" onclick="App.ask('Find prospects like my last 10 wins')">${ic('search', 13)} Find prospects</button>`);
     cv.innerHTML = `<div class="list-tabs">${lists.map(x => `<button class="${x.id === l.id ? 'on' : ''}" onclick="App.openList('${x.id}')">${esc(x.name)}${x.kind ? `<i>${esc(x.kind)}</i>` : ''}</button>`).join('')}</div>
       ${l.note ? `<div class="list-note">${esc(l.note)} · saved by ${esc(l.by)} · ${esc(l.when)}<span style="flex:1"></span>${btn('Score this list', 'Score this list')}${btn('Create micro-segments', 'Create micro-segments')}</div>` : ''}
-      <div class="toolbar">${isMgr ? filt('Whole team', 'users', true) : `<div class="seg">${[['mine', 'For you'], ['team', 'Team']].map(([k, lb]) => `<button class="${scope === k ? 'on' : ''}" onclick="App.setScope('${k}')">${lb}</button>`).join('')}</div>`}
+      <div class="toolbar">${ownerSel()}
         <label class="sr" for="accT">Tier</label><select class="sel" id="accT" onchange="App.renderAll()">${[['all', 'All tiers'], ['A', 'Tier A'], ['B', 'Tier B'], ['C', 'Tier C']].map(([k, lb]) => `<option value="${k}" ${tf === k ? 'selected' : ''}>${lb}</option>`).join('')}</select>
-        <div class="search">${ic('search', 14)}<label class="sr" for="accQ">Search</label><input id="accQ" placeholder="Search accounts, people, segments" value="${esc(q)}" oninput="App.renderAll()"></div></div>
-      <div class="card tbl-wrap"><table class="tbl"><thead><tr><th>#</th><th>Account</th><th>Person</th><th>Tier</th><th>Score</th><th>Why now</th><th>Micro-segment</th>${isMgr || scope === 'team' ? '<th>Owner</th>' : ''}<th>Status</th></tr></thead><tbody>
-        ${rows.map((a, i) => `<tr class="row-link" onclick="App.openRecord('${a.id}','overview')"><td class="mono muted">${i + 1}</td><td><div class="nm">${esc(a.name)}</div><div class="sm">${esc(a.industry)} · ${esc(a.country)}</div></td><td>${esc(a.contact.name)}<div class="sm">${esc(a.contact.title)}</div></td><td>${tierBadge(a.tier)}</td><td class="mono">${fmt(a.score)}</td><td>${a.whyNow ? `${esc(a.whyNow.type)}<div class="sm">${ago(a.whyNow.age)}</div>` : '<span class="muted">No live signal</span>'}</td><td>${a.seg ? `<span class="seg-link" onclick="event.stopPropagation();App.openSegment('${a.seg}')">${esc(a.segment)}</span>` : '—'}</td>${isMgr || scope === 'team' ? `<td>${esc(first(USERS[a.owner].name))}</td>` : ''}<td>${stepBadge(a)}</td></tr>`).join('')}</tbody></table></div>`;
+        <div class="search">${ic('search', 14)}<label class="sr" for="accQ">Search</label><input id="accQ" placeholder="Search accounts, people, segments" value="${esc(q)}" oninput="App.renderAll()"></div><button class="btn sm ghost" onclick="App.toggleProc()">${ic('layers', 13)} ${showProc ? 'Hide' : 'How scoring works'}</button></div>
+      ${showProc ? scoreProcess(rows.find(a => a.score > 0)) : ''}
+      <div class="card tbl-wrap"><table class="tbl"><thead><tr><th>#</th><th>Account</th><th>Person</th><th>Tier</th><th>Score</th><th>Why now</th><th>Micro-segment</th>${isMgr ? '<th>Owner</th>' : ''}<th>Status</th></tr></thead><tbody>
+        ${rows.map((a, i) => `<tr class="row-link" onclick="App.openRecord('${a.id}','overview')"><td class="mono muted">${i + 1}</td><td><div class="nm">${esc(a.name)}</div><div class="sm">${esc(a.industry)} · ${esc(a.country)}</div></td><td>${esc(a.contact.name)}<div class="sm">${esc(a.contact.title)}</div></td><td>${tierBadge(a.tier)}</td><td class="mono">${fmt(a.score)}</td><td>${a.whyNow ? `${esc(a.whyNow.type)}<div class="sm">${ago(a.whyNow.age)}</div>` : '<span class="muted">No live signal</span>'}</td><td>${a.seg ? `<span class="seg-link" onclick="event.stopPropagation();App.openSegment('${a.seg}')">${esc(a.segment)}</span>` : '—'}</td>${isMgr ? `<td>${esc(first(USERS[a.owner].name))}</td>` : ''}<td>${stepBadge(a)}</td></tr>`).join('')}</tbody></table></div>`;
     const s = $('accQ'); if (q) { s.focus(); s.setSelectionRange(q.length, q.length); }
   }
   function stepBadge(a) {
@@ -593,7 +713,7 @@
   function renderSegments() {
     if (segSel) return renderSegment();
     const cv = frame('Micro-segments', `${SEGMENTS.length} segments`, `<button class="btn sm pri" onclick="App.ask('Create micro-segments')">${ic('spark', 13)} Segment a list</button>`);
-    cv.innerHTML = `<div class="toolbar">${filt('For you', 'users', true)}${filt('Campaign · NBC', '', false)}${filt('My actions · NBA', '', false)}${filt('Building', '', false)}<div class="search" style="margin-left:auto">${ic('search', 14)}<input placeholder="Search…" aria-label="Search segments"></div></div>
+    cv.innerHTML = `<div class="toolbar">${ownerSel()}${filt('Campaign · NBC', '', false)}${filt('My actions · NBA', '', false)}${filt('Building', '', false)}<div class="search" style="margin-left:auto">${ic('search', 14)}<input placeholder="Search…" aria-label="Search segments"></div></div>
       <div class="rule"><b>Campaign or my action?</b> 10 or more accounts in one segment within 7 days become a campaign (NBC) once ${isMgr ? 'you confirm' : 'Pavan confirms'}. Fewer, and each account gets its own next best action (NBA). Sensitive segments never become campaigns.</div>
       <div class="srow-list">${SEGMENTS.map(s => { const st = segStats(s), c = s.campaign ? campOf(s.campaign) : null; return `<div class="srow" onclick="App.openSegment('${s.id}')">
         <div class="srow-n"><div class="nm">${esc(s.name)} ${modeBadge(s)}</div><div class="sm">${esc(s.trigger)} · ${c ? `${esc(campStatus(c))} · ${seqSpan(c)}` : s.mode === 'Building' ? `${s.building} of 10 toward a campaign` : `${s.proven.toLowerCase()} message`}${s.sensitive ? ' · sensitive' : ''}</div></div>
@@ -602,13 +722,13 @@
   }
   function renderSegment() {
     const s = segOf(segSel), c = s.campaign ? campOf(s.campaign) : null, st = segStats(s);
-    const accs = ACCOUNTS.filter(a => a.seg === s.id && (isMgr || scope === 'team' || a.owner === me.id)).sort((p, q) => q.score - p.score);
+    const accs = ACCOUNTS.filter(a => a.seg === s.id && visible(a)).sort((p, q) => q.score - p.score);
     const cv = frame(`<button class="back-l" onclick="App.openSegment(null)">${ic('left', 14)}</button> ${esc(s.name)} ${modeBadge(s)}`, `${esc(s.trigger)} · ${st.total} accounts${s.fromList ? ' · from a prospect list' : ''}`, c ? `<button class="btn sm pri" onclick="App.goCampaign('${c.id}')">${ic('megaphone', 13)} Open campaign</button>` : `<button class="btn sm" onclick="App.saveSegList('${s.id}')">${ic('savei', 13)} Save as a list</button>`);
     cv.innerHTML = `<div class="mcards">${[['Accounts', isMgr ? st.total : `${st.mine} of ${st.total}`, isMgr ? 'in this segment' : 'are yours'], ['Waiting on you', st.waiting, 'need a person'], ['Went ahead', st.ahead, 'on their own'], ['Positive rate', s.rate ? s.rate + '%' : '--', `${s.outcomes} outcomes`], ['Message', s.proven, 'from the outcome cache']].map(([k, v, d]) => `<div class="mcard"><div class="k">${k}</div><div class="v">${v}</div><div class="d">${d}</div></div>`).join('')}</div>
       <div class="seg-why"><div><div class="lbl">Why these accounts are together</div><p class="p">${esc(s.why)}</p></div><div><div class="lbl">Message structure</div><p class="p">${esc(s.structure)}</p></div></div>
-      <div class="dtabs">${[['accounts', 'Accounts'], ['activity', 'Activity'], ['replies', 'Replies']].map(([k, lb]) => `<button class="${segTab === k ? 'on' : ''}" onclick="App.setSegTab('${k}')">${lb}</button>`).join('')}${isMgr ? '' : `<div class="seg" style="margin-left:auto">${[['mine', 'For you'], ['team', 'Whole segment']].map(([k, lb]) => `<button class="${scope === k ? 'on' : ''}" onclick="App.setScope('${k}')">${lb}</button>`).join('')}</div>`}</div>
-      ${segTab === 'accounts' ? `<div class="card tbl-wrap"><table class="tbl"><thead><tr><th>Person</th><th>Links</th><th>Status</th><th>Company</th><th>Tier · score</th><th>Signal</th>${isMgr || scope === 'team' ? '<th>Owner</th>' : ''}<th>Last activity</th></tr></thead><tbody>
-        ${accs.map(a => `<tr class="row-link" onclick="App.openRecord('${a.id}','engage')"><td><div style="display:flex;gap:9px;align-items:center">${pAvatar(a)}<div><div class="nm">${esc(a.contact.name)}</div><div class="sm">${esc(a.contact.title)}</div></div></div></td><td><span class="li-ic">${ic('li', 14)}</span></td><td>${stepBadge(a)}</td><td>${esc(a.name)}</td><td>${tierBadge(a.tier)} <span class="mono" style="font-size:12px">${fmt(a.score)}</span></td><td>${a.whyNow ? esc(a.whyNow.type) + `<div class="sm">${ago(a.whyNow.age)}</div>` : '—'}</td>${isMgr || scope === 'team' ? `<td>${esc(first(USERS[a.owner].name))}</td>` : ''}<td class="sm">${esc((a.activity[a.activity.length - 1] || {}).t || '—')}</td></tr>`).join('') || '<tr><td colspan="8" class="empty">None of your accounts are in this segment. Switch to "Whole segment".</td></tr>'}
+      <div class="dtabs">${[['accounts', 'Accounts'], ['activity', 'Activity'], ['replies', 'Replies']].map(([k, lb]) => `<button class="${segTab === k ? 'on' : ''}" onclick="App.setSegTab('${k}')">${lb}</button>`).join('')}${isMgr ? `<span style="margin-left:auto">${ownerSel()}</span>` : ''}</div>
+      ${segTab === 'accounts' ? `<div class="card tbl-wrap"><table class="tbl"><thead><tr><th>Person</th><th>Links</th><th>Status</th><th>Company</th><th>Tier · score</th><th>Signal</th>${isMgr ? '<th>Owner</th>' : ''}<th>Last activity</th></tr></thead><tbody>
+        ${accs.map(a => `<tr class="row-link" onclick="App.openRecord('${a.id}','engage')"><td><div style="display:flex;gap:9px;align-items:center">${pAvatar(a)}<div><div class="nm">${esc(a.contact.name)}</div><div class="sm">${esc(a.contact.title)}</div></div></div></td><td><span class="li-ic">${ic('li', 14)}</span></td><td>${stepBadge(a)}</td><td>${esc(a.name)}</td><td>${tierBadge(a.tier)} <span class="mono" style="font-size:12px">${fmt(a.score)}</span></td><td>${a.whyNow ? esc(a.whyNow.type) + `<div class="sm">${ago(a.whyNow.age)}</div>` : '—'}</td>${isMgr ? `<td>${esc(first(USERS[a.owner].name))}</td>` : ''}<td class="sm">${esc((a.activity[a.activity.length - 1] || {}).t || '—')}</td></tr>`).join('') || '<tr><td colspan="8" class="empty">None of your accounts are in this segment.</td></tr>'}
       </tbody></table></div>`
       : segTab === 'activity' ? `<div class="card"><div class="card-b timeline">${accs.flatMap(a => a.activity.slice(-2).map(x => ({ a, x }))).slice(0, 14).map(({ a, x }) => `<button class="tl-row" onclick="App.openRecord('${a.id}','activity')"><span class="ic k-${x.k}">${ic(ACT_IC[x.k] || 'clock', 13)}</span><div class="grow"><div class="nm">${esc(a.name)} · ${esc(x.t)}</div><div class="sm">${esc(x.d)}</div></div><span class="when">${esc(x.when)}</span></button>`).join('') || '<div class="empty">No activity yet.</div>'}</div></div>`
       : repliesTable(REPLIES.filter(r => acct(r.acc).seg === s.id))}`;
@@ -621,7 +741,7 @@
     const order = ['Ready to confirm', 'Draft', 'Running', 'Completed'];
     const list = CAMPAIGNS.slice().sort((p, q) => order.indexOf(p.status) - order.indexOf(q.status));
     const cv = frame('Campaigns', `${list.length} campaigns · email and LinkedIn`, `<button class="btn sm pri" onclick="App.ask('Build the campaign')">${ic('plus', 13)} New campaign</button>`);
-    cv.innerHTML = `<div class="toolbar">${filt('For you', 'users', true)}${filt(isMgr ? 'Owner: Pavan' : 'Owner: anyone', '', false)}${filt('Starred', 'star', false)}${filt('Active', '', false)}<div class="search" style="margin-left:auto">${ic('search', 14)}<input placeholder="Search…" aria-label="Search campaigns"></div></div>
+    cv.innerHTML = `<div class="toolbar">${ownerSel()}${filt('Starred', 'star', false)}${filt('Active', '', false)}<div class="search" style="margin-left:auto">${ic('search', 14)}<input placeholder="Search…" aria-label="Search campaigns"></div></div>
       <div class="placeholder-note" style="margin:6px 0 12px">${ic('mail', 16)}<div><b>Placeholder.</b> Sending through email and LinkedIn connects after the pilot. Nothing is sent from the mock.</div></div>
       <div class="srow-list">${list.map(c => { const st = campStats(c); return `<div class="srow" onclick="App.goCampaign('${c.id}')">
         <div class="srow-n"><div class="nm">${esc(c.name)} ${campBadge(c)}${c.status === 'Running' ? '<span class="live-dot" title="Active"></span>' : ''}</div><div class="sm">${seqSpan(c)} · ${esc(c.seg ? segOf(c.seg).trigger : 'archived segment')}</div></div>
@@ -630,25 +750,26 @@
   }
   function renderCampaign() {
     const c = campOf(campSel), st = campStats(c), sq = seqOf(c), s = c.seg ? segOf(c.seg) : null;
-    const accs = ACCOUNTS.filter(a => a.campaign === c.id).sort((p, q) => (isMgr ? 0 : (q.owner === me.id) - (p.owner === me.id)));
+    const accs = ACCOUNTS.filter(a => a.campaign === c.id && visible(a));
     const live = c.status === 'Running', canConfirm = !live && c.status !== 'Completed' && S.camp[c.id] !== 'Confirmed';
-    const cv = frame(`<button class="back-l" onclick="App.goCampaign(null)">${ic('left', 14)}</button> ${esc(c.name)} ${campBadge(c)}`, `${seqSpan(c)} · ${s ? `micro-segment <a href="#segments" onclick="App.openSegment('${s.id}');return false">${esc(s.name)}</a>` : 'archived segment'}${c.fromList ? ' · from the list "Lookalikes of my last 10 wins"' : ''}`,
-      `${live ? `<span class="toggle-lbl">${ic('check', 12)} Active</span><span class="switch on" title="Pause" onclick="App.toast('Paused (mock)')"></span>` : ''}<button class="btn sm" onclick="App.setCampTab('steps')">${ic('edit', 13)} Edit</button>${canConfirm ? (isMgr ? `<button class="btn sm pri" onclick="App.confirmCampaign('${c.id}')">Confirm and schedule</button>` : c.status === 'Draft' && !S.camp[c.id] ? `<button class="btn sm pri" onclick="App.sendForConfirm('${c.id}')">Send to Pavan to confirm</button>` : '') : ''}`);
+    const chans = [...new Set(sq.map(t => t.ch))], nCh = ch => sq.filter(t => t.ch === ch).length;
+    const needsOK = a => !live && c.status !== 'Completed' && !S.enrollOK[a.id];
+    const todo = accs.filter(needsOK);
+    const cv = frame(`<button class="back-l" onclick="App.goCampaign(null)">${ic('left', 14)}</button> ${esc(c.name)} ${campBadge(c)}`, `${seqSpan(c)} · ${chans.join(' + ')} · ${s ? `micro-segment <a href="#campaigns" onclick="App.openSegment('${s.id}');return false">${esc(s.name)}</a>` : 'archived segment'}${c.fromList ? ' · from the list "Lookalikes of my last 10 wins"' : ''}`,
+      `${live ? `<span class="toggle-lbl">${ic('check', 12)} Active</span><span class="switch on" title="Pause" onclick="App.toast('Paused (mock)')"></span>` : ''}${canConfirm ? (isMgr ? `<button class="btn sm pri" onclick="App.confirmCampaign('${c.id}')">Confirm and schedule</button>` : c.status === 'Draft' && !S.camp[c.id] ? `<button class="btn sm pri" onclick="App.sendForConfirm('${c.id}')">Send to Pavan to confirm</button>` : '') : ''}`);
     const card = (k, v, d, icn) => `<div class="mcard"><div class="k">${icn ? ic(icn, 13) : ''} ${k}</div><div class="v">${v}</div><div class="d">${d}</div></div>`;
-    cv.innerHTML = `<div class="toolbar">${filt(`Assignees: ${isMgr ? '4 reps' : 'Sofia'}`, 'users', false)}${filt('Mailboxes: rep\'s own', 'mail', false)}<span style="flex:1"></span>${filt(`Version ${S.seq[c.id] ? 2 : 1}`, 'plane', false)}</div>
-      <div class="mcards">${card('Reply rate', pct(st.replies, st.started), `${st.replies} people`, 'reply')}${card('Positive', st.positive, `${pct(st.positive, st.replies)} of replies`)}${card('Positive + objection', st.positive + st.objection, `${pct(st.positive + st.objection, st.replies)} of replies`)}${card('Open rate', pct(st.opened, st.started), `${st.opened} people`, 'mail')}${card('Click rate', pct(st.clicked, st.started), `${st.clicked} people`)}${card('Opt-out rate', pct(st.optout, st.started), `${st.optout} people`)}</div>
-      <div class="lbl" style="margin:14px 0 8px">Enrollment</div>
-      <div class="mcards e">${card('Total enrollments', st.total, isMgr ? 'people' : 'of your people')}${card('In progress', st.progress, `${pct(st.progress, st.total)} of total`)}${card('Queued', st.queued, live ? 'next step scheduled' : 'waiting to start')}${card('Finished', st.finished, `${pct(st.finished, st.total)} of total`)}</div>
+    const msgs = `${chans.map(ch => `<span class="chn">${chIc(ch)} ${ch} ×${nCh(ch)}</span>`).join('')}`;
+    cv.innerHTML = `<div class="mcards">${card('Accounts', st.total, isMgr ? 'in this campaign' : 'yours in this campaign', 'users')}${card('Reply rate', pct(st.replies, st.started), `${st.replies} replied`, 'reply')}${card('Positive', st.positive, `${pct(st.positive, st.replies)} of replies`)}${card('Open rate', pct(st.opened, st.started), `${st.opened} opened`, 'mail')}${card('Meetings', st.meetings, 'booked')}${card('Approved', live || c.status === 'Completed' ? 'All' : `${accs.length - todo.length} of ${accs.length}`, live ? 'running' : 'sequences approved', 'check')}</div>
       ${c.blockers.map(b => `<div class="blk ${b.k}" style="margin-top:10px">${ic('alert', 15)}<div class="grow"><b>Blocker</b><span>${esc(b.x)}</span></div></div>`).join('')}
-      <div class="dtabs">${[['enroll', 'Enrollments'], ['steps', `Steps (${sq.length})`], ['outbox', 'Outbox'], ['replies', 'Replies']].map(([k, lb]) => `<button class="${campTab === k ? 'on' : ''}" onclick="App.setCampTab('${k}')">${lb}</button>`).join('')}</div>
-      ${campTab === 'enroll' ? `<div class="card tbl-wrap"><table class="tbl"><thead><tr><th>Person</th><th>Links</th><th>Status</th><th>Company</th><th>Enrolled</th><th>Mailbox</th><th>Current step</th></tr></thead><tbody>
-          ${accs.map(a => { const done = sq.filter(sent).length, cur = sq[Math.min(done, sq.length - 1)]; return `<tr class="row-link ${!isMgr && a.owner !== me.id ? 'dim' : ''}" onclick="App.openRecord('${a.id}','engage')"><td><div style="display:flex;gap:9px;align-items:center">${pAvatar(a)}<div><div class="nm">${esc(a.contact.name)}</div><div class="sm">${esc(a.contact.title)}</div></div></div></td><td><span class="li-ic">${ic('li', 14)}</span></td><td>${S.enrollOK[a.id] ? '<span class="badge b-pos">Approved</span>' : stateBadge(a.campState)}</td><td>${esc(a.name)}</td><td class="sm">${esc(c.launched || 'Today 06:05')}<div>by ${esc(first(USERS[a.owner].name))}</div></td><td class="sm">${esc(mailbox(a))}</td><td class="sm">${cur ? `Step ${Math.min(done + 1, sq.length)}<div>${cur.ch === 'Email' ? 'Automatic email' : 'LinkedIn ' + cur.fmt.toLowerCase()}</div>` : '—'}</td></tr>`; }).join('')}</tbody></table></div>`
-      : campTab === 'steps' ? `<div class="seq-h"><span class="muted" style="font-size:12px">Written by the AI from the ${s ? s.proven.toLowerCase() : ''} message structure, personalised per person. Sent steps are locked.</span>${c.status !== 'Completed' ? `<div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn sm" onclick="App.seqAdd('${c.id}','Email')">${ic('plus', 12)} Email step</button><button class="btn sm" onclick="App.seqAdd('${c.id}','LinkedIn')">${ic('plus', 12)} LinkedIn step</button>${S.seq[c.id] ? `<button class="btn sm ghost" onclick="App.seqReset('${c.id}')">Reset to the AI draft</button>` : ''}</div>` : ''}</div>
+      <div class="sec-row"><div class="lbl">Accounts in this campaign · ${accs.length}</div><div class="sp"></div>${isMgr ? ownerSel() : ''}${todo.length ? `<button class="btn sm pri" onclick="App.approveEnrollAll('${c.id}')">Approve all ${todo.length}</button>` : ''}</div>
+      <div class="card tbl-wrap"><table class="tbl"><thead><tr><th>Person</th><th>Company</th><th>Messages</th><th>Current step</th><th>Status</th>${isMgr ? '<th>Owner</th>' : ''}<th></th></tr></thead><tbody>
+        ${accs.map(a => { const done = sq.filter(sent).length, cur = sq[Math.min(done, sq.length - 1)]; return `<tr class="row-link" onclick="App.openRecord('${a.id}','engage')"><td><div style="display:flex;gap:9px;align-items:center">${pAvatar(a)}<div><div class="nm">${esc(a.contact.name)}</div><div class="sm">${esc(a.contact.title)}</div></div></div></td><td>${esc(a.name)}</td><td><div class="chns">${msgs}</div></td><td class="sm">${cur ? `Step ${Math.min(done + 1, sq.length)} of ${sq.length}<div>${cur.ch === 'Email' ? 'Email · ' + esc(cur.fmt) : 'LinkedIn · ' + esc(cur.fmt)}</div>` : '—'}</td><td>${S.enrollOK[a.id] ? '<span class="badge b-pos">Approved</span>' : stateBadge(a.campState)}</td>${isMgr ? `<td>${esc(first(USERS[a.owner].name))}</td>` : ''}<td style="white-space:nowrap" onclick="event.stopPropagation()">${needsOK(a) ? `<button class="btn sm pri" onclick="App.approveEnroll('${a.id}')">Approve</button> ` : ''}<button class="btn sm" onclick="App.openRecord('${a.id}','engage')">Open</button></td></tr>`; }).join('') || '<tr><td colspan="7" class="empty">None of your accounts are in this campaign.</td></tr>'}</tbody></table></div>
+      <div class="sec-row" style="margin-top:20px"><div class="lbl">Sequence · ${seqSpan(c)}</div><div class="sp"></div>${c.status !== 'Completed' ? `<button class="btn sm" onclick="App.setCampTab('${campTab === 'steps' ? 'enroll' : 'steps'}')">${ic('edit', 13)} ${campTab === 'steps' ? 'Done editing' : 'Edit sequence'}</button>` : ''}</div>
+      ${campTab === 'steps' ? `<div class="seq-h"><span class="muted" style="font-size:12px">Written by the AI from the ${s ? s.proven.toLowerCase() : ''} message structure, personalised per person. Sent steps are locked.</span><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn sm" onclick="App.seqAdd('${c.id}','Email')">${ic('plus', 12)} Email step</button><button class="btn sm" onclick="App.seqAdd('${c.id}','LinkedIn')">${ic('plus', 12)} LinkedIn step</button>${S.seq[c.id] ? `<button class="btn sm ghost" onclick="App.seqReset('${c.id}')">Reset to the AI draft</button>` : ''}</div></div>
           <div class="seq">${sq.map((t, i) => touchEditor(c, t, i, sq.length)).join('')}</div>
           <div class="muted" style="font-size:11.5px;margin-top:10px">Explore / exploit: ${esc(c.explore)}</div>`
-      : campTab === 'outbox' ? (() => { const next = sq.find(t => !sent(t)); return next && accs.length ? `<div class="card tbl-wrap"><table class="tbl"><thead><tr><th>Person</th><th>Step</th><th>Channel</th><th>Scheduled</th><th>Status</th></tr></thead><tbody>${accs.filter(a => !/Replied|Meeting|Taken out/.test(a.campState)).map(a => `<tr class="row-link" onclick="App.openRecord('${a.id}','engage')"><td><div class="nm">${esc(a.contact.name)}</div><div class="sm">${esc(a.name)}</div></td><td>Step ${sq.indexOf(next) + 1} · ${esc(next.fmt)}</td><td>${chIc(next.ch)} ${next.ch}</td><td class="sm">${esc((next.state || '').replace('Scheduled ', '') || (live ? 'Next send window' : 'After confirmation'))}</td><td>${S.enrollOK[a.id] || live ? '<span class="badge b-sec">Queued</span>' : '<span class="badge b-ter">Waiting for approval</span>'}</td></tr>`).join('')}</tbody></table></div>` : '<div class="card"><div class="empty">Nothing queued.</div></div>'; })()
-      : repliesTable(REPLIES.filter(r => acct(r.acc).campaign === c.id))}
-      ${campTab !== 'steps' ? `<div class="lbl" style="margin:16px 0 6px">Updates</div>${c.updates.map(u => `<div class="upd"><span class="when">${esc(u.t)}</span><div class="sm" style="font-size:12.5px;color:var(--i1)">${esc(u.x)}</div></div>`).join('')}` : ''}`;
+      : `<div class="seq-prev">${sq.map((t, i) => `<div class="sp-i">${i ? `<span class="sp-gap">${ic('hour', 12)} ${t.day - sq[i - 1].day}d</span>` : ''}<div class="sp-c"><span class="sp-ic">${chIc(t.ch)}</span><div><b>Step ${i + 1} · Day ${t.day}</b><span>${t.ch} · ${esc(t.fmt)}</span></div><em>${esc(t.state || 'Not started')}</em></div></div>`).join('')}</div>`}
+      <div class="lbl" style="margin:18px 0 6px">Updates</div>${c.updates.map(u => `<div class="upd"><span class="when">${esc(u.t)}</span><div class="sm" style="font-size:12.5px;color:var(--i1)">${esc(u.x)}</div></div>`).join('')}`;
   }
   function touchEditor(c, t, i, n) {
     if (sent(t) || c.status === 'Completed') return `<div class="tedit locked"><div class="tedit-h">${chIc(t.ch)}<b>Step ${i + 1} · Day ${t.day}</b><span>${t.ch} · ${esc(t.fmt)}</span><span class="badge b-pos nodot" style="margin-left:auto">${esc(t.state || 'Done')}</span></div><div class="tedit-t">${esc(t.t)}</div></div>`;
@@ -685,14 +806,13 @@
   function renderRecord() {
     const a = acct(recId), o = USERS[a.owner];
     const tabs = [['overview', 'Overview'], ['engage', 'Engagement'], ['activity', 'Activity'], ['notes', 'Notes']];
-    $('main').className = 'canvas';
-    $('main').innerHTML = `<div class="pdrawer">
+    $('focus').innerHTML = `<div class="pdrawer">
       <div class="pd-left">
-        <div class="pd-top"><button class="ic-btn" title="Close" onclick="App.closeCanvas()">${ic('right', 15)}${ic('right', 15)}</button><span class="li-ic" style="margin-left:auto">${ic('li', 16)}</span></div>
+        <div class="pd-top"><button class="ic-btn" title="Close" onclick="App.closeFocus()">${ic('x', 16)}</button><span class="li-ic" style="margin-left:auto">${ic('li', 16)}</span></div>
         <div class="who"><span class="av" style="background:${o.color};width:54px;height:54px;font-size:18px">${initials(a.contact.name)}</span><div><div class="nm" style="font-family:var(--fd);font-size:19px">${esc(a.contact.name)}</div><div class="tl">${esc(a.contact.title)}</div><div class="tl"><span class="logo-dot">${esc(a.name[0])}</span> <a href="#segments" onclick="App.openSegment('${a.seg}');return false">${esc(a.name)}</a></div></div></div>
         <div class="qa" style="grid-template-columns:repeat(5,1fr)"><button title="Add to a campaign" onclick="App.toast('Added to a campaign (mock)')">${ic('plane')}</button><button title="LinkedIn" onclick="App.toast('LinkedIn: placeholder')">${ic('li')}</button><button title="Email" onclick="App.toast('Email: placeholder until the inbox is connected')">${ic('mail')}</button><button title="Add a task" onclick="App.toast('Task added (mock)')">${ic('task')}</button><button title="Ask about this person" onclick="App.focusComposer('')">${ic('spark')}</button></div>
         <div class="sec-t">Details</div>
-        <dl class="kv"><dt>Name</dt><dd>${esc(a.contact.name)}</dd><dt>Title</dt><dd>${esc(a.contact.title)}</dd><dt>Email</dt><dd>${esc(a.contact.email)}</dd><dt>Identity</dt><dd>${idBadge(a.contact.idTier)}</dd><dt>Record owner</dt><dd>${esc(o.name)}</dd><dt>Last activity</dt><dd>${esc((a.activity[a.activity.length - 1] || {}).t || '—')}</dd><dt>Lead source</dt><dd>${a.fromList ? 'Prospecting · Lookalikes of my last 10 wins' : 'Signals · overnight sweep'}</dd></dl>
+        <dl class="kv"><dt>Name</dt><dd>${esc(a.contact.name)}</dd><dt>Title</dt><dd>${esc(a.contact.title)}</dd><dt>Email</dt><dd>${esc(a.contact.email)}</dd><dt>Identity</dt><dd>${idBadge(a.contact.idTier)}</dd><dt>Record owner</dt><dd>${isMgr ? `<label class="sr" for="recOwner">Owner</label><select class="sel" id="recOwner" onchange="App.reassign(['${a.id}'],this.value)">${REPS.map(r => `<option value="${r}" ${a.owner === r ? 'selected' : ''}>${esc(USERS[r].name)}</option>`).join('')}</select>` : esc(o.name)}</dd><dt>Last activity</dt><dd>${esc((a.activity[a.activity.length - 1] || {}).t || '—')}</dd><dt>Lead source</dt><dd>${a.fromList ? 'Prospecting · Lookalikes of my last 10 wins' : 'Signals · overnight sweep'}</dd></dl>
         <div class="sec-t">Company</div>
         <dl class="kv"><dt>Name</dt><dd>${esc(a.name)}</dd><dt>Industry</dt><dd>${esc(a.industry)}</dd><dt>Country</dt><dd>${esc(a.country)}</dd><dt>Size</dt><dd>${esc(a.size)}</dd><dt>Micro-segment</dt><dd>${a.seg ? esc(a.segment) : '—'}</dd><dt>Warm path</dt><dd>${a.warm.score} · ${esc(a.warm.note)}</dd></dl>
       </div>
@@ -707,7 +827,7 @@
       return `<div class="formula"><div class="box"><div class="v">${a.fit}</div><div class="k">Fit: how well they match</div></div><span class="op">×</span><div class="box"><div class="v">${a.timing}</div><div class="k">Timing: what changed</div></div><span class="op">=</span><div class="box hl"><div class="v">${fmt(a.score)}</div><div class="k">Score · #${a.rank} · tier ${a.tier}</div></div></div>
         ${sig.length ? `<div class="sec-t">Why now · signals, strongest first</div>${sig.map((x, i) => `<div class="sig"><div><div style="font-weight:600">${esc(x.type)}</div><div class="muted" style="font-size:11.5px">${esc(x.text)} · ${esc(x.source)}</div></div><span class="badge ${x.tier === 1 ? 'b-pos' : x.tier === 2 ? 'b-sec' : 'b-grey'} nodot">Tier ${x.tier}</span><div><div class="bar"><i style="width:${Math.min(100, x.weight)}%"></i></div><div class="muted" style="font-size:10.5px;margin-top:3px">${ago(x.age)}</div></div><span class="mono" style="text-align:right">${i ? (i === 1 ? '½×' : '¼×') : ''}${x.weight}</span></div>`).join('')}
           <div class="placeholder-note" style="margin-top:12px"><div>Timing = ${sig.map((x, i) => (i ? (i === 1 ? '½ × ' : '¼ × ') : '') + x.weight).join(' + ')} = <b>${a.timing}</b>. Fit and timing multiply, so a perfect fit with no live signal scores zero.</div></div>`
-          : '<div class="placeholder-note">No live signal, so the score is zero and nothing is suggested. The account stays watched.</div>'}`;
+          : '<div class="placeholder-note">No live signal, so the score is zero and nothing is suggested. The account stays watched.</div>'}${a.signals.length ? scoreProcess(a) : ''}`;
     }
     if (recTab === 'activity') {
       const out = S.outcomes[a.id], list = a.activity.slice().reverse();
@@ -722,7 +842,7 @@
     }
     if (a.campaign) {
       const c = campOf(a.campaign), sq = seqOf(c), ok = S.enrollOK[a.id] || c.status === 'Running' || S.camp[c.id] === 'Confirmed';
-      return `<div class="eng-h"><div class="lbl">${ic('plane', 13)} Campaigns</div><div class="eng-grid"><div><span>Campaign</span><a href="#campaigns" onclick="App.goCampaign('${c.id}');return false">${esc(c.name)}</a></div><div><span>Status</span>${stateBadge(ok && !S.enrollOK[a.id] ? a.campState : S.enrollOK[a.id] ? 'Approved' : 'Draft')}</div><div><span>Mailbox</span>${esc(mailbox(a))}</div><div><span>Enrolled</span>${esc(c.launched || 'Today 06:05')}</div></div></div>
+      return `<div class="eng-h"><div class="lbl">${ic('plane', 13)} Campaigns</div><div class="eng-grid"><div><span>Campaign</span><a href="#campaigns" onclick="App.goCampaign('${c.id}');return false">${esc(c.name)}</a></div><div><span>Status</span>${stateBadge(ok && !S.enrollOK[a.id] ? a.campState : S.enrollOK[a.id] ? 'Approved' : 'Draft')}</div><div><span>Mailbox</span>${esc(mailbox(a))}</div><div><span>Enrolled</span>${esc(c.launched || 'Today 06:05')}</div><div><span>Messages</span><div class="chns">${[...new Set(sq.map(t => t.ch))].map(ch => `<span class="chn">${chIc(ch)} ${ch} ×${sq.filter(t => t.ch === ch).length}</span>`).join('')}</div></div></div></div>
         ${ok ? '' : `<div class="ready"><div class="grow">Your personalized sequence is ready to launch. Approve to continue.</div><button class="btn pri" onclick="App.approveEnroll('${a.id}')">Approve</button></div>`}
         <div class="steps-tl">${sq.map((t, i) => `${i ? `<div class="gap">${ic('hour', 13)} ${t.day - sq[i - 1].day} days</div>` : ''}<div class="step-i"><span class="ic">${chIc(t.ch)}</span><div class="step-c"><div class="step-h"><b>${t.ch === 'Email' ? 'Automatic email' : 'LinkedIn ' + esc(t.fmt.toLowerCase())}</b><span class="muted">${ic('clock', 12)} ${sent(t) ? esc(t.state) : 'Step scheduled'}</span></div>${t.ch === 'Email' ? `<div class="subj">${esc(t.subject || c.name)}</div><div class="sm" style="margin-bottom:8px"><b>${esc(USERS[a.owner].name)}</b> to ${esc(a.contact.name)}</div>` : ''}<div class="draft plain">${esc(personal(t, a))}</div></div></div>`).join('')}</div>`;
     }
@@ -815,44 +935,44 @@
     apprItems(isMgr ? 'team' : 'todo').filter(a => !a.nba.reason && !S.decisions[a.id]).forEach(a => { S.decisions[a.id] = 'approved'; });
     save(); if (!silent) { toast('Approved all ready items. Scheduled for the next send window (placeholder).'); renderAll(); }
   }
-  function goCampaign(id, tab) { art = null; recId = null; expanded = true; campSel = id; campTab = tab || 'enroll'; go('campaigns'); }
-  function openRecord(id, tab) { recId = id; recTab = tab || 'engage'; actOpen = null; ctx = id; if (recTab === 'engage' && !acct(id).nba && !acct(id).campaign) recTab = 'overview'; if (!view()) location.hash = '#accounts'; else renderAll(); }
+  function goCampaign(id, tab) { art = null; recId = null; thrId = null; expanded = true; campSel = id; campTab = tab || 'enroll'; go('campaigns'); }
+  function openRecord(id, tab) { recId = id; thrId = null; recTab = tab || 'engage'; actOpen = null; ctx = id; if (recTab === 'engage' && !acct(id).nba && !acct(id).campaign) recTab = 'overview'; renderAll(); }
   let lastKey = null;
+  function openThread(id) { thrId = id; recId = null; renderAll(); }
+  /* A person or a reply opens in a focused panel; everything behind it is blurred */
+  function renderFocus() {
+    const on = !!(recId || thrId);
+    $('ws').classList.toggle('focused', on);
+    $('fscrim').classList.toggle('open', on);
+    if (recId) renderRecord(); else if (thrId) renderThread();
+    $('focus').classList.toggle('open', on);
+  }
   function renderAll() {
-    const v = view();
-    const home = !v && S.cur === 'home' && !art && !recId, studioHome = v === 'studio' && !S.studio.doc && !recId;
-    const split = !!art || !!recId || (v && v !== 'studio' && expanded) || (v === 'studio' && !!S.studio.doc);
-    $('ws').classList.toggle('canvas-open', !!split);
+    const v = view(), tok = ++loadTok;
+    const home = !v && S.cur === 'home' && !art, studioHome = v === 'studio' && !S.studio.doc;
+    const split = !!art || !!(v && v !== 'studio' && expanded) || (v === 'studio' && !!S.studio.doc);
+    $('ws').classList.toggle('canvas-open', split);
     $('ws').classList.toggle('home', home);
     $('ws').classList.toggle('nochat', studioHome);
     $('ws').classList.toggle('solo', !split && !home && !studioHome);
     renderNav(); renderChat();
-    if (recId) renderRecord();
-    else if (art) renderArt();
-    else if (v === 'studio' || (v && expanded)) ({ accounts: renderAccounts, segments: renderSegments, campaigns: renderCampaigns, approvals: renderApprovals, studio: renderStudio })[v]();
-    else if (home) renderHome();
-    else { $('main').className = ''; $('main').innerHTML = ''; }
-    const key = [v, home, expanded, art, recId, campSel, campTab, segSel, segTab, listSel, studioTab, !!S.studio.doc].join('|');
-    if (key !== lastKey) { const cv = $('cv'); if (cv) cv.scrollTop = 0; $('main').scrollTop = 0; lastKey = key; }
-  }
-  function openRuns() {
-    const runs = SCHEDULED.concat(S.runs.map(r => Object.assign({ scope: 'Mine' }, r)));
-    $('drawer').innerHTML = `
-      <div class="drawer-h"><div class="t">Scheduled runs</div><button class="ic-btn" onclick="App.closeDrawer()" title="Close">${ic('x', 16)}</button></div>
-      <div class="drawer-b">
-        <p style="margin:0 0 14px;font-size:12.5px;color:var(--i2);line-height:1.5">How the work gets done before you arrive. Each run is a saved instruction on a timer; results land in Today's brief. ${isMgr ? 'Runs you create for the team apply to every rep.' : 'Team defaults are set by your admin; you can add your own.'}</p>
-        ${runs.map(r => `<div class="run"><div class="h">${esc(r.name)}<span class="badge ${r.scope === 'Mine' ? 'b-brand' : 'b-grey'} nodot">${r.scope === 'Mine' ? 'Yours' : 'Set by admin'}</span></div><div class="p">${esc(r.prompt)}</div><div class="m">${ic('clock', 12)} ${esc(r.freq)} · next ${esc(r.next)}</div></div>`).join('')}
-        <div class="sec-t" style="margin:18px 0 12px">Create a run</div>
-        <div class="field"><label for="runName">Name</label><input id="runName" value="Research new job postings"></div>
-        <div class="field"><label for="runPrompt">What should it do?</label><textarea id="runPrompt" rows="3">Show me accounts that posted reliability or control-systems roles in the last 30 days and prepare next actions for the new leaders.</textarea></div>
-        <div class="field"><label>When</label><div class="days">${['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d, i) => `<button class="${i === 0 ? 'on' : ''}" onclick="this.classList.toggle('on')">${d}</button>`).join('')}</div></div>
-      </div>
-      <div class="drawer-f"><button class="btn" onclick="App.closeDrawer();App.ask(document.getElementById('runPrompt').value)">Try it in chat</button><button class="btn pri" onclick="App.createRun()">Create</button></div>`;
-    $('drawer').classList.add('open'); $('scrim').classList.add('open');
+    const MODR = { inbox: renderInbox, accounts: renderAccounts, segments: renderSegments, campaigns: renderCampaigns, approvals: renderApprovals, studio: renderStudio, analytics: renderAnalytics };
+    const draw = art ? renderArt : v === 'studio' || (v && expanded) ? MODR[v] : home ? renderHome : () => { $('main').className = ''; $('main').innerHTML = ''; };
+    const key = [v, home, expanded, art, campSel, segSel, listSel, studioTab, !!S.studio.doc].join('|');
+    const fresh = key !== lastKey;
+    lastKey = key;
+    if (fresh && split && v !== 'studio') {
+      skeleton();
+      setTimeout(() => { if (tok !== loadTok) return; draw(); $('main').classList.add('fadein'); }, 280);
+    } else {
+      draw();
+      if (fresh) { const cv = $('cv'); if (cv) cv.scrollTop = 0; $('main').scrollTop = 0; }
+    }
+    renderFocus();
   }
 
   window.App = {
-    ask, toast, nav, openRecord, approve, approveAll: () => approveAll(false), openRuns, goCampaign, decide, renderAll,
+    ask, toast, nav, openRecord, openThread, approve, approveAll: () => approveAll(false), goCampaign, decide, renderAll,
     send() { const el = $('composer'); const v = el.value; el.value = ''; ask(v); },
     key(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); App.send(); } },
     focusComposer(v) { const el = $('composer'); if (!el) return; el.focus(); if (v) el.value = v; },
@@ -865,29 +985,38 @@
       if (v) { S.mchat[v] = null; save(); return renderAll(); }
       const id = 'n' + Date.now();
       S.chats.unshift({ id, title: 'New chat', when: 'Now', thread: [{ who: 'ai', kind: 'text', html: 'New chat. What should I work on? I can find prospects, score them, build micro-segments, prepare next actions and campaigns, track them, and tell you what the system learned.' }] });
-      S.cur = id; ctx = null; art = null; recId = null; save(); go(null); setTimeout(() => $('composer') && $('composer').focus(), 0);
+      S.cur = id; ctx = null; art = null; recId = null; thrId = null; save(); go(null); setTimeout(() => $('composer') && $('composer').focus(), 0);
     },
-    openChat(id) { S.cur = id; art = null; recId = null; save(); go(null); },
-    closeCanvas() { if (recId) recId = null; else if (art) art = null; else expanded = false; renderAll(); },
-    expand() { art = null; recId = null; expanded = true; renderAll(); },
+    openChat(id) { S.cur = id; art = null; recId = null; thrId = null; save(); go(null); },
+    closeCanvas() { if (art) art = null; else expanded = false; renderAll(); },
+    expand() { art = null; recId = null; thrId = null; expanded = true; renderAll(); },
     openMod,
-    openArt(k) { art = k; recId = null; artMore = false; renderAll(); },
+    openArt(k) { art = k; recId = null; thrId = null; artMore = false; renderAll(); },
     toggleMore() { artMore = !artMore; renderAll(); },
-    doneTodo(id) { S.todosDone[id] = !S.todosDone[id]; save(); renderAll(); },
+    doneTodo(id) { S.todosDone[id] = !S.todosDone[id]; if (id.startsWith('as-')) { const x = shared.tasks[+id.slice(3)]; if (x) { x.done = S.todosDone[id]; saveShared(); } } save(); renderAll(); },
     runTodo(id) { const t = todos().find(x => x.id === id); if (t) t.go(); },
     goTo(target) { const [k, v] = target.split(':'); if (k === 'campaign') goCampaign(v); else if (k === 'record') openRecord(v, 'engage'); else if (k === 'ask') ask(v); },
     repApprovals(r) { apprTab = 'team'; apprRep = r; openMod('approvals'); },
     setApprTab(k) { apprTab = k; renderAll(); },
     setApprRep(r) { apprRep = r; renderAll(); },
-    setScope(k) { scope = k; renderAll(); },
+    closeFocus() { recId = null; thrId = null; renderAll(); },
+    setOwner(r) { ownerF = r; renderAll(); },
+    setInboxTab(k) { inboxTab = k; renderAll(); },
+    setHomeMet(k) { homeMet = k; renderAll(); },
+    toggleProc() { showProc = !showProc; renderAll(); },
+    viewRep(r) { ownerF = r; toast(`Showing ${USERS[r].name}'s accounts`); openMod('accounts'); },
+    reassign(ids, r) { ids.forEach(id => { const a = acct(id); if (a) { a.owner = r; shared.assign[id] = r; } }); saveShared(); toast(`Moved ${ids.length === 1 ? acct(ids[0]).name : ids.length + ' accounts'} to ${USERS[r].name}`); renderAll(); },
+    assignTask() { const t = $('asT').value.trim(), to = $('asR').value; if (!t) { toast('Write the task first'); return; } shared.tasks.push({ t, to, acc: $('asA').value, due: $('asD').value, done: false }); saveShared(); toast(`Assigned to ${USERS[to].name}. It's in their to-do list`); renderAll(); },
+    approveEnrollAll(cid) { ACCOUNTS.filter(a => a.campaign === cid && visible(a)).forEach(a => { S.enrollOK[a.id] = true; }); save(); toast('Approved. Each sequence starts once the campaign is confirmed.'); renderAll(); },
+    saveThread(id) { const el = $('thrBody'); if (el) { S.drafts['thr-' + id] = el.value; save(); } },
     setCampTab(k) { campTab = k; renderAll(); },
     setSegTab(k) { segTab = k; renderAll(); },
     setRecTab(k) { recTab = k; actOpen = null; renderAll(); },
     toggleAct(i) { actOpen = actOpen === i ? null : i; renderAll(); },
     star(id) { S.starred[id] = !S.starred[id]; save(); renderAll(); },
-    openList(id) { listSel = id || 'all'; art = null; recId = null; expanded = true; go('accounts'); },
+    openList(id) { listSel = id || 'all'; art = null; recId = null; thrId = null; expanded = true; go('accounts'); },
     saveView() { const name = `My view · ${listSel === 'all' ? 'all accounts' : 'list'} · 27 Oct`; const ids = Array.from(document.querySelectorAll('#cv tbody tr')).length; addList(name, 'Saved view', `${ids} accounts saved from the Accounts view`, ACCOUNTS.filter(mine).map(a => a.id)); listSel = S.lists[0].id; save(); toast('Saved as a list. It\'s a tab now'); renderAll(); },
-    openSegment(id) { segSel = id; segTab = 'accounts'; art = null; recId = null; expanded = true; go('segments'); },
+    openSegment(id) { segSel = id; segTab = 'accounts'; art = null; recId = null; thrId = null; expanded = true; go('segments'); },
     saveSegList(segId) { const s = segOf(segId); addList(s.name + ' · 27 Oct', 'Segment', 'Saved from Segments', ACCOUNTS.filter(a => a.seg === segId).map(a => a.id)); save(); toast('Saved. It\'s a tab in Accounts'); },
     confirmCampaign(id) { S.camp[id] = 'Confirmed'; save(); toast('Campaign confirmed. Step 1 goes out tomorrow 09:00 (placeholder: nothing is sent).'); renderAll(); },
     sendForConfirm(id) { S.camp[id] = 'Sent for confirmation'; save(); toast('Sent to Pavan to confirm, with your edits.'); renderAll(); },
@@ -915,9 +1044,8 @@
     addNote(id) { const v = $('noteBox').value.trim(); if (!v) return; (S.notes[id] = S.notes[id] || []).unshift({ t: v, d: 'just now' }); save(); renderAll(); },
     useRunnerUp(id) { ctx = id; ask('Use the runner-up'); },
     closeDrawer() { $('drawer').classList.remove('open'); $('scrim').classList.remove('open'); },
-    createRun() { S.runs.push({ name: $('runName').value, prompt: $('runPrompt').value, freq: 'Every Mon at 07:00', next: 'Mon 2 Nov 07:00' }); save(); toast('Scheduled run created'); openRuns(); renderNav(); },
   };
   document.addEventListener('click', e => { if (!e.target.closest('.menu,.btn')) document.querySelectorAll('.menu.open').forEach(m => m.classList.remove('open')); });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') { if ($('drawer').classList.contains('open')) App.closeDrawer(); else if (recId || art || (view() && view() !== 'studio' && expanded)) App.closeCanvas(); } });
+  document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; if ($('drawer').classList.contains('open')) App.closeDrawer(); else if (recId || thrId) App.closeFocus(); else if (art || (view() && view() !== 'studio' && expanded)) App.closeCanvas(); });
   renderAll();
 })();

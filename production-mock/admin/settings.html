@@ -133,9 +133,9 @@
       </div>
 
       <div class="card c12" id="runs">
-        <div class="card-h"><span class="lbl">Team default runs</span><button class="btn sm" onclick="toast('New run (mock)')">Add a run</button></div>
+        <div class="card-h"><span class="lbl">System jobs</span><span class="muted" style="font-size:11.5px">Run the process in the background · not user-scheduled</span></div>
         <div class="card-b" style="padding:0"><table class="tbl">
-          <thead><tr><th>Run</th><th>What it does</th><th>When</th><th>For</th><th>On</th></tr></thead>
+          <thead><tr><th>Job</th><th>What it does</th><th>When</th><th>For</th><th>On</th></tr></thead>
           <tbody>
             <tr><td class="nm">Overnight signal sweep</td><td>Checks every account for new signals, re-scores, prepares next actions for anything in tier A or B</td><td>Every day 06:00</td><td>All reps</td><td><span class="switch on" onclick="this.classList.toggle('on')"></span></td></tr>
             <tr><td class="nm">Weekly prospect refresh</td><td>Finds new ICP matches and lookalikes, retries held records</td><td>Every Mon 07:00</td><td>All reps</td><td><span class="switch on" onclick="this.classList.toggle('on')"></span></td></tr>

@@ -9,11 +9,11 @@ Open `index.html` in Chrome or Edge (double-click). Fonts need an internet conne
 | File | What it is |
 |---|---|
 | `index.html` | Sign in. Pick Sofia (sales rep), Pavan (sales manager) or Rajiv (admin). Links to the overview |
-| `story.html` | What we're selling: scope (product vs. client POC), the three process flows, the learning loop, the battle card, the roadmap and open decisions. Prints to two pages |
-| `app.html` | Sales workspace. Today is a home page: the greeting and the chat box at the top, then the brief and the to-do table, with metrics, updates and a leaderboard on the right. Every chat is one screen: Today chats and each module's own chat (Accounts, Segments, Campaigns, Approvals). The screen splits, chat on the left and the view on the right, only when you expand a list, open an item or open the module. Asking from Today starts a chat session that stays under Recent chats |
-| `admin/index.html` | Admin home: held records, set-up health, data freshness, the monthly learning job, team default runs |
+| `story.html` | What we're selling, as a product page: the three questions, how it works (find → score → segment → act → track → learn), the scoring engine, the three process flows, product vs. client POC, the learning loop, the battle card, the roadmap and open decisions |
+| `app.html` | Sales workspace. Today is a home page: the greeting and the chat box at the top, then the brief and the to-do table, with metrics, updates and a leaderboard on the right. Every chat is one screen: Today chats and each module's own chat (Inbox, Accounts, Segments, Campaigns, Approvals, and Analytics for the manager). The screen splits, chat on the left and the view on the right, only when you expand a list, open an item or open the module. Asking from Today starts a chat session that stays under Recent chats |
+| `admin/index.html` | Admin home: held records, set-up health, data freshness, the monthly learning job, the system jobs |
 | `admin/integrations.html` | CRM, contact-data providers, signal sources, rep mailboxes, LinkedIn, team chat (placeholders) |
-| `admin/settings.html` | ICP, closed-won mapping, who decides what, thresholds, message templates, team default runs |
+| `admin/settings.html` | ICP, closed-won mapping, who decides what, thresholds, message templates, the system jobs (overnight sweep, weekly prospect refresh, monthly learning) |
 | `admin/07-…15-*.html` | The legacy prototype screens (setup, content, users, prospecting, scoring, NBA, analytics, review), copied with the admin sidebar |
 
 ## Today
@@ -22,7 +22,7 @@ The chat box comes first, under the greeting; any blocker shows on top of it. Be
 
 ## The flow in the chat
 
-Find prospects → save as a list → score the list → create micro-segments → prepare next actions (NBA) and build the campaign (NBC) → track the campaigns → what the system learned. Each answer suggests the next step. Result tables come back as a card (save, download, add to campaign); expand one to open the full table beside the chat, with search and more columns.
+Find prospects → save as a list → score the list → route to NBA and NBC → track the campaigns and the inbox → what the system learned. Each answer suggests the next step. Result tables come back as a card (save, download, add to campaign); expand one to open the full table beside the chat, with search and more columns.
 
 ## Accounts and lists
 
@@ -30,11 +30,11 @@ A list is a saved selection of accounts, so lists live in Accounts as tabs next 
 
 ## Campaigns
 
-Email and LinkedIn only. A list of campaigns with enrollment and reply numbers; each campaign has metric cards and tabs for Enrollments, Steps, Outbox and Replies. Clicking a person opens their drawer: details on the left, and Overview, Engagement, Activity and Notes on the right. Engagement shows the personalised steps and "Approve" for a draft sequence. The AI drafts the sequence; anyone can add an email or LinkedIn touch, remove, reorder, change the day, channel or format, edit the text, or rewrite a touch with AI. Sent touches are locked. Reps send drafts to the manager, who confirms.
+Email and LinkedIn only. Open a campaign to see its numbers, then the accounts in it: what each person gets (email, LinkedIn or both), their current step, and Approve. The sequence sits below; Edit sequence opens the step editor. Clicking a person opens their drawer: details on the left, and Overview, Engagement, Activity and Notes on the right. Engagement shows the personalised steps and "Approve" for a draft sequence. The AI drafts the sequence; anyone can add an email or LinkedIn touch, remove, reorder, change the day, channel or format, edit the text, or rewrite a touch with AI. Sent touches are locked. Reps send drafts to the manager, who confirms.
 
 ## Segments
 
-Micro-segments → segment (metric cards; Accounts, Activity and Replies tabs) → person drawer → activity. A segment with 10 or more accounts in 7 days runs as a campaign once the manager confirms; below that, each account gets its own next best action. Sensitive segments never become campaigns.
+Micro-segments → segment (metric cards; Accounts, Activity and Replies tabs) → person panel → activity. A segment with 10 or more accounts in 7 days runs as a campaign once the manager confirms; below that, each account gets its own next best action. Sensitive segments never become campaigns.
 
 ## Content studio
 
@@ -44,6 +44,26 @@ Micro-segments → segment (metric cards; Accounts, Activity and Replies tabs) �
 
 The navigation becomes icons and Today stacks into one column. When a list is expanded, the view replaces the chat.
 
+## Work is individual
+
+A rep sees only their own accounts, campaigns, replies and numbers. The manager sees everyone's, can filter any view by rep, move accounts to another rep, and assign tasks; an assigned task appears in that rep's to-do list on Today (try it: assign as Pavan, then "Switch to Sofia"). The manager's metrics switch between Team and Mine.
+
+## Person and reply views
+
+Opening a person or a reply brings up a focused panel; the chat and the view behind it are blurred until you close it. Loading shows a short placeholder instead of redrawing, and the AI's steps appear one by one before the answer.
+
+## Inbox
+
+Replies from email and LinkedIn in one place, each with a suggested answer that runs the brand checks. When someone replies, their remaining campaign steps pause (an assumption to confirm). The manager can reassign the thread.
+
+## Analytics (manager; the admin has its own page)
+
+Pilot targets (meetings, reply rate, accepted first time), the funnel, each rep, each campaign, and what the system learned. Pick a rep to see only their numbers.
+
+## Scoring and routing
+
+"Score this list" shows the Score flow step by step (collect, qualify, weigh by tier, decay, stack into Timing, Fit × Timing) with the top account worked through; "How scoring works" in Accounts shows the same. "Route to NBA and NBC" then sends the segment that crosses the threshold to one campaign and gives every other account its own next best action.
+
 ## Roles
 
 - **Sales rep** works their own items: approves ready actions, reviews the ones the AI wasn't sure about, logs outcomes.
@@ -52,7 +72,7 @@ The navigation becomes icons and Today stacks into one column. When a list is ex
 
 ## Things to try in the chat
 
-"Find prospects like my last 10 wins", "Score this list", "Create micro-segments", "Prepare the next actions", "Build the campaign", "How are the campaigns doing?", "Write a blog on planning a control system migration", "Why is Juniper ranked first?", "What should I do with Cedar?", "Make it shorter", "Use cost framing", "What worked last month?", "How is my team doing?" (manager), "Every weekday at 7am, check my accounts for new signals".
+"Find prospects like my last 10 wins", "Score this list", "Route to NBA and NBC", "Which replies are objections?", "Where is the funnel leaking?" (manager), "Prepare the next actions", "Build the campaign", "How are the campaigns doing?", "Write a blog on planning a control system migration", "Why is Juniper ranked first?", "What should I do with Cedar?", "Make it shorter", "Use cost framing", "What worked last month?", "How is my team doing?" (manager).
 
 ## Files
 
