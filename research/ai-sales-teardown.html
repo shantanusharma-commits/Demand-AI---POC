@@ -1,0 +1,666 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AI Sales Platform Teardown</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+/* Layout: a sticky section bar over one long report column; dense data sections (signals, stories, pricing) use filterable tables. */
+:root {
+  --paper: #f3f5f4;
+  --card: #ffffff;
+  --sunk: #e8edeb;
+  --ink: #13201c;
+  --ink-2: #4b5a54;
+  --ink-3: #75837d;
+  --line: #d3dcd8;
+  --accent: #0a6b55;
+  --accent-soft: #d9ede6;
+  --amber: #9a5b00;
+  --amber-soft: #f7ead2;
+  --red: #a63a2c;
+  --red-soft: #f6e0dc;
+  --blue: #285e9e;
+  --blue-soft: #e0e9f5;
+  --f-display: "IBM Plex Sans Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --f-body: "IBM Plex Sans", -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --f-data: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0e1513; --card: #15201c; --sunk: #1b2824; --ink: #e2ebe7; --ink-2: #a9b8b2; --ink-3: #7f8f88; --line: #2a3a35;
+    --accent: #4cc3a1; --accent-soft: #123a30; --amber: #e2ad57; --amber-soft: #3a2b12; --red: #ef8f80; --red-soft: #3c1d18;
+    --blue: #8db6ea; --blue-soft: #18283c; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #0e1513; --card: #15201c; --sunk: #1b2824; --ink: #e2ebe7; --ink-2: #a9b8b2; --ink-3: #7f8f88; --line: #2a3a35;
+  --accent: #4cc3a1; --accent-soft: #123a30; --amber: #e2ad57; --amber-soft: #3a2b12; --red: #ef8f80; --red-soft: #3c1d18;
+  --blue: #8db6ea; --blue-soft: #18283c; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 15px/1.6 var(--f-body); }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--card); }
+a { color: var(--accent); text-underline-offset: 2px; }
+a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+h1, h2, h3 { font-family: var(--f-display); margin: 0; text-wrap: balance; letter-spacing: -0.005em; }
+h1 { font-size: clamp(32px, 5vw, 52px); line-height: 1.02; font-weight: 700; }
+h2 { font-size: clamp(24px, 3vw, 32px); line-height: 1.1; font-weight: 700; }
+h3 { font-size: 19px; line-height: 1.25; font-weight: 600; }
+p { margin: 0; max-width: 72ch; }
+ul, ol { margin: 0; padding-left: 20px; }
+.eyebrow { font: 500 11.5px/1.2 var(--f-data); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
+.muted { color: var(--ink-2); }
+.small { font-size: 13px; }
+.num { font-family: var(--f-data); font-variant-numeric: tabular-nums; }
+
+/* top bar */
+.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 9; background: var(--card); border-bottom: 1px solid var(--line); }
+.bar-in { max-width: 1180px; margin: 0 auto; padding-block: 10px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: flex; gap: 6px 18px; align-items: center; overflow-x: auto; scrollbar-width: none; }
+.bar-in::-webkit-scrollbar { display: none; }
+.bar .brand { font: 700 15px/1 var(--f-display); white-space: nowrap; color: var(--ink); }
+.bar a { font-size: 13.5px; white-space: nowrap; text-decoration: none; color: var(--ink-2); padding: 4px 0; border-bottom: 2px solid transparent; }
+.bar a:hover { color: var(--ink); border-bottom-color: var(--accent); }
+
+.wrap { max-width: 1180px; margin: 0 auto; padding-block: 36px 72px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 64px; }
+section { display: grid; gap: 20px; min-width: 0; scroll-margin-top: 64px; }
+.sec-head { display: grid; gap: 8px; }
+.sec-head .k { font: 600 13px/1 var(--f-data); color: var(--accent); }
+
+/* hero */
+.hero { display: grid; gap: 18px; }
+.hero .lede { font-size: 17px; color: var(--ink-2); max-width: 70ch; }
+.findings { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 0; border-top: 2px solid var(--ink); }
+.finding { padding: 14px 18px 16px 0; border-bottom: 1px solid var(--line); display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 10px; }
+.finding .n { font: 600 22px/1 var(--f-display); color: var(--accent); }
+.finding b { display: block; font-family: var(--f-display); font-size: 17px; line-height: 1.25; margin-bottom: 4px; }
+.finding p { font-size: 14px; color: var(--ink-2); }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 14px; font-size: 12.5px; color: var(--ink-2); align-items: center; }
+
+/* chips */
+.chip { display: inline-flex; align-items: center; padding: 1px 8px; border-radius: 4px; font: 500 11.5px/1.6 var(--f-data); white-space: nowrap; background: var(--sunk); color: var(--ink-2); }
+.chip.g { background: var(--accent-soft); color: var(--accent); }
+.chip.a { background: var(--amber-soft); color: var(--amber); }
+.chip.r { background: var(--red-soft); color: var(--red); }
+.chip.b { background: var(--blue-soft); color: var(--blue); }
+
+/* picks */
+.picks { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 16px; }
+.pick { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 18px 20px; display: grid; gap: 12px; align-content: start; min-width: 0; }
+.pick-head { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.liked { border-left: 3px solid var(--accent); padding: 4px 0 4px 12px; font-style: italic; color: var(--ink); font-size: 14.5px; }
+.liked .who { font-style: normal; display: block; font: 500 11px/1.4 var(--f-data); color: var(--ink-3); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 2px; }
+.pick .lbl { font: 500 11px/1.2 var(--f-data); letter-spacing: 0.07em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 4px; }
+.pick ol, .pick ul { font-size: 14px; display: grid; gap: 3px; }
+.pick .take { background: var(--accent-soft); border-radius: 6px; padding: 10px 12px; font-size: 14px; }
+.pick .take .lbl { color: var(--accent); }
+.pick .caveat { background: var(--amber-soft); border-radius: 6px; padding: 8px 12px; font-size: 13px; color: var(--ink); }
+.pick .src { font-size: 12.5px; display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.flagged { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 0; border-top: 1px solid var(--line); }
+.flag { padding: 14px 16px 16px 0; border-bottom: 1px solid var(--line); display: grid; gap: 6px; align-content: start; min-width: 0; }
+.flag p { font-size: 14px; }
+.quote { font-family: var(--f-display); font-size: 16.5px; line-height: 1.35; color: var(--ink); }
+
+/* filters */
+.filters { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.fbtn { font: 500 12.5px/1 var(--f-body); padding: 7px 11px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); color: var(--ink-2); cursor: pointer; }
+.fbtn[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.search { font: 14px var(--f-body); padding: 7px 11px; border-radius: 6px; border: 1px solid var(--line); background: var(--card); color: var(--ink); min-width: 0; width: 220px; max-width: 100%; }
+
+/* tables */
+.tbl { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--card); }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+th, td { text-align: left; vertical-align: top; padding: 9px 12px; border-top: 1px solid var(--line); }
+thead th { border-top: 0; position: sticky; top: 0; background: var(--sunk); font: 500 11px/1.3 var(--f-data); letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); white-space: nowrap; }
+td.co { font-weight: 600; white-space: nowrap; }
+td .sub { display: block; color: var(--ink-3); font-size: 12px; font-weight: 400; }
+tr.group td { background: var(--sunk); font: 600 12px/1.3 var(--f-data); letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-2); }
+tr.ours td { background: var(--accent-soft); }
+.metric { font-family: var(--f-data); font-size: 12.5px; color: var(--ink); }
+
+/* tabs */
+.tabs { display: flex; gap: 0; border-bottom: 1px solid var(--line); overflow-x: auto; }
+.tab { font: 600 14px/1 var(--f-display); padding: 10px 14px; background: none; border: 0; border-bottom: 3px solid transparent; color: var(--ink-2); cursor: pointer; white-space: nowrap; }
+.tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+
+/* headline results */
+.wins { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
+.win { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; display: grid; gap: 4px; align-content: start; }
+.win .v { font: 600 24px/1.1 var(--f-display); color: var(--accent); }
+.win .d { font-size: 13.5px; }
+.win .w { font: 500 11.5px/1.4 var(--f-data); color: var(--ink-3); }
+
+.patterns { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 12px 28px; }
+.pat { display: grid; gap: 4px; padding-top: 10px; border-top: 1px solid var(--line); }
+.pat b { font-family: var(--f-display); font-size: 16px; }
+.pat p { font-size: 14px; color: var(--ink-2); }
+
+/* chart */
+.chart-box { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 16px 16px 8px; overflow-x: auto; }
+.chart-box svg { display: block; min-width: 560px; width: 100%; height: auto; }
+.chart-box svg text { font-family: var(--f-data); font-size: 11.5px; fill: var(--ink-2); }
+.chart-box svg .lab { font-family: var(--f-body); font-size: 12.5px; fill: var(--ink); }
+.chart-box svg .grid { stroke: var(--line); stroke-width: 1; }
+
+.quotes { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+.iq { display: grid; gap: 6px; padding: 14px 0; border-top: 2px solid var(--ink); }
+.iq .who { font: 500 11.5px/1.3 var(--f-data); color: var(--ink-3); letter-spacing: 0.04em; }
+
+.bands { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--card); }
+.band { padding: 14px 16px; border-left: 1px solid var(--line); display: grid; gap: 4px; align-content: start; }
+.band:first-child { border-left: 0; }
+.band .p { font: 600 20px/1.1 var(--f-display); }
+.band p { font-size: 13px; color: var(--ink-2); }
+@media (max-width: 700px) { .band { border-left: 0; border-top: 1px solid var(--line); } .band:first-child { border-top: 0; } }
+
+.moves { display: grid; gap: 0; border-top: 2px solid var(--ink); }
+.move { display: grid; grid-template-columns: 210px minmax(0, 1fr) minmax(0, 1fr); gap: 16px 24px; padding: 16px 0; border-bottom: 1px solid var(--line); }
+.move h3 { font-size: 18px; }
+.move .lbl { font: 500 11px/1.2 var(--f-data); letter-spacing: 0.07em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 4px; }
+.move p, .move li { font-size: 14px; }
+@media (max-width: 860px) { .move { grid-template-columns: minmax(0, 1fr); gap: 8px; } }
+
+footer { font-size: 13px; color: var(--ink-2); display: grid; gap: 8px; border-top: 1px solid var(--line); padding-top: 18px; }
+footer ul { display: grid; gap: 4px; }
+</style>
+
+</head>
+<body>
+<nav class="bar" aria-label="Report sections"><div class="bar-in">
+  <span class="brand">AI Sales Teardown</span>
+  <a href="#summary">Summary</a><a href="#picks">Your picks</a><a href="#stories">Customer results</a><a href="#signals">Signals</a><a href="#funding">Who is winning</a><a href="#pricing">Metrics and pricing</a><a href="#adopt">What we adopt</a><a href="#method">Sources</a>
+</div></nav>
+
+<main class="wrap">
+
+<section id="summary" class="hero">
+  <div class="eyebrow">Demand AI · competitor teardown · October 2026</div>
+  <h1>What the AI sales platforms that are winning actually do</h1>
+  <p class="lede">A read of 24 AI-native and incumbent sales platforms, their customer stories, the signals they use, the results they promise and what they charge. It is written for one decision: what Demand AI should build next for new-logo acquisition in long-cycle, high-ticket markets.</p>
+  <div class="findings">
+    <div class="finding"><span class="n">1</span><div><b>Signals, not lists, start the work</b><p>Every leader turns an event (a hire, a renewal date, a site visit, a new leader) into a play for a set persona. Single signals are weak; Unify's own illustrative data shows website visits alone give 1.9 meetings per 100 contacts against 11.2 for a new leader plus hiring.</p></div></div>
+    <div class="finding"><span class="n">2</span><div><b>First-party context beats bought data</b><p>Nooks mines its own call recordings for competitor contract end dates. Lightfield writes messages from your customers' own words. Warmly, Rox and Monaco store every action and its outcome. Everyone can buy the same third-party data.</p></div></div>
+    <div class="finding"><span class="n">3</span><div><b>Warm beats cold, by a lot</b><p>Kargo reports about 40% of warm calls book a meeting against 1% of cold calls (Warmly story). Lightfield maps the sales team's LinkedIn graph to find mutual-connection introductions.</p></div></div>
+    <div class="finding"><span class="n">4</span><div><b>Money follows the system of record</b><p>The best-funded and fastest-growing startups (Rox, Monaco, Reevo, Nooks, Lightfield, Unify) own the record and the workflow. Single-signal tools (Warmly, Common Room) were bought by HubSpot and Zoom.</p></div></div>
+    <div class="finding"><span class="n">5</span><div><b>Nobody charges per meeting or on revenue</b><p>Pricing has moved from seats to credits and agent actions. The closest to outcome pricing is HubSpot at $1 per lead worked and Leadsforge charging only for verified contacts. That is an open position.</p></div></div>
+    <div class="finding"><span class="n">6</span><div><b>Proof is short, small and self-reported</b><p>Most customer results cover weeks, not quarters, and rarely state a baseline. The strongest proof formats are a stated period, a baseline, a counterfactual and the customer's own CRM as referee.</p></div></div>
+  </div>
+  <div class="legend"><span><span class="chip a">vendor claim</span> figure stated by the company, not independently verified</span><span><span class="chip">third-party</span> press, analysts, databases</span><span><span class="chip b">inference</span> our reasoning</span></div>
+</section>
+
+<section id="picks">
+  <div class="sec-head"><span class="k">01</span><h2>Your picks, and how each one works</h2>
+  <p class="muted">The features you singled out, unpacked into how they work, what proof exists, and what Demand AI should take. 1mind is left out because it serves inbound conversion, not prospecting.</p></div>
+  <div class="picks" id="pickGrid"></div>
+  <h3 style="margin-top:8px">Pages you flagged</h3>
+  <div class="flagged" id="flagGrid"></div>
+</section>
+
+<section id="stories">
+  <div class="sec-head"><span class="k">02</span><h2>What the customer stories actually show</h2>
+  <p class="muted">Every customer story on the Unify, Warmly, Rox and Lightfield customer pages, read in full: 16 Unify, 19 Rox, 7 Lightfield and 44 Warmly pages. Reevo links no customer stories. All figures are vendor claims.</p></div>
+  <div class="wins" id="wins"></div>
+  <div class="tabs" role="tablist" id="storyTabs"></div>
+  <div class="tbl" id="storyTable"></div>
+  <h3>Patterns across the stories</h3>
+  <div class="patterns" id="storyPatterns"></div>
+</section>
+
+<section id="signals">
+  <div class="sec-head"><span class="k">03</span><h2>One list of every signal in use</h2>
+  <p class="muted">Signals named by Nooks, Common Room, Warmly, Unify, Rox, Lightfield, Monaco, kōdlo and HubSpot, merged into one catalogue. Intent ratings are the vendors' own where published (Common Room and Warmly). The "fit for Demand AI" column is our judgement for industrial, long-cycle selling.</p></div>
+  <div class="filters" id="sigFilters"></div>
+  <div class="filters"><input class="search" id="sigSearch" type="search" placeholder="Search signals or vendors" aria-label="Search signals"><span class="small muted" id="sigCount"></span></div>
+  <div class="tbl"><table id="sigTable"></table></div>
+</section>
+
+<section id="funding">
+  <div class="sec-head"><span class="k">04</span><h2>Who is growing and getting funded, and why</h2>
+  <p class="muted">Disclosed capital for the AI-native startups, ranked separately on funding plus the strength of growth evidence. Then what investors said, and the product patterns the winners share.</p></div>
+  <div class="chart-box" id="fundChart" aria-label="Disclosed funding by startup, US dollars millions"></div>
+  <div class="tbl"><table id="rankTable"></table></div>
+  <h3>What investors said when they invested</h3>
+  <div class="quotes" id="investorQuotes"></div>
+  <h3>What the winners have in common</h3>
+  <div class="patterns" id="fundPatterns"></div>
+</section>
+
+<section id="pricing">
+  <div class="sec-head"><span class="k">05</span><h2>The metrics they promise, and what they charge</h2>
+  <p class="muted">Each platform's headline promise, the figure behind it, how that figure was produced, and the price. Prices were checked on 27 October 2026.</p></div>
+  <div class="bands" id="bands"></div>
+  <div class="filters" id="priceFilters"></div>
+  <div class="tbl"><table id="priceTable"></table></div>
+  <h3>How pricing is structured</h3>
+  <div class="patterns" id="pricePatterns"></div>
+</section>
+
+<section id="adopt">
+  <div class="sec-head"><span class="k">06</span><h2>What Demand AI should adopt</h2>
+  <p class="muted">Ten moves, each tied to the stage of our flow it changes and the companies it comes from. The first five come straight from your picks.</p></div>
+  <div class="moves" id="moves"></div>
+</section>
+
+<footer id="method">
+  <h3>Sources and method</h3>
+  <ul>
+    <li>Pages read in full with web extraction tools on 27 October 2026, including every link you supplied and every customer story on those customer pages. A few Warmly index pages could not be paged, so a small number of Warmly stories may be missing.</li>
+    <li>Funding, ARR and valuation figures come from company announcements, investor posts and press. Rox's $1.2B valuation and about $8M ARR come from TechCrunch's unnamed sources and are unconfirmed. Neither the Zoom deal for Common Room nor the HubSpot deal for Warmly had a public closing notice at the time of writing.</li>
+    <li>Full company-by-company research with inline citations is in <code>COMPETITOR_RESEARCH.md</code> in the Demand-AI---POC repository.</li>
+    <li>Key first-party pages: <a href="https://www.unifygtm.com/use-cases">Unify use cases</a> · <a href="https://www.unifygtm.com/customers">Unify customers</a> · <a href="https://kodlo.ai/ai-prospecting/">kōdlo prospecting</a> · <a href="https://kodlo.ai/sales-intelligence/">kōdlo sales intelligence</a> · <a href="https://www.monaco.com/blog/design-monaco-memory-for-sales-agents">Monaco Memory</a> · <a href="https://www.monaco.com/product">Monaco product</a> · <a href="https://www.warmly.ai/p/context-graph/how-it-works">Warmly Context Graph</a> · <a href="https://www.warmly.ai/p/customers/reviews">Warmly reviews</a> · <a href="https://reevo.ai/products/foundation">Reevo Foundation</a> · <a href="https://reevo.ai/products/sell">Reevo Sell</a> · <a href="https://www.rox.com/articles/the-outbound-reward-model">Rox reward model</a> · <a href="https://www.rox.com/customers">Rox customers</a> · <a href="https://lightfield.com/customers">Lightfield customers</a> · <a href="https://lightfield.com/product/ai-pipeline-generation">Lightfield pipeline generation</a> · <a href="https://www.nooks.ai/signals-intelligence">Nooks signals</a> · <a href="https://www.commonroom.io/resources/signals/">Common Room signals</a></li>
+  </ul>
+</footer>
+</main>
+
+<script>
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const $ = id => document.getElementById(id);
+const link = (href, text) => `<a href="${esc(href)}" target="_blank" rel="noopener">${esc(text)}</a>`;
+
+/* ---------- 01 Your picks ---------- */
+const PICKS = [
+  { co: 'Lightfield', tag: 'AI-native CRM', liked: 'A dynamic CRM, a clean and minimalist UI, and warm outbound: it maps the sales team\'s LinkedIn connections to see if a mutual connection can make the introduction.',
+    how: ['Connect email, calendar, Slack, LinkedIn and call recordings; months of history backfill in about an hour.', 'Every interaction is captured and the record structures itself; a temporal graph keeps how each field changed.', 'Target accounts are scored on fit, timing and connection strength, from hiring, funding, tech stack and investor signals.', 'The team\'s LinkedIn connection graph is mapped to those accounts and warm intro paths are surfaced.', 'Sequences include a "mutual connection intro" step; drafts use language from your own call transcripts.', 'Deal review returns one next step, never a list.'],
+    proof: 'No warm-intro conversion figure published. Pipeline generation results "take 4 to 6 weeks of live sending". 5,000+ sign-ups and a $47M a16z Series A.',
+    caveat: 'How mutual paths are computed (whose connections, second-degree or not, how strength is measured) is not published. LinkedIn sync is in beta on the Growth plan.',
+    take: 'Add connection strength as a third scoring axis next to fit and timing, and a "warm intro" action in the NBA library when a colleague knows someone at a target account.',
+    src: [['https://lightfield.com/product/ai-pipeline-generation', 'Pipeline generation'], ['https://lightfield.com/', 'Home'], ['https://lightfield.com/customers', 'Customers']] },
+  { co: 'Nooks', tag: 'AI sales assistant', liked: 'So many important signals. The range and diversity of signals, including whether a competitor\'s renewal is about to expire.',
+    how: ['An admin lists up to 30 competitors; Nooks tags every recorded call where one is named, back through old calls.', 'The Competitor Renewal signal reads past call recordings for the contract end date a prospect mentioned.', 'Agentic signals such as "Uses Competitor" and "Upcoming Renewal with Competitor" also search job ads, Gong transcripts and CRM data.', 'Lists rebuild themselves as signals change; plays enrol contacts into sequences that pull battlecard content.', 'Every call outcome (pickup, objection, booking) retrains the scoring model.'],
+    proof: 'Signals users: 2x pipeline, 4x faster prospecting, 3x meetings (vendor claim). Pendo: one in three meetings came from signals. HubSpot: 67% more meetings, 24% more pipeline per BDR.',
+    caveat: '"100+ pre-built signals" is claimed but only about 25 are named publicly. Competitor tags cannot be exported to the CRM.',
+    take: 'Capture contract end dates and incumbent supplier names from call notes and the CRM, and trigger a play months before renewal. For industrial buyers this is the service contract and installed-base equivalent we already score, extended to competitors\' contracts.',
+    src: [['https://www.nooks.ai/signals-intelligence', 'Signals page'], ['https://support.nooks.ai/articles/8913542083-configuring-competitors-in-nooks', 'Competitor docs'], ['https://www.nooks.ai/blog-posts/june-product-release-auto-enrich-numbers-frequently-used-dispositions-competitor-renewal-signal', 'Renewal signal launch']] },
+  { co: 'Common Room', tag: 'Signal layer (Zoom deal pending)', liked: 'Signals plus LinkedIn personal signals.',
+    how: ['About 100 signal types, each published with a source and an intent rating (High, Medium, Low).', 'Person360 merges each person\'s activity across website, product, community, CRM and social into one contact.', 'LinkedIn company page: everyone who comments, reacts or is mentioned becomes a contact, synced within about 30 minutes.', 'Job changes come from LinkedIn; filter by previous employer to follow former champions.', 'A Chrome extension shows the full profile on any LinkedIn page and adds a person in one click.'],
+    proof: 'Semgrep 74% pipeline growth in a quarter, Notion 30% more meetings per rep, Workvivo 40% more meetings (vendor claims).',
+    caveat: 'Automatic LinkedIn capture covers only your own company page. Personal profiles and follower lists are not supported; anything else needs a rep to add it through the extension.',
+    take: 'Adopt the signal catalogue format: every signal with a source, a published intent rating and a reason. Add champion job changes and company-page engagement first; treat personal LinkedIn activity as a rep-assisted input, not an automatic feed.',
+    src: [['https://www.commonroom.io/resources/signals/', 'Signal guides'], ['https://www.commonroom.io/docs/signals/community-and-social-integrations/linkedin/', 'LinkedIn docs'], ['https://www.commonroom.io/docs/signals/common-room-native-signals/job-changes/', 'Job changes']] },
+  { co: 'Monaco', tag: 'Revenue engine for startups', liked: 'The UI and the simplicity of the process.',
+    how: ['Build the target market: your whole TAM is pre-built on day one from your ICP, existing customers and email history, scored with a "why this account".', 'Overlay signals: custom (common investors, job posts, tech stack) and inbound (site visits, demo requests); segment by plain-language search.', 'Execute sequences: Autopilot decides who to enrol, when to start and how to follow up, without blasting the whole TAM.', 'Capture activity: every interaction is summarised and attached to the right account, contact and deal.', 'Track pipeline: stages move on real signals (meetings, threads, stakeholders); ghosting and stalls are flagged early.', 'Ask Monaco: a ranked list of the most important actions, plus chat for questions.'],
+    proof: 'More than $85M raised in three months; the CEO says seven figures of ARR were added after the February 2026 launch. Re-engagement runs "sustain 20 to 40% response rates" (vendor claim).',
+    caveat: 'No quantified customer case studies yet; evidence is testimonials. A forward-deployed AE is bundled, so part of the result is service.',
+    take: 'Present Demand AI as one six-step flow on one screen, with the target list ready on day one and a one-line reason on every account and action.',
+    src: [['https://www.monaco.com/product', 'Product'], ['https://www.monaco.com/blog/design-monaco-memory-for-sales-agents', 'Monaco Memory'], ['https://www.monaco.com/pricing', 'Pricing']] },
+  { co: 'Reevo Sell', tag: 'Meeting stage', liked: 'What you flagged under Nex. The link you shared is Reevo\'s Sell page, so it is filed under Reevo here.',
+    how: ['Before a meeting: an automatic brief with highlights from every past conversation with the account.', 'During: every call is recorded automatically.', 'After: highlights, action items and sentiment are extracted, each cited back to the exact moment in the call.', 'Next steps and tasks are created, prioritised and tied back to the pipeline.', 'Every action can be approved, edited or dismissed before it goes out, with more handed over as trust grows.'],
+    proof: 'No metrics or pricing published. One testimonial (RoboForce): "It turned it into action... showed me how they tied back to my pipeline."',
+    caveat: 'If you meant a Nex feature, send the Nex link and the card can be swapped. Nex\'s closest equivalents are its deal-going-dark and closed-lost re-engagement agents.',
+    take: 'Extend Demand AI past the first reply: a pre-meeting brief built from signals and history, and cited next steps after the call, so the NBA keeps working at the meeting stage.',
+    src: [['https://reevo.ai/products/sell', 'Reevo Sell'], ['https://reevo.ai/products/foundation', 'Reevo Foundation']] },
+];
+$('pickGrid').innerHTML = PICKS.map(p => `
+  <article class="pick">
+    <div class="pick-head"><h3>${esc(p.co)}</h3><span class="chip">${esc(p.tag)}</span></div>
+    <div class="liked"><span class="who">What you liked</span>${esc(p.liked)}</div>
+    <div><div class="lbl">How it works</div><ol>${p.how.map(h => `<li>${esc(h)}</li>`).join('')}</ol></div>
+    <div><div class="lbl">Proof</div><p class="small">${esc(p.proof)} <span class="chip a">vendor claim</span></p></div>
+    <div class="caveat"><b>Watch out:</b> ${esc(p.caveat)}</div>
+    <div class="take"><div class="lbl">Take for Demand AI</div>${esc(p.take)}</div>
+    <div class="src">${p.src.map(s => link(s[0], s[1])).join('')}</div>
+  </article>`).join('');
+
+const FLAGS = [
+  { co: 'Unify', what: 'Use-case library and 16 customer stories', idea: 'A library of 78 worked plays, each with the same method: start from a signal, check the CRM, verify the contact, write an opener that names one checkable fact, hold it for approval, then trace the meeting back to the signal.', q: '"One signal is a guess. Four pointing the same way is a reason to call today."', why: 'It already writes manufacturing variants: work at plant level, phone beats email, plant openings and operations hiring matter, funding does not.', href: 'https://www.unifygtm.com/use-cases' },
+  { co: 'kōdlo', what: 'AI prospecting and sales intelligence', idea: 'Research first: every suggested company comes with why it fits, who to contact and where the evidence came from. Reports carry numbered citations and a "Limitations" note when something could not be found.', q: '"You get fewer records and much more reason to trust each one."', why: 'Closest to high-ticket, technical selling. Free, then $49 and $199 a month. No customers or results yet.', href: 'https://kodlo.ai/sales-intelligence/' },
+  { co: 'Monaco', what: 'Monaco Memory', idea: 'Organisation and user memory stored as versioned Markdown that people can read and edit: positioning, exclusions, lessons from losses, tone. Updated by events and a scheduled "reflection" job, then injected into every agent.', q: '"Knowledge that once depended on a particular rep being present becomes available to future prospecting tasks."', why: 'Gives the NBA engine a readable place for "we stopped pursuing this segment after repeated losses".', href: 'https://www.monaco.com/blog/design-monaco-memory-for-sales-agents' },
+  { co: 'Warmly', what: 'Context Graph and reviews', idea: 'Ingest, resolve, enrich, de-duplicate, activate, sync: one account, one contact, one timeline before anything is scored. A job change is the same person moving, not a new contact.', q: '"Hot signals cool quickly." "First-responder advantage is real."', why: 'The stories turn on speed: Kargo books about 40% of warm calls against 1% cold.', href: 'https://www.warmly.ai/p/context-graph/how-it-works' },
+  { co: 'Reevo', what: 'Foundation', idea: 'An AI-native record with no manual entry, an overnight feed of what changed ranked by importance, and answers that cite the exact call, email or record.', q: '"Most CRMs store what happened and never know why it mattered."', why: 'The ranked "what changed overnight" feed is a ready model for Demand AI\'s Today screen.', href: 'https://reevo.ai/products/foundation' },
+  { co: 'Rox', what: 'The outbound reward model', idea: 'Every time an SDR sends, edits or discards a draft, that is a free expert label. Rox trained a small model on before-and-after edits, then drafts several emails and sends the one it scores highest.', q: '"An SDR who edits your email is telling you, character by character, what was wrong with it."', why: 'Agrees with SDR edits 80% of the time against 38 to 45% for general models; its top fifth of emails get 1.75x the reply rate (vendor claim). We already capture reviewer edits.', href: 'https://www.rox.com/articles/the-outbound-reward-model' },
+  { co: 'Rox', what: '19 customer stories', idea: 'Enterprise stories sell trust and research time; smaller customers sell speed and meetings. Bespoke public signals win: legislation and local Facebook posts for Axon 911, weather incidents for WSP.', q: '"Reps adopt outcomes, not tools." (Upwind)', why: 'WSP (engineering services) cut research from 4 to 8 hours per client to 5 minutes and rolled out to 600 users.', href: 'https://www.rox.com/customers' },
+  { co: 'Lightfield', what: '7 customer stories', idea: 'Few hard numbers, but each story shows the record filling itself: GPU specs pulled from calls, MEDDPICC gaps from 2,330 closed deals, ClinicalTrials.gov registrations watched by an agent.', q: '"State is just a snapshot." (Intent HQ, 18+ month cycles)', why: 'Power and Intent HQ show the approach working on long cycles and narrow markets, closer to our world than most.', href: 'https://lightfield.com/customers' },
+];
+$('flagGrid').innerHTML = FLAGS.map(f => `
+  <div class="flag"><div class="eyebrow">${esc(f.co)} · ${esc(f.what)}</div>
+    <p>${esc(f.idea)}</p><p class="quote">${esc(f.q)}</p><p class="muted small">${esc(f.why)}</p>
+    <div class="small">${link(f.href, 'Open page')}</div></div>`).join('');
+
+/* ---------- 02 Customer stories ---------- */
+const WINS = [
+  { v: '$15M', d: 'pipeline in one month, targeting manufacturing plant managers', w: 'Unify · Innovate Energy Group' },
+  { v: '$3.17M', d: 'closed-won from influenced accounts, with no SDR team', w: 'Unify · Guru · 12 months' },
+  { v: '~$3M', d: 'pipeline in one month, 256 meetings, 92% show rate', w: 'Unify · Juicebox' },
+  { v: '40% vs 1%', d: 'meeting rate on warm calls against cold calls', w: 'Warmly · Kargo' },
+  { v: '5 min vs 4 to 8 h', d: 'research per client, rolled out to 600 users', w: 'Rox · WSP' },
+  { v: '2.5x', d: 'net-new closed ARR per month for account managers', w: 'Rox · Bynder' },
+  { v: '$2.59M', d: 'pipeline and $250K revenue in 7 months', w: 'Unify · Spellbook' },
+  { v: '12 → 5', d: 'tools in the stack after switching', w: 'Rox · XBOW' },
+];
+$('wins').innerHTML = WINS.map(w => `<div class="win"><div class="v">${esc(w.v)}</div><div class="d">${esc(w.d)}</div><div class="w">${esc(w.w)}</div></div>`).join('');
+
+const STORIES = {
+  Unify: { url: 'https://www.unifygtm.com/customers', rows: [
+    ['Innovate Energy Group', 'Clean-energy EPC, 10+ staff', 'AI agent researches ESG and energy-cost plans; strategist-led', 'Firmographics, intent, ESG plans scraped from sites', '$15M pipeline in one month; 8x meetings; 20+ hours a week saved'],
+    ['Guru', 'Knowledge SaaS, 101 to 250', 'Upmarket with no SDR team; Unify services on site', 'Web visits, new hires, champion job changes, closed-lost, CEO LinkedIn', '$3.17M closed-won influenced; 132 opps; 109 net-new accounts; 12 months'],
+    ['Juicebox', 'AI recruiting', 'PLG sign-ups to enterprise', 'Trial usage, Fortune 500 match, pricing visits, events', '~$3M pipeline in one month; 256 meetings; 92% show rate'],
+    ['Spellbook', 'Legal AI, 120+', '7 BDRs moving upmarket; email and phone', 'Website intent, closed-lost returning', '$2.59M pipeline and $250K revenue in 7 months; opens 70 to 80% vs 19 to 25%'],
+    ['CandorIQ', 'HR planning, 20+', 'Founding SDR replacing 5 tools', 'Web visitors, new hires, champion moves', '$1.8M+ pipeline; $121K closed-won; bounce 15% to under 2%'],
+    ['Perplexity', 'AI search, 100+', 'Zero-to-one outbound for Enterprise Pro', 'Site visits, product usage, campaign engagement', '$1.7M pipeline in 3 months; 75+ opps; 26+ meetings'],
+    ['HyperComply', 'Security questionnaires, 24+', 'Website plays, gifting, closed-lost', 'Website intent, closed-lost date', '$1.6M+ pipeline in 12 months; meetings +40%'],
+    ['Peridio', 'Industrial IoT, 11 to 50', 'Founder-led outbound made repeatable', 'Web and social engagement, lookalikes', '$1.15M influenced, $550K direct; 1 Fortune 100 customer'],
+    ['Justworks', 'Payroll and HR, 1,500+', 'Warm outbound on top of 6sense and G2', 'Pricing and demo visits, G2 comparison', '6.8x ROI; paid back in 5 months; 3 plays in 3 days'],
+    ['Pylon', 'Support platform, 100+', 'Automated outbound replacing many tools', 'Website intent, tech stack, new hires', '4.2x ROI; 3x meetings; $300K pipeline in weeks'],
+    ['Anrok', 'Sales-tax compliance, 130+', 'Marketing then a 2-person SDR team', 'Finance-leader hires, champion moves, pricing visits', '$300K+ pipeline from ~25 campaigns in 3 months'],
+    ['Abacum', 'FP&A, 100', 'Turn 6sense and G2 intent into outbound', 'Website visits, G2 competitor pages', '$250K pipeline a year; 75% less prospecting time'],
+    ['Campfire', 'AI ERP, 80+', 'Consolidated HubSpot, Apollo, Instantly', 'Site visits, campaign engagement, opens', '2x qualified pipeline in under 5 months; 3 tools into 1'],
+    ['Navattic', 'Demo software, 35+', 'Warm and cold outbound, Slack alerts', 'Visitors, new hires, closed-lost, PQLs', '$100K+ pipeline in first 10 days; 30+ meetings'],
+    ['Quo', 'Business phone, 120', 'Replaced Apollo, Outreach, Clearbit', 'Website intent', '100% of outbound pipeline; 2.5x reply rate; 100+ opps'],
+    ['Together AI', 'AI cloud, 150+', 'Engage on-platform users', 'Product usage enriched from 10+ sources', '500+ high-intent contacts from 5 plays; 30+ hours a month saved'],
+  ] },
+  Rox: { url: 'https://www.rox.com/customers', rows: [
+    ['WSP', 'Engineering services, 50,000+', 'Research agent over top clients', 'Extreme weather incidents affecting clients', 'Answers in 5 minutes vs 4 to 8 hours per client; 600 users'],
+    ['Bynder', 'Digital assets, 500+', 'Expansion research and BDR outbound', 'Account gaps', '2.5x net-new closed ARR per month; 100+ users in 90 days'],
+    ['Axon 911', 'Public safety, 150+', 'Signal detection and automated outreach', 'Legislation, local news, community and Facebook posts', '3 reps booked 11 meetings in 2.5 weeks'],
+    ['LogicMonitor', 'IT observability, 1,000 to 5,000', 'BDR agents over 300 accounts', '10-K reports, pain points, past emails', '70%+ open rate; research time near zero (was 20 to 25 min an email)'],
+    ['New Relic', 'Observability, 2,000+', 'Call prep for mid-market new business', 'Deal and buyer context', '85% less research time; 50%+ faster ramp'],
+    ['XBOW', 'AI pen-testing, 200 to 500', 'Prospecting partner', 'Not published', 'Stack 12 to 5 tools; won a 2-week bake-off'],
+    ['Upwind', 'Cloud security, 200 to 500', 'Outbound in one tool, not six', 'Salesforce fit and intent scores', '"Saved you 80% of your day" in first hour; best quarter'],
+    ['Rev.io', 'Billing software, 51 to 200', 'Agent per account', 'Prospect research', '~200 emails per rep a day; TAM 10,000 to 50,000+'],
+    ['Pallet', 'Supply chain AI, 50 to 200', 'CEO view of pipeline and risk', 'Calls, Slack, email; weak champion', 'Best quarter ever; team 5 to 40 reps'],
+    ['Couchbase', 'NoSQL database, 700+', 'Account plans and briefs', 'Account intelligence columns', '90%+ adoption of 200+ field reps'],
+    ['Puma Energy', 'Retail fuel, 3,000+', 'Replace an abandoned CRM', 'Internal plus live external sourcing', 'Feature use from 2% to 80 to 90%'],
+    ['Tabs', 'Finance software, 50+', 'Research and outreach', 'Contact research', '2 to 3x open or response rates; "often seven hours a day" saved'],
+    ['MongoDB', 'Database, 5,500', 'Autonomous outbound', 'Not published', 'Prototype to production in 45 days'],
+    ['Ramp', 'Fintech, 500+', 'Meeting prep', 'Deal context', 'Card says 10 to 15% conversion lift; story gives no number'],
+    ['Others (5)', 'Cloud Software Group, Together AI, Codat, Rho, Snorkel AI', 'Renewals, account mapping, plays', 'Contracts, usage, org charts', 'No hard numbers'],
+  ] },
+  Lightfield: { url: 'https://lightfield.com/customers', rows: [
+    ['Power', 'Clinical trial recruitment, 5 sellers', 'Deal coaching; trial monitoring agent', 'ClinicalTrials.gov, FDA filings, press', 'Surfaced a Phase 2 IND at a customer; market ~120 accounts'],
+    ['Verdigris', 'Electrical sensing for data centres', 'Left Salesforce; MEDDPICC hygiene', 'MEDDPICC gaps from 2,330 closed deals', '~10,000 contacts and a 211-field object migrated; daily deal scoring'],
+    ['Intent HQ', 'Customer intelligence, 18+ month cycles', 'Forecasting and deal reviews', 'Time in stage, conversation fields', 'No outcome figure after 7 months'],
+    ['Macroscope', 'AI code review', 'Every touchpoint into CRM; agents qualify inbound', 'Site visitors, GitHub installs, trust-centre requests', '50-step Zapier flow rebuilt in under a day; 30 automations'],
+    ['Thrad', 'Ad tech', 'Post-call onboarding; 9pm call briefs', 'Call content; LinkedIn integration', '~55 calls a week through the flow; hours saved per call'],
+    ['SF Compute', 'GPU clusters', 'Demand captured from calls', 'GPU type, count, start date from calls', 'No figures'],
+    ['Agree', 'Contracting and payments', 'Pipeline run by chat', 'Conversation-derived deal fields', '"Multiple hours per week" saved'],
+  ] },
+  Warmly: { url: 'https://www.warmly.ai/p/customers/reviews', rows: [
+    ['Kargo', 'Warehouse tech', 'Chat plus orchestrator', 'Visits driven by LinkedIn posts', '62 of 206 meetings in a month; warm calls ~40% vs cold 1%'],
+    ['Continu', 'Enablement, ~30 staff', 'Visitor ID, AI chat, Salesforce sync', 'Pricing and demo page visits, chat', '8x pipeline ROI, 3.5x revenue ROI in under a year'],
+    ['Behavioral Signals', 'AI software, 30', 'Visitor ID and chat', 'Tracked links in emails', 'Nearly $7M pipeline; nearly $2M in first month'],
+    ['Conversion', 'CRO SaaS, 41', 'Visitor ID, inbound and nurture agents', 'Website intent', '$1M+ ARR sourced; 12% higher close rate'],
+    ['The D2D Experts', 'Sales training, 15 in sales', 'AI chat, AI email, warm calls', 'Visits, CRM contact on site', '$80K revenue in 12 days; answer rate 5 to 10% up to 30 to 40%'],
+    ['TeamWeave', 'Construction SaaS', 'Five-signal funnel into HubSpot', 'Visits, Bombora, ICP hiring, social engagers', 'Pipeline up 80%+ (period not stated)'],
+    ['TotalSDS', 'Safety software', 'AE self-sourcing', 'Page visits, champion\'s colleagues visiting', 'Pipeline up 60%+ in one quarter'],
+    ['Innerspace', 'Indoor location, 30', 'Replace SDR agency', 'Engagers with competitor and competitor-rep posts', 'Removed $20K to $40K a month of SDR spend'],
+    ['Arc', 'Startup banking, 150', 'Visitor ID into Outreach', 'Landing pages', 'Breakeven in 90 days; 200% ROI by month 6'],
+    ['Namecoach', 'HR tech, 50', 'Placed SDR plus AI chat', 'Visitor ID, intent', '28 qualified meetings in 60 days'],
+    ['Bigeye', 'Data observability', 'Chat plus AI prospector', 'Enterprise account visits', '$230K pipeline; second-best channel after phone'],
+    ['Caddis Systems', 'Enterprise software, 75', 'Chat tied to ad landing pages', 'Landing and support page visits', '2 to 3 leads in week 1 vs 1 to 2 a month'],
+    ['Pump', 'Cloud cost, 75', 'Visitor ID, live video chat', 'Visit by a prior outreach contact', '$20K deal in the first week'],
+    ['Kandji', 'Device management, 300', 'AI chat with human takeover', 'Company identified on site', '2 qualified meetings in 8 minutes'],
+    ['Others (30)', 'Mostly small B2B software firms', 'Visitor ID, chat, alerts', 'Visits, pages, UTMs', 'Many stories carry one deal or no figure at all'],
+  ] },
+};
+const tabs = Object.keys(STORIES);
+let curTab = 'Unify';
+function renderStories() {
+  $('storyTabs').innerHTML = tabs.map(t => `<button class="tab" role="tab" aria-selected="${t === curTab}" data-t="${t}">${t} <span class="num muted">${STORIES[t].rows.length}</span></button>`).join('');
+  const s = STORIES[curTab];
+  $('storyTable').innerHTML = `<table><thead><tr><th>Customer</th><th>Profile</th><th>What they used it for</th><th>Signals used</th><th>Result claimed</th></tr></thead><tbody>${
+    s.rows.map(r => `<tr><td class="co">${esc(r[0])}</td><td>${esc(r[1])}</td><td>${esc(r[2])}</td><td>${esc(r[3])}</td><td class="metric">${esc(r[4])}</td></tr>`).join('')
+  }</tbody></table>`;
+  document.querySelectorAll('#storyTabs .tab').forEach(b => b.addEventListener('click', () => { curTab = b.dataset.t; renderStories(); }));
+}
+renderStories();
+
+const SPAT = [
+  ['Speed of response does the work', 'The most repeated mechanism is acting within minutes of a signal, not having more data: Kargo, D2D Experts, Kandji, Subskribe.'],
+  ['Website intent alone is weak', '13 of 16 Unify stories use site visits, but the biggest results pair them with product usage or a narrow researched play. Unify now requires a second signal before a website-visitor play runs.'],
+  ['People changes recur', 'New hires in the buying team, champion job changes and new leaders appear in Guru, CandorIQ, Navattic, Anrok and Pylon. Closed-lost re-engagement appears in four Unify stories.'],
+  ['Bespoke public signals win', 'Power watches clinical-trial registrations, Axon 911 watches legislation and local posts, WSP watches weather incidents. For industrial buyers the equivalents are plant announcements, permits, tenders and capex filings.'],
+  ['Results are front-loaded and short', 'First play live in hours to three days, first pipeline in 10 days to a month, headline results at three to seven months. Several stories give no timeframe.'],
+  ['Time saved and tools cut are the safest claims', 'Rox (80% of the day, 12 to 5 tools), Warmly ($20K to $40K a month of SDR spend), Lightfield (Zapier rebuilt in a day). Pipeline claims mix "influenced", "attributed" and "direct".'],
+  ['Services sit behind big wins', 'Guru credits Unify\'s on-site team; Innovate Energy and Peridio credit a named strategist; Rox and Lightfield send forward-deployed teams. Part of every result is service.'],
+  ['Almost none are industrial', 'Most customers are venture-backed US software firms with 20 to 250 staff. Only Innovate Energy, Peridio, Verdigris, WSP and Puma Energy sit near our world.'],
+];
+$('storyPatterns').innerHTML = SPAT.map(p => `<div class="pat"><b>${esc(p[0])}</b><p>${esc(p[1])}</p></div>`).join('');
+
+/* ---------- 03 Signals ---------- */
+// [category, signal, what it tells you, intent (vendor rating), who offers it, fit for Demand AI]
+const SIG = [
+  ['Already in Demand AI', 'Inquiry or RFQ', 'They asked for a quote or a conversation', 'High', 'Demand AI; Nooks (5-minute speed to lead), Unify', 'High'],
+  ['Already in Demand AI', 'Installed system near end of support', 'A replacement decision is coming on a known date', 'High', 'Demand AI only', 'High'],
+  ['Already in Demand AI', 'Service contract renewal', 'Our own contract is up; risk and upsell window', 'Medium', 'Demand AI only', 'High'],
+  ['Already in Demand AI', 'Capital project', 'Budget and a design decision are being set', 'High', 'Demand AI; kōdlo (tenders), Lightfield customer Power (registrations)', 'High'],
+  ['Already in Demand AI', 'Leadership change', 'New leaders review suppliers early', 'Medium', 'Demand AI; Nooks, Unify, Lightfield, Common Room', 'High'],
+  ['Already in Demand AI', 'Webinar, content download, email click', 'They engaged with our expertise', 'Low to Medium', 'Demand AI; Nooks, Common Room, Unify', 'Medium'],
+
+  ['Competitor and contract', 'Upcoming renewal with a competitor', 'Their contract with a rival ends soon, so a switch window opens', 'Medium (Common Room)', 'Nooks (from call recordings), Common Room', 'High'],
+  ['Competitor and contract', 'Uses a competitor, with first-seen date', 'They already buy the category; how long they have had it', 'Not rated', 'Nooks, Unify (BuiltWith, TheirStack), Common Room', 'High'],
+  ['Competitor and contract', 'Competitor closure, acquisition or product end', 'Rival customers are forced to re-evaluate', 'High (Common Room)', 'Common Room', 'High'],
+  ['Competitor and contract', 'Closed-lost with a change that touches the loss reason', 'The reason they said no may be gone', 'Not rated', 'Unify, Nooks (Closed Lost Intel), Nex', 'High'],
+  ['Competitor and contract', 'Engaged with competitor posts', 'Researching the category in public', 'Not rated', 'Warmly (Innerspace), Unify', 'Medium'],
+  ['Competitor and contract', 'Competitor comparison or review research (G2)', 'Actively evaluating options', 'Not rated', 'Unify, Warmly, HubSpot', 'Low'],
+
+  ['People and relationships', 'Champion or customer job change', 'A past buyer can open a new account', 'High (Common Room)', 'Common Room, Nooks, Unify, Lightfield, Warmly', 'High'],
+  ['People and relationships', 'New leader in a buying role, with start date', 'First 90 days are when suppliers get reviewed', 'Low (Common Room)', 'Nooks, Unify, Lightfield, Common Room', 'High'],
+  ['People and relationships', 'Warm path: mutual LinkedIn connections', 'Someone on our team can make the introduction', 'Low (Common Room "shared connections")', 'Lightfield (team graph), Unify (The Swarm), Common Room', 'High'],
+  ['People and relationships', 'Several stakeholders engaging at once', 'A buying committee is forming', 'High (Warmly)', 'Warmly, Common Room (committee map), Nooks', 'High'],
+  ['People and relationships', 'Ideal persona recently hired', 'The team around our problem is growing', 'Low (Common Room)', 'Common Room, Unify', 'Medium'],
+  ['People and relationships', 'Shared investor or advisor', 'A credible route to an introduction', 'Low (Common Room)', 'Common Room, Lightfield, Monaco (common investors)', 'Low'],
+  ['People and relationships', 'Promotion or professional milestone', 'A light personal reason to get in touch', 'Low (Common Room)', 'Common Room', 'Low'],
+
+  ['Company events', 'Hiring for the team we sell to (operations, engineering)', 'They are investing in the area we serve', 'Medium (Warmly)', 'Nooks (Hiring Ops), Unify, Lightfield, Seam', 'High'],
+  ['Company events', 'New site, plant or regional expansion', 'New capacity needs equipment and systems', 'Low (Common Room); strong per Unify\'s manufacturing notes', 'Nooks (Announced Expansion), Unify, Common Room', 'High'],
+  ['Company events', 'Regulation or legislation change', 'A compliance deadline forces action', 'High (Common Room)', 'Common Room, Rox (Axon 911), Unify', 'High'],
+  ['Company events', 'Annual report or earnings call priorities', 'Stated capex plans and priorities', 'Low (Common Room)', 'Common Room, Rox (10-K research)', 'High'],
+  ['Company events', 'Public registrations: tenders, permits, patents, trials', 'A concrete project with dates and scope', 'Not rated', 'kōdlo (tenders, patents), Lightfield customer Power', 'High'],
+  ['Company events', 'Merger or acquisition', 'Systems and suppliers get consolidated', 'Low (Common Room)', 'Nooks, Common Room', 'Medium'],
+  ['Company events', 'Headcount jump (20%+)', 'Growth creates new needs', 'Not rated', 'Nooks, Lightfield', 'Medium'],
+  ['Company events', 'Public problem mentions (job ads, forums, reviews)', 'They describe our problem in their own words', 'Not rated', 'Unify (Infinity Signal)', 'Medium'],
+  ['Company events', 'Local news, community posts, incidents', 'An event that creates an immediate need', 'Not rated', 'Rox (Axon 911, WSP)', 'Medium'],
+  ['Company events', 'Funding round', 'Budget is available', 'Low (Common Room); weak for manufacturing per Unify', 'Nooks, Unify, Lightfield, Monaco, Rox', 'Low'],
+  ['Company events', 'Partnership or product launch', 'New priorities that may need support', 'Low (Common Room)', 'Nooks, Unify', 'Low'],
+  ['Company events', 'Layoffs', 'Budget pressure; possible supplier consolidation', 'Low (Common Room)', 'Common Room', 'Low'],
+
+  ['Technology', 'Tech stack change or tool removal', 'A replacement window is open', 'Medium (Common Room "adjacency")', 'Lightfield, Unify, Common Room', 'Medium'],
+  ['Technology', 'Outgrowing the current setup', 'Strain shows before they go to market', 'Not rated', 'Unify', 'Medium'],
+  ['Technology', 'Uses an integration we support', 'Easier fit with what they run', 'Not rated', 'Nooks', 'Low'],
+
+  ['Website and first-party', 'Pricing or quote page visits', 'Weighing cost', 'High (Common Room, Warmly)', 'Common Room, Warmly, Unify, Nooks', 'Medium'],
+  ['Website and first-party', 'Return visit in the same week', 'Sustained, not casual, interest', 'High (Warmly)', 'Warmly, Nooks (3+ visits a week)', 'Medium'],
+  ['Website and first-party', 'Docs, security or integration page visits', 'A technical evaluation is under way', 'Medium (Common Room)', 'Common Room, Unify', 'Medium'],
+  ['Website and first-party', 'Event or trade-show attendance (Q&A, booth demo vs badge scan)', 'Engaged in person; a demo beats a scan', 'Low (Common Room)', 'Unify, Nooks, Common Room', 'High'],
+  ['Website and first-party', 'Campaign click-through (UTM)', 'Responding to a specific campaign', 'Not rated', 'Unify, Warmly', 'Medium'],
+  ['Website and first-party', 'Champion\'s colleagues visiting', 'The champion is sharing us internally', 'Not rated', 'Warmly (TotalSDS)', 'Medium'],
+  ['Website and first-party', 'Form or chat abandoned', 'They nearly reached out', 'Medium (Common Room)', 'Common Room, Warmly', 'Low'],
+
+  ['Third-party intent', 'Topic research surge (co-op intent)', 'Reading about the category more than usual', 'Medium (Warmly, for Bombora)', 'Bombora, 6sense, HubSpot (200,000+ site co-op), Warmly', 'Low'],
+  ['Third-party intent', 'Category or comparison research (G2, 6sense, Demandbase)', 'In an active evaluation', 'Not rated', 'Unify, 6sense', 'Low'],
+
+  ['Social and LinkedIn', 'Engagement with our company page', 'Following what we publish', 'Not rated', 'Common Room (automatic), Warmly', 'Medium'],
+  ['Social and LinkedIn', 'Engagement with relevant posts', 'Interested in the topic', 'Medium (Common Room)', 'Common Room, Warmly', 'Medium'],
+  ['Social and LinkedIn', 'Follows a competitor', 'Watching our rivals', 'Medium (Common Room)', 'Common Room', 'Medium'],
+  ['Social and LinkedIn', 'LinkedIn profile view', 'Checking us out', 'Low (Common Room)', 'Common Room, Warmly', 'Low'],
+  ['Social and LinkedIn', 'Podcast, keynote or panel appearance', 'Public statement of priorities', 'Low (Common Room)', 'Common Room', 'Low'],
+
+  ['Conversation and CRM', 'Contract end date mentioned on a call', 'Exact timing for the next approach', 'Not rated', 'Nooks', 'High'],
+  ['Conversation and CRM', 'Requested follow-up on a date ("call me in March")', 'They agreed to a future conversation', 'Not rated', 'Nooks, Unify (bad-timing replies with date)', 'High'],
+  ['Conversation and CRM', 'Reply type (bad timing, left job, positive, opt-out)', 'What to do next with this person', 'Not rated', 'Unify, Conversica (six statuses)', 'High'],
+  ['Conversation and CRM', 'Stale deal waking up', 'A dormant opportunity is back', 'Medium (Common Room)', 'Common Room, Unify, Monaco, Nex', 'High'],
+  ['Conversation and CRM', 'Economic buyer active', 'The decision maker is engaged', 'High (Common Room)', 'Common Room', 'High'],
+  ['Conversation and CRM', 'Budget or timing mentioned in notes', 'Qualification evidence', 'Not rated', 'HubSpot (two-day cool-off), Monaco', 'High'],
+  ['Conversation and CRM', 'Repeat email opens (3+ in 30 days)', 'Interest without a reply', 'High (Common Room "surge in opens")', 'Unify, Common Room', 'Medium'],
+  ['Conversation and CRM', 'Timing objection or demo no-show', 'Re-engage later with a reason', 'Not rated', 'Nooks', 'Medium'],
+
+  ['Product usage', 'Sign-ups, usage surges, paywall or seat limits', 'Product-led buyers ready to talk', 'High (Common Room)', 'Unify, Common Room, Lightfield customers', 'Low'],
+];
+const CATS = ['All', ...Array.from(new Set(SIG.map(s => s[0])))];
+let sigCat = 'All', sigQ = '';
+const fitChip = f => `<span class="chip ${f === 'High' ? 'g' : f === 'Medium' ? 'a' : ''}">${f}</span>`;
+function renderSignals() {
+  $('sigFilters').innerHTML = CATS.map(c => `<button class="fbtn" aria-pressed="${c === sigCat}" data-c="${esc(c)}">${esc(c)}</button>`).join('');
+  document.querySelectorAll('#sigFilters .fbtn').forEach(b => b.addEventListener('click', () => { sigCat = b.dataset.c; renderSignals(); }));
+  const q = sigQ.toLowerCase();
+  const rows = SIG.filter(s => (sigCat === 'All' || s[0] === sigCat) && (!q || s.join(' ').toLowerCase().includes(q)));
+  let html = '<thead><tr><th>Signal</th><th>What it tells you</th><th>Intent (vendor rating)</th><th>Who offers it</th><th>Fit for Demand AI <span class="chip b">inference</span></th></tr></thead><tbody>';
+  let last = '';
+  rows.forEach(s => {
+    if (s[0] !== last) { html += `<tr class="group"><td colspan="5">${esc(s[0])}</td></tr>`; last = s[0]; }
+    html += `<tr class="${s[0] === 'Already in Demand AI' ? 'ours' : ''}"><td class="co" style="white-space:normal">${esc(s[1])}</td><td>${esc(s[2])}</td><td class="small">${esc(s[3])}</td><td class="small">${esc(s[4])}</td><td>${fitChip(s[5])}</td></tr>`;
+  });
+  $('sigTable').innerHTML = html + '</tbody>';
+  $('sigCount').textContent = `${rows.length} of ${SIG.length} signals`;
+}
+$('sigSearch').addEventListener('input', e => { sigQ = e.target.value; renderSignals(); });
+renderSignals();
+
+/* ---------- 04 Funding ---------- */
+// [company, disclosed $M, status, note]
+const FUND = [
+  ['Common Room', 105, 'acq', 'Zoom deal agreed July 2026'],
+  ['Monaco', 85, 'win', 'Benchmark-led $50M B, May 2026'],
+  ['Reevo', 80, 'win', '~$500M valuation (third-party)'],
+  ['Nooks', 70, 'win', 'Kleiner-led $43M B, 2024'],
+  ['Unify', 58.6, 'win', 'Battery-led $40M B, July 2025'],
+  ['Rox', 50, 'win', 'plus undisclosed round; ~$1.2B valuation reported'],
+  ['Lightfield', 47, 'win', 'a16z-led Series A, Sept 2026'],
+  ['Aurasell', 30, 'mid', '$30M seed; $6M+ ARR (vendor)'],
+  ['Clarify', 22.5, 'mid', 'plus undisclosed; bought Seam AI'],
+  ['Warmly', 17, 'acq', 'HubSpot deal agreed June 2026'],
+  ['AiSDR', 3, 'thin', 'YC seed'],
+  ['nRev', 1, 'thin', 'Antler pre-seed'],
+  ['Leadsforge', 0.5, 'thin', 'claims $3M ARR and profitable'],
+  ['Nex AI', 0, 'thin', 'YC S26, amount not published'],
+  ['kōdlo', 0, 'thin', 'no funding; "almost no users"'],
+];
+(function drawFund() {
+  const W = 760, rowH = 26, top = 24, left = 110, right = 250, H = top + FUND.length * rowH + 28;
+  const max = 120, sx = v => left + (v / max) * (W - left - right);
+  const col = s => s === 'win' ? 'var(--accent)' : s === 'acq' ? 'var(--amber)' : s === 'mid' ? 'var(--blue)' : 'var(--ink-3)';
+  let svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Disclosed funding in US dollars millions">`;
+  [0, 25, 50, 75, 100].forEach(t => { svg += `<line class="grid" x1="${sx(t)}" x2="${sx(t)}" y1="${top - 6}" y2="${H - 22}"/><text x="${sx(t)}" y="${H - 8}" text-anchor="middle">$${t}M</text>`; });
+  FUND.forEach((f, i) => {
+    const y = top + i * rowH;
+    svg += `<text class="lab" x="${left - 10}" y="${y + 14}" text-anchor="end">${esc(f[0])}</text>`;
+    const w = Math.max(f[1] > 0 ? 2 : 0, sx(f[1]) - left);
+    svg += `<rect x="${left}" y="${y + 3}" width="${w}" height="16" rx="2" fill="${col(f[2])}"/>`;
+    svg += `<text x="${left + w + 8}" y="${y + 15}">${f[1] ? '$' + f[1] + 'M' : 'n/a'} · ${esc(f[3])}</text>`;
+  });
+  svg += `</svg>`;
+  $('fundChart').innerHTML = svg + `<div class="legend" style="padding:6px 0 8px"><span><span class="chip g">growing, top group</span></span><span><span class="chip b">mid</span></span><span><span class="chip a">acquired</span></span><span><span class="chip">thinly funded</span></span><span>Disclosed amounts only. Lightfield excludes capital raised as Tome; Rox excludes its later round of undisclosed size.</span></div>`;
+})();
+
+const RANK = [
+  ['1', 'Rox', 'Sequoia, General Catalyst, GV', 'About $8M ARR projected end 2025 (third-party, unconfirmed); 35+ enterprise teams in beta; Gartner Magic Quadrant 2026', 'Enterprise account-based selling on the warehouse; agent per account'],
+  ['2', 'Monaco', 'Founders Fund, Benchmark', 'Seven figures of ARR added after a February 2026 launch (CEO); hundreds of customers', 'Day-one TAM, autopilot outbound, self-updating CRM, bundled AE'],
+  ['3', 'Reevo', 'Khosla, Kleiner Perkins', '"4x growth" (vendor, no baseline); 100+ staff; bought Ciro', 'One platform for marketing, sales and success; ranked overnight feed'],
+  ['4', 'Nooks', 'Kleiner Perkins, Lachy Groom', 'Revenue 4x year on year (investor, 2024); ~2,000 customers (vendor); 200+ staff', 'Dialer habit first, then signals and agents; call data feedback loop'],
+  ['5', 'Lightfield', 'a16z (Series A)', '5,000+ sign-ups; ~3,000 customers (third-party); 400% net dollar retention (founder)', 'CRM that builds itself from conversations; warm paths'],
+  ['6', 'Unify', 'Battery, OpenAI Startup Fund, Thrive', '8x revenue year on year (vendor, 2025); 16 case studies', 'Signal-triggered plays with a data marketplace'],
+  ['7', 'Aurasell', 'N47, Menlo, Unusual', '$6M+ ARR, 50+ customers (vendor)', 'AI-native CRM or overlay; readable scoring rules'],
+  ['8', 'Clarify', 'USVP, Gradient, Madrona', '100+ pilot teams, 70% weekly engagement (investor); bought Seam', 'Self-building CRM plus signal plays'],
+];
+$('rankTable').innerHTML = `<thead><tr><th>Rank</th><th>Company</th><th>Backed by</th><th>Growth evidence</th><th>What they built</th></tr></thead><tbody>${
+  RANK.map(r => `<tr><td class="num">${r[0]}</td><td class="co">${esc(r[1])}</td><td class="small">${esc(r[2])}</td><td class="small">${esc(r[3])}</td><td class="small">${esc(r[4])}</td></tr>`).join('')
+}<tr><td colspan="5" class="small muted">Ranked on capital and investor quality first, then on how hard the growth evidence is (investor or press figures above vendor claims). Common Room and Warmly were acquired; Conversica was recapitalised by private equity; AiSDR, nRev, Nex and kōdlo are thinly funded. Leadsforge is the capital-light outlier: about $500K raised and a claimed $3M ARR.</td></tr></tbody>`;
+
+const IQ = [
+  ['"In a world where context is the rate limiter, Lightfield delivers a compounding context moat."', 'a16z on Lightfield, Sept 2026', 'https://a16z.com/announcement/investing-in-lightfield/'],
+  ['"Laser focus on serious enterprise sellers doing account-based selling. This isn\'t a tool for small sales teams."', 'Sequoia on Rox, Nov 2024', 'https://sequoiacap.com/article/partnering-with-rox-every-seller-needs-an-agent-swarm'],
+  ['"Success will come not from sending more messages... the right message to the right person at the right time."', 'Battery on Unify, July 2025', 'https://www.battery.com/blog/outbound-is-broken-and-why-were-excited-about-unifying-the-sales-workflow/'],
+  ['"80% of customers see productivity double in the first two weeks of using Nooks."', 'Kleiner Perkins on Nooks, Oct 2024', 'https://www.kleinerperkins.com/perspectives/nooks-bringing-ai-to-sales-in-a-human-centric-way/'],
+  ['"What was once a system of record has become a system of friction."', 'Kleiner Perkins on Reevo, Nov 2025', 'https://www.kleinerperkins.com/perspectives/reevo-the-intelligent-revenue-operating-system/'],
+  ['"When things work, they tend to work swiftly."', 'Benchmark (Jack Altman) on Monaco, May 2026, via Business Insider', 'https://benzatine.com/news-room/ai-sales-startup-monaco-secures-50-million-boost-amid-rapid-growth'],
+];
+$('investorQuotes').innerHTML = IQ.map(q => `<div class="iq"><p class="quote">${esc(q[0])}</p><span class="who">${link(q[2], q[1])}</span></div>`).join('');
+
+const FPAT = [
+  ['They own the record, built from captured activity', 'Lightfield, Reevo, Monaco, Clarify and Aurasell build the CRM from email, calendar and calls; Rox sits on the warehouse. Tools that fed someone else\'s CRM (Warmly, Common Room) were bought by the CRM and platform owners.'],
+  ['Consolidation is the headline promise', 'Reevo "four or five tools", Aurasell "15+ tools", Lightfield "one bill instead of six", Monaco replaces the CRM and point tools. Battery: "Sales teams want consolidation."'],
+  ['Founders who ran sales or growth', 'Monaco (ex-Brex CRO), Rox (ex-New Relic growth), Reevo (DoorDash operators), Unify (Ramp growth), Aurasell (ex-Harness CRO). Every investor post leads on it.'],
+  ['Timed and warm, not volume', 'Unify, Rox, Nooks and Clarify (which bought Seam for signals) sell timing. Volume tools priced per contact or per email (AiSDR, Leadsforge) are thinly funded.'],
+  ['Visible value in days', 'Nooks productivity doubles in two weeks (investor), Monaco "impact within days", Lightfield "builds itself in minutes". Investors quote speed to value more than long-run ROI.'],
+  ['Agents draft, people approve', 'Reevo, Nooks, Rox and Lightfield keep reps in the loop. Fully autonomous AI SDR pitches raised far less.'],
+  ['Priced on work done, not seats', 'Monaco (no seats), Rox (agent actions), Lightfield (workspace plus credits), Clarify (unlimited seats). a16z names it as a reason to invest.'],
+  ['Software plus people', 'Monaco bundles an AE, Lightfield a GTM engineer, Rox and Reevo hire forward-deployed engineers. Early results are partly service-delivered.'],
+  ['Going after headcount budgets', 'Battery: agents capture "headcount budgets". Monaco: "a 3-person team running GTM like a 20-person sales org". Unify: Perplexity "without a single BDR".'],
+  ['Narrow wedges got bought', 'Single-signal tools (Warmly: site visitors; Common Room: community) and single-motion tools (Conversica: lead follow-up) sold or were recapitalised.'],
+];
+$('fundPatterns').innerHTML = FPAT.map(p => `<div class="pat"><b>${esc(p[0])}</b><p>${esc(p[1])}</p></div>`).join('');
+
+/* ---------- 05 Pricing ---------- */
+$('bands').innerHTML = [
+  ['Free', 'Free tiers', 'Unify, kōdlo, Apollo, Leadsforge (100 credits), nRev (2,500 credits)'],
+  ['$20 to $100 / month', 'Self-serve entry', 'Unify $20 a seat, HubSpot $20 a seat, Apollo $49, Leadsforge $49, kōdlo $49, Nex $49, Rox $100'],
+  ['$1,000 to $2,500 / month', 'Mid-market platforms', 'Lightfield $999 to $1,999, nRev $999 to $2,499, AiSDR managed $2,500, Conversica ~$2,999 (third-party)'],
+  ['$10K to $30K+ / year', 'Enterprise and data', 'Monaco $10K upfront, Warmly ~$10K, Aurasell ~$20K, Nooks ~$26K median, Common Room ~$27K to $30K, Bombora ~$30K (most third-party)'],
+].map(b => `<div class="band"><span class="eyebrow">${esc(b[1])}</span><span class="p">${esc(b[0])}</span><p>${esc(b[2])}</p></div>`).join('');
+
+// [company, group, promise, figure, evidence, pricing model, price points, outcome-priced]
+const PRICE = [
+  ['Rox', 'AI-native', 'Seller time, pipeline', '"Saved you 80% of your day" (Upwind); 5+ hour weekly task to 10 minutes', 'Customer quotes; editable in-product value report', 'Agent actions', '$100 / month (10,000 actions); Teams $255; Enterprise custom', 'Partly'],
+  ['Monaco', 'AI-native', 'Revenue growth, reply rates', 'Re-engagement runs sustain 20 to 40% response rates', 'Vendor claim; testimonials', 'Credits, no seats', '$10,000 upfront for 1M credits (~3 months), then usage; AE included', 'No'],
+  ['Reevo', 'AI-native', 'Rep time, tool count', '"Every rep a day back each week"; replaces 4 to 5 tools', 'Vendor claim', 'Quote only', 'Not published', 'No'],
+  ['Nooks', 'AI-native', 'Meetings, replies, ramp', '3x meetings; 2x replies; 50% faster ramp; 10 hours a rep a week', 'Vendor claims, named case studies', 'Per seat, quote', 'Not published; ~$26K median contract (third-party)', 'No'],
+  ['Lightfield', 'AI-native', 'Tool spend, CRM admin', '"One bill instead of six"', 'Customer quotes, no percentages', 'Per user, then workspace plus credits', '$89 a user (Starter); $999 and $1,999 a workspace / month', 'No'],
+  ['Unify', 'AI-native', 'List time, replies, pipeline', '90% faster lists; 2.5x replies; Perplexity $1.7M pipeline in 3 months', 'Vendor research and case studies', 'Seats plus credits', 'Free; $20 and $60 a seat / month; Business custom', 'No'],
+  ['Aurasell', 'AI-native', 'Close rate, cycle time', '12.3% close-rate lift (TCI); ~50% faster cycles (Accsense)', 'Named customer cards', 'Annual contract', '~$20,000 a year (third-party)', 'No'],
+  ['Clarify', 'AI-native', 'Admin, tool spend, pipeline', '"98% less CRM data entry"; $50K+ tools cut; +35% qualified pipeline (Seam)', 'Vendor case studies', 'Unlimited seats, credits', 'AI field 3 credits (30 with research), charged only on success', 'Partly'],
+  ['Common Room', 'AI-native', 'Pipeline, meetings per rep', 'Semgrep +74% pipeline in a quarter; Notion +30% meetings a rep', 'Vendor metrics page', 'Annual seats, contacts, credits', '~$1,700 to $2,500 / month (third-party)', 'No'],
+  ['Warmly', 'AI-native', 'Pipeline from anonymous traffic', '"97% of visitors leave without a form"; WorkBoard +20% pipeline', 'Vendor quotes', 'Annual, quote only', '~$10,000 a year entry (third-party)', 'No'],
+  ['Conversica', 'AI-native', 'Pipeline, ROI', '"10-fold" pipeline; 24x ROI; Epson +75% MQLs', 'Vendor claims via third parties', 'Quote only', '~$2,999 / month (third-party)', 'No'],
+  ['AiSDR', 'AI-native', 'Meetings per lead', '1 to 3 meetings per 100 leads; Medisafe 29 meetings in 30 days', 'Vendor claims; public experiments', 'Per person contacted', '$1.50 a person; $149 managed campaign; $2,500 / month fully managed', 'No'],
+  ['Leadsforge', 'AI-native', 'Data accuracy and speed', 'Verified contacts "in seconds"; 500M+ contacts', 'Vendor claims', 'Credits on verified match only', '$49 / month (2,000 credits); Agent Frank $499 / month', 'Partly'],
+  ['nRev', 'AI-native', 'Qualified leads a week', 'Mindtickle ~400 qualified leads a week', 'Vendor case studies', 'Credits plus human hours', '$149 to $2,499 / month', 'No'],
+  ['Nex AI', 'AI-native', 'Stack cost per agent', '$200 to $500 a month saved per agent', 'Illustrative estimates', 'Subscription plus usage', '$49 / month plus usage', 'Unconfirmed'],
+  ['kōdlo', 'AI-native', 'Research time', 'An hour of research per company down to minutes', 'Vendor claim', 'Per seat', 'Free; $49; $199 (3 seats)', 'No'],
+  ['Apollo.io', 'Incumbent', 'Meetings, cold-to-meeting rate', '2.37% cold-to-meeting vs 0.5 to 1.5%; 2.3x meetings (beta)', 'Commissioned test', 'Seats plus credits, freemium', 'Free; $49 to $119 a seat / month', 'No'],
+  ['ZoomInfo', 'Incumbent', 'ROI, play launch time', '316% ROI; plays "3 weeks now 30 minutes"', 'Commissioned study; own benchmark', 'Moving to credits', 'Not published', 'No'],
+  ['Salesforce Agentforce', 'Incumbent', 'Pipeline from untouched leads', '130,000 leads, 3,200 opportunities in 4 months (own team); Perk 60% of pipeline', 'Vendor claims', 'Per user plus Flex Credits', 'Add-on from $125 a user / month; ~$0.10 an action', 'No'],
+  ['6sense', 'Incumbent', 'Deal value', '29% higher opportunity value, 33% larger deals on qualified accounts', 'Vendor-measured counterfactual', 'Quote-based licence', 'Not published', 'No'],
+  ['Bombora', 'Incumbent', 'Campaign timing', 'Click-through +28%, traffic +40% (partner)', 'Partner figures', 'Annual data licence', '~$30,000 a year (third-party)', 'No'],
+  ['Outreach', 'Incumbent', 'Replies, win rates', '15 to 20% higher replies; 26% higher win rates; 244% ROI', 'Vendor claims; commissioned study', 'Seats plus AI credits', 'Not published', 'No'],
+  ['Salesloft', 'Incumbent', 'Admin time, conversion', '50% less admin, 50% higher conversion; Rhythm +23% meetings', 'Commissioned studies', 'Per seat, quote', '~$125 to $200 a user / month (third-party)', 'No'],
+  ['HubSpot Sales Hub', 'Incumbent', 'Qualified leads, meetings', '76% more qualified leads; 80% more meetings; own team 10x meetings', 'Vendor claims; dogfooding post', 'Seats plus credits', '$20 to $150 a seat / month; $1 per lead the agent works', 'Partly'],
+];
+let priceGroup = 'All';
+function renderPrice() {
+  $('priceFilters').innerHTML = ['All', 'AI-native', 'Incumbent'].map(g => `<button class="fbtn" aria-pressed="${g === priceGroup}" data-g="${g}">${g}</button>`).join('');
+  document.querySelectorAll('#priceFilters .fbtn').forEach(b => b.addEventListener('click', () => { priceGroup = b.dataset.g; renderPrice(); }));
+  const ev = e => /commissioned/i.test(e) ? 'r' : /vendor|illustrative|quote/i.test(e) ? 'a' : 'b';
+  const op = o => o === 'Partly' ? 'g' : o === 'No' ? '' : 'a';
+  $('priceTable').innerHTML = `<thead><tr><th>Company</th><th>Promise</th><th>Headline figure</th><th>Evidence</th><th>Pricing model</th><th>Price</th><th>Outcome-priced</th></tr></thead><tbody>${
+    PRICE.filter(p => priceGroup === 'All' || p[1] === priceGroup).map(p => `<tr><td class="co">${esc(p[0])}<span class="sub">${esc(p[1])}</span></td><td>${esc(p[2])}</td><td class="metric">${esc(p[3])}</td><td><span class="chip ${ev(p[4])}">${esc(p[4])}</span></td><td class="small">${esc(p[5])}</td><td class="small">${esc(p[6])}</td><td><span class="chip ${op(p[7])}">${esc(p[7])}</span></td></tr>`).join('')
+  }</tbody>`;
+}
+renderPrice();
+
+const PPAT = [
+  ['No one charges per meeting or revenue', 'The closest are Leadsforge (pay only for a verified contact), Clarify (pay only for a successful AI field) and HubSpot ($1 per lead the agent works). Rox\'s footer disclaims guaranteed outcomes.'],
+  ['Startups meter work, not people', 'Monaco ($0.01 a credit, no seats), Rox (agent actions), Clarify (unlimited seats), Lightfield (pooled credits). Seat-only pricing survives at Nooks and kōdlo.'],
+  ['Incumbents are hybrid and moving to credits', 'Salesforce (~$0.10 an agent action), HubSpot ($10 per 1,000 credits), Outreach (tiers by credit allowance), ZoomInfo (data and AI credits).'],
+  ['People are bundled into higher tiers', 'Monaco\'s AE, Lightfield\'s GTM engineer, nRev\'s 5 to 20 human hours, AiSDR\'s managed service. Buyers pay for outcomes through service.'],
+  ['Spend caps are now a selling point', 'Hard caps and usage logs at Lightfield, Rox, Monaco and HubSpot (caps from 15 October 2026). Buyers worry about unpredictable agent bills.'],
+  ['Many leaders still hide prices', 'Reevo, Nooks, Aurasell, Warmly, Common Room, 6sense, Outreach and Salesloft publish no price list. Transparent pricing belongs to the self-serve players.'],
+];
+$('pricePatterns').innerHTML = PPAT.map(p => `<div class="pat"><b>${esc(p[0])}</b><p>${esc(p[1])}</p></div>`).join('');
+
+/* ---------- 06 Moves ---------- */
+const MOVES = [
+  ['Warm paths into every account', 'Prospecting · Campaign execution', 'Lightfield, Unify (The Swarm)', ['Connect the sales team\'s LinkedIn connections and score "connection strength" next to fit and timing.', 'Add a "warm intro" action to the NBA library and a mutual-connection step in sequences.']],
+  ['Competitor and contract timing', 'Lead scoring · NBA and NBC', 'Nooks, Common Room, Unify', ['Keep a competitor list; capture contract end dates and incumbent suppliers from call notes and the CRM.', 'Trigger a play ahead of a rival\'s renewal, the same way we already do for end of support and our own service renewals.']],
+  ['A published signal catalogue with person-level signals', 'Qualified lead identification · Lead scoring', 'Common Room, Nooks, Warmly', ['List every signal with its source, an intent rating and the reason it matters (the table above is a first draft).', 'Add champion job changes and company-page engagement; take personal LinkedIn activity as a rep-assisted input.']],
+  ['One simple flow on one screen', 'Whole product', 'Monaco, Reevo Foundation', ['Present six steps: target list, signals, sequences, capture, pipeline, next actions.', 'Target list ready on day one; a one-line "why" on every account and action; an overnight "what changed" feed.']],
+  ['Keep the NBA working at the meeting', 'Follow-up · Deal', 'Reevo Sell, Lightfield', ['Pre-meeting brief from signals and past conversations.', 'Cited highlights and next steps after the call, approved by the rep.']],
+  ['Stack signals and attribute meetings to them', 'Lead scoring · Follow-up', 'Unify', ['Score on the count and mix of distinct signals; require a second signal before acting on website intent.', 'Report meetings per 100 contacted by signal, with median days from signal to meeting.']],
+  ['A readable memory of what the team has learned', 'NBA and NBC', 'Monaco Memory, Warmly Context Graph', ['Store exclusions, lessons from losses and tone as editable notes injected into every recommendation.', 'Log signal, action, reason and outcome per account.']],
+  ['Learn from reviewer edits', 'Content creation', 'Rox', ['We already capture edits in For Review. Store each before-and-after pair.', 'Use the pairs first as examples for a draft checker, later to train a scorer.']],
+  ['Research with citations and a limits note', 'Prospecting · Content creation', 'kōdlo', ['Every research claim cites its source; gaps are stated, not filled.', 'Watch named accounts on a schedule and report what changed.']],
+  ['Prove results the way the best do', 'Deal', '6sense, Rox, Unify', ['A fixed period, a stated baseline and a comparison: prioritised accounts against the rest.', 'Show meetings and pipeline per 100 accounts, in the client\'s own CRM, with assumptions the client can edit.']],
+];
+$('moves').innerHTML = MOVES.map((m, i) => `
+  <div class="move">
+    <div><span class="eyebrow">${String(i + 1).padStart(2, '0')}</span><h3>${esc(m[0])}</h3></div>
+    <div><div class="lbl">Stage</div><p>${esc(m[1])}</p><div class="lbl" style="margin-top:8px">Learned from</div><p>${esc(m[2])}</p></div>
+    <div><div class="lbl">What we build</div><ul>${m[3].map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>
+  </div>`).join('');
+</script>
+
+</body>
+</html>
