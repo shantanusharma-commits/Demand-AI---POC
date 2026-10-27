@@ -15,7 +15,7 @@ import { DemandAISample } from '@/lib/demandai-sample-data';
 import { download } from '@/lib/download';
 import { avColor, initials, showToast } from '@/lib/ui';
 import { sx } from '@/lib/sx';
-import { CHECK_HELP, CHECK_SHORT, CHECKS, STEPS, type CheckKey, type StepResult } from '@/lib/prospecting/checks';
+import { CHECK_HELP, CHECK_SHORT, CHECKS, STEPS, namedRows, type CheckKey, type Finding, type StepResult } from '@/lib/prospecting/checks';
 import { EDIT_FIELDS, EDIT_REASONS, EDIT_SOURCES, PUT_BACK, TAKEN_OUT } from '@/lib/engine/corrections';
 import { ApiError, api, errorText, uploadFile, waitForJob, type JobState, type Wire } from '@/lib/client/api';
 import { useDebounced } from '@/lib/client/use-debounced';
@@ -215,7 +215,7 @@ export function ProspectingScreen({ aiClassify = false }: { aiClassify?: boolean
   const [q, setQ] = useState('');
   const dq = useDebounced(q.trim().toLowerCase());
   const [sel, setSel] = useState<Map<number, Contact>>(() => new Map());
-  const [unattached, setUnattached] = useState<Issue[]>([]);
+  const [unattached, setUnattached] = useState<Finding[]>([]);
   const [checks, setChecks] = useState<ChecksState | null>(null);
   // Column mapping (G-040): offered when the file lacks required template columns.
   const [mappings, setMappings] = useState<{ id: string; name: string }[]>([]);
@@ -345,7 +345,7 @@ export function ProspectingScreen({ aiClassify = false }: { aiClassify?: boolean
   useEffect(() => {
     if (!listId) return;
     let live = true;
-    api<{ issues: Issue[] }>(`/api/lists/${listId}/issues`).then(r => { if (live) setUnattached(r.issues); }).catch(() => { if (live) setUnattached([]); });
+    api<{ issues: Finding[] }>(`/api/lists/${listId}/issues`).then(r => { if (live) setUnattached(r.issues); }).catch(() => { if (live) setUnattached([]); });
     return () => { live = false; };
   }, [listId]);
   const visibleContacts = contacts.rows;
@@ -354,7 +354,7 @@ export function ProspectingScreen({ aiClassify = false }: { aiClassify?: boolean
   const corrLog = usePaged<Wire<CorrectionRow>, { summary: CorrectionSummary }>(corrBase && corrBase + query({ severity: corrF?.severity, reason: corrF?.reason, limit: PAGE }));
 
   /* ─── data quality: the check pane, its findings a page at a time from the server ─── */
-  const findings = usePaged<Issue>(pane && paneOpen ? `/api/lists/${pane.list.id}/issues?` + query({ check: pane.check, limit: 50 }) : null);
+  const findings = usePaged<Finding>(pane && paneOpen ? `/api/lists/${pane.list.id}/issues?` + query({ check: pane.check, limit: 50 }) : null);
   function openCheckPane(check: CheckKey, list?: ListDetail) {
     const l = list ?? pane?.list ?? run;
     if (!l) return;
@@ -516,8 +516,8 @@ export function ProspectingScreen({ aiClassify = false }: { aiClassify?: boolean
     const n = sel.size;
     return <>
       <div className="topbar">
-        <div className="topbar-l"><span className="tb-title">{r.status === 'saved' ? r.name : r.sourceFile}</span>
-          <span className="tb-badge badge-neutral">{r.sheet}</span></div>
+        <div className="topbar-l"><span className="tb-title" title={r.status === 'saved' ? r.name : r.sourceFile}>{r.status === 'saved' ? r.name : r.sourceFile}</span>
+          <span className="tb-badge badge-neutral" title={r.sheet}>{r.sheet}</span></div>
         <div className="topbar-r">
           <CopilotButton screen="prospecting" ctxRef={{ listId: r.id }} title={r.status === 'saved' ? r.name : r.sourceFile} />
           <button className="btn btn-sec btn-sm" onClick={() => renderStart('upload')}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>Upload a different file</button>
@@ -629,9 +629,9 @@ export function ProspectingScreen({ aiClassify = false }: { aiClassify?: boolean
         {n ? <a className="btn btn-ghost btn-sm" style={sx('text-decoration:none')} href={`/api/lists/${l.id}/issues.csv?` + query({ check: k })} download>↓ CSV</a> : null}</div>
       {n && total !== null && total < n ? <div style={sx('font-size:11.5px;color:var(--i3);margin-bottom:6px')}>{`You see the ${total} on your own rows and about the whole file.`}</div> : null}
       {!n ? <div className="dqp-ok">✓ Every row passed this check.</div> : rows === null ? <div style={sx('font-size:12px;color:var(--i3)')}>Loading…</div>
-        : rows.map((i, x) => <div key={x} className="dqp-i"><div className="dqp-ih"><b>{i.row === '—' ? 'Whole file' : 'Row ' + i.row}</b><span className="dqp-f">{i.field || ''}</span>{sevTag(i.severity)}</div>
-          <div className="dqp-t">{i.issue}</div><div className="dqp-o">{'What happens: ' + (i.outcome || '')}</div>{i.fix ? <div className="dqp-o">{'How to fix: ' + i.fix}</div> : null}
-          {editable && typeof i.row === 'number' ? <button className="btn btn-sec btn-sm" style={sx('margin-top:6px')} onClick={() => void openEdit(editRowOf(i))}>{`Edit row ${editRowOf(i)}`}</button> : null}</div>)}
+        : rows.map((i, x) => <div key={x} className="dqp-i"><div className="dqp-ih"><b>{i.row === '—' ? 'Whole file' : i.who ?? 'Row ' + i.row}</b>{i.who ? <span className="dqp-r">{'row ' + i.row}</span> : null}<span className="dqp-f">{i.field || ''}</span>{sevTag(i.severity)}</div>
+          <div className="dqp-t">{namedRows(i.issue, i.names ?? {})}</div><div className="dqp-o">{'What happens: ' + namedRows(i.outcome || '', i.names ?? {})}</div>{i.fix ? <div className="dqp-o">{'How to fix: ' + i.fix}</div> : null}
+          {editable && typeof i.row === 'number' ? <button className="btn btn-sec btn-sm" style={sx('margin-top:6px')} onClick={() => void openEdit(editRowOf(i))}>{i.who ? `Edit ${i.who}` : `Edit row ${editRowOf(i)}`}</button> : null}</div>)}
       {findings.next !== null ? <div style={sx('display:flex;justify-content:center;padding:6px')}><button className="btn btn-sec btn-sm" disabled={findings.busy} onClick={() => void findings.more()}>{`Show more (${(rows ?? []).length} of ${total ?? n} shown)`}</button></div> : null}
       <div className="dqp-b" style={sx('margin-top:14px')}><div className="dqp-k" style={sx('display:flex;justify-content:space-between;align-items:center')}>Validation report
         <a className="btn btn-ghost btn-sm" style={sx('text-decoration:none')} href={`/api/lists/${l.id}/report.csv`} download>↓ CSV</a></div>
@@ -714,7 +714,7 @@ export function ProspectingScreen({ aiClassify = false }: { aiClassify?: boolean
     return (
       <div className="panel" style={sx('margin-bottom:12px;border-color:var(--warn)')}><div className="panel-body" style={sx('font-size:12px;color:var(--i2);line-height:1.7')}>
         <b>{`${un.length} issue${un.length > 1 ? 's' : ''} not on any contact in the list`}</b> (rows not loaded, or about the whole file):
-        {' '}{un.map((i, k) => <div key={k}><b>{i.row === '—' ? 'File' : 'Row ' + i.row}</b>{` · ${i.field}: ${i.issue}. `}<span style={sx('color:var(--i3)')}>{`${i.outcome}. Fix: ${i.fix}`}</span></div>)}
+        {' '}{un.map((i, k) => <div key={k}><b>{i.row === '—' ? 'File' : i.who ? `${i.who} (row ${i.row})` : 'Row ' + i.row}</b>{` · ${i.field}: ${namedRows(i.issue, i.names ?? {})}. `}<span style={sx('color:var(--i3)')}>{`${namedRows(i.outcome, i.names ?? {})}. Fix: ${i.fix}`}</span></div>)}
       </div></div>
     );
   }

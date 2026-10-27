@@ -13,10 +13,16 @@ const Body = z.object({
   chip: z.boolean().default(false),
   /** The viewer's UTC offset in minutes (Date#getTimezoneOffset), so due dates match their screen. */
   offset: z.number().int().min(-900).max(900).default(0),
+  /** The saved chat to carry on; without it the question starts a new one, titled `title`. */
+  chatId: uuidField.optional(),
+  title: z.string().max(300).optional(),
+  /** The prospect or item picked on the screen, as the panel shows it. */
+  focusLabel: z.string().max(300).optional(),
 });
 
 // Copilot (G-013): a question about what is on the screen, answered from the data the person can see. Rule answers
-// first; a question they don't cover goes to the model when it is switched on. Never changes data; chats are not stored.
+// first; a question they don't cover goes to the model when it is switched on. Never changes data. The question and
+// its answer go into the person's saved chat, whose id comes back with the answer.
 export const POST = withApi<z.infer<typeof Body>>({ route: 'POST /api/copilot', auth: 'unit', permission: 'copilot.use', body: Body, maxBodyBytes: 256 * 1024, limit: LIMITS.copilot }, async ({ request, deps, tenant, role, body }) => {
   return askCopilot(deps.db, tenant!, { userId: tenant!.userId, role: role! }, body, request.signal);
 });

@@ -7,6 +7,7 @@ import { AiGateway } from '../lib/ai/gateway.ts';
 import { Aliases, answerCopilot, budget, toBlocks } from '../lib/ai/copilot.ts';
 import { bucketIn, dueIn, labelIn } from '../lib/copilot/due.ts';
 import * as C from '../lib/copilot/rules.ts';
+import { namedRows, rowsIn } from '../lib/prospecting/checks.ts';
 import * as R from '../lib/engine/review.ts';
 import { FakeModel, reply } from './helpers/fake-model.ts';
 
@@ -92,19 +93,85 @@ test('one item: why, fix, runner-up, confidence, account, contact and more from 
   assert.equal(C.itemAnswer(ITEM, 'tell me a joke'), null);
 });
 
-test('Prospecting and Scoring questions come from the list and the run', () => {
-  const L: C.ListFacts = { fileName: 'leads.xlsx', rowsRead: 10, clean: 70, accounts: 4, accountsPass: 3, contacts: 9, inFinalList: 7,
-    checks: [{ key: 'channel', name: 'Email or LinkedIn on every contact', fix: 'Add at least one.', findings: 2, rows: [4, 7] }, { key: 'dupes', name: 'Duplicates', fix: 'De-duplicate.', findings: 0, rows: [] }],
-    excluded: [{ name: 'Palm Co', reason: 'Out of the ICP' }], unreachable: [{ name: 'Ana Reyes', company: 'Northwind', row: 4 }], duplicates: [], personas: { Primary: 5, None: 4 },
+// A file like the testers' P04_duplicates.xlsx: rows 2–7, three people (two of them called Ivan Lo), repeats merged.
+const P04: C.ListFacts = { fileName: 'P04_duplicates.xlsx', rowsRead: 6, clean: 33, unclean: 4, own: false, accounts: 1, accountsPass: 1, contacts: 3, inFinalList: 3,
+  checks: [
+    { key: 'emailFormat', name: 'Email format', why: 'A malformed address bounces.', fix: 'Export emails straight from the CRM.', findings: 1, stop: 0, flag: 1, info: 0, rows: [7], badRows: [7] },
+    { key: 'channel', name: 'Email or LinkedIn on every contact', why: 'A contact with no way to reach them is lost.', fix: 'Add at least one.', findings: 4, stop: 0, flag: 0, info: 4, rows: [2, 5, 6, 7], badRows: [] },
+    { key: 'dupes', name: 'Duplicates', why: 'The same person twice would get two messages.', fix: 'De-duplicate in the CRM.', findings: 4, stop: 0, flag: 4, info: 0, rows: [3, 5, 6, 7], badRows: [3, 5, 6, 7] },
+    { key: 'formats', name: 'Values and formats', why: 'Inconsistent values break scoring.', fix: 'Use Y or N.', findings: 1, stop: 0, flag: 1, info: 0, rows: [7], badRows: [7] },
+  ],
+  bad: [{ row: 3, check: 'dupes', text: 'Duplicate of row 2 (Grace Teh)' }, { row: 5, check: 'dupes', text: 'Duplicate of row 4 (Ivan Lo)' },
+    { row: 7, check: 'emailFormat', text: 'Email "grace.teh@eastwind.example" domain eastwind.example is not the company domain ferngate.example' },
+    { row: 7, check: 'dupes', text: 'Duplicate of row 2 (Grace Teh)' }, { row: 7, check: 'formats', text: 'Differs from row 2 (Grace Teh) for Eastwind Refining' },
+    { row: 6, check: 'dupes', text: 'Possible duplicate of row 4 (Ivan Lo)' }],
+  info: { n: 4, kinds: [['No LinkedIn URL', 3], ['No email', 1]] },
+  rowNames: { 2: 'Grace Teh', 3: 'Grace Teh', 4: 'Ivan Lo', 5: 'Ivan Lo', 6: 'Ivan Lo', 7: 'Grace Teh' }, mergedInto: { 3: 2, 5: 4, 7: 2 },
+  excluded: [], unreachable: [], duplicates: [{ row: 3, issue: 'Duplicate of row 2 (Grace Teh)' }, { row: 6, issue: 'Possible duplicate of row 4 (Ivan Lo)' }],
+  personas: { Primary: 3 }, accountsByName: [{ name: 'Eastwind Refining', vertical: 'Refining', country: 'Thailand', excluded: '', contacts: [] }],
+  people: [{ id: 'row:2', who: 'Grace Teh', row: 2, title: 'Instrumentation Manager', account: 'Eastwind Refining', reach: 'unverified email, LinkedIn' },
+    { id: 'row:4', who: 'Ivan Lo', row: 4, title: 'Instrumentation Manager', account: 'Eastwind Refining', reach: 'verified email, LinkedIn' },
+    { id: 'row:6', who: 'Ivan Lo', row: 6, title: 'Instrumentation Manager', account: 'Eastwind Refining', reach: 'verified email, no LinkedIn' }],
+  dupes: [{ row: 3, of: 2, possible: false, outcome: 'Merged into row 2' }, { row: 5, of: 4, possible: false, outcome: 'Merged into row 4' },
+    { row: 7, of: 2, possible: false, outcome: 'Merged into row 2' }, { row: 6, of: 4, possible: true, outcome: 'Kept and not merged; listed for review' }] };
+
+test('Prospecting questions come from the list and the run', () => {
+  const L: C.ListFacts = { ...P04, fileName: 'leads.xlsx', rowsRead: 10, clean: 70, unclean: 3, checks: [P04.checks[1]], bad: [], dupes: [], duplicates: [],
+    excluded: [{ name: 'Palm Co', reason: 'Out of the ICP' }], unreachable: [{ name: 'Ana Reyes', company: 'Northwind', row: 4 }], people: [],
     accountsByName: [{ name: 'Northwind Refining', vertical: 'Refining', country: 'Thailand', excluded: '', contacts: [{ name: 'Ana Reyes', title: 'Plant Manager', reach: 'no way to reach them' }] }] };
-  assert.match(JSON.stringify(C.listAnswer(L, "What's wrong with this file?")), /\*\*70%\*\* of the 10 rows are clean\. 2 findings in 1 check/);
+  assert.match(JSON.stringify(C.listAnswer(L, "What's wrong with this file?")), /\*\*70%\*\* of the 10 rows are clean: 7 rows have no finding that stops or flags them, and 3 rows have at least one\./);
   assert.match(JSON.stringify(C.listAnswer(L, "Who can't be reached?")), /Ana Reyes · Northwind \(row 4\)/);
   assert.match(JSON.stringify(C.listAnswer(L, 'Which accounts were excluded, and why?')), /\*\*Palm Co\*\*: Out of the ICP/);
   assert.match(JSON.stringify(C.listAnswer(L, 'tell me about northwind')), /\*\*Northwind Refining\*\*: Refining, Thailand\. Passes the knock-outs/);
-  const S: C.ScoringFacts = { name: 'Run 1', tiers: { A: 2, B: 5 }, top: [{ who: 'Ana Reyes', account: 'Northwind', tier: 'A', score: 41.2, whyNow: 'asked for a quote' }],
-    unused: [{ code: 'R4', reason: 'Older than its window', n: 3 }], weights: [{ type: 'Inquiry or RFQ', full: 100 }], prospects: 7 };
-  assert.match(JSON.stringify(C.scoringAnswer(S, 'Who are the top prospects?')), /Ana Reyes · Northwind","A","41.2","asked for a quote/);
-  assert.match(JSON.stringify(C.scoringAnswer(S, 'Which signal rows were not used, and why?')), /R4","Older than its window","3/);
+  assert.doesNotMatch(JSON.stringify(C.listAnswer(L, 'what are the issues in the north region?') ?? ''), /Northwind Refining/, 'a word inside an account name is not the account');
+});
+
+test("Prospecting: why a file is only so clean, and its biggest issues, by the people on the rows (the testers' P04 file)", () => {
+  const why = JSON.stringify(C.listAnswer(P04, 'why only 33% rows are clean? what are the major issues?'));
+  assert.match(why, /\*\*33%\*\* of the 6 rows are clean: 2 rows have no finding that stops or flags them, and 4 rows have at least one\./);
+  assert.match(why, /\*\*Grace Teh \(row 3\)\*\*: Duplicate of row 2 \(Grace Teh\)/);
+  assert.match(why, /\*\*Ivan Lo \(row 6\)\*\*: Possible duplicate of row 4 \(Ivan Lo\)/);
+  assert.match(why, /\*\*Grace Teh \(row 7\)\*\*: Email .*; Duplicate of row 2 \(Grace Teh\); Differs from row 2 \(Grace Teh\) for Eastwind Refining/);
+  assert.match(why, /The biggest issues in P04_duplicates\.xlsx/, 'it asked for the major issues too');
+  const big = C.listAnswer(P04, 'what are the biggest issues in the list? major gaps?')!;
+  assert.notDeepEqual(big, C.listAnswer(P04, 'why only 33% rows are clean? what are the major issues?'), 'two different questions, two different answers');
+  const order = (big.find(b => b.t === 'list') as { items: string[] }).items;
+  assert.match(order[0], /^\*\*Duplicates\*\*: 4 rows, Grace Teh \(row 3\), Ivan Lo \(row 5\), Ivan Lo \(row 6\) and 1 more\. The same person twice would get two messages\. Fix: De-duplicate/);
+  assert.deepEqual(order.map(i => i.match(/^\*\*(.+?)\*\*/)![1]), ['Duplicates', 'Email format', 'Values and formats']);
+  assert.match(JSON.stringify(big), /4 findings are for information only \(No LinkedIn URL 3, No email 1\): they don't count against % clean/);
+  const wrong = JSON.stringify(C.listAnswer(P04, "What's wrong with this file?"));
+  assert.match(wrong, /\*\*Duplicates\*\*: 4 rows held back/);
+  assert.match(wrong, /For information only, not counted against % clean: Email or LinkedIn on every contact 4/);
+  assert.doesNotMatch(wrong, /rows 7\b/, 'no "rows 7"');
+});
+
+test('two prospects with the same name: who each one is, and whether the checks think they are one person', () => {
+  const t = JSON.stringify(C.listAnswer(P04, 'why do we have two ivans? are these two different?'));
+  assert.match(t, /\*\*2 prospects are called Ivan Lo\*\*, both at Eastwind Refining/);
+  assert.match(t, /"4","Instrumentation Manager","verified email, LinkedIn"/);
+  assert.match(t, /Row 6 is flagged as a \*\*possible duplicate\*\* of row 4: same name and company, but not the same email or LinkedIn URL, so it was kept and not merged; listed for review\./);
+  assert.match(t, /open row 6 in Prospecting and take them out of the list/);
+  const S: C.ScoringFacts = { name: 'P04_duplicates · 2026-10-27', tiers: { A: 2, B: 1 }, prospects: 3, unused: [], weights: [],
+    top: [{ id: 'c2', who: 'Grace Teh', row: 2, account: 'Eastwind Refining', tier: 'A', score: 68.3, whyNow: 'asked for a quote' },
+      { id: 'c4', who: 'Ivan Lo', row: 4, account: 'Eastwind Refining', tier: 'A', score: 50.1, whyNow: 'webinar' }, { id: 'c6', who: 'Ivan Lo', row: 6, account: 'Eastwind Refining', tier: 'B', score: 20.5, whyNow: '' }],
+    people: P04.people.map((p, i) => ({ ...p, id: `c${p.row}`, tier: ['A', 'A', 'B'][i], score: [68.3, 50.1, 20.5][i] })), dupes: P04.dupes };
+  const s = JSON.stringify(C.scoringAnswer(S, 'why do we have two ivans? are these two different?'));
+  assert.match(s, /"Tier · score"/);
+  assert.match(s, /"4","Instrumentation Manager","verified email, LinkedIn","A · 50.1"\],\["6","Instrumentation Manager","verified email, no LinkedIn","B · 20.5"/);
+  assert.match(JSON.stringify(C.scoringAnswer(S, 'Who are the top prospects?')), /Ivan Lo \(row 4\) · Eastwind Refining","A","50.1"/, 'a shared name gets its row');
+  assert.match(JSON.stringify(C.scoringAnswer(S, 'is this one a duplicate?', 'c6')), /2 prospects are called Ivan Lo/, 'the picked prospect is what "this one" means');
+  assert.equal(C.scoringAnswer(S, 'is this one a duplicate?', 'c2'), null, 'Grace Teh is listed once');
+  assert.match(JSON.stringify(C.scoringAnswer({ ...S, people: S.people.slice(0, 2) }, 'is anyone listed twice?')), /Nobody is listed twice under the same name/);
+  assert.match(JSON.stringify(C.scoringAnswer(S, 'Which signal rows were not used, and why?')), /Every signal row counted/);
+});
+
+test('a finding names the people on the rows it mentions', () => {
+  const names = { 2: 'Grace Teh', 4: 'Ivan Lo' };
+  assert.equal(namedRows('Differs from row 2 for Eastwind Refining', names), 'Differs from row 2 (Grace Teh) for Eastwind Refining');
+  assert.equal(namedRows("Row 2's value used for the account", names), 'The value from row 2 (Grace Teh) used for the account');
+  assert.equal(namedRows('Duplicate of row 4 (Ivan Lo)', names), 'Duplicate of row 4 (Ivan Lo)', 'a name already there is not repeated');
+  assert.equal(namedRows('Merged into row 9', names), 'Merged into row 9', 'a row with no person stays a row');
+  assert.deepEqual(rowsIn('Duplicate of row 2 (Grace Teh); merged into row 14'), [2, 14]);
 });
 
 test('people become tokens before anything is sent, both in the data and in the person\'s own words, and come back as names', () => {
@@ -117,6 +184,12 @@ test('people become tokens before anything is sent, both in the data and in the 
   assert.equal(al.show('P1 needs a person; R1 owns it. P9 is unknown.'), 'Ana Reyes needs a person; Rep One owns it. P9 is unknown.');
   const same = new Aliases(); same.token('Ana Reyes'); same.token('Ana Lim');
   assert.equal(same.hide('what about Ana?'), 'what about Ana?', 'an ambiguous first name is left as it is');
+  // Two people with the same name are two tokens; the question names both, a row names one, the answer shows rows.
+  const twins = new Aliases();
+  assert.deepEqual([twins.token('Ivan Lo', 'P', { id: 'c4', row: 4 }), twins.token('Ivan Lo', 'P', { id: 'c6', row: 6 }), twins.token('Ivan Lo', 'P', { id: 'c4', row: 4 })], ['P1', 'P2', 'P1']);
+  assert.equal(twins.hide('why do we have two ivans? is Ivan Lo a duplicate?'), 'why do we have two P1 and P2? is P1 or P2 a duplicate?');
+  assert.equal(twins.hide("what about Ivan Lo (row 6)? and Ivan's title?"), "what about P2 (row 6)? and P1 or P2's title?");
+  assert.equal(twins.show('P1 is in tier A; P2 (row 6) is in tier B.'), 'Ivan Lo (row 4) is in tier A; Ivan Lo (row 6) is in tier B.');
 });
 
 test('rows within a budget say what was left out; the answer becomes paragraphs and lists, never markup', () => {

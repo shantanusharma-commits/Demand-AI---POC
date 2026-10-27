@@ -4,12 +4,12 @@
 // are owner-scoped twice: row-level security, and the filters here (G-014).
 import 'server-only';
 import { randomUUID } from 'node:crypto';
-import { and, asc, desc, eq, gt, inArray, isNull, like, notExists, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, inArray, isNotNull, isNull, like, notExists, or, sql, type SQL } from 'drizzle-orm';
 import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 import { CODES, LEAD_COLUMNS, LEAD_REQUIRED, missingColumns, processLeads, readTable, toCSV, type AiVerticals, type CsvText } from '../../demandai-engine.ts';
 import { ENGINE_VERSION } from '../../engine/config.ts';
 import { LEAD_SHEET } from '../../engine/sheets.ts';
-import { CHECKS, STEPS, checkOf, groupIssues, stepResult, type CheckKey, type StepResult } from '../../prospecting/checks.ts';
+import { CHECKS, STEPS, checkOf, groupIssues, rowsIn, stepResult, type CheckKey, type Finding, type StepResult } from '../../prospecting/checks.ts';
 import { listQuality, readinessChecks, readinessCounts, type ListQuality, type ReadinessCheck } from '../../prospecting/quality.ts';
 import { can, type BuRole } from '../../auth/permissions.ts';
 import type { Account, Contact, DqCode, Issue, LeadList, LeadResult, LeadStats, Severity } from '../../../types/demandai';
@@ -378,25 +378,60 @@ export async function listAccounts(scope: TenantScope, listId: string, query: Pa
   return { rows: page.map(r => ({ id: r.id, account: r.data as Account, contacts: r.contacts, primary: r.primary })), next: rows.length > limit ? page[page.length - 1].seq : null };
 }
 
-/** Issues on no contact in the list: rows not loaded, or the whole file. */
-export async function unattachedIssues(scope: TenantScope, listId: string): Promise<Issue[]> {
+/** Issues on no contact in the list: rows not loaded, a merged repeat's own notes, or the whole file; each with the
+ *  person on its row when there is one (a merged repeat's: the person it went into). */
+export async function unattachedIssues(scope: TenantScope, listId: string): Promise<Finding[]> {
   if (!(await listRow(scope, listId))) throw notFound('That list is not there any more.');
   const rows = await scope.tx.select({ data: issues.data }).from(issues)
     .where(and(eq(issues.listId, listId), isNull(issues.attachRowNo))).orderBy(asc(issues.seq)).limit(1000);
-  return rows.map(r => r.data as Issue);
+  return withPeople(scope, listId, rows.map(r => r.data as Issue));
 }
 
 /* ─── Check panes, per-check CSV and the validation report (G-015) ─── */
 
 /** The repository half of the issues policy: reps get their own rows' findings and the whole-file notes. */
-function visibleIssues(scope: TenantScope): SQL | undefined {
+export function visibleIssues(scope: TenantScope): SQL | undefined {
   const own = ownerOnly(scope, issues.ownerEmail);
   return own && or(own, and(isNull(issues.ownerEmail), isNull(issues.rowNo)));
 }
 
-export type CheckPage = Page<Issue> & { total: number };
+/** The person on each of these sheet rows of a list, as the caller may see them: a contact's own row, or a merged
+ *  repeat's row through the person it went into. Rows not loaded, and other people's rows for a rep, have none.
+ *  Without `rows`, every row of the list. */
+export async function rowPeople(scope: TenantScope, listId: string, rows?: number[]): Promise<Map<number, { name: string; company: string }>> {
+  const out = new Map<number, { name: string; company: string }>();
+  if (rows && !rows.length) return out;
+  const people = async (rs?: number[]) => new Map((await scope.tx.select({ row: contacts.rowNo, name: sql<string>`${contacts.data}->>'name'`, company: sql<string>`${contacts.data}->>'company'` })
+    .from(contacts).where(and(eq(contacts.listId, listId), rs ? inArray(contacts.rowNo, rs) : undefined, ownerOnly(scope, contacts.ownerEmail)))).map(c => [c.row, { name: c.name, company: c.company }]));
+  for (const [r, p] of await people(rows)) out.set(r, p);
+  const missing = rows?.filter(r => !out.has(r));
+  if (missing && !missing.length) return out;
+  const merged = await scope.tx.selectDistinct({ row: issues.rowNo, into: issues.attachRowNo }).from(issues)
+    .where(and(eq(issues.listId, listId), eq(issues.checkKey, 'dupes'), isNotNull(issues.attachRowNo), sql`${issues.rowNo} <> ${issues.attachRowNo}`,
+      missing ? inArray(issues.rowNo, missing) : undefined, visibleIssues(scope)));
+  const into = merged.filter(m => m.row !== null && !out.has(m.row));
+  const more = [...new Set(into.map(m => m.into!))].filter(r => !out.has(r));
+  const targets = rows && more.length ? await people(more) : new Map<number, { name: string; company: string }>();
+  for (const m of into) { const p = out.get(m.into!) ?? targets.get(m.into!); if (p) out.set(m.row!, p); }
+  return out;
+}
 
-/** One check's findings a page at a time, in file order. `total` is what the caller can see (a rep: their own rows). */
+/** Findings with the people on their rows and on the rows their text mentions. */
+async function withPeople(scope: TenantScope, listId: string, page: Issue[]): Promise<Finding[]> {
+  const rows = new Set<number>();
+  for (const i of page) { if (typeof i.row === 'number') rows.add(i.row); for (const r of [...rowsIn(i.issue), ...rowsIn(i.outcome || '')]) rows.add(r); }
+  const people = await rowPeople(scope, listId, [...rows]);
+  return page.map(i => {
+    const names: Record<string, string> = {};
+    for (const r of [...rowsIn(i.issue), ...rowsIn(i.outcome || '')]) { const p = people.get(r); if (p) names[r] = p.name; }
+    return { ...i, who: typeof i.row === 'number' ? people.get(i.row)?.name ?? null : null, names };
+  });
+}
+
+export type CheckPage = Page<Finding> & { total: number };
+
+/** One check's findings a page at a time, in file order, each with the person on its row. `total` is what the caller
+ *  can see (a rep: their own rows). */
 export async function issuesForCheck(scope: TenantScope, listId: string, check: CheckKey, query: PageQuery): Promise<CheckPage> {
   if (!(await listRow(scope, listId))) throw notFound('That list is not there any more.');
   const limit = limitOf(query);
@@ -405,13 +440,13 @@ export async function issuesForCheck(scope: TenantScope, listId: string, check: 
     .where(and(where, query.after !== undefined ? gt(issues.seq, query.after) : undefined)).orderBy(asc(issues.seq)).limit(limit + 1);
   const [{ n }] = await scope.tx.select({ n: sql<number>`count(*)::int` }).from(issues).where(where);
   const page = rows.slice(0, limit);
-  return { rows: page.map(r => r.data as Issue), next: rows.length > limit ? page[page.length - 1].seq : null, total: n };
+  return { rows: await withPeople(scope, listId, page.map(r => r.data as Issue)), next: rows.length > limit ? page[page.length - 1].seq : null, total: n };
 }
 
 export type CsvFile = { fileName: string; csv: CsvText };
 const fileBase = (sourceFile: string) => sourceFile.replace(/\.[^.]+$/, '') || 'lead-file';
-const ISSUE_HEADER = ['Row', 'Field', 'Issue', 'What happens', 'How to fix', 'Severity'];
-const issueCells = (i: Issue) => [i.row, i.field || '', i.issue, i.outcome || '', i.fix || '', i.severity];
+const ISSUE_HEADER = ['Row', 'Person', 'Field', 'Issue', 'What happens', 'How to fix', 'Severity'];
+const issueCells = (i: Issue, people: Map<number, { name: string }>) => [i.row, typeof i.row === 'number' ? people.get(i.row)?.name ?? '' : '', i.field || '', i.issue, i.outcome || '', i.fix || '', i.severity];
 
 /** One check's findings as the original pane's CSV, `<file>-<check>-issues.csv`; formulas neutralised (G-052). */
 export async function checkCsv(scope: TenantScope, listId: string, check: CheckKey): Promise<CsvFile> {
@@ -419,8 +454,9 @@ export async function checkCsv(scope: TenantScope, listId: string, check: CheckK
   if (!l) throw notFound('That list is not there any more.');
   const rows = await scope.tx.select({ data: issues.data }).from(issues)
     .where(and(eq(issues.listId, listId), eq(issues.checkKey, check), visibleIssues(scope))).orderBy(asc(issues.seq));
+  const people = await rowPeople(scope, listId);
   await recordAudit(scope, { action: 'list.exported', targetType: 'list', targetId: listId, details: { file: 'issues', check, rows: rows.length } });
-  return { fileName: `${fileBase(l.sourceFile)}-${check}-issues.csv`, csv: toCSV([ISSUE_HEADER, ...rows.map(r => issueCells(r.data as Issue))]) };
+  return { fileName: `${fileBase(l.sourceFile)}-${check}-issues.csv`, csv: toCSV([ISSUE_HEADER, ...rows.map(r => issueCells(r.data as Issue, people))]) };
 }
 
 /** Every finding the caller can see, with its check and D-code, in file order: the validation report. */
@@ -430,9 +466,10 @@ export async function reportCsv(scope: TenantScope, listId: string): Promise<Csv
   const rows = await scope.tx.select({ data: issues.data, check: issues.checkKey }).from(issues)
     .where(and(eq(issues.listId, listId), visibleIssues(scope))).orderBy(asc(issues.seq));
   const checkName = new Map<string, string>(CHECKS.map(([k, name]) => [k, name]));
+  const people = await rowPeople(scope, listId);
   const body = rows.map(r => {
     const i = r.data as Issue;
-    return [...issueCells(i), checkName.get(r.check) ?? r.check, i.code === '—' ? '' : i.code, i.code === '—' ? '' : CODES[i.code as DqCode]];
+    return [...issueCells(i, people), checkName.get(r.check) ?? r.check, i.code === '—' ? '' : i.code, i.code === '—' ? '' : CODES[i.code as DqCode]];
   });
   await recordAudit(scope, { action: 'list.exported', targetType: 'list', targetId: listId, details: { file: 'validation-report', rows: body.length } });
   return { fileName: `${fileBase(l.sourceFile)}-validation-report.csv`, csv: toCSV([[...ISSUE_HEADER, 'Check', 'D-code', 'What the code means'], ...body]) };

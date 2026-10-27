@@ -63,17 +63,19 @@ test('N-07 readiness: an account counts as reachable only with a primary-persona
   assert.equal(quality({ country: 'France' }).inScope, 0, 'outside the pilot region: not in scope');
 });
 
-test('readiness checks use CONFIG.readiness and say what is needed and how to fix it', () => {
+test('readiness checks use CONFIG.readiness and say what is needed and how to fix it; a list of any size can be ready', () => {
   const R = E.CONFIG.readiness;
-  const ok = readinessChecks({ inScope: R.accounts, primaryReachable: Math.ceil(R.accounts * R.contactable / 100) });
-  assert.deepEqual(ok.map(c => [c.k, c.ok]), [['Accounts in scope', true], ['Contactability', true]]);
-  const short = readinessChecks({ inScope: R.accounts - 1, primaryReachable: 0 });
-  assert.deepEqual(short.map(c => c.ok), [false, false]);
-  assert.equal(short[0].show, String(R.accounts - 1));
-  assert.equal(short[1].show, '0% of accounts');
-  assert.match(short[1].need, new RegExp(`^${R.contactable}%\\+`));
+  const ok = readinessChecks({ inScope: 20, primaryReachable: Math.ceil(20 * R.contactable / 100) });
+  assert.deepEqual(ok.map(c => [c.k, c.ok]), [['Contactability', true]]);
+  // No minimum number of accounts (27 Oct 2026): four reachable accounts are ready for measurement.
+  assert.deepEqual(readinessChecks({ inScope: 4, primaryReachable: 4 }).map(c => c.ok), [true]);
+  assert.equal('accounts' in R, false, 'there is no account minimum to check against');
+  const short = readinessChecks({ inScope: 29, primaryReachable: 0 });
+  assert.deepEqual(short.map(c => c.ok), [false]);
+  assert.equal(short[0].show, '0% of accounts');
+  assert.match(short[0].need, new RegExp(`^${R.contactable}%\\+`));
   assert.ok(short.every(c => c.fix.length > 10));
-  assert.equal(readinessChecks({ inScope: 0, primaryReachable: 0 })[1].show, '0% of accounts', 'no accounts: 0%, not NaN');
+  assert.equal(readinessChecks({ inScope: 0, primaryReachable: 0 })[0].show, '0% of accounts', 'no accounts: 0%, not NaN');
 });
 
 test('the full sample: % clean, D-codes and readiness (reference figures)', () => {
@@ -85,7 +87,7 @@ test('the full sample: % clean, D-codes and readiness (reference figures)', () =
   assert.equal(q.clean, dqScore(r.issues.filter(i => typeof i.row === 'number' && rows.has(i.row)), r.stats.rowsRead));
   assert.deepEqual(q, SAMPLE_QUALITY);
   const checks = readinessChecks(q);
-  assert.deepEqual(checks.map(c => c.ok), [true, SAMPLE_QUALITY.primaryReachable / SAMPLE_QUALITY.inScope * 100 >= E.CONFIG.readiness.contactable]);
+  assert.deepEqual(checks.map(c => c.ok), [SAMPLE_QUALITY.primaryReachable / SAMPLE_QUALITY.inScope * 100 >= E.CONFIG.readiness.contactable]);
 });
 
 // Measured on 23 Oct 2026 (ENGINE_VERSION ts-1.10.0); changes only with a rule change, noted in the commit.

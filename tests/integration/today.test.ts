@@ -61,7 +61,7 @@ test('a manager sees the team: the whole queue, the approvals, the spot-checks d
   assert.deepEqual([v.latest?.id, v.latest?.went, v.latest?.needed], [runId, went.went, went.n - went.went]);
   assert.equal(v.ready.total, went.went - drawn.n, 'released on their own and not picked for a spot-check: waiting for an outcome');
   assert.deepEqual(v.recent.map(r => r.kind), ['Micro-segments', 'Scored list', 'Prospect list']);
-  assert.deepEqual([v.setup?.configVersion, v.setup?.brandVersion, v.setup?.brandDraft, v.setup?.readiness?.total, v.setup?.saved], [1, 1, false, 6, 3]);
+  assert.deepEqual([v.setup?.configVersion, v.setup?.brandVersion, v.setup?.brandDraft, v.setup?.readiness?.total, v.setup?.saved], [1, 1, false, 5, 3]);
   assert.deepEqual([v.gates.g2.state, v.gates.g1.state, v.measure.items], ['none', 'none', went.n]);
   assert.equal(v.withManager.total, 0, 'managers approve; they have nothing waiting on someone else');
   // Readiness: the baseline is still the placeholder, so measurement isn't ready yet; that is a manager's blocker.

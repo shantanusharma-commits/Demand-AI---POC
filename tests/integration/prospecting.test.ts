@@ -106,6 +106,11 @@ test('issues come back on their rows (a merged duplicate on the row it went into
   const un = await as(admin(), s => unattachedIssues(s, listId));
   const contactRows = new Set(leads.contacts.map(c => c.row));
   assert.equal(un.length, leads.issues.filter(i => !contactRows.has(i.row as number) && !(i.code === 'D5' && contactRows.has(Number(i.outcome.slice(16))))).length);
+  // A merged repeat's own notes name the person it went into.
+  const into = new Map(leads.issues.filter(i => i.code === 'D5' && i.outcome.startsWith('Merged into row ')).map(i => [i.row as number, Number(i.outcome.slice(16))]));
+  const onMerged = un.filter(i => typeof i.row === 'number' && into.has(i.row));
+  assert.ok(onMerged.length > 0);
+  for (const i of onMerged) assert.equal(i.who, leads.contacts.find(c => c.row === into.get(i.row as number))!.name, `row ${i.row}`);
 });
 
 test('search and filters run on the server and page by keyset', async () => {
@@ -149,16 +154,22 @@ test('G-015: a list keeps its % clean, findings per D-code and readiness over th
 
 test('G-015 check panes: one check’s findings page in file order; a rep gets their own rows’ findings and the whole-file notes', async () => {
   const dupes = leads.issues.filter(i => checkOf(i) === 'dupes');
-  const seen: E.Issue[] = [];
+  const seen: E.Issue[] = [], who: (string | null)[] = [], named: Record<string, string>[] = [];
   let after: number | undefined, total = -1;
   do {
     const page = await as(admin(), s => issuesForCheck(s, listId, 'dupes', { after, limit: 200 }));
     total = page.total;
-    seen.push(...page.rows);
+    for (const { who: w, names, ...i } of page.rows) { seen.push(i); who.push(w); named.push(names); }
     after = page.next ?? undefined;
   } while (after !== undefined);
   assert.equal(total, dupes.length);
   assert.deepStrictEqual(seen, dupes, 'every duplicate finding, in file order');
+  // Each finding names the person on its row (a merged repeat: the person it went into), and the rows its text mentions.
+  const nameAt = (row: number) => leads.contacts.find(c => c.row === row)?.name ?? null;
+  const expected = dupes.map(i => nameAt(i.row as number) ?? nameAt(Number(/^Merged into row (\d+)$/.exec(i.outcome)?.[1])));
+  assert.deepEqual(who, expected);
+  assert.ok(who.every(Boolean), 'every duplicate finding has a person');
+  dupes.forEach((i, k) => { const of = Number(/row (\d+)/.exec(i.issue)![1]); assert.equal(named[k][of], nameAt(of), i.issue); });
   const repRows = new Set(leads.contacts.filter(c => c.owner === someOwner).map(c => c.row));
   for (const check of ['dupes', 'columns', 'channel'] as const) {
     const mine = await as(repCtx([someOwner]), s => issuesForCheck(s, listId, check, { limit: 500 }));
@@ -175,12 +186,14 @@ test('G-015 CSV: per-check findings as the original pane wrote them, and the val
   const csv = await as(admin(), s => checkCsv(s, listId, 'dupes'));
   assert.equal(csv.fileName, 'Lead_Research_Sample_Dataset-dupes-issues.csv');
   const lines = csv.csv.split('\r\n');
-  assert.equal(lines[0], 'Row,Field,Issue,What happens,How to fix,Severity');
+  assert.equal(lines[0], 'Row,Person,Field,Issue,What happens,How to fix,Severity');
+  const first = leads.issues.find(i => checkOf(i) === 'dupes')!;
+  assert.ok(lines[1].startsWith(`${first.row},${leads.contacts.find(c => c.row === first.row)?.name ?? leads.contacts.find(c => c.row === Number(/(\d+)$/.exec(first.outcome)![1]))!.name},`), lines[1]);
   assert.equal(lines.length, 1 + leads.issues.filter(i => checkOf(i) === 'dupes').length);
   const report = await as(admin(), s => reportCsv(s, listId));
   assert.equal(report.fileName, 'Lead_Research_Sample_Dataset-validation-report.csv');
   const rl = report.csv.split('\r\n');
-  assert.equal(rl[0], 'Row,Field,Issue,What happens,How to fix,Severity,Check,D-code,What the code means');
+  assert.equal(rl[0], 'Row,Person,Field,Issue,What happens,How to fix,Severity,Check,D-code,What the code means');
   assert.equal(rl.length, 1 + leads.issues.length);
   assert.equal(rl.filter(l => l.endsWith(',D5,Duplicate')).length, leads.issues.filter(i => i.code === 'D5').length);
   const mine = await as(repCtx([someOwner]), s => reportCsv(s, listId));

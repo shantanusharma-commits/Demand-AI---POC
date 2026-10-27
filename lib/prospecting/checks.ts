@@ -72,3 +72,22 @@ export function stepResult(r: LeadResult, k: StepKey, by: IssuesByCheck): StepRe
   const rows = [...new Set(is.map(i => i.row))];
   return { n, sev, label: n ? `${n} found` : 'Passed', rows: n ? (rows.length === 1 && rows[0] === '—' ? 'Whole file' : 'Row' + (rows.length > 1 ? 's ' : ' ') + rows.slice(0, 5).join(', ') + (rows.length > 5 ? '…' : '')) : '' };
 }
+
+/* People instead of row numbers: a finding names the person on its row, and the rows its text mentions. */
+
+/** A finding as the check pane gets it: the person on its row (a merged repeat's, the person it went into), and the
+ *  people on the rows its text mentions. Null when the row isn't a contact the caller can see (a row not loaded). */
+export type Finding = Issue & { who: string | null; names: Record<string, string> };
+
+/** The rows a finding's text mentions ("Differs from row 2", "Merged into row 4"). */
+export function rowsIn(text: string): number[] {
+  return [...text.matchAll(/\brow (\d+)/gi)].map(m => Number(m[1]));
+}
+
+/** The finding's text with the person beside each row it mentions: "Differs from row 2 (Grace Teh) for Eastwind",
+ *  "The value from row 2 (Grace Teh) used for the account". A row already followed by a name is left as it is. */
+export function namedRows(text: string, names: Record<string, string>): string {
+  return text
+    .replace(/\b([Rr])ow (\d+)'s (\w+)/g, (m, r: string, n: string, what: string) => names[n] ? `${r === 'R' ? 'The' : 'the'} ${what} from row ${n} (${names[n]})` : m)
+    .replace(/\b([Rr])ow (\d+)\b(?!'s|\s*\()/g, (m, r: string, n: string) => names[n] ? `${r}ow ${n} (${names[n]})` : m);
+}

@@ -38,8 +38,9 @@ export const CONFIG = {
   dealSize: { threshold: 250000, base: { core: 600000, adjacent: 350000, other: 150000 } as Record<VerticalLevel, number> },
   // Outreach limits checked on every draft (the brand pack adds its own words and competitors).
   brand: { maxSubjectWords: 6, maxNote: 200, competitors: [] as string[] },
-  // 3.3 Data sufficiency: the readiness checks before measurement (placeholders until kickoff).
-  readiness: { accounts: 30, contactable: 60, coverage: 40, recency: 70, recencyDays: 90 },
+  // 3.3 Data sufficiency: the readiness checks before measurement (placeholders until kickoff). No minimum number of
+  // accounts: a list of any size counts toward the pilot's measurement (product owner, 27 Oct 2026; was 30).
+  readiness: { contactable: 60, coverage: 40, recency: 70, recencyDays: 90 },
   // For Review: the share of items that went ahead on their own picked at random for a spot-check.
   spotCheckShare: 0.2,
   // G1: minutes a person spent per usable first action before the pilot (the Client's timed baseline; placeholder).

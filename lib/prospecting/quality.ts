@@ -1,8 +1,8 @@
 /* A lead list's data quality and readiness (G-015). Computed once over the whole file when the list is built and
    stored with it, because a rep only sees their own rows. % clean is the original 10-prospecting.html dqScore; the
-   readiness checks are the original demandai-nba.js readiness() rules that a lead list can answer (accounts in scope
-   and contactability; signal coverage and recency need a signal file), with contactability through canContact
-   (N-07: an unconfirmed opt-out is not reachable). */
+   readiness checks are the original demandai-nba.js readiness() rules that a lead list can answer (contactability;
+   signal coverage and recency need a signal file), with contactability through canContact (N-07: an unconfirmed
+   opt-out is not reachable). There is no minimum number of accounts: a list of any size counts (27 Oct 2026). */
 import { CONFIG, canContact } from '../demandai-engine.ts';
 import type { DqCode, Issue, LeadResult } from '../../types/demandai';
 
@@ -47,7 +47,6 @@ export function readinessChecks(q: Pick<ListQuality, 'inScope' | 'primaryReachab
   const R = CONFIG.readiness;
   const pct = q.inScope ? q.primaryReachable / q.inScope * 100 : 0;
   return [
-    { k: 'Accounts in scope', ok: q.inScope >= R.accounts, show: `${q.inScope}`, need: `${R.accounts} or more`, fix: 'More accounts in the selected vertical and region' },
     { k: 'Contactability', ok: pct >= R.contactable, show: `${Math.round(pct)}% of accounts`,
       need: `${R.contactable}%+ with a primary-persona contact who can be contacted`,
       fix: 'Verified emails or LinkedIn URLs, a consent basis and a confirmed opt-out for the primary-persona contacts' },

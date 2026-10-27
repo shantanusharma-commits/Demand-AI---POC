@@ -288,6 +288,20 @@
       "when": 1793089434120,
       "tag": "0040_custom_segments_security",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1793109798888,
+      "tag": "0041_copilot_chats",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1793109805947,
+      "tag": "0042_copilot_chats_security",
+      "breakpoints": true
     }
   ]
 }

@@ -77,6 +77,7 @@ Every request runs in a transaction that sets `app.user_id`, `app.business_unit_
 | `spot_checks` | The weekly sample of items that went ahead on their own, and their ratings |
 | `review_views` | When each person last saw their queue (for decision timing) |
 | `autopilot_runs` | Copilot's Autopilot runs and their undo (update granted only for undo) |
+| `copilot_chats`, `copilot_messages` | Copilot's saved chats: one person's conversation about a screen's record (list, run, build, item or queue) and its questions and answers, with the prospect or item picked for each question. Private to that person (row-level security on the creator), deletable by them; a chat goes with the record it is about, and the purge removes the rest by date |
 
 ### Content and measurement
 
@@ -96,7 +97,7 @@ Every request runs in a transaction that sets `app.user_id`, `app.business_unit_
 
 ## Personal data, retention and deletion
 
-Personal data (names, job titles, emails and LinkedIn addresses of the Client's prospects) is in `upload_files`, `contacts`, `signals`, `issues`, `corrections`, `prospect_scores`, `handoff_items`, `recommendations`, `drafts` and `spot_checks`; users' own emails are in `users`. None is kept in the browser beyond three UI preferences, and none goes to the logs or, as names or emails, to the model (people are tokens to Copilot; drafts get job titles, not names).
+Personal data (names, job titles, emails and LinkedIn addresses of the Client's prospects) is in `upload_files`, `contacts`, `signals`, `issues`, `corrections`, `prospect_scores`, `handoff_items`, `recommendations`, `drafts`, `spot_checks` and Copilot's saved answers (`copilot_messages`); users' own emails are in `users`. None is kept in the browser beyond three UI preferences, and none goes to the logs or, as names or emails, to the model (people are tokens to Copilot; drafts get job titles, not names).
 
 The end-of-pilot purge (D-20; migration 0037; `scripts/data/purge.mjs`) deletes, per unit or upload or before a date, the uploads and everything made from them, inside one transaction as the ops role; it keeps the audit log, AI call metadata, readouts and sign-offs, configuration, brand packs, Content studio pieces and users. The export (`scripts/data/export.mjs`) returns the original files and every table's rows as JSON Lines before that.
 

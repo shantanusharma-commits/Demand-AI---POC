@@ -33,7 +33,7 @@ What the pilot build does not do, where it is provisional, and what is still to 
 - Prices in the cost estimate are list prices from published price lists; set the Client's agreed prices.
 - To record before switching on: the Azure resource's region, its abuse-monitoring setting, and confirmation that data isn't used for training.
 - The Bedrock adapter is built and tested against a stand-in, never against a live Bedrock model.
-- Copilot conversations are not kept (retention not agreed); free-text answers go to the model only when no rule answers.
+- Copilot chats are kept for the person who had them until they delete them or the end-of-pilot purge removes them; they are not part of the data export. Free-text answers go to the model only when no rule answers.
 
 ## Product
 

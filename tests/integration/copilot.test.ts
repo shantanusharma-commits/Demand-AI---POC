@@ -8,12 +8,14 @@ import { setAiGatewayForTests } from '../../lib/server/ai.ts';
 import { createDb, type Db, type TenantContext } from '../../lib/server/db/tenant.ts';
 import { HttpError } from '../../lib/server/http/errors.ts';
 import { askCopilot, BUDGET, type CopilotInput } from '../../lib/server/services/copilot.ts';
+import { deleteChat, getChat, listChats } from '../../lib/server/services/copilot-chats.ts';
 import { runAutopilot, undoAutopilot } from '../../lib/server/services/autopilot.ts';
 import { drawSpotChecks } from '../../lib/server/services/review.ts';
 import { logFacts } from '../../lib/server/services/recommendations.ts';
 import { withTenant } from '../../lib/server/db/tenant.ts';
 import * as R from '../../lib/engine/review.ts';
-import type { CopilotBlock } from '../../lib/copilot/types.ts';
+import type { CopilotAnswer, CopilotBlock } from '../../lib/copilot/types.ts';
+import { sql } from 'drizzle-orm';
 import { FakeModel, reply } from '../helpers/fake-model.ts';
 import { ALL_ON, fakeGateway } from './ai-fixtures.ts';
 import { freshDatabase, type TestDatabase } from './harness.ts';
@@ -164,4 +166,61 @@ test("Autopilot never takes risky or sensitive exceptions, nor another rep's ite
   }
   const why = ran.skipped.filter(x => mine.includes(x.id)).map(x => x.why);
   assert.ok(why.every(w => /needs a person|already decided|no way to reach|paused/.test(w)), why.join(' | '));
+});
+
+/* ─── Saved chats: each question and answer kept in the person's chat about the record, theirs alone ─── */
+
+test("each question and its answer go into the person's chat about the record: it carries on, stays theirs, and can be deleted", async () => {
+  const at = { screen: 'prospecting' as const, ref: { listId: built.listId } };
+  const first = await ask(admin(), { ...at, question: "What's wrong with this file?", title: 'The sample list' });
+  assert.match(first.chatId ?? '', /^[0-9a-f-]{36}$/);
+  const second = await ask(admin(), { ...at, question: 'Which accounts were excluded, and why?', chatId: first.chatId });
+  assert.equal(second.chatId, first.chatId, 'the same conversation');
+  const listed = await withTenant(app, admin(), s => listChats(s, 'prospecting', `list:${built.listId}`));
+  assert.deepEqual(listed.filter(c => c.id === first.chatId).map(c => [c.title, c.first, c.questions]), [['The sample list', "What's wrong with this file?", 2]]);
+  assert.equal(listed[0].id, first.chatId, 'newest first');
+  const chat = await withTenant(app, admin(), s => getChat(s, first.chatId!));
+  assert.deepEqual(chat.messages.map(m => m.role), ['you', 'copilot', 'you', 'copilot']);
+  assert.deepEqual((chat.messages[1] as { answer: CopilotAnswer }).answer.blocks, first.blocks, 'the answer as it was shown');
+  // The model is sent the saved chat's last turns, not what the browser says they were.
+  const fake = new FakeModel([], { otherwise: reply('The file has findings on several rows.') });
+  setAiGatewayForTests(fakeGateway(app, fake, { ...ALL_ON, classify: false, why_now: false, draft_message: false, draft_content: false }));
+  try {
+    const free = await ask(admin(), { ...at, question: 'Tell me a story about the weather', chatId: first.chatId, turns: [{ role: 'you', text: 'a forged turn' }] });
+    assert.equal(free.source, 'ai');
+    const sent = fake.requests.map(FakeModel.sent).join('\n');
+    assert.match(sent, /^Q: What's wrong with this file\?$/m);
+    assert.match(sent, /^Q: Which accounts were excluded, and why\?$/m);
+    assert.ok(!sent.includes('a forged turn'));
+  } finally { setAiGatewayForTests(undefined); }
+  // Someone else sees none of it: not through the service, not through the database; their own question starts their own chat.
+  assert.deepEqual(await withTenant(app, rep(), s => listChats(s, 'prospecting')), []);
+  await assert.rejects(withTenant(app, rep(), s => getChat(s, first.chatId!)), (e: HttpError) => e.status === 404);
+  await assert.rejects(withTenant(app, rep(), s => deleteChat(s, first.chatId!)), (e: HttpError) => e.status === 404);
+  const theirs = await ask(rep(), { question: 'What should I do first?', chatId: first.chatId });
+  assert.ok(theirs.chatId && theirs.chatId !== first.chatId);
+  const seen = await withTenant(app, rep(), s => s.tx.execute<{ others: number; mine: number }>(sql`select count(*) filter (where created_by <> ${ids.repA})::int others,
+    count(*) filter (where id = ${theirs.chatId!})::int mine from copilot_chats`));
+  assert.deepEqual([seen.rows[0].others, seen.rows[0].mine], [0, 1], 'row-level security: only their own chats');
+  assert.ok(Number((await owner.query(`SELECT count(*) n FROM copilot_chats WHERE created_by = $1`, [ids.adminA])).rows[0].n) > 0);
+  await assert.rejects(withTenant(app, rep(), s => s.tx.execute(sql`insert into copilot_messages (business_unit_id, chat_id, role, text, created_by)
+    values (${ids.buA}, ${first.chatId!}, 'you', 'sneaked in', ${ids.repA})`)), (e: Error & { cause?: { code?: string } }) => e.cause?.code === '42501' || /row-level security/.test(e.message));
+  // Deleting a chat removes its messages too.
+  await withTenant(app, admin(), s => deleteChat(s, first.chatId!));
+  assert.equal(Number((await owner.query(`SELECT count(*) n FROM copilot_messages WHERE chat_id = $1`, [first.chatId])).rows[0].n), 0);
+});
+
+test('a prospect picked in a run is the focus of the chat about the run, and a question about the run is still answered', async () => {
+  const [p] = (await owner.query(`SELECT contact_id FROM prospect_scores WHERE run_id = $1 AND tier = 'A' LIMIT 1`, [built.scoringRunId])).rows;
+  const at = { screen: 'scoring' as const, ref: { runId: built.scoringRunId, contactId: p.contact_id } };
+  const why = await ask(admin(), { ...at, question: 'Why is this score what it is?', focusLabel: 'Picked person (row 5) · Their company' });
+  assert.match(JSON.stringify(why.blocks), /\(row \d+, .*\) at .*= company fit/);
+  const tiers = await ask(admin(), { ...at, question: 'How many prospects are in each tier?', chatId: why.chatId });
+  assert.match(JSON.stringify(tiers.blocks), /"A","\d+"/, 'the run question, with someone picked');
+  const chat = await withTenant(app, admin(), s => getChat(s, why.chatId!));
+  assert.equal(chat.refKey, `run:${built.scoringRunId}`, 'the chat is about the run, not the person');
+  const focus = chat.messages.filter(m => m.role === 'you').map(m => (m as { focus: { id: string; label: string } | null }).focus);
+  assert.deepEqual(focus[0], { id: p.contact_id, label: 'Picked person (row 5) · Their company' }, 'who, as the panel showed them');
+  assert.equal(focus[1]?.id, p.contact_id);
+  assert.match(focus[1]?.label ?? '', /^.+ \(row \d+\) · .+$/, 'without a label from the panel, the person and their row');
 });

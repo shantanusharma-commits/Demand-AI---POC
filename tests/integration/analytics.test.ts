@@ -190,7 +190,7 @@ test('the six success areas and the readout: evidence per area, the gates where 
 
 test('validation: a manager changes the gate settings, which makes a new configuration version with the change recorded (D-21)', async () => {
   const before = await as(admin(), s => validationView(s, mgr()));
-  assert.deepEqual([before.configVersion, before.settings.g2Threshold, before.settings.g1BaselineTimed, before.canEdit, before.readiness.length], [1, 70, false, true, 6]);
+  assert.deepEqual([before.configVersion, before.settings.g2Threshold, before.settings.g1BaselineTimed, before.canEdit, before.readiness.length], [1, 70, false, true, 5]);
   assert.equal(before.readiness.find(c => c.k === 'Baseline')!.ok, false);
   await assert.rejects(as(rep(), s => saveValidation(s, repActor(), { g2Threshold: 75 })), status(403));
   await assert.rejects(as(admin(), s => saveValidation(s, mgr(), { g2Threshold: 140, minDecisions: 2.5 })), (e: HttpError) => e.status === 400 && !!e.fields?.g2Threshold && !!e.fields?.minDecisions);

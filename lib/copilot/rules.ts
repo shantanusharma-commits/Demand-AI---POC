@@ -276,29 +276,148 @@ export function nbaAnswer(f: NbaFacts, text: string, queue: QueueFacts | null): 
   return queue ? queueAnswer(queue, text) : null;
 }
 
+/* ─── People listed more than once (Prospecting, Scoring) ─── */
+
+/** A person in a list or run, with what tells two people of the same name apart. */
+export type Person = { id: string; who: string; row: number; title: string; account: string; reach: string; tier?: string; score?: number | null };
+/** A duplicates finding: `row` repeats `of`; merged into it, or kept as a possible duplicate for a person to decide. */
+export type Dupe = { row: number; of: number; possible: boolean; outcome: string };
+
+const nameKey = (s: string) => s.trim().toLowerCase().replace(/\s+/g, ' ');
+const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+/** Whether the text names this person: the whole name, or the first name ("Ivan", "Ivans", "Ivan's"). */
+export function names(text: string, who: string): boolean {
+  const full = nameKey(who), first = full.split(' ')[0];
+  if (!full) return false;
+  const re = (n: string) => new RegExp(`(^|[^\\p{L}])${esc(n)}(?:'?s)?(?![\\p{L}])`, 'iu');
+  return re(full).test(text) || (first.length > 2 && first !== full && re(first).test(text));
+}
+/** The people who share a name, two or more to a group, the largest group first. */
+export function sameName(people: Person[]): Person[][] {
+  const by = new Map<string, Person[]>();
+  for (const p of people) { const k = nameKey(p.who); if (k && k !== '(no name)') by.set(k, [...(by.get(k) ?? []), p]); }
+  return [...by.values()].filter(g => g.length > 1).map(g => g.slice().sort((a, b) => a.row - b.row)).sort((a, b) => b.length - a.length || a[0].row - b[0].row);
+}
+const TWINS = /\btwo\b|\btwice\b|\bboth\b|duplicat|same (name|person|people|contact|guy)|different (people|persons?|contacts?|prospects?)|more than once|\brepeat/;
+
+/** Two or more prospects with the same name: who each one is, and whether the file's checks think they are one person. */
+export function twinsAnswer(people: Person[], dupes: Dupe[], text: string, focus?: string): CopilotBlock[] | null {
+  const t = text.toLowerCase();
+  const groups = sameName(people);
+  const plural = groups.filter(g => new RegExp(`(^|[^\\p{L}])${esc(nameKey(g[0].who).split(' ')[0])}s(?![\\p{L}])`, 'iu').test(text));
+  let hit = plural.length ? plural : TWINS.test(t) ? groups.filter(g => names(text, g[0].who)) : [];
+  if (!hit.length && focus && TWINS.test(t)) hit = groups.filter(g => g.some(p => p.id === focus));
+  const general = /same name|listed (twice|more than once)|\btwice\b|duplicate (people|prospects|contacts|names)|(people|prospects|contacts) .*(twice|more than once)/.test(t);
+  if (!hit.length && general) hit = groups;
+  if (!hit.length) return general ? [P('Nobody is listed twice under the same name.')] : null;
+  const out: CopilotBlock[] = [];
+  for (const g of hit.slice(0, 3)) {
+    const accs = [...new Set(g.map(p => p.account))], rows = new Set(g.map(p => p.row));
+    out.push(P(`**${g.length} prospects are called ${g[0].who}**${accs.length === 1 ? `, ${g.length === 2 ? 'both' : 'all'} at ${accs[0]}` : ''}. Each is its own row in the file, so each is ${g[0].tier !== undefined ? 'scored' : 'checked'} on its own:`));
+    out.push({ t: 'table', head: ['Row', 'Title', 'Reach', ...(g[0].tier !== undefined ? ['Tier · score'] : [])],
+      rows: g.map(p => [String(p.row), p.title || 'no title', p.reach, ...(p.tier !== undefined ? [`${p.tier} · ${p.score ?? '—'}`] : [])]) });
+    const link = dupes.filter(d => rows.has(d.row) && rows.has(d.of));
+    const possible = link.filter(d => d.possible);
+    if (possible.length) {
+      out.push(P(possible.map(d => `Row ${d.row} is flagged as a **possible duplicate** of row ${d.of}: same name and company, but not the same email or LinkedIn URL, so it was ${mid(d.outcome)}.`).join(' ')));
+      out.push(NOTE(`If it is the same person, open row ${possible[0].row} in Prospecting and take them out of the list (or give both rows the same email), then score the list again, so they are contacted once.`));
+    } else if (link.length) {
+      out.push(P(link.map(d => `Row ${d.row} repeats row ${d.of} (same email or LinkedIn URL): ${mid(d.outcome)}.`).join(' ')));
+    } else {
+      out.push(P('Prospecting did not flag them as duplicates: they share no email or LinkedIn URL, so DemandAI keeps them as different people.'));
+    }
+  }
+  if (hit.length > 3) out.push(NOTE(`and ${pl(hit.length - 3, 'more name')} shared by two or more prospects.`));
+  return out;
+}
+
 /* ─── A lead list (Prospecting) ─── */
 
+/** One check over the rows the caller can see: findings by severity, the rows with any, and the rows it holds back
+ *  (a stop or flag finding: what % clean counts). */
+export type ListCheck = { key: string; name: string; why: string; fix: string; findings: number; stop: number; flag: number; info: number; rows: number[]; badRows: number[] };
 export type ListFacts = {
-  fileName: string; rowsRead: number; clean: number | null; accounts: number; accountsPass: number; contacts: number; inFinalList: number;
-  checks: { key: string; name: string; fix: string; findings: number; rows: number[] }[];
+  fileName: string; rowsRead: number; clean: number | null; unclean: number | null; own: boolean; accounts: number; accountsPass: number; contacts: number; inFinalList: number;
+  checks: ListCheck[];
+  /** The stop and flag findings on rows, in file order, people's names beside the rows they mention. */
+  bad: { row: number; check: string; text: string }[];
+  /** For information only: how many, and the most common kinds. */
+  info: { n: number; kinds: [string, number][] };
+  /** The person on each row (a merged repeat's: the person it went into), and a merged repeat's row → that person's. */
+  rowNames: Record<string, string>; mergedInto: Record<string, number>;
   excluded: { name: string; reason: string }[]; unreachable: { name: string; company: string; row: number }[]; duplicates: { row: number; issue: string }[];
   personas: Record<string, number>; accountsByName: { name: string; vertical: string; country: string; excluded: string; contacts: { name: string; title: string; reach: string }[] }[];
+  people: Person[]; dupes: Dupe[];
 };
+
+/** "Grace Teh (row 3)", or "row 3" when the row has no person the caller can see. */
+const rowOf = (f: Pick<ListFacts, 'rowNames'>, r: number) => (f.rowNames[r] ? `${f.rowNames[r]} (row ${r})` : `row ${r}`);
+const rowsOf2 = (f: Pick<ListFacts, 'rowNames'>, rows: number[], max = 4) => {
+  const s = rows.slice().sort((a, b) => a - b);
+  return s.slice(0, max).map(r => rowOf(f, r)).join(', ') + (s.length > max ? ` and ${s.length - max} more` : '');
+};
+const NOT_WORDS = new Set(['the', 'list', 'file', 'this', 'that', 'what', 'which', 'with', 'from', 'about', 'group', 'company', 'global', 'international', 'industries', 'industrial']);
+/** The account a question is about: its whole name, or a distinctive first word of it. */
+function accountIn<A extends { name: string }>(accs: A[], t: string): A | undefined {
+  const word = (w: string) => new RegExp(`(^|[^\\p{L}\\p{N}])${esc(w)}(?![\\p{L}\\p{N}])`, 'iu').test(t);
+  return accs.find(a => a.name.length > 3 && word(a.name.toLowerCase())) ?? accs.find(a => { const w = a.name.toLowerCase().split(/\s+/)[0]; return w.length > 3 && !NOT_WORDS.has(w) && word(w); });
+}
+
+function cleanLine(f: ListFacts): string {
+  if (f.clean === null) return '';
+  const u = f.unclean ?? 0, ok = Math.max(0, f.rowsRead - u);
+  return `**${f.clean}%** of the ${f.rowsRead} rows are clean: ${pl(ok, 'row has', 'rows have')} no finding that stops or flags ${ok === 1 ? 'it' : 'them'}, and ${pl(u, 'row has', 'rows have')} at least one.`;
+}
+const infoNote = (f: ListFacts) => f.info.n ? [NOTE(`${pl(f.info.n, 'finding is', 'findings are')} for information only (${f.info.kinds.slice(0, 3).map(([k, n]) => `${k} ${n}`).join(', ')}): ${f.info.n === 1 ? 'it doesn\'t' : 'they don\'t'} count against % clean.`)] : [];
+const ownNote = (f: ListFacts) => f.own ? [NOTE('You see the findings on your own rows; % clean counts the whole file.')] : [];
+
+/** Checks that hold rows back, the most rows first (a stop before a flag). */
+const ranked = (f: ListFacts) => f.checks.filter(c => c.badRows.length).sort((a, b) => (b.stop ? 1 : 0) - (a.stop ? 1 : 0) || b.badRows.length - a.badRows.length || b.findings - a.findings);
+
+function biggest(f: ListFacts, max = 5): CopilotBlock[] {
+  const r = ranked(f);
+  if (!r.length) return [P(f.checks.some(c => c.findings) ? 'Nothing holds a row back: every finding is for information only.' : 'Every check passed: there are no issues in this file.'), ...infoNote(f)];
+  return [P(`The biggest issues in ${f.fileName}, by how many rows they hold back:`),
+    { t: 'list', ordered: true, items: r.slice(0, max).map(c => `**${c.name}**: ${pl(c.badRows.length, 'row')}${c.stop ? ` (${c.stop} stop the row)` : ''}, ${rowsOf2(f, c.badRows, 3)}. ${c.why} Fix: ${c.fix}`) },
+    ...infoNote(f), ...ownNote(f)];
+}
+
+function whyClean(f: ListFacts): CopilotBlock[] {
+  const byRow = new Map<number, string[]>();
+  for (const b of f.bad) byRow.set(b.row, [...(byRow.get(b.row) ?? []), b.text.length > 140 ? b.text.slice(0, 137) + '…' : b.text]);
+  const rows = [...byRow.keys()].sort((a, b) => a - b);
+  return [P(cleanLine(f) || 'This list was saved before % clean was kept with it.'),
+    ...(rows.length ? [P(rows.length === 1 ? 'The row held back, and why:' : `The rows held back, and why${rows.length > 8 ? ' (the first 8)' : ''}:`),
+      { t: 'list' as const, items: rows.slice(0, 8).map(r => `**${rowOf(f, r)}**: ${[...new Set(byRow.get(r))].join('; ')}`) }] : []),
+    ...infoNote(f), ...ownNote(f)];
+}
+
 export function listAnswer(f: ListFacts, text: string): CopilotBlock[] | null {
   const t = text.toLowerCase(), found = f.checks.filter(c => c.findings);
-  const acc = f.accountsByName.find(a => a.name.length > 3 && t.includes(a.name.toLowerCase().split(' ')[0]));
+  const twins = twinsAnswer(f.people, f.dupes, text);
+  if (twins) return twins;
+  const acc = accountIn(f.accountsByName, t);
   if (acc) return [P(`**${acc.name}**: ${acc.vertical}${acc.country ? `, ${acc.country}` : ''}. ${acc.excluded ? `Excluded: ${acc.excluded}.` : 'Passes the knock-outs.'}`), { t: 'list', items: acc.contacts.map(c => `${c.name}, ${c.title || 'no title'} · ${c.reach}`) }];
-  if (/next|cleaner|better|template|avoid|prevent/.test(t)) return found.length ? [P('For the next upload, fix these at the source:'), { t: 'list', items: found.map(c => `**${c.name}**: ${c.fix}`) }] : [P('This file is clean. Keep using the lead template as it is.')];
-  if (/wrong|issue|problem|quality|\bclean\b|check|finding/.test(t)) {
-    return [P(`${f.clean !== null ? `**${f.clean}%** of the ${f.rowsRead} rows are clean. ` : ''}${found.length ? `${pl(found.reduce((n, c) => n + c.findings, 0), 'finding')} in ${pl(found.length, 'check')}:` : 'Every check passed.'}`),
-      ...(found.length ? [{ t: 'list' as const, items: found.map(c => `**${c.name}**: ${c.findings} (rows ${c.rows.slice(0, 6).join(', ')}${c.rows.length > 6 ? ', …' : ''})`) }, NOTE('Click a check above the list to see every finding and how to fix it.')] : [])];
+  if (/next (time|upload|file)|cleaner|better (file|list|data)|template|avoid|prevent/.test(t)) return found.length ? [P('For the next upload, fix these at the source:'), { t: 'list', items: [...ranked(f), ...found.filter(c => !c.badRows.length)].map(c => `**${c.name}**: ${c.fix}`) }] : [P('This file is clean. Keep using the lead template as it is.')];
+  const big = /biggest|major|\bmain\b|\btop\b|worst|most (common|important|serious|frequent)|key (issue|problem|gap)|\bgaps?\b|priorit|focus on|fix first/.test(t);
+  if (/\bclean\b|%|percent|dq score|quality score/.test(t) && /\bwhy\b|\bonly\b|\blow\b|how (is|was|are|do|does)|calculat|\bmean|worked out|\bso\b/.test(t)) {
+    const why = whyClean(f);
+    return big && ranked(f).length ? [...why.filter(b => b.t !== 'note'), ...biggest(f, 3)] : why;
+  }
+  if (big) return biggest(f);
+  if (/wrong|issue|problem|quality|\bclean\b|check|finding|error/.test(t)) {
+    const r = ranked(f), infoOnly = found.filter(c => !c.badRows.length);
+    return [P(found.length ? cleanLine(f) || `${pl(found.reduce((n, c) => n + c.findings, 0), 'finding')} in ${pl(found.length, 'check')}.` : 'Every check passed.'),
+      ...(r.length ? [{ t: 'list' as const, items: r.map(c => `**${c.name}**: ${pl(c.badRows.length, 'row')} held back, ${rowsOf2(f, c.badRows)}`) }] : []),
+      ...(infoOnly.length ? [NOTE(`For information only, not counted against % clean: ${infoOnly.map(c => `${c.name} ${c.findings}`).join(' · ')}.`)] : []),
+      ...(found.length ? [NOTE('Click a check above the list to see every finding and how to fix it.')] : [])];
   }
   if (/reach|no email|linkedin|channel|contact them/.test(t)) {
     return f.unreachable.length ? [P(`${pl(f.unreachable.length, 'contact')} in the list can't be reached by email or LinkedIn:`), { t: 'list', items: f.unreachable.slice(0, 12).map(c => `${c.name} · ${c.company} (row ${c.row})`) },
       ...(f.unreachable.length > 12 ? [NOTE(`and ${f.unreachable.length - 12} more.`)] : []), NOTE('Add a verified email or a LinkedIn URL; contacts are kept on the account until then.')] : [P('Every contact can be reached by a verified email or LinkedIn.')];
   }
   if (/exclud|knock|drop|removed|out of/.test(t)) return f.excluded.length ? [P(`${pl(f.excluded.length, 'account')} excluded by the knock-out rules:`), { t: 'list', items: f.excluded.slice(0, 12).map(a => `**${a.name}**: ${a.reason}`) }, ...(f.excluded.length > 12 ? [NOTE(`and ${f.excluded.length - 12} more.`)] : [])] : [P('No account was excluded.')];
-  if (/duplicate|twice|same person/.test(t)) return f.duplicates.length ? [P(`${pl(f.duplicates.length, 'duplicate')}, merged into the first row:`), { t: 'list', items: f.duplicates.slice(0, 12).map(d => `Row ${d.row}: ${d.issue}`) }] : [P('No duplicates.')];
+  if (/duplicate|twice|same person/.test(t)) return f.duplicates.length ? [P(`${pl(f.duplicates.length, 'duplicate')} found:`), { t: 'list', items: f.duplicates.slice(0, 12).map(d => `**${rowOf(f, d.row)}**: ${d.issue}`) }] : [P('No duplicates.')];
   if (/how many|summary|overview|total|final list/.test(t)) return [P(`${f.rowsRead} rows read. ${f.accountsPass} of ${f.accounts} accounts pass the knock-outs; **${f.inFinalList}** of ${f.contacts} contacts are in the final list.`)];
   if (/persona|primary|role|title/.test(t)) return [{ t: 'table', head: ['Persona', 'Contacts'], rows: Object.entries(f.personas).sort((a, b) => b[1] - a[1]).map(([k, n]) => [k, String(n)]) }];
   return null;
@@ -306,18 +425,21 @@ export function listAnswer(f: ListFacts, text: string): CopilotBlock[] | null {
 
 /* ─── A scoring run, and one prospect in it (Account Scoring) ─── */
 
-export type ScoringFacts = { name: string; tiers: Record<string, number>; top: { who: string; account: string; tier: string; score: number | null; whyNow: string }[];
-  unused: { code: string; reason: string; n: number }[]; weights: { type: string; full: number }[]; prospects: number };
-export function scoringAnswer(f: ScoringFacts, text: string): CopilotBlock[] | null {
+export type ScoringFacts = { name: string; tiers: Record<string, number>; top: { id: string; who: string; row: number; account: string; tier: string; score: number | null; whyNow: string }[];
+  unused: { code: string; reason: string; n: number }[]; weights: { type: string; full: number }[]; prospects: number; people: Person[]; dupes: Dupe[] };
+export function scoringAnswer(f: ScoringFacts, text: string, focus?: string): CopilotBlock[] | null {
   const t = text.toLowerCase();
+  const twins = twinsAnswer(f.people, f.dupes, text, focus);
+  if (twins) return twins;
+  const label = (x: { who: string; row: number; account: string }) => `${x.who}${f.people.filter(p => nameKey(p.who) === nameKey(x.who)).length > 1 ? ` (row ${x.row})` : ''} · ${x.account}`;
   if (/\btiers?\b|\bhow many\b|\bsummary\b|\boverview\b|\bcount\b/.test(t)) return [P(`${f.prospects} prospects in ${f.name}:`), { t: 'table', head: ['Tier', 'Prospects'], rows: Object.entries(f.tiers).map(([k, n]) => [k, String(n)]) }];
-  if (/top|best|highest|first|priority/.test(t)) return [P('The highest-scoring prospects:'), { t: 'table', head: ['Prospect', 'Tier', 'Score', 'Why now'], rows: f.top.slice(0, 10).map(x => [`${x.who} · ${x.account}`, x.tier, x.score === null ? '—' : String(x.score), x.whyNow]) }];
+  if (/top|best|highest|first|priority/.test(t)) return [P('The highest-scoring prospects:'), { t: 'table', head: ['Prospect', 'Tier', 'Score', 'Why now'], rows: f.top.slice(0, 10).map(x => [label(x), x.tier, x.score === null ? '—' : String(x.score), x.whyNow]) }];
   if (/unused|not used|reject|weren'?t used|ignored|why .*rows/.test(t)) return f.unused.length ? [P('Signal rows that did not count, by reason:'), { t: 'table', head: ['Code', 'Why', 'Rows'], rows: f.unused.map(u => [u.code, u.reason, String(u.n)]) }] : [P('Every signal row counted.')];
   if (/weight|count most|strong|which signals|signal types/.test(t)) return [P('What each signal type is worth when fresh (it fades with age):'), { t: 'table', head: ['Signal', 'Points'], rows: f.weights.slice().sort((a, b) => b.full - a.full).map(w => [w.type, String(w.full)]) }];
   return null;
 }
 
-export type ProspectFacts = { who: string; title: string; account: string; tier: string; score: number | null; fit: number | null; timing: number | null;
+export type ProspectFacts = { id: string; who: string; row: number; title: string; account: string; tier: string; score: number | null; fit: number | null; timing: number | null;
   fitWhy: string[]; whyNow: string; whyNowAi: string | null; signals: { type: string; date: string; detail: string; weight: number }[]; next: string | null };
 export function prospectAnswer(f: ProspectFacts, text: string): CopilotBlock[] | null {
   const t = text.toLowerCase();
@@ -325,7 +447,7 @@ export function prospectAnswer(f: ProspectFacts, text: string): CopilotBlock[] |
   if (/why now/.test(t)) return [P(f.whyNowAi ?? f.whyNow ?? 'No live signal for this person.'), ...(f.whyNowAi ? [NOTE('Worded with AI from the signal rows; the rules\' line is in the prospect panel.')] : [])];
   if (/signal|which .*used|evidence/.test(t)) return f.signals.length ? [{ t: 'table', head: ['Signal', 'Date', 'What happened', 'Points'], rows: f.signals.map(s => [s.type, s.date, s.detail, String(Math.round(s.weight * 10) / 10)]) }] : [P('No live signal for this person.')];
   if (/why|score|fit|how .*(made|worked)|rank/.test(t)) {
-    return [P(`**${f.who}** (${f.title || 'no title'}) at ${f.account}: score ${f.score ?? '—'} (tier ${f.tier}) = company fit ${f.fit ?? '—'} × timing ${f.timing ?? '—'} ÷ 100.`), ...(f.fitWhy.length ? [{ t: 'list' as const, items: f.fitWhy }] : [])];
+    return [P(`**${f.who}** (row ${f.row}, ${f.title || 'no title'}) at ${f.account}: score ${f.score ?? '—'} (tier ${f.tier}) = company fit ${f.fit ?? '—'} × timing ${f.timing ?? '—'} ÷ 100.`), ...(f.fitWhy.length ? [{ t: 'list' as const, items: f.fitWhy }] : [])];
   }
   return null;
 }

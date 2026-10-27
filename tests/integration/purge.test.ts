@@ -101,6 +101,16 @@ before(async () => {
     [ids.buA, JSON.stringify([{ id: item, before: {} }]), ids.adminA]);
   await owner.query(`INSERT INTO account_transfers (business_unit_id, to_business_unit_id, account_key, account_name, from_list_id, from_account_id, rows, reason, created_by)
     SELECT $1, $2, 'k', a.name, a.list_id, a.id, 1, 'test', $3 FROM accounts a WHERE a.list_id = $4 LIMIT 1`, [ids.buA, ids.buB, ids.adminA, listId]);
+  // Copilot's saved chats: one about the old list, one about the queue last used 45 days ago, and one used today.
+  const chat = async (list: string | null, daysAgo: number) => {
+    const id = (await owner.query(`INSERT INTO copilot_chats (business_unit_id, screen, ref_key, ref, list_id, title, created_by, updated_at)
+      VALUES ($1, $2, $3, $4, $5, 'A chat', $6, now() - make_interval(days => $7)) RETURNING id`,
+    [ids.buA, list ? 'prospecting' : 'today', list ? `list:${list}` : 'queue:today', JSON.stringify(list ? { listId: list } : {}), list, ids.adminA, daysAgo])).rows[0].id;
+    await owner.query(`INSERT INTO copilot_messages (business_unit_id, chat_id, role, text, created_by) VALUES ($1, $2, 'you', 'What is wrong with this file?', $3)`, [ids.buA, id, ids.adminA]);
+  };
+  await chat(lead.listId, 0);
+  await chat(null, 45);
+  await chat(null, 0);
   await owner.query(`UPDATE uploads SET created_at = now() - interval '45 days' WHERE id = ANY($1)`, [[leadUpload, signalUpload]]);
   const recent = await upload(admin(), 'lead', 'recent.csv', smallFile('recent-co'), 'text/csv');
   recentUpload = recent.uploadId;
@@ -113,7 +123,8 @@ after(async () => { await db?.drop(); });
 async function snapshot(): Promise<Record<string, number>> {
   const out: Record<string, number> = {};
   for (const t of ['uploads', 'upload_files', 'lead_lists', 'accounts', 'contacts', 'issues', 'corrections', 'scoring_runs', 'signals', 'account_scores', 'prospect_scores',
-    'handoffs', 'handoff_items', 'nba_runs', 'recommendations', 'drafts', 'decision_log', 'segment_pauses', 'spot_checks', 'autopilot_runs', 'account_transfers', 'jobs', 'audit_log']) {
+    'handoffs', 'handoff_items', 'nba_runs', 'recommendations', 'drafts', 'decision_log', 'segment_pauses', 'spot_checks', 'autopilot_runs', 'account_transfers', 'jobs', 'audit_log',
+    'copilot_chats', 'copilot_messages']) {
     out[t] = await n(`SELECT count(*)::int n FROM ${t}`);
   }
   return out;
@@ -174,6 +185,7 @@ test('a dry run counts what a date purge would remove, table by table, and remov
   for (const k of ['upload_files', 'accounts', 'issues', 'corrections', 'scoring_runs', 'signals', 'account_scores', 'prospect_scores', 'handoffs', 'handoff_items', 'nba_runs',
     'decision_log', 'spot_checks', 'autopilot_runs', 'account_transfers', 'jobs']) assert.ok(r[k] > 0, `${k}: ${r[k]}`);
   assert.equal(r.ai_verticals, 0);
+  assert.equal(r.copilot_chats, 2, "Copilot's chat about the old list, and the queue chat last used before the date");
 });
 
 test('the export returns the files as received and the rows made from them, per unit, records it, and never a password hash', async () => {
@@ -236,6 +248,7 @@ test('a date purge removes the old uploads and everything made from them, in one
     assert.equal(await n(`SELECT count(*)::int n FROM ${t}`), 0, t);
   }
   assert.equal(await n(`SELECT count(*)::int n FROM jobs WHERE payload->>'uploadId' = ANY($1)`, [[leadUpload, signalUpload]]), 0);
+  assert.deepEqual([after.copilot_chats, after.copilot_messages], [1, 1], "the chat used today stays; the others' messages went with them");
   // The rest stays: the recent upload with its corrections, unit B, the configuration and the audit trail.
   assert.equal(await n(`SELECT count(*)::int n FROM uploads WHERE id = ANY($1)`, [[recentUpload, unitBUpload]]), 2);
   assert.ok(await n(`SELECT count(*)::int n FROM corrections WHERE upload_id = $1`, [recentUpload]) > 0);

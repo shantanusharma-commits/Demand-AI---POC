@@ -279,7 +279,7 @@ test('G-015 over HTTP: per-check CSV and the validation report download as UTF-8
   assert.match(String(r.headers.get('content-type')), /^text\/csv; charset=utf-8/);
   assert.equal(r.headers.get('content-disposition'), `attachment; filename="Lead_Research_Sample_Dataset-dupes-issues.csv"; filename*=UTF-8''Lead_Research_Sample_Dataset-dupes-issues.csv`);
   assert.equal(r.headers.get('cache-control'), 'no-store');
-  assert.ok(r.text.startsWith('Row,Field,Issue,What happens,How to fix,Severity\r\n'), 'the BOM is stripped by fetch; the header row follows');
+  assert.ok(r.text.startsWith('Row,Person,Field,Issue,What happens,How to fix,Severity\r\n'), 'the BOM is stripped by fetch; the header row follows');
   assert.equal((await b.get(`/api/lists/${listId}/issues.csv?check=nonsense`)).status, 400);
   assert.equal((await b.get(`/api/lists/${listId}/issues.csv`)).status, 400, 'the check is required');
   const page = await b.get(`/api/lists/${listId}/issues?check=dupes&limit=5`);

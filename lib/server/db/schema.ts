@@ -1171,3 +1171,57 @@ export const autopilotRuns = pgTable('autopilot_runs', {
   check('autopilot_runs_kind_check', sql`${t.kind} in ('spot', 'exception')`),
   index('autopilot_runs_bu_idx').on(t.businessUnitId, t.createdAt),
 ]);
+
+/* ─── Copilot's saved chats (G-013, the legacy panel's saved chats) ─── */
+
+/** Kept in step with COPILOT_SCREENS in lib/copilot/types.ts. */
+export const COPILOT_CHAT_SCREENS = ['today', 'review', 'nba', 'prospecting', 'scoring'] as const;
+
+/** One person's conversation with Copilot about a screen and the record open on it (`ref_key`: 'list:<id>',
+ *  'run:<id>', 'nba:<id>', 'item:<id>', or 'queue'). Private to the person who had it; they may delete it. A chat about
+ *  a list, run, build or item goes with that record, so the end-of-pilot purge removes it with the data it talks about. */
+export const copilotChats = pgTable('copilot_chats', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  businessUnitId: uuid('business_unit_id').notNull().references(() => businessUnits.id),
+  screen: text('screen').notNull(),
+  refKey: text('ref_key').notNull(),
+  /** The CopilotRef of the record the chat is about (no focus: a prospect or item picked on the way is per message). */
+  ref: jsonb('ref').notNull(),
+  listId: uuid('list_id').references(() => leadLists.id, { onDelete: 'cascade' }),
+  runId: uuid('run_id').references(() => scoringRuns.id, { onDelete: 'cascade' }),
+  nbaRunId: uuid('nba_run_id').references(() => nbaRuns.id, { onDelete: 'cascade' }),
+  itemId: uuid('item_id').references(() => recommendations.id, { onDelete: 'cascade' }),
+  /** What the panel's header said when the chat began (a file, a run, a person and account). */
+  title: text('title').notNull(),
+  createdAt: createdAt(),
+  createdBy: createdBy(),
+  updatedAt: updatedAt(),
+}, t => [
+  check('copilot_chats_screen_check', sql`${t.screen} in (${inList(COPILOT_CHAT_SCREENS)})`),
+  index('copilot_chats_owner_idx').on(t.businessUnitId, t.createdBy, t.screen, t.updatedAt),
+  index('copilot_chats_ref_idx').on(t.createdBy, t.refKey, t.updatedAt),
+  index('copilot_chats_list_idx').on(t.listId),
+  index('copilot_chats_run_idx').on(t.runId),
+  index('copilot_chats_nba_run_idx').on(t.nbaRunId),
+  index('copilot_chats_item_idx').on(t.itemId),
+]);
+
+/** A question or an answer in a chat. An answer keeps its blocks as they were shown; `text` is its plain form, sent as
+ *  an earlier turn with the next question. `focus` is the prospect or item picked when the question was asked. */
+export const copilotMessages = pgTable('copilot_messages', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  seq: bigint('seq', { mode: 'number' }).generatedAlwaysAsIdentity(),
+  businessUnitId: uuid('business_unit_id').notNull().references(() => businessUnits.id),
+  chatId: uuid('chat_id').notNull().references(() => copilotChats.id, { onDelete: 'cascade' }),
+  role: text('role').notNull(),
+  text: text('text').notNull(),
+  answer: jsonb('answer'),
+  focus: jsonb('focus'),
+  createdAt: createdAt(),
+  createdBy: createdBy(),
+}, t => [
+  check('copilot_messages_role_check', sql`${t.role} in ('you', 'copilot')`),
+  check('copilot_messages_answer_check', sql`(${t.role} = 'copilot') = (${t.answer} is not null)`),
+  index('copilot_messages_chat_idx').on(t.chatId, t.seq),
+  index('copilot_messages_bu_idx').on(t.businessUnitId),
+]);

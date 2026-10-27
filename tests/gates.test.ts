@@ -103,13 +103,16 @@ test('readiness before measurement: each check against its agreed level; the bas
   const facts: G.PilotFacts = { accounts: 40, contactable: 30, covered: 10, qualified: 20, recent: 15, noProof: ['Offer a renewal review'], actions: 15 };
   const checks = G.pilotReadiness(facts, settings);
   assert.deepEqual(checks.map(c => [c.k, c.ok]), [
-    ['Accounts in scope', true], ['Contactability', true], ['Signal coverage', false], ['Recency', true], ['Collateral', false], ['Baseline', false],
+    ['Contactability', true], ['Signal coverage', false], ['Recency', true], ['Collateral', false], ['Baseline', false],
   ]);
-  assert.equal(checks[1].show, '75% of accounts');
-  assert.equal(checks[4].fix, 'Proof for: Offer a renewal review');
+  assert.equal(checks[0].show, '75% of accounts');
+  assert.equal(checks[3].fix, 'Proof for: Offer a renewal review');
   assert.equal(G.pilotVerdict(checks), 'Not yet sufficient');
   assert.equal(G.pilotReadiness(facts, { ...settings, g1BaselineTimed: true }).at(-1)!.ok, true);
-  assert.equal(G.pilotReadiness({ ...facts, qualified: 0, recent: 0 }, settings)[3].ok, false, 'no qualified signals: recency fails');
+  assert.equal(G.pilotReadiness({ ...facts, qualified: 0, recent: 0 }, settings)[2].ok, false, 'no qualified signals: recency fails');
+  // No minimum number of accounts (27 Oct 2026): a handful of well-covered accounts is ready on every data check.
+  const few = G.pilotReadiness({ accounts: 4, contactable: 4, covered: 4, qualified: 4, recent: 4, noProof: [], actions: 15 }, { ...settings, g1BaselineTimed: true });
+  assert.ok(few.every(c => c.ok), JSON.stringify(few.filter(c => !c.ok)));
   assert.equal(G.pilotVerdict(G.pilotReadiness({ ...facts, covered: 30, noProof: [] }, settings)), 'Sufficient with gaps');
 });
 

@@ -104,7 +104,6 @@ export function pilotReadiness(f: PilotFacts, s: ValidationSettings): PilotCheck
   const p = (a: number, b: number) => (b ? a / b * 100 : 0);
   const pct = (v: number) => Math.round(v) + '%';
   return [
-    { k: 'Accounts in scope', ok: f.accounts >= R.accounts, show: `${f.accounts}`, need: `${R.accounts} or more`, fix: 'More accounts in the selected vertical and region' },
     { k: 'Contactability', ok: p(f.contactable, f.accounts) >= R.contactable, show: `${pct(p(f.contactable, f.accounts))} of accounts`,
       need: `${R.contactable}%+ with a primary-persona contact who has a verified email or LinkedIn URL`, fix: 'Verified emails or LinkedIn URLs for the primary-persona contacts' },
     { k: 'Signal coverage', ok: p(f.covered, f.accounts) >= R.coverage, show: `${pct(p(f.covered, f.accounts))} of accounts`,

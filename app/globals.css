@@ -71,9 +71,10 @@ input,textarea,select{font:inherit;}
 
 /* Topbar */
 .topbar{height:var(--hh);padding:0 20px;display:flex;align-items:center;justify-content:space-between;background:var(--surf);border-bottom:1px solid var(--border);flex-shrink:0;gap:10px;}
+/* A long title or tag is cut with an ellipsis (the full text is its tooltip) so it never runs under the buttons. */
 .topbar-l{display:flex;align-items:center;gap:10px;flex:1;min-width:0;}
-.tb-title{font-family:var(--fd);font-size:15px;font-weight:600;color:var(--i1);}
-.tb-badge{display:inline-flex;align-items:center;gap:4px;font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 9px;border-radius:999px;}
+.tb-title{font-family:var(--fd);font-size:15px;font-weight:600;color:var(--i1);min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tb-badge{display:inline-block;flex-shrink:3;min-width:0;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 9px;border-radius:999px;}
 .badge-live{background:var(--pos-lt);color:var(--pos);}
 .badge-dot{width:5px;height:5px;border-radius:50%;background:currentColor;animation:pulse 1.6s ease-in-out infinite;}
 .badge-neutral{background:var(--s100);color:var(--i3);}
@@ -438,6 +439,7 @@ button.ftab{background:none;border-top:0;border-left:0;border-right:0;font-famil
 .dqp-i{padding:9px 11px;border:1px solid var(--border);border-radius:9px;margin-bottom:7px;font-size:12px;}
 .dqp-ih{display:flex;gap:8px;align-items:center;margin-bottom:3px;}
 .dqp-f{flex:1;font-family:var(--fm);font-size:11px;color:var(--i3);}
+.dqp-r{font-size:11px;color:var(--i3);white-space:nowrap;}
 .dqp-t{color:var(--i1);font-weight:600;line-height:1.45;}
 .dqp-o{color:var(--i2);font-size:11.5px;margin-top:2px;line-height:1.45;}
 .dqp-ok{font-size:12.5px;color:var(--pos);font-weight:600;padding:10px 0;}
@@ -1158,6 +1160,29 @@ mark.k-brand{background:#E8DDF4;color:inherit;border-radius:3px;box-shadow:0 0 0
 .copilot .cpp-send{width:32px;height:32px;border-radius:10px;border:none;background:var(--brand);color:#fff;cursor:pointer;flex-shrink:0;}
 .copilot .cpp-send.busy{background:var(--i1);}
 .copilot .cpp-foot{font-size:10.5px;color:var(--i3);margin-top:6px;text-align:center;}
+/* Saved chats (the legacy panel's history) and the prospect or item a chat is about */
+.copilot .cpp-tool.on{background:var(--brand-lt);color:var(--brand-dk);}
+.copilot .cpp-tool.sm{width:28px;height:28px;flex-shrink:0;}
+.copilot .cpp-tool svg{vertical-align:middle;}
+.copilot .cpp-note{font-size:12px;color:var(--i2);padding:9px 12px;background:var(--s50);border-radius:10px;}
+.copilot .cpp-link{display:inline-flex;align-items:center;gap:6px;border:none;background:none;color:var(--brand-dk);font-weight:600;font-size:12px;cursor:pointer;padding:0;}
+.copilot .cpp-hist-top{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11.5px;color:var(--i3);}
+.copilot .cpp-hist{display:flex;align-items:center;gap:4px;border:1px solid var(--border);border-radius:12px;padding:2px 6px 2px 2px;}
+.copilot .cpp-hist.cur{border-color:var(--brand-mid);}
+.copilot .cpp-hist:hover{background:#FCFAFE;}
+.copilot .cpp-hist-main{flex:1;min-width:0;display:flex;gap:10px;align-items:flex-start;padding:10px;border:none;background:none;text-align:left;cursor:pointer;font-family:var(--fb);}
+.copilot .cpp-hist-i{color:var(--brand);margin-top:1px;}
+.copilot .cpp-hist-tx{display:flex;flex-direction:column;gap:2px;min-width:0;}
+.copilot .cpp-hist-t{font-size:12.5px;font-weight:700;color:var(--i1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.copilot .cpp-hist-q{font-size:12px;color:var(--i2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.copilot .cpp-hist-m{font-size:11px;color:var(--i3);}
+.copilot .cpp-none{font-size:12.5px;color:var(--i3);padding:16px;text-align:center;border:1px dashed var(--border);border-radius:12px;}
+.copilot .cpp-focus{display:flex;align-items:center;gap:6px;margin-bottom:8px;font-size:11.5px;color:var(--i2);}
+.copilot .cpp-focus b{max-width:100%;min-width:0;padding:3px 4px 3px 10px;border-radius:999px;background:var(--brand-lt);color:var(--brand-dk);font-weight:600;display:inline-flex;align-items:center;gap:4px;overflow:hidden;}
+.copilot .cpp-focus b span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.copilot .cpp-focus button{border:none;background:transparent;color:inherit;cursor:pointer;width:18px;height:18px;border-radius:50%;flex-shrink:0;font-size:11px;}
+.copilot .cpp-focus button:hover{background:var(--brand-mid);color:#fff;}
+.copilot .cpp-me-about{align-self:flex-end;margin:-10px 4px 0 0;font-size:11px;color:var(--i3);}
 
 /* Upload fields (G-035): the file input is hidden from sight but not from the keyboard, so Tab reaches it and Enter or
    Space opens the file chooser; the drop zone around it shows where focus is. */
