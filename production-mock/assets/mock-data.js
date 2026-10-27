@@ -332,9 +332,11 @@
   ACCOUNTS.forEach(a => {
     a.signals.forEach(x => { x.weight = Math.round(decayed(x.tier, x.age) * x.strength * 10) / 10; });
     const ws = a.signals.map(x => x.weight).sort((p, q) => q - p);
-    a.timing = Math.round(ws.reduce((t, w, i) => t + w / Math.pow(2, i), 0) * 10) / 10;
-    a.score = Math.round(a.fit * a.timing);
-    a.tier = a.score >= 8000 ? 'A' : a.score >= 4000 ? 'B' : a.score > 0 ? 'C' : '—';
+    // Everything on 0–100: Timing is the stacked points as a share of 200, Score = Fit × Timing ÷ 100
+    a.points = Math.round(ws.reduce((t, w, i) => t + w / Math.pow(2, i), 0) * 10) / 10;
+    a.timing = Math.min(100, Math.round(a.points / 2));
+    a.score = Math.round(a.fit * a.timing / 100);
+    a.tier = a.score >= 40 ? 'A' : a.score >= 20 ? 'B' : a.score > 0 ? 'C' : '—';
     a.whyNow = a.signals.length ? a.signals.slice().sort((p, q) => q.weight - p.weight)[0] : null;
   });
   ACCOUNTS.sort((p, q) => q.score - p.score);
@@ -425,7 +427,7 @@
     if (a.fromList) act.push({ k: 'crm', when: 'Mon 26 Oct', t: 'Found by prospecting', d: 'Added to the list "Lookalikes of my last 10 wins" from the chat. Identity checked, customers removed.' });
     const sig = a.signals.slice().sort((p, q) => q.age - p.age);
     sig.forEach(x => act.push({ k: 'signal', when: x.age === 0 ? 'Today' : `${x.age} day${x.age > 1 ? 's' : ''} ago`, t: `Signal: ${x.type}`, d: `${x.text} (${x.source}, tier ${x.tier})` }));
-    if (a.signals.length) act.push({ k: 'score', when: 'Today 06:00', t: `Scored ${a.score.toLocaleString('en-US')} · tier ${a.tier}`, d: `Fit ${a.fit} × Timing ${a.timing}. Passed the observable, predictive and time-bound checks.` });
+    if (a.signals.length) act.push({ k: 'score', when: 'Today 06:00', t: `Scored ${a.score}/100 · tier ${a.tier}`, d: `Fit ${a.fit} × Timing ${a.timing} ÷ 100. Passed the observable, predictive and time-bound checks.` });
     if (a.seg) act.push({ k: 'segment', when: 'Today 06:02', t: `Joined micro-segment: ${a.segment}`, d: `Strongest trigger: ${a.whyNow ? a.whyNow.type : '—'}.` });
     if (a.campaign) {
       const c = CAMPAIGNS.find(x => x.id === a.campaign);

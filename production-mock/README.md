@@ -52,6 +52,14 @@ A rep sees only their own accounts, campaigns, replies and numbers. The manager 
 
 Opening a person or a reply brings up a focused panel; the chat and the view behind it are blurred until you close it. Loading shows a short placeholder instead of redrawing, and the AI's steps appear one by one before the answer.
 
+## Next best actions
+
+A next best action goes ahead on its own when it passes six checks: high confidence, proven message, not sensitive, identity confirmed, not in another sequence, not picked for a spot-check. Only the ones that fail a check wait for a person, with the failed check shown. The Next best actions module has Needs you, With Pavan (manager sign-off), Went ahead and Decided. Segments that aren't campaigns list their next best actions.
+
+## Person panel
+
+Send and Copilot sit under the person's name. In a campaign, Engagement shows that person's sequence as a timeline: each step's day, channel, format, message and what it was built from (the signal, the message structure and the outreach practice it follows). Edit any unsent message, remove a step, add an email or LinkedIn step, or ask Copilot ("make step 1 shorter", "use cost framing", "add a LinkedIn step", "why these messages?"). Changes apply to that person only.
+
 ## Inbox
 
 Laid out like a mail client: folders (Inbox, Needs a reply, Positive, Objection, Meetings, Out of office, Sent, Archived) and channel filters on the left, the conversation list in the middle with unread in bold, and the reading pane on the right with the earlier message, a reply drafted by the AI that runs the brand checks, Send, Mark handled, Archive and Mark as unread. On a phone the list and the message are separate screens. When someone replies, their remaining campaign steps pause (an assumption to confirm). The manager can reassign the thread.
@@ -62,7 +70,7 @@ Pilot targets (meetings, reply rate, accepted first time), the funnel, each rep,
 
 ## Scoring and routing
 
-"Score this list" shows the Score flow step by step (collect, qualify, weigh by tier, decay, stack into Timing, Fit × Timing) with the top account worked through; "How scoring works" in Accounts shows the same. "Route to NBA and NBC" then sends the segment that crosses the threshold to one campaign and gives every other account its own next best action.
+Every score is out of 100: Fit (0–100) × Timing (stacked signal points as a share of 200, 0–100) ÷ 100; tiers A ≥ 40, B ≥ 20, C above 0. "Score this list" shows the Score flow step by step (collect, qualify, weigh by tier, decay, stack into Timing, Fit × Timing ÷ 100) with the top account worked through; "How scoring works" in Accounts shows the same. "Route to NBA and NBC" then sends the segment that crosses the threshold to one campaign and gives every other account its own next best action.
 
 ## Roles
 
