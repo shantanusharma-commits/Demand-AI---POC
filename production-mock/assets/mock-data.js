@@ -115,7 +115,7 @@
         subject: 'Automation for the Balikpapan expansion',
         body: 'Hi Dian, congratulations on the hydrocracker approval…',
       },
-      outcome: 'Replied: positive', replyAt: 'Today 08:12', history: [{ d: 'Today 08:12', t: 'Reply received · "Yes, let\'s talk next week"', o: 'Positive reply' }],
+      history: [],
     },
     {
       id: 'ironwood', name: 'Ironwood Refining', industry: 'Refining', country: 'Thailand', size: '2,200 staff', fit: 81, owner: 'marco',
@@ -226,6 +226,95 @@
     },
   ];
 
+  /* ─── Micro-segments ───
+     A segment is the strongest trigger that made its accounts ready. When 10 or more accounts land in one segment within
+     7 days it is run as a campaign (NBC, confirmed by the manager); below that, each account gets its own next best action (NBA). */
+  const SEGMENTS = [
+    { id: 's8', name: 'Turnaround season 2027', trigger: 'Turnaround announced', mode: 'NBC', campaign: 'c1', proven: 'Proven', rate: 58, outcomes: 19,
+      why: '11 accounts announced a planned maintenance shutdown for H1 2027 in the last 6 days. That crosses the campaign threshold, so they wait for one campaign instead of 11 separate actions.',
+      structure: 'Turnaround readiness: reference the shutdown date → the 3 risks peers hit → offer a pre-turnaround health check' },
+    { id: 's2', name: 'Control-system renewal window', trigger: 'Contract renewal window', mode: 'NBC', campaign: 'c2', proven: 'Proven', rate: 48, outcomes: 21,
+      why: 'Accounts whose control-system or safety-system support contract with a named competitor ends within 6 months.',
+      structure: 'Extend vs. migrate: the cost question framed for their renewal date → comparison document → direct ask' },
+    { id: 's4', name: 'Expansion & capex projects', trigger: 'Expansion / capex approved', mode: 'NBC', campaign: 'c3', proven: 'Proven', rate: 52, outcomes: 11,
+      why: 'Board-approved expansion or debottlenecking projects. Automation is decided early, so timing matters.',
+      structure: 'Automation for the project: congratulate → what peers decided in the first 90 days → offer an early design review' },
+    { id: 's1', name: 'New reliability & operations leaders', trigger: 'New exec hire', mode: 'NBA', proven: 'Proven', rate: 64, outcomes: 14,
+      why: '7 accounts got a new leader this week, below the campaign threshold of 10, so each gets its own next best action from its owner.',
+      structure: '"First 90 days": congratulate on the role → where downtime really comes from → 20-minute call before plans lock' },
+    { id: 's3', name: '2027 emissions-reporting deadline', trigger: 'Compliance deadline', mode: 'Building', building: 8, proven: 'Provisional', rate: 31, outcomes: 9,
+      why: '8 of the 10 accounts needed for a campaign. Until two more arrive within the window, each account gets its own action.',
+      structure: 'Deadline in one paragraph → the gap map → offer the 2-week emissions assessment (email only; LinkedIn was demoted)' },
+    { id: 's7', name: 'Researching competitors', trigger: 'Researching a competitor', mode: 'NBA', proven: 'Proven', rate: 44, outcomes: 12,
+      why: 'Accounts comparing vendors on review sites. Each needs a tailored answer to the competitor it is looking at.',
+      structure: 'Acknowledge the evaluation → the 2 questions to ask any vendor → offer a reference call' },
+    { id: 's5', name: 'Historian & tech-stack change', trigger: 'Tech-stack change', mode: 'NBA', proven: 'Provisional', rate: 38, outcomes: 6,
+      why: 'Job posts and filings show a platform change. Too few, and too varied, for a campaign.',
+      structure: 'Spot the change → the migration checklist → offer an architecture review' },
+    { id: 's6', name: 'Incidents & unplanned shutdowns', trigger: 'Safety incident', mode: 'NBA', sensitive: true, proven: 'Provisional', rate: 0, outcomes: 4,
+      why: 'Sensitive by nature, so never run as a campaign. Every message goes to the sales manager before it is sent.',
+      structure: 'Lead with a peer story, never the incident → root-cause help → reliability assessment' },
+  ];
+  const HAND_SEG = { juniper: 's1', kingfisher: 's1', meridian: 's1', saltmarsh: 's1', tidewater: 's1', cedar: 's7', aurora: 's3', banyan: 's3',
+    eastgate: 's4', pelican: 's4', ironwood: 's2', sapphire: 's2', halcyon: 's5', coralbay: 's6' };
+
+  /* Seeded generator so the mock shows the same accounts every time. */
+  let seed = 20261027;
+  const rnd = () => { seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; };
+  const pick = arr => arr[Math.floor(rnd() * arr.length)];
+  const NAMES = ['Heron', 'Mangrove', 'Monsoon', 'Teakwood', 'Egret', 'Hornbill', 'Rattan', 'Jadeite', 'Amberline', 'Cobalt Bay', 'Saffron', 'Tamarind',
+    'Kestrel', 'Osprey', 'Marlin', 'Nautilus', 'Lantern', 'Harbourline', 'Tidemark', 'Silverleaf', 'Bluewater', 'Greystone', 'Northcape', 'Southpoint',
+    'Westbay', 'Sandpiper', 'Starling', 'Waxwing', 'Magnolia', 'Camphor', 'Pinewell', 'Driftwood', 'Larkspur', 'Bayleaf', 'Copperhill', 'Stillwater',
+    'Seabright', 'Palmyra', 'Ironbark', 'Wildfern', 'Moonstone', 'Firethorn', 'Kingsbay', 'Riverbend', 'Cloudbreak', 'Oakmere', 'Sunfield', 'Brightwater', 'Gullwing', 'Reedbank'];
+  const KIND = [['Refining', 'Refining'], ['Refinery', 'Refining'], ['Petrochem', 'Petrochemicals'], ['Olefins', 'Petrochemicals'], ['Aromatics', 'Petrochemicals'], ['Gas Processing', 'Gas processing'], ['LNG', 'Gas processing']];
+  const REGION = { sofia: [['Singapore', ['Tan', 'Lim', 'Ng', 'Goh', 'Chua'], ['Jia Hui', 'Wei Ming', 'Kai Xin', 'Jun Jie', 'Hui Min']], ['Malaysia', ['Ismail', 'Abdullah', 'Lee', 'Wong', 'Kumar'], ['Nurul', 'Hafiz', 'Siew Ling', 'Arjun', 'Zul']]],
+    marco: [['Thailand', ['Srisuk', 'Chaiyaporn', 'Wongsa', 'Boonmee', 'Kittisak'], ['Anan', 'Pim', 'Narong', 'Suda', 'Chalerm']], ['Vietnam', ['Nguyen', 'Tran', 'Pham', 'Le', 'Vo'], ['Minh', 'Lan', 'Quang', 'Thu', 'Huy']]],
+    aisha: [['Indonesia', ['Wijaya', 'Santoso', 'Hidayat', 'Saputra', 'Lestari'], ['Budi', 'Dewi', 'Agus', 'Rina', 'Fajar']]],
+    kenji: [['Philippines', ['Santos', 'Reyes', 'Cruz', 'Garcia', 'Mendoza'], ['Miguel', 'Andrea', 'Ramon', 'Bea', 'Carlo']]] };
+  const TITLES = ['VP Reliability', 'Head of Maintenance', 'Operations Director', 'Plant Manager', 'Head of Instrumentation & Control', 'Engineering Manager', 'Automation Lead', 'HSE Director', 'Project Director', 'Procurement Director'];
+  const SIG = {
+    s8: [['Turnaround announced', 1, 'Planned maintenance shutdown announced for H1 2027.', 'Funding & news'], ['Hiring surge', 2, 'Contract maintenance roles posted for the turnaround.', 'Hiring data']],
+    s2: [['Contract renewal window', 1, 'Control-system support contract with a named competitor ends within 6 months.', 'Contract data'], ['Email opened', 3, 'Opened the renewal comparison.', 'Sequencing tool']],
+    s4: [['Expansion / capex approved', 1, 'Expansion project approved by the board.', 'Funding & news'], ['Hiring surge', 2, 'Engineering roles posted for the new unit.', 'Hiring data']],
+    s1: [['New exec hire', 1, 'New reliability or operations leader appointed.', 'Job-change alerts']],
+    s3: [['Compliance deadline', 3, 'New emissions-reporting rules apply from 1 Jan 2027.', 'Regulatory calendar']],
+    s7: [['Researching a competitor', 1, 'Comparing control-system vendors on a review site.', 'Buyer intent'], ['Visited pricing page', 1, 'Visited the pricing page twice.', 'Website visitor ID']],
+    s5: [['Tech-stack change', 2, 'Job posts ask for a new historian platform.', 'Tech-stack data']],
+    s6: [['Safety incident', 1, 'Unplanned shutdown reported.', 'Public filings']],
+  };
+  const NEED = { s8: 11, s2: 14, s4: 10, s1: 7, s3: 8, s7: 5, s5: 4, s6: 3 };
+  const OWNERS = ['sofia', 'sofia', 'marco', 'aisha', 'kenji', 'marco', 'sofia', 'aisha', 'kenji'];
+  let nameIx = 0;
+  const genAccount = segId => {
+    const owner = pick(OWNERS), [country, lasts, firsts] = pick(REGION[owner]), [suffix, industry] = pick(KIND);
+    const name = NAMES[nameIx++ % NAMES.length] + ' ' + suffix;
+    const first = pick(firsts), last = pick(lasts);
+    const sigs = SIG[segId].filter((x, i) => i === 0 || rnd() > 0.45).map(([type, tier, text, source]) => s(type, tier, 1 + Math.floor(rnd() * (tier === 3 ? 30 : tier === 2 ? 14 : 8)), Math.round((0.55 + rnd() * 0.4) * 100) / 100, text, source));
+    const id = name.toLowerCase().replace(/[^a-z]+/g, '');
+    return { id, name, industry, country, size: (600 + Math.floor(rnd() * 40) * 100).toLocaleString('en-US') + ' staff', fit: 58 + Math.floor(rnd() * 36), owner, generated: true,
+      segment: '', motivation: rnd() > 0.5 ? 'Cost' : 'Growth',
+      contact: { name: `${first} ${last}`, title: pick(TITLES), email: `${first.split(' ')[0].toLowerCase()}.${last.toLowerCase()}@${id.slice(0, 12)}.example`, phone: rnd() > 0.4 ? '+65 6000 ' + (1000 + Math.floor(rnd() * 8999)) : '', linkedin: true, idTier: pick([1, 1, 1, 1, 2, 2, 3, 5]) },
+      warm: { score: Math.floor(rnd() * 70), note: pick(['No connection found.', 'One 2nd-degree connection.', 'A sibling contact is in CRM.', 'The rep is a 1st-degree connection.']) },
+      signals: sigs, nba: null, history: [] };
+  };
+  Object.keys(NEED).forEach(segId => {
+    const have = ACCOUNTS.filter(a => HAND_SEG[a.id] === segId).length;
+    for (let i = have; i < NEED[segId]; i++) { const a = genAccount(segId); HAND_SEG[a.id] = segId; ACCOUNTS.push(a); }
+  });
+  ACCOUNTS.forEach(a => { a.seg = HAND_SEG[a.id] || null; const sg = SEGMENTS.find(x => x.id === a.seg); a.segment = sg ? sg.name : '—'; });
+
+  /* Next best actions for generated accounts in NBA segments: most went ahead on their own, a few wait for a person. */
+  const ACTION = { s1: ['Introduce Client to the new leader', 'Share a peer case study from their sector'], s3: ['Share the regulation summary', 'Offer an emissions-monitoring assessment'],
+    s7: ['Send the vendor-evaluation guide', 'Offer a reference call'], s5: ['Send the historian migration checklist', 'Offer an architecture review'], s6: ['Offer a reliability assessment', 'Share a peer case study from their sector'] };
+  ACCOUNTS.filter(a => a.generated && SEGMENTS.find(x => x.id === a.seg).mode !== 'NBC').forEach((a, i) => {
+    const st = a.seg === 's6' ? 'review' : ['auto', 'sent', 'auto', 'sent', 'ready', 'auto'][i % 6];
+    const [action, runnerUp] = ACTION[a.seg];
+    a.nba = { action, runnerUp, channel: 'Email', confidence: st === 'review' ? 'Medium' : 'High', proven: SEGMENTS.find(x => x.id === a.seg).proven === 'Proven',
+      reason: a.seg === 's6' ? 'Sensitive' : null, reasonNote: a.seg === 's6' ? 'Incident-related: needs the sales manager\'s approval.' : '', sensitive: a.seg === 's6', status: st, due: st === 'ready' ? 'Today 17:00' : st === 'review' ? 'Wed 28 Oct' : '',
+      subject: action, body: `Hi ${a.contact.name.split(' ')[0]},\n\n${a.whyNowText || ''}A short note from Client: ${action.toLowerCase()}.\n\nWould a 20-minute call next week be useful?\n\nBest regards` };
+    if (st === 'sent') a.outcome = pick(['Sent · awaiting reply', 'Opened · no reply yet', 'Sent · awaiting reply']);
+  });
+
   /* Fit × Timing = Score (Score process flow, steps 8 and 10). */
   ACCOUNTS.forEach(a => {
     a.signals.forEach(x => { x.weight = Math.round(decayed(x.tier, x.age) * x.strength * 10) / 10; });
@@ -238,52 +327,120 @@
   ACCOUNTS.sort((p, q) => q.score - p.score);
   ACCOUNTS.forEach((a, i) => { a.rank = i + 1; });
 
+  /* ─── Campaigns (NBC) ─── */
+  const CAMPAIGNS = [
+    { id: 'c1', seg: 's8', name: 'Turnaround season 2027', status: 'Ready to confirm', launched: null, day: 0,
+      touches: [
+        { day: 0, ch: 'Email', fmt: 'Plain text', t: 'Reference the announced shutdown window and the three risks peers hit in planning.', state: 'Waiting for confirmation' },
+        { day: 4, ch: 'LinkedIn', fmt: 'Checklist (carousel)', t: 'The pre-turnaround health checklist a peer refinery used.', state: '' },
+        { day: 9, ch: 'Email', fmt: 'Plain text', t: 'A direct ask for a pre-turnaround health check, referencing both earlier touches.', state: '' } ],
+      explore: '1 of 11 accounts gets a different opening (cost of a delayed restart) to keep the pattern honest.',
+      updates: [{ t: 'Today 06:05', x: 'Crossed the threshold: 11 accounts in 6 days. Waiting for Pavan to confirm.' }, { t: 'Mon 26 Oct', x: '3 more accounts announced shutdowns (8 → 11).' }],
+      blockers: [] },
+    { id: 'c2', seg: 's2', name: 'Control-system renewal window', status: 'Running', launched: 'Mon 12 Oct', day: 15,
+      touches: [
+        { day: 0, ch: 'Email', fmt: 'Plain text', t: 'Extend vs. migrate: the cost question, framed for their renewal date.', state: 'Sent 12 Oct' },
+        { day: 4, ch: 'Email', fmt: 'Comparison document', t: 'Migration-path comparison: lifecycle cost and outage windows.', state: 'Sent 16 Oct' },
+        { day: 9, ch: 'Phone', fmt: 'Call', t: 'Direct ask, referencing the comparison.', state: 'Done 21 Oct' } ],
+      explore: '1 of 14 accounts got a "risk of staying" opening instead of cost. It is behind (0 replies), so the cost structure stays.',
+      updates: [{ t: 'Mon 26 Oct', x: 'Sapphire Aromatics opened the comparison a third time; follow-up suggested to Sofia.' }, { t: 'Fri 23 Oct', x: 'Ironwood Refining booked a meeting (Marco).' }, { t: 'Wed 21 Oct', x: 'Call touch completed for 9 accounts.' }, { t: 'Fri 16 Oct', x: '1 email bounced; the contact was re-enriched from the fallback provider.' }],
+      blockers: [{ k: 'warn', x: 'Explore variant has 0 replies from 1 account. Kept running so the pattern can be re-earned.' }] },
+    { id: 'c3', seg: 's4', name: 'Expansion & capex projects', status: 'Running', launched: 'Mon 19 Oct', day: 8,
+      touches: [
+        { day: 0, ch: 'Email', fmt: 'Plain text', t: 'Congratulate on the approval; what peers decided in the first 90 days.', state: 'Sent 19 Oct' },
+        { day: 4, ch: 'LinkedIn', fmt: 'Case study (carousel)', t: 'How an expansion kept automation on the critical path.', state: 'Sent 23 Oct' },
+        { day: 10, ch: 'Email', fmt: 'Plain text', t: 'Offer an early design review, referencing both touches.', state: 'Scheduled Thu 29 Oct 09:00' } ],
+      explore: 'None yet: fewer than 10 outcomes for this structure.',
+      updates: [{ t: 'Today 08:12', x: 'Eastgate Refinery replied positive. Sequence stopped for that account and handed to Sofia (fast lane).' }, { t: 'Fri 23 Oct', x: 'Touch 2 sent to 8 accounts on LinkedIn.' }, { t: 'Thu 22 Oct', x: 'Status watch: another rep opened an opportunity at 1 account. It was taken out of the campaign.' }],
+      blockers: [{ k: 'neg', x: 'Touch 3 goes out Thursday through rep mailboxes. 3 of the 4 reps have not connected theirs (placeholder in the mock).' }] },
+    { id: 'c4', seg: null, name: 'Q3 debottlenecking projects', status: 'Completed', launched: 'Mon 7 Sep', day: 30,
+      touches: [{ day: 0, ch: 'Email', fmt: 'Plain text', t: 'Debottlenecking: where automation pays back first.', state: 'Sent 7 Sep' }, { day: 4, ch: 'Email', fmt: 'Infographic', t: 'Payback timeline from 3 peer projects.', state: 'Sent 11 Sep' }, { day: 9, ch: 'Email', fmt: 'Plain text', t: 'Direct ask.', state: 'Sent 16 Sep' }],
+      explore: 'The explore variant (safety-first opening) beat the original 3 replies to 1 and became the proven structure.',
+      updates: [{ t: 'Fri 2 Oct', x: 'Closed: 12 accounts, 5 replies, 3 meetings, 1 opportunity.' }], blockers: [], final: { accounts: 12, sent: 36, replies: 5, meetings: 3 } },
+  ];
+  /* Where each campaign account is in its sequence. */
+  const C2_STATES = ['Meeting booked', 'Replied · positive', 'Replied · objection', 'Out of office', 'Touch 3 done', 'Touch 3 done', 'Touch 3 done', 'Opened', 'Opened', 'Touch 3 done', 'Bounced → re-enriched', 'Touch 3 done', 'Opened', 'Touch 3 done'];
+  const C3_STATES = ['Replied · positive', 'Touch 2 sent', 'Touch 2 sent', 'Opened', 'Touch 2 sent', 'Clicked', 'Touch 2 sent', 'Taken out: owner changed', 'Touch 2 sent', 'Opened'];
+  const camp = (c, states, first) => {
+    const accs = ACCOUNTS.filter(a => a.seg === c.seg);
+    const at = a => (first.includes(a.id) ? first.indexOf(a.id) : 99);
+    accs.sort((p, q) => at(p) - at(q));
+    accs.forEach((a, i) => { a.campaign = c.id; a.campState = states ? states[i % states.length] : 'Waiting for confirmation'; a.nba = null; });
+    return accs;
+  };
+  camp(CAMPAIGNS[0], null, []);
+  camp(CAMPAIGNS[1], C2_STATES, ['ironwood']);
+  camp(CAMPAIGNS[2], C3_STATES, ['eastgate']);
+  ACCOUNTS.find(a => a.id === 'sapphire').campState = 'Opened';
+  CAMPAIGNS.forEach(c => {
+    const accs = ACCOUNTS.filter(a => a.campaign === c.id);
+    c.accounts = accs.map(a => a.id);
+    if (c.final) { c.stats = c.final; return; }
+    const has = re => accs.filter(a => re.test(a.campState)).length;
+    c.stats = { accounts: accs.length, sent: c.status === 'Running' ? accs.length * c.touches.filter(t => /Sent|Done/.test(t.state)).length : 0,
+      opened: has(/Opened|Clicked|Replied|Meeting/), replies: has(/Replied|Meeting|Out of office/), positive: has(/positive|Meeting/), meetings: has(/Meeting/) };
+  });
+
+  /* ─── Replies (from campaigns and from individual actions) ─── */
+  const REPLIES = [];
+  const replyText = { 'Replied · positive': ['Good timing. Can we talk next week?', 'Yes, please send the comparison and some times.', 'Interested. Our project team meets vendors in November.'], 'Replied · objection': ['We are locked in with our current vendor until 2028.', 'Not a priority this year, budget is set.'], 'Out of office': ['Out of office until 3 Nov.'], 'Meeting booked': ['Booked: Tue 3 Nov 10:00 via the scheduling link.'] };
+  ACCOUNTS.filter(a => /Replied|Meeting|Out of office/.test(a.campState || '')).forEach((a, i) => {
+    const kind = a.campState.replace('Replied · ', '');
+    REPLIES.push({ id: 'r' + a.id, acc: a.id, from: a.contact.name, owner: a.owner, source: CAMPAIGNS.find(c => c.id === a.campaign).name, sourceKind: 'Campaign',
+      kind: /positive/.test(kind) ? 'Positive' : /objection/.test(kind) ? 'Objection' : /Out/.test(kind) ? 'Out of office' : 'Meeting booked',
+      text: a.id === 'eastgate' ? 'Thanks Sofia, good timing. The expansion team is meeting vendors next week. Can we do Tuesday or Wednesday?' : replyText[a.campState][i % replyText[a.campState].length],
+      at: a.id === 'eastgate' ? 'Today 08:12' : ['Mon 26 Oct', 'Fri 23 Oct', 'Thu 22 Oct', 'Wed 21 Oct'][i % 4] });
+  });
+  const firstSent = ACCOUNTS.find(a => a.nba && a.nba.status === 'sent' && a.generated);
+  if (firstSent) { firstSent.outcome = 'Replied · positive'; REPLIES.push({ id: 'r' + firstSent.id, acc: firstSent.id, from: firstSent.contact.name, owner: firstSent.owner, source: firstSent.nba.action, sourceKind: 'Your action', kind: 'Positive', text: 'Thanks for the note. Send me something I can share with my team.', at: 'Today 07:40' }); }
+  REPLIES.sort((p, q) => (q.at.startsWith('Today') ? 1 : 0) - (p.at.startsWith('Today') ? 1 : 0));
+
+  /* ─── Activity: every account's story from signal to outcome ─── */
+  ACCOUNTS.forEach(a => {
+    const act = [];
+    const sig = a.signals.slice().sort((p, q) => q.age - p.age);
+    sig.forEach(x => act.push({ k: 'signal', when: x.age === 0 ? 'Today' : `${x.age} day${x.age > 1 ? 's' : ''} ago`, t: `Signal: ${x.type}`, d: `${x.text} (${x.source}, tier ${x.tier})` }));
+    if (a.signals.length) act.push({ k: 'score', when: 'Today 06:00', t: `Scored ${a.score.toLocaleString('en-US')} · tier ${a.tier}`, d: `Fit ${a.fit} × Timing ${a.timing}. Passed the observable, predictive and time-bound checks.` });
+    if (a.seg) act.push({ k: 'segment', when: 'Today 06:02', t: `Joined micro-segment: ${a.segment}`, d: `Strongest trigger: ${a.whyNow ? a.whyNow.type : '—'}.` });
+    if (a.campaign) {
+      const c = CAMPAIGNS.find(x => x.id === a.campaign);
+      act.push({ k: 'campaign', when: c.launched || 'Today 06:05', t: c.status === 'Ready to confirm' ? `Held for campaign: ${c.name}` : `Enrolled in campaign: ${c.name}`, d: c.status === 'Ready to confirm' ? 'Waiting for the sales manager to confirm the campaign.' : `Touch plan: ${c.touches.map(t => `day ${t.day} ${t.ch.toLowerCase()}`).join(', ')}.` });
+      c.touches.filter(t => /Sent|Done/.test(t.state)).forEach((t, i) => act.push({ k: 'sent', when: t.state.replace(/^(Sent|Done) /, ''), t: `Touch ${i + 1} ${t.ch === 'Phone' ? 'call made' : 'sent'} · ${t.ch}`, d: t.t, msg: t.ch === 'Email' ? { subject: c.name, body: `Hi ${a.contact.name.split(' ')[0]},\n\n${t.t}\n\nBest regards,\n${USERS[a.owner].name.split(' ')[0]}` } : null }));
+      if (/Opened|Clicked|Replied|Meeting/.test(a.campState)) act.push({ k: 'open', when: 'Recently', t: /Clicked/.test(a.campState) ? 'Clicked the case study' : 'Opened the email', d: 'Engagement is logged against the segment and message structure.' });
+      const r = REPLIES.find(x => x.acc === a.id);
+      if (r) act.push({ k: 'reply', when: r.at, t: `Reply · ${r.kind}`, d: `"${r.text}"`, reply: r });
+      if (/Taken out/.test(a.campState)) act.push({ k: 'watch', when: 'Thu 22 Oct', t: 'Taken out of the campaign', d: 'Status watch: another rep opened an opportunity here. No double outreach.' });
+      if (/Bounced/.test(a.campState)) act.push({ k: 'watch', when: 'Fri 16 Oct', t: 'Email bounced → contact re-enriched', d: 'The fallback provider found the new address; the next touch used it.' });
+    } else if (a.nba) {
+      act.push({ k: 'nba', when: 'Today 06:05', t: `Next best action: ${a.nba.action}`, d: `${a.nba.channel} · ${a.nba.confidence} confidence · runner-up: ${a.nba.runnerUp}` });
+      if (a.nba.status === 'auto') act.push({ k: 'sent', when: 'Today 09:00', t: 'Went ahead on its own', d: 'Every check passed, so it was sent in the morning window.' });
+      if (a.nba.status === 'sent') act.push({ k: 'sent', when: 'Mon 26 Oct', t: 'Approved and sent', d: a.nba.subject || a.nba.action, msg: a.nba.body ? { subject: a.nba.subject, body: a.nba.body } : null });
+      if (a.nba.status === 'ready' || a.nba.status === 'review') act.push({ k: 'wait', when: 'Now', t: 'Waiting for a person', d: a.nba.reason ? `${a.nba.reason}: ${a.nba.reasonNote}` : 'Ready: high confidence, proven message.' });
+      const r = REPLIES.find(x => x.acc === a.id);
+      if (r) act.push({ k: 'reply', when: r.at, t: `Reply · ${r.kind}`, d: `"${r.text}"`, reply: r });
+    }
+    (a.history || []).forEach(h => act.push({ k: 'crm', when: h.d, t: h.t, d: h.o }));
+    a.activity = act;
+  });
+
   /* Prospecting output (Prospect process flow): one row per person, with identity tier. */
   const PROSPECTS_FOUND = [
-    { name: 'Arif Hidayat', title: 'Head of Maintenance', account: 'Garuda Refinery', country: 'Indonesia', idTier: 1, email: true, crm: 'New', note: '' },
-    { name: 'Chen Jia Hui', title: 'Reliability Manager', account: 'Straits Petrochem', country: 'Singapore', idTier: 1, email: true, crm: 'New', note: '' },
-    { name: 'Thanh Le', title: 'Operations Director', account: 'Mekong Refining', country: 'Vietnam', idTier: 2, email: true, crm: 'New', note: 'Confirmed by a second provider' },
-    { name: 'Siti Aminah', title: 'I&C Manager', account: 'Borneo Gas Processing', country: 'Malaysia', idTier: 1, email: true, crm: 'New', note: '' },
-    { name: 'Apinya Srisuk', title: 'Plant Manager', account: 'Andaman Aromatics', country: 'Thailand', idTier: 3, email: true, crm: 'New', note: 'Unconfirmed, re-checked next refresh' },
-    { name: 'Jose Santos', title: 'Engineering Manager', account: 'Luzon Petrochem', country: 'Philippines', idTier: 1, email: false, crm: 'New', note: 'Email pulled only when needed' },
-    { name: 'Lim Wei Jie', title: 'Automation Lead', account: 'Jurong Olefins', country: 'Singapore', idTier: 4, email: true, crm: 'Held', note: 'Held: providers disagree on title' },
-    { name: 'Dewi Lestari', title: 'HSE Manager', account: 'Java Refining Co', country: 'Indonesia', idTier: 1, email: true, crm: 'Name-only match', note: 'Held: may already be a customer' },
+    { name: 'Arif Hidayat', title: 'Head of Maintenance', account: 'Garnet Refinery', country: 'Indonesia', idTier: 1, email: true, crm: 'New', note: '' },
+    { name: 'Chen Jia Hui', title: 'Reliability Manager', account: 'Lumen Petrochem', country: 'Singapore', idTier: 1, email: true, crm: 'New', note: '' },
+    { name: 'Thanh Le', title: 'Operations Director', account: 'Willow Refining', country: 'Vietnam', idTier: 2, email: true, crm: 'New', note: 'Confirmed by a second provider' },
+    { name: 'Siti Aminah', title: 'I&C Manager', account: 'Fernhill Gas Processing', country: 'Malaysia', idTier: 1, email: true, crm: 'New', note: '' },
+    { name: 'Apinya Srisuk', title: 'Plant Manager', account: 'Ember Aromatics', country: 'Thailand', idTier: 3, email: true, crm: 'New', note: 'Unconfirmed, re-checked next refresh' },
+    { name: 'Jose Santos', title: 'Engineering Manager', account: 'Coralwood Petrochem', country: 'Philippines', idTier: 1, email: false, crm: 'New', note: 'Email pulled only when needed' },
+    { name: 'Lim Wei Jie', title: 'Automation Lead', account: 'Quartz Olefins', country: 'Singapore', idTier: 4, email: true, crm: 'Held', note: 'Held: providers disagree on title' },
+    { name: 'Dewi Lestari', title: 'HSE Manager', account: 'Thornbury Refining', country: 'Indonesia', idTier: 1, email: true, crm: 'Name-only match', note: 'Held: may already be a customer' },
   ];
 
-  const CAMPAIGNS = [
-    {
-      id: 'c1', name: 'New reliability & operations leaders', segment: 'Exec hire', status: 'Ready to confirm', accounts: 11, window: '11 accounts in 6 days',
-      proven: true, owner: 'pavan',
-      why: '11 accounts got a new reliability, operations or plant leader in the last 7 days. That crosses the campaign threshold (10 in 7 days), so the system suggests one campaign instead of 11 separate actions.',
-      touches: [
-        { day: 'Day 0', ch: 'Email', fmt: 'Plain text', t: 'Congratulations + the "first 90 days in reliability" angle, referencing the new role directly.' },
-        { day: 'Day 4', ch: 'LinkedIn', fmt: 'Case study (carousel)', t: 'How a peer site cut unplanned trips by 18% in year one.' },
-        { day: 'Day 9', ch: 'Email', fmt: 'Plain text', t: 'A direct ask for 20 minutes, referencing both earlier touches.' },
-      ],
-      list: ['Juniper Petrochem', 'Kingfisher Refining', 'Meridian Olefins', 'Saltmarsh Refinery', 'Tidewater Petrochem', 'Straits Petrochem', 'Mekong Refining', 'Garuda Refinery', 'Andaman Aromatics', 'Luzon Petrochem', 'Borneo Gas Processing'],
-    },
-    {
-      id: 'c2', name: '2027 emissions-reporting deadline', segment: 'Compliance deadline', status: 'Building · 8 of 10', accounts: 8, window: '8 accounts in 7 days',
-      proven: false, owner: 'pavan',
-      why: 'Accounts facing the 1 January emissions-reporting rules. Two more in this window and it becomes eligible as a campaign. Until then, each account gets its own next best action.',
-      touches: [
-        { day: 'Day 0', ch: 'Email', fmt: 'Plain text', t: 'The new rules in one paragraph, and what they mean for the site.' },
-        { day: 'Day 3', ch: 'Email', fmt: 'Infographic', t: 'The actual deadlines on one page.' },
-        { day: 'Day 8', ch: 'Email', fmt: 'Plain text', t: 'Offer the two-week emissions-monitoring assessment.' },
-      ],
-      list: ['Aurora Refining', 'Banyan Gas', 'Coral Bay Refining', 'Java Refining Co', 'Borneo Gas Processing', 'Andaman Aromatics', 'Pelican LNG', 'Halcyon Gas Processing'],
-    },
-    {
-      id: 'c3', name: 'Control-system renewal window', segment: 'Contract renewal', status: 'Running', accounts: 14, window: 'Launched 12 Oct',
-      proven: true, owner: 'pavan', stats: { sent: 42, replies: 9, meetings: 4 },
-      why: 'Accounts whose control-system or safety-system support contract with a named competitor ends within 6 months.',
-      touches: [
-        { day: 'Day 0', ch: 'Email', fmt: 'Plain text', t: 'Extend vs. migrate: the cost question, framed for their renewal date.' },
-        { day: 'Day 4', ch: 'Email', fmt: 'Comparison doc', t: 'Migration-path comparison: lifecycle cost and outage windows.' },
-        { day: 'Day 9', ch: 'Phone', fmt: 'Call', t: 'Direct ask, referencing the comparison.' },
-      ],
-      list: ['Cedar Petrochemicals', 'Ironwood Refining', 'Sapphire Aromatics'],
-    },
+  const BLOCKERS = [
+    { k: 'neg', who: 'all', t: 'Rep mailboxes not connected', d: '3 of 4 reps can\'t send campaign touches. Expansion & capex touch 3 goes out Thursday.', go: 'campaign:c3' },
+    { k: 'warn', who: 'all', t: 'Website-visit signals paused since 02:14', d: 'The visitor-ID connection failed. Visit signals are missing from today\'s scores; the admin has been told.', go: null },
+    { k: 'warn', who: 'manager', t: 'Turnaround season 2027 waits for you', d: '11 accounts are held until you confirm the campaign or send them back as individual actions.', go: 'campaign:c1' },
+    { k: 'warn', who: 'manager', t: 'Kenji: 3 overdue items, no meetings this week', d: 'The AI suggests moving 2 accounts to Aisha, who has capacity.', go: 'ask:How is my team doing?' },
+    { k: 'warn', who: 'sofia', t: 'Aurora Refining waits for Pavan\'s sign-off', d: 'Sensitive (mentions an incident). Nothing goes out until he approves.', go: 'record:aurora' },
   ];
 
   const LEARNED = [
@@ -306,5 +463,5 @@
     kenji: { todo: 4, overdue: 3, approved: 4, sent: 7, replies: 1, meetings: 0, target: 3, accept: 57 },
   };
 
-  window.MOCK = { TODAY, USERS, REPS, ACCOUNTS, PROSPECTS_FOUND, CAMPAIGNS, LEARNED, SCHEDULED, TEAM_STATS, decayed };
+  window.MOCK = { TODAY, USERS, REPS, ACCOUNTS, SEGMENTS, PROSPECTS_FOUND, CAMPAIGNS, REPLIES, BLOCKERS, LEARNED, SCHEDULED, TEAM_STATS, decayed };
 })();

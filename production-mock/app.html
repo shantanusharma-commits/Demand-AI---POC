@@ -3,24 +3,24 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Sales workspace · DemandAI</title>
+<title>DemandAI Sales Workspace</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/mock.css">
 </head>
 <body>
-<div class="ws home" id="ws">
+<div class="ws" id="ws">
   <header class="top">
-    <div class="top-brand"><img src="assets/logo.png" alt=""> DemandAI</div>
+    <div class="top-brand"><img src="assets/logo.png" alt=""><span>DemandAI</span></div>
     <nav class="top-tabs" id="tabs"></nav>
     <div class="top-right" id="topRight"></div>
   </header>
   <div class="body">
-    <section class="chat" id="chat"></section>
     <section id="main"></section>
+    <section class="chat" id="chat" aria-label="Ask DemandAI"></section>
   </div>
-  <button class="chat-open-tab" id="chatOpenTab" title="Open chat" onclick="App.toggleChat(true)"></button>
+  <button class="chat-open-tab" id="chatOpenTab" onclick="App.toggleChat(true)">Ask DemandAI</button>
 </div>
 <div class="menu" id="userMenu"></div>
 <div class="menu" id="bellMenu" style="width:340px"></div>

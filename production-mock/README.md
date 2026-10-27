@@ -10,11 +10,19 @@ Open `index.html` in Chrome or Edge (double-click). Fonts need an internet conne
 |---|---|
 | `index.html` | Sign in. Pick Sofia (sales rep), Pavan (sales manager) or Rajiv (admin). Links to the overview |
 | `story.html` | What we're selling: scope (product vs. client POC), the three process flows, the learning loop, the battle card, the roadmap and open decisions. Prints to two pages |
-| `app.html` | Sales workspace. Tabs: Home (Today), Approvals, Accounts, Campaigns. The chat is shared by every tab: full width on Home, docked on the left elsewhere. Account records open beside the chat |
+| `app.html` | Sales workspace. Tabs: Today, Segments, Campaigns, Approvals, Accounts. The chat panel sits on the right and is shared by every tab; account records open to its left |
 | `admin/index.html` | Admin home: held records, set-up health, data freshness, the monthly learning job, team default runs |
 | `admin/integrations.html` | CRM, contact-data providers, signal sources, rep mailboxes, LinkedIn, team chat (placeholders) |
 | `admin/settings.html` | ICP, closed-won mapping, who decides what, thresholds, message templates, team default runs |
 | `admin/07-…15-*.html` | The legacy prototype screens (setup, content, users, prospecting, scoring, NBA, analytics, review), copied with the admin sidebar |
+
+## Today
+
+Rep and manager see the same layout with different scope: blockers, key numbers, to-dos, replies (from campaigns and from individual actions), next best actions (NBA), campaigns (NBC) with touch progress and results, campaign updates, micro-segments split into campaign segments and "my actions" segments, and what the system learned.
+
+## Segments
+
+Micro-segments → segment → account → activity. A segment with 10 or more accounts in 7 days runs as a campaign once the manager confirms; below that, each account gets its own next best action. Sensitive segments never become campaigns.
 
 ## Roles
 
@@ -32,6 +40,7 @@ Open `index.html` in Chrome or Edge (double-click). Fonts need an internet conne
 - `assets/mock-data.js`: the representative data; Fit × Timing is computed with the Score flow's tier, decay and stacking rules
 - `assets/app.js`: the sales workspace and the scripted chat
 - `admin/admin.css`: the admin sidebar (copied from the legacy pages) and admin page styles
+- `tools/build-artifact.py`: writes a copy that can be published as a claude.ai artifact (the sign-in page without its own document wrapper)
 - `tools/sync-admin-pages.py`: re-copies `legacy/` into `admin/` with the admin sidebar. Run `python3 production-mock/tools/sync-admin-pages.py` after legacy changes
 
 State (decisions, drafts, notes) is kept in the browser's session storage, so a new tab starts fresh.
