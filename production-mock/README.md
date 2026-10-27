@@ -10,7 +10,7 @@ Open `index.html` in Chrome or Edge (double-click). Fonts need an internet conne
 |---|---|
 | `index.html` | Sign in. Pick Sofia (sales rep), Pavan (sales manager) or Rajiv (admin). Links to the overview |
 | `story.html` | What we're selling: scope (product vs. client POC), the three process flows, the learning loop, the battle card, the roadmap and open decisions. Prints to two pages |
-| `app.html` | Sales workspace. Side navigation: Today, Segments, Campaigns, Approvals, Accounts. Today is the chat, with a to-do table and the most important updates beside it; on the other views the same chat is docked on the right |
+| `app.html` | Sales workspace. Today is the only page: the chat in the middle, the to-do table and the most important updates beside it. Lists, Accounts, Segments, Campaigns, Approvals, Content studio and account records open in a panel beside the chat; Close returns to the to-do list. Chats are sessions: New chat starts one and it stays under Chats |
 | `admin/index.html` | Admin home: held records, set-up health, data freshness, the monthly learning job, team default runs |
 | `admin/integrations.html` | CRM, contact-data providers, signal sources, rep mailboxes, LinkedIn, team chat (placeholders) |
 | `admin/settings.html` | ICP, closed-won mapping, who decides what, thresholds, message templates, team default runs |
@@ -19,6 +19,14 @@ Open `index.html` in Chrome or Edge (double-click). Fonts need an internet conne
 ## Today
 
 Chat first. The AI's brief opens the day: prospects who said yes (fast lane), next best actions due today only (NBA), and campaigns to create today from the scored list (NBC). The panel beside it has key numbers, a to-do table and the most important updates. The rep sees their own accounts; the manager sees the team.
+
+## The flow in the chat
+
+Find prospects → save as a list → score the list → create micro-segments → prepare next actions (NBA) and build the campaign (NBC) → track the campaigns → what the system learned. Each answer suggests the next step. Lists can be saved from the chat and opened in Lists.
+
+## Campaigns
+
+Email and LinkedIn only. The AI drafts the sequence; anyone can add an email or LinkedIn touch, remove, reorder, change the day, channel or format, edit the text, or rewrite a touch with AI. Sent touches are locked. Reps send drafts to the manager, who confirms.
 
 ## Segments
 
@@ -32,7 +40,7 @@ Micro-segments → segment → account → activity. A segment with 10 or more a
 
 ## Things to try in the chat
 
-"What should I do first today?", "Find refiners in Thailand like my last 3 wins", "Rank my accounts for this week", "Why is Juniper ranked first?", "Group them by trigger", "What should I do with Cedar?", "Make it shorter", "Use cost framing", "What worked last month?", "How is my team doing?" (manager), "Every weekday at 7am, check my accounts for new signals".
+"Find prospects like my last 10 wins", "Score this list", "Create micro-segments", "Prepare the next actions", "Build the campaign", "How are the campaigns doing?", "Write a LinkedIn post for the turnaround segment", "Why is Juniper ranked first?", "What should I do with Cedar?", "Make it shorter", "Use cost framing", "What worked last month?", "How is my team doing?" (manager), "Every weekday at 7am, check my accounts for new signals".
 
 ## Files
 
