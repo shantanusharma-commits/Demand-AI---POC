@@ -48,6 +48,9 @@ add(P, 'TS4_Microsegments_from_file.xlsx', '(none: prospects and signals in one 
 for f in ('TS6_Segment_boundaries.xlsx', 'TS7_Scoring_boundaries.xlsx', 'TS8_Contactability_and_channel.xlsx', 'TS9_For_Review_routing.xlsx',
           'TS10_Rep_ownership.xlsx', 'TS12_Realistic_mixed_list.xlsx'):
     add(P, f, LT, f + ' (same file)', ST, AS_OF, 'Prospecting (or Scoring upload) with the file; then drop the same file as the signals.', f.split('_')[0] + ': "Answer key - accounts"')
+# golden-set
+add('golden-set', 'Golden_NBA_and_For_Review.xlsx', LT, 'Golden_NBA_and_For_Review.xlsx (same file)', ST, AS_OF,
+    'Prospecting with the file; Scoring with the saved list and the same file; "Send tier A and B to NBA"; then For Review.', 'Golden: "Golden - expected totals", "Golden - accounts", "Review script"')
 # realistic-sets
 R = 'realistic-sets'
 for f in sorted(os.listdir(R)):
