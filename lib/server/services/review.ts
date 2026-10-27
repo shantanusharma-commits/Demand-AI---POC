@@ -6,18 +6,18 @@
 import 'server-only';
 import { randomInt } from 'node:crypto';
 import { and, desc, eq, inArray, isNull, lt, or, sql, type SQL } from 'drizzle-orm';
-import { toCSV, type CsvText } from '../../demandai-engine.ts';
+import { CONFIG, toCSV, type CsvText } from '../../demandai-engine.ts';
 import { briefFor, callScript, type Draft, type Rec } from '../../engine/nba.ts';
 import * as R from '../../engine/review.ts';
-import { decisionLog, drafts, nbaRuns, recommendations, reviewViews, SYSTEM_USER_ID, spotChecks, users } from '../db/schema.ts';
+import { customSegments, decisionLog, drafts, nbaRuns, recommendations, reviewViews, SYSTEM_USER_ID, spotChecks, users } from '../db/schema.ts';
 import type { TenantScope } from '../db/tenant.ts';
 import { recordAudit } from '../db/audit.ts';
 import { badRequest, conflict, forbidden } from '../http/errors.ts';
 import { logger } from '../logger.ts';
 import { chunks, containsPattern, isManager, ownerOnly, type Actor } from './lists.ts';
 import {
-  addDraftVersion, checkDateOf, checkedSql, loadItem, logFacts, logItem, optionFacts, pausedSegments, redraft, segKey, stateOf, statePatch,
-  type Item, type LogInput, type RecRow,
+  addDraftVersion, checkDateOf, checkedSql, loadItem, logFacts, logItem, optionFacts, pausedSegments, redraft, segKey, segmentChoices, stateOf, statePatch,
+  type Item, type LogInput, type RecRow, type SegmentChoice,
 } from './recommendations.ts';
 import { ownerNames, unitReps } from './users.ts';
 import { activeValidation } from './measures.ts';
@@ -208,9 +208,9 @@ export async function acceptItem(scope: TenantScope, actor: Actor, id: string, i
   const manager = isManager(actor.role);
   const kind = R.kindOfItem(item.state), firstPass = kind === 'exception' || kind === 'spot';
   if (!item.rec.segment && item.state.spot !== 'pending') {
-    const pick = input.assignedSegment || item.state.assignedSegment;
-    if (!pick) throw badRequest('Assign a micro-segment first: it is released into that micro-segment.', { assignedSegment: ['Pick a micro-segment.'] });
-    if (!item.run.segments.some(s => s.name === pick)) throw badRequest(`"${pick}" is not one of these micro-segments.`, { assignedSegment: ['Pick one of the micro-segments formed.'] });
+    const asked = input.assignedSegment || item.state.assignedSegment;
+    if (!asked) throw badRequest('Assign a micro-segment first: it is released into that micro-segment.', { assignedSegment: ['Pick a micro-segment.'] });
+    const pick = (await choiceFor(scope, item, asked, 'assignedSegment')).name;
     if (pick !== item.state.assignedSegment) {
       await setState(scope, item, actor, { assignedSegment: pick }, { segmentAt: new Date() });
       await logItem(scope, item, actor, { decision: `Assigned to the ${pick} micro-segment`, note: 'It had no micro-segment of its own' });
@@ -318,7 +318,33 @@ export async function chooseAction(scope: TenantScope, actor: Actor, id: string,
   return { message: afterRelease ? `Switched to the ${to}; the message is redrafted and the change is logged` : `The ${to} is chosen: the message is redrafted for it` };
 }
 
-export type FixInput = { kind: 'low' | 'deal' | 'small'; contactRow?: number; segment?: string };
+export type FixInput = { kind: 'low' | 'deal' | 'small'; contactRow?: number; segment?: string; create?: { name: string; also?: string[] } };
+
+/** The micro-segment a person picked for an item with none, if it is one it may join (segmentChoices). */
+async function choiceFor(scope: TenantScope, item: Item, name: string | undefined, field: string): Promise<SegmentChoice> {
+  const want = (name ?? '').trim().toLowerCase();
+  const c = want ? (await segmentChoices(scope, item.rec.prominent)).find(x => x.name.toLowerCase() === want) : undefined;
+  if (!c) throw badRequest(want ? `"${name!.trim()}" is not a micro-segment it can join: pick one with an approved message, or create one.` : 'Pick a micro-segment.', { [field]: ['Pick a micro-segment.'] });
+  return c;
+}
+
+/** A person's own micro-segment for an item the system could not group: it may hold fewer than
+ *  CONFIG.minSegmentAccounts accounts, follows the theme of the item's message, and stays for later lists in the unit.
+ *  Its name is unique in the unit and never one of the system's. */
+async function createSegment(scope: TenantScope, actor: Actor, item: Item, raw: string): Promise<SegmentChoice> {
+  const name = raw.replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim();
+  if (name.length < 3 || name.length > 60) throw badRequest('Give the micro-segment a name of 3 to 60 characters.', { name: ['3 to 60 characters.'] });
+  if ([...Object.keys(CONFIG.segmentLibrary), 'No micro-segment'].some(x => x.toLowerCase() === name.toLowerCase())) {
+    throw badRequest(`"${name}" is the name of one of the system's micro-segments: pick it from the list, or choose another name.`, { name: ['Choose another name.'] });
+  }
+  const theme = item.rec.prominent;
+  const [row] = await scope.tx.insert(customSegments).values({ businessUnitId: scope.ctx.businessUnitId, name, theme, createdBy: actor.userId })
+    .onConflictDoNothing().returning({ id: customSegments.id });
+  if (!row) throw conflict(`There is already a micro-segment called "${name}": pick it from the list.`);
+  await recordAudit(scope, { action: 'nba.segment_created', actorRole: actor.role, targetType: 'custom_segment', targetId: row.id, details: { name, theme } });
+  logger.info({ event: 'nba.segment_created', customSegmentId: row.id, theme }, 'Micro-segment created by a person');
+  return { name, theme, origin: 'person', approved: 0, by: null };
+}
 
 /** A reason fixed by a person's call on the account: the contact is right (or switched), the deal is worth it, the
  *  micro-segment is set. Logged, and the reason drops out of why it needs a person. */
@@ -339,14 +365,33 @@ export async function fixItem(scope: TenantScope, actor: Actor, id: string, inpu
       note = `${R.liveRec(item.rec, item.state).contact.firstName || R.liveRec(item.rec, item.state).contact.name} is the right person`;
     }
   } else if (input.kind === 'small') {
-    if (!input.segment || !item.run.segments.some(s => s.name === input.segment)) throw badRequest('Pick one of the micro-segments formed.', { segment: ['Pick a micro-segment.'] });
-    await setState(scope, item, actor, { assignedSegment: input.segment, fixed }, { segmentAt: new Date() });
-    note = 'Micro-segment: ' + input.segment;
+    if (item.rec.segment) throw badRequest(`It is already in the ${item.rec.segment} micro-segment.`);
+    // Check the other items before creating anything, so a refusal leaves no micro-segment behind.
+    const also = input.create ? await joining(scope, item, input.create.also ?? []) : [];
+    const seg = input.create ? await createSegment(scope, actor, item, input.create.name) : await choiceFor(scope, item, input.segment, 'segment');
+    await setState(scope, item, actor, { assignedSegment: seg.name, fixed }, { segmentAt: new Date() });
+    note = input.create ? `Created the micro-segment ${seg.name} (${seg.theme} theme) and put it there` : 'Micro-segment: ' + seg.name;
+    for (const o of also) {
+      await setState(scope, o, actor, { assignedSegment: seg.name, fixed: [...new Set([...o.state.fixed, 'small'])] }, { segmentAt: new Date() });
+      await logItem(scope, o, actor, { decision: 'Fixed: ' + R.REASON_CATS.small, note: `Micro-segment: ${seg.name}, created for ${item.rec.account.name}` });
+    }
   } else {
     await setState(scope, item, actor, { fixed });
     note = 'Worth it anyway';
   }
   await logItem(scope, item, actor, { decision: 'Fixed: ' + (R.REASON_CATS[input.kind] || input.kind), note });
+}
+
+/** Other items joining a micro-segment created for this one: the caller's, waiting in the same list, with none of
+ *  their own. */
+async function joining(scope: TenantScope, item: Item, ids: string[]): Promise<Item[]> {
+  const out: Item[] = [];
+  for (const id of new Set(ids.filter(x => x !== item.row.id))) {
+    const o = await itemForChange(scope, id, { need: 'decide' });
+    if (o.run.id !== item.run.id || o.rec.segment) throw badRequest(`${o.rec.account.name} can't join it: only items in the same list with no micro-segment of their own can.`);
+    out.push(o);
+  }
+  return out;
 }
 
 /** A rep can step in on an item that went ahead on its own: it comes back to their queue as an intervention. */

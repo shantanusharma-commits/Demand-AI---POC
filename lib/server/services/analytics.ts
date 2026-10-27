@@ -13,7 +13,7 @@ import * as G from '../../engine/gates.ts';
 import * as R from '../../engine/review.ts';
 import type { DqCode } from '../../../types/demandai';
 import {
-  accountTransfers, AREA_VERDICTS, brandVersions, businessUnitMembers, configChanges, configVersions, decisionLog, drafts, leadLists, nbaRuns, READOUT_KINDS,
+  accountTransfers, AREA_VERDICTS, brandVersions, businessUnitMembers, configChanges, configVersions, customSegments, decisionLog, drafts, leadLists, nbaRuns, READOUT_KINDS,
   readouts, readoutSignoffs, recommendations, routingRules, scoringRuns, signalTypeChanges, SPONSOR_DECISIONS, users,
 } from '../db/schema.ts';
 import type { TenantScope } from '../db/tenant.ts';
@@ -431,6 +431,10 @@ async function outcomeRecords(scope: TenantScope, x: Pilot): Promise<OutcomeReco
     .where(and(eq(recommendations.businessUnitId, scope.ctx.businessUnitId), ownerOnly(scope, recommendations.ownerEmail), ownerIn(recommendations.ownerEmail, x.lens)))
     .orderBy(desc(nbaRuns.createdAt), asc(recommendations.position));
   const names = await ownerNames(scope, rows.map(r => r.row.ownerEmail ?? ''));
+  // A micro-segment a person created is marked as theirs, apart from the system's.
+  const made = new Set((await scope.tx.select({ name: customSegments.name }).from(customSegments).where(eq(customSegments.businessUnitId, scope.ctx.businessUnitId)))
+    .map(m => m.name.toLowerCase()));
+  const segLabel = (seg: string) => (!seg ? 'No micro-segment' : made.has(seg.toLowerCase()) ? `${seg} (created by a person)` : seg);
   const byRec = new Map<string, LogFact[]>();
   for (const l of x.logs) { if (l.decisive) { const a = byRec.get(l.recommendationId) ?? []; a.push(l); byRec.set(l.recommendationId, a); } }
   return rows.map(({ row, draft, runName, configNo, brandNo }) => {
@@ -440,7 +444,7 @@ async function outcomeRecords(scope: TenantScope, x: Pilot): Promise<OutcomeReco
       : row.passed ? 'Not judged (proceeded)' : 'Not decided yet';
     return {
       list: runName, account: rec.account.name, vertical: rec.account.vertical || '', status: rec.account.existingCustomer ? 'Existing customer' : 'Net-new', tier: rec.person.tier || '',
-      segment: R.segOf(rec, st) || 'No micro-segment', groupedOn: (rec as { groupedOn?: { type?: string } }).groupedOn?.type || '',
+      segment: segLabel(R.segOf(rec, st)), groupedOn: (rec as { groupedOn?: { type?: string } }).groupedOn?.type || '',
       signals: [...new Set((rec.result.people || []).flatMap(pp => (pp.signals || []).map(s => s.type)))], action: R.chosenAction(rec, st), recommended: rec.action,
       runnerUp: rec.runnerUp ? rec.runnerUp.action : '', contact: lr.contact.name, contactTitle: lr.contact.jobTitle || '', channel: d.channel, draft: R.draftText(d),
       path: row.passed ? 'Proceeded on its own' : 'Went to a person', exceptions: row.reasons.join(' · '), decision,

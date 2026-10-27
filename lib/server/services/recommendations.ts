@@ -10,7 +10,7 @@ import {
   approvedClaims, briefFor, checkDraft, confidenceFor, draftFor, estimateDealSize, type BrandPack, type CheckResult, type Claim, type Draft, type NbaContact, type Rec,
 } from '../../engine/nba.ts';
 import * as R from '../../engine/review.ts';
-import { brandVersions, decisionLog, drafts, nbaRuns, recommendations, segmentPauses, studioItems, SYSTEM_USER_ID, users } from '../db/schema.ts';
+import { brandVersions, customSegments, decisionLog, drafts, nbaRuns, recommendations, segmentPauses, studioItems, SYSTEM_USER_ID, users } from '../db/schema.ts';
 import type { TenantScope } from '../db/tenant.ts';
 import { conflict, notFound } from '../http/errors.ts';
 import { currentLogContext, logger } from '../logger.ts';
@@ -131,6 +131,24 @@ export async function pausedSegments(scope: TenantScope, runId: string): Promise
 }
 export const segKey = (rec: Pick<Rec, 'segment'>): string => rec.segment || '';
 
+/** A micro-segment an item with none can join: one the system formed (at least CONFIG.minSegmentAccounts accounts),
+ *  or one a person created, which may hold fewer. `theme` is the system segment whose actions it follows. */
+export type SegmentChoice = { name: string; theme: string; origin: 'system' | 'person'; approved: number; by: string | null };
+
+/** Where an item with no micro-segment can go, from any list in the unit: the system's micro-segments with at least one
+ *  approved message, and every one a person created. Those with the theme of the item's message come first. */
+export async function segmentChoices(scope: TenantScope, theme: string): Promise<SegmentChoice[]> {
+  const { rows } = await scope.tx.execute<{ segment: string; formed: number; approved: number }>(sql`select segment, formed, approved from nba_segment_approvals()`);
+  const approvedIn = new Map(rows.map(r => [r.segment.toLowerCase(), Number(r.approved)]));
+  const made = await scope.tx.select({ name: customSegments.name, theme: customSegments.theme, by: byName }).from(customSegments)
+    .leftJoin(users, eq(users.id, customSegments.createdBy)).where(eq(customSegments.businessUnitId, scope.ctx.businessUnitId)).orderBy(customSegments.name);
+  const system = rows.filter(r => Number(r.formed) > 0).sort((a, b) => a.segment.localeCompare(b.segment))
+    .map((r): SegmentChoice => ({ name: r.segment, theme: r.segment, origin: 'system', approved: Number(r.approved), by: null }));
+  const people = made.map((m): SegmentChoice => ({ name: m.name, theme: m.theme, origin: 'person', approved: approvedIn.get(m.name.toLowerCase()) ?? 0, by: m.by }));
+  const rank = (c: SegmentChoice) => (c.theme === theme ? 0 : 1);
+  return [...system, ...people].sort((a, b) => rank(a) - rank(b));
+}
+
 /** The measures' view of the log the caller can see: decisive rows (with whether a manager checked a flagged one),
  *  and the step-ins and compliance send-backs, which are logged as rows of their own; for a rep's own results, the
  *  rows logged while they owned the item. */
@@ -205,6 +223,13 @@ export async function itemDetail(scope: TenantScope, actor: Actor, id: string) {
     .where(and(eq(recommendations.nbaRunId, row.nbaRunId), eq(recommendations.businessUnitId, scope.ctx.businessUnitId), ownerOnly(scope, recommendations.ownerEmail), sql`${recommendations.id} <> ${row.id}`)) : [];
   const sameAction = peers.filter(p => { const st2 = { assignedSegment: p.assignedSegment, useRunnerUp: p.useRunnerUp, manualAction: p.manualAction }, r2 = p.rec as Rec;
     return R.segOf(r2, st2) === seg && R.chosenAction(r2, st2) === action; }).length;
+  // No micro-segment of its own: where it can go, and the caller's other waiting items in this list with the same theme,
+  // which can join a micro-segment created for this one.
+  const choices = rec.segment ? [] : await segmentChoices(scope, rec.prominent);
+  const sameTheme = rec.segment ? [] : (await scope.tx.select({ id: recommendations.id, rec: recommendations.rec, contactRow: recommendations.contactRow, assignedSegment: recommendations.assignedSegment }).from(recommendations)
+    .where(and(eq(recommendations.nbaRunId, row.nbaRunId), eq(recommendations.businessUnitId, scope.ctx.businessUnitId), ownerOnly(scope, recommendations.ownerEmail),
+      sql`${recommendations.segment} is null`, eq(recommendations.status, 'Waiting'), sql`${recommendations.id} <> ${row.id}`, sql`${recommendations.rec}->>'prominent' = ${rec.prominent}`))
+    .orderBy(recommendations.position)).map(p => ({ id: p.id, account: (p.rec as Rec).account.name, contact: R.liveRec(p.rec as Rec, p).contact.name, assignedSegment: p.assignedSegment }));
   return {
     id: row.id, run: { id: run.id, name: run.name, asOf: run.asOf, segments: run.segments.map(s => s.name) }, key: row.engineKey, position: row.position,
     // The brand pack and date the checks use, so an edit is checked live as it is typed (the server checks again on saving).
@@ -233,6 +258,7 @@ export async function itemDetail(scope: TenantScope, actor: Actor, id: string) {
     people, claims: approvedClaims(item.pack).filter(c => (c.segments || []).includes(claimSeg)).map((c: Claim) => ({ id: c.id, title: c.title, type: c.type, year: c.year, claim: c.claim, expiry: c.expiry })),
     reps: manager ? await unitReps(scope) : [],
     content: row.content.map(cid => attached.find(a => a.id === cid)).filter((a): a is (typeof attached)[number] => !!a), sameAction,
+    segmentChoices: choices, sameTheme,
     can: {
       content: (item.draft.draft.channel === 'Email' || item.draft.draft.channel === 'LinkedIn') && mine && !paused,
       decide: R.inQueue(state) && mine && !paused,

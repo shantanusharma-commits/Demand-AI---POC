@@ -12,8 +12,8 @@ import { buildSegments, checkDraft, confidenceFor, type Draft, type NbaAccount, 
 import * as R from '../../engine/review.ts';
 import type { Account, Contact, Signal, Tier } from '../../../types/demandai';
 import {
-  accounts, accountScores, contacts, decisionLog, drafts, handoffItems, handoffs, leadLists, nbaRuns, prospectScores, recommendations, scoringRuns,
-  segmentPauses, SYSTEM_USER_ID, users,
+  accounts, accountScores, contacts, customSegments, decisionLog, drafts, handoffItems, handoffs, leadLists, nbaRuns, prospectScores, recommendations,
+  scoringRuns, segmentPauses, SYSTEM_USER_ID, users,
 } from '../db/schema.ts';
 import type { TenantScope } from '../db/tenant.ts';
 import { recordAudit } from '../db/audit.ts';
@@ -295,12 +295,22 @@ export async function getNbaRun(scope: TenantScope, id: string) {
       ownerEmail: x.ownerEmail, ownerName: x.ownerEmail ? names.get(x.ownerEmail) ?? null : null, paused: paused.has(segKey(rec)),
     };
   });
+  // Micro-segments its items joined in For Review that this build did not form: the system's, formed in other lists, or
+  // ones a person created (which may hold fewer than CONFIG.minSegmentAccounts accounts).
+  const formed = new Set((r.segments as { name: string }[]).map(s => s.name));
+  const joined = [...new Set(recs.filter(x => !x.segment && x.assignedSegment && !formed.has(x.assignedSegment)).map(x => x.assignedSegment!))];
+  const made = joined.length ? await scope.tx.select({ name: customSegments.name, theme: customSegments.theme, by: byName }).from(customSegments)
+    .leftJoin(users, eq(users.id, customSegments.createdBy)).where(and(eq(customSegments.businessUnitId, scope.ctx.businessUnitId), inArray(customSegments.name, joined))) : [];
+  const assigned = joined.map(name => {
+    const m = made.find(z => z.name.toLowerCase() === name.toLowerCase());
+    return m ? { name, theme: m.theme, origin: 'person' as const, by: m.by } : { name, theme: name, origin: 'system' as const, by: null };
+  });
   const visibleEngaged = (r.engaged as { name: string; label: string; ownerEmail: string | null }[])
     .filter(e => scope.ctx.scope === 'all' || (!!e.ownerEmail && scope.ctx.ownerEmails.includes(e.ownerEmail))).map(({ name, label }) => ({ name, label }));
   return {
     id: r.id, name: r.name, asOf: r.asOf, createdAt: r.createdAt, by: r.by, createdBy: r.createdBy, source: r.scoringName || r.listName, sourceFile: r.sourceFile,
     configVersionNo: r.configVersionNo, brandVersionNo: r.brandVersionNo, engineVersion: r.engineVersion,
-    segments: r.segments as { name: string; accounts: number }[], engaged: visibleEngaged, checks: r.checks as BuildStep[], stats: r.stats,
+    segments: r.segments as { name: string; accounts: number }[], assigned, engaged: visibleEngaged, checks: r.checks as BuildStep[], stats: r.stats,
     paused: Object.fromEntries([...paused].map(([k, v]) => [k, { by: v.by, at: v.at, reason: v.reason }])), recs,
   };
 }

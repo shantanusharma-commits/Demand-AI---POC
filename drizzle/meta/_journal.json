@@ -274,6 +274,20 @@
       "when": 1792817742116,
       "tag": "0038_ai_calls_model",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1793089428582,
+      "tag": "0039_custom_segments",
+      "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1793089434120,
+      "tag": "0040_custom_segments_security",
+      "breakpoints": true
     }
   ]
 }

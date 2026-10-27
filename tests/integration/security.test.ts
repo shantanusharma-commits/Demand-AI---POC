@@ -93,7 +93,7 @@ test('SECURITY DEFINER functions: owned by the owner role, search_path pinned, n
     FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname = 'public' AND p.prosecdef ORDER BY 1`)).rows;
   const who = Object.fromEntries(fns.map(f => [f.proname, f.app && f.ops ? 'both' : f.app ? 'app' : f.ops ? 'ops' : 'owner only']));
   assert.deepEqual(who, {
-    claim_job: 'app', export_pilot_files: 'ops', export_pilot_rows: 'ops', nba_engaged_accounts: 'app', pilot_retention: 'ops', pilot_scope: 'owner only',
+    claim_job: 'app', export_pilot_files: 'ops', export_pilot_rows: 'ops', nba_engaged_accounts: 'app', nba_segment_approvals: 'app', pilot_retention: 'ops', pilot_scope: 'owner only',
     purge_pilot_data: 'ops', recover_stale_jobs: 'app', upload_has_corrections: 'app',
   });
   for (const f of fns) {

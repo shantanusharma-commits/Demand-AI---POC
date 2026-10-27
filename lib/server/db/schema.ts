@@ -892,6 +892,19 @@ export const segmentPauses = pgTable('segment_pauses', {
   index('segment_pauses_bu_idx').on(t.businessUnitId),
 ]);
 
+/** A micro-segment a person created in For Review for an account the system could not group (fewer than
+ *  CONFIG.minSegmentAccounts accounts share its signal), so it may hold fewer accounts. It stays for later lists in the
+ *  unit. `theme` is the system segment whose actions and messages it follows. The system's own micro-segments are
+ *  formed per build (nba_runs.segments) and never come from here. Append-only. */
+export const customSegments = pgTable('custom_segments', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  businessUnitId: uuid('business_unit_id').notNull().references(() => businessUnits.id),
+  name: citext('name').notNull(),
+  theme: text('theme').notNull(),
+  createdAt: createdAt(),
+  createdBy: createdBy(),
+}, t => [uniqueIndex('custom_segments_bu_name_key').on(t.businessUnitId, t.name)]);
+
 /** Step 2 · The weekly spot-check: once per ISO week and owner ('' = unassigned), a random share of what went ahead on
  *  its own since the last draw goes back to its rep to rate. Append-only: the draw is part of the evidence. */
 export const spotChecks = pgTable('spot_checks', {

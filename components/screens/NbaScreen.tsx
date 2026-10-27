@@ -61,8 +61,9 @@ const timeOf = (t: string | number | Date) => new Date(t).toLocaleTimeString(und
 const pl = (n: number, w: string) => `${n} ${w}${n === 1 ? '' : 's'}`;
 const srcKey = (s: { kind: string; id: string }) => `${s.kind}:${s.id}`;
 
-export function SegTag({ seg }: { seg: string | null }) {
-  return seg ? <span className={`tag ${SEG_TONE[seg] || 'tag-grey'}`}>{seg}</span> : <span className="tag tag-grey">No micro-segment</span>;
+/** A micro-segment's tag; one a person created takes the colour of its theme. */
+export function SegTag({ seg, theme }: { seg: string | null; theme?: string }) {
+  return seg ? <span className={`tag ${SEG_TONE[seg] || (theme && SEG_TONE[theme]) || 'tag-grey'}`}>{seg}</span> : <span className="tag tag-grey">No micro-segment</span>;
 }
 function Cell({ v, sub, cls = 'val' }: { v: string; sub?: ReactNode; cls?: string }) {
   return <><span className={cls} title={v}>{v || <span className="muted">—</span>}</span>{sub ? <span className="sub">{sub}</span> : null}</>;
@@ -291,7 +292,7 @@ export function NbaScreen() {
           onChanged={() => { void loadRun(r.id); if (drawer) void loadItem(drawer.id); }} /><button className="btn btn-sec btn-sm" onClick={() => { setScreen('start'); setRun(null); setDrawer(null); setTab('new'); void reloadRuns(); }}>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="15 18 9 12 15 6" /></svg>Group another list</button></div>
       </div>
-      <Tabs label="Build views">{ft('grid', 'Micro-segments', r.segments.length)}{ft('list', 'Recommendations', recs.length)}</Tabs>
+      <Tabs label="Build views">{ft('grid', 'Micro-segments', r.segments.length + r.assigned.length)}{ft('list', 'Recommendations', recs.length)}</Tabs>
       <div className="canvas">
         <div style={sx(`display:flex;align-items:center;gap:12px;padding:12px 16px;background:${waiting ? 'var(--brand-lt)' : 'var(--pos-lt)'};border-radius:var(--rmd);margin-bottom:16px`)}>
           <span style={sx(`width:26px;height:26px;border-radius:50%;background:${waiting ? 'var(--brand)' : 'var(--pos)'};color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0`)}>{waiting ? '→' : '✓'}</span>
@@ -331,10 +332,22 @@ export function NbaScreen() {
                 {canPause ? <button className="btn btn-ghost btn-sm" style={sx('margin-top:6px;padding:0 6px')} onClick={e => { e.stopPropagation(); void pause(g.name, !paused); }}>{paused ? 'Resume' : 'Pause this micro-segment'}</button> : null}</td>
               {num(byAcc.length, byAcc.length === 1 ? 'account' : 'accounts', 'var(--brand-dk)')}{num(rs.filter(x => x.passed).length, 'ready to use', 'var(--pos)')}{num(rs.filter(needsPerson).length, 'in For Review', 'var(--warn)')}
               <td style={sx(`${td};text-align:right`)}><span className="btn btn-sec btn-sm">View →</span></td></tr>;
-          }) : <tr><td colSpan={5} style={sx(`${td};text-align:center;color:var(--i3);font-size:12.5px`)}>No micro-segment formed: fewer than {min} accounts share a signal.</td></tr>}</tbody>
+          }) : <tr><td colSpan={5} style={sx(`${td};text-align:center;color:var(--i3);font-size:12.5px`)}>No micro-segment formed: fewer than {min} accounts share a signal.</td></tr>}
+          {/* Micro-segments this list did not form that a person put its accounts in from For Review. */}
+          {r.assigned.map(g => {
+            const rs = r.recs.filter(x => !x.segment && x.assignedSegment === g.name), byAcc = accOf(rs);
+            return <tr key={'joined:' + g.name} style={sx('cursor:pointer')} onClick={() => go(g.name)}>
+              <td style={sx(td)}><div style={sx('display:flex;align-items:center;gap:8px;margin-bottom:4px')}><SegTag seg={g.name} theme={g.theme} />
+                <span className="tag tag-grey">{g.origin === 'person' ? `Created by ${g.by || 'a person'}` : 'Formed in another list'}</span></div>
+                <div style={sx('font-size:12px;color:var(--i2)')}>{g.origin === 'person' ? `A person's own micro-segment with the ${g.theme} theme: it can hold fewer than ${min} accounts.` : R.SEG_MEANS[g.name] || ''}</div>
+                <div style={sx('font-size:12px;color:var(--i1);font-weight:600;margin-top:4px')}>→ {(CONFIG.segmentLibrary[g.theme] || [''])[0]}</div>
+                <div style={sx('font-size:10.5px;color:var(--brand-dk);margin-top:3px')}>Assigned by a person in For Review: {byAcc.map(x => x.account.name).join(', ')}</div></td>
+              {num(byAcc.length, byAcc.length === 1 ? 'account' : 'accounts', 'var(--brand-dk)')}{num(rs.filter(x => x.passed).length, 'ready to use', 'var(--pos)')}{num(rs.filter(needsPerson).length, 'in For Review', 'var(--warn)')}
+              <td style={sx(`${td};text-align:right`)}><span className="btn btn-sec btn-sm">View →</span></td></tr>;
+          })}</tbody>
         </table>
       </div>
-      <div style={sx('font-size:11px;color:var(--i3);margin:8px 2px 0')}>A micro-segment is a group of at least {min} accounts with the same reason to buy now. Click one to see its accounts.</div>
+      <div style={sx('font-size:11px;color:var(--i3);margin:8px 2px 0')}>A micro-segment is a group of at least {min} accounts with the same reason to buy now.{r.assigned.some(g => g.origin === 'person') ? ' One a person created can be smaller, and is marked with who created it.' : ''} Click one to see its accounts.</div>
       {unseg.length ? <div onClick={() => go(null)} style={sx('display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surf);border:1px solid var(--border);border-radius:var(--rmd);margin-top:8px;cursor:pointer')}>
         <span className="tag tag-grey">No micro-segment</span><span style={sx('flex:1;font-size:12px;color:var(--i2)')}>{unseg.map(x => x.account.name).join(', ')}: fewer than {min} accounts share any of their signals, so each gets its own action.</span>
         <span style={sx('font-size:12px;font-weight:600;color:var(--i1)')}>{pl(unseg.length, 'account')}</span><span style={sx('color:var(--i3)')}>›</span>
@@ -345,7 +358,7 @@ export function NbaScreen() {
     </>;
   }
   function listTab(r: Run): ReactNode {
-    const segs = r.segments.map(g => g.name).concat(r.recs.some(x => !(x.segment || x.assignedSegment)) ? ['__x'] : []);
+    const segs = r.segments.map(g => g.name).concat(r.assigned.map(g => g.name), r.recs.some(x => !(x.segment || x.assignedSegment)) ? ['__x'] : []);
     const verts = [...new Set(r.recs.map(x => x.account.vertical))].sort();
     const sel = sx('padding:6px 9px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:12px');
     const rows = visibleRecs(r);
@@ -370,7 +383,7 @@ export function NbaScreen() {
             return <tr key={x.id} className="click" onClick={() => void openRec(x.id)}>
               <td><Cell v={x.account.name} sub={`${x.account.vertical} · ${x.account.existingCustomer ? 'Existing customer' : 'Net-new'}`} cls="dt-main" /></td>
               <td><div className="person"><div className="co-av" style={{ background: avColor(x.contact.name) }}>{initials(x.contact.name)}</div><div><Cell v={x.contact.name} sub={x.contact.jobTitle} /></div></div></td>
-              <td><SegTag seg={seg} />{!x.segment && seg ? <span className="sub">assigned</span> : null}{x.segSince ? <span className="sub">since {fmtDate(x.segSince)}</span> : null}</td>
+              <td><SegTag seg={seg} theme={r.assigned.find(g => g.name === seg)?.theme} />{!x.segment && seg ? <span className="sub">assigned</span> : null}{x.segSince ? <span className="sub">since {fmtDate(x.segSince)}</span> : null}</td>
               <td className="wrap"><span className="clamp2" style={sx('font-size:12px;color:var(--i1)')} title={x.chosenAction}>{x.chosenAction}</span>{x.runnerUp ? <span className="sub" title={x.runnerUp}>Runner-up: {x.runnerUp}</span> : null}</td>
               <td><Cell v={x.channel} /></td>
               <td><span className={`tag ${tone}`}>{label}</span>{x.outcome ? <span className="sub">{x.outcome}</span> : canPause ? <span className="sub">{x.ownerName || x.ownerEmail || 'Unassigned'}</span> : null}</td>

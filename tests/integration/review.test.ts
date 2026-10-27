@@ -7,8 +7,10 @@ import test, { after, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import type pg from 'pg';
+import { and, eq } from 'drizzle-orm';
 import { serializeConfig } from '../../lib/engine/config.ts';
 import { createDb, withTenant, type Db, type TenantContext } from '../../lib/server/db/tenant.ts';
+import { customSegments, recommendations } from '../../lib/server/db/schema.ts';
 import { createAppWorker } from '../../lib/server/jobs/handlers.ts';
 import { getJob } from '../../lib/server/jobs/queue.ts';
 import { receiveUpload, uploadLimits, type UploadLimits } from '../../lib/server/services/uploads.ts';
@@ -16,7 +18,7 @@ import { saveList, type Actor } from '../../lib/server/services/lists.ts';
 import { saveRun, startScoringRun } from '../../lib/server/services/scoring.ts';
 import { createHandoff } from '../../lib/server/services/handoffs.ts';
 import { buildNbaRun, getNbaRun, setSegmentPaused } from '../../lib/server/services/nba.ts';
-import { itemDetail, openItem } from '../../lib/server/services/recommendations.ts';
+import { itemDetail, openItem, segmentChoices } from '../../lib/server/services/recommendations.ts';
 import {
   acceptItem, approveItem, checkFlagged, chooseAction, decisionLogRows, drawSpotChecks, fixItem, holdItem, isoWeek, reassign, rejectItem, reviewExport, reviewQueue, sendBack, stepIn, teach,
 } from '../../lib/server/services/review.ts';
@@ -323,3 +325,77 @@ test('Content library: where each claim was used, and what For Review approved t
   assert.ok(n(mine) > 0 && n(mine) < n(all), 'a rep sees the use in their own items');
 });
 
+test('no micro-segment of its own: it joins one of the system’s with an approved message, from any list, or one a person creates, which may be smaller', async () => {
+  // A small list, as on 27 Oct 2026: a hand-off of a few accounts from the scored list, at most two per theme, so the
+  // build forms no micro-segment and every item waits in For Review. The system's come from the first build.
+  const scoringRunId = (await one(`SELECT scoring_run_id FROM nba_runs WHERE id = $1`, [runId])).scoring_run_id;
+  const waiting: { contact_id: string; theme: string }[] = (await owner.query(`SELECT contact_id, rec->>'prominent' AS theme FROM recommendations
+    WHERE nba_run_id = $1 AND status = 'Waiting' ORDER BY position`, [runId])).rows;
+  const contactIds = Object.values(Object.groupBy(waiting, w => w.theme)).flatMap(g => g!.slice(0, 2).map(w => w.contact_id));
+  const handoffId = (await as(admin(), s => createHandoff(s, mgr(), { runId: scoringRunId, contactIds }))).handoffId;
+  const smallRun = (await as(admin(), s => buildNbaRun(s, mgr(), { handoffId }))).runId;
+  assert.deepEqual((await one(`SELECT segments FROM nba_runs WHERE id = $1`, [smallRun])).segments, [], 'no micro-segment formed');
+  const small: { id: string; theme: string }[] = (await owner.query(`SELECT id, rec->>'prominent' AS theme FROM recommendations
+    WHERE nba_run_id = $1 AND segment IS NULL AND status = 'Waiting' ORDER BY position`, [smallRun])).rows;
+  const it0 = small.find(x => small.filter(y => y.theme === x.theme).length >= 2)!;
+  assert.ok(it0, 'two items with the same theme wait with no micro-segment');
+  // Offered: each micro-segment the system formed (at least three accounts) with a released message in the unit.
+  const approved = (await owner.query(`SELECT segment FROM recommendations WHERE business_unit_id = $1 AND status = 'Released' AND segment IS NOT NULL
+    GROUP BY segment ORDER BY segment`, [ids.buA])).rows.map(r => r.segment);
+  assert.ok(approved.length, 'the build released messages on its own');
+  const d0 = await as(admin(), s => itemDetail(s, mgr(), it0.id));
+  assert.deepEqual(d0.segmentChoices.filter(c => c.origin === 'system').map(c => c.name).sort(), approved);
+  assert.ok(d0.segmentChoices.every(c => c.approved >= 1));
+  const firstOther = d0.segmentChoices.findIndex(c => c.theme !== it0.theme);
+  assert.ok(firstOther < 0 || d0.segmentChoices.slice(firstOther).every(c => c.theme !== it0.theme), 'the theme of the message comes first');
+  assert.deepEqual((await as(rep(), s => segmentChoices(s, it0.theme))).map(c => c.name), d0.segmentChoices.map(c => c.name), 'a rep is offered the unit’s, not only their own');
+  // A micro-segment the system formed is not offered until one of its messages is approved (in a rolled-back transaction).
+  await assert.rejects(as(admin(), async s => {
+    await s.tx.update(recommendations).set({ status: 'Waiting' })
+      .where(and(eq(recommendations.businessUnitId, ids.buA), eq(recommendations.segment, approved[0]), eq(recommendations.status, 'Released')));
+    assert.ok(!(await segmentChoices(s, it0.theme)).some(c => c.name === approved[0]));
+    throw new Error('roll back');
+  }), /roll back/);
+
+  await assert.rejects(as(admin(), s => fixItem(s, mgr(), it0.id, { kind: 'small', segment: 'Nope' })), status(400, /not a micro-segment it can join/));
+  await assert.rejects(as(admin(), s => acceptItem(s, mgr(), it0.id, { assignedSegment: 'Nope' })), status(400, /not a micro-segment it can join/));
+  await assert.rejects(as(admin(), s => fixItem(s, mgr(), it0.id, { kind: 'small', create: { name: 'inquiry' } })), status(400, /system's micro-segments/));
+  await assert.rejects(as(admin(), s => fixItem(s, mgr(), it0.id, { kind: 'small', create: { name: ' ab ' } })), status(400, /3 to 60/));
+  const formedOne = (await one(`SELECT id FROM recommendations WHERE nba_run_id = $1 AND segment IS NOT NULL AND status = 'Waiting' LIMIT 1`, [runId]))?.id;
+  if (formedOne) await assert.rejects(as(admin(), s => fixItem(s, mgr(), it0.id, { kind: 'small', create: { name: 'Never made', also: [formedOne] } })), status(400, /can't join it/));
+  assert.equal((await one(`SELECT count(*)::int n FROM custom_segments`)).n, 0, 'a refusal creates nothing');
+
+  // A person's own: the theme of the message, any number of accounts, and the other waiting items they pick.
+  const name = 'DCS quote follow-ups';
+  const also = small.filter(x => x.id !== it0.id && x.theme === it0.theme).slice(0, 1).map(x => x.id);
+  await as(admin(), s => fixItem(s, mgr(), it0.id, { kind: 'small', create: { name, also } }));
+  const made = await one(`SELECT name, theme, created_by FROM custom_segments WHERE business_unit_id = $1`, [ids.buA]);
+  assert.deepEqual([made.name, made.theme, made.created_by], [name, it0.theme, ids.adminA]);
+  for (const id of [it0.id, ...also]) {
+    const r = await one(`SELECT assigned_segment, fixed FROM recommendations WHERE id = $1`, [id]);
+    assert.deepEqual([r.assigned_segment, r.fixed.includes('small')], [name, true]);
+  }
+  assert.match((await lastLog(it0.id)).note, /^Created the micro-segment DCS quote follow-ups \(\w[\w ]*theme\) and put it there$/);
+  if (also.length) assert.match((await lastLog(also[0])).note, /^Micro-segment: DCS quote follow-ups, created for /);
+  assert.equal((await one(`SELECT count(*)::int n FROM audit_log WHERE action = 'nba.segment_created' AND business_unit_id = $1`, [ids.buA])).n, 1);
+
+  // It stays for the next item and later lists, marked as a person's; its name is unique in the unit, whatever the case.
+  const next = small.find(x => x.id !== it0.id && !also.includes(x.id));
+  if (next) {
+    await assert.rejects(as(admin(), s => fixItem(s, mgr(), next.id, { kind: 'small', create: { name: name.toUpperCase() } })), status(409, /already a micro-segment/));
+    const c = (await as(admin(), s => itemDetail(s, mgr(), next.id))).segmentChoices.find(z => z.name === name)!;
+    assert.deepEqual([c.origin, c.theme, !!c.by], ['person', it0.theme, true]);
+    await as(admin(), s => fixItem(s, mgr(), next.id, { kind: 'small', segment: name.toLowerCase() }));
+    assert.equal((await one(`SELECT assigned_segment FROM recommendations WHERE id = $1`, [next.id])).assigned_segment, name);
+  }
+  // Micro-segments & NBA shows it as a group of its own; Analytics will mark it as a person's.
+  const run = await as(admin(), s => getNbaRun(s, smallRun));
+  const group = run.assigned.find(g => g.name === name);
+  assert.deepEqual([group?.theme, group?.origin, !!group?.by], [it0.theme, 'person', true]);
+  assert.ok(!run.segments.some(g => g.name === name), 'the system did not form it');
+  // Append-only, and another business unit sees none of them.
+  await assert.rejects(owner.query(`UPDATE custom_segments SET theme = 'Project'`), /append-only/);
+  await assert.rejects(owner.query(`DELETE FROM custom_segments`), /append-only/);
+  const other = await withTenant(app, { userId: ids.repB, businessUnitId: ids.buB, scope: 'all', ownerEmails: [] }, s => s.tx.select().from(customSegments));
+  assert.equal(other.length, 0);
+});

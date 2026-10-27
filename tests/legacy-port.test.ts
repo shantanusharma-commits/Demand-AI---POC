@@ -77,6 +77,17 @@ test('micro-segments: a segment never forms on second-best signals; those accoun
   assert.match(a.exception, /No micro-segment/);
 });
 
+// A small list (27 Oct 2026): two accounts per signal form nothing. A person may put them in a micro-segment of their
+// own in For Review, but the system never forms one below the minimum.
+test('micro-segments: two accounts on each of two signals form no micro-segment; all four go to a person', () => {
+  const r = N.buildSegments([fake('a', [['Inquiry or RFQ', 100]]), fake('b', [['Inquiry or RFQ', 90]]),
+    fake('c', [['Capital project', 70]]), fake('d', [['Capital project', 65]])]);
+  assert.equal(E.CONFIG.minSegmentAccounts, 3);
+  assert.deepEqual(r.segments, []);
+  assert.deepEqual(r.recs.map(x => [x.account.id, x.segment, x.prominent]), [['a', null, 'Inquiry'], ['b', null, 'Inquiry'], ['c', null, 'Project'], ['d', null, 'Project']]);
+  assert.ok(r.recs.every(x => /No micro-segment/.test(x.exception || '')));
+});
+
 // legacy engine.test.js:174
 test('micro-segments: an account falls back to its next signal to join a segment formed on strongest signals', () => {
   const r = N.buildSegments([

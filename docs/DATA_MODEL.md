@@ -73,6 +73,7 @@ Every request runs in a transaction that sets `app.user_id`, `app.business_unit_
 | `drafts` † | Every version of a message (rules, AI, a person's edit), with its checks |
 | `decision_log` † | Every decision: accept, reject with code, hold, approve, send back, step in, outcomes; G1 and G2 are measured from it |
 | `segment_pauses` † | Micro-segments paused and resumed |
+| `custom_segments` † | Micro-segments a person created in For Review for accounts the system couldn't group: a name unique in the unit, the theme it follows, who created it. May hold fewer than 3 accounts; kept for later lists. The system still forms its own only from 3 accounts |
 | `spot_checks` | The weekly sample of items that went ahead on their own, and their ratings |
 | `review_views` | When each person last saw their queue (for decision timing) |
 | `autopilot_runs` | Copilot's Autopilot runs and their undo (update granted only for undo) |

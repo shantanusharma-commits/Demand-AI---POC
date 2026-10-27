@@ -31,7 +31,9 @@ type Queue = { items: Row[]; shownAt: string; total: number; released: number; a
 type View = 'queue' | 'approvals' | 'log';
 type Filt = { due: string | null; reason: string | null; kind: string | null; seg: string | null; rep: string | null; ch: string | null; preset?: boolean };
 type Fields = { subject: string; body: string; note: string; task: string };
-type Ws = { id: string; list: string[]; from: View; item: Item | null; fields: Fields | null; own: boolean; ownText: string; seg: string; modal: null | 'hold' | 'reject' | 'send' };
+/** `make`: a micro-segment being created for the item (its name, and the other waiting items that join it). */
+type Ws = { id: string; list: string[]; from: View; item: Item | null; fields: Fields | null; own: boolean; ownText: string; seg: string; make: { name: string; also: string[] } | null;
+  modal: null | 'hold' | 'reject' | 'send' };
 type Teach = { id: string; decision: string; rejected: boolean; tags: string[]; note: string; held: boolean };
 
 const NO_FILT: Filt = { due: null, reason: null, kind: null, seg: null, rep: null, ch: null };
@@ -141,7 +143,7 @@ export function ReviewScreen() {
   async function openItem(id: string, list?: string[], from: View = view) {
     setMenu(null);
     const ids = list ?? (() => { const qs = myQueue().filter(r => !r.hold).map(r => r.id); return qs.includes(id) ? qs : [id]; })();
-    setWs({ id, list: ids, from, item: null, fields: null, own: false, ownText: '', seg: '', modal: null });
+    setWs({ id, list: ids, from, item: null, fields: null, own: false, ownText: '', seg: '', make: null, modal: null });
     try {
       await api(`/api/recommendations/${encodeURIComponent(id)}/open`, { body: {} });
       const { item } = await api<{ item: Item }>(`/api/recommendations/${encodeURIComponent(id)}`);
@@ -150,7 +152,7 @@ export function ReviewScreen() {
   }
   async function reloadItem(id: string) {
     const { item } = await api<{ item: Item }>(`/api/recommendations/${encodeURIComponent(id)}`);
-    setWs(w => w && w.id === id ? { ...w, item, fields: fieldsOf(item.draft), own: false, ownText: '', modal: null } : w);
+    setWs(w => w && w.id === id ? { ...w, item, fields: fieldsOf(item.draft), own: false, ownText: '', make: null, modal: null } : w);
     return item;
   }
   function leave() { setWs(null); void loadQueue(); }
@@ -239,6 +241,15 @@ export function ReviewScreen() {
     if (!ws?.item) return;
     if (await call(ws.item.id, 'fixes', body)) { await reloadItem(ws.item.id); void loadQueue(); }
   }
+  /** A micro-segment of the reviewer's own for an item the system could not group, with the waiting items they tick. */
+  async function createSegment() {
+    if (!ws?.item || !ws.make || busy) return;
+    const id = ws.item.id, name = ws.make.name.trim(), also = ws.make.also;
+    if (name.length < 3) { showToast('Give the micro-segment a name of at least 3 characters'); return; }
+    if (!await call(id, 'fixes', { kind: 'small', create: { name, also } })) return;
+    showToast(also.length ? `Created “${name}” with ${also.length + 1} accounts in it` : `Created “${name}” and put it there`);
+    await reloadItem(id); void loadQueue();
+  }
   function startTeach(id: string, decision: string, rejected: boolean) { setTeach({ id, decision, rejected, tags: [], note: '', held: false }); }
   async function saveTeach() {
     if (!teach) return;
@@ -288,7 +299,11 @@ export function ReviewScreen() {
     if (!ws) return;
     const onKey = (e: KeyboardEvent) => {
       const tag = ((e.target as HTMLElement).tagName || '').toLowerCase();
-      if (e.key === 'Escape') { if (teach) { setTeach(null); return; } if (ws.modal) { setWs(w => w && { ...w, modal: null }); return; } leave(); return; }
+      if (e.key === 'Escape') {
+        if (teach) { setTeach(null); return; }
+        if (ws.modal || ws.make) { setWs(w => w && { ...w, modal: null, make: null }); return; }
+        leave(); return;
+      }
       if (['input', 'textarea', 'select'].includes(tag) || ws.modal || e.metaKey || e.ctrlKey || e.altKey) return;
       if (e.key === 'ArrowRight') go(1);
       if (e.key === 'ArrowLeft') go(-1);
@@ -511,6 +526,40 @@ export function ReviewScreen() {
       {body ? <div className="fx-d">{body}</div> : null}{acts ? <div className="fx-a">{acts}</div> : null}</div>;
     const showBtn = (k: string) => <button className="btn btn-ghost btn-sm" onClick={() => showMe(k)}>Show me ↓</button>;
     const deal = it.deal;
+    /* No micro-segment: the system's with an approved message and the ones people created (same theme as the message
+       first), or a new one of the reviewer's own, which may hold fewer than the system's minimum. */
+    const segmentPicker = (): ReactNode => {
+      const min = CONFIG.minSegmentAccounts, mk = w.make;
+      if (mk) {
+        const setMk = (m: Partial<NonNullable<Ws['make']>>) => setWs(ww => ww && ww.make ? { ...ww, make: { ...ww.make, ...m } } : ww);
+        return <div style={sx('display:flex;flex-direction:column;gap:8px;width:100%')}>
+          <div style={sx('display:flex;align-items:center;gap:8px;flex-wrap:wrap')}>
+            <input autoFocus aria-label="Name of the new micro-segment" maxLength={60} placeholder={`e.g. ${it.prominent} follow-ups`} value={mk.name}
+              onChange={e => setMk({ name: e.target.value })} onKeyDown={e => { if (e.key === 'Enter') void createSegment(); }}
+              style={sx('flex:1;min-width:200px;border:1px solid var(--bdk);border-radius:var(--rsm);padding:6px 9px;font-size:12.5px;font-family:var(--fb)')} />
+            <span className="ws-sub">Theme: {it.prominent}, as the message</span></div>
+          {it.sameTheme.length ? <div style={sx('display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--i2)')}><span>Also put here:</span>
+            {it.sameTheme.map(o => <label key={o.id} style={sx('display:inline-flex;align-items:center;gap:5px;cursor:pointer')}>
+              <input type="checkbox" checked={mk.also.includes(o.id)} onChange={e => setMk({ also: e.target.checked ? [...mk.also, o.id] : mk.also.filter(z => z !== o.id) })} />
+              {o.account} · {o.contact}</label>)}</div> : null}
+          <span className="ws-sub">It can hold fewer than {min} accounts and is marked as created by you. The system still forms micro-segments only from {min} accounts.</span>
+          <div style={sx('display:flex;gap:8px')}><button className="btn btn-primary btn-sm" disabled={busy || mk.name.trim().length < 3} onClick={() => void createSegment()}>Create and assign</button>
+            <button className="btn btn-ghost btn-sm" onClick={() => setWs(ww => ww && { ...ww, make: null })}>Cancel</button></div>
+        </div>;
+      }
+      const same = it.segmentChoices.filter(c => c.theme === it.prominent), other = it.segmentChoices.filter(c => c.theme !== it.prominent);
+      const opts = (cs: typeof same) => cs.map(c => <option key={c.name} value={c.name}>
+        {c.origin === 'person' ? `${c.name} · created by ${c.by || 'a person'}${c.theme !== it.prominent ? ` · ${c.theme}` : ''}` : `${c.name} · ${c.approved} approved`}</option>);
+      return <><select className="fx-sel" id="assignSeg" aria-label="Micro-segment" value={w.seg} onChange={e => {
+        const v = e.target.value;
+        if (v === '__new') { setWs(ww => ww && { ...ww, make: { name: '', also: [] } }); return; }
+        setWs(ww => ww && { ...ww, seg: v }); if (v) void fix({ kind: 'small', segment: v });
+      }}><option value="">{it.segmentChoices.length ? 'Pick a micro-segment…' : 'No micro-segment with an approved message yet'}</option>
+        {same.length ? <optgroup label={`Same theme as the message: ${it.prominent}`}>{opts(same)}</optgroup> : null}
+        {other.length ? <optgroup label="Other themes">{opts(other)}</optgroup> : null}
+        <option value="__new">+ Create a micro-segment…</option></select>
+        <span className="ws-sub">{same.length ? `Suggested: ${same[0].name}` : `No ${it.prominent} micro-segment yet: create one`}</span></>;
+    };
     const fixRows = mode === 'view' ? [] : cats.map(k => {
       if (k === 'sensitive') return fixRow(k, 'Sensitive content', <>{[...new Set((text.match(new RegExp(R.SENSITIVE_RE.source, 'gi')) || []).map(z => z.toLowerCase()))].map(z => <mark key={z} className="k-sensitive">{z}</mark>)} — highlighted in red in the message. {mode === 'approve' ? 'Keep it, edit it, or send it back.' : 'You can edit it; anything sensitive still goes to the sales manager.'}</>,
         <>{showBtn(k)}{canEdit ? <button className="btn btn-ghost btn-sm" onClick={() => cut('sensitive')}>Remove that sentence</button> : null}</>);
@@ -526,8 +575,8 @@ export function ReviewScreen() {
           {factor(w2 >= 30, `${w2 >= 60 ? 'Strong' : w2 >= 30 ? 'Moderate' : 'Weak'} signal`)}{factor(it.resultConfidence !== 'low', it.resultConfidence === 'low' ? `No one in the primary persona: ${first} is ${c.jobTitle || 'in another role'}` : 'Contact in the primary persona')}</>,
           live ? <><button className="btn btn-sec btn-sm" onClick={() => void fix({ kind: 'low' })}>Yes, {first} is the right person</button>{others.map(p => <button key={p.row} className="btn btn-ghost btn-sm" onClick={() => void fix({ kind: 'low', contactRow: p.row! })}>Switch to {p.name} <span className="ws-sub">· {p.jobTitle || p.persona}</span></button>)}</> : null);
       }
-      if (k === 'small') return fixRow(k, 'No micro-segment', `Fewer than ${CONFIG.minSegmentAccounts} accounts share its signal. Pick the one to release it into.`,
-        live ? <><select className="fx-sel" id="assignSeg" value={w.seg} onChange={e => { const v = e.target.value; setWs(ww => ww && { ...ww, seg: v }); if (v) void fix({ kind: 'small', segment: v }); }}><option value="">Pick a micro-segment…</option>{it.run.segments.map(nm => <option key={nm}>{nm}</option>)}</select><span className="ws-sub">Suggested: {it.prominent}</span></> : null);
+      if (k === 'small') return fixRow(k, 'No micro-segment', `Fewer than ${CONFIG.minSegmentAccounts} accounts share its signal. Move it into a micro-segment with an approved message, or create one.`,
+        live ? segmentPicker() : null);
       if (k === 'deal') return fixRow(k, 'Below deal size', deal ? `About USD ${Math.round(deal.value / 1000)}k against a ${Math.round(it.dealThreshold / 1000)}k threshold (${deal.basis}).` : '', live ? <button className="btn btn-sec btn-sm" onClick={() => void fix({ kind: 'deal' })}>It&apos;s worth it anyway</button> : null);
       return null;
     }).filter(Boolean);
