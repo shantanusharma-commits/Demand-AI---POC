@@ -10,7 +10,7 @@ Open `index.html` in Chrome or Edge (double-click). Fonts need an internet conne
 |---|---|
 | `index.html` | Sign in. Pick Sofia (sales rep), Pavan (sales manager) or Rajiv (admin). Links to the overview |
 | `story.html` | What we're selling: scope (product vs. client POC), the three process flows, the learning loop, the battle card, the roadmap and open decisions. Prints to two pages |
-| `app.html` | Sales workspace. Tabs: Today, Segments, Campaigns, Approvals, Accounts. The chat panel sits on the right and is shared by every tab; account records open to its left |
+| `app.html` | Sales workspace. Side navigation: Today, Segments, Campaigns, Approvals, Accounts. Today is the chat, with a to-do table and the most important updates beside it; on the other views the same chat is docked on the right |
 | `admin/index.html` | Admin home: held records, set-up health, data freshness, the monthly learning job, team default runs |
 | `admin/integrations.html` | CRM, contact-data providers, signal sources, rep mailboxes, LinkedIn, team chat (placeholders) |
 | `admin/settings.html` | ICP, closed-won mapping, who decides what, thresholds, message templates, team default runs |
@@ -18,7 +18,7 @@ Open `index.html` in Chrome or Edge (double-click). Fonts need an internet conne
 
 ## Today
 
-Rep and manager see the same layout with different scope: blockers, key numbers, to-dos, replies (from campaigns and from individual actions), next best actions (NBA), campaigns (NBC) with touch progress and results, campaign updates, micro-segments split into campaign segments and "my actions" segments, and what the system learned.
+Chat first. The AI's brief opens the day: prospects who said yes (fast lane), next best actions due today only (NBA), and campaigns to create today from the scored list (NBC). The panel beside it has key numbers, a to-do table and the most important updates. The rep sees their own accounts; the manager sees the team.
 
 ## Segments
 

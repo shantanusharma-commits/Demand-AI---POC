@@ -1,6 +1,6 @@
 /* DemandAI production mock: the sales workspace (rep and manager).
-   Five tabs (#today, #segments, #campaigns, #approvals, #accounts) with one chat panel on the right that every tab shares.
-   Account records open to the left of the chat. Replies in the chat are scripted against mock-data.js. */
+   A side navigation with five views (#today, #segments, #campaigns, #approvals, #accounts). Today is the chat itself, with the
+   to-do table and the most important updates beside it; on every other view the same chat is docked on the right. Replies in the chat are scripted against mock-data.js. */
 (function () {
   const { USERS, REPS, ACCOUNTS, SEGMENTS, PROSPECTS_FOUND, CAMPAIGNS, REPLIES, BLOCKERS, LEARNED, SCHEDULED, TEAM_STATS } = window.MOCK;
 
@@ -125,24 +125,36 @@
   function go(r) { if (route() === r) renderAll(); else location.hash = '#' + r; }
   window.addEventListener('hashchange', () => { closeRecord(true); renderAll(); });
 
-  /* ─── Top bar ─── */
-  function renderTop() {
+  /* ─── Side navigation ─── */
+  function renderNav() {
     const r = route(), n = badgeCount();
-    const tabs = [['today', 'Today'], ['segments', 'Segments'], ['campaigns', 'Campaigns'], ['approvals', 'Approvals'], ['accounts', 'Accounts']];
-    $('tabs').innerHTML = tabs.map(([k, l]) => `<a class="top-tab ${r === k ? 'on' : ''}" href="#${k}">${l}${k === 'approvals' && n ? `<span class="cnt">${n}</span>` : ''}</a>`).join('');
-    $('topRight').innerHTML = `
-      <button class="top-ic" title="Ask the AI" onclick="App.focusComposer('')">${ic('search', 16)}</button>
-      <button class="top-ic" title="Alerts" onclick="App.toggleMenu('bellMenu')">${ic('bell', 16)}<span class="dot"></span></button>
-      <div class="top-user" onclick="App.toggleMenu('userMenu')">${avatar(me)}<div class="top-user-t"><div class="nm">${esc(me.name)}</div><div class="rl">${isMgr ? 'Sales manager · 4 reps' : 'Sales rep'}</div></div></div>`;
-    $('userMenu').innerHTML = `
-      <div style="padding:8px 10px 6px"><div style="font-weight:700;font-size:13px">${esc(me.name)}</div><div class="muted" style="font-size:11.5px">${esc(me.title)}</div></div>
-      <div class="sep"></div>
-      <button onclick="App.switchUser('${isMgr ? 'sofia' : 'pavan'}')">${ic('users', 14)} Switch to ${isMgr ? 'Sofia (sales rep)' : 'Pavan (sales manager)'} <span class="muted" style="margin-left:auto;font-size:10.5px">demo</span></button>
-      <button onclick="App.openRuns()">${ic('clock', 14)} Scheduled runs</button>
-      <a href="story.html">${ic('book', 14)} What we're selling</a>
-      <div class="sep"></div>
-      <a href="index.html" onclick="App.signOut()">${ic('out', 14)} Sign out</a>`;
-    $('bellMenu').innerHTML = `<div class="lbl" style="padding:8px 10px">Alerts</div>${alerts().map(x => `<div class="alert ${x.k}" style="margin:4px 4px 6px" onclick="${x.on}"><div><b>${x.t}</b>${x.d}</div></div>`).join('')}`;
+    const items = [['today', 'Today', 'spark'], ['segments', 'Segments', 'layers'], ['campaigns', 'Campaigns', 'megaphone'], ['approvals', 'Approvals', 'task'], ['accounts', 'Accounts', 'users']];
+    $('side').innerHTML = `
+      <div class="side-brand"><img src="assets/logo.png" alt=""><div><div class="nm">DemandAI</div><div class="org">Sales workspace</div></div></div>
+      <button class="side-new" onclick="App.newChat()">${ic('plus', 14)}<span>New chat</span></button>
+      <nav class="side-nav" aria-label="Main">${items.map(([k, l, i]) => `<a class="side-item ${r === k ? 'on' : ''}" href="#${k}" title="${l}">${ic(i, 16)}<span class="lbl-t">${l}</span>${k === 'approvals' && n ? `<span class="cnt">${n}</span>` : ''}</a>`).join('')}</nav>
+      <div class="side-sec">Recent chats</div>
+      <div class="side-recent">
+        <button onclick="App.go('today')">Today's brief</button>
+        <button onclick="App.ask('Find refiners in Thailand like my last 3 wins')">Refiners in Thailand like my wins</button>
+        <button onclick="App.ask('What should I do with Cedar?')">Cedar renewal prep</button>
+      </div>
+      <button class="side-item side-runs" onclick="App.openRuns()" title="Scheduled runs">${ic('clock', 16)}<span class="lbl-t">Scheduled runs</span><span class="cnt grey">${SCHEDULED.length + S.runs.length}</span></button>
+      <div class="side-foot">
+        <div class="side-user">${avatar(me, 30)}<div class="lbl-t"><div class="nm">${esc(me.name)}</div><div class="rl">${isMgr ? 'Sales manager · 4 reps' : 'Sales rep'}</div></div></div>
+        <div class="side-links lbl-t"><button onclick="App.switchUser('${isMgr ? 'sofia' : 'pavan'}')">Switch to ${isMgr ? 'Sofia (rep)' : 'Pavan (manager)'}</button><a href="story.html">What we're selling</a><a href="index.html" onclick="App.signOut()">Sign out</a></div>
+      </div>`;
+  }
+  /* The most important updates, ranked: replies first, then what changed overnight, then blockers. */
+  function updates() {
+    const u = [];
+    myReplies().filter(r => r.kind === 'Positive' || r.kind === 'Meeting booked').forEach(r => u.push({ k: 'pos', icon: 'reply', when: r.at, t: `${r.from} ${r.kind === 'Positive' ? 'replied: interested' : 'booked a meeting'}`, d: `${acct(r.acc).name} · ${r.sourceKind === 'Campaign' ? 'campaign' : 'your action'}${isMgr ? ' · ' + first(USERS[r.owner].name) : ''}`, on: `App.openRecord('${r.acc}','activity')` }));
+    if (!S.camp.c1) u.push({ k: 'brand', icon: 'megaphone', when: 'Today 06:05', t: 'New campaign proposed: Turnaround season 2027', d: isMgr ? '11 accounts crossed the threshold. Needs your confirmation.' : '5 of your accounts are in it. Pavan confirms.', on: "App.goCampaign('c1')" });
+    u.push({ k: 'info', icon: 'bolt', when: 'Today 06:00', t: isMgr ? '3 accounts moved into tier A' : 'Juniper Petrochem moved into tier A', d: 'New VP Reliability plus pricing-page visits. A warm path was found through a champion who moved.', on: "App.openRecord('juniper','why')" });
+    myBlockers().filter(b => b.k === 'neg').forEach(b => u.push({ k: 'neg', icon: 'alert', when: 'Now', t: b.t, d: b.d, on: b.go ? `App.goTo(${js(b.go)})` : '' }));
+    u.push({ k: 'pos', icon: 'megaphone', when: 'Fri 23 Oct', t: 'Control-system renewal: first meeting booked', d: 'Ironwood Refining (Marco). 4 replies from 14 accounts so far.', on: "App.goCampaign('c2')" });
+    u.push({ k: 'warn', icon: 'alert', when: 'Thu 22 Oct', t: 'Status watch took 1 account out of a campaign', d: 'Another rep opened an opportunity there. No double outreach.', on: "App.goCampaign('c3')" });
+    return u;
   }
   function alerts() {
     return [
@@ -156,9 +168,10 @@
   /* ─── Chat (right-hand panel) ─── */
   function renderChat() {
     if (!S.thread) { S.thread = [{ who: 'ai', kind: 'brief' }]; save(); }
+    const onToday = $('ws').classList.contains('today');
     const hints = isMgr
-      ? ['How are the campaigns doing?', 'Which segments are campaigns?', 'What needs my approval?', 'How is my team doing?']
-      : ['What should I do first today?', 'Any replies?', 'Which segments are campaigns?', 'Why is Juniper ranked first?'];
+      ? ['How is my team doing?', 'How are the campaigns doing?', 'Which segments are campaigns?', 'What needs my approval?', 'What did we learn this week?']
+      : ['What should I do first today?', 'Find refiners in Thailand like my last 3 wins', 'Which segments are campaigns?', 'Why is Juniper ranked first?', 'What worked last month?'];
     $('chat').innerHTML = `
       <div class="chat-h">
         <span class="ai-mark">${ic('spark', 13)}</span>
@@ -166,7 +179,7 @@
         <div class="sp"></div>
         <button class="ic-btn" title="Scheduled runs" onclick="App.openRuns()">${ic('clock', 15)}</button>
         <button class="ic-btn" title="New chat" onclick="App.newChat()">${ic('plus', 15)}</button>
-        <button class="ic-btn" title="Hide chat" onclick="App.toggleChat(false)">${ic('right', 15)}</button>
+        ${onToday ? '' : `<button class="ic-btn" title="Hide chat" onclick="App.toggleChat(false)">${ic('right', 15)}</button>`}
       </div>
       <div class="menu" id="histMenu" style="position:absolute;top:46px;left:14px;right:auto;width:280px">
         <div class="lbl" style="padding:6px 10px">Recent chats</div>
@@ -176,9 +189,9 @@
         <div class="sep"></div>
         <button onclick="App.toggleMenu('histMenu');App.openRuns()">${ic('clock', 14)} Scheduled runs (${SCHEDULED.length + S.runs.length})</button>
       </div>
-      <div class="thread" id="thread"><div class="thread-in">${S.thread.map(renderMsg).join('')}</div></div>
+      <div class="thread" id="thread"><div class="thread-in">${onToday ? `<div class="greet"><h1>${greeting()}, ${esc(first(me.name))}</h1><div class="sub">${isMgr ? 'Your team\'s day, prepared overnight. Reps act; you oversee and can step in on anything.' : 'Your day is ready. I\'ve done the research; you approve, edit or ask.'}</div></div>` : ''}${S.thread.map(renderMsg).join('')}</div></div>
       <div class="composer-wrap">
-        <div class="hints">${hints.map(h => `<button class="chip" onclick="App.ask(${js(h)})">${esc(h)}</button>`).join('')}</div>
+        <div class="hints">${hints.slice(0, onToday ? 5 : 3).map(h => `<button class="chip" onclick="App.ask(${js(h)})">${esc(h)}</button>`).join('')}</div>
         <div class="composer">
           <div class="ctx" id="ctx">${ctxChip()}</div>
           <label class="sr" for="composer">Message DemandAI</label>
@@ -191,7 +204,7 @@
           </div>
         </div>
       </div>`;
-    const th = $('thread'); th.scrollTop = th.scrollHeight;
+    const th = $('thread'); th.scrollTop = onToday && S.thread.length < 2 ? 0 : th.scrollHeight;
   }
   function ctxChip() { return ctx ? `<span class="badge b-brand" onclick="App.setCtx(null)" title="Remove">@${esc(acct(ctx).name)} ✕</span>` : ''; }
   function greeting() { const h = new Date().getHours(); return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening'; }
@@ -207,10 +220,24 @@
   const RENDER = {
     text: m => `<p>${m.html}</p>`,
     brief: () => {
-      const rp = myReplies(), open = isMgr ? apprItems('needs').length : apprItems('todo').length;
-      return `${stepsHtml(isMgr ? ['Overnight sweep 06:00 · 61 new signals across the team, 24 qualified', 'Re-scored 64 accounts and re-built 8 micro-segments', '31 next actions prepared · 22 went ahead on their own'] : ['Overnight sweep 06:00 · 23 new signals on your accounts, 9 qualified', 'Re-scored your accounts · Juniper Petrochem moved into tier A', 'Prepared 7 next actions · 4 went ahead on their own'])}
-        <p>${greeting()}, ${esc(first(me.name))}. Here's the short version: <b>${rp.length} repl${rp.length === 1 ? 'y' : 'ies'}</b>, <b>${open} item${open === 1 ? '' : 's'}</b> waiting for you${isMgr ? ', and <b>1 campaign to confirm</b>' : ''}. ${myBlockers().length} blocker${myBlockers().length === 1 ? '' : 's'} on the list.</p>
-        <p>Ask me anything about an account, a segment or a campaign. I can also draft, rewrite or explain.</p>`;
+      const today = todayNBA(), later = openItems().filter(a => (isMgr || a.owner === me.id) && !today.includes(a) && !S.decisions[a.id]).length;
+      const hot = myReplies().filter(r => r.kind === 'Positive');
+      const auto = ACCOUNTS.filter(a => a.nba && a.nba.status === 'auto' && (isMgr || a.owner === me.id)).length;
+      const c1 = campOf('c1'), mineIn = ACCOUNTS.filter(a => a.campaign === 'c1' && a.owner === me.id).length, bld = SEGMENTS.find(x => x.mode === 'Building');
+      return `${stepsHtml(isMgr ? ['Overnight sweep 06:00 · 61 new signals across the team, 24 qualified', 'Re-scored 64 accounts and re-built 8 micro-segments', '31 next actions prepared · 22 went ahead on their own'] : ['Overnight sweep 06:00 · 23 new signals on your accounts, 9 qualified', 'Re-scored your accounts · Juniper Petrochem moved into tier A', `Prepared your next actions · ${auto} went ahead on their own`])}
+        <p>${isMgr ? `Here's the team's day. <b>${today.length}</b> action${today.length === 1 ? ' needs' : 's need'} a decision today, <b>${hot.length}</b> prospects said yes, and <b>one new campaign</b> is ready for you to confirm.` : `Here's your day. <b>${today.length}</b> action${today.length === 1 ? '' : 's'} to decide today and <b>${hot.length}</b> prospect${hot.length === 1 ? '' : 's'} to answer. Everything else went ahead on its own.`}</p>
+        ${hot.length ? `<div class="ccard" style="border-color:#F1D3D3"><div class="ccard-h"><span class="t" style="color:var(--neg)">${ic('flame', 14)} Answer first · they said yes</span><span class="muted" style="font-size:11px">fast lane</span></div><div class="ccard-b" style="padding:2px 14px">${hot.map(r => `<div class="mini-row"><div class="grow row-link" onclick="App.openRecord('${r.acc}','activity')"><div class="nm">${esc(r.from)} · ${esc(acct(r.acc).name)}${isMgr ? ` <span class="muted" style="font-weight:400">· ${esc(first(USERS[r.owner].name))}</span>` : ''}</div><div class="sm">"${esc(r.text)}"</div></div><span class="due ${r.at.startsWith('Today') ? 'hot' : 'soon'}" style="font-size:11px">${esc(r.at)}</span>${isMgr ? '' : `<button class="btn sm pri" onclick="App.ask(${js(r.acc === 'eastgate' ? 'Draft a reply to Dian with 3 times next week' : 'What should I do with ' + acct(r.acc).name.split(' ')[0] + '?')})">Draft reply</button>`}</div>`).join('')}</div></div>` : ''}
+        <div class="ccard"><div class="ccard-h"><span class="t">${ic('bolt', 14)} Next best actions · due today</span><span class="badge b-sec nodot">${today.length}</span></div>
+          <div class="ccard-b" style="padding:0">${today.length ? `<table class="tbl"><thead><tr><th>Account · contact</th><th>Action</th><th>Why it needs you</th><th></th></tr></thead><tbody>${today.map(a => { const d = S.decisions[a.id]; return `<tr><td class="row-link" onclick="App.openRecord('${a.id}','next')"><div class="nm">${esc(a.name)}</div><div class="sm">${esc(a.contact.name)}${isMgr ? ' · ' + esc(first(USERS[a.owner].name)) : ''}</div></td><td>${esc(a.nba.action)}<div class="sm">${a.nba.channel} · ${esc(a.segment)}</div></td><td><span class="badge ${REASON[reasonOf(a)]}">${reasonOf(a)}</span></td><td style="white-space:nowrap">${d ? `<span class="badge b-grey nodot">${decLabel(d)}</span>` : `${!a.nba.reason || (isMgr && a.nba.sensitive) ? `<button class="btn sm pri" onclick="App.approve('${a.id}')">${isMgr && a.nba.sensitive ? 'Sign off' : 'Approve'}</button> ` : ''}<button class="btn sm" onclick="App.openRecord('${a.id}','next')">Review</button>`}</td></tr>`; }).join('')}</tbody></table>` : '<div class="empty">Nothing to decide today.</div>'}</div>
+          <div class="ccard-f"><span class="muted" style="font-size:11.5px">${auto} went ahead on their own${later ? ` · ${later} more due later this week` : ''}</span><div style="flex:1"></div>${today.some(a => !a.nba.reason && !S.decisions[a.id]) && !isMgr ? '<button class="btn sm pri" onclick="App.approveAll()">Approve all ready</button>' : ''}<button class="btn sm" onclick="App.go('approvals')">${ic('expand', 12)} Approvals</button></div></div>
+        <div class="ccard"><div class="ccard-h"><span class="t">${ic('megaphone', 14)} Campaigns to create today · NBC</span><span class="muted" style="font-size:11px">from today's scored list</span></div>
+          <div class="ccard-b">
+            <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><div><b style="font-size:13px">${esc(c1.name)}</b><div class="sm" style="font-size:12px;color:var(--i2);margin-top:2px">11 accounts announced a planned shutdown in 6 days, which crosses the threshold (10 in 7 days). One campaign instead of 11 separate actions${isMgr ? '' : `; <b>${mineIn} are yours</b>`}.</div></div>${campBadge(c1)}</div>
+            <div class="touch-mini">${c1.touches.map(t => `<span><b>Day ${t.day}</b> ${t.ch} · ${t.fmt}</span>`).join('')}</div>
+            <div class="sm" style="font-size:11.5px;color:var(--i3);margin-top:8px">Almost a campaign: <a href="#segments" onclick="App.openSegment('${bld.id}');return false">${esc(bld.name)}</a> has ${bld.building} of 10. Until then each account gets its own action.</div>
+          </div>
+          <div class="ccard-f">${isMgr && !S.camp.c1 ? '<button class="btn sm pri" onclick="App.confirmCampaign(\'c1\')">Confirm campaign</button><button class="btn sm" onclick="App.toast(\'Kept as 11 separate next actions (mock)\')">Send as separate actions</button>' : !isMgr && !S.camp.c1 ? '<span class="muted" style="font-size:11.5px">Pavan confirms campaigns.</span><button class="btn sm" onclick="App.toast(\'Your accounts were taken out; they get their own actions (mock)\')">Take mine out</button>' : ''}<div style="flex:1"></div><button class="btn sm" onclick="App.goCampaign('c1')">${ic('expand', 12)} Review campaign</button></div></div>
+        <p style="margin-top:8px">Ask me anything below: an account, a segment, a campaign, or "find more like Eastgate".</p>`;
     },
     prospects: () => {
       const rows = PROSPECTS_FOUND.map(p => `<tr><td><div class="nm">${esc(p.name)}</div><div class="sm">${esc(p.title)}</div></td><td>${esc(p.account)}<div class="sm">${esc(p.country)}</div></td><td>${idBadge(p.idTier)}</td></tr>`).join('');
@@ -365,55 +392,23 @@
     return `<div class="tbar">${c.touches.map((t, i) => `<i class="${i < done ? 'on' : ''}" title="Touch ${i + 1}: ${esc(t.state || 'not started')}"></i>`).join('')}</div>`;
   }
 
-  /* ─── Today ─── */
+  /* ─── Today: the chat is the page; this is the panel beside it ─── */
+  function todayNBA() { return openItems().filter(a => (isMgr || a.owner === me.id) && /^Today/.test(a.nba.due || '') && (!isMgr || a.nba.sensitive || a.owner === me.id)); }
   function renderToday() {
-    const rp = myReplies(), bl = myBlockers();
-    const nba = openItems().filter(a => isMgr || a.owner === me.id);
-    const wentAhead = ACCOUNTS.filter(a => a.nba && a.nba.status === 'auto' && (isMgr || a.owner === me.id)).length;
-    const k = isMgr
-      ? [['7/15', 'Meetings booked', 'team, this week'], [String(rp.length), 'Replies', 'need an answer'], [String(badgeCount()), 'Waiting on you', 'sign-offs and campaigns'], ['77%', 'Accepted first time', 'G2 · target 70%']]
-      : [['2/4', 'Meetings booked', 'this week'], [String(rp.length), 'Replies', 'need an answer'], [String(apprItems('todo').length), 'Waiting on you', 'approvals'], ['83%', 'Accepted first time', 'your G2 score']];
-    const campRows = CAMPAIGNS.filter(c => c.status !== 'Completed').map(c => { const st = scopedStats(c); return `
-      <div class="camp-row row-link" onclick="App.goCampaign('${c.id}')">
-        <div class="camp-row-h"><div><div class="nm">${esc(c.name)}</div><div class="sm">${esc(segOf(c.seg).trigger)} · ${progressText(c)}</div></div>${campBadge(c)}</div>
-        ${touchBar(c)}
-        <div class="mstats">${statCells(st)}</div>
-        ${c.blockers.length && !S.camp[c.id] ? `<div class="camp-blk">${ic('alert', 12)} ${esc(c.blockers[0].x)}</div>` : ''}
-      </div>`; }).join('');
-    const updates = [];
-    CAMPAIGNS.filter(c => c.status !== 'Completed').forEach(c => c.updates.forEach(u => updates.push({ c, u })));
-    updates.sort((p, q) => (q.u.t.startsWith('Today') ? 1 : 0) - (p.u.t.startsWith('Today') ? 1 : 0));
-    const segRow = s => { const n = ACCOUNTS.filter(a => a.seg === s.id && (isMgr || a.owner === me.id)).length; const tot = ACCOUNTS.filter(a => a.seg === s.id).length; return `<div class="mini-row row-link" onclick="App.openSegment('${s.id}')"><div class="grow"><div class="nm">${esc(s.name)}</div><div class="sm">${isMgr ? `${tot} accounts` : `${n} yours of ${tot}`} · ${s.mode === 'NBC' ? esc(campStatus(campOf(s.campaign))) : s.mode === 'Building' ? `${s.building}/10 toward a campaign` : `${s.proven.toLowerCase()} message, ${s.rate}%`}</div></div>${modeBadge(s)}</div>`; };
-    $('main').className = 'page';
+    const k = isMgr ? [['7/15', 'Meetings', 'team, this week'], [String(myReplies().length), 'Replies', 'to answer'], ['22/31', 'Went ahead', 'on their own'], ['77%', 'Accepted', 'first time (G2)']]
+      : [['2/4', 'Meetings', 'this week'], [String(myReplies().length), 'Replies', 'to answer'], [String(todayNBA().length), 'To decide', 'today'], ['83%', 'Accepted', 'first time (G2)']];
+    const td = todos();
+    $('main').className = 'tpanel';
     $('main').innerHTML = `
-      <div class="today-h"><div><h1>${greeting()}, ${esc(first(me.name))}</h1><div class="sub">${isMgr ? 'Your team\'s day, prepared overnight. You oversee; reps act; you can step in on anything.' : 'Your day, prepared overnight. The AI did the research; you approve, edit or ask.'}</div></div>
-        <div class="overnight">${ic('spark', 13)} Overnight: ${isMgr ? '214 accounts checked · 61 signals · 31 actions · 22 went ahead' : '9 accounts re-scored · 23 signals · 7 actions · ' + wentAhead + ' went ahead'}</div></div>
-      ${bl.length ? `<div class="blockers">${bl.map(b => `<div class="blk ${b.k}" ${b.go ? `onclick="App.goTo(${js(b.go)})"` : ''}>${ic('alert', 15)}<div class="grow"><b>${esc(b.t)}</b><span>${esc(b.d)}</span></div>${b.go ? `<span class="go">${ic('right', 14)}</span>` : ''}</div>`).join('')}</div>` : '<div class="blk ok">No blockers. Everything is running.</div>'}
-      <div class="kpi-strip">${k.map(x => `<div class="kpi"><div class="v">${x[0]}</div><div class="k">${x[1]}</div><div class="d">${x[2]}</div></div>`).join('')}</div>
-      <div class="today-grid">
-        <div class="col">
-          <div class="card"><div class="card-h"><span class="lbl">${isMgr ? 'Your to-do' : 'To do today'}</span><span class="muted" style="font-size:11.5px">most urgent first</span></div><div class="card-b" style="padding:6px 8px">${todoList()}</div></div>
-          <div class="card"><div class="card-h"><span class="lbl">${ic('reply', 13)} Replies</span><span class="badge b-brand nodot">${rp.length}</span></div><div class="card-b" style="padding:0">
-            ${rp.length ? rp.map(r => `<div class="reply"><div class="reply-h"><span class="badge ${KIND_B[r.kind]}">${r.kind}</span><b>${esc(r.from)}</b><span class="sm">· ${esc(acct(r.acc).name)}${isMgr ? ' · ' + esc(first(USERS[r.owner].name)) : ''}</span><span class="when">${esc(r.at)}</span></div>
-              <div class="reply-t">"${esc(r.text)}"</div>
-              <div class="reply-f"><span class="badge ${r.sourceKind === 'Campaign' ? 'b-brand' : 'b-sec'} nodot">${r.sourceKind === 'Campaign' ? 'Campaign' : 'Your action'}: ${esc(r.source)}</span><div class="sp"></div>
-                ${r.kind === 'Positive' ? `<button class="btn sm pri" onclick="App.ask(${js(r.acc === 'eastgate' ? 'Draft a reply to Dian with 3 times next week' : 'What should I do with ' + acct(r.acc).name.split(' ')[0] + '?')})">Draft reply</button>` : r.kind === 'Objection' ? `<button class="btn sm" onclick="App.toast('Suggested: acknowledge, offer a 2028 planning call, pause the sequence (mock)')">Suggest a response</button>` : r.kind === 'Out of office' ? `<button class="btn sm" onclick="App.handleReply('${r.id}','Paused until 3 Nov')">Pause until back</button>` : `<button class="btn sm" onclick="App.handleReply('${r.id}','Meeting prep sent to your calendar')">Prep the meeting</button>`}
-                <button class="btn sm" onclick="App.openRecord('${r.acc}','activity')">Open</button></div></div>`).join('') : '<div class="empty">No new replies.</div>'}</div></div>
-          <div class="card"><div class="card-h"><span class="lbl">${ic('bolt', 13)} Next best actions · NBA</span><span class="muted" style="font-size:11.5px">${wentAhead} went ahead on their own today</span></div><div class="card-b" style="padding:2px 16px">
-            ${nba.length ? nba.slice(0, 7).map(a => `<div class="mini-row"><div class="grow row-link" onclick="App.openRecord('${a.id}','next')"><div class="nm">${esc(a.name)} <span class="muted" style="font-weight:400">· ${esc(a.contact.name)}</span></div><div class="sm">${esc(a.nba.action)} · <span class="seg-link" onclick="event.stopPropagation();App.openSegment('${a.seg}')">${esc(a.segment)}</span>${isMgr ? ' · ' + esc(first(USERS[a.owner].name)) : ''}</div></div><span class="badge ${REASON[reasonOf(a)]}">${reasonOf(a)}</span>${S.decisions[a.id] ? `<span class="badge b-grey nodot">${decLabel(S.decisions[a.id])}</span>` : `<button class="btn sm" onclick="App.openRecord('${a.id}','next')">Review</button>`}</div>`).join('') : '<div class="empty">Nothing waiting.</div>'}
-            ${nba.length > 7 ? `<div style="padding:8px 0"><a href="#approvals">All ${nba.length} in Approvals →</a></div>` : ''}</div></div>
-          ${isMgr ? `<div class="card"><div class="card-h"><span class="lbl">${ic('users', 13)} Reps</span><a class="btn sm ghost" href="#approvals">Team approvals</a></div><div class="card-b" style="padding:0"><table class="tbl"><thead><tr><th>Rep</th><th>To do</th><th>Overdue</th><th>Replies</th><th>Meetings</th><th>Accepted</th></tr></thead><tbody>${REPS.map(r => { const t = TEAM_STATS[r]; return `<tr class="row-link" onclick="App.repApprovals('${r}')"><td><div style="display:flex;gap:8px;align-items:center">${avatar(USERS[r], 24)}<span class="nm">${esc(USERS[r].name)}</span></div></td><td class="mono">${t.todo}</td><td>${t.overdue ? `<span class="badge b-neg">${t.overdue}</span>` : '<span class="muted">0</span>'}</td><td class="mono">${t.replies}</td><td class="mono">${t.meetings}/${t.target}</td><td class="mono">${t.accept}%</td></tr>`; }).join('')}</tbody></table></div></div>` : ''}
-        </div>
-        <div class="col">
-          <div class="card"><div class="card-h"><span class="lbl">${ic('megaphone', 13)} Campaigns · NBC</span><a class="btn sm ghost" href="#campaigns">All campaigns</a></div><div class="card-b" style="padding:0">${campRows}</div></div>
-          <div class="card"><div class="card-h"><span class="lbl">Campaign updates</span></div><div class="card-b" style="padding:2px 16px">${updates.slice(0, 6).map(({ c, u }) => `<div class="upd row-link" onclick="App.goCampaign('${c.id}')"><span class="when">${esc(u.t)}</span><div><div class="nm">${esc(c.name)}</div><div class="sm">${esc(u.x)}</div></div></div>`).join('')}</div></div>
-          <div class="card"><div class="card-h"><span class="lbl">${ic('layers', 13)} Micro-segments</span><a class="btn sm ghost" href="#segments">Open</a></div><div class="card-b" style="padding:2px 16px">
-            <div class="grp-l">Run as campaigns (NBC)</div>${SEGMENTS.filter(s => s.mode === 'NBC').map(segRow).join('')}
-            <div class="grp-l">${isMgr ? 'Next best actions (NBA)' : 'My actions (NBA)'}</div>${SEGMENTS.filter(s => s.mode !== 'NBC').map(segRow).join('')}
-          </div></div>
-          <div class="card"><div class="card-h"><span class="lbl">What the system learned</span></div><div class="card-b" style="padding:2px 16px">${LEARNED.slice(0, 3).map(l => `<div class="mini-row"><span class="badge b-${l.k} nodot">${l.k === 'pos' ? '↑' : l.k === 'neg' ? '↓' : 'i'}</span><div class="grow"><div class="nm">${esc(l.t)}</div><div class="sm" style="white-space:normal">${esc(l.d)}</div></div></div>`).join('')}</div></div>
-        </div>
-      </div>`;
+      <div class="tp-h"><span>Today</span><span class="muted">Tue 27 Oct</span></div>
+      <div class="tp-kpis">${k.map(x => `<div><b>${x[0]}</b><span>${x[1]}</span><i>${x[2]}</i></div>`).join('')}</div>
+      <section class="tp-sec"><div class="tp-sec-h"><span class="lbl">To do</span><span class="muted" style="font-size:11px">${td.filter(x => !S.todosDone[x.id]).length} open</span></div>
+        <table class="tbl todo-tbl"><thead><tr><th style="width:26px"><span class="sr">Done</span></th><th>Task</th><th>Due</th></tr></thead><tbody>
+        ${td.map(x => `<tr class="${S.todosDone[x.id] ? 'done' : ''}"><td><button class="ck" aria-label="Mark done" onclick="App.doneTodo('${x.id}')">${S.todosDone[x.id] ? ic('check', 11, 3) : ''}</button></td><td class="row-link" onclick="App.runTodo('${x.id}')"><div class="nm">${esc(x.t)}</div><div class="sm">${esc(x.d)}</div></td><td><span class="due ${x.cls}">${esc(x.due)}</span></td></tr>`).join('')}
+        </tbody></table></section>
+      <section class="tp-sec"><div class="tp-sec-h"><span class="lbl">Most important updates</span><a href="#campaigns" style="font-size:11.5px">Campaigns</a></div>
+        ${updates().slice(0, 6).map(u => `<button class="upd-i" ${u.on ? `onclick="${u.on}"` : ''}><span class="ic k-${u.k}">${ic(u.icon, 13)}</span><div class="grow"><div class="nm">${esc(u.t)}</div><div class="sm">${esc(u.d)}</div></div><span class="when">${esc(u.when)}</span></button>`).join('')}
+      </section>`;
   }
   function todoList() {
     return todos().map(x => `<div class="todo ${S.todosDone[x.id] ? 'done' : ''}"><button class="ck" aria-label="Mark done" onclick="event.stopPropagation();App.doneTodo('${x.id}')">${S.todosDone[x.id] ? ic('check', 12, 3) : ''}</button><div style="flex:1;min-width:0" class="row-link" onclick="App.runTodo('${x.id}')"><div class="tt">${esc(x.t)}</div><div class="td">${esc(x.d)}</div></div><span class="due ${x.cls}">${esc(x.due)}</span></div>`).join('');
@@ -694,7 +689,8 @@
   function renderAll() {
     const r = route();
     if (r !== lastRoute) { $('main').scrollTop = 0; lastRoute = r; }
-    renderTop(); renderChat();
+    $('ws').classList.toggle('today', r === 'today' && !recId);
+    renderNav(); renderChat();
     ({ today: renderToday, segments: renderSegments, campaigns: renderCampaigns, approvals: renderApprovals, accounts: renderAccounts })[r]();
   }
 
@@ -752,7 +748,7 @@
     closeDrawer() { $('drawer').classList.remove('open'); $('scrim').classList.remove('open'); },
     createRun() { S.runs.push({ name: $('runName').value, prompt: $('runPrompt').value, freq: 'Every Mon at 07:00', next: 'Mon 2 Nov 07:00' }); save(); toast('Scheduled run created'); openRuns(); },
   };
-  document.addEventListener('click', e => { if (!e.target.closest('.menu,.top-user,.top-ic,.ttl')) document.querySelectorAll('.menu').forEach(m => m.classList.remove('open')); });
+  document.addEventListener('click', e => { if (!e.target.closest('.menu,.ttl')) document.querySelectorAll('.menu').forEach(m => m.classList.remove('open')); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape') { if (recId) closeRecord(false); App.closeDrawer(); } });
   if (window.matchMedia('(max-width: 900px)').matches) $('ws').classList.add('chat-closed');
   renderAll();
