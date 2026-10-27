@@ -1,0 +1,504 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Demand AI Funnel View</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: an outcome strip, then a left-to-right track of ten stage columns, then the diagnosis and supporting tables, read top to bottom. */
+:root {
+  --bg: #f5f7f8;
+  --surface: #ffffff;
+  --sunk: #ecf0f2;
+  --ink: #17242b;
+  --ink-2: #4a5a63;
+  --ink-3: #75858e;
+  --line: #d5dde1;
+  --accent: #0f6b74;
+  --accent-soft: #dcefef;
+  --good: #2f7d4f;
+  --good-soft: #e1f1e6;
+  --warn: #9a6400;
+  --warn-soft: #fbefd6;
+  --bad: #b23a2e;
+  --bad-soft: #f8e1dd;
+  --sample: #6c4fa1;
+  --sample-soft: #ece6f6;
+  --f-display: Charter, "Bitstream Charter", "Sitka Text", Cambria, Georgia, serif;
+  --f-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --f-data: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f171b; --surface: #162228; --sunk: #1b282f; --ink: #e4ecef; --ink-2: #aebcc3; --ink-3: #82939b; --line: #2b3a42;
+    --accent: #5cc2c9; --accent-soft: #143338; --good: #6fcf94; --good-soft: #15301f; --warn: #e9b44c; --warn-soft: #33270f;
+    --bad: #f08a7e; --bad-soft: #3a1c18; --sample: #b9a2e6; --sample-soft: #2a2140; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f171b; --surface: #162228; --sunk: #1b282f; --ink: #e4ecef; --ink-2: #aebcc3; --ink-3: #82939b; --line: #2b3a42;
+  --accent: #5cc2c9; --accent-soft: #143338; --good: #6fcf94; --good-soft: #15301f; --warn: #e9b44c; --warn-soft: #33270f;
+  --bad: #f08a7e; --bad-soft: #3a1c18; --sample: #b9a2e6; --sample-soft: #2a2140; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.55 var(--f-body); }
+.wrap { max-width: 1240px; margin: 0 auto; padding-block: 28px 64px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 44px; }
+h1, h2, h3 { font-family: var(--f-display); font-weight: 600; text-wrap: balance; margin: 0; letter-spacing: -0.01em; }
+h1 { font-size: clamp(28px, 4vw, 40px); line-height: 1.12; }
+h2 { font-size: 24px; line-height: 1.2; }
+h3 { font-size: 17px; line-height: 1.3; }
+p { margin: 0; max-width: 70ch; }
+.eyebrow { font: 600 11.5px/1 var(--f-body); letter-spacing: 0.09em; text-transform: uppercase; color: var(--ink-3); }
+.num { font-family: var(--f-data); font-variant-numeric: tabular-nums; }
+.muted { color: var(--ink-2); }
+.small { font-size: 13px; }
+section { display: grid; gap: 18px; min-width: 0; }
+.sec-head { display: grid; gap: 6px; }
+.sec-head .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+/* chips */
+.chip { display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: 999px; font: 600 11.5px/1.5 var(--f-body); white-space: nowrap; }
+.chip.sample { background: var(--sample-soft); color: var(--sample); }
+.chip.good { background: var(--good-soft); color: var(--good); }
+.chip.warn { background: var(--warn-soft); color: var(--warn); }
+.chip.bad { background: var(--bad-soft); color: var(--bad); }
+.chip.info { background: var(--accent-soft); color: var(--accent); }
+
+/* header */
+header { display: grid; gap: 14px; }
+.banner { display: flex; gap: 10px; align-items: flex-start; padding: 10px 14px; border: 1px dashed var(--sample); border-radius: 8px; background: var(--sample-soft); color: var(--ink); font-size: 13.5px; }
+.banner b { color: var(--sample); }
+nav { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13.5px; }
+nav a { color: var(--accent); text-decoration: none; border-bottom: 1px solid transparent; }
+nav a:hover, nav a:focus-visible { border-bottom-color: var(--accent); outline: none; }
+
+/* outcome strip */
+.outcomes { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border: 1px solid var(--line); border-radius: 10px; background: var(--surface); overflow: hidden; }
+.outcome { padding: 14px 14px 12px; display: grid; gap: 4px; border-left: 1px solid var(--line); min-width: 0; }
+.outcome:first-child { border-left: 0; }
+.outcome .v { font: 600 28px/1.1 var(--f-data); font-variant-numeric: tabular-nums; }
+.outcome .l { font-size: 12.5px; color: var(--ink-2); line-height: 1.3; }
+.outcome .c { font: 12px/1.3 var(--f-data); color: var(--ink-3); }
+.outcome.zero .v { color: var(--bad); }
+@media (max-width: 860px) { .outcomes { grid-template-columns: repeat(4, minmax(0, 1fr)); } .outcome:nth-child(5) { border-left: 0; } .outcome:nth-child(n+5) { border-top: 1px solid var(--line); } }
+@media (max-width: 480px) { .outcomes { grid-template-columns: repeat(2, minmax(0, 1fr)); } .outcome { border-left: 0; border-top: 1px solid var(--line); } .outcome:nth-child(-n+2) { border-top: 0; } .outcome:nth-child(even) { border-left: 1px solid var(--line); } }
+
+/* funnel bars */
+.funnel { display: grid; gap: 6px; }
+.frow { display: grid; grid-template-columns: 210px minmax(0, 1fr) 150px; gap: 12px; align-items: center; font-size: 13.5px; }
+.frow .name { color: var(--ink); line-height: 1.25; }
+.frow .name small { display: block; color: var(--ink-3); font-size: 11.5px; }
+.track { height: 22px; background: var(--sunk); border-radius: 4px; position: relative; overflow: hidden; }
+.bar { position: absolute; inset: 0 auto 0 0; background: var(--accent); border-radius: 4px; min-width: 2px; }
+.bar.zero { background: transparent; border-left: 2px solid var(--bad); }
+.frow .val { font-family: var(--f-data); font-variant-numeric: tabular-nums; display: flex; gap: 8px; justify-content: flex-end; align-items: center; }
+.frow .val .cv { font-size: 11.5px; padding: 1px 6px; border-radius: 4px; }
+.cv.good { background: var(--good-soft); color: var(--good); } .cv.warn { background: var(--warn-soft); color: var(--warn); } .cv.bad { background: var(--bad-soft); color: var(--bad); } .cv.none { color: var(--ink-3); }
+@media (max-width: 640px) { .frow { grid-template-columns: minmax(0, 1fr) auto; } .frow .track { grid-column: 1 / -1; grid-row: 2; } }
+
+/* stage track */
+.scroller { overflow-x: auto; scroll-snap-type: x proximity; padding-bottom: 8px; -webkit-overflow-scrolling: touch; }
+.stages { display: grid; grid-auto-flow: column; grid-auto-columns: 300px; gap: 12px; }
+.stage { scroll-snap-align: start; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; display: grid; grid-template-rows: auto auto 1fr; overflow: hidden; }
+.stage-top { padding: 12px 14px 10px; display: grid; gap: 6px; border-bottom: 1px solid var(--line); border-top: 4px solid var(--good); }
+.stage[data-health="warn"] .stage-top { border-top-color: var(--warn); }
+.stage[data-health="bad"] .stage-top { border-top-color: var(--bad); }
+.stage-top .id { font: 600 11.5px/1 var(--f-data); color: var(--ink-3); letter-spacing: 0.04em; }
+.stage-top .count { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 12.5px; color: var(--ink-2); }
+.stage-top .count b { font: 600 20px/1 var(--f-data); color: var(--ink); font-variant-numeric: tabular-nums; }
+.stage-rows { display: grid; }
+.iadr { padding: 10px 14px; border-top: 1px solid var(--line); display: grid; gap: 3px; font-size: 13.5px; line-height: 1.45; }
+.iadr:first-child { border-top: 0; }
+.iadr .k { font: 600 10.5px/1 var(--f-body); letter-spacing: 0.09em; text-transform: uppercase; color: var(--ink-3); }
+.iadr.result { background: var(--sunk); }
+.iadr.result .k { color: var(--accent); }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: 12.5px; color: var(--ink-2); align-items: center; }
+.sw { display: inline-block; width: 18px; height: 4px; border-radius: 2px; vertical-align: middle; margin-right: 5px; }
+
+/* tables */
+.tbl-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+th, td { text-align: left; vertical-align: top; padding: 9px 12px; border-top: 1px solid var(--line); }
+thead th { border-top: 0; font: 600 11.5px/1.3 var(--f-body); letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); background: var(--sunk); white-space: nowrap; }
+tbody th { font-weight: 600; }
+td.n, th.n { text-align: right; font-family: var(--f-data); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cell-asset { font-weight: 600; }
+.cell-why { color: var(--ink-2); font-size: 12.5px; margin-top: 2px; }
+.cell-res { margin-top: 6px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12px; }
+.seq th.step { min-width: 150px; }
+.seq td { min-width: 200px; }
+.seq td.gapcell { background: var(--bad-soft); }
+
+/* personas */
+.personas { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.persona { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; display: grid; gap: 8px; align-content: start; }
+.persona .titles { font-size: 12.5px; color: var(--ink-3); }
+.persona ul { margin: 0; padding-left: 18px; font-size: 13.5px; display: grid; gap: 3px; }
+.persona .stat { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12.5px; color: var(--ink-2); border-top: 1px solid var(--line); padding-top: 8px; }
+.persona .stat b { font-family: var(--f-data); color: var(--ink); }
+
+/* diagnosis */
+.breaks { display: grid; gap: 12px; }
+.brk { display: grid; grid-template-columns: 54px minmax(0, 1fr); gap: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+.brk .rank { font: 600 26px/1 var(--f-display); color: var(--ink-3); }
+.brk-body { display: grid; gap: 8px; min-width: 0; }
+.brk-head { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.brk-cols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; font-size: 13.5px; }
+.brk-cols .k { font: 600 10.5px/1.2 var(--f-body); letter-spacing: 0.09em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 3px; }
+@media (max-width: 820px) { .brk-cols { grid-template-columns: minmax(0, 1fr); } .brk { grid-template-columns: minmax(0, 1fr); } }
+.dropoff { display: grid; gap: 4px; }
+.verdict { padding: 14px 16px; border-radius: 10px; background: var(--accent-soft); font-size: 14.5px; display: grid; gap: 6px; }
+.verdict p { max-width: 90ch; }
+
+footer { font-size: 12.5px; color: var(--ink-3); display: grid; gap: 6px; border-top: 1px solid var(--line); padding-top: 16px; }
+footer ol { margin: 0; padding-left: 18px; display: grid; gap: 2px; }
+a:focus-visible, .scroller:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (prefers-reduced-motion: no-preference) { .bar { transition: width .5s ease-out; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="eyebrow">Demand AI · Next Best Campaign · pilot funnel</div>
+  <h1>From prospect list to deal: where the pilot stands</h1>
+  <p class="muted">Pilot client: an industrial automation vendor selling control system migration and lifecycle services to refining, petrochemical and gas processing sites in South-East Asia. Window: <span id="window"></span>. Every company and person below is invented.</p>
+  <div class="banner" role="note"><b>Sample data.</b><span>All figures on this page are placeholders until the real pilot numbers are supplied. Each one is listed in CONSOLIDATION.md so it can be replaced. Edit the <code>DATA</code> block at the top of the script to update the whole page.</span></div>
+  <nav aria-label="Sections">
+    <a href="#outcomes">Outcomes</a><a href="#stages">Stage walk</a><a href="#personas">Personas</a><a href="#sequence">Content map</a><a href="#followup">Follow-up</a><a href="#why">Why no deals yet</a><a href="#activities">Activities vs results</a>
+  </nav>
+</header>
+
+<section id="outcomes" aria-labelledby="h-out">
+  <div class="sec-head"><div class="row"><h2 id="h-out">Outcomes first</h2><span class="chip sample">Sample data</span></div>
+  <p class="muted">Counts are accounts unless marked. Percentages are conversion from the previous outcome.</p></div>
+  <div class="outcomes" id="outcomeStrip"></div>
+  <div class="funnel" id="funnel" aria-label="Funnel counts by stage"></div>
+  <div class="legend"><span><span class="cv good">x%</span> healthy</span><span><span class="cv warn">x%</span> watch</span><span><span class="cv bad">x%</span> break point</span><span>Bars are drawn to one linear scale.</span></div>
+</section>
+
+<section id="stages" aria-labelledby="h-stages">
+  <div class="sec-head"><div class="row"><h2 id="h-stages">Stage walk</h2><span class="chip sample">Sample data</span></div>
+  <p class="muted">Each stage shows what the tool surfaces, what it recommends, what the seller or marketer decides, and the measurable result. Scroll sideways to follow the flow.</p></div>
+  <div class="legend"><span><span class="sw" style="background:var(--good)"></span>Result traced to an outcome</span><span><span class="sw" style="background:var(--warn)"></span>Leaking</span><span><span class="sw" style="background:var(--bad)"></span>Break point</span></div>
+  <div class="scroller" tabindex="0" aria-label="Stages, scroll sideways"><div class="stages" id="stageTrack"></div></div>
+</section>
+
+<section id="personas" aria-labelledby="h-per">
+  <div class="sec-head"><div class="row"><h2 id="h-per">Target lead and persona</h2><span class="chip sample">Sample data</span></div>
+  <p class="muted">Who we target: owner-operators of refining, petrochemical and gas processing sites in the six pilot countries, with an installed control system or a live project. What each persona wants to hear, and how they responded.</p></div>
+  <div class="personas" id="personaGrid"></div>
+</section>
+
+<section id="sequence" aria-labelledby="h-seq">
+  <div class="sec-head"><div class="row"><h2 id="h-seq">Content-to-sequence map</h2><span class="chip sample">Sample data</span></div>
+  <p class="muted">Which content goes out at each outreach step, for which persona, and why. Each cell shows replies against contacts who reached that step. Red cells are content that is not pulling its weight.</p></div>
+  <div class="tbl-wrap"><table class="seq" id="seqTable"></table></div>
+</section>
+
+<section id="followup" aria-labelledby="h-fu">
+  <div class="sec-head"><div class="row"><h2 id="h-fu">Follow-up: who responded and what happens next</h2><span class="chip sample">Sample data</span></div>
+  <p class="muted">Replies collected from Dripify (LinkedIn) and email. Sorted by what needs doing first.</p></div>
+  <div class="tbl-wrap"><table id="fuTable"></table></div>
+</section>
+
+<section id="why" aria-labelledby="h-why">
+  <div class="sec-head"><div class="row"><h2 id="h-why">Why no deals yet</h2><span class="chip sample">Sample data</span></div>
+  <p class="muted">Drop-off between stages, the likely break points in order, and what the best AI-native and incumbent platforms do differently at each one (see COMPETITOR_RESEARCH.md for sources).</p></div>
+  <div class="verdict" id="verdict"></div>
+  <div class="tbl-wrap"><table id="dropTable"></table></div>
+  <div class="breaks" id="breakList"></div>
+</section>
+
+<section id="activities" aria-labelledby="h-act">
+  <div class="sec-head"><div class="row"><h2 id="h-act">Activities vs results</h2><span class="chip sample">Sample data</span></div>
+  <p class="muted">Effort on the left, outcomes on the right. An activity that does not trace to a result is flagged as a gap.</p></div>
+  <div class="tbl-wrap"><table id="actTable"></table></div>
+</section>
+
+<footer>
+  <div>Built from the Demand AI prototype flow (Prospecting, Account Scoring, Micro-segments and NBA, Content studio) and the competitor research in COMPETITOR_RESEARCH.md. Company and contact names are invented. Figures are sample data until replaced.</div>
+</footer>
+
+</div>
+
+<script>
+/* ===== DATA: every figure on the page is sample data. Replace with real pilot numbers. ===== */
+const DATA = {
+  window: '1 Sep to 26 Oct 2026 (8 weeks)',
+  // Outcome strip, in order. value: number; unit is shown under the label.
+  outcomes: [
+    { label: 'Qualified accounts', value: 612 },
+    { label: 'Accounts contacted', value: 64 },
+    { label: 'Accounts that replied', value: 16 },
+    { label: 'Positive replies', value: 6 },
+    { label: 'Meetings held', value: 3 },
+    { label: 'Opportunities', value: 1, note: 'USD 600k est.' },
+    { label: 'Deals', value: 0 },
+  ],
+  // Funnel rows (accounts). health is set from conversion: good, warn, bad.
+  funnel: [
+    { name: 'Accounts loaded', sub: '7,498 contacts', v: 1400 },
+    { name: 'Qualified (ICP + contactable)', sub: '2,310 contacts', v: 612, health: 'good' },
+    { name: 'Scored with a live signal', sub: 'A 34 · B 61 · C 141', v: 236, health: 'warn' },
+    { name: 'Tier A and B', v: 95, health: 'good' },
+    { name: 'In a micro-segment', v: 88, health: 'good' },
+    { name: 'NBA approved and launched', sub: '172 contacts in sequence', v: 64, health: 'good' },
+    { name: 'Replied', sub: '21 replies from 18 contacts', v: 16, health: 'good' },
+    { name: 'Positive reply', v: 6, health: 'warn' },
+    { name: 'Meeting held', sub: '4 booked', v: 3, health: 'warn' },
+    { name: 'Opportunity', v: 1, health: 'bad' },
+    { name: 'Deal', v: 0, health: 'bad' },
+  ],
+  stages: [
+    { id: 'S1', name: 'Prospecting', inLabel: 'loaded', count: 1400, health: 'good',
+      info: '1,400 accounts and 7,498 contacts from the lead research file: firmographics, site profile (process type, capacity), job titles, email and LinkedIn, consent basis.',
+      action: 'Validate every row, merge duplicates, flag invalid or risky emails, map industries to the pilot verticals.',
+      decision: 'The sales manager fixes or drops rows the tool cannot repair and confirms the vertical mapping.',
+      result: '1,400 accounts loaded; 1,126 issues found and resolved or dropped. Activity only: no outcome yet.' },
+    { id: 'S2', name: 'Qualified lead identification', inLabel: 'qualified', count: 612, health: 'good',
+      info: 'ICP knock-outs (outside the six pilot countries, managed separately, distributor, too small, product already installed, all contacts opted out) and contactability.',
+      action: 'Keep owner-operators in refining, petrochemicals and gas processing with at least one reachable contact.',
+      decision: 'The sales manager accepts the qualified list or overrides individual knock-outs.',
+      result: '612 accounts (44%) and 2,310 contacts qualified. Only 38% of qualified contacts are in the primary persona with a verified email.' },
+    { id: 'S3', name: 'Lead scoring', inLabel: 'with a signal', count: 236, health: 'warn',
+      info: 'Fit score (vertical, size, site, relationship, account type, contact coverage) plus signals: inquiry, end of support, renewal, capital project, leadership change, webinar, download, click. Signals decay over time.',
+      action: 'Rank accounts into tiers A, B, C, or a watch list when there is no live signal.',
+      decision: 'Which tiers to work this week and who owns each account.',
+      result: '236 accounts have a live signal (A 34, B 61, C 141). 376 qualified accounts (61%) have no signal at all and cannot be prioritised.' },
+    { id: 'S4', name: 'Segmentation', inLabel: 'segmented', count: 88, health: 'good',
+      info: 'The strongest signal sets the micro-segment: Modernisation 31, Project 21, Engagement 17, Leadership 12, Service renewal 4, Inquiry 3.',
+      action: 'Group tier A and B accounts into micro-segments of three or more, each with its own play.',
+      decision: 'Approve the segments and the play per segment; park 7 accounts that fit no segment.',
+      result: '88 of 95 tier A and B accounts segmented. Only 3 accounts (Inquiry) show active buying intent; the largest segment rests on an installed-base date.' },
+    { id: 'S5', name: 'Next Best Action and Next Best Campaign', inLabel: 'approved', count: 64, health: 'good',
+      info: 'Per account: the recommended action from the segment library, a runner-up, the contact to approach, the "why now" line and a draft. Per segment: the campaign (NBC), for example "Migration path before end of support".',
+      action: 'Send each recommendation and draft to For Review with brand and claim checks.',
+      decision: 'Reviewers approve, edit or reject: 51 approved as is, 13 edited, 24 rejected (11 wrong contact, 7 already engaged, 6 wrong action).',
+      result: '64 accounts (73%) released to outreach with a reason to talk. Review took a median 1.6 days per item.' },
+    { id: 'S6', name: 'Campaign execution', inLabel: 'launched', count: 64, health: 'warn',
+      info: 'Released accounts, chosen contacts and channel. Outreach runs outside Demand AI: LinkedIn through Dripify and email from the reps\' inboxes.',
+      action: 'Load contacts into a six-step sequence over 21 days.',
+      decision: 'Reps choose which contacts go into Dripify and which get email; 61% of sequenced contacts were secondary persona because primary contacts lacked a verified email.',
+      result: '172 contacts sequenced. LinkedIn: 70 of 172 connections accepted (41%). Email: 101 of 123 delivered (18% bounced).' },
+    { id: 'S7', name: 'Content creation', inLabel: 'assets', count: 14, health: 'warn',
+      info: 'Brand pack, approved claims and sources, segment audience and persona from the content library.',
+      action: 'Draft blogs and whitepapers per segment in Content studio; reuse case studies from the library.',
+      decision: 'Marketing approves each asset for use in outreach.',
+      result: '14 assets produced; 9 used in sequences; 5 never sent. 2 replies referenced an asset. No asset can be tied to a meeting.' },
+    { id: 'S8', name: 'Content mapping to sequence steps', inLabel: 'steps mapped', count: 6, health: 'bad',
+      info: 'The sequence steps, the persona at each account, and the asset approved for each segment.',
+      action: 'Attach one asset per step per persona (see the content map below).',
+      decision: 'Reps pick the asset at each step; in practice the same whitepaper went to every persona at step 3.',
+      result: 'Step 3 (whitepaper) drew 1 reply from 101 contacts. Short, signal-based LinkedIn notes at steps 1 and 2 drew 13 of the 21 replies.' },
+    { id: 'S9', name: 'Follow-up and response tracking', inLabel: 'replied', count: 16, health: 'bad',
+      info: 'Replies sit in Dripify and in reps\' inboxes. Nothing flows back to Demand AI or the CRM automatically.',
+      action: 'A rep copies replies into a tracking sheet and books meetings by hand.',
+      decision: 'Reps decide who to call back and when.',
+      result: '21 replies from 16 accounts; 6 positive. Median 3.4 days to answer a positive reply; 2 positive replies waited more than 7 days.' },
+    { id: 'S10', name: 'Deal', inLabel: 'deals', count: 0, health: 'bad',
+      info: 'Meetings, discovery notes and the opportunity record in the client\'s CRM.',
+      action: 'Run the meeting with the NBA call script; propose a site assessment or migration workshop.',
+      decision: 'The account executive qualifies the opportunity and sets the next step.',
+      result: '4 meetings booked, 3 held, 1 opportunity (estimated USD 600k migration). 0 deals. Typical cycle for this deal type is 9 to 18 months.' },
+  ],
+  personas: [
+    { name: 'Instrumentation and I&C lead', type: 'Primary', titles: 'Head of Instrumentation, I&C Manager, E&I Manager',
+      wants: ['How to migrate a legacy control system inside a planned turnaround', 'Risk of running past end of support: spares, cyber patches', 'Proof from a comparable site in the region'],
+      sequenced: 41, replied: 7, positive: 3 },
+    { name: 'Automation and control systems lead', type: 'Primary', titles: 'Head of Automation, Control Systems Lead, DCS Engineer',
+      wants: ['A migration path that keeps field wiring and graphics', 'Open standards and integration with existing systems', 'A technical session, not a sales pitch'],
+      sequenced: 26, replied: 4, positive: 2 },
+    { name: 'Plant and operations leader', type: 'Secondary', titles: 'Plant Manager, Operations Director, General Manager',
+      wants: ['Uptime and production protected during change', 'Safety and compliance', 'Payback and who else in their sector has done it'],
+      sequenced: 63, replied: 6, positive: 1 },
+    { name: 'Maintenance, reliability and procurement', type: 'Secondary', titles: 'Maintenance Manager, Reliability Engineer, Procurement Lead',
+      wants: ['Lifecycle cost and service cover', 'Obsolete spares and response times', 'Clear commercial terms and renewal dates'],
+      sequenced: 42, replied: 4, positive: 0 },
+  ],
+  steps: [
+    { step: 'Step 1', when: 'Day 0', ch: 'LinkedIn connection (Dripify)' },
+    { step: 'Step 2', when: 'Day 3', ch: 'LinkedIn message (Dripify)' },
+    { step: 'Step 3', when: 'Day 5', ch: 'Email 1' },
+    { step: 'Step 4', when: 'Day 10', ch: 'Email 2' },
+    { step: 'Step 5', when: 'Day 14', ch: 'LinkedIn message (Dripify)' },
+    { step: 'Step 6', when: 'Day 21', ch: 'Email 3' },
+  ],
+  // seq[personaIndex][stepIndex] = { asset, why, replies, reached, gap }
+  seq: [
+    [ { asset: 'Note naming their signal', why: 'Shows we know the end-of-support date or project; no attachment.', replies: 3, reached: 41 },
+      { asset: '"Migration in one turnaround" insight', why: 'Their main worry is downtime during the 2027 turnaround.', replies: 2, reached: 19 },
+      { asset: 'Whitepaper: migration planning', why: 'Depth for the technical owner.', replies: 1, reached: 30, gap: true },
+      { asset: 'Case study: regional refinery migration', why: 'Peer proof from a comparable site.', replies: 1, reached: 27 },
+      { asset: 'Offer: site assessment', why: 'Low-commitment next step.', replies: 0, reached: 16 },
+      { asset: 'Meeting ask with two times', why: 'Close the loop.', replies: 0, reached: 22 } ],
+    [ { asset: 'Note naming their signal', why: 'Technical peer tone, no pitch.', replies: 2, reached: 26 },
+      { asset: 'Architecture diagram, one image', why: 'Shows the path that keeps wiring and graphics.', replies: 1, reached: 12 },
+      { asset: 'Whitepaper: migration planning', why: 'Same asset as the I&C lead.', replies: 0, reached: 18, gap: true },
+      { asset: 'Invite: technical session', why: 'They want engineers, not sales.', replies: 1, reached: 17 },
+      { asset: 'Case study: regional refinery migration', why: 'Peer proof.', replies: 0, reached: 10 },
+      { asset: 'Meeting ask with two times', why: 'Close the loop.', replies: 0, reached: 14 } ],
+    [ { asset: 'Note naming their signal', why: 'Leadership change or project as the reason to connect.', replies: 2, reached: 63 },
+      { asset: 'Blog: protecting uptime during change', why: 'Speaks to production, not technology.', replies: 2, reached: 24 },
+      { asset: 'Whitepaper: migration planning', why: 'Too technical for this persona.', replies: 0, reached: 31, gap: true },
+      { asset: 'Case study: regional refinery migration', why: 'Peer proof and payback.', replies: 1, reached: 29 },
+      { asset: 'No content: reminder only', why: 'No asset was mapped for this step.', replies: 0, reached: 18, gap: true },
+      { asset: 'Meeting ask with two times', why: 'Close the loop.', replies: 1, reached: 25 } ],
+    [ { asset: 'Note naming their signal', why: 'Renewal date or end of support.', replies: 1, reached: 42 },
+      { asset: 'No content: generic intro', why: 'No asset was mapped for this step.', replies: 0, reached: 15, gap: true },
+      { asset: 'Whitepaper: migration planning', why: 'Wrong problem: they care about lifecycle cost.', replies: 0, reached: 22, gap: true },
+      { asset: 'One-pager: lifecycle service review', why: 'Matches renewal and spares concerns.', replies: 2, reached: 20 },
+      { asset: 'Offer: renewal review', why: 'Practical next step.', replies: 1, reached: 12 },
+      { asset: 'Meeting ask with two times', why: 'Close the loop.', replies: 0, reached: 16 } ],
+  ],
+  followups: [
+    { who: 'Aditi Rao', role: 'Head of Instrumentation', co: 'Northwind Refining', persona: 'Primary', ch: 'Dripify', step: 'Step 2', reply: 'Positive', said: 'Asked for times to talk about the 2027 turnaround', days: 9, status: 'Not answered', next: 'Call today and book the migration-path discussion' },
+    { who: 'Hassan Idris', role: 'Operations Director', co: 'Meridian Petrochem', persona: 'Secondary', ch: 'Email', step: 'Step 4', reply: 'Positive', said: 'Wants the case study author on a call', days: 8, status: 'Not answered', next: 'Introduce the I&C lead and book a call with the case study engineer' },
+    { who: 'Maria Santos', role: 'I&C Manager', co: 'Coral Bay Refinery', persona: 'Primary', ch: 'Dripify', step: 'Step 1', reply: 'Positive', said: 'Accepted and asked about the hydrotreater revamp scope', days: 2, status: 'Meeting booked', next: 'Hold the technical session on 30 Oct; send the agenda' },
+    { who: 'Budi Hartono', role: 'Control Systems Lead', co: 'Tasik Gas Processing', persona: 'Primary', ch: 'Dripify', step: 'Step 5', reply: 'Positive', said: 'Will join the technical session', days: 4, status: 'Meeting held', next: 'Send the site assessment proposal agreed in the meeting' },
+    { who: 'Anong Chai', role: 'Head of Instrumentation', co: 'Andaman Petroleum', persona: 'Primary', ch: 'Email', step: 'Step 3', reply: 'Positive', said: 'Shared end-of-support dates for two units', days: 5, status: 'Opportunity open', next: 'Prepare the migration estimate for the assessment readout' },
+    { who: 'Rizal Hamid', role: 'Head of Instrumentation', co: 'Borneo Gas Processing', persona: 'Primary', ch: 'Dripify', step: 'Step 2', reply: 'Positive', said: 'Asked for a reference site in Malaysia', days: 3, status: 'Meeting held', next: 'Arrange the reference-site visit' },
+    { who: 'Linh Nguyen', role: 'Process Control Engineer', co: 'Lotus Chemicals', persona: 'Primary', ch: 'Dripify', step: 'Step 1', reply: 'Neutral', said: 'Asked what the company does', days: 6, status: 'Not answered', next: 'Reply with the two-line summary and the architecture image' },
+    { who: 'Siti Nurhaliza Omar', role: 'Plant Manager', co: 'Selat Aromatics', persona: 'Secondary', ch: 'Dripify', step: 'Step 2', reply: 'Neutral', said: 'Forwarded to the E&I manager', days: 5, status: 'In progress', next: 'Connect with the E&I manager and reference the forward' },
+    { who: 'Paolo Reyes', role: 'Maintenance Manager', co: 'Mindoro Fuels', persona: 'Secondary', ch: 'Email', step: 'Step 4', reply: 'Neutral', said: 'Renewal is handled by head office', days: 7, status: 'Not answered', next: 'Ask for the head office contact; route to the service owner' },
+    { who: 'Kittipong Srisai', role: 'Procurement Lead', co: 'Chao Phraya Olefins', persona: 'Secondary', ch: 'Email', step: 'Step 4', reply: 'Not now', said: 'Budget set for 2027; come back in Q2', days: 3, status: 'Nurture', next: 'Set a reminder for March 2027 and add to the Engagement segment' },
+    { who: 'Dewi Lestari', role: 'Head of Instrumentation', co: 'Sunda Refining', persona: 'Primary', ch: 'Dripify', step: 'Step 1', reply: 'Not now', said: 'Already in talks with the incumbent vendor', days: 10, status: 'Closed lost', next: 'Record the reason; recheck at the next signal' },
+    { who: 'Ngozi Bello', role: 'Operations Director', co: 'Halden Petrochemicals', persona: 'Secondary', ch: 'Dripify', step: 'Step 2', reply: 'Negative', said: 'Not the right person; asked to be removed', days: 4, status: 'Opted out', next: 'Suppress the contact; find the primary-persona contact' },
+  ],
+  drop: [
+    { from: 'Accounts loaded', to: 'Qualified', a: 1400, b: 612, stage: 'Qualification', note: 'Expected: knock-outs remove out-of-ICP and unreachable accounts.' },
+    { from: 'Qualified', to: 'Live signal', a: 612, b: 236, stage: 'Targeting', note: '61% of qualified accounts have no signal, so the tool cannot say why now.' },
+    { from: 'Live signal', to: 'Tier A or B', a: 236, b: 95, stage: 'Scoring', note: 'Reasonable, but tiers are not yet checked against replies.' },
+    { from: 'Tier A or B', to: 'Launched', a: 95, b: 64, stage: 'Qualification', note: 'Rejections mostly for the wrong contact: persona coverage gap.' },
+    { from: 'Launched', to: 'Replied', a: 64, b: 16, stage: 'Messaging', note: '25% of accounts replied; 18% email bounce and a 41% LinkedIn accept rate cap it.' },
+    { from: 'Replied', to: 'Positive', a: 16, b: 6, stage: 'Messaging', note: 'Secondary personas replied but rarely positively.' },
+    { from: 'Positive', to: 'Meeting held', a: 6, b: 3, stage: 'Follow-up', note: 'Two positive replies went unanswered for more than a week.' },
+    { from: 'Meeting held', to: 'Opportunity', a: 3, b: 1, stage: 'Conversion', note: 'No agreed next step or proposal template after the first meeting.' },
+    { from: 'Opportunity', to: 'Deal', a: 1, b: 0, stage: 'Conversion', note: 'Too early: the open opportunity is in week 3 of a 9 to 18 month cycle.' },
+  ],
+  breaks: [
+    { area: 'Follow-up', sev: 'bad', title: 'Positive replies are not followed up fast enough',
+      evidence: 'Median 3.4 days to answer a positive reply; 2 of 6 waited more than a week. Replies live in Dripify and inboxes, so Demand AI never sees them and cannot recommend the next step.',
+      best: 'AI-native SDR and inbound agents (Conversica, AiSDR, 1mind, Warmly) answer in minutes and route hot replies to a person at once. Outreach and Salesloft classify replies by intent inside the sequencer and pause the sequence automatically.',
+      fix: 'Pull Dripify and email replies back into Demand AI, classify each one (positive, neutral, not now, wrong person, opt-out), and make the response itself the next best action with a same-day due time.' },
+    { area: 'Targeting', sev: 'bad', title: 'We reach the wrong persona, and most accounts have no reason to talk now',
+      evidence: '61% of sequenced contacts were secondary persona; they returned 1 positive reply from 105. 376 qualified accounts carry no signal, and the biggest segment rests on an installed-base date, not active intent.',
+      best: 'Apollo and ZoomInfo run enrichment waterfalls to find a verified email for the right title. 6sense and Bombora add third-party intent; Common Room, Warmly and Unify add first-party website and community signals so every account has a "why now".',
+      fix: 'Add an enrichment step that finds a verified primary-persona contact before an account is released, and add at least one live intent source (website visits or a co-op intent feed) for the watch list.' },
+    { area: 'Content', sev: 'warn', title: 'Heavy content goes to cold contacts, and one asset goes to everyone',
+      evidence: 'The step 3 whitepaper drew 1 reply from 101 contacts across all personas. Short signal-based notes at steps 1 and 2 drew 13 of 21 replies. 5 of 14 assets were never used.',
+      best: 'AiSDR, Unify and Rox write each message from the account\'s own signal and research. HubSpot and Salesloft measure reply rate per template and step, so weak content is retired quickly.',
+      fix: 'Map one asset per persona per step, keep steps 1 to 3 short and signal-led, hold long-form content until someone engages, and show reply rate per asset in the content library.' },
+    { area: 'Messaging and deliverability', sev: 'warn', title: 'Email reach is capped before the message is read',
+      evidence: '18% of emails bounced. No sending domain warm-up or inbox rotation. The LinkedIn accept rate is 41%.',
+      best: 'Salesforge, Apollo and Outreach build deliverability into the product: verified emails, warmed domains, sending limits and bounce protection.',
+      fix: 'Block unverified emails at release (the prospecting checks already flag them), and set a bounce threshold that pauses a sequence.' },
+    { area: 'Conversion and measurement', sev: 'warn', title: 'After the first meeting there is no playbook, and nothing writes back to the CRM',
+      evidence: '3 meetings produced 1 opportunity. Outcomes are tracked in a sheet by hand, so the scoring and NBA rules cannot learn which signals led to meetings.',
+      best: 'Clarify, Lightfield and Rox capture every email and call into the account record automatically. Salesforce Agentforce and HubSpot write agent actions straight to the CRM, and 6sense retrains its models on closed-won outcomes.',
+      fix: 'Write every release, reply and meeting back to the CRM, and add the meeting itself as a stage with a next best action (proposal, site assessment, reference visit).' },
+  ],
+  verdict: 'The funnel is not broken at the top. It is breaking after the first reply. Qualification and segmentation work: 95 well-scored accounts and 64 launched. The losses come from reaching secondary personas, sending long-form content too early, and slow, manual follow-up. With a 9 to 18 month cycle, zero deals after eight weeks is expected; one open opportunity is the leading indicator to watch. The next eight weeks should be judged on meetings held and qualified pipeline, not deals.',
+  activities: [
+    { act: 'Lead rows loaded and cleaned', vol: '7,498 rows', goal: 'Qualified accounts', got: '612 qualified accounts', v: 'good' },
+    { act: 'Scoring runs', vol: '6 runs', goal: 'Prioritised accounts', got: '95 tier A and B accounts', v: 'good' },
+    { act: 'NBA recommendations reviewed', vol: '88 items, about 22 review hours', goal: 'Accounts launched with a reason to talk', got: '64 accounts launched', v: 'good' },
+    { act: 'Segment campaigns (NBC) run', vol: '6 campaigns', goal: 'Replies by segment', got: 'Replies from 4 of 6 segments; Inquiry 2 of 3 accounts', v: 'warn' },
+    { act: 'LinkedIn steps sent (Dripify)', vol: '298 actions', goal: 'Replies', got: '14 replies, 4 positive', v: 'warn' },
+    { act: 'Emails sent', vol: '271 emails', goal: 'Replies', got: '7 replies, 2 positive; 18% bounced', v: 'bad' },
+    { act: 'Content assets produced', vol: '14 assets', goal: 'Replies that cite content, meetings', got: '2 replies cite an asset; 0 meetings traced', v: 'bad', gap: true },
+    { act: 'Positive replies followed up', vol: '4 of 6', goal: 'Meetings', got: '4 booked, 3 held', v: 'warn' },
+    { act: 'Meetings run', vol: '3 meetings', goal: 'Opportunities', got: '1 opportunity, USD 600k estimated', v: 'warn' },
+    { act: 'Reply tracking in a spreadsheet', vol: 'About 2 hours a week', goal: 'Learning which signals convert', got: 'No feedback reaches scoring or NBA', v: 'bad', gap: true },
+  ],
+};
+
+/* ===== Rendering ===== */
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fmt = n => Number(n).toLocaleString('en-GB');
+const pct = (b, a) => a ? Math.round(b / a * 100) + '%' : 'n/a';
+
+$('window').textContent = DATA.window;
+
+$('outcomeStrip').innerHTML = DATA.outcomes.map((o, i) => {
+  const prev = i ? DATA.outcomes[i - 1].value : null;
+  return `<div class="outcome${o.value === 0 ? ' zero' : ''}"><div class="v">${fmt(o.value)}</div><div class="l">${esc(o.label)}</div><div class="c">${prev === null ? 'base' : pct(o.value, prev) + ' of previous'}${o.note ? ' · ' + esc(o.note) : ''}</div></div>`;
+}).join('');
+
+const max = DATA.funnel[0].v;
+$('funnel').innerHTML = DATA.funnel.map((f, i) => {
+  const prev = i ? DATA.funnel[i - 1].v : null;
+  const w = (f.v / max * 100).toFixed(2);
+  return `<div class="frow"><div class="name">${esc(f.name)}${f.sub ? `<small>${esc(f.sub)}</small>` : ''}</div>
+    <div class="track"><div class="bar${f.v === 0 ? ' zero' : ''}" style="width:${f.v === 0 ? 0 : w}%"></div></div>
+    <div class="val"><b>${fmt(f.v)}</b><span class="cv ${prev === null ? 'none' : f.health}">${prev === null ? 'start' : pct(f.v, prev)}</span></div></div>`;
+}).join('');
+
+$('stageTrack').innerHTML = DATA.stages.map(s => `
+  <article class="stage" data-health="${s.health}" aria-label="${esc(s.id + ' ' + s.name)}">
+    <div class="stage-top"><span class="id">${s.id}</span><h3>${esc(s.name)}</h3>
+      <div class="count"><span>${esc(s.inLabel)}</span><b>${fmt(s.count)}</b></div></div>
+    <div class="stage-rows">
+      <div class="iadr"><span class="k">Information</span>${esc(s.info)}</div>
+      <div class="iadr"><span class="k">Action</span>${esc(s.action)}</div>
+      <div class="iadr"><span class="k">Decision</span>${esc(s.decision)}</div>
+      <div class="iadr result"><span class="k">Result</span>${esc(s.result)}</div>
+    </div>
+  </article>`).join('');
+
+$('personaGrid').innerHTML = DATA.personas.map(p => `
+  <div class="persona"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><h3>${esc(p.name)}</h3><span class="chip ${p.type === 'Primary' ? 'info' : 'warn'}">${p.type}</span></div>
+    <div class="titles">${esc(p.titles)}</div>
+    <div class="eyebrow">Wants to hear</div>
+    <ul>${p.wants.map(w => `<li>${esc(w)}</li>`).join('')}</ul>
+    <div class="stat"><span>Sequenced <b>${p.sequenced}</b></span><span>Replied <b>${p.replied}</b> (${pct(p.replied, p.sequenced)})</span><span>Positive <b>${p.positive}</b></span></div>
+  </div>`).join('');
+
+$('seqTable').innerHTML = `<thead><tr><th class="step">Step</th>${DATA.personas.map(p => `<th>${esc(p.name)}<br><span style="text-transform:none;letter-spacing:0;font-weight:400">${p.type}</span></th>`).join('')}</tr></thead>
+  <tbody>${DATA.steps.map((st, si) => `<tr><th scope="row">${st.step}<div class="cell-why">${st.when} · ${esc(st.ch)}</div></th>${DATA.seq.map(row => {
+    const c = row[si]; const r = c.reached ? c.replies / c.reached : 0;
+    const tone = c.gap ? 'bad' : r >= 0.06 ? 'good' : r > 0 ? 'warn' : 'bad';
+    return `<td class="${c.gap ? 'gapcell' : ''}"><div class="cell-asset">${esc(c.asset)}</div><div class="cell-why">${esc(c.why)}</div>
+      <div class="cell-res"><span class="chip ${tone}"><span class="num">${c.replies}/${c.reached}</span> replied</span>${c.gap ? '<span class="chip bad">Gap</span>' : ''}</div></td>`;
+  }).join('')}</tr>`).join('')}</tbody>`;
+
+const order = { 'Not answered': 0, 'In progress': 1, 'Meeting booked': 2, 'Meeting held': 3, 'Opportunity open': 4, 'Nurture': 5, 'Opted out': 6, 'Closed lost': 7 };
+const replyTone = { Positive: 'good', Neutral: 'info', 'Not now': 'warn', Negative: 'bad' };
+const statusTone = s => s === 'Not answered' ? 'bad' : /Meeting|Opportunity/.test(s) ? 'good' : s === 'In progress' ? 'warn' : 'info';
+$('fuTable').innerHTML = `<thead><tr><th>Contact</th><th>Account</th><th>Channel</th><th>Reply</th><th class="n">Days since</th><th>Status</th><th>Next step</th></tr></thead>
+  <tbody>${DATA.followups.slice().sort((a, b) => order[a.status] - order[b.status] || (a.reply === 'Positive' ? -1 : 1)).map(f => `<tr>
+    <td><b>${esc(f.who)}</b><div class="cell-why">${esc(f.role)} · ${f.persona}</div></td>
+    <td>${esc(f.co)}</td>
+    <td>${esc(f.ch)}<div class="cell-why">${f.step}</div></td>
+    <td><span class="chip ${replyTone[f.reply]}">${f.reply}</span><div class="cell-why">${esc(f.said)}</div></td>
+    <td class="n">${f.days}</td>
+    <td><span class="chip ${statusTone(f.status)}">${esc(f.status)}</span></td>
+    <td>${esc(f.next)}</td></tr>`).join('')}</tbody>`;
+
+$('verdict').innerHTML = `<div class="eyebrow">Diagnosis</div><p>${esc(DATA.verdict)}</p>`;
+
+$('dropTable').innerHTML = `<thead><tr><th>From</th><th>To</th><th class="n">In</th><th class="n">Out</th><th class="n">Kept</th><th>Where it breaks</th><th>Reading</th></tr></thead>
+  <tbody>${DATA.drop.map(d => {
+    const k = d.a ? d.b / d.a : 0;
+    const tone = d.stage === 'Qualification' || d.stage === 'Scoring' ? 'info' : k < 0.4 ? 'bad' : k < 0.6 ? 'warn' : 'good';
+    return `<tr><td>${esc(d.from)}</td><td>${esc(d.to)}</td><td class="n">${fmt(d.a)}</td><td class="n">${fmt(d.b)}</td><td class="n">${pct(d.b, d.a)}</td><td><span class="chip ${tone}">${d.stage}</span></td><td>${esc(d.note)}</td></tr>`;
+  }).join('')}</tbody>`;
+
+$('breakList').innerHTML = DATA.breaks.map((b, i) => `
+  <article class="brk"><div class="rank">${i + 1}</div><div class="brk-body">
+    <div class="brk-head"><span class="chip ${b.sev}">${esc(b.area)}</span><h3>${esc(b.title)}</h3></div>
+    <div class="brk-cols">
+      <div><div class="k">Evidence in our funnel</div>${esc(b.evidence)}</div>
+      <div><div class="k">What the best players do</div>${esc(b.best)}</div>
+      <div><div class="k">What we change</div>${esc(b.fix)}</div>
+    </div></div></article>`).join('');
+
+const vLabel = { good: 'Traced to a result', warn: 'Weak result', bad: 'Not converting' };
+$('actTable').innerHTML = `<thead><tr><th>Activity</th><th>Volume</th><th>Result it should drive</th><th>Actual result</th><th>Verdict</th></tr></thead>
+  <tbody>${DATA.activities.map(a => `<tr><td>${esc(a.act)}</td><td class="num">${esc(a.vol)}</td><td>${esc(a.goal)}</td><td>${esc(a.got)}</td>
+    <td><span class="chip ${a.v}">${vLabel[a.v]}</span>${a.gap ? ' <span class="chip bad">Gap</span>' : ''}</td></tr>`).join('')}</tbody>`;
+</script>
+</body>
+</html>
