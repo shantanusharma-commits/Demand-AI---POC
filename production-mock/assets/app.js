@@ -14,20 +14,19 @@
   let me = USERS[store.get('dmock_user') || 'sofia'] || USERS.sofia;
   if (me.role === 'admin') { location.href = 'admin/index.html'; return; }
   const isMgr = me.role === 'manager';
-  const STATE_KEY = 'dmock_state_v4_' + me.id;
+  const STATE_KEY = 'dmock_state_v5_' + me.id;
   let saved = {};
   try { saved = JSON.parse(store.get(STATE_KEY, true) || '{}'); } catch (e) { saved = {}; }
-  const S = Object.assign({ chats: null, cur: 'brief', mchat: {}, studio: { doc: null, thread: [] }, decisions: {}, todosDone: {}, notes: {}, outcomes: {}, drafts: {}, runs: [], camp: {}, handled: {}, lists: [], seq: {}, content: [], enrollOK: {}, starred: {} }, saved);
+  const S = Object.assign({ chats: null, cur: 'home', mchat: {}, studio: { doc: null, thread: [] }, decisions: {}, todosDone: {}, notes: {}, outcomes: {}, drafts: {}, runs: [], camp: {}, handled: {}, lists: [], seq: {}, content: [], enrollOK: {}, starred: {} }, saved);
   const save = () => store.set(STATE_KEY, JSON.stringify(S), true);
   const FIND_STEPS = () => ['Turned your request into an ICP filter: refining, petrochemicals and gas · SEA · 500+ staff · reliability, operations and I&amp;C leaders', 'Searched the primary contact provider, then the fallback for the misses', 'Cross-checked fallback hits and gave everyone an identity tier', 'Removed 4 existing customers and 3 accounts another rep owns (CRM, read-only)', 'Ranked by similarity to your last 10 wins'];
   if (!S.chats) {
     S.chats = [
-      { id: 'brief', title: 'Today\'s brief', when: 'Today', thread: [{ who: 'ai', kind: 'brief' }] },
       { id: 'flow', title: 'Lookalikes of my last 10 wins', when: 'Mon', thread: [{ who: 'me', text: 'Find refiners and petrochem plants like my last 10 wins' }, { who: 'ai', kind: 'prospects', steps: FIND_STEPS() }] },
       { id: 'cedar', title: 'Cedar renewal prep', when: 'Fri', thread: [{ who: 'me', text: 'What should I do with Cedar?' }, { who: 'ai', kind: 'nba', id: 'cedar' }] },
     ];
   }
-  let ctx = null, art = null, recId = null, recTab = 'engage', listSel = 'all', campSel = null, campTab = 'enroll', segSel = null, segTab = 'accounts', apprTab = isMgr ? 'needs' : 'todo', apprRep = 'all', scope = isMgr ? 'team' : 'mine', studioTab = 'write', studioType = 'Blog', actOpen = null, artMore = false;
+  let expanded = false, ctx = null, art = null, recId = null, recTab = 'engage', listSel = 'all', campSel = null, campTab = 'enroll', segSel = null, segTab = 'accounts', apprTab = isMgr ? 'needs' : 'todo', apprRep = 'all', scope = isMgr ? 'team' : 'mine', studioTab = 'write', studioType = 'Blog', actOpen = null, artMore = false;
 
   /* ─── Helpers ─── */
   const $ = id => document.getElementById(id);
@@ -128,7 +127,7 @@
     myReplies().filter(r => r.kind === 'Positive').forEach(r => t.push({ id: 'rep-' + r.id, t: `Reply to ${r.from}: said yes`, d: `${acct(r.acc).name} · ${r.sourceKind === 'Campaign' ? 'campaign: ' + r.source : 'your action'}${isMgr ? ' · ' + first(USERS[r.owner].name) : ''}`, due: r.at.startsWith('Today') ? 'By 11:00' : 'Overdue', cls: 'hot', go: () => openRecord(r.acc, 'activity') }));
     if (isMgr) {
       const sens = apprItems('needs');
-      if (sens.length) t.push({ id: 'm1', t: `Sign off ${sens.length} sensitive message${sens.length > 1 ? 's' : ''}`, d: sens.map(a => `${a.name} (${first(USERS[a.owner].name)})`).join(' · '), due: 'Today 15:00', cls: 'hot', go: () => nav('approvals') });
+      if (sens.length) t.push({ id: 'm1', t: `Sign off ${sens.length} sensitive message${sens.length > 1 ? 's' : ''}`, d: sens.map(a => `${a.name} (${first(USERS[a.owner].name)})`).join(' · '), due: 'Today 15:00', cls: 'hot', go: () => openMod('approvals') });
       if (!S.camp.c1) t.push({ id: 'm2', t: 'Confirm campaign: Turnaround season 2027', d: '11 accounts are held until you decide', due: 'Today', cls: 'soon', go: () => goCampaign('c1') });
       if (S.camp.c5 === 'Sent for confirmation') t.push({ id: 'm6', t: 'Confirm campaign: Control-systems hiring surge', d: 'Sent by Sofia from her prospect list', due: 'Today', cls: 'soon', go: () => goCampaign('c5') });
       t.push({ id: 'm3', t: 'Kenji has 3 overdue items and no meetings yet', d: 'Reassign or nudge. The AI suggests moving 2 to Aisha', due: 'Overdue', cls: 'hot', go: () => ask('How is my team doing?') });
@@ -136,9 +135,9 @@
       return t;
     }
     const ready = apprItems('todo').filter(a => !a.nba.reason);
-    if (ready.length) t.push({ id: 't2', t: `Approve ${ready.length} ready action${ready.length > 1 ? 's' : ''}`, d: ready.map(a => a.name).join(' · '), due: 'Today 12:00', cls: 'soon', go: () => nav('approvals') });
+    if (ready.length) t.push({ id: 't2', t: `Approve ${ready.length} ready action${ready.length > 1 ? 's' : ''}`, d: ready.map(a => a.name).join(' · '), due: 'Today 12:00', cls: 'soon', go: () => openMod('approvals') });
     const unsure = apprItems('todo').filter(a => a.nba.reason && !a.nba.sensitive);
-    if (unsure.length) t.push({ id: 't3', t: `Review ${unsure.length} item${unsure.length > 1 ? 's' : ''} the AI wasn't sure about`, d: unsure.map(a => `${a.name} · ${reasonOf(a).toLowerCase()}`).join(' · '), due: 'Today 17:00', cls: 'soon', go: () => nav('approvals') });
+    if (unsure.length) t.push({ id: 't3', t: `Review ${unsure.length} item${unsure.length > 1 ? 's' : ''} the AI wasn't sure about`, d: unsure.map(a => `${a.name} · ${reasonOf(a).toLowerCase()}`).join(' · '), due: 'Today 17:00', cls: 'soon', go: () => openMod('approvals') });
     if (!S.camp.c5) t.push({ id: 't6', t: 'Review the draft campaign from your list', d: 'Control-systems hiring surge · 4 touches, email and LinkedIn', due: 'Today', cls: 'soon', go: () => goCampaign('c5', 'steps') });
     const sens = apprItems('todo').filter(a => a.nba.sensitive);
     if (sens.length) t.push({ id: 't4', t: `Check ${sens.length} sensitive message${sens.length > 1 ? 's' : ''} before they go to Pavan`, d: sens.map(a => a.name).join(' · '), due: 'Fri 30 Oct', cls: 'ok', go: () => openRecord(sens[0].id, 'engage') });
@@ -161,7 +160,8 @@
   const MOD_IC = { accounts: 'users', segments: 'layers', campaigns: 'megaphone', approvals: 'task', studio: 'pen' };
   function view() { const r = (location.hash || '').slice(1); return MODULES[r] ? r : null; }
   function go(r) { if (view() === r || (!r && !view())) renderAll(); else location.hash = r ? '#' + r : '#today'; }
-  function nav(r) { art = null; recId = null; ctx = null; if (r === 'campaigns') campSel = null; if (r === 'segments') segSel = null; if (r === 'studio') S.studio.doc = null; go(r); }
+  function nav(r) { art = null; recId = null; ctx = null; expanded = false; if (!r) S.cur = 'home'; if (r === 'campaigns') campSel = null; if (r === 'segments') segSel = null; if (r === 'studio') S.studio.doc = null; go(r); }
+  function openMod(r) { art = null; recId = null; expanded = true; go(r); }
   window.addEventListener('hashchange', () => renderAll());
 
   /* ─── Side navigation ─── */
@@ -199,6 +199,7 @@
     const v = view();
     if (v === 'studio') return S.studio.doc ? S.studio : null;
     if (v) { if (!S.mchat[v]) S.mchat[v] = { title: `${MODULES[v]} chat`, thread: [{ who: 'ai', kind: 'modIntro', v }] }; return S.mchat[v]; }
+    if (S.cur === 'home') return null;
     return S.chats.find(c => c.id === S.cur) || S.chats[0];
   }
   const lastKind = () => { const c = chat(); const t = c ? c.thread.filter(m => m.who === 'ai') : []; return t.length ? t[t.length - 1].kind : null; };
@@ -213,16 +214,15 @@
   function renderChat() {
     const c = chat(), v = view();
     if (!c) { $('chat').innerHTML = ''; return; }
-    const centred = !$('ws').classList.contains('canvas-open');
     $('chat').innerHTML = `
       <div class="chat-h">
         <span class="ai-mark">${ic('spark', 13)}</span>
         <div class="ttl">${v === 'studio' ? `<button class="back-l" onclick="App.nav('studio')">${ic('left', 13)} Content studio</button>` : esc(c.title)}</div>
         <div class="sp"></div>
-        ${v ? '' : `<button class="ic-btn" title="Scheduled runs" onclick="App.openRuns()">${ic('clock', 15)}</button>`}
+        ${v && v !== 'studio' && !expanded ? `<button class="btn sm" onclick="App.expand()">${ic('expand', 12)} Open ${MODULES[v]}</button>` : ''}${v ? '' : `<button class="ic-btn" title="Scheduled runs" onclick="App.openRuns()">${ic('clock', 15)}</button>`}
         <button class="ic-btn" title="${v && v !== 'studio' ? 'Clear this chat' : 'New chat'}" onclick="App.newChat()">${ic('plus', 15)}</button>
       </div>
-      <div class="thread" id="thread"><div class="thread-in">${centred && !v && c.id === 'brief' ? `<div class="greet"><h1>${greeting()}, ${esc(first(me.name))}</h1><div class="sub">${isMgr ? 'Your team\'s day, prepared overnight. Reps act; you oversee and can step in on anything.' : 'Your day is ready. I\'ve done the research; you approve, edit or ask.'}</div></div>` : ''}${c.thread.map(renderMsg).join('')}</div></div>
+      <div class="thread" id="thread"><div class="thread-in">${c.thread.map(renderMsg).join('')}</div></div>
       <div class="composer-wrap">
         <div class="hints">${hints().map(h => `<button class="chip" onclick="App.ask(${js(h)})">${esc(h)}</button>`).join('')}</div>
         <div class="composer">
@@ -237,7 +237,7 @@
           </div>
         </div>
       </div>`;
-    const th = $('thread'); th.scrollTop = !v && c.id === 'brief' && c.thread.length < 2 ? 0 : th.scrollHeight;
+    const th = $('thread'); th.scrollTop = th.scrollHeight;
   }
   function ctxChip() { return ctx ? `<span class="badge b-brand" onclick="App.setCtx(null)" title="Remove">@${esc(acct(ctx).name)} ✕</span>` : ''; }
   function greeting() { const h = new Date().getHours(); return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening'; }
@@ -289,8 +289,8 @@
 
   const RENDER = {
     text: m => `<p>${m.html}</p>`,
-    modIntro: m => `<p>${MOD_INTRO[m.v]()}</p>`,
-    brief: () => {
+    modIntro: m => `<p>${MOD_INTRO[m.v]()}</p>${modCard(m.v)}`,
+    brief: (m) => {
       const today = todayNBA(), later = openItems().filter(a => mine(a) && !today.includes(a) && !S.decisions[a.id]).length;
       const hot = myReplies().filter(r => r.kind === 'Positive');
       const auto = ACCOUNTS.filter(a => a.nba && a.nba.status === 'auto' && mine(a)).length;
@@ -300,7 +300,7 @@
         ${hot.length ? `<div class="ccard" style="border-color:#F1D3D3"><div class="ccard-h"><span class="t" style="color:var(--neg)">${ic('flame', 14)} Answer first · they said yes</span><span class="muted" style="font-size:11px">fast lane</span></div><div class="ccard-b" style="padding:2px 14px">${hot.map(r => `<div class="mini-row"><div class="grow row-link" onclick="App.openRecord('${r.acc}','activity')"><div class="nm">${esc(r.from)} · ${esc(acct(r.acc).name)}${isMgr ? ` <span class="muted" style="font-weight:400">· ${esc(first(USERS[r.owner].name))}</span>` : ''}</div><div class="sm">"${esc(r.text)}"</div></div><span class="due ${r.at.startsWith('Today') ? 'hot' : 'soon'}" style="font-size:11px">${esc(r.at)}</span>${isMgr ? '' : btn('Draft reply', r.acc === 'eastgate' ? 'Draft a reply to Dian with 3 times next week' : 'What should I do with ' + acct(r.acc).name.split(' ')[0] + '?', true)}</div>`).join('')}</div></div>` : ''}
         <div class="ccard"><div class="ccard-h"><span class="t">${ic('bolt', 14)} Next best actions · due today</span><span class="badge b-sec nodot">${today.length}</span></div>
           <div class="ccard-b" style="padding:0">${today.length ? `<div class="tbl-wrap"><table class="tbl nba-tbl"><thead><tr><th>Account · contact</th><th>Action</th><th>Why it needs you</th><th></th></tr></thead><tbody>${today.map(a => { const d = S.decisions[a.id]; return `<tr><td class="row-link" onclick="App.openRecord('${a.id}','engage')"><div class="nm">${esc(a.name)}</div><div class="sm">${esc(a.contact.name)}${isMgr ? ' · ' + esc(first(USERS[a.owner].name)) : ''}</div></td><td>${esc(a.nba.action)}<div class="sm">${a.nba.channel} · ${esc(a.segment)}</div></td><td><span class="badge ${REASON[reasonOf(a)]}">${reasonOf(a)}</span></td><td style="white-space:nowrap">${d ? `<span class="badge b-grey nodot">${decLabel(d)}</span>` : `${!a.nba.reason || (isMgr && a.nba.sensitive) ? `<button class="btn sm pri" onclick="App.approve('${a.id}')">${isMgr && a.nba.sensitive ? 'Sign off' : 'Approve'}</button> ` : ''}<button class="btn sm" onclick="App.openRecord('${a.id}','engage')">Review</button>`}</td></tr>`; }).join('')}</tbody></table></div>` : '<div class="empty">Nothing to decide today.</div>'}</div>
-          <div class="ccard-f"><span class="muted" style="font-size:11.5px">${auto} went ahead on their own${later ? ` · ${later} more due later this week` : ''}</span><div style="flex:1"></div>${today.some(a => !a.nba.reason && !S.decisions[a.id]) && !isMgr ? '<button class="btn sm pri" onclick="App.approveAll()">Approve all ready</button>' : ''}${openBtn('Approvals', "App.nav('approvals')")}</div></div>
+          <div class="ccard-f"><span class="muted" style="font-size:11.5px">${auto} went ahead on their own${later ? ` · ${later} more due later this week` : ''}</span><div style="flex:1"></div>${today.some(a => !a.nba.reason && !S.decisions[a.id]) && !isMgr ? '<button class="btn sm pri" onclick="App.approveAll()">Approve all ready</button>' : ''}${openBtn('Approvals', "App.openMod('approvals')")}</div></div>
         <div class="ccard"><div class="ccard-h"><span class="t">${ic('megaphone', 14)} Campaigns to create today · NBC</span><span class="muted" style="font-size:11px">from today's scored list</span></div>
           <div class="ccard-b">
             <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><div><b style="font-size:13px">${esc(c1.name)}</b><div class="sm" style="font-size:12px;color:var(--i2);margin-top:2px">11 accounts announced a planned shutdown in 6 days, which crosses the threshold (10 in 7 days). One campaign instead of 11 separate actions${isMgr ? '' : `; <b>${mineIn} are yours</b>`}.</div></div>${campBadge(c1)}</div>
@@ -308,7 +308,7 @@
             <div class="sm" style="font-size:11.5px;color:var(--i3);margin-top:8px">Also waiting: <a href="#campaigns" onclick="App.goCampaign('c5');return false">Control-systems hiring surge</a>, drafted from ${isMgr ? 'Sofia\'s' : 'your'} Monday list (${esc(campStatus(campOf('c5')))}). Almost a campaign: <a href="#segments" onclick="App.openSegment('${bld.id}');return false">${esc(bld.name)}</a> has ${bld.building} of 10.</div>
           </div>
           <div class="ccard-f">${isMgr && !S.camp.c1 ? '<button class="btn sm pri" onclick="App.confirmCampaign(\'c1\')">Confirm campaign</button><button class="btn sm" onclick="App.toast(\'Kept as 11 separate next actions (mock)\')">Send as separate actions</button>' : !isMgr && !S.camp.c1 ? '<span class="muted" style="font-size:11.5px">Pavan confirms campaigns.</span><button class="btn sm" onclick="App.toast(\'Your accounts were taken out; they get their own actions (mock)\')">Take mine out</button>' : ''}<div style="flex:1"></div>${openBtn('Review the sequence', "App.goCampaign('c1','steps')")}</div></div>
-        <p style="margin-top:8px">I can run the whole flow here: find prospects, score them, build micro-segments, prepare next actions and campaigns, then track them. Try "Find prospects like my last 10 wins".</p>`;
+        ${m && m.home ? '' : '<p style="margin-top:8px">I can run the whole flow here: find prospects, score them, build micro-segments, prepare next actions and campaigns, then track them. Try "Find prospects like my last 10 wins".</p>'}`;
     },
     prospects: () => `<p>I found <b>24 people at ${listAccounts().length} accounts</b> that match your ICP and look like your recent wins. <b>2 are held</b> for a person to check, and I removed 4 existing customers.</p>${tableCard('prospects')}<div class="next-row">${btn('Score this list', 'Score this list', true)}${btn('Save as a list', 'Save as a list')}</div>`,
     savedList: m => `<p>Saved as <b>${esc(m.name)}</b>. It's a tab in Accounts now, ready to score, segment or use in a campaign.</p><div class="next-row">${openBtn('Open in Accounts', `App.openList('${m.id}')`)}${btn(m.next || 'Score this list', m.next || 'Score this list', true)}</div>`,
@@ -324,7 +324,7 @@
       const accs = listAccounts().filter(a => a.nba);
       return `<p>Next best actions for the ${accs.length} list accounts that aren't in the campaign. Each has a contact, a channel and a draft; the ones on a proven message go ahead on their own.</p>
         <div class="ccard"><div class="ccard-b" style="padding:2px 14px">${accs.map(a => `<div class="mini-row row-link" onclick="App.openRecord('${a.id}','engage')">${chIc(a.nba.channel)}<div class="grow"><div class="nm">${esc(a.name)} <span class="muted" style="font-weight:400">· ${esc(a.contact.name)}</span></div><div class="sm">${esc(a.nba.action)} · ${esc(a.segment)}</div></div>${stepBadge(a)}</div>`).join('')}</div></div>
-        <div class="next-row">${btn('Build the campaign', 'Build the campaign', true)}${openBtn('Approvals', "App.nav('approvals')")}</div>`;
+        <div class="next-row">${btn('Build the campaign', 'Build the campaign', true)}${openBtn('Approvals', "App.openMod('approvals')")}</div>`;
     },
     flowCampaign: () => seqCard(campOf('c5'), `Here's the campaign for the 10 hiring-surge accounts: <b>${seqOf(campOf('c5')).length} touches</b>, email and LinkedIn, personalised per person. Add, remove, reorder or rewrite any touch.`),
     campaign: m => seqCard(campOf(m.id), esc(segOf(campOf(m.id).seg).why)),
@@ -360,6 +360,14 @@
     docCard: () => { const d = S.studio.doc; return d ? `<button class="doc-card" onclick="App.focusDoc()"><span class="doc-ic">${ic(d.type === 'Whitepaper' ? 'doc' : 'pen', 18)}</span><span><b>${esc(d.title)}</b><span class="sm">${esc(d.type)} · Open in the canvas</span></span></button>` : ''; },
     help: () => `<p>I can run the whole flow. Try:</p><div class="hints" style="margin:4px 0">${['Find prospects like my last 10 wins', 'Score this list', 'Create micro-segments', 'Prepare the next actions', 'Build the campaign', 'How are the campaigns doing?', 'What did we learn this week?', 'Write a blog on planning a control system migration', 'Every weekday at 7am, check my accounts for new signals'].map(h => `<button class="chip" onclick="App.ask(${js(h)})">${esc(h)}</button>`).join('')}</div>`,
   };
+  function modCard(v) {
+    const card = (title, count, rows) => `<div class="tcard"><div class="tcard-h"><span class="t">${ic(MOD_IC[v], 15)} ${title}</span><span class="muted" style="font-size:12px;white-space:nowrap">${count}</span><div class="sp"></div><button class="ic-btn" title="Open beside the chat" onclick="App.expand()">${ic('expand', 15)}</button></div><div style="padding:2px 14px">${rows}</div><button class="tcard-more" onclick="App.expand()">Open ${MODULES[v]} beside the chat ${ic('expand', 12)}</button></div>`;
+    if (v === 'accounts') { const acc = ACCOUNTS.filter(mine).filter(a => a.score > 0).sort((p, q) => q.score - p.score); return card(isMgr ? 'Team accounts' : 'Your accounts', `${acc.length} with a live signal · ${S.lists.length + LISTS.length} saved lists`, acc.slice(0, 5).map(a => `<div class="mini-row row-link" onclick="App.openRecord('${a.id}','overview')">${tierBadge(a.tier)}<div class="grow"><div class="nm">${esc(a.name)} <span class="muted" style="font-weight:400">· ${esc(a.contact.name)}</span></div><div class="sm">${a.whyNow ? esc(a.whyNow.type) + ' · ' + ago(a.whyNow.age) : ''}</div></div>${stepBadge(a)}</div>`).join('')); }
+    if (v === 'segments') return card('Micro-segments', `${SEGMENTS.length} segments`, SEGMENTS.slice(0, 6).map(s => `<div class="mini-row row-link" onclick="App.openSegment('${s.id}')"><div class="grow"><div class="nm">${esc(s.name)}</div><div class="sm">${ACCOUNTS.filter(a => a.seg === s.id).length} accounts · ${esc(s.trigger)}</div></div>${modeBadge(s)}</div>`).join(''));
+    if (v === 'campaigns') return card('Campaigns', `${CAMPAIGNS.length} campaigns`, CAMPAIGNS.map(c => `<div class="mini-row row-link" onclick="App.goCampaign('${c.id}')"><div class="grow"><div class="nm">${esc(c.name)}</div><div class="sm">${esc(progressText(c))}</div></div>${campBadge(c)}</div>`).join(''));
+    const items = apprItems(isMgr ? 'needs' : 'todo');
+    return card('Approvals', `${items.length} waiting`, items.length ? items.map(apprMini).join('') : '<div class="empty">Nothing is waiting for you.</div>');
+  }
   function seqCard(c, intro) {
     return `<p>${intro}</p><div class="ccard"><div class="ccard-h"><span class="t">${ic('megaphone', 14)} ${esc(c.name)}</span>${campBadge(c)}</div><div class="ccard-b" style="padding:2px 14px">
       ${seqOf(c).map((t, i) => `<div class="mini-row">${chIc(t.ch)}<div class="grow"><div class="nm">Step ${i + 1} · Day ${t.day} · ${t.ch} · ${esc(t.fmt)}</div><div class="sm">${esc(t.t)}</div></div></div>`).join('')}</div>
@@ -451,6 +459,7 @@
   }
   function ask(text) {
     if (!text || !text.trim()) return;
+    if (!view() && S.cur === 'home') { const id = 'n' + Date.now(); S.chats.unshift({ id, title: 'New chat', when: 'Now', thread: [] }); S.cur = id; renderAll(); }
     const c = chat();
     if (!c) return;
     c.thread = c.thread.filter(m => m.who !== 'typing');
@@ -497,28 +506,41 @@
   }
   const seqSpan = c => { const sq = seqOf(c); return `${sq.length} steps · ${sq.length ? sq[sq.length - 1].day + 1 : 0} days`; };
 
-  /* ─── Today panel (beside the chat on Today) ─── */
-  function renderToday() {
-    const k = isMgr ? [['7/15', 'Meetings', 'team, this week'], [String(myReplies().length), 'Replies', 'to answer'], ['22/31', 'Went ahead', 'on their own'], ['77%', 'Accepted', 'first time (G2)']]
-      : [['2/4', 'Meetings', 'this week'], [String(myReplies().length), 'Replies', 'to answer'], [String(todayNBA().length), 'To decide', 'today'], ['83%', 'Accepted', 'first time (G2)']];
-    const td = todos();
-    $('main').className = 'tpanel';
-    $('main').innerHTML = `
-      <div class="tp-h"><span>Today</span><span class="muted">Tue 27 Oct</span></div>
-      <div class="tp-kpis">${k.map(x => `<div><b>${x[0]}</b><span>${x[1]}</span><i>${x[2]}</i></div>`).join('')}</div>
-      <section class="tp-sec"><div class="tp-sec-h"><span class="lbl">To do</span><span class="muted" style="font-size:11px">${td.filter(x => !S.todosDone[x.id]).length} open</span></div>
-        <table class="tbl todo-tbl"><thead><tr><th style="width:26px"><span class="sr">Done</span></th><th>Task</th><th>Due</th></tr></thead><tbody>
-        ${td.map(x => `<tr class="${S.todosDone[x.id] ? 'done' : ''}"><td><button class="ck" aria-label="Mark done" onclick="App.doneTodo('${x.id}')">${S.todosDone[x.id] ? ic('check', 11, 3) : ''}</button></td><td class="row-link" onclick="App.runTodo('${x.id}')"><div class="nm">${esc(x.t)}</div><div class="sm">${esc(x.d)}</div></td><td><span class="due ${x.cls}">${esc(x.due)}</span></td></tr>`).join('')}
-        </tbody></table></section>
-      <section class="tp-sec"><div class="tp-sec-h"><span class="lbl">Most important updates</span></div>
-        ${updates().slice(0, 6).map(u => `<button class="upd-i" ${u.on ? `onclick="${u.on}"` : ''}><span class="ic k-${u.k}">${ic(u.icon, 13)}</span><div class="grow"><div class="nm">${esc(u.t)}</div><div class="sm">${esc(u.d)}</div></div><span class="when">${esc(u.when)}</span></button>`).join('')}
-      </section>`;
+  /* ─── Home (Today): the greeting and the chat box first; the brief, to-do and numbers below ─── */
+  function renderHome() {
+    const td = todos(), blk = myBlockers().find(b => b.k === 'neg');
+    const my = a => isMgr || a.owner === me.id;
+    const met = [['users', 'Sequenced', ACCOUNTS.filter(a => a.campaign && my(a)).length, isMgr ? 120 : 30], ['mail', 'Emails sent', isMgr ? 38 : 9, isMgr ? 160 : 40], ['li', 'LinkedIn touches', isMgr ? 21 : 5, isMgr ? 80 : 20], ['reply', 'Replies to answer', myReplies().length, null], ['task', 'To decide today', todayNBA().length, null], ['check', 'Meetings this week', isMgr ? 7 : 2, isMgr ? 15 : 4]];
+    const board = REPS.slice().sort((p, q) => TEAM_STATS[q].meetings - TEAM_STATS[p].meetings);
+    const q = ($('todoQ') && $('todoQ').value || '').toLowerCase();
+    $('main').className = 'home-pg';
+    $('main').innerHTML = `<div class="hm"><div class="hm-main">
+        <h1 class="hm-greet">${greeting()}, ${esc(first(me.name))}. ${isMgr ? 'Here\'s your team\'s day.' : 'Ready to prospect?'}</h1>
+        <div class="hm-box ${blk ? 'warn' : ''}">${blk ? `<div class="hm-note"><b>${esc(blk.t)}</b><span>${esc(blk.d)}</span></div>` : ''}
+          <div class="composer"><div class="ctx" id="ctx">${ctxChip()}</div><label class="sr" for="composer">Message DemandAI</label>
+            <textarea id="composer" rows="2" placeholder="Find, score, segment, act, track… type @ to add an account" onkeydown="App.key(event)" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
+            <div class="composer-f"><button class="ic-btn" title="Add an account" onclick="App.focusComposer('@')">@</button><span class="muted" style="font-size:11px">Scripted demo · nothing is sent</span><div class="sp"></div><button class="send" onclick="App.send()" title="Send">${ic('send', 16)}</button></div></div></div>
+        <div class="hints hm-hints">${hints().map(h => `<button class="chip" onclick="App.ask(${js(h)})">${esc(h)}</button>`).join('')}</div>
+        <section class="hm-card"><div class="hm-card-h"><span class="hm-ic">${ic('spark', 15)}</span><b>Today's brief</b><span class="muted">prepared overnight · 06:00</span></div><div class="hm-brief">${RENDER.brief({ home: true })}</div></section>
+        <section class="hm-card"><div class="hm-card-h"><span class="hm-ic">${ic('task', 15)}</span><b>To do</b><span class="badge b-grey nodot">${td.filter(x => !S.todosDone[x.id]).length} open</span><div class="sp"></div><div class="search">${ic('search', 14)}<label class="sr" for="todoQ">Search</label><input id="todoQ" placeholder="Search…" value="${esc(q)}" oninput="App.renderAll()"></div></div>
+          <div class="tbl-wrap"><table class="tbl todo-tbl"><thead><tr><th style="width:34px"><span class="sr">Done</span></th><th>Task</th><th>Details</th><th>Due</th></tr></thead><tbody>
+          ${td.filter(x => !q || (x.t + x.d).toLowerCase().includes(q)).map(x => `<tr class="${S.todosDone[x.id] ? 'done' : ''}"><td><button class="ck" aria-label="Mark done" onclick="App.doneTodo('${x.id}')">${S.todosDone[x.id] ? ic('check', 11, 3) : ''}</button></td><td class="row-link" onclick="App.runTodo('${x.id}')"><div class="nm">${esc(x.t)}</div></td><td class="row-link" onclick="App.runTodo('${x.id}')"><div class="sm">${esc(x.d)}</div></td><td><span class="due ${x.cls}">${esc(x.due)}</span></td></tr>`).join('') || '<tr><td colspan="4" class="empty">No tasks match.</td></tr>'}
+          </tbody></table></div></section>
+      </div>
+      <aside class="hm-side">
+        <section class="hm-card"><div class="hm-card-h"><b>${isMgr ? 'Team metrics' : 'Your metrics'}</b><div class="sp"></div><label class="sr" for="metP">Period</label><select class="sel" id="metP"><option>Today</option><option>This week</option></select></div>
+          ${met.map(([i, k, v, t]) => `<div class="met"><span class="met-ic">${ic(i, 15)}</span><span class="grow">${k}</span><b>${v}${t ? `<i> / ${t}</i>` : ''}</b></div>`).join('')}</section>
+        <section class="hm-card"><div class="hm-card-h"><b>Most important updates</b></div><div style="padding:2px 14px 6px">${updates().slice(0, 5).map(u => `<button class="upd-i" ${u.on ? `onclick="${u.on}"` : ''}><span class="ic k-${u.k}">${ic(u.icon, 13)}</span><div class="grow"><div class="nm">${esc(u.t)}</div><div class="sm">${esc(u.d)}</div></div><span class="when">${esc(u.when)}</span></button>`).join('')}</div></section>
+        <section class="hm-card"><div class="hm-card-h"><b>Weekly leaderboard</b><div class="sp"></div><span class="muted" style="font-size:12px">Meetings booked</span></div>
+          ${board.map((r, i) => `<div class="met ${r === me.id ? 'me' : ''}"><span class="rank">${i + 1}</span>${avatar(USERS[r], 24)}<span class="grow">${esc(USERS[r].name)}</span><b>${TEAM_STATS[r].meetings}</b></div>`).join('')}</section>
+      </aside></div>`;
+    if (q) { const s = $('todoQ'); s.focus(); s.setSelectionRange(q.length, q.length); }
   }
 
   /* ─── Module and canvas frames ─── */
   function frame(title, sub, actions, closable) {
     $('main').className = 'canvas';
-    $('main').innerHTML = `<div class="cv-h"><div class="cv-ht"><div class="cv-t">${title}</div>${sub ? `<div class="cv-s">${sub}</div>` : ''}</div><div class="cv-a">${actions || ''}${closable ? `<button class="ic-btn" onclick="App.closeCanvas()" title="Close">${ic('x', 16)}</button>` : ''}</div></div><div class="cv-b" id="cv"></div>`;
+    $('main').innerHTML = `<div class="cv-h"><div class="cv-ht"><div class="cv-t">${title}</div>${sub ? `<div class="cv-s">${sub}</div>` : ''}</div><div class="cv-a">${actions || ''}<button class="ic-btn" onclick="App.closeCanvas()" title="Close">${ic('x', 16)}</button></div></div><div class="cv-b" id="cv"></div>`;
     return $('cv');
   }
   const filt = (label, ic2, on) => `<button class="fchip ${on ? 'on' : ''}">${ic2 ? ic(ic2, 13) : ''}${label}</button>`;
@@ -793,20 +815,24 @@
     apprItems(isMgr ? 'team' : 'todo').filter(a => !a.nba.reason && !S.decisions[a.id]).forEach(a => { S.decisions[a.id] = 'approved'; });
     save(); if (!silent) { toast('Approved all ready items. Scheduled for the next send window (placeholder).'); renderAll(); }
   }
-  function goCampaign(id, tab) { art = null; recId = null; campSel = id; campTab = tab || 'enroll'; go('campaigns'); }
+  function goCampaign(id, tab) { art = null; recId = null; expanded = true; campSel = id; campTab = tab || 'enroll'; go('campaigns'); }
   function openRecord(id, tab) { recId = id; recTab = tab || 'engage'; actOpen = null; ctx = id; if (recTab === 'engage' && !acct(id).nba && !acct(id).campaign) recTab = 'overview'; if (!view()) location.hash = '#accounts'; else renderAll(); }
   let lastKey = null;
   function renderAll() {
     const v = view();
-    const split = !!(v && v !== 'studio') || !!art || !!recId || (v === 'studio' && !!S.studio.doc);
-    $('ws').classList.toggle('canvas-open', split);
-    $('ws').classList.toggle('nochat', v === 'studio' && !S.studio.doc && !recId);
+    const home = !v && S.cur === 'home' && !art && !recId, studioHome = v === 'studio' && !S.studio.doc && !recId;
+    const split = !!art || !!recId || (v && v !== 'studio' && expanded) || (v === 'studio' && !!S.studio.doc);
+    $('ws').classList.toggle('canvas-open', !!split);
+    $('ws').classList.toggle('home', home);
+    $('ws').classList.toggle('nochat', studioHome);
+    $('ws').classList.toggle('solo', !split && !home && !studioHome);
     renderNav(); renderChat();
     if (recId) renderRecord();
     else if (art) renderArt();
-    else if (v) ({ accounts: renderAccounts, segments: renderSegments, campaigns: renderCampaigns, approvals: renderApprovals, studio: renderStudio })[v]();
-    else renderToday();
-    const key = [v, art, recId, campSel, campTab, segSel, segTab, listSel, studioTab, !!S.studio.doc].join('|');
+    else if (v === 'studio' || (v && expanded)) ({ accounts: renderAccounts, segments: renderSegments, campaigns: renderCampaigns, approvals: renderApprovals, studio: renderStudio })[v]();
+    else if (home) renderHome();
+    else { $('main').className = ''; $('main').innerHTML = ''; }
+    const key = [v, home, expanded, art, recId, campSel, campTab, segSel, segTab, listSel, studioTab, !!S.studio.doc].join('|');
     if (key !== lastKey) { const cv = $('cv'); if (cv) cv.scrollTop = 0; $('main').scrollTop = 0; lastKey = key; }
   }
   function openRuns() {
@@ -838,17 +864,19 @@
       if (v === 'studio') { S.studio = { doc: null, thread: [] }; save(); return nav('studio'); }
       if (v) { S.mchat[v] = null; save(); return renderAll(); }
       const id = 'n' + Date.now();
-      S.chats.splice(1, 0, { id, title: 'New chat', when: 'Now', thread: [{ who: 'ai', kind: 'text', html: 'New chat. What should I work on? I can find prospects, score them, build micro-segments, prepare next actions and campaigns, track them, and tell you what the system learned.' }] });
+      S.chats.unshift({ id, title: 'New chat', when: 'Now', thread: [{ who: 'ai', kind: 'text', html: 'New chat. What should I work on? I can find prospects, score them, build micro-segments, prepare next actions and campaigns, track them, and tell you what the system learned.' }] });
       S.cur = id; ctx = null; art = null; recId = null; save(); go(null); setTimeout(() => $('composer') && $('composer').focus(), 0);
     },
     openChat(id) { S.cur = id; art = null; recId = null; save(); go(null); },
-    closeCanvas() { if (recId) recId = null; else art = null; renderAll(); },
+    closeCanvas() { if (recId) recId = null; else if (art) art = null; else expanded = false; renderAll(); },
+    expand() { art = null; recId = null; expanded = true; renderAll(); },
+    openMod,
     openArt(k) { art = k; recId = null; artMore = false; renderAll(); },
     toggleMore() { artMore = !artMore; renderAll(); },
     doneTodo(id) { S.todosDone[id] = !S.todosDone[id]; save(); renderAll(); },
     runTodo(id) { const t = todos().find(x => x.id === id); if (t) t.go(); },
     goTo(target) { const [k, v] = target.split(':'); if (k === 'campaign') goCampaign(v); else if (k === 'record') openRecord(v, 'engage'); else if (k === 'ask') ask(v); },
-    repApprovals(r) { apprTab = 'team'; apprRep = r; nav('approvals'); },
+    repApprovals(r) { apprTab = 'team'; apprRep = r; openMod('approvals'); },
     setApprTab(k) { apprTab = k; renderAll(); },
     setApprRep(r) { apprRep = r; renderAll(); },
     setScope(k) { scope = k; renderAll(); },
@@ -857,9 +885,9 @@
     setRecTab(k) { recTab = k; actOpen = null; renderAll(); },
     toggleAct(i) { actOpen = actOpen === i ? null : i; renderAll(); },
     star(id) { S.starred[id] = !S.starred[id]; save(); renderAll(); },
-    openList(id) { listSel = id || 'all'; art = null; recId = null; go('accounts'); },
+    openList(id) { listSel = id || 'all'; art = null; recId = null; expanded = true; go('accounts'); },
     saveView() { const name = `My view · ${listSel === 'all' ? 'all accounts' : 'list'} · 27 Oct`; const ids = Array.from(document.querySelectorAll('#cv tbody tr')).length; addList(name, 'Saved view', `${ids} accounts saved from the Accounts view`, ACCOUNTS.filter(mine).map(a => a.id)); listSel = S.lists[0].id; save(); toast('Saved as a list. It\'s a tab now'); renderAll(); },
-    openSegment(id) { segSel = id; segTab = 'accounts'; art = null; recId = null; go('segments'); },
+    openSegment(id) { segSel = id; segTab = 'accounts'; art = null; recId = null; expanded = true; go('segments'); },
     saveSegList(segId) { const s = segOf(segId); addList(s.name + ' · 27 Oct', 'Segment', 'Saved from Segments', ACCOUNTS.filter(a => a.seg === segId).map(a => a.id)); save(); toast('Saved. It\'s a tab in Accounts'); },
     confirmCampaign(id) { S.camp[id] = 'Confirmed'; save(); toast('Campaign confirmed. Step 1 goes out tomorrow 09:00 (placeholder: nothing is sent).'); renderAll(); },
     sendForConfirm(id) { S.camp[id] = 'Sent for confirmation'; save(); toast('Sent to Pavan to confirm, with your edits.'); renderAll(); },
@@ -890,6 +918,6 @@
     createRun() { S.runs.push({ name: $('runName').value, prompt: $('runPrompt').value, freq: 'Every Mon at 07:00', next: 'Mon 2 Nov 07:00' }); save(); toast('Scheduled run created'); openRuns(); renderNav(); },
   };
   document.addEventListener('click', e => { if (!e.target.closest('.menu,.btn')) document.querySelectorAll('.menu.open').forEach(m => m.classList.remove('open')); });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') { if ($('drawer').classList.contains('open')) App.closeDrawer(); else if (recId || art) App.closeCanvas(); } });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') { if ($('drawer').classList.contains('open')) App.closeDrawer(); else if (recId || art || (view() && view() !== 'studio' && expanded)) App.closeCanvas(); } });
   renderAll();
 })();

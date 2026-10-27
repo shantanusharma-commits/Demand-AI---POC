@@ -10,7 +10,7 @@ Open `index.html` in Chrome or Edge (double-click). Fonts need an internet conne
 |---|---|
 | `index.html` | Sign in. Pick Sofia (sales rep), Pavan (sales manager) or Rajiv (admin). Links to the overview |
 | `story.html` | What we're selling: scope (product vs. client POC), the three process flows, the learning loop, the battle card, the roadmap and open decisions. Prints to two pages |
-| `app.html` | Sales workspace. Today: the chat in the middle, the to-do table and the most important updates beside it. Every module (Accounts, Segments, Campaigns, Approvals, Content studio) has its own chat on the left and its view on the right; the Today chat never shows inside a module. Chats on Today are sessions: New chat starts one and it stays under Recent chats |
+| `app.html` | Sales workspace. Today is a home page: the greeting and the chat box at the top, then the brief and the to-do table, with metrics, updates and a leaderboard on the right. Every chat is one screen: Today chats and each module's own chat (Accounts, Segments, Campaigns, Approvals). The screen splits, chat on the left and the view on the right, only when you expand a list, open an item or open the module. Asking from Today starts a chat session that stays under Recent chats |
 | `admin/index.html` | Admin home: held records, set-up health, data freshness, the monthly learning job, team default runs |
 | `admin/integrations.html` | CRM, contact-data providers, signal sources, rep mailboxes, LinkedIn, team chat (placeholders) |
 | `admin/settings.html` | ICP, closed-won mapping, who decides what, thresholds, message templates, team default runs |
@@ -18,7 +18,7 @@ Open `index.html` in Chrome or Edge (double-click). Fonts need an internet conne
 
 ## Today
 
-Chat first. The AI's brief opens the day: prospects who said yes (fast lane), next best actions due today only (NBA), and campaigns to create today from the scored list (NBC). The panel beside it has key numbers, a to-do table and the most important updates. The rep sees their own accounts; the manager sees the team.
+The chat box comes first, under the greeting; any blocker shows on top of it. Below: the AI's brief (prospects who said yes, next best actions due today only (NBA), campaigns to create today (NBC)) and the to-do table. On the right: today's metrics against targets, the most important updates, and the weekly leaderboard. The rep sees their own accounts; the manager sees the team.
 
 ## The flow in the chat
 
@@ -42,7 +42,7 @@ Micro-segments â†’ segment (metric cards; Accounts, Activity and Replies tabs) â
 
 ## Phone
 
-The navigation becomes icons. Today shows the chat; a module shows its view without its chat.
+The navigation becomes icons and Today stacks into one column. When a list is expanded, the view replaces the chat.
 
 ## Roles
 
