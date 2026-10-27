@@ -54,10 +54,11 @@ Opening a person or a reply brings up a focused panel; the chat and the view beh
 
 ## Where each thing is tracked
 
-- **Campaigns (NBC):** one sequence for 10+ accounts that share a trigger. Tracked in Campaigns.
-- **Next best actions (NBA):** one account at a time. Tracked in the Next best actions module: prepared, went ahead on their own, waiting for approval, delivered, open and reply rates, a Prepared → Sent → Delivered → Opened → Replied bar, filters (went ahead, waiting, opened, replied, bounced) and a By micro-segment view. Opening a person shows the delivery steps for their action.
-- **Approvals:** only the exceptions from both, the next best actions that failed a check and campaigns waiting to be confirmed.
-- **Segments:** the groups behind both; segments that aren't campaigns list their next best actions.
+Both NBC and NBA come from micro-segments: accounts grouped by the same trigger, with one message structure.
+
+- **Campaign segments (NBC):** 10+ accounts in 7 days run as one sequence. Segments shows them first with their campaign numbers; each person's steps and delivery are in Campaigns.
+- **Next best action segments (NBA):** below the threshold, every account gets its own action from the segment's message structure. Segments tracks them: actions, went ahead, waiting for approval, delivered, open and reply rates, a Prepared → Sent → Delivered → Opened → Replied bar, and each person's delivery. Opening a person shows the same steps.
+- **Approvals:** only the exceptions from both: next best actions that failed a check, and campaigns waiting to be confirmed.
 
 ## Next best actions
 

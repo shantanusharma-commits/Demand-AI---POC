@@ -1030,3 +1030,6 @@ button.tl-row:hover{background:var(--s50);}
 .dlv-p .bad span{background:var(--neg);}
 .dlv-p .bad{color:var(--neg);}
 .dtabs button i{font-style:normal;}
+.seg-grp-h{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;font-family:var(--fd);font-size:14.5px;font-weight:600;margin:18px 0 8px;}
+.seg-grp-h svg{align-self:center;}
+.seg-grp-h span{font-family:var(--fb);font-size:12px;font-weight:400;color:var(--i3);}
