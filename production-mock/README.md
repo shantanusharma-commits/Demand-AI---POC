@@ -10,7 +10,7 @@ Open `index.html` in Chrome or Edge (double-click). Fonts need an internet conne
 |---|---|
 | `index.html` | Sign in. Pick Sofia (sales rep), Pavan (sales manager) or Rajiv (admin). Links to the overview |
 | `story.html` | What we're selling, as a product page: the three questions, how it works (find → score → segment → act → track → learn), the scoring engine, the three process flows, product vs. client POC, the learning loop, the battle card, the roadmap and open decisions |
-| `app.html` | Sales workspace. Today is a home page: the greeting and the chat box at the top, then the brief and the to-do table, with metrics, updates and a leaderboard on the right. Inbox is a mail client without a chat. Every chat is one screen: Today chats and each module's own chat (Accounts, Segments, Campaigns, Approvals, and Analytics for the manager). The screen splits, chat on the left and the view on the right, only when you expand a list, open an item or open the module. Asking from Today starts a chat session that stays under Recent chats |
+| `app.html` | Sales workspace. Today is a home page: the greeting and the chat box at the top, then the brief and the to-do table, with metrics, updates and a leaderboard on the right. Inbox is a mail client and Analytics a dashboard, neither with a chat. Every chat is one screen: Today chats and each module's own chat (Accounts, Segments, Campaigns, Approvals, and Analytics for the manager). The screen splits, chat on the left and the view on the right, only when you expand a list, open an item or open the module. Asking from Today starts a chat session that stays under Recent chats |
 | `admin/index.html` | Admin home: held records, set-up health, data freshness, the monthly learning job, the system jobs |
 | `admin/integrations.html` | CRM, contact-data providers, signal sources, rep mailboxes, LinkedIn, team chat (placeholders) |
 | `admin/settings.html` | ICP, closed-won mapping, who decides what, thresholds, message templates, the system jobs (overnight sweep, weekly prospect refresh, monthly learning) |
@@ -54,7 +54,7 @@ Opening a person or a reply brings up a focused panel; the chat and the view beh
 
 ## Next best actions
 
-A next best action goes ahead on its own when it passes six checks: high confidence, proven message, not sensitive, identity confirmed, not in another sequence, not picked for a spot-check. Only the ones that fail a check wait for a person, with the failed check shown. The Next best actions module has Needs you, With Pavan (manager sign-off), Went ahead and Decided. Segments that aren't campaigns list their next best actions.
+A next best action goes ahead on its own when it passes six checks: high confidence, proven message, not sensitive, identity confirmed, not in another sequence, not picked for a spot-check. Only the ones that fail a check wait for a person, with the failed check shown. Approvals shows them, with tabs Needs you, With Pavan (manager sign-off), Went ahead and Decided; the manager also confirms campaigns there. Segments that aren't campaigns list their next best actions.
 
 ## Person panel
 
@@ -66,7 +66,7 @@ Laid out like a mail client: folders (Inbox, Needs a reply, Positive, Objection,
 
 ## Analytics (manager; the admin has its own page)
 
-Pilot targets (meetings, reply rate, accepted first time), the funnel, each rep, each campaign, and what the system learned. Pick a rep to see only their numbers.
+A dashboard page, not a chat. Metric cards first: meetings booked against target, reply rate, positive replies, accepted first time (G2), went ahead on their own, time to a first action (G1), pipeline influenced and overdue items, each with its trend over the last five periods and the change against the previous one. Then the funnel, each rep, each campaign, and what the system learned. Switch between this week and this month, or pick a rep to see only their numbers.
 
 ## Scoring and routing
 

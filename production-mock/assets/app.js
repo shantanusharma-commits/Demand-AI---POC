@@ -34,7 +34,7 @@
       { id: 'cedar', title: 'Cedar renewal prep', when: 'Fri', thread: [{ who: 'me', text: 'What should I do with Cedar?' }, { who: 'ai', kind: 'nba', id: 'cedar' }] },
     ];
   }
-  let copOpen = false, pEdit = null, thrId = null, ibCh = 'all', ownerF = 'all', inboxTab = 'all', homeMet = 'team', showProc = false, loadTok = 0, expanded = false, ctx = null, art = null, recId = null, recTab = 'engage', listSel = 'all', campSel = null, campTab = 'enroll', segSel = null, segTab = 'accounts', apprTab = isMgr ? 'needs' : 'todo', apprRep = 'all', scope = isMgr ? 'team' : 'mine', studioTab = 'write', studioType = 'Blog', actOpen = null, artMore = false;
+  let anPer = 'week', copOpen = false, pEdit = null, thrId = null, ibCh = 'all', ownerF = 'all', inboxTab = 'all', homeMet = 'team', showProc = false, loadTok = 0, expanded = false, ctx = null, art = null, recId = null, recTab = 'engage', listSel = 'all', campSel = null, campTab = 'enroll', segSel = null, segTab = 'accounts', apprTab = isMgr ? 'needs' : 'todo', apprRep = 'all', scope = isMgr ? 'team' : 'mine', studioTab = 'write', studioType = 'Blog', actOpen = null, artMore = false;
 
   /* ─── Helpers ─── */
   const $ = id => document.getElementById(id);
@@ -170,8 +170,8 @@
   }
 
   /* ─── Routing: #today or a module; a result or a record opens in the canvas beside the chat ─── */
-  const MODULES = Object.assign({ inbox: 'Inbox', accounts: 'Accounts', segments: 'Segments', campaigns: 'Campaigns', approvals: 'Next best actions', studio: 'Content studio' }, isMgr ? { analytics: 'Analytics' } : {});
-  const MOD_IC = { inbox: 'inbox', accounts: 'users', segments: 'layers', campaigns: 'megaphone', approvals: 'bolt', studio: 'pen', analytics: 'bars' };
+  const MODULES = Object.assign({ inbox: 'Inbox', accounts: 'Accounts', segments: 'Segments', campaigns: 'Campaigns', approvals: 'Approvals', studio: 'Content studio' }, isMgr ? { analytics: 'Analytics' } : {});
+  const MOD_IC = { inbox: 'inbox', accounts: 'users', segments: 'layers', campaigns: 'megaphone', approvals: 'task', studio: 'pen', analytics: 'bars' };
   function view() { const r = (location.hash || '').slice(1); return MODULES[r] ? r : null; }
   function go(r) { if (view() === r || (!r && !view())) renderAll(); else location.hash = r ? '#' + r : '#today'; }
   function nav(r) { art = null; recId = null; thrId = null; ctx = null; expanded = false; if (!r) S.cur = 'home'; if (r === 'campaigns') campSel = null; if (r === 'segments') segSel = null; if (r === 'studio') S.studio.doc = null; go(r); }
@@ -317,7 +317,7 @@
         ${hot.length ? `<div class="ccard" style="border-color:#F1D3D3"><div class="ccard-h"><span class="t" style="color:var(--neg)">${ic('flame', 14)} Answer first · they said yes</span><span class="muted" style="font-size:11px">fast lane</span></div><div class="ccard-b" style="padding:2px 14px">${hot.map(r => `<div class="mini-row"><div class="grow row-link" onclick="App.openThread('${r.id}')"><div class="nm">${esc(r.from)} · ${esc(acct(r.acc).name)}${isMgr ? ` <span class="muted" style="font-weight:400">· ${esc(first(USERS[r.owner].name))}</span>` : ''}</div><div class="sm">"${esc(r.text)}"</div></div><span class="due ${r.at.startsWith('Today') ? 'hot' : 'soon'}" style="font-size:11px">${esc(r.at)}</span><button class="btn sm pri" onclick="App.openThread('${r.id}')">${isMgr ? 'Open' : 'Reply'}</button></div>`).join('')}</div></div>` : ''}
         <div class="ccard"><div class="ccard-h"><span class="t">${ic('bolt', 14)} Next best actions that need you today</span><span class="badge b-sec nodot">${today.length}</span></div>
           <div class="ccard-b" style="padding:0">${today.length ? `<div class="tbl-wrap"><table class="tbl nba-tbl"><thead><tr><th>Account · contact</th><th>Action</th><th>Why it needs you</th><th></th></tr></thead><tbody>${today.map(a => { const d = S.decisions[a.id]; return `<tr><td class="row-link" onclick="App.openRecord('${a.id}','engage')"><div class="nm">${esc(a.name)}</div><div class="sm">${esc(a.contact.name)}${isMgr ? ' · ' + esc(first(USERS[a.owner].name)) : ''}</div></td><td>${esc(a.nba.action)}<div class="sm">${a.nba.channel} · ${esc(a.segment)}</div></td><td><span class="badge ${REASON[reasonOf(a)]}">${reasonOf(a)}</span></td><td style="white-space:nowrap">${d ? `<span class="badge b-grey nodot">${decLabel(d)}</span>` : /auto|sent/.test(a.nba.status) ? '<span class="badge b-pos">Went ahead</span>' : `${!a.nba.reason || (isMgr && a.nba.sensitive) ? `<button class="btn sm pri" onclick="App.approve('${a.id}')">${isMgr && a.nba.sensitive ? 'Sign off' : 'Approve'}</button> ` : ''}<button class="btn sm" onclick="App.openRecord('${a.id}','engage')">Review</button>`}</td></tr>`; }).join('')}</tbody></table></div>` : '<div class="empty">Nothing to decide today.</div>'}</div>
-          <div class="ccard-f"><span class="muted" style="font-size:11.5px">${auto} went ahead on their own${later ? ` · ${later} more due later this week` : ''}</span><div style="flex:1"></div>${today.some(a => !a.nba.reason && !S.decisions[a.id]) && !isMgr ? '<button class="btn sm pri" onclick="App.approveAll()">Approve all ready</button>' : ''}${openBtn('Next best actions', "App.openMod('approvals')")}</div></div>
+          <div class="ccard-f"><span class="muted" style="font-size:11.5px">${auto} went ahead on their own${later ? ` · ${later} more due later this week` : ''}</span><div style="flex:1"></div>${today.some(a => !a.nba.reason && !S.decisions[a.id]) && !isMgr ? '<button class="btn sm pri" onclick="App.approveAll()">Approve all ready</button>' : ''}${openBtn('Approvals', "App.openMod('approvals')")}</div></div>
         <div class="ccard"><div class="ccard-h"><span class="t">${ic('megaphone', 14)} Campaigns to create today · NBC</span><span class="muted" style="font-size:11px">from today's scored list</span></div>
           <div class="ccard-b">
             <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><div><b style="font-size:13px">${esc(c1.name)}</b><div class="sm" style="font-size:12px;color:var(--i2);margin-top:2px">11 accounts announced a planned shutdown in 6 days, which crosses the threshold (10 in 7 days). One campaign instead of 11 separate actions${isMgr ? '' : `; <b>${mineIn} are yours</b>`}.</div></div>${campBadge(c1)}</div>
@@ -340,14 +340,14 @@
             <div class="next-row">${openBtn('Open campaign', "App.goCampaign('c5')")}${isMgr ? `<button class="btn sm pri" onclick="App.confirmCampaign('c5')">Confirm</button>` : S.camp.c5 ? `<span class="badge b-ter">${esc(S.camp.c5)}</span>` : `<button class="btn sm pri" onclick="App.sendForConfirm('c5')">Send to Pavan</button>`}</div></div>
           <div class="route-col"><div class="route-h"><span class="badge b-sec">NBA · one at a time</span><b>${nba.length} accounts</b></div>
             ${nba.map(a => `<div class="mini-row row-link" onclick="App.openRecord('${a.id}','engage')">${chIc(a.nba.channel)}<div class="grow"><div class="nm">${esc(a.name)}</div><div class="sm">${esc(a.nba.action)}</div></div>${stepBadge(a)}</div>`).join('')}
-            <div class="next-row">${isMgr ? '' : '<button class="btn sm pri" onclick="App.approveAll()">Approve all ready</button>'}${openBtn('Next best actions', "App.openMod('approvals')")}</div></div>
+            <div class="next-row">${isMgr ? '' : '<button class="btn sm pri" onclick="App.approveAll()">Approve all ready</button>'}${openBtn('Approvals', "App.openMod('approvals')")}</div></div>
         </div>${tableCard('segmented')}`;
     },
     nbaList: () => {
       const accs = listAccounts().filter(a => a.nba);
       return `<p>Next best actions for the ${accs.length} list accounts that aren't in the campaign. Each has a contact, a channel and a draft; the ones on a proven message go ahead on their own.</p>
         <div class="ccard"><div class="ccard-b" style="padding:2px 14px">${accs.map(a => `<div class="mini-row row-link" onclick="App.openRecord('${a.id}','engage')">${chIc(a.nba.channel)}<div class="grow"><div class="nm">${esc(a.name)} <span class="muted" style="font-weight:400">· ${esc(a.contact.name)}</span></div><div class="sm">${esc(a.nba.action)} · ${esc(a.segment)}</div></div>${stepBadge(a)}</div>`).join('')}</div></div>
-        <div class="next-row">${btn('Build the campaign', 'Build the campaign', true)}${openBtn('Next best actions', "App.openMod('approvals')")}</div>`;
+        <div class="next-row">${btn('Build the campaign', 'Build the campaign', true)}${openBtn('Approvals', "App.openMod('approvals')")}</div>`;
     },
     flowCampaign: () => seqCard(campOf('c5'), `Here's the campaign for the 10 hiring-surge accounts: <b>${seqOf(campOf('c5')).length} touches</b>, email and LinkedIn, personalised per person. Add, remove, reorder or rewrite any touch.`),
     campaign: m => seqCard(campOf(m.id), esc(segOf(campOf(m.id).seg).why)),
@@ -672,10 +672,34 @@
   /* ─── Analytics (sales manager) ─── */
   function renderAnalytics() {
     const reps = ownerF === 'all' ? REPS : [ownerF], sum = k => reps.reduce((n, r) => n + TEAM_STATS[r][k], 0);
-    const cv = frame('Analytics', `Pilot week 3 · ${ownerF === 'all' ? 'whole team' : USERS[ownerF].name}`, ownerSel());
+    /* A dashboard page, not a chat: the important numbers first as cards, then the detail */
+    $('main').className = 'an-pg';
+    $('main').innerHTML = `<div class="an-h"><div><h1>Analytics</h1><div class="sub">Pilot week 3 · ${ownerF === 'all' ? 'whole team' : esc(USERS[ownerF].name)} · ${anPer === 'week' ? 'Mon 26 Oct – Sun 1 Nov' : 'October 2026'}</div></div><div class="an-ctl"><div class="seg">${[['week', 'This week'], ['month', 'This month']].map(([k, l]) => `<button class="${anPer === k ? 'on' : ''}" onclick="App.setAnPer('${k}')">${l}</button>`).join('')}</div>${ownerSel()}</div></div><div class="an-b" id="cv"></div>`;
+    const cv = $('cv'), mo = anPer === 'month' ? 3.6 : 1, n = x => Math.round(x * mo), share = ownerF === 'all' ? 1 : 0.27;
+    const spark = (pts, up) => { const mx = Math.max(...pts), mn = Math.min(...pts), w = 88, h = 30, xy = pts.map((v, i) => `${(i / (pts.length - 1) * w).toFixed(1)},${(h - 3 - (v - mn) / ((mx - mn) || 1) * (h - 6)).toFixed(1)}`); return `<svg class="spk" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-hidden="true"><polyline points="${xy.join(' ')}" fill="none" stroke="${up ? 'var(--pos)' : 'var(--neg)'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="${xy[xy.length - 1].split(',')[0]}" cy="${xy[xy.length - 1].split(',')[1]}" r="2.5" fill="${up ? 'var(--pos)' : 'var(--neg)'}"/></svg>`; };
+    /* Each card: the value, its last five periods, and the change against the previous period (green when it moved the right way) */
+    const kpi = (icn, k, shown, v, sub, unit, betterUp, steady, goal) => {
+      const pts = (steady ? [1.06, 1.03, 1.02, 0.99, 1] : betterUp ? [0.5, 0.62, 0.76, 0.9, 1] : [1.5, 1.3, 1.2, 0.9, 1]).map(x => v * x);
+      if (!v) pts.splice(0, 5, 1, 1, 0, 0, 0);
+      const d = pts[4] - pts[3], good = d === 0 ? true : (d > 0) === betterUp, dtxt = d === 0 ? 'No change' : `${d > 0 ? '+' : '−'}${unit === '%' ? Math.abs(d).toFixed(1) + ' pts' : unit === 'min' ? Math.round(Math.abs(d)) + ' min' : unit === 'M' ? Math.abs(d).toFixed(2) + 'M' : Math.round(Math.abs(d)) || 1}`;
+      return `<div class="kpi"><div class="kpi-h"><span class="kpi-ic">${ic(icn, 15)}</span>${k}${goal ? `<span class="badge ${goal[1] ? 'b-pos' : 'b-warn'} nodot" style="margin-left:auto">${goal[0]}</span>` : ''}</div><div class="kpi-m"><div class="kpi-v">${shown}</div>${spark(pts, good)}</div><div class="kpi-f"><span class="dl ${good ? 'up' : 'down'}">${d === 0 ? '■' : d > 0 ? '▲' : '▼'} ${dtxt}</span><span class="muted">vs last ${anPer} · ${sub}</span></div></div>`;
+    };
+    const m = n(sum('meetings')), tg = n(sum('target')), rr = sum('replies') / sum('sent') * 100, acc = Math.round(sum('accept') / reps.length), od = sum('overdue');
+    const own = ACCOUNTS.filter(a => a.nba && reps.includes(a.owner)), went = own.filter(a => /auto|sent/.test(a.nba.status)).length, tot = own.filter(a => /auto|sent|ready|review/.test(a.nba.status)).length || 1;
+    const g1 = ownerF === 'all' ? 12 : { sofia: 10, marco: 14, aisha: 9, kenji: 21 }[ownerF], pipe = 1.2 * (ownerF === 'all' ? 1 : TEAM_STATS[ownerF].meetings / 7 || 0.1) * mo;
+    const kpis = `<div class="kpis">
+      ${kpi('check', 'Meetings booked', `${m}<span class="of"> / ${tg}</span>`, m, 'target ' + tg, '', true, false, [m >= tg ? 'On target' : 'Below target', m >= tg])}
+      ${kpi('reply', 'Reply rate', rr.toFixed(1) + '%', rr, `${n(sum('replies'))} of ${n(sum('sent'))} sent`, '%', true)}
+      ${kpi('up', 'Positive replies', n(Math.round(sum('replies') * 0.53)), n(Math.round(sum('replies') * 0.53)), 'interested or booked', '', true)}
+      ${kpi('task', 'Accepted first time · G2', acc + '%', acc, 'target 70%', '%', true, false, [acc >= 70 ? 'Passing' : 'Below target', acc >= 70])}
+      ${kpi('bolt', 'Went ahead on their own', Math.round(went / tot * 100) + '%', went / tot * 100, `${went} of ${tot} next actions`, '%', true)}
+      ${kpi('clock', 'Time to a first action · G1', g1 + ' min', g1, 'was 38 min before the pilot', 'min', false, false, [g1 <= 19 ? 'Passing' : 'Below target', g1 <= 19])}
+      ${kpi('layers', 'Pipeline influenced', 'USD ' + pipe.toFixed(1) + 'M', pipe, 'open opportunities touched', 'M', true)}
+      ${kpi('alert', 'Overdue items', od, od, 'past their due time', '', false, od === 0)}
+    </div>`;
     const card = (k, v, d) => `<div class="mcard"><div class="k">${k}</div><div class="v">${v}</div><div class="d">${d}</div></div>`;
     const f = ownerF === 'all' ? 1 : 0.27, funnel = [['People found', 412], ['Identity checked', 368], ['Accounts scored', 81], ['With a live signal', 33], ['Next actions (NBA)', 31], ['In campaigns (NBC)', 44], ['Contacted', 58], ['Replied', 15], ['Positive', 8], ['Meetings', sum('meetings')]].map(([k, v], i) => [k, i === 9 ? v : Math.round(v * f)]);
-    cv.innerHTML = `<div class="mcards">${card('Meetings this week', `${sum('meetings')} / ${sum('target')}`, 'G1 target: 15 a week')}${card('Reply rate', pct(sum('replies'), sum('sent')), `${sum('replies')} of ${sum('sent')} sent`)}${card('Accepted first time', Math.round(sum('accept') / reps.length) + '%', 'G2 target: 70%')}${card('Went ahead on their own', '71%', '22 of 31 next actions')}${card('Overdue', sum('overdue'), 'items past due')}</div>
+    cv.innerHTML = `${kpis}
       <div class="an-grid">
         <section class="card"><div class="card-h"><span class="lbl">Funnel · this month</span></div><div class="card-b">${funnel.map(([k, v]) => `<div class="fn-r"><span>${k}</span><div class="fn-b"><i style="width:${Math.max(3, v / funnel[0][1] * 100)}%"></i></div><b class="mono">${v}</b></div>`).join('')}</div></section>
         <section class="card"><div class="card-h"><span class="lbl">By rep</span></div><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Rep</th><th>Sent</th><th>Replies</th><th>Meetings</th><th>Accepted</th><th>Overdue</th></tr></thead><tbody>${REPS.map(r => { const t = TEAM_STATS[r]; return `<tr class="row-link ${ownerF === r ? 'sel-row' : ''}" onclick="App.setOwner('${r}')"><td><div style="display:flex;gap:8px;align-items:center">${avatar(USERS[r], 22)}${esc(USERS[r].name)}</div></td><td>${t.sent}</td><td>${t.replies}</td><td>${t.meetings}/${t.target}</td><td>${t.accept}%</td><td>${t.overdue ? `<span class="badge b-neg">${t.overdue}</span>` : '0'}</td></tr>`; }).join('')}</tbody></table></div></section>
@@ -824,7 +848,7 @@
   function renderApprovals() {
     const tabs = isMgr ? [['needs', 'Needs me'], ['team', 'Team exceptions'], ['ahead', 'Went ahead'], ['done', 'Decided']] : [['todo', 'Needs you'], ['waiting', 'With Pavan'], ['ahead', 'Went ahead'], ['done', 'Decided']];
     const items = apprItems(apprTab), readyIds = items.filter(a => !a.nba.reason && !S.decisions[a.id]);
-    const cv = frame('Next best actions', isMgr ? 'Sensitive messages and campaigns need you; you can step in on any rep\'s item.' : 'They go ahead on their own when they pass every check. Only the ones that don\'t come to you.', readyIds.length ? `<button class="btn sm pri" onclick="App.approveAll()">Approve ${readyIds.length} ready</button>` : '');
+    const cv = frame('Approvals', isMgr ? 'Sensitive messages and campaigns need you; you can step in on any rep\'s item.' : 'Next best actions go ahead on their own when they pass every check. Only the ones that don\'t come here for your approval.', readyIds.length ? `<button class="btn sm pri" onclick="App.approveAll()">Approve ${readyIds.length} ready</button>` : '');
     cv.innerHTML = `<div class="rule"><b>How a next best action is decided.</b> The AI picks the action, the channel and the message for each account from its strongest signal. It goes ahead on its own when it passes all six checks; if any fails, it waits here with the reason.<div class="gate-r" style="margin-top:8px">${['High confidence', 'Proven message', 'Not sensitive', 'Identity confirmed', 'Not in another sequence', 'Not picked for a spot-check'].map(k => `<span class="gc ok">✓ ${k}</span>`).join('')}</div></div>
       <div class="dtabs" style="margin-top:0">${tabs.map(([k, l]) => `<button class="${apprTab === k ? 'on' : ''}" onclick="App.setApprTab('${k}')">${l} (${apprItems(k).length})</button>`).join('')}
         ${isMgr && apprTab === 'team' ? `<label class="sr" for="repSel">Rep</label><select class="sel" id="repSel" style="margin-left:auto" onchange="App.setApprRep(this.value)"><option value="all">All reps</option>${REPS.map(r => `<option value="${r}" ${apprRep === r ? 'selected' : ''}>${USERS[r].name}</option>`).join('')}</select>` : ''}</div>
@@ -1058,15 +1082,15 @@
   }
   function renderAll() {
     const v = view(), tok = ++loadTok;
-    const home = !v && S.cur === 'home' && !art, studioHome = v === 'studio' && !S.studio.doc, inboxV = v === 'inbox' && !art;
-    const split = !!art || !!(v && v !== 'studio' && v !== 'inbox' && expanded) || (v === 'studio' && !!S.studio.doc);
+    const home = !v && S.cur === 'home' && !art, studioHome = v === 'studio' && !S.studio.doc, inboxV = (v === 'inbox' || v === 'analytics') && !art;
+    const split = !!art || !!(v && v !== 'studio' && v !== 'inbox' && v !== 'analytics' && expanded) || (v === 'studio' && !!S.studio.doc);
     $('ws').classList.toggle('canvas-open', split);
     $('ws').classList.toggle('home', home);
     $('ws').classList.toggle('nochat', studioHome || inboxV);
     $('ws').classList.toggle('solo', !split && !home && !studioHome && !inboxV);
     renderNav(); renderChat();
     const MODR = { inbox: renderInbox, accounts: renderAccounts, segments: renderSegments, campaigns: renderCampaigns, approvals: renderApprovals, studio: renderStudio, analytics: renderAnalytics };
-    const draw = art ? renderArt : v === 'studio' || v === 'inbox' || (v && expanded) ? MODR[v] : home ? renderHome : () => { $('main').className = ''; $('main').innerHTML = ''; };
+    const draw = art ? renderArt : v === 'studio' || v === 'inbox' || v === 'analytics' || (v && expanded) ? MODR[v] : home ? renderHome : () => { $('main').className = ''; $('main').innerHTML = ''; };
     const key = [v, home, expanded, art, campSel, segSel, listSel, studioTab, !!S.studio.doc].join('|');
     const fresh = key !== lastKey;
     lastKey = key;
@@ -1123,6 +1147,7 @@
     pReset(id) { delete S.pseq[id]; save(); renderAll(); },
     addToSeq(id, cid) { if (cid) toast(`${acct(id).contact.name} joins ${campOf(cid).name} when this sequence ends (mock)`); },
     setOwner(r) { ownerF = r; renderAll(); },
+    setAnPer(k) { anPer = k; renderAll(); },
     setInboxTab(k) { inboxTab = k; thrId = null; renderAll(); },
     setHomeMet(k) { homeMet = k; renderAll(); },
     toggleProc() { showProc = !showProc; renderAll(); },
