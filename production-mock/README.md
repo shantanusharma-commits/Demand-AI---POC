@@ -10,7 +10,7 @@ Open `index.html` in Chrome or Edge (double-click). Fonts need an internet conne
 |---|---|
 | `index.html` | Sign in. Pick Sofia (sales rep), Pavan (sales manager) or Rajiv (admin). Links to the overview |
 | `story.html` | What we're selling, as a product page: the three questions, how it works (find → score → segment → act → track → learn), the scoring engine, the three process flows, product vs. client POC, the learning loop, the battle card, the roadmap and open decisions |
-| `app.html` | Sales workspace. Today is a home page: the greeting and the chat box at the top, then the brief and the to-do table, with metrics, updates and a leaderboard on the right. Every chat is one screen: Today chats and each module's own chat (Inbox, Accounts, Segments, Campaigns, Approvals, and Analytics for the manager). The screen splits, chat on the left and the view on the right, only when you expand a list, open an item or open the module. Asking from Today starts a chat session that stays under Recent chats |
+| `app.html` | Sales workspace. Today is a home page: the greeting and the chat box at the top, then the brief and the to-do table, with metrics, updates and a leaderboard on the right. Inbox is a mail client without a chat. Every chat is one screen: Today chats and each module's own chat (Accounts, Segments, Campaigns, Approvals, and Analytics for the manager). The screen splits, chat on the left and the view on the right, only when you expand a list, open an item or open the module. Asking from Today starts a chat session that stays under Recent chats |
 | `admin/index.html` | Admin home: held records, set-up health, data freshness, the monthly learning job, the system jobs |
 | `admin/integrations.html` | CRM, contact-data providers, signal sources, rep mailboxes, LinkedIn, team chat (placeholders) |
 | `admin/settings.html` | ICP, closed-won mapping, who decides what, thresholds, message templates, the system jobs (overnight sweep, weekly prospect refresh, monthly learning) |
@@ -54,7 +54,7 @@ Opening a person or a reply brings up a focused panel; the chat and the view beh
 
 ## Inbox
 
-Replies from email and LinkedIn in one place, each with a suggested answer that runs the brand checks. When someone replies, their remaining campaign steps pause (an assumption to confirm). The manager can reassign the thread.
+Laid out like a mail client: folders (Inbox, Needs a reply, Positive, Objection, Meetings, Out of office, Sent, Archived) and channel filters on the left, the conversation list in the middle with unread in bold, and the reading pane on the right with the earlier message, a reply drafted by the AI that runs the brand checks, Send, Mark handled, Archive and Mark as unread. On a phone the list and the message are separate screens. When someone replies, their remaining campaign steps pause (an assumption to confirm). The manager can reassign the thread.
 
 ## Analytics (manager; the admin has its own page)
 

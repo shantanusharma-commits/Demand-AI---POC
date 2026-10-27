@@ -816,3 +816,89 @@ button.tl-row:hover{background:var(--s50);}
 .btn.btn.sm{color:var(--i1);font-size:11.5px;overflow:visible;margin-top:0;}
 .btn.btn.sm.pri{color:#fff;}
 .btn.btn.sm.ghost{color:var(--brand);}
+
+/* ─── v8: Inbox as a mail client (folders, list, reading pane) ─── */
+.side-sep{height:1px;background:var(--rb);margin:8px 12px;}
+.ibx-pg{min-height:0;overflow:hidden;background:var(--surf);}
+.ibx{display:grid;grid-template-columns:216px 360px minmax(0,1fr);height:100%;min-height:0;}
+.ibx-f{border-right:1px solid var(--border);padding:16px 10px;overflow-y:auto;background:var(--bg);}
+.ibx-ttl{font-family:var(--fd);font-size:18px;font-weight:600;padding:0 8px 12px;}
+.ibx-new{width:100%;height:38px;margin-bottom:12px;}
+.ibx-nav{display:flex;flex-direction:column;gap:1px;}
+.ibx-nav button{display:flex;align-items:center;gap:10px;height:34px;padding:0 10px;border-radius:8px;font-size:13px;color:var(--i2);text-align:left;}
+.ibx-nav button span{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ibx-nav button i{font-style:normal;font-size:11.5px;font-weight:700;color:var(--i2);}
+.ibx-nav button:hover{background:var(--s75);}
+.ibx-nav button.on{background:var(--brand-lt);color:var(--brand-dk);font-weight:600;}
+.ibx-nav button.on i{color:var(--brand-dk);}
+.ibx-sec{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--i3);padding:16px 10px 6px;}
+.ibx-mb{padding:0 10px;font-size:11.5px;overflow-wrap:anywhere;}
+.ibx-mb .sel{width:100%;}
+.ibx-l{display:flex;flex-direction:column;min-height:0;border-right:1px solid var(--border);}
+.ibx-lh{padding:12px 12px 8px;}
+.ibx-lh .search{min-width:0;width:100%;}
+.ibx-lt{display:flex;justify-content:space-between;align-items:baseline;padding:4px 16px 8px;font-size:13px;border-bottom:1px solid var(--border);}
+.ibx-lt .muted{font-size:11.5px;}
+.ibx-rows{flex:1;overflow-y:auto;}
+.ibx-r{display:flex;gap:10px;width:100%;text-align:left;padding:12px 14px 12px 12px;border-bottom:1px solid var(--border);border-left:3px solid transparent;}
+.ibx-r:hover{background:var(--s50);}
+.ibx-r.on{background:var(--brand-lt);border-left-color:var(--brand);}
+.ibx-r .grow{flex:1;min-width:0;}
+.ibx-r1{display:flex;justify-content:space-between;gap:8px;font-size:13px;}
+.ibx-r1 .fr{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--i2);}
+.ibx-r1 .when{font-size:11px;color:var(--i3);white-space:nowrap;}
+.ibx-r2{font-size:12.5px;color:var(--i2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;}
+.ibx-r3{font-size:12px;color:var(--i3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px;}
+.ibx-r4{display:flex;align-items:center;gap:6px;margin-top:6px;font-size:11px;color:var(--i3);}
+.ibx-r4 .badge{height:18px;font-size:10.5px;}
+.ibx-r.unread .fr,.ibx-r.unread .ibx-r2{color:var(--i1);font-weight:700;}
+.ibx-r.unread .when{color:var(--brand-dk);font-weight:700;}
+.ibx-v{display:flex;flex-direction:column;min-width:0;min-height:0;background:var(--surf);}
+.ibx-empty{margin:auto;display:flex;flex-direction:column;align-items:center;gap:10px;color:var(--i3);font-size:13px;}
+.rp-h{padding:14px 24px 12px;border-bottom:1px solid var(--border);}
+.rp-top{display:flex;align-items:flex-start;gap:10px;}
+.rp-top h2{flex:1;margin:2px 0 0;font-family:var(--fd);font-size:19px;font-weight:600;letter-spacing:-.01em;line-height:1.3;min-width:0;}
+.rp-tools{display:flex;align-items:center;gap:4px;flex-shrink:0;}
+.rp-back{display:none;}
+.rp-labels{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
+.rp-b{flex:1;overflow-y:auto;padding:18px 24px 40px;display:flex;flex-direction:column;gap:14px;}
+.rp-m{border:1px solid var(--border);border-radius:var(--rmd);padding:14px 16px;}
+.rp-m.mine{background:var(--s50);}
+.rp-mh{display:flex;gap:10px;align-items:flex-start;margin-bottom:12px;font-size:13px;}
+.rp-mh .grow{flex:1;min-width:0;overflow-wrap:anywhere;}
+.rp-mh .sm{font-size:12px;}
+.rp-mh .when{font-size:11.5px;color:var(--i3);white-space:nowrap;}
+.rp-t{font-size:13.5px;line-height:1.65;white-space:pre-wrap;color:var(--i1);}
+.rp-q{margin-top:12px;border-top:1px dashed var(--border);padding-top:10px;}
+.rp-q summary{font-size:12px;color:var(--i3);cursor:pointer;}
+.rp-q .rp-t{color:var(--i2);font-size:12.5px;border-left:3px solid var(--border);padding-left:12px;margin-top:6px;}
+.rp-qh{font-size:12px;color:var(--i3);margin-top:8px;}
+.rp-reply{border:1px solid var(--bdk);border-radius:var(--rmd);box-shadow:var(--sh);overflow:hidden;}
+.rp-reply:focus-within{border-color:var(--brand-mid);box-shadow:0 0 0 3px var(--brand-lt);}
+.rp-rh{display:flex;align-items:center;gap:8px;padding:10px 14px;font-size:12.5px;color:var(--i2);border-bottom:1px solid var(--border);background:var(--s50);}
+.rp-rh .badge{margin-left:auto;}
+.rp-reply textarea{display:block;width:100%;border:none;outline:none;resize:vertical;min-height:170px;padding:14px;font:inherit;font-size:13.5px;line-height:1.6;}
+.rp-rf{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 14px;border-top:1px solid var(--border);}
+.rp-rf .sp{flex:1;}
+@media (max-width:1250px){
+  .ibx{grid-template-columns:60px 320px minmax(0,1fr);}
+  .ibx-f{padding:14px 8px;}
+  .ibx-ttl,.ibx-sec,.ibx-mb,.ibx-nav button span,.ibx-nav button i,.ibx-new span{display:none;}
+  .ibx-new{padding:0;}
+  .ibx-nav button{justify-content:center;padding:0;}
+}
+@media (max-width:900px){
+  .ibx{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);}
+  .ibx-f{border-right:none;border-bottom:1px solid var(--border);padding:8px;display:flex;gap:6px;overflow-x:auto;overflow-y:hidden;}
+  .ibx-new{display:none;}
+  .ibx-f .ibx-nav{flex-direction:row;}
+  .ibx-f .ibx-nav+.ibx-nav,.ibx-f .ibx-mb{display:none;}
+  .ibx-nav button{width:40px;flex-shrink:0;}
+  .ibx.has-sel .ibx-l,.ibx.has-sel .ibx-f{display:none;}
+  .ibx.has-sel{grid-template-rows:minmax(0,1fr);}
+  .ibx:not(.has-sel) .ibx-v{display:none;}
+  .ibx-l{border-right:none;}
+  .rp-back{display:inline-flex;}
+  .rp-h,.rp-b{padding-left:16px;padding-right:16px;}
+  .rp-tools .btn{display:none;}
+}

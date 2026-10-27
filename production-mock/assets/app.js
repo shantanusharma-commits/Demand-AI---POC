@@ -17,7 +17,7 @@
   const STATE_KEY = 'dmock_state_v5_' + me.id;
   let saved = {};
   try { saved = JSON.parse(store.get(STATE_KEY, true) || '{}'); } catch (e) { saved = {}; }
-  const S = Object.assign({ chats: null, cur: 'home', mchat: {}, studio: { doc: null, thread: [] }, decisions: {}, todosDone: {}, notes: {}, outcomes: {}, drafts: {}, runs: [], camp: {}, handled: {}, lists: [], seq: {}, content: [], enrollOK: {}, starred: {} }, saved);
+  const S = Object.assign({ chats: null, cur: 'home', mchat: {}, studio: { doc: null, thread: [] }, decisions: {}, todosDone: {}, notes: {}, outcomes: {}, drafts: {}, runs: [], camp: {}, handled: {}, lists: [], read: {}, archived: {}, seq: {}, content: [], enrollOK: {}, starred: {} }, saved);
   const save = () => store.set(STATE_KEY, JSON.stringify(S), true);
   /* Shared across sign-ins in this tab: what the manager assigns shows up for the rep */
   let shared = {};
@@ -32,7 +32,7 @@
       { id: 'cedar', title: 'Cedar renewal prep', when: 'Fri', thread: [{ who: 'me', text: 'What should I do with Cedar?' }, { who: 'ai', kind: 'nba', id: 'cedar' }] },
     ];
   }
-  let thrId = null, ownerF = 'all', inboxTab = 'needs', homeMet = 'team', showProc = false, loadTok = 0, expanded = false, ctx = null, art = null, recId = null, recTab = 'engage', listSel = 'all', campSel = null, campTab = 'enroll', segSel = null, segTab = 'accounts', apprTab = isMgr ? 'needs' : 'todo', apprRep = 'all', scope = isMgr ? 'team' : 'mine', studioTab = 'write', studioType = 'Blog', actOpen = null, artMore = false;
+  let thrId = null, ibCh = 'all', ownerF = 'all', inboxTab = 'all', homeMet = 'team', showProc = false, loadTok = 0, expanded = false, ctx = null, art = null, recId = null, recTab = 'engage', listSel = 'all', campSel = null, campTab = 'enroll', segSel = null, segTab = 'accounts', apprTab = isMgr ? 'needs' : 'todo', apprRep = 'all', scope = isMgr ? 'team' : 'mine', studioTab = 'write', studioType = 'Blog', actOpen = null, artMore = false;
 
   /* ─── Helpers ─── */
   const $ = id => document.getElementById(id);
@@ -181,7 +181,7 @@
       <div class="side-brand"><img src="assets/logo.png" alt=""><div><div class="nm">DemandAI</div><div class="org">Sales workspace</div></div></div>
       <button class="side-new" onclick="App.newChat()">${ic('plus', 14)}<span>New chat</span></button>
       <a class="side-item ${!v ? 'on' : ''}" href="#today" onclick="App.nav(null);return false" title="Today">${ic('home', 16)}<span class="lbl-t">Today</span></a>
-      <div class="side-sec">Modules · each with its own chat</div>
+      <div class="side-sep"></div>
       <nav class="side-nav" aria-label="Modules">${Object.keys(MODULES).map(k => `<a class="side-item ${v === k ? 'on' : ''}" href="#${k}" onclick="App.nav('${k}');return false" title="${MODULES[k]}">${ic(MOD_IC[k], 16)}<span class="lbl-t">${MODULES[k]}</span>${(k === 'approvals' ? n : k === 'inbox' ? threads().filter(needsReply).length : 0) ? `<span class="cnt">${k === 'approvals' ? n : threads().filter(needsReply).length}</span>` : ''}</a>`).join('')}</nav>
       <div class="side-sec">Recent chats</div>
       <div class="side-recent">${S.chats.map(c => `<button class="${!v && c.id === S.cur ? 'on' : ''}" onclick="App.openChat('${c.id}')" title="${esc(c.title)}">${ic('chat', 13)}<span>${esc(c.title)}</span><i>${esc(c.when)}</i></button>`).join('')}</div>
@@ -614,26 +614,54 @@
     if (r.kind === 'Meeting booked') return `Hi ${f},\n\nThanks for booking. I'll send a short agenda the day before. Anything you'd like us to cover first?\n\nBest,\n${me1}`;
     return 'No reply needed. The remaining steps resume when they\'re back (4 Nov).';
   }
+  /* Inbox: folders, the message list and a reading pane, like a mail client */
+  const unread = r => !S.read[r.id] && !S.handled[r.id];
+  function subjOf(r) { const out = acct(r.acc).activity.filter(x => x.msg).pop(); return r.ch === 'Email' ? 'Re: ' + (out ? out.msg.subject : r.source) : 'LinkedIn message · ' + r.source; }
+  const FOLDERS = [['all', 'Inbox', 'inbox'], ['needs', 'Needs a reply', 'reply'], ['Positive', 'Positive', 'up'], ['Objection', 'Objection', 'alert'], ['Meeting booked', 'Meetings', 'check'], ['Out of office', 'Out of office', 'clock'], ['sent', 'Sent', 'plane'], ['archived', 'Archived', 'savei']];
+  const inFolder = (r, k) => k === 'archived' ? !!S.archived[r.id] : k === 'sent' ? !!S.handled[r.id] : !S.archived[r.id] && (k === 'all' || (k === 'needs' ? needsReply(r) : r.kind === k));
   function renderInbox() {
-    const tabs = [['all', 'All'], ['needs', 'Needs a reply'], ['Positive', 'Positive'], ['Objection', 'Objection'], ['Out of office', 'Out of office']];
-    const all = threads(), list = all.filter(r => inboxTab === 'all' ? true : inboxTab === 'needs' ? needsReply(r) : r.kind === inboxTab);
-    const cv = frame('Inbox', `${all.filter(needsReply).length} need a reply · email and LinkedIn`, isMgr ? ownerSel() : '');
-    cv.innerHTML = `<div class="dtabs" style="margin-top:0">${tabs.map(([k, l]) => `<button class="${inboxTab === k ? 'on' : ''}" onclick="App.setInboxTab('${k}')">${l} <i>${k === 'all' ? all.length : k === 'needs' ? all.filter(needsReply).length : all.filter(r => r.kind === k).length}</i></button>`).join('')}</div>
-      <div class="card">${list.map(r => { const a = acct(r.acc); return `<button class="ib-row ${needsReply(r) ? 'unread' : ''}" onclick="App.openThread('${r.id}')"><span class="ib-dot"></span>${pAvatar(a, 34)}<div class="grow"><div class="ib-t"><b>${esc(r.from)}</b><span class="muted">· ${esc(a.name)}</span>${isMgr ? `<span class="muted">· ${esc(first(USERS[r.owner].name))}</span>` : ''}</div><div class="ib-p">"${esc(r.text)}"</div><div class="ib-s">${chIc(r.ch)} ${r.ch} · ${r.sourceKind === 'Campaign' ? 'campaign: ' + esc(r.source) : 'your action'}</div></div><div class="ib-m"><span class="when">${esc(r.at)}</span><span class="badge ${KIND_B[r.kind]}">${r.kind}</span>${S.handled[r.id] ? '<span class="badge b-grey nodot">Answered</span>' : ''}</div></button>`; }).join('') || '<div class="empty">Nothing here.</div>'}</div>`;
+    const src = threads(), q = ($('ibQ') && $('ibQ').value || '').toLowerCase();
+    const list = src.filter(r => inFolder(r, inboxTab) && (ibCh === 'all' || r.ch === ibCh) && (!q || (r.from + acct(r.acc).name + r.text).toLowerCase().includes(q)));
+    if (!thrId && innerWidth > 900 && list.length) thrId = list[0].id;
+    const cur = thrId ? REPLIES.find(x => x.id === thrId) : null;
+    $('main').className = 'ibx-pg';
+    $('main').innerHTML = `<div class="ibx ${cur ? 'has-sel' : ''}">
+      <aside class="ibx-f">
+        <div class="ibx-ttl">Inbox</div>
+        <button class="btn pri ibx-new" onclick="App.toast('New messages start from a campaign step or a next best action (mock)')">${ic('pen', 14)} <span>New message</span></button>
+        <nav class="ibx-nav">${FOLDERS.map(([k, l, i]) => { const n = k === 'all' ? src.filter(r => inFolder(r, 'all') && unread(r)).length : src.filter(r => inFolder(r, k)).length; return `<button class="${inboxTab === k ? 'on' : ''}" onclick="App.setInboxTab('${k}')" title="${l}">${ic(i, 15)}<span>${l}</span><i>${n || ''}</i></button>`; }).join('')}</nav>
+        <div class="ibx-sec">Channel</div>
+        <nav class="ibx-nav">${[['all', 'All channels', 'layers'], ['Email', 'Email', 'mail'], ['LinkedIn', 'LinkedIn', 'li']].map(([k, l, i]) => `<button class="${ibCh === k ? 'on' : ''}" onclick="App.setIbCh('${k}')" title="${l}">${ic(i, 15)}<span>${l}</span></button>`).join('')}</nav>
+        <div class="ibx-sec">Mailbox</div>${isMgr ? `<div class="ibx-mb">${ownerSel()}</div>` : `<div class="ibx-mb muted">${esc(mailbox({ owner: me.id }))}</div>`}
+      </aside>
+      <section class="ibx-l">
+        <div class="ibx-lh"><div class="search">${ic('search', 14)}<label class="sr" for="ibQ">Search mail</label><input id="ibQ" placeholder="Search mail" value="${esc(q)}" oninput="App.renderAll()"></div></div>
+        <div class="ibx-lt"><b>${FOLDERS.find(f => f[0] === inboxTab)[1]}</b><span class="muted">${list.length} conversation${list.length === 1 ? '' : 's'}</span></div>
+        <div class="ibx-rows">${list.map(r => { const a = acct(r.acc); return `<button class="ibx-r ${unread(r) ? 'unread' : ''} ${thrId === r.id ? 'on' : ''}" onclick="App.openThread('${r.id}')">${pAvatar(a, 34)}<div class="grow"><div class="ibx-r1"><span class="fr">${esc(r.from)}</span><span class="when">${esc(r.at)}</span></div><div class="ibx-r2">${esc(subjOf(r))}</div><div class="ibx-r3">${esc(r.text)}</div><div class="ibx-r4">${chIc(r.ch)}<span class="badge ${KIND_B[r.kind]}">${r.kind}</span>${isMgr ? `<span>${esc(first(USERS[r.owner].name))}</span>` : ''}${S.handled[r.id] ? '<span>· replied</span>' : ''}</div></div></button>`; }).join('') || '<div class="empty">No conversations here.</div>'}</div>
+      </section>
+      <section class="ibx-v">${cur ? readingPane(cur) : `<div class="ibx-empty">${ic('inbox', 40, 1.5)}<div>Select a conversation to read it</div></div>`}</section>
+    </div>`;
+    if (q) { const s = $('ibQ'); s.focus(); s.setSelectionRange(q.length, q.length); }
   }
-  function renderThread() {
-    const r = REPLIES.find(x => x.id === thrId), a = acct(r.acc), out = a.activity.filter(x => x.msg).pop(), done = S.handled[r.id];
-    $('focus').innerHTML = `<div class="tv">
-      <div class="tv-h"><button class="ic-btn" title="Close" onclick="App.closeFocus()">${ic('x', 16)}</button>${pAvatar(a, 38)}<div class="grow"><div class="nm">${esc(r.from)} <span class="badge ${KIND_B[r.kind]}">${r.kind}</span></div><div class="sm">${esc(a.contact.title)} · ${esc(a.name)} · ${chIc(r.ch)} ${r.ch}</div></div><button class="btn sm" onclick="App.openRecord('${a.id}','activity')">Open account</button></div>
-      <div class="tv-b"><div class="tv-in">
-        <div class="tv-note">${ic('megaphone', 13)} ${r.sourceKind === 'Campaign' ? `From the campaign <b>${esc(r.source)}</b>. Their remaining steps are paused while you answer.` : `Reply to your action: ${esc(r.source)}.`}</div>
-        ${out ? `<div class="bubble out"><div class="bh"><b>${esc(USERS[a.owner].name)}</b> to ${esc(r.from)}<span>${esc(out.when)}</span></div>${r.ch === 'Email' ? `<div class="subj">${esc(out.msg.subject)}</div>` : ''}<div class="bt">${esc(out.msg.body)}</div></div>` : ''}
-        <div class="bubble in"><div class="bh"><b>${esc(r.from)}</b><span>${esc(r.at)}</span></div><div class="bt">${esc(r.text)}</div></div>
-        ${done ? `<div class="bubble out"><div class="bh"><b>${esc(USERS[a.owner].name)}</b><span>Just now · ${r.ch}</span></div><div class="bt">${esc(S.drafts['thr-' + r.id] || suggestReply(r, a))}</div></div><div class="tv-note ok">${ic('check', 13)} Answered. Logged to the account and the learning loop.</div>`
-        : `<div class="tv-reply"><div class="lbl">${ic('spark', 13)} Suggested reply · ${r.ch}</div><label class="sr" for="thrBody">Reply</label><textarea class="edit" id="thrBody" onchange="App.saveThread('${r.id}')">${esc(S.drafts['thr-' + r.id] || suggestReply(r, a))}</textarea>
-          <div class="checks"><span class="badge b-pos">Brand voice</span><span class="badge b-pos">Approved claims only</span></div>
-          <div class="tv-act">${r.kind === 'Out of office' ? `<button class="btn pri" onclick="App.handleReply('${r.id}','Steps resume on 4 Nov')">Resume on 4 Nov</button>` : `<button class="btn pri" onclick="App.saveThread('${r.id}');App.handleReply('${r.id}','Reply sent (placeholder: nothing is sent)')">Send by ${r.ch}</button>`}<button class="btn" onclick="App.handleReply('${r.id}','Marked as handled')">Mark handled</button>${isMgr ? `<span class="muted" style="font-size:12px;margin-left:auto">Owner</span><label class="sr" for="thrOwner">Owner</label><select class="sel" id="thrOwner" onchange="App.reassign(['${a.id}'],this.value)">${REPS.map(x => `<option value="${x}" ${a.owner === x ? 'selected' : ''}>${esc(USERS[x].name)}</option>`).join('')}</select>` : ''}</div></div>`}
-      </div></div></div>`;
+  function readingPane(r) {
+    const a = acct(r.acc), out = a.activity.filter(x => x.msg).pop(), done = S.handled[r.id], rep = USERS[a.owner];
+    return `<div class="rp-h"><div class="rp-top"><button class="ic-btn rp-back" title="Back to the list" onclick="App.closeThread()">${ic('left', 16)}</button><h2>${esc(subjOf(r))}</h2>
+        <div class="rp-tools"><button class="ic-btn" title="Archive" onclick="App.archive('${r.id}')">${ic('savei', 16)}</button><button class="ic-btn" title="Mark as unread" onclick="App.markUnread('${r.id}')">${ic('mail', 16)}</button><button class="btn sm" onclick="App.openRecord('${a.id}','activity')">${ic('users', 13)} Open account</button></div></div>
+        <div class="rp-labels"><span class="badge ${KIND_B[r.kind]}">${r.kind}</span><span class="badge b-grey nodot">${chIc(r.ch)} ${r.ch}</span><span class="badge b-brand nodot">${r.sourceKind === 'Campaign' ? 'Campaign: ' + esc(r.source) : 'Next best action'}</span></div></div>
+      <div class="rp-b">
+        <article class="rp-m"><div class="rp-mh">${pAvatar(a, 38)}<div class="grow"><div><b>${esc(r.from)}</b> <span class="muted">&lt;${esc(r.ch === 'Email' ? a.contact.email : 'via LinkedIn')}&gt;</span></div><div class="muted sm">to ${esc(rep.name)} · ${esc(a.contact.title)}, ${esc(a.name)}</div></div><span class="when">${esc(r.at)}</span></div>
+          <div class="rp-t">${esc(r.text)}</div>
+          ${out ? `<details class="rp-q"><summary>Show earlier message · ${esc(out.when)}</summary><div class="rp-qh"><b>${esc(rep.name)}</b> wrote:</div><div class="rp-t">${r.ch === 'Email' ? `<b>${esc(out.msg.subject)}</b>\n\n` : ''}${esc(out.msg.body)}</div></details>` : ''}
+        </article>
+        ${r.sourceKind === 'Campaign' && !done ? `<div class="tv-note">${ic('megaphone', 13)} The remaining steps of ${esc(r.source)} are paused for ${esc(first(r.from))} while you answer.</div>` : ''}
+        ${done ? `<article class="rp-m mine"><div class="rp-mh">${avatar(rep, 38)}<div class="grow"><div><b>${esc(rep.name)}</b></div><div class="muted sm">to ${esc(r.from)} · via ${r.ch}</div></div><span class="when">Just now</span></div><div class="rp-t">${esc(S.drafts['thr-' + r.id] || suggestReply(r, a))}</div></article>`
+        : `<div class="rp-reply"><div class="rp-rh">${ic('reply', 14)} Reply to ${esc(r.from)} · ${r.ch}<span class="badge b-brand nodot">${ic('spark', 11)} Drafted by AI</span></div>
+          <label class="sr" for="thrBody">Reply</label><textarea id="thrBody" onchange="App.saveThread('${r.id}')">${esc(S.drafts['thr-' + r.id] || suggestReply(r, a))}</textarea>
+          <div class="rp-rf"><span class="badge b-pos">Brand voice</span><span class="badge b-pos">Approved claims</span><div class="sp"></div>
+            ${isMgr ? `<label class="sr" for="thrOwner">Owner</label><select class="sel" id="thrOwner" onchange="App.reassign(['${a.id}'],this.value)">${REPS.map(x => `<option value="${x}" ${a.owner === x ? 'selected' : ''}>${esc(USERS[x].name)}</option>`).join('')}</select>` : ''}
+            <button class="btn" onclick="App.handleReply('${r.id}','Marked as handled')">Mark handled</button>
+            ${r.kind === 'Out of office' ? `<button class="btn pri" onclick="App.handleReply('${r.id}','Steps resume on 4 Nov')">Resume on 4 Nov</button>` : `<button class="btn pri" onclick="App.saveThread('${r.id}');App.handleReply('${r.id}','Reply sent (placeholder: nothing is sent)')">${ic('plane', 13)} Send</button>`}</div></div>`}
+      </div>`;
   }
 
   /* ─── Analytics (sales manager) ─── */
@@ -938,26 +966,26 @@
   function goCampaign(id, tab) { art = null; recId = null; thrId = null; expanded = true; campSel = id; campTab = tab || 'enroll'; go('campaigns'); }
   function openRecord(id, tab) { recId = id; thrId = null; recTab = tab || 'engage'; actOpen = null; ctx = id; if (recTab === 'engage' && !acct(id).nba && !acct(id).campaign) recTab = 'overview'; renderAll(); }
   let lastKey = null;
-  function openThread(id) { thrId = id; recId = null; renderAll(); }
+  function openThread(id) { recId = null; thrId = id; S.read[id] = true; save(); if (view() !== 'inbox') location.hash = '#inbox'; else renderAll(); }
   /* A person or a reply opens in a focused panel; everything behind it is blurred */
   function renderFocus() {
-    const on = !!(recId || thrId);
+    const on = !!recId;
     $('ws').classList.toggle('focused', on);
     $('fscrim').classList.toggle('open', on);
-    if (recId) renderRecord(); else if (thrId) renderThread();
+    if (recId) renderRecord();
     $('focus').classList.toggle('open', on);
   }
   function renderAll() {
     const v = view(), tok = ++loadTok;
-    const home = !v && S.cur === 'home' && !art, studioHome = v === 'studio' && !S.studio.doc;
-    const split = !!art || !!(v && v !== 'studio' && expanded) || (v === 'studio' && !!S.studio.doc);
+    const home = !v && S.cur === 'home' && !art, studioHome = v === 'studio' && !S.studio.doc, inboxV = v === 'inbox' && !art;
+    const split = !!art || !!(v && v !== 'studio' && v !== 'inbox' && expanded) || (v === 'studio' && !!S.studio.doc);
     $('ws').classList.toggle('canvas-open', split);
     $('ws').classList.toggle('home', home);
-    $('ws').classList.toggle('nochat', studioHome);
-    $('ws').classList.toggle('solo', !split && !home && !studioHome);
+    $('ws').classList.toggle('nochat', studioHome || inboxV);
+    $('ws').classList.toggle('solo', !split && !home && !studioHome && !inboxV);
     renderNav(); renderChat();
     const MODR = { inbox: renderInbox, accounts: renderAccounts, segments: renderSegments, campaigns: renderCampaigns, approvals: renderApprovals, studio: renderStudio, analytics: renderAnalytics };
-    const draw = art ? renderArt : v === 'studio' || (v && expanded) ? MODR[v] : home ? renderHome : () => { $('main').className = ''; $('main').innerHTML = ''; };
+    const draw = art ? renderArt : v === 'studio' || v === 'inbox' || (v && expanded) ? MODR[v] : home ? renderHome : () => { $('main').className = ''; $('main').innerHTML = ''; };
     const key = [v, home, expanded, art, campSel, segSel, listSel, studioTab, !!S.studio.doc].join('|');
     const fresh = key !== lastKey;
     lastKey = key;
@@ -999,9 +1027,13 @@
     repApprovals(r) { apprTab = 'team'; apprRep = r; openMod('approvals'); },
     setApprTab(k) { apprTab = k; renderAll(); },
     setApprRep(r) { apprRep = r; renderAll(); },
+    setIbCh(k) { ibCh = k; thrId = null; renderAll(); },
+    closeThread() { thrId = null; renderAll(); },
+    archive(id) { S.archived[id] = true; thrId = null; save(); toast('Archived'); renderAll(); },
+    markUnread(id) { S.read[id] = false; thrId = null; save(); toast('Marked as unread'); renderAll(); },
     closeFocus() { recId = null; thrId = null; renderAll(); },
     setOwner(r) { ownerF = r; renderAll(); },
-    setInboxTab(k) { inboxTab = k; renderAll(); },
+    setInboxTab(k) { inboxTab = k; thrId = null; renderAll(); },
     setHomeMet(k) { homeMet = k; renderAll(); },
     toggleProc() { showProc = !showProc; renderAll(); },
     viewRep(r) { ownerF = r; toast(`Showing ${USERS[r].name}'s accounts`); openMod('accounts'); },
@@ -1046,6 +1078,6 @@
     closeDrawer() { $('drawer').classList.remove('open'); $('scrim').classList.remove('open'); },
   };
   document.addEventListener('click', e => { if (!e.target.closest('.menu,.btn')) document.querySelectorAll('.menu.open').forEach(m => m.classList.remove('open')); });
-  document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; if ($('drawer').classList.contains('open')) App.closeDrawer(); else if (recId || thrId) App.closeFocus(); else if (art || (view() && view() !== 'studio' && expanded)) App.closeCanvas(); });
+  document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; if ($('drawer').classList.contains('open')) App.closeDrawer(); else if (recId) App.closeFocus(); else if (art || (view() && view() !== 'studio' && expanded)) App.closeCanvas(); });
   renderAll();
 })();
