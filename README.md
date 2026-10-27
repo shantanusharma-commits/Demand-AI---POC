@@ -6,6 +6,8 @@ The app is built with **Next.js (App Router), React and TypeScript**. It was mig
 
 > **`legacy/` is ahead of the React screens.** The HTML prototype kept changing after the migration was cut (2 Oct 2026): Content studio (`15-content-studio.html`), Copilot, the reworked Account Scoring and Micro-segments flows, and more. Open `legacy/00-today.html` in a browser to see the latest design. The React screens still show the 2 Oct version until those changes are ported.
 
+> **Production mock:** the chat-first sales workspace, admin console and "What we're selling" overview are in [`production-mock/`](production-mock/README.md). Open `production-mock/index.html`.
+
 ## Running it
 
 Requires Node.js 22 or later.

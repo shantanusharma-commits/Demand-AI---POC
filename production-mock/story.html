@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>What we're selling · DemandAI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/mock.css">
+<style>
+body{background:var(--bg);}
+.wrap{max-width:1120px;margin:0 auto;padding:0 24px 60px;}
+.hdr{background:var(--rail);color:var(--r1);}
+.hdr-in{max-width:1120px;margin:0 auto;padding:22px 24px 30px;}
+.hdr-top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:26px;}
+.hdr .logo{display:flex;align-items:center;gap:9px;font-family:var(--fd);font-weight:600;}
+.hdr .logo img{width:26px;height:26px;border-radius:7px;}
+.hdr a.back{color:var(--r2);font-size:12.5px;text-decoration:none;}
+.hdr a.back:hover{color:var(--r1);}
+.hdr h1{font-family:var(--fd);font-size:32px;font-weight:600;letter-spacing:-.025em;margin:0 0 8px;max-width:820px;line-height:1.2;}
+.hdr h1 em{font-style:normal;color:var(--brand-mid);}
+.hdr p{color:var(--r2);font-size:14.5px;line-height:1.6;max-width:780px;margin:0;}
+.ref{display:inline-flex;gap:8px;align-items:center;margin-top:16px;font-size:12px;color:var(--r3);border:1px solid var(--rb);border-radius:999px;padding:5px 12px;}
+section{margin-top:30px;}
+h2{font-family:var(--fd);font-size:19px;font-weight:600;letter-spacing:-.015em;margin:0 0 4px;display:flex;align-items:center;gap:10px;}
+h2 .n{width:26px;height:26px;border-radius:8px;background:var(--brand);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:13px;}
+.lead{color:var(--i2);font-size:13.5px;margin:0 0 14px;line-height:1.55;}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.vp{padding:16px 18px;}
+.vp .q{font-family:var(--fd);font-size:16px;font-weight:600;color:var(--brand-dk);margin-bottom:6px;}
+.vp p{margin:0;font-size:13px;color:var(--i2);line-height:1.55;}
+.tagline{margin-top:12px;padding:14px 18px;border-radius:var(--rmd);background:var(--brand-lt);font-size:14px;line-height:1.55;color:var(--brand-dk);}
+.scope th{background:var(--s50);}
+.scope td{font-size:12.5px;line-height:1.5;vertical-align:top;}
+.scope td:first-child{font-weight:700;width:150px;}
+.flow{padding:16px 18px;margin-bottom:12px;}
+.flow-h{display:flex;justify-content:space-between;gap:12px;align-items:baseline;margin-bottom:12px;flex-wrap:wrap;}
+.flow-h b{font-family:var(--fd);font-size:15px;}
+.flow-h span{font-size:12.5px;color:var(--i2);}
+.steps-row{display:flex;flex-wrap:wrap;gap:6px 4px;align-items:stretch;}
+.step{flex:1 1 120px;min-width:112px;background:var(--s50);border:1px solid var(--border);border-radius:var(--rsm);padding:9px 10px;position:relative;}
+.step .k{font-size:10px;font-weight:700;color:var(--brand);letter-spacing:.06em;text-transform:uppercase;}
+.step .t{font-size:12.5px;font-weight:700;margin:2px 0 3px;}
+.step .d{font-size:11.5px;color:var(--i2);line-height:1.4;}
+.arrow{display:flex;align-items:center;color:var(--i4);font-size:16px;}
+.step.hi{background:var(--brand-lt);border-color:var(--brand-mid);}
+.out{margin-top:10px;font-size:12px;color:var(--i2);}
+.out b{color:var(--i1);}
+.par{display:grid;grid-template-columns:200px 24px 1fr;gap:8px;align-items:center;}
+.par .stack{display:flex;flex-direction:column;gap:6px;}
+.loop{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:16px;align-items:center;}
+.loop svg{width:100%;height:auto;}
+.loop svg text{font-family:var(--fb);}
+.mech{font-size:12.5px;}
+.mech .mini-row{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);}
+.mech .mini-row:last-child{border-bottom:none;}
+.mech b{display:block;}
+.mech span{color:var(--i2);}
+.bc{display:grid;grid-template-columns:repeat(3,1fr);gap:0;overflow:hidden;}
+.bc>div{padding:16px 18px;border-right:1px solid var(--border);}
+.bc>div:last-child{border-right:none;}
+.bc h3{font-family:var(--fd);font-size:14.5px;margin:0 0 10px;display:flex;align-items:center;gap:8px;}
+.bc ul{margin:0;padding-left:18px;font-size:12.5px;line-height:1.55;color:var(--i1);}
+.bc li{margin-bottom:7px;}
+.bc li span{color:var(--i2);}
+.obj{font-size:12.5px;}
+.obj .q{font-weight:700;}
+.obj .a{color:var(--i2);margin:2px 0 10px;line-height:1.5;}
+.road{display:grid;grid-template-columns:repeat(4,1fr);gap:0;}
+.road>div{padding:14px 16px;border-right:1px solid var(--border);position:relative;}
+.road>div:last-child{border-right:none;}
+.road .ph{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--brand);}
+.road .tt{font-family:var(--fd);font-size:14px;font-weight:600;margin:3px 0 2px;}
+.road .dt{font-size:11.5px;color:var(--i3);margin-bottom:8px;}
+.road ul{margin:0;padding-left:16px;font-size:12px;line-height:1.5;color:var(--i2);}
+.road .now{position:absolute;top:10px;right:10px;}
+.open li{font-size:12.5px;line-height:1.5;margin-bottom:5px;color:var(--i2);}
+.foot{margin-top:30px;font-size:11.5px;color:var(--i3);text-align:center;}
+@media (max-width:860px){.grid3,.grid2,.bc,.road,.loop{grid-template-columns:1fr;}.bc>div,.road>div{border-right:none;border-bottom:1px solid var(--border);}.par{grid-template-columns:1fr;}.par .arrow{display:none;}}
+@media print{
+  body{background:#fff;font-size:12px;}
+  .hdr{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  .hdr a.back,.noprint{display:none;}
+  .card{box-shadow:none;}
+  section{break-inside:avoid;}
+  .pb{break-before:page;}
+}
+</style>
+</head>
+<body>
+<header class="hdr"><div class="hdr-in">
+  <div class="hdr-top"><div class="logo"><img src="assets/logo.png" alt=""> DemandAI</div><a class="back" href="index.html">← Back to sign in</a></div>
+  <h1>Know <em>who</em> to contact, <em>why now</em>, and <em>what to say</em>, with the AI doing the work and the seller deciding.</h1>
+  <p>DemandAI (the full Proposal AI) finds the right accounts from a customer's own ICP, notices the moment they're ready to buy, picks the next best action, writes it, and learns from every outcome. Sellers approve or edit; they don't build lists, chase signals or write first drafts.</p>
+  <div class="ref">Reference point · 27 Oct 2026 · Gathered from the locked Prospect, Score and NBA process flows. No new scope.</div>
+</div></header>
+
+<div class="wrap">
+
+<section>
+  <h2><span class="n">1</span>What we're selling</h2>
+  <p class="lead">One product, three questions answered in order, and a loop that makes the answers better every month.</p>
+  <div class="grid3">
+    <div class="card vp"><div class="q">Who to contact</div><p>A clean, identity-checked list built from the customer's own ICP and lookalikes of their wins. Existing customers and owned accounts are removed, and every person carries a confidence tier.</p></div>
+    <div class="card vp"><div class="q">Why now</div><p>Live signals (new leaders, contract renewals, expansion, intent, website visits and more) are qualified, weighted, decayed and stacked. <b>Score = Fit × Timing</b>, so a good fit with nothing happening waits.</p></div>
+    <div class="card vp"><div class="q">What to say</div><p>The next best action for each account: the action, the contact, the channel and a ready draft, written against message structures that have already worked. Ten or more similar accounts become a campaign.</p></div>
+  </div>
+  <div class="tagline"><b>The story to tell:</b> the AI does the work, and the salesperson only approves or edits. Anything uncertain goes to a person with the reason attached; everything else goes ahead on its own.</div>
+</section>
+
+<section>
+  <h2><span class="n">2</span>Scope: the product vs. the client POC</h2>
+  <p class="lead">The client POC is a deliberately small slice used to prove the mechanism on one customer's data. It is <b>not</b> the whole product. Judge each discussion against the right column.</p>
+  <div class="card" style="overflow:hidden"><table class="tbl scope">
+    <thead><tr><th></th><th>Full product (Proposal AI / DemandAI)</th><th>Client POC (scoped pilot, running now)</th></tr></thead>
+    <tbody>
+      <tr><td>Data in</td><td>Contact-data waterfall (primary → fallback → last resort), 24 live signal types from pull and push sources, read-only CRM</td><td>One lead file and one signal file, uploaded</td></tr>
+      <tr><td>Prospect</td><td>8 steps: query, aggregate, identity tiers 1–5, generate with lookalikes, de-dup + CRM match, profile-change check, enrich + cross-check, hand off</td><td>12 data checks on the uploaded file and knock-outs</td></tr>
+      <tr><td>Score</td><td>External research, outcome cache and live signals; LLM content strength; tier, decay and stacking; Fit × Timing</td><td>Fit × Timing on the file's signals, rules only</td></tr>
+      <tr><td>Act</td><td>NBA and NBC (campaigns), channel choice, send coordination, delivery to CRM, team chat and outbound channels</td><td>Micro-segments, next best action and a draft. No sending</td></tr>
+      <tr><td>Learn</td><td>Every outcome logged; monthly promotion/demotion of patterns, tier re-weighting, source scoring, coverage checks, explore/exploit</td><td>Outcomes logged by hand; success gates G1 (effort saved) and G2 (first-time acceptance)</td></tr>
+      <tr><td>Experience</td><td>Chat-first sales workspace (Home, Approvals, Accounts, Campaigns) plus an admin console</td><td>Screen-by-screen prototype with a Copilot panel</td></tr>
+      <tr><td>Market</td><td>Any B2B team with a defined ICP</td><td>Industrial automation · SEA · refining (core), petrochemicals and gas (adjacent)</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <h2><span class="n">3</span>The three process flows</h2>
+  <p class="lead">Each stage answers one question and hands a clean output to the next.</p>
+
+  <div class="card flow">
+    <div class="flow-h"><b>Prospect</b><span>Which accounts and people fit, are real, and are correctly identified?</span></div>
+    <div class="steps-row">
+      <div class="step"><div class="k">1</div><div class="t">Query</div><div class="d">ICP in the customer's words → structured filter</div></div><div class="arrow">›</div>
+      <div class="step"><div class="k">2</div><div class="t">Aggregate</div><div class="d">Waterfall: primary, then fallback, then last resort</div></div><div class="arrow">›</div>
+      <div class="step hi"><div class="k">3</div><div class="t">Identity tiers</div><div class="d">1–5 by how it was found; tier 4 held</div></div><div class="arrow">›</div>
+      <div class="step"><div class="k">4</div><div class="t">Generate</div><div class="d">Weighted ICP fit + lookalikes of wins</div></div><div class="arrow">›</div>
+      <div class="step"><div class="k">5</div><div class="t">De-dup + CRM</div><div class="d">Closed-won out; name-only matches held</div></div><div class="arrow">›</div>
+      <div class="step"><div class="k">6</div><div class="t">Profile change</div><div class="d">&lt;30 days: re-verify; logged</div></div><div class="arrow">›</div>
+      <div class="step"><div class="k">7</div><div class="t">Enrich + check</div><div class="d">Email domain and title cross-checked</div></div><div class="arrow">›</div>
+      <div class="step"><div class="k">8</div><div class="t">Hand off</div><div class="d">Straight to Score</div></div>
+    </div>
+    <div class="out"><b>Output:</b> an identity-resolved, enriched list with a confidence tier per person. No scoring. Held records retry each refresh and go to a person after three failed cycles.</div>
+  </div>
+
+  <div class="card flow">
+    <div class="flow-h"><b>Score</b><span>Which of those should a rep call first, and why, right now?</span></div>
+    <div class="par">
+      <div class="stack">
+        <div class="step"><div class="k">External</div><div class="t">Background research</div><div class="d">Why customers buy · motivation · lookalikes</div></div>
+        <div class="step"><div class="k">Internal</div><div class="t">Outcome cache</div><div class="d">Proven message structures per segment</div></div>
+        <div class="step hi"><div class="k">Forward</div><div class="t">Live signals</div><div class="d">24 types, pull and push</div></div>
+      </div>
+      <div class="arrow" style="justify-content:center">›</div>
+      <div class="steps-row">
+        <div class="step"><div class="t">Entry gate</div><div class="d">Recency and frequency</div></div><div class="arrow">›</div>
+        <div class="step"><div class="t">Qualify</div><div class="d">Observable, predictive, time-bound</div></div><div class="arrow">›</div>
+        <div class="step"><div class="t">Strength</div><div class="d">LLM reads what the signal says</div></div><div class="arrow">›</div>
+        <div class="step"><div class="t">Tier + decay</div><div class="d">T1 100 · T2 60 · T3 30, fading</div></div><div class="arrow">›</div>
+        <div class="step"><div class="t">Stack</div><div class="d">S₁ + ½S₂ + ¼S₃ …</div></div><div class="arrow">›</div>
+        <div class="step hi"><div class="t">Fit × Timing</div><div class="d">Multiplied: no signal, no rank</div></div>
+      </div>
+    </div>
+    <div class="out"><b>Output:</b> a ranked account with its full signal stack, micro-segment and motivation tag. A fast lane (positive reply, demo attendance) skips straight to NBA within minutes. Every decision is in the audit trail.</div>
+  </div>
+
+  <div class="card flow">
+    <div class="flow-h"><b>NBA / NBC</b><span>What should be done, on which channel, with what message?</span></div>
+    <div class="steps-row">
+      <div class="step"><div class="k">Phase 1</div><div class="t">Checks</div><div class="d">De-dup gate (live owner?) · history · warm path</div></div><div class="arrow">›</div>
+      <div class="step"><div class="k">Phase 2</div><div class="t">Cache check</div><div class="d">Proven structure, provisional, or explore</div></div><div class="arrow">›</div>
+      <div class="step hi"><div class="k">Phase 3</div><div class="t">Decide + brief</div><div class="d">Segment, framing, NBA or NBC, channel, format</div></div><div class="arrow">›</div>
+      <div class="step"><div class="k">Route</div><div class="t">Confidence</div><div class="d">High goes ahead; medium goes to a person</div></div><div class="arrow">›</div>
+      <div class="step"><div class="k">Phase 4</div><div class="t">Deliver</div><div class="d">Send coordination · CRM · team chat · channel</div></div>
+    </div>
+    <div class="out"><b>Output:</b> one account, one action, one channel, one format (NBA), or a three-touch sequence for 10+ accounts in a segment within 7 days (NBC, confirmed by a person). The LLM writes every message; the cache stores structure, never text.</div>
+  </div>
+</section>
+
+<section class="pb">
+  <h2><span class="n">4</span>The learning loop</h2>
+  <p class="lead">What makes it more accurate every month without a bigger model. Misses count as much as wins.</p>
+  <div class="card" style="padding:16px 18px"><div class="loop">
+    <svg viewBox="0 0 420 380" role="img" aria-label="Learning loop: deliver, outcome, log, monthly job, coverage check, back into prospect and score">
+      <defs><marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#C9B3E8"/></marker></defs>
+      <circle cx="210" cy="190" r="130" fill="none" stroke="#E5E9EE" stroke-width="2"/>
+      <g fill="none" stroke="#C9B3E8" stroke-width="2.5" marker-end="url(#ah)">
+        <path d="M262 71 A130 130 0 0 1 328 128"/>
+        <path d="M339 222 A130 130 0 0 1 292 291"/>
+        <path d="M188 318 A130 130 0 0 1 112 282"/>
+        <path d="M82 208 A130 130 0 0 1 96 128"/>
+        <path d="M128 83 A130 130 0 0 1 178 63"/>
+      </g>
+      <g font-size="12" text-anchor="middle">
+        <rect x="145" y="34" width="130" height="46" rx="10" fill="#7D52A2"/><text x="210" y="55" fill="#fff" font-weight="700">Deliver</text><text x="210" y="70" fill="#F0EBF8" font-size="10.5">NBA / NBC goes out</text>
+        <rect x="296" y="128" width="112" height="56" rx="10" fill="#fff" stroke="#D1D7DE"/><text x="352" y="149" fill="#141A21" font-weight="700">Outcome</text><text x="352" y="164" fill="#4A5664" font-size="10.5">meeting booked</text><text x="352" y="177" fill="#4A5664" font-size="10.5">or not</text>
+        <rect x="232" y="290" width="120" height="50" rx="10" fill="#fff" stroke="#D1D7DE"/><text x="292" y="311" fill="#141A21" font-weight="700">Log every result</text><text x="292" y="326" fill="#4A5664" font-size="10.5">against segment + structure</text>
+        <rect x="40" y="282" width="140" height="56" rx="10" fill="#F0EBF8" stroke="#C9B3E8"/><text x="110" y="302" fill="#5E3A80" font-weight="700">Monthly job</text><text x="110" y="317" fill="#5E3A80" font-size="10.5">promote / demote patterns</text><text x="110" y="330" fill="#5E3A80" font-size="10.5">re-weight tiers · score sources</text>
+        <rect x="14" y="128" width="130" height="56" rx="10" fill="#fff" stroke="#D1D7DE"/><text x="79" y="149" fill="#141A21" font-weight="700">Coverage check</text><text x="79" y="164" fill="#4A5664" font-size="10.5">no signal → new source</text><text x="79" y="177" fill="#4A5664" font-size="10.5">low score → re-weight</text>
+        <text x="210" y="178" fill="#141A21" font-family="Sora,system-ui" font-size="15" font-weight="700">Prospect + Score</text><text x="210" y="198" fill="#4A5664" font-size="11">get better inputs</text><text x="210" y="214" fill="#4A5664" font-size="11">every cycle</text>
+      </g>
+    </svg>
+    <div class="mech">
+      <div class="mini-row"><div><b>Pattern promotion</b><span>A segment + message structure becomes "proven" after 10+ outcomes at ≥ 60% confidence; demoted if the 90-day rate drops.</span></div></div>
+      <div class="mini-row"><div><b>Decay</b><span>A proven pattern that isn't re-confirmed fades back to provisional.</span></div></div>
+      <div class="mini-row"><div><b>Explore / exploit</b><span>A small share always tries a different structure, so winners keep being re-earned and better ones can take over.</span></div></div>
+      <div class="mini-row"><div><b>Source scoring</b><span>Sources whose signals convert are weighted up; failing ones are flagged for a renewal review.</span></div></div>
+      <div class="mini-row"><div><b>Anomaly detection</b><span>A signal far outside its normal range triggers a temporary tier-1 boost and a real-time alert.</span></div></div>
+      <div class="mini-row"><div><b>Explainable</b><span>Every ranking keeps its evidence and the threshold version in effect, so March's decision is still explainable in June.</span></div></div>
+    </div>
+  </div></div>
+</section>
+
+<section>
+  <h2><span class="n">5</span>Battle card</h2>
+  <p class="lead">For any conversation with a prospect or a stakeholder: what we sell, why we're different, and why they buy.</p>
+  <div class="card bc">
+    <div><h3><span class="badge b-brand nodot">What</span> What we're selling</h3><ul>
+      <li><b>A seller's day, already prepared.</b> <span>Who to contact, why now, what to say, ready when they log in.</span></li>
+      <li><b>Approve, edit or ask.</b> <span>A chat-first workspace; no list-building, no signal-chasing, no first drafts.</span></li>
+      <li><b>Manager oversight built in.</b> <span>Sensitive and C-level messages come to the manager; team progress at a glance.</span></li>
+      <li><b>It runs on the customer's own ICP, CRM and channels.</b> <span>Read-only by default.</span></li>
+    </ul></div>
+    <div><h3><span class="badge b-sec nodot">Different</span> What makes us different</h3><ul>
+      <li><b>Fit × Timing, multiplied.</b> <span>Not a lead score: a perfect-fit account with nothing happening ranks zero.</span></li>
+      <li><b>Signals that fade and stack.</b> <span>Each signal is qualified, read for strength, decayed, and stacked so one strong signal beats a pile of weak ones.</span></li>
+      <li><b>Learns structure, not scripts.</b> <span>Proven message structures, never canned text, so two accounts get the same approach, never the same words.</span></li>
+      <li><b>Learns from misses.</b> <span>No-reply counts; coverage gaps and miscalibration are told apart and fixed differently.</span></li>
+      <li><b>Data you can trust.</b> <span>Identity tiers and cross-checks; disputed records are held, not guessed.</span></li>
+      <li><b>Every decision explainable.</b> <span>Full audit trail with threshold versions.</span></li>
+    </ul></div>
+    <div><h3><span class="badge b-pos nodot">Why buy</span> Why a prospect buys</h3><ul>
+      <li><b>Reps spend time selling, not researching.</b> <span>Measured as G1: the share of work that goes ahead without a person.</span></li>
+      <li><b>Recommendations reps actually use.</b> <span>G2: accepted first time.</span></li>
+      <li><b>Earlier conversations.</b> <span>Reach the new leader in week one, the renewal six months out.</span></li>
+      <li><b>No double outreach.</b> <span>Live-owner checks and send coordination across channels.</span></li>
+      <li><b>Gets better on its own.</b> <span>Monthly re-weighting from their own outcomes.</span></li>
+    </ul></div>
+  </div>
+  <div class="grid2" style="margin-top:12px">
+    <div class="card" style="padding:14px 18px"><div class="lbl" style="margin-bottom:8px">Likely objections</div><div class="obj">
+      <div class="q">"We already buy contact data."</div><div class="a">Good. That's an input. We decide who to contact and when, cross-check the data, and write the action.</div>
+      <div class="q">"Our reps won't trust AI messages."</div><div class="a">They approve or edit everything uncertain, and every recommendation shows why. Trust is measured (G2), not assumed.</div>
+      <div class="q">"Will it email our customers or spam accounts?"</div><div class="a">Closed-won and live opportunities are excluded, and cross-channel conflicts are caught before anything sends.</div>
+    </div></div>
+    <div class="card" style="padding:14px 18px"><div class="lbl" style="margin-bottom:8px">Proof to collect in the pilot</div><div class="obj">
+      <div class="q">G1 · Effort saved</div><div class="a">Share of next actions that went ahead without a person, and review time per item.</div>
+      <div class="q">G2 · First-time acceptance</div><div class="a">Share of recommendations accepted without edits.</div>
+      <div class="q">Outcomes</div><div class="a">Replies and meetings booked per signal type and segment, against the channel baseline.</div>
+    </div></div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="n">6</span>Roadmap</h2>
+  <p class="lead">From the project plan. Dates are the plan's; build start depends on the tech team's guidance period.</p>
+  <div class="card road">
+    <div><span class="badge b-pos now">Done</span><div class="ph">Phase 0</div><div class="tt">Mechanism locked</div><div class="dt">Sep 2026</div><ul><li>Prospect, Score and NBA flows locked</li><li>Contact-data provider research</li></ul></div>
+    <div><span class="badge b-ter now">Now</span><div class="ph">Phase 1</div><div class="tt">Mocks + client POC</div><div class="dt">Sep–Oct 2026</div><ul><li>POC on the client's files (rules only)</li><li>Production mocks: chat-first seller workspace, admin console</li><li>Tech handoff</li></ul></div>
+    <div><div class="ph">Phase 2</div><div class="tt">Build: all three blocks</div><div class="dt">8 weeks from 5 Oct (plan)</div><ul><li>Live providers and signals</li><li>CRM read, team-chat notifications</li><li>NBA delivery; NBC and sending</li></ul></div>
+    <div><div class="ph">Phase 3</div><div class="tt">Test and rectify</div><div class="dt">Weeks 9–10</div><ul><li>Test against real accounts</li><li>Revise thresholds from real outcomes</li><li>Monthly learning job live</li></ul></div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="n">7</span>Still to decide</h2>
+  <p class="lead">Open in the process documents. Decide these once, here, rather than in every meeting.</p>
+  <div class="card" style="padding:14px 18px"><ul class="open" style="margin:0;padding-left:18px">
+    <li><b>Who reviews</b> held records, unproven messages, medium-confidence items and campaign confirmations (the mock assumes: rep for their own items, manager for sensitive ones and campaigns, admin for data issues).</li>
+    <li><b>What happens if nobody responds</b>: a timeout or fallback for an unconfirmed campaign or an unreviewed message.</li>
+    <li><b>What "medium confidence" means</b> as a score range.</li>
+    <li><b>Whether reps approve every outbound message</b> or proven patterns send on their own.</li>
+    <li><b>Values still unset</b>: pattern decay threshold, explore share, tiers for 9 signal types, refresh cadence.</li>
+  </ul></div>
+</section>
+
+<div class="foot">DemandAI · reference sheet for discussion · every company shown in the mock is invented. <a class="noprint" href="#" onclick="window.print();return false">Print or save as PDF</a></div>
+</div>
+</body>
+</html>

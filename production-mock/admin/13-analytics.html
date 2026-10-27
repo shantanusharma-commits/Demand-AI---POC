@@ -1,0 +1,1062 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Analytics — DemandAI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --brand:#7D52A2;--brand-dk:#5E3A80;--brand-lt:#F0EBF8;--brand-mid:#C9B3E8;
+  --sec:#0094DA;--sec-lt:#E6F4FC;--sec-dk:#005E8E;
+  --ter:#FF8820;--ter-lt:#FFF0E0;--ter-dk:#B85800;
+  --pos:#2E7D5A;--pos-lt:#EAF5F0;
+  --warn:#C4751A;--warn-lt:#FDF6E8;
+  --neg:#B23F3F;--neg-lt:#FBECEC;
+  --rail:#130D1C;--rb:rgba(255,255,255,.07);
+  --r1:#fff;--r2:rgba(255,255,255,.76);--r3:rgba(255,255,255,.43);--r4:rgba(255,255,255,.21);
+  --rhov:rgba(255,255,255,.05);--ract:rgba(125,82,162,.22);
+  --bg:#F5F6F9;--surf:#fff;--border:#E5E9EE;--bdk:#D1D7DE;
+  --i1:#141A21;--i2:#4A5664;--i3:#9DA8B5;--i4:#C9D1DA;
+  --s50:#F4F6F8;--s75:#ECEFF3;--s100:#E1E6EC;--s200:#C9D1DA;--s300:#9DA8B5;
+  --fd:"Sora",system-ui,sans-serif;
+  --fb:"Plus Jakarta Sans",-apple-system,sans-serif;
+  --fm:"JetBrains Mono",monospace;
+  --rsm:8px;--rmd:12px;--rlg:16px;
+  --ease:cubic-bezier(.4,0,.2,1);--fast:120ms;--base:200ms;
+  --sh:0 2px 8px rgba(20,26,33,.07),0 1px 3px rgba(20,26,33,.05);
+  --sh-lg:0 8px 40px rgba(20,26,33,.14),0 2px 8px rgba(20,26,33,.08);
+  --nav-w:224px;--chat-w:400px;--hh:54px;--tabs-h:42px;
+}
+*,*::before,*::after{box-sizing:border-box;}
+html{font-size:16px;-webkit-font-smoothing:antialiased;}
+body{margin:0;font-family:var(--fb);font-size:14px;background:var(--bg);color:var(--i1);overflow:hidden;height:100vh;}
+button{font:inherit;cursor:pointer;border:none;background:none;color:inherit;padding:0;}
+input,textarea,select{font:inherit;}
+:root{color-scheme:light;}
+input,textarea,select{background-color:#fff;color:var(--i1);}
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-thumb{background:var(--s200);border-radius:2px;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.55;transform:scale(1.3);}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+@keyframes slideLeft{from{opacity:0;transform:translateX(24px);}to{opacity:1;transform:translateX(0);}}
+@keyframes slideDown{from{opacity:0;transform:translateY(-5px);}to{opacity:1;transform:translateY(0);}}
+@keyframes msgIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
+@keyframes barGrow{from{width:0}to{width:var(--bw)}}
+
+/* ─── SHELL ─────────────────────────────── */
+.shell{display:grid;grid-template-columns:var(--nav-w) 1fr;height:100vh;width:100vw;}
+
+/* ─── NAV ─────────────────────────────── */
+.nav{background:var(--rail);display:flex;flex-direction:column;height:100vh;overflow:hidden;border-right:1px solid var(--rb);}
+.nav-brand{display:flex;align-items:center;gap:9px;padding:13px 13px 11px;border-bottom:1px solid var(--rb);flex-shrink:0;}
+.nav-nm{font-family:var(--fd);font-size:14px;font-weight:600;color:var(--r1);letter-spacing:-.01em;}
+.nav-org{font-size:10px;color:var(--r3);margin-top:1px;}
+.nav-body{flex:1;overflow-y:auto;padding:6px 0;}
+.nav-body::-webkit-scrollbar{width:3px;}
+.nav-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.07);}
+.nav-sec{padding:8px 14px 3px;font-size:9px;letter-spacing:.09em;text-transform:uppercase;color:var(--r4);font-weight:600;}
+.nav-item{display:flex;text-decoration:none;align-items:center;gap:9px;height:32px;padding:0 10px;margin:1px 6px;border-radius:7px;color:var(--r3);font-size:12.5px;font-weight:500;cursor:pointer;position:relative;transition:background var(--fast) var(--ease),color var(--fast) var(--ease);}
+.nav-item:hover{background:var(--rhov);color:var(--r2);}
+.nav-item.active{background:var(--ract);color:var(--r1);}
+.nav-item.active::before{content:'';position:absolute;left:0;top:7px;bottom:7px;width:2.5px;background:var(--brand-mid);border-radius:0 2px 2px 0;}
+.nav-ic{width:15px;height:15px;flex-shrink:0;opacity:.7;}
+.nav-item.active .nav-ic{opacity:1;color:var(--brand-mid);}
+.nav-lbl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.nav-div{height:1px;background:var(--rb);margin:6px 10px;}
+.nav-foot{padding:10px;border-top:1px solid var(--rb);flex-shrink:0;}
+.nav-user{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:var(--rsm);cursor:pointer;transition:background var(--fast) var(--ease);}
+.nav-user:hover{background:var(--rhov);}
+.nav-av{width:28px;height:28px;border-radius:7px;background:linear-gradient(135deg,var(--brand),var(--brand-dk));color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;}
+.nav-un{font-size:12px;color:var(--r2);font-weight:500;}
+.nav-ur{font-size:10px;color:var(--r4);margin-top:1px;}
+
+/* ─── MAIN ─────────────────────────────── */
+.main{display:flex;flex-direction:column;height:100vh;overflow:hidden;min-width:0;}
+
+/* Topbar */
+.topbar{height:var(--hh);padding:0 20px;display:flex;align-items:center;justify-content:space-between;background:var(--surf);border-bottom:1px solid var(--border);flex-shrink:0;gap:10px;}
+.topbar-l{display:flex;align-items:center;gap:10px;flex:1;min-width:0;}
+.tb-title{font-family:var(--fd);font-size:15px;font-weight:600;color:var(--i1);}
+.tb-badge{display:inline-flex;align-items:center;gap:4px;font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 9px;border-radius:999px;}
+.badge-live{background:var(--pos-lt);color:var(--pos);}
+.badge-dot{width:5px;height:5px;border-radius:50%;background:currentColor;animation:pulse 1.6s ease-in-out infinite;}
+.badge-neutral{background:var(--s100);color:var(--i3);}
+.topbar-r{display:flex;align-items:center;gap:7px;flex-shrink:0;}
+.btn{display:inline-flex;align-items:center;gap:6px;font-family:var(--fb);font-size:12.5px;font-weight:600;height:30px;padding:0 12px;border-radius:var(--rsm);border:1px solid transparent;cursor:pointer;white-space:nowrap;transition:all var(--fast) var(--ease);}
+.btn-primary{background:var(--brand);color:#fff;}
+.btn-primary:hover{background:var(--brand-dk);}
+.btn-sec{background:var(--surf);border-color:var(--bdk);color:var(--i1);}
+.btn-sec:hover{background:var(--s75);}
+.btn-copilot{background:var(--brand-lt);border-color:var(--brand-mid);color:var(--brand-dk);}
+.btn-copilot:hover{background:var(--brand-mid);}
+.btn-copilot.active{background:var(--brand);color:#fff;border-color:var(--brand);}
+.btn-ghost{color:var(--i2);}
+.btn-ghost:hover{background:var(--s75);}
+.btn-sm{height:27px;font-size:11.5px;padding:0 10px;border-radius:6px;}
+
+/* Tabs */
+.ftabs{height:var(--tabs-h);padding:0 20px;display:flex;align-items:stretch;gap:0;border-bottom:1px solid var(--border);background:var(--surf);flex-shrink:0;}
+.ftab{display:flex;align-items:center;gap:6px;padding:0 16px;font-size:13px;font-weight:500;color:var(--i3);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;transition:color var(--fast) var(--ease);}
+.ftab:hover{color:var(--i2);}
+.ftab.active{color:var(--i1);border-bottom-color:var(--brand);}
+.ftab-cnt{font-family:var(--fm);font-size:10.5px;color:var(--i4);}
+.ftab.active .ftab-cnt{color:var(--brand);}
+
+/* Canvas */
+.canvas{flex:1;overflow-y:auto;padding:16px 20px 40px;}
+.canvas::-webkit-scrollbar{width:5px;}
+
+/* ─── STATS STRIP ─────────────────────── */
+.stats{display:grid;grid-template-columns:repeat(5,1fr);background:var(--surf);border:1px solid var(--border);border-radius:var(--rmd);overflow:hidden;margin-bottom:16px;}
+.stat{padding:13px 16px;border-right:1px solid var(--border);}
+.stat:last-child{border-right:none;}
+.stat-lbl{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--i3);font-weight:600;margin-bottom:4px;}
+.stat-val{font-family:var(--fd);font-size:24px;font-weight:700;letter-spacing:-.03em;line-height:1;margin-bottom:3px;}
+.stat-sub{font-size:11px;color:var(--i3);}
+.sv1{color:var(--brand);}
+.sv2{color:var(--sec);}
+.sv3{color:var(--ter-dk);}
+.sv4{color:var(--pos);}
+.sv5{color:var(--i1);}
+
+/* ─── MAIN LAYOUT: full-width list, detail as fixed right drawer ─── */
+.score-layout{display:block;}
+/* dim-overview handled inline */
+
+/* Detail drawer — slides in from the right over the content */
+.detail-drawer{
+  position:fixed;top:0;right:0;bottom:0;
+  width:360px;
+  background:var(--surf);
+  border-left:1px solid var(--border);
+  box-shadow:var(--sh-lg);
+  display:flex;flex-direction:column;
+  z-index:300;
+  transform:translateX(100%);
+  transition:transform var(--base) var(--ease);
+  overflow-y:auto;
+}
+.detail-drawer.open{transform:translateX(0);}
+.detail-drawer::-webkit-scrollbar{width:4px;}
+.drawer-hdr{
+  position:sticky;top:0;z-index:2;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 16px;
+  background:var(--surf);
+  border-bottom:1px solid var(--border);
+}
+.drawer-title{font-family:var(--fd);font-size:13px;font-weight:600;color:var(--i1);}
+.drawer-sub{font-size:10.5px;color:var(--i3);margin-top:1px;}
+.drawer-close{width:26px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:6px;color:var(--i3);cursor:pointer;flex-shrink:0;transition:all var(--fast);}
+.drawer-close:hover{background:var(--s75);color:var(--i1);}
+.drawer-body{padding:14px 16px 24px;flex:1;}
+
+/* Score list */
+.score-list{background:var(--surf);border:1px solid var(--border);border-radius:var(--rmd);overflow:hidden;}
+.sl-toolbar{display:flex;align-items:center;gap:8px;padding:9px 14px;border-bottom:1px solid var(--border);flex-wrap:wrap;}
+.sl-srch{display:flex;align-items:center;gap:6px;background:var(--s50);border:1px solid var(--border);border-radius:var(--rsm);padding:0 10px;height:29px;min-width:160px;flex:1;max-width:220px;transition:border-color var(--fast);}
+.sl-srch:focus-within{border-color:var(--brand-mid);}
+.sl-srch input{border:none;background:transparent;font-size:12.5px;color:var(--i1);outline:none;width:100%;}
+.sl-srch input::placeholder{color:var(--i3);}
+.sl-seg-filter{display:flex;gap:4px;margin-left:auto;}
+.seg-pill{display:inline-flex;align-items:center;font-size:11px;font-weight:600;padding:3px 10px;border-radius:999px;cursor:pointer;border:1px solid var(--border);color:var(--i3);background:var(--surf);white-space:nowrap;transition:all var(--fast);}
+.seg-pill:hover{border-color:var(--brand-mid);color:var(--brand);}
+.seg-pill.active{background:var(--brand);border-color:var(--brand);color:#fff;}
+
+.sl-head{display:grid;grid-template-columns:minmax(160px,2.5fr) 72px 72px 72px 110px 180px;padding:0 14px;height:32px;background:var(--s50);border-bottom:1px solid var(--border);align-items:center;gap:6px;}
+.sl-th{font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--i3);font-weight:600;white-space:nowrap;}
+
+.sl-row{display:grid;grid-template-columns:minmax(160px,2.5fr) 72px 72px 72px 110px 180px;padding:6px 14px;min-height:60px;border-bottom:1px solid var(--border);align-items:center;gap:6px;cursor:pointer;transition:background var(--fast);}
+.sl-row:last-child{border-bottom:none;}
+.sl-row:hover{background:var(--s50);}
+.sl-row.selected{background:var(--brand-lt);}
+
+.co-cell{display:flex;align-items:center;gap:9px;min-width:0;}
+.co-av{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-family:var(--fd);font-size:10px;font-weight:700;color:#fff;flex-shrink:0;}
+.co-nm{font-size:12.5px;font-weight:600;color:var(--i1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.co-ind{font-size:10.5px;color:var(--i3);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+/* Score badges */
+.sc{display:inline-flex;align-items:center;justify-content:center;min-width:34px;height:20px;padding:0 5px;border-radius:4px;font-family:var(--fm);font-size:11px;font-weight:700;}
+.sc-h{background:var(--pos-lt);color:var(--pos);}
+.sc-m{background:var(--warn-lt);color:var(--warn);}
+.sc-l{background:var(--neg-lt);color:var(--neg);}
+
+/* Composite bar */
+.comp-bar{display:flex;align-items:center;gap:5px;}
+.comp-track{flex:1;height:4px;background:var(--s100);border-radius:2px;overflow:hidden;}
+.comp-fill{height:4px;border-radius:2px;animation:barGrow .5s var(--ease) forwards;}
+.comp-val{font-family:var(--fm);font-size:11px;color:var(--i2);min-width:20px;text-align:right;flex-shrink:0;}
+
+/* Delta */
+.delta{font-family:var(--fm);font-size:10.5px;font-weight:600;padding:1px 5px;border-radius:3px;white-space:nowrap;}
+.delta-up{background:var(--pos-lt);color:var(--pos);}
+.delta-dn{background:var(--neg-lt);color:var(--neg);}
+.delta-flat{background:var(--s100);color:var(--i3);}
+
+/* ─── PANEL (used in tabs) ─────────── */
+.panel{background:var(--surf);border:1px solid var(--border);border-radius:var(--rmd);overflow:hidden;}
+.panel-hdr{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border-bottom:1px solid var(--border);}
+.panel-ttl{font-size:11px;font-weight:600;color:var(--i2);letter-spacing:.04em;text-transform:uppercase;}
+.panel-body{padding:12px 14px;}
+
+/* Score breakdown in detail */
+.dim-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--s75);}
+.dim-row:last-child{border-bottom:none;}
+.dim-lbl{font-size:11.5px;color:var(--i2);width:74px;flex-shrink:0;}
+.dim-track{flex:1;height:5px;background:var(--s100);border-radius:3px;overflow:hidden;}
+.dim-fill{height:5px;border-radius:3px;transition:width .5s var(--ease);}
+.dim-val{font-family:var(--fm);font-size:12px;font-weight:700;min-width:26px;text-align:right;flex-shrink:0;}
+
+/* Signal log */
+.sig-row{display:flex;align-items:flex-start;gap:8px;padding:7px 0;border-bottom:1px solid var(--s75);}
+.sig-row:last-child{border-bottom:none;}
+.sig-ic{width:24px;height:24px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0;margin-top:1px;}
+.sig-lbl{font-size:11.5px;color:var(--i1);font-weight:500;line-height:1.4;}
+.sig-meta{font-size:10px;color:var(--i3);margin-top:2px;}
+.sig-impact{margin-left:auto;font-family:var(--fm);font-size:11px;font-weight:700;flex-shrink:0;}
+.sig-up{color:var(--pos);}
+.sig-dn{color:var(--neg);}
+
+/* Sparkline */
+.spark{display:flex;align-items:flex-end;gap:2px;height:28px;}
+.spark-bar{flex:1;border-radius:2px 2px 0 0;min-width:3px;}
+
+/* Lookalikes */
+.like-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--s75);cursor:pointer;}
+.like-row:last-child{border-bottom:none;}
+.like-row:hover .like-nm{color:var(--brand);}
+.like-av{width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:var(--fd);font-size:9.5px;font-weight:700;color:#fff;flex-shrink:0;}
+.like-nm{font-size:12px;font-weight:600;color:var(--i1);transition:color var(--fast);}
+.like-meta{font-size:10.5px;color:var(--i3);margin-top:1px;}
+.like-match{margin-left:auto;font-family:var(--fm);font-size:11px;font-weight:700;color:var(--brand);flex-shrink:0;}
+
+/* Empty detail state */
+.detail-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px 16px;gap:8px;text-align:center;}
+
+/* ─── DIMENSION OVERVIEW (below list on Scores tab) */
+/* dim-overview now defined in score-layout block above */
+/* dov-num used by the inline dimension strip */
+.dov-num{font-family:var(--fd);font-weight:700;letter-spacing:-.03em;line-height:1;}
+.dov-dist{display:flex;gap:2px;height:5px;border-radius:3px;overflow:hidden;}
+.dov-seg{height:100%;}
+
+/* ─── SEGMENT MAP TAB ─── */
+.seg-map-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border);}
+.seg-map-ttl{font-family:var(--fd);font-size:13px;font-weight:600;color:var(--i1);}
+.seg-grid{display:grid;grid-template-columns:repeat(4,1fr);}
+.seg-cell{padding:14px 16px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);cursor:pointer;transition:background var(--fast);}
+.seg-cell:hover{background:var(--s50);}
+.seg-cell:nth-child(4n){border-right:none;}
+.seg-cell:nth-last-child(-n+4){border-bottom:none;}
+.seg-nm{font-size:12.5px;font-weight:600;color:var(--i1);margin-bottom:3px;}
+.seg-desc{font-size:10.5px;color:var(--i3);margin-bottom:8px;line-height:1.5;}
+.seg-count{font-family:var(--fd);font-size:20px;font-weight:700;letter-spacing:-.03em;line-height:1;margin-bottom:2px;}
+.seg-sub{font-size:10.5px;color:var(--i3);}
+.seg-bar-wrap{height:3px;background:var(--s100);border-radius:2px;margin-top:8px;overflow:hidden;}
+.seg-bar-fill{height:3px;border-radius:2px;}
+
+/* ─── HISTORY TAB ─── */
+.hist-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--s75);}
+.hist-row:last-child{border-bottom:none;}
+.hist-dir{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+
+/* ─── THRESHOLD TAB ─── */
+.thresh-body{padding:18px 20px;display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+.thresh-dim{display:flex;flex-direction:column;gap:10px;}
+.thresh-dim-ttl{font-size:10.5px;font-weight:600;color:var(--i2);letter-spacing:.05em;text-transform:uppercase;margin-bottom:2px;padding-bottom:6px;border-bottom:1px solid var(--border);}
+.thresh-row{display:flex;align-items:center;gap:10px;}
+.thresh-lbl{font-size:11.5px;color:var(--i2);min-width:90px;}
+.thresh-slider{flex:1;accent-color:var(--brand);cursor:pointer;height:4px;}
+.thresh-val{font-family:var(--fm);font-size:12px;font-weight:600;color:var(--i1);min-width:26px;text-align:right;}
+.thresh-footer{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-top:1px solid var(--border);background:var(--s50);}
+.thresh-hint{font-size:12px;color:var(--i3);}
+.thresh-hint strong{color:var(--warn);font-weight:600;}
+
+/* ─── CHAT PANEL ─────────────────────── */
+.chat-panel{position:fixed;top:0;right:0;bottom:0;width:var(--chat-w);background:var(--surf);border-left:1px solid var(--border);box-shadow:var(--sh-lg);display:flex;flex-direction:column;z-index:400;transform:translateX(100%);transition:transform var(--base) var(--ease);}
+.chat-panel.open{transform:translateX(0);}
+.chat-panel.expanded{position:fixed;inset:0;width:100vw;height:100vh;border-left:none;z-index:450;}
+.chat-panel.expanded .hist-section{display:none;}
+.chat-panel.expanded .chat-msgs,.chat-panel.expanded .sugg-wrap,.chat-panel.expanded .composer-wrap{padding-left:24px;padding-right:24px;}
+
+.chat-top{height:var(--hh);padding:0 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);flex-shrink:0;gap:8px;}
+.chat-top-l{display:flex;align-items:center;gap:9px;min-width:0;flex:1;}
+.chat-ttl{font-size:13px;font-weight:600;color:var(--i1);}
+.chat-scope{font-size:10.5px;color:var(--i3);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.chat-top-acts{display:flex;align-items:center;gap:2px;flex-shrink:0;}
+.ct-ic{width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:6px;color:var(--i3);cursor:pointer;transition:all var(--fast);}
+.ct-ic:hover{background:var(--s75);color:var(--i1);}
+.ct-ic.active{background:var(--brand-lt);color:var(--brand);}
+
+.hist-section{border-bottom:1px solid var(--border);flex-shrink:0;overflow:hidden;max-height:220px;transition:max-height var(--base) var(--ease);}
+.hist-section.collapsed{max-height:0;border-bottom:none;}
+.hist-hdr{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;cursor:pointer;user-select:none;}
+.hist-lbl{font-size:10.5px;font-weight:600;color:var(--i2);letter-spacing:.03em;}
+.hist-chev{color:var(--i3);transition:transform var(--fast);}
+.hist-section.collapsed .hist-chev{transform:rotate(-90deg);}
+.hist-list{padding:0 10px 8px;overflow-y:auto;max-height:160px;}
+.hist-list::-webkit-scrollbar{width:3px;}
+.hist-item{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:7px;cursor:pointer;transition:background var(--fast);}
+.hist-item:hover{background:var(--s50);}
+.hist-item.active{background:var(--brand-lt);}
+.hist-item-nm{flex:1;font-size:12px;font-weight:500;color:var(--i2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.hist-item.active .hist-item-nm{color:var(--brand-dk);}
+
+.chat-msgs{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;}
+.chat-msgs::-webkit-scrollbar{width:4px;}
+.msg{animation:msgIn var(--base) var(--ease);}
+.msg-a{display:flex;align-items:flex-start;gap:8px;}
+.msg-ic{width:24px;height:24px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;}
+.msg-bub{background:var(--s50);border:1px solid var(--border);border-radius:var(--rmd);padding:10px 12px;font-size:12.5px;color:var(--i1);line-height:1.6;max-width:calc(100% - 32px);}
+.msg-bub strong{font-weight:600;}
+.msg-bub em{font-style:normal;color:var(--i2);background:var(--s100);padding:1px 5px;border-radius:3px;font-size:12px;}
+.msg-u{display:flex;justify-content:flex-end;}
+.msg-ub{background:var(--brand);color:#fff;border-radius:var(--rmd);padding:10px 12px;font-size:12.5px;line-height:1.6;max-width:86%;}
+.msg-time{font-size:9.5px;color:var(--i4);margin-top:3px;padding:0 2px;}
+
+/* Chat action chips */
+.chat-acts{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;}
+.ca{display:inline-flex;align-items:center;gap:4px;padding:5px 10px;border-radius:16px;font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid;transition:all var(--fast);}
+.ca-pri{background:var(--brand);border-color:var(--brand);color:#fff;}
+.ca-pri:hover{background:var(--brand-dk);}
+.ca-sec{background:var(--surf);border-color:var(--bdk);color:var(--i1);}
+.ca-sec:hover{background:var(--s75);}
+.ca-ghost{background:transparent;border-color:var(--border);color:var(--i2);}
+.ca-ghost:hover{border-color:var(--bdk);color:var(--i1);}
+
+/* Suggestions */
+.sugg-wrap{padding:4px 14px 8px;}
+.sugg-lbl{font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--i3);font-weight:600;margin-bottom:6px;}
+.sugg{display:flex;align-items:center;gap:7px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--rsm);font-size:12px;color:var(--i2);cursor:pointer;background:var(--surf);margin-bottom:3px;transition:all var(--fast);}
+.sugg:hover{border-color:var(--brand-mid);background:var(--brand-lt);color:var(--brand-dk);}
+.sugg svg{color:var(--brand);flex-shrink:0;}
+
+/* Typing */
+.typing-bub{display:inline-flex;align-items:center;gap:4px;padding:12px 14px;background:var(--s50);border:1px solid var(--border);border-radius:var(--rmd);}
+.typing-bub span{width:6px;height:6px;border-radius:50%;background:var(--s300);}
+.typing-bub span:nth-child(1){animation:pulse .9s ease-in-out infinite;}
+.typing-bub span:nth-child(2){animation:pulse .9s ease-in-out .18s infinite;}
+.typing-bub span:nth-child(3){animation:pulse .9s ease-in-out .36s infinite;}
+
+/* Composer */
+.composer-wrap{border-top:1px solid var(--border);padding:10px 13px 13px;background:var(--bg);flex-shrink:0;}
+.composer{display:flex;align-items:flex-end;gap:7px;background:var(--surf);border:1.5px solid var(--border);border-radius:12px;padding:8px 9px;transition:border-color var(--fast);}
+.composer:focus-within{border-color:var(--brand-mid);}
+.cta{flex:1;border:none;background:transparent;font-size:13px;color:var(--i1);outline:none;resize:none;min-height:20px;max-height:90px;line-height:1.5;}
+.cta::placeholder{color:var(--i3);}
+.composer-btns{display:flex;align-items:center;gap:5px;}
+.att-btn{width:28px;height:28px;border-radius:7px;color:var(--i3);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all var(--fast);}
+.att-btn:hover{background:var(--s75);color:var(--i1);}
+.send-btn{width:32px;height:32px;border-radius:9px;background:var(--brand);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:background var(--fast),transform var(--fast);}
+.send-btn:hover{background:var(--brand-dk);transform:scale(1.04);}
+.send-btn.off{background:var(--s200);cursor:default;transform:none;}
+.composer-hint{font-size:10px;color:var(--i4);margin-top:5px;text-align:center;}
+
+/* Dropdown */
+.dd{position:relative;display:inline-block;}
+.ddm{position:absolute;top:calc(100% + 5px);right:0;min-width:200px;background:var(--surf);border:1px solid var(--border);border-radius:var(--rmd);box-shadow:var(--sh-lg);z-index:200;overflow:hidden;display:none;}
+.ddm.open{display:block;animation:slideDown 100ms var(--ease);}
+.ddi{display:flex;align-items:center;gap:9px;padding:9px 14px;font-size:13px;color:var(--i1);cursor:pointer;transition:background var(--fast);}
+.ddi:hover{background:var(--s50);}
+.ddi svg{color:var(--i3);flex-shrink:0;}
+.dd-sep{height:1px;background:var(--border);margin:3px 0;}
+
+/* Toast */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--i1);color:#fff;font-size:12.5px;font-weight:500;padding:9px 18px;border-radius:999px;z-index:900;pointer-events:none;animation:fadeUp .2s var(--ease);}
+
+</style>
+</head>
+<body>
+<div class="shell">
+<nav class="nav">
+  <div class="nav-brand">
+    <div style="width:26px;height:26px;flex-shrink:0">
+      <svg width="26" height="26" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+        <image href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAKAAAACgCAYAAACLz2ctAAAbsUlEQVR4nO2deZRdxX3nP1X33rf2pla3Wi20IQkJJIERkgWYxQIxbA62YQwYYxiYM2cwk2QyniQkjj3Jycn4eMk4M8nYMZ5JODEOA44NXghg1pjNoIAAgSTAkkC7WmqpF/Xb371V80fd+7olI6F+/Va9+zlHPPT0lnp1v/f3q1/Vr34FISEhISEhISEhrYbQWut6NyKkdZH1bkBIaxMKMKSuhAIMqSuhAEPqSijAkLoSCjCkroQCDKkroQBD6koowJC6EgowpK7Y9W5AJdCA1uaRYGVRiGO8eMLKoxAI/6XHeHVIlWnKtWClQaPRGiwhjqm1yaA1eFojhEBybP2GVJamEaDSoLVGfoDgxgqKHYeLbB8rMjjmsiPlMpDzyBQ1RVeZFwlBxBK0RQT9MYu57Q69bTYLOhxmt9skHXnC3xdSORpagBojBAHICSLYk3JZP5DluT1ZXt+f493DRQYzHgVXmzfA8X1q8IstQdwW9CZslnU5rOiLcdEpcVbOjNMbt0ov93Tp5SEVpiEFqAGlNNYE1b03UuDR99L88/spXtmfYyjnmRdKAbYAKY6wVmLCZwUc/ZzW2ujV0+N/JMxM2pw/M8Y1C9q44tQks9qc0md4gVWsyi9vPRpKgEcLr+BpHn0vxb2bRnlqd4axrAe2BEciLTNW01ofGYRMkvEgxIhXAcpTUDDWtCdpcfXcJLcu72TtvGTpfZ4OLWIlaBgBTrygqaLivo2jfPfNETYM5s1kUdQywvStVjUbLQDp3wSepyGvAM2F/TF+Z8U0PnN6J5YYF70MhVg2dRegGedpLCHwNPzDm8P85atDvDtUhKhEOhKBsYz1aGggRgXovAeuZnVflD9e3cO1S9oB8BRIGU7llENdBTjR6j2zI82Xnx/k5YGssXa2HB+jNQjS99eq4EFRc9W8JF+9uJcVfTHAxD+hNZwcdROgqzS2FIzkPL783AH+duMoSIEVs9CqsYR3NCUh5jxiAu5a2c2XP9ZDxBJ4RwVPIcen5gIMAgYp4Jc70tz55ADvjBYQCQfRYBbvw7CkwNMa0i7n98f53hX9nNkbDV3yJKipACe6qG+uO8iXXzyIa0vsiMT1mkh5ExCAZQncnEenFPzNpX3curwT5a+qhCI8PjUTYCC+rKv5T4/v4x82jSLabBNgNKf2jsCSxv2SdvmT1d18dU0fEI4LP4yaCDAINg5mPT7zk908uzeL3WbjefWJbKuFECCFwBsrcuOSDr7/W7OIWiIU4XGougAD8Q2kXa7+0S5eHypgJ6ymdbkngm0J3LEiV85L8uNrZ5N0ZCjCY1BVAQadPpByufJHu9gwUsCOn9ziC3AsQTHlctmcBD+7bjZxR4IOs2yOpmoJqcrv7KGcxycebC3xARQ9jdNm89SuDDf8fA+u0ihOriFHJaiKAINO9pTmhp/v4bVD+ZYSX0Agwke2pfjC4/uwhECdDBFXBamKAD2lkQJ+98kBnt6Rxk7YLSe+gKKnsTsc7nlrlK+/fAhLCtxQhCUqLkDPX+G4+/Vh7t4wjN3mtKz4AjxPY7U7fOn5QX7xXgo7mMAOqWwQEgQdr+/PccH/20EhKqueudIsSAFaaWZagldvmU9/0gkzaaigBdT+n5yr+Q9P7CMrQSNC8fkoDdKS7Mt63PnkfoQgDEmooACV0lgCvr7uIK8N5LCjFip0M0fgKY2dsPn5ljHu3ThaSkFrZSriggPXu2kwz6r7tlOMhK73WEgB2tP02YIN/+5UeuJ2KSu7FaloEPJHzw+SU4AIXe+xUBqkLRlIe/z3lw4hBagW7q0pC9Dzrd/j76d45P0UVtwyi/Ihx0QpjUxY/N+NI7x9MI8U4qRIyCiHKQtQYHaK/cW6Q2bRt0U7cjJoQAhBztV87V8P+SlbrdlxUxKgp4z1e3J7mhf3ZJFRK5zfOkGU0oi4xY+2jLH5UOtawSkJMBg4/+/Xh0EKRAt2YLmYOUBjBb/z+oj/XOt1YNkCDCLftwbzPLkzg4jKcNplkiilEVHJP20Z40DGw2rB4K1sAQazNz/YPErR1S3ZeVNFYyanD6ZcHvr1YYCWC+DKEqDGpKBnXMVD21IQCa1f2WiNsAU//PWY6dcWmxAsS4DBTfrSnizbRgoIW7bkALoSKA06Inl5f44tQwVTHqSF+rI8F+xbu0feS0FYI2VKBN4kl1c8uSMN0FLepCwBmv2w8Ms9WbBFS3VY1ZCiJEDZQm540gIM3MPW4QKbhwpgS0L9TQ2tNDiCVw7kGcl7+DWYWoJJCzCYq3p9f458QSFlGP1OFQVgCfZmXN4+VABaZ11k8gL0e2b9gVx5HxDygdhCgKt5fTAPtM44cNL6CaYJNh3KgyVaxlXUis3+jd0qo8BJCdAsopvKVlvHXCPAlnEW1UWbkv9sGi0CrROITO6cEA34JTaGMx7I5rGAQck07f+GRkMK0LZgOOOanXRyvEB7qY+DR+GXFT4JRDopAQbXbm/aZbjogdUcI0AhwMt65koKGnKEr/wqTe8Ma4YU9FnjlbWOpzPlp54LAaIJdzhNWoAAIzkPzwNpN/6svRCg84rPntbGpxa34zTqrLl/d7t5jwf//AmsvIuwJEIKYgmHREeUZGec7hltdPe3093fQVdPAnmUEVCebioxlnVUV7aox2tvNLAPtqTAy3l8bnE7931iVr2bc2IUXP50434ymTy2bTZ2aeWfBqA0Go1lW8QSDl29SWae2s38pX2cuqyP/gXdyAk3mPI0Qjb2QTuTHAMa0aWLypj9KjWqUggAV/HRmaaGc9ZVRCxJI/pgv2tJZ12chEPCEkZMpTHruEtWWqM8zcG9YwxsH2b9U1uIxhx653SyZOVszrxwPnNPn1ESoxFiY44Zy7KADWz0jkBpjYha/N1bo9y+vIvOqPTLxTXehdCYiqq4Cs/1zNjuiPHqkZ0uBESiNtG4YxIYPMXgrlF2bznEcw9u5JTFPaxcu4iz1ywg2eEXUW9Ai9gcUUSZKA3CkWwaLnDNg7s4mPWw/GmkRsUteqVx3IehtUZ5Cs9VaA2RuEPn9ASxtgh7tx7iwb9+gb+64yEevecVRg+mkZZ/GE8D/f6yBNhMqlVKY8Usnh/IsfaBHbw3XMBuxAJBfnMKeRfP9Yw1nGQTtdJGjEoTTTh09iTJZ4s8dd8b/NWdP+Hx768nly6Y5VOtaYQziianJf+2TERMCfj6N//EMBUJLN4cLbLmgR28sDvTmCIECtkinqumPF4LxGjZks6eBMpVPH7ver71hYdY/9RWU0BdCFSdSzOUZcziEUnprKomwfU0VtRil6u5/Me7eGDzaKlKVSP8iqANmbE8blFVbBpFa4ygLUFnT5LM4Tz3fe0Z7vlvTzA0MIa06luzcFICDLpkWlRiTZipbxY8pZG2IOtIbnpkH19/6aAJSHQD3Ev+948ezFRHEL4QbceisyfJ2+t28r9++6e89vRWcy6epi4uuSwBzkradPs1j5sNpfxq9m02X3p+kDsf3wfQMKnwo4MpUyumSp+vtXHNbdPiKKX5wVef4Sff/lXpXBNd406Y5BjQPEyPW0xLmmWQRgrpTxStzRjJ7nC4+80RbvjpbvKuqepaNxH6/Th8IIWoQY6l5yosS9LVm+S5BzfyvbseJX04h5C1dcmTtoBagy0Fp7U54OqGnNw8ETRmXGi3O/x4W4pPP7iLVEHVLRs5OB52cM9hLFvWpBGBNZzW18a2N/fx7f/yMEP7xszpoDUKTiYdhASlN5b1RIwFrHiTaovraew2m1/synDDz4wlDIpt1opAa9l0gZHBFE7EqulN4BY82rsTDA2M8e0vPszA9uGaBSeTFmBg8Fb1xcA/YbzZcf1q9o+9n+b3/2V/7a2g/2WH9oySGs5i2VZtAwIBXsEj0R4lk8pz912PcGDniLGEVRbh5AXo27wVfTHiUWnKS1S8WbXH9TSyzebujaO8cyhf0/FgoLU9Ww9RyHtHJBTUDAFeURFPRsili/yfLz3GyGDKTFpXsSMmLcBgempBZ4Rl0yLgqqYMRI4mcLsekC7UeBDo99/7mw/4qxS1/fqJ7fCKinhbhMNDGf7+K4+TSxfMokOVGlXWRLTrnwNyyewEFPVJkT5uCYEuKFbPiHJmXxStdW0q2GsTgLgFj51v7ycSs2s+FXIEvgiTnXH2bhvi/m8+60/PVOfryhJgEPlevSAJkqYvtB3ozPI0f3nxDCJSoGo0sAgsy+6tBzm4dwwnatd/jVaAV/To7Emw4dn3eOIHr5mgpAoXurxkBP/anNefYEl3BO2qpj7vQloCL13kK+dN5+I5CTy/4n8tCLS2+aWdeEWvNB3TCLhFRVdvkifuXc/WN/ZWJTIuzwJilrVituDfLmyHgmpaN2xJgZf1uHRukj/9WA+e1jUVgbSM+9300g6iCafuyQEfRCTu8E/feo5culDxJPiyM6sCN/z5pR1EHXNaeLNJMDgyoceR3HPlTKQQiAmZx9UmsCZbXt/D/h3DRGJO/d3vUSilicYdDu49zKP3vGLGgxVsY9kCDKYpzpge5cp5SXReNZT7OBGEEKisx7fWzGBeZ6RU87pm3+8/vvTIO4gG3SoAZtmuozvBSw+/zfYgUq+QK55SbmnQhP+8YhrNVuE4cL1XLUhy6/JOM+6rYaatViY9fte7g7z7yi4S7dGGdL8lBAhb8sjfratolD6lLrd8K3jJ3CRrZidQOa8h91scjVnT1sQswTcvnmGeq3G7g0v4zANvmMn8Bu835WmS7VG2bdjHhuffN0kLFbhhpnzPB+U6/uy86YgmSRCU0rje25Z2sLw3WjrfuFYoZQKdrRv28taLO0h2xlBe4y9qBuPBZ+5/wyS5VsBjTPkjjBXUrJmb5NpFbXhZt1QGoxERmI5MRiR/sKq7dGhMzfCNhucqHv7eOmzHatSh32+glSaWjLB7y0E2/WpHRVL6KzTqMflrX7uol6QlzfimMh9ccaQU6LzHZ05rZ+G0SOm4iVoRWL9nfriBne8MEm+LNNQutQ9DK40TtXnhZ5vQWk/ZClZEgNLf6re4O8qXz+1GZTysBi2BYQQnuOOsrpobHq000jKBx5P/+Bod3Qk8t/Fd70SUbwW3b9rPrncGp5xFXbG4T/obfP7go9M5b1YMN+c1nCuWAnTBY+WMGKv740DtCqwHU2e5TIH7v/FLLEs2bRKHFALPU7z65BZgaiOIignQ7GMQOJbg76/op02AVo11Dq7wq5Bet6jNjF1r6PqMuxL89DsvMbBjhFiyuVzvRJRSxBIR3n5lF7lMobSpqRwqOvMlhcmYXtoT5Ttr+1CZYsNMywTBh+MIk0RB7YKPYNz3xr9sY91j79LZ03yudyJagxO1GRoYY9sGs6mr3JLCFZ96tYTZ8H3r8i5+75xpuGNF7AYYDwoB2tWc0R1h6fRo6bmqo43QCzmXx+9dT7yJLd8H8c4ru6f0/qrM/VvSrA1/69I+Pr2oHTfl1l2EUggoKi7sj5sN6TWK1LU2Owf3bDPpVpG4U998vwqhtSYSc3h/4wCeW/4ybFUEKDAXXArBfb81i4v6Y7gZr64i1H7DLjwlUdsv9n9yZ3cCJ2qZCef6O4Qpo5XGiVgc2neYwd2jpecmS9VWP4O0nURE8tB1c1g5PYKbqY8lDNLHIo5gWW/gfmvTDiFMDl13fwdrrj+L0cE0tm3V5LurjWVJ8tkiu349CJSXplXV5fcgY6YnbvHo9XO4YEYMN117EQoBKE1/0mFRpzP+XI0Iskcuv+Uczr/mDIb2j5kVkCYnWEXau/VQ2Z9R9fyPQIQzEjaP3TCXT85L4o65WFbt8u4EgKs5tcMm4cjxoqM1JJiw/ewffpxzr1rC0MAYltNMhe4+AK2xbYuBHcNAeXWpa9IDgQjbI5KHrpvNF87qxDtcRAtqMlkt/MIvp3dFgDodCi0AP5nzprvWsOb6MxkeSPlFI5tzUKg1WI5k9GAat+gZrzLJrq3ZLRhs9pZC8N0r+vnuZX3ECgqvYIKTql8CDf3tTrW/5bgIYSbrtdJ8+rc/xjV3rObwoYzZgddgq0YngtYay5akRnKkRrLmuUkqsKY+QPhlnzyt+cI53Tx7w1xWdDq4qSJaiKpZw6BLFrSbkth1vdSCUi7d2ptWcPOfXEo+W6RY8LCs5qs4JqWkkCuSGjFHjDWsBQwQjE9Wr54V54Wb53PXym6cnIeXM0kMldah8r/4lDa/JnsDuDyzzVGxcu0i7vjG1dgRi0wqb8aFTSRCUyBdk02Vd8pn3UbBthQoDQlH8o1L+nj+s3NZOyuOlyqiirqiQtRagy1IRhsr8pSWRHmaBWfO5Hf/+pP0zu5kbDiLFWmi4MSfZipki2W9va6/NFjD9rTm3FlxnrpxLg9cPYsVXQ5eykUVTNatJcsfIwoAv6RcwhHjzzUIwYbvnlkd/M7/vIZFZ89idDBt3HGToJUmn/MF2Ogu+GgCl+wfecaNSzt5+fPz+ccr+/lYbxSd9fCyrom4pChPjBqSUtDeoNMe0hKlbOP/+LUrOXvNQlIj2d84hquhaYRsmKkghb9ioTURS3Dz8k5evHk+T103h1uWdNBtgZd28bKeybj2gxZLiNJ7j0dUCqJW41nAAOEfnSAtyS1fuZR5y/pKRyqczJR1UlI1sYRJ71dKY0nB2vlJ1s5Psjfl8sT2FA9vS/OrgSwDaRdPYTJKLWEULM37g0umMXeYUpq4JYhgBsz1mIg+IQS4BRcnanP2xxewbcM+4m2Rxihe/SGUW9W/4QQIvlv2f1Cw52VWm81ty7u4bXkXh7Ie6/fnWLc3y7oDObYMFdiZ9cjlPPN6Pf5BHoDSjMVs2pJ245j8YyCjNl5RmVId9a6UdUJohCWIJvw51knqsCEFOJFg2VhrSpXcp8ctLp+f5PL5JrE04yr2p112H3bZNlZkOOtxOOsxVPAoeJqMB93K45c/3EC0BgXAy0UIQSHv8va6nezecpBEW7ThcwfN2FwSi5c3yd/wAgwQYvyQQa39uT1fkAlbcmpnhFM7I1x0jPfrdJ4vXf8EuWzRLwJeq5ZPnkjMbgrxgb/RypbE2/0so0m+v2kEOBEhwAr+B7+6qQ4e9RGvQ5sIRccc+uZP49DesfoXgfwQlNZNIT4hwPM0sYRD+7T4+JOToCkFeDT+Or//F/Eb/6i1RliS9mlx9r03hO3IprjAjY/Acz2m9bWR8I+EnewiU6OPyStCYO16T+nE86Z+EGCIQUhTSbV7RlvpBM7J0hICDEYm/Qu6zZlodW7NyYPAcxUzT+0GKKuOdEsIMDB4sxZOx4429viv2RACZp/W4/9l8u9vEQGanpkxp5OungRuwQvdcAVQrke8Lcopi6YD5SUZtYQAEWYcGIk5zFncSyFfrNh5vK2KkIJC3mPGvC66+9pL+58nS2sIkPEdW4tXzka5zXnKZyMh/UnzRR+ZZY5sK3NY0zICDMqILT5nFonOKG6xeUtjNAJKa2xHsvTcOUD5Ob6tI0B/V1rXjDbmL+0jnynU50y2kwAhBYVckZnzpjF7cW/puXJoGQHCuBs++5KF/i6uUIDlIKUgn3FZfuF8LFtOqbxwSwkwuEuXnTeX6f0dFHJuOBYsA881BxquvHQRUL71g1YToL+BJpaMsOLShWRThebKOm4ApCXJjOU5ffUcps/qKCUHl/15FWxbUxAEI+d/4nQSHdGmrtNXF/wMpIuuXVaRj2s9Afq7uKb1tbPyskWkR3MmPSvkQ5GWJD2W5/SPzmb+0r7SYTtT+swKta2pCCp3XXL9WcTb/SmZcCz44fhR3GU3r6jYR7aoAE3mRteMNi6+dhmpkWxTbYOsB5YtGRvJsuKShcw7Y4Y53akCq0kt2+vSF+HHrz+Lvrld5LPh8tyxEALcokeiLcrVt69C68oVl2hZAeJXcorGHT5153ktsQWyXKQlSQ1nueK2lXTNaPPLDlemr1pXgPhFgpTmjHPnct4nTmf0YDoMSI7Cskz1q9NXz+GCTy4tVfyvFC3f28ES3SfvOI8Zc7uMJQyX6ADTN8WiRyzpcP0XL0IIUfGJ+1CAfofGkhFu/uNLUJ5GeWG2DBgPkTmc48bfv5jume1VOVa25QUI4/X65izp5fovXsjYUAYpW7trbMdi+ECKK29bxfIL5qO88o9iOB6t3csTCOr1rbp8MZffupKhA6mTopB4OQTiW33lYi6/5RyUp6u2ZBkKcAKmXp/iqttXccGnljI0cHJUs58MtmMxMphi6XlzuekPP242nldxdiAU4FFIafYM3/DFi1h95eKWEmEgviUrZ3Pbn11mhiF+WeVqIXQ5mzlPcrRfakFIwQ//x3O89M9vM62vDeWpsg5jaQZsRzJ8IM0Z587h9j+/HCdiVXS+71iEAjwGplfMBXj4ey/z9AMb6JyeNCldJ9G2TiEEQsLIgTSrLj+Nz/3RGqQlayI+CAV4fPyKXFIKXvz5Zn76t7/CidhE485JkcZlWRK36JE+nOPffP4crrp9lb9xvzbig1CAJ4SJAgVb39jL/d98ltHBFO3dCVPsshm7T4Dtn+8RiTt85vcu4Ow1C82G/SpMNh+3KaEAT4xAhKnhLD/+mxfY8Oz7JDtiOFGrqayhZUk8VzE2kmXR2f3c8F8vpnd2Z+n31ZpQgJNg4jrov/7iXR6751UOD2VomxY3ia5T2JxTbYy4BKmRLNG4w2WfO5tLbvwIQN3EB6EAJ83ECPnwUIbHv7+eV5/cgvI0iY5owwkxEF52LI/nKc68cD5X//uP0ju784hAq16EAiyTidZw17uDPH3/G2x+eSdKaRLtUX+7Yn3GiEKI0vkj2VQepTQLPzKTtTetYPE5p5j219HqTSQU4BTQWpsDGH0hbt+0nxd/tonN63aRTRWIJRwiMdtYRa2rWpXLTKeYdhTzLrl0ASdqcdqKU7jw08tYsmq2abPS5ry6Bsm2CAVYAQJhBQIY3D3Ka09v5a0XtrN/1wjKVURiNk7UHl9T9cVbTvcLvySs8I+kUEpTzLsUckUQgun9HSw7fy4rLzutVLlK+zWMGy3rOxRgBdHKnEESWETPVby/cYDN63aybcM+BnePks8UzSE7jsR2LCxbmtdPsEhHS6R0gfza0cpTuEWFW/RQShOJ2Uzvb2fBmf0sPXcOCz8yi0jM9t9ypJVuNEIBVgGtNVpxxBhLa82BnSPsfHeQXe8Osn/HMEMDKbLpAvlMEaXU8Uu3CrOPJRJ3iCUdps1op29uF7OX9DD39BnMnNeFZY+vWQc5jY1m8Y4mFGCV0cq3QB8w4M+lC4wNZzl8KM3hQxkyqQKFXJFizkMphZCCSNTGiTnE2xw6uhN0TE/S3hUrFQWfSLBEKMUJnF3WIIQCrCGBZQyCgKnGAco/4VEEQUWTiG4ioQDrSDAPV7oCuvSfoxgXlxFtbZfLqkkowJC6EiakhtSVUIAhdSUUYEhdCQUYUldCAYbUlVCAIXUlFGBISEhISEhISEhISEhI6/D/AXPHcVuRMnblAAAAAElFTkSuQmCC" width="200" height="200"/>
+      </svg>
+    </div>
+    <div><div class="nav-nm">DemandAI</div></div>
+  </div>
+  <div class="nav-body">
+    <a class="nav-item " href="index.html">
+      <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 10.5L12 3l9 7.5V21a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></svg>
+      <span class="nav-lbl">Admin home</span>
+    </a>
+    <div class="nav-div"></div>
+    <div class="nav-sec">Set up</div>
+    <a class="nav-item " href="09-setup.html">
+      <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      <span class="nav-lbl">Data and signals</span>
+    </a>
+    <a class="nav-item " href="integrations.html">
+      <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 2v6"/><path d="M15 2v6"/><path d="M6 8h12v4a6 6 0 0 1-12 0z"/><path d="M12 18v4"/></svg>
+      <span class="nav-lbl">Integrations and email</span>
+    </a>
+    <a class="nav-item " href="07-content.html">
+      <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      <span class="nav-lbl">Content library</span>
+    </a>
+    <a class="nav-item " href="settings.html">
+      <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+      <span class="nav-lbl">Templates and settings</span>
+    </a>
+    <a class="nav-item " href="08-users.html">
+      <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <span class="nav-lbl">Users and roles</span>
+    </a>
+    <div class="nav-div"></div>
+    <div class="nav-sec">The process behind the chat</div>
+    <a class="nav-item " href="10-prospecting.html">
+      <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      <span class="nav-lbl">Prospecting</span>
+    </a>
+    <a class="nav-item " href="11-scoring.html">
+      <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      <span class="nav-lbl">Account Scoring</span>
+    </a>
+    <a class="nav-item " href="12-nba.html">
+      <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+      <span class="nav-lbl">Micro-segments & NBA</span>
+    </a>
+    <a class="nav-item " href="15-content-studio.html">
+      <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+      <span class="nav-lbl">Content studio</span>
+    </a>
+    <a class="nav-item " href="14-review.html">
+      <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      <span class="nav-lbl">Review queue</span>
+    </a>
+    <div class="nav-div"></div>
+    <div class="nav-sec">Measure</div>
+    <a class="nav-item active" href="13-analytics.html">
+      <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      <span class="nav-lbl">Analytics</span>
+    </a>
+  </div>
+  <div class="nav-foot">
+    <div class="nav-user">
+      <div class="nav-av">PK</div>
+      <div><div class="nav-un">Pavan Kumar</div><div class="nav-ur">Sales manager</div></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;gap:6px;padding:8px 8px 0;font-size:10.5px"><a href="../app.html" onclick="localStorage.setItem('dmock_user','pavan')" style="color:var(--brand-mid);text-decoration:none">Sales workspace →</a><a href="../index.html" style="color:var(--r3)">Sign out</a></div>
+  </div>
+</nav>
+
+<!-- ════ MAIN ════ -->
+<main class="main" id="mainArea"></main>
+</div>
+
+<script src="demandai-engine.js"></script>
+<script src="demandai-sample-data.js"></script>
+<script src="demandai-nba.js"></script>
+<script>
+function showToast(msg){document.querySelectorAll('.toast').forEach(t=>t.remove());const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2600);}
+let activeTab = (t => ['gates','funnel','evidence','weekly','readout','log','loop','validation'].includes(t) ? t : 'gates')(new URLSearchParams(location.search).get('tab'));
+
+function toggleGatesWorking(){
+  const el = document.getElementById('gatesWorking');
+  const btn = document.getElementById('gatesWorkingBtn');
+  const showing = el.style.display !== 'none';
+  el.style.display = showing ? 'none' : 'block';
+  btn.textContent = showing ? 'Show the working' : 'Hide the working';
+}
+function switchTab(tab){
+  activeTab = tab;
+  renderMain();
+}
+
+function renderMain(){
+  document.getElementById('mainArea').innerHTML = `
+    <div class="topbar">
+      <div class="topbar-l"><span class="tb-title">Analytics</span><span class="tb-badge badge-neutral">From live decisions</span></div>
+      
+    </div>
+    <div class="ftabs">
+      ${[['gates','Success gates'],['funnel','Work-done funnel'],['evidence','Supporting evidence'],['weekly','Weekly summary'],['readout','Pilot readout'],['log','Decision log'],['loop','Learning loop'],['validation','Validation']].map(([k,l])=>`<div class="ftab ${activeTab===k?'active':''}" onclick="switchTab('${k}')">${l}</div>`).join('')}
+    </div>
+    <div class="canvas">${({gates:renderGates, funnel:renderFunnel, evidence:renderEvidence, weekly:renderWeekly, readout:renderReadout, log:renderLog, loop:renderLoop, validation:renderValidation})[activeTab]()}</div>
+  `;
+}
+
+/* ═══════════════ SUCCESS GATES from the stored decisions: the same data as For Review and Next best action ═══════════════ */
+function esc(s){return String(s===undefined||s===null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+const fmtDate = t => new Date(t).toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'});
+const SEG_TONE = {};
+let REP_FILTER = null, A_RUNS = null;
+function analyticsRuns(){
+  if(A_RUNS) return A_RUNS;
+  A_RUNS = [];
+  try{ DemandAI.loadSegmentations().forEach(saved=>{ const c = compute(saved.src, saved.id, saved.createdAt, saved.brandVersion); if(c) A_RUNS.push({ saved, ...c }); }); }catch(e){ A_RUNS = []; }
+  return A_RUNS;
+}
+function renderGates(){
+  const runs = analyticsRuns();
+  if(!runs.length) return `<div class="panel"><div class="panel-body" style="text-align:center;padding:30px">
+      <div style="font-family:var(--fd);font-size:15px;font-weight:700;color:var(--i1)">No recommendations yet</div>
+      <div style="font-size:12px;color:var(--i3);margin-top:6px">The gates are worked out from real decisions. Build micro-segments, then decide in For Review. <a href="12-nba.html" style="color:var(--brand);font-weight:600;text-decoration:none">Go to Micro-segments &amp; NBA →</a></div></div></div>`;
+  const mgr = isManager(), owner = mgr ? REP_FILTER : myEmail();
+  const m = measure(runs, owner);
+  const pct = v => v===null ? '—' : Math.round(v)+'%';
+  const bar = (label, n, total, color) => `<div class="dim-row"><span class="dim-lbl" style="width:150px;flex-shrink:0">${esc(label)}</span><div class="dim-track"><div class="dim-fill" style="width:${total?Math.round(n/total*100):0}%;background:${color}"></div></div><span class="dim-val">${n}</span></div>`;
+  const row = (label, val) => `<div style="display:flex;align-items:baseline;gap:12px;padding:7px 0;border-bottom:1px solid var(--s75);font-size:12px"><span style="flex:1;color:var(--i2)">${label}</span><span style="color:var(--i1);font-weight:600;text-align:right">${val}</span></div>`;
+  const rej = Object.entries(m.reasons).sort((a,b)=>b[1]-a[1]), rejTotal = rej.reduce((t,x)=>t+x[1],0);
+  const decided = m.edits.none + m.edits.minor + m.edits.major + rejTotal;
+  const total = m.autoN + m.excN;
+  return `
+    ${repFilter(`<span style="font-size:11px;color:var(--i3)">${m.items} recommendation${m.items===1?'':'s'} · ${m.autoN} proceeded · ${m.excN} exceptions</span>`)}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+      <div class="panel">
+        <div class="panel-hdr"><span class="panel-ttl">G1 · Reduced human effort</span>${gateBadge(m.saved, DemandAI.CONFIG.g1Threshold, m.released)}</div>
+        <div class="panel-body">
+          <div style="font-family:var(--fd);font-size:30px;font-weight:700;color:var(--i1);margin-bottom:4px">${m.saved===null?'—':Math.round(m.saved)+'% less'}</div>
+          <div style="font-size:11.5px;color:var(--i3)">${m.minutes===null?'No usable first actions yet':`${(Math.round(m.minutes*10)/10)} min of review per usable first action, against a baseline of ${m.base} min`} · threshold ${DemandAI.CONFIG.g1Threshold}% less</div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-hdr"><span class="panel-ttl">G2 · Recommendation acceptance</span>${gateBadge(m.weighted, DemandAI.CONFIG.g2Threshold, m.pooled.n)}</div>
+        <div class="panel-body">
+          <div style="font-family:var(--fd);font-size:30px;font-weight:700;color:var(--i1);margin-bottom:4px">${pct(m.weighted)}</div>
+          <div style="font-size:11.5px;color:var(--i3)">accepted on first pass, weighted across both paths${m.partial&&m.weighted!==null?' (only one path has decisions so far)':''} · threshold ${DemandAI.CONFIG.g2Threshold}%</div>
+        </div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+      <div class="panel">
+        <div class="panel-hdr"><span class="panel-ttl">G2 · the working</span></div>
+        <div class="panel-body">
+          ${row('Proceeded path (weekly spot-check)', `${pct(m.auto.pct)} · ${m.auto.a} of ${m.auto.n} rated · ${m.autoN} items`)}
+          ${row('Exception path (decided in the queue)', `${pct(m.exc.pct)} · ${m.exc.a} of ${m.exc.n} decided · ${m.excN} items`)}
+          ${row('Weighted', m.auto.pct!==null && m.exc.pct!==null ? `${pct(m.auto.pct)} × ${m.autoN}/${total} + ${pct(m.exc.pct)} × ${m.excN}/${total} = <b>${pct(m.weighted)}</b>` : pct(m.weighted))}
+          ${row('Pooled, for comparison', `${pct(m.pooled.pct)} · ${m.pooled.a} of ${m.pooled.n}`)}
+          ${row('Within one alternative', `${pct(m.alternatives.pct)} · ${m.alternatives.a} of ${m.alternatives.n}`)}
+          <div style="font-size:10.5px;color:var(--i3);margin-top:8px;padding-top:8px;border-top:1px solid var(--s75);line-height:1.5">First-pass decisions only: an alternative accepted after a rejection is shown separately. Pooling lets the few hard exceptions weigh as much as the many items that proceeded, so the headline is weighted by how many items took each path.</div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-hdr"><span class="panel-ttl">How it was decided</span></div>
+        <div class="panel-body">
+          ${bar('Accepted as it is', m.edits.none, decided, 'var(--pos)')}${bar('Minor edit', m.edits.minor, decided, 'var(--sec)')}${bar('Major edit', m.edits.major, decided, 'var(--warn)')}${bar('Rejected', rejTotal, decided, 'var(--neg)')}
+          ${row('Flagged, waiting for a check', `${m.flagged}`)}${row('Interventions on items that proceeded', `${m.interventions}`)}
+          <div style="font-size:10.5px;color:var(--i3);margin-top:8px;padding-top:8px;border-top:1px solid var(--s75)">Decisions under 5 seconds or in a long run of identical ones count only once checked. Interventions are an early warning on the automatic path.</div>
+        </div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+      <div class="panel">
+        <div class="panel-hdr"><span class="panel-ttl">Rejection reasons</span></div>
+        <div class="panel-body">
+          ${rej.length ? rej.map(([k,n])=>bar(k, n, rejTotal, 'var(--s300)')).join('') : '<div style="font-size:12px;color:var(--i3)">No rejections yet.</div>'}
+          <div style="font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--i3);margin:12px 0 4px">By cause</div>
+          ${row("Gaps in the client's data", m.causes.data)}${row("The system's own judgement", m.causes.system)}${row('Other', m.causes.other)}${row('Compliance: sent back by the sales manager', m.compliance)}
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-hdr"><span class="panel-ttl">What happened next</span></div>
+        <div class="panel-body">
+          ${row('Released, ready to use', m.released)}
+          ${['Sent','Replied','Meeting booked','No response'].map(o=>row(o, m.outcomes[o]||0)).join('')}
+          <div style="font-size:10.5px;color:var(--i3);margin-top:8px;padding-top:8px;border-top:1px solid var(--s75)">Reps mark the outcome on Next best action; there's no CRM in the POC to tell us.</div>
+        </div>
+      </div>
+    </div>`;
+}
+
+/* ═══════════════ 7.1 GATE STATUS against the thresholds agreed at kickoff ═══════════════ */
+const pillCss = (bg, fg) => `display:inline-flex;align-items:center;font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:999px;background:${bg};color:${fg}`;
+function gateState(value, threshold, n){ return value===null ? 'none' : n < DemandAI.CONFIG.minDecisions ? 'early' : value >= threshold ? 'met' : 'below'; }
+function gateBadge(value, threshold, n){
+  const st = gateState(value, threshold, n);
+  if(st==='none') return `<span style="${pillCss('var(--s100)','var(--i3)')}">No data yet</span>`;
+  if(st==='early') return `<span style="${pillCss('var(--s100)','var(--i2)')}">Too early to call: ${n} of ${DemandAI.CONFIG.minDecisions}</span>`;
+  return st==='met' ? `<span style="${pillCss('var(--pos-lt)','var(--pos)')}">On track</span>` : `<span style="${pillCss('var(--neg-lt)','var(--neg)')}">Below the threshold</span>`;
+}
+
+/* ═══════════════ SHARED PIECES ═══════════════ */
+const ownerNow = () => isManager() ? REP_FILTER : myEmail();
+const pct0 = v => v===null || v===undefined || isNaN(v) ? '—' : Math.round(v)+'%';
+const arow = (label, val, sub) => `<div style="display:flex;align-items:baseline;gap:12px;padding:7px 0;border-bottom:1px solid var(--s75);font-size:12px"><span style="flex:1;color:var(--i2)">${label}${sub?`<span style="display:block;font-size:10.5px;color:var(--i3)">${sub}</span>`:''}</span><span style="color:var(--i1);font-weight:600;text-align:right">${val}</span></div>`;
+const apanel = (title, right, body) => `<div class="panel" style="margin-bottom:16px"><div class="panel-hdr"><span class="panel-ttl">${title}</span>${right||''}</div><div class="panel-body">${body}</div></div>`;
+const two = (a, b) => `<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">${a}${b}</div>`;
+// Every list's items with their decision, scoped to a rep when one is chosen.
+function itemsOf(runs, owner){
+  const out = [];
+  runs.forEach(run=>{ const keep = RUN; RUN = run; run.seg.recs.forEach(r=>{ if(!owner || ownerOf(r)===owner) out.push({ run, r, d:dec(r.key), x:draftOf(r), owner:ownerOf(r) }); }); RUN = keep; });
+  return out;
+}
+function logsOf(runs, owner){ return runs.flatMap(run=>run.saved.log.map(l=>({...l, list:run.saved.name, runId:run.saved.id}))).filter(l=>!owner || l.owner===owner).sort((a,b)=>b.at-a.at); }
+async function saveText(name, text){
+  let dl = null;
+  try{ dl = window.claude && window.claude.use ? await window.claude.use('downloads') : null; }catch(e){ dl = null; }
+  if(dl){ try{ await dl.save({filename:name, data:text}); showToast(name+' saved'); }catch(e){ if(!e || e.code!=='declined') showToast("This view can't save files"); } return; }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text],{type:'text/plain'})); a.download = name; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 0);
+}
+const noData = () => renderGates();
+
+/* ═══════════════ 7.2 WORK-DONE FUNNEL, over the process flow ═══════════════ */
+function funnelStages(runs, owner){
+  const lists = new Map();
+  runs.forEach(run=>{
+    if(run.saved.src.sample && !lists.has('sample')) lists.set('sample', { stats: DemandAI.processLeads(DemandAISample.LEADS, {file:DemandAISample.LEAD_FILE}).stats });
+    else if(run.saved.src.listId && !lists.has(run.saved.src.listId)){ const L = DemandAI.getList(run.saved.src.listId); if(L) lists.set(run.saved.src.listId, L); }
+    else if(run.saved.src.csv && !lists.has(run.saved.id)) lists.set(run.saved.id, { csvRows: Math.max(0, (run.saved.src.grid||[]).length-1), accounts: run.scored.length });
+  });
+  const L = [...lists.values()], sum = f => L.reduce((t,l)=>t+(f(l)||0), 0);
+  const records = sum(l=>l.stats?l.stats.rowsRead:l.csvRows), valid = sum(l=>l.stats?l.stats.contacts:l.csvRows), inScope = sum(l=>l.stats?l.stats.accountsPass:l.accounts);
+  const sigs = runs.flatMap(run=>(run.sig && run.sig.signals) || []);
+  const qualified = sigs.filter(s=>s.status==='Qualified'), extraRejected = runs.reduce((t,run)=>t+((run.sig&&run.sig.rejectedRows)||0),0);
+  const rejected = { length: sigs.filter(s=>s.status==='Rejected').length + extraRejected };
+  const found = sigs.length + extraRejected;
+  const scored = runs.flatMap(run=>run.scored.filter(r=>(r.people||[]).some(p=>p.signals.length)));
+  const tierOf = r => (r.people||[]).filter(p=>p.signals.length).map(p=>p.tier).sort()[0];
+  const it = itemsOf(runs, owner), logs = logsOf(runs, owner);
+  const segAccts = runs.reduce((n,run)=>n+run.seg.segments.reduce((m,g)=>m+g.accountIds.length,0),0);
+  const t = k => scored.filter(r=>tierOf(r)===k).length;
+  return [
+    { k:'Records received', n:records, sub:`${valid} valid contacts` },
+    { k:'Accounts in scope', of:0, n:inScope, sub:'after the checks and knock-outs' },
+    { k:'Signals found', n:found, sub:`${qualified.length} qualified · ${rejected.length} rejected · ${found-qualified.length-rejected.length} not used`, note:`${found?Math.round(qualified.length/found*100):0}% qualified`, nobase:true },
+    { k:'Accounts scored', of:1, n:scored.length, sub:`with a live signal: ${t('A')} A · ${t('B')} B · ${t('C')} C` },
+    { k:'Accounts in micro-segments', of:3, n:segAccts, sub:`${runs.reduce((n,run)=>n+run.seg.segments.length,0)} micro-segments formed · ${runs.reduce((n,run)=>n+run.seg.exceptions.length,0)} with no micro-segment · ${runs.reduce((n,run)=>n+run.seg.engagedOnce.length,0)} set aside by engage-once` },
+    { k:'Actions and drafts', of:3, n:it.length, sub:`${it.filter(x=>x.x.channel!=='Task').length} drafts · ${it.filter(x=>x.x.channel==='Task').length} tasks · ${logs.filter(l=>/^Regenerated once/.test(l.decision)).length} regenerated once` },
+    { k:'Completed on their own', of:5, n:it.filter(x=>x.d.passed).length, sub:`${it.filter(x=>!x.d.passed).length} went to the exception queue`, split:true },
+    { k:'Decided by a person', n:logs.filter(l=>l.decisive).length, sub:`${logs.filter(l=>l.decisive&&l.kind==='exception').length} exceptions · ${logs.filter(l=>l.decisive&&l.kind==='spot').length} spot-checks · ${logs.filter(l=>l.decisive&&l.kind==='alternative').length} alternatives`, nobase:true },
+    { k:'Released, ready to use', of:5, n:it.filter(x=>x.d.status==='Released').length, sub:`${it.filter(x=>x.d.outcome).length} with an outcome · ${it.filter(x=>x.d.outcome==='Meeting booked').length} meetings booked` },
+  ];
+}
+function renderFunnel(){
+  const runs = analyticsRuns(); if(!runs.length) return noData();
+  const st = funnelStages(runs, ownerNow()), max = Math.max(1, ...st.map(s=>s.n));
+  return `${repFilter()}
+    <div class="panel"><div class="panel-body" style="padding:18px 22px">
+      ${st.map((s,i)=>{
+        const base = s.of!==undefined ? st[s.of] : null;
+        const share = base && base.n ? Math.round(s.n/base.n*100) : null;
+        const lbl = share!==null ? `${share}% of ${base.k.toLowerCase()}` : s.note || (s.nobase ? 'decisions on exceptions, spot-checks and alternatives' : '');
+        return `${i?`<div style="display:flex;align-items:center;gap:8px;padding:2px 0 2px 22px;font-size:10.5px;color:var(--i3)"><span style="font-size:13px;color:var(--i4)">↓</span>${lbl}</div>`:''}
+        <div style="display:grid;grid-template-columns:220px 1fr 70px;gap:14px;align-items:center;padding:6px 0">
+          <div><div style="font-size:12.5px;font-weight:600;color:var(--i1)">${i+1} · ${s.k}</div><div style="font-size:10.5px;color:var(--i3);margin-top:2px">${esc(s.sub)}</div></div>
+          <div style="height:12px;background:var(--s75);border-radius:6px;overflow:hidden"><div style="height:100%;width:${Math.max(2, s.n/max*100)}%;background:${s.nobase?'var(--sec)':'var(--brand)'};border-radius:6px"></div></div>
+          <div style="font-family:var(--fd);font-size:17px;font-weight:700;color:var(--i1);text-align:right">${s.n}</div>
+        </div>`;
+      }).join('')}
+    </div></div>
+    <div style="font-size:11px;color:var(--i3);margin-top:-6px">Every stage of the process, counted from the stored lists and the decision log; each stage as a share of the stage it comes from.</div>`;
+}
+
+/* ═══════════════ SUPPORTING EVIDENCE: prioritisation accuracy, decision reasons and codes ═══════════════ */
+const REASON_CODE = Object.fromEntries(REJECT.map(([c,l])=>[l,c]));
+function renderEvidence(){
+  const runs = analyticsRuns(); if(!runs.length) return noData();
+  const owner = ownerNow(), it = itemsOf(runs, owner), logs = logsOf(runs, owner);
+  const judged = logs.filter(l=>l.decisive && l.firstPass && (!l.flag||l.checked));
+  // Prioritisation accuracy: if the ranking is right, higher tiers are accepted and convert more often.
+  const tierOfKey = new Map(); it.forEach(x=>tierOfKey.set(x.run.saved.id+'|'+x.r.key, x.r.person.tier));
+  const byTier = ['A','B','C'].map(t=>{
+    const items = it.filter(x=>x.r.person.tier===t), keys = new Set(items.map(x=>x.run.saved.id+'|'+x.r.key));
+    const j = judged.filter(l=>keys.has(l.runId+'|'+l.key));
+    return { t, n:items.length, j:j.length, a:j.filter(l=>l.accepted).length, meetings:items.filter(x=>x.d.outcome==='Meeting booked').length, replies:items.filter(x=>x.d.outcome==='Replied').length, out:items.filter(x=>x.d.outcome).length };
+  });
+  const reviewed = byTier.some(x=>x.j);
+  const ordered = reviewed && byTier.filter(x=>x.j).every((x,i,a)=>!i || (a[i-1].a/a[i-1].j) >= (x.a/x.j));
+  const tierTable = `<table style="width:100%;border-collapse:collapse;font-size:12px">
+    <tr style="color:var(--i3);font-size:10px;text-transform:uppercase;letter-spacing:.06em"><td style="padding:6px 0">Tier</td><td style="text-align:right">Recommendations</td><td style="text-align:right">Judged</td><td style="text-align:right">Accepted</td><td style="text-align:right">Replied</td><td style="text-align:right">Meetings</td></tr>
+    ${byTier.map(x=>`<tr style="border-top:1px solid var(--s75)"><td style="padding:8px 0;font-weight:600">Tier ${x.t}</td><td style="text-align:right">${x.n}</td><td style="text-align:right">${x.j}</td><td style="text-align:right;font-weight:600">${x.j?pct0(x.a/x.j*100):'—'}</td><td style="text-align:right">${x.replies}</td><td style="text-align:right">${x.meetings}</td></tr>`).join('')}
+  </table>
+  <div style="font-size:11.5px;color:${!reviewed?'var(--i3)':ordered?'var(--pos)':'var(--warn)'};margin-top:10px">${!reviewed ? 'Not reviewed yet: shown once people have judged recommendations.' : ordered ? 'Higher tiers are accepted at least as often as lower ones: the ranking holds.' : 'A lower tier is accepted more often than a higher one: the rubric or the signal weights need a look.'}</div>`;
+  // Decision reasons and codes
+  const rej = {}; logs.filter(l=>l.decisive && !l.accepted).forEach(l=>{ rej[l.reason]=(rej[l.reason]||0)+1; });
+  const tags = {}; logs.filter(l=>l.accepted).forEach(l=>(l.tags||[]).forEach(t=>{ tags[t]=(tags[t]||0)+1; }));
+  const edits = { as:logs.filter(l=>l.accepted && l.rating==='none').length, minor:logs.filter(l=>l.rating==='minor').length, major:logs.filter(l=>l.rating==='major').length };
+  const dq = {}; runs.forEach(run=>((run.sig&&run.sig.signals)||[]).filter(s=>s.status==='Rejected').forEach(s=>{ const k = `${s.code} ${DemandAI.CODES[s.code]||''}`.trim(); dq[k]=(dq[k]||0)+1; }));
+  const secs = k => { const v = logs.filter(l=>l.decisive && (!k || l.kind===k) && l.secs!=null).map(l=>l.secs).sort((a,b)=>a-b); return v.length ? v[Math.floor(v.length/2)] : null; };
+  const reasonRows = Object.entries(rej).sort((a,b)=>b[1]-a[1]).map(([k,n])=>arow(`<b style="font-family:var(--fm);font-size:11px;color:var(--i3);margin-right:6px">${REASON_CODE[k]||''}</b>${esc(k)}`, n, (CAUSE[REASON_CODE[k]]==='data'?"Gap in the client's data":CAUSE[REASON_CODE[k]]==='system'?"The system's judgement":''))).join('');
+  return `${repFilter()}
+    ${apanel('Prioritisation accuracy', '<span style="font-size:10.5px;color:var(--i3)">if reviewed</span>', tierTable)}
+    ${two(apanel('Rejection reasons and codes', '', reasonRows || '<div style="font-size:12px;color:var(--i3)">No rejections yet.</div>'),
+          apanel('Acceptance', '', arow('Accepted as it is', edits.as)+arow('Minor edit', edits.minor, 'Wording, tone or length only')+arow('Major edit', edits.major, 'Facts, the ask, the action or the person changed')
+            +`<div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--i3);margin:12px 0 4px">Quick tags</div>`
+            +(Object.keys(tags).length ? Object.entries(tags).sort((a,b)=>b[1]-a[1]).map(([k,n])=>arow(esc(k), n)).join('') : '<div style="font-size:12px;color:var(--i3)">No tags yet.</div>')))}
+    ${two(apanel('Data-quality reasons', '', Object.keys(dq).length ? Object.entries(dq).sort((a,b)=>b[1]-a[1]).map(([k,n])=>arow(esc(k), n)).join('') : '<div style="font-size:12px;color:var(--i3)">No data-quality issues in the signal files.</div>'),
+          apanel('Decision time', '<span style="font-size:10.5px;color:var(--i3)">median seconds</span>', arow('Exceptions', secs('exception')??'—')+arow('Spot-checks', secs('spot')??'—')+arow('Alternatives', secs('alternative')??'—')+arow('All decisions', secs(null)??'—')))}`;
+}
+
+/* ═══════════════ 8.1 DECISION LOG: every decision and automatic release, with its reason ═══════════════ */
+let LOG_KIND = 'all', LOG_Q = '';
+function renderLog(){
+  const runs = analyticsRuns(); if(!runs.length) return noData();
+  let ls = logsOf(runs, ownerNow());
+  const kinds = [['all','Everything'],['decisions','Decisions'],['auto','Automatic'],['outcomes','Outcomes'],['other','Changes']];
+  const isOut = l=>/^Outcome/.test(l.decision), isAuto = l=>l.kind==='system';
+  if(LOG_KIND==='decisions') ls = ls.filter(l=>l.decisive || /^Approved and released|^Sent back/.test(l.decision));
+  else if(LOG_KIND==='auto') ls = ls.filter(isAuto);
+  else if(LOG_KIND==='outcomes') ls = ls.filter(isOut);
+  else if(LOG_KIND==='other') ls = ls.filter(l=>!l.decisive && !isAuto(l) && !isOut(l));
+  if(LOG_Q) ls = ls.filter(l=>(l.who+' '+l.prospect+' '+l.company+' '+l.decision+' '+l.action+' '+l.note+' '+(l.reason||'')).toLowerCase().includes(LOG_Q));
+  const tone = d => /^Accepted|^Approved/.test(d)?'tag-green':/^Rejected|^Sent back/.test(d)?'tag-red':/^Outcome/.test(d)?'tag-violet':/^Proceeded|^Went ahead/.test(d)?'tag-blue':'tag-grey';
+  return `${repFilter(`<div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+      <div style="display:inline-flex;background:var(--s75);border-radius:999px;padding:3px">${kinds.map(([k,l])=>`<button onclick="LOG_KIND='${k}';renderMain()" style="padding:5px 11px;border-radius:999px;font-size:11.5px;font-weight:600;${LOG_KIND===k?'background:var(--surf);color:var(--i1);box-shadow:var(--sh)':'color:var(--i3)'}">${l}</button>`).join('')}</div>
+      <input placeholder="Search…" value="${esc(LOG_Q)}" onchange="LOG_Q=this.value.toLowerCase();renderMain()" style="padding:6px 9px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:12px;width:160px">
+      <button class="btn btn-sec btn-sm" onclick="downloadLog()">Download (.csv)</button></div>`)}
+    <div class="panel"><div class="panel-body" style="padding:0">
+      ${ls.length ? ls.slice(0,300).map(l=>`<div style="display:grid;grid-template-columns:120px 130px 1fr 1.2fr;gap:12px;padding:9px 14px;border-bottom:1px solid var(--s75);font-size:12px;align-items:start">
+        <div style="color:var(--i3)">${fmtDate(l.at)}<div style="font-size:10.5px">${new Date(l.at).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'})}${l.secs!=null?` · ${l.secs}s`:''}</div></div>
+        <div style="color:var(--i1)">${esc(l.who)}<div style="font-size:10.5px;color:var(--i3)">${esc(l.role)}</div></div>
+        <div><span class="tag ${tone(l.decision)}" style="display:inline-flex;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:999px">${esc(l.decision)}</span><div style="color:var(--i2);margin-top:3px">${esc(l.prospect)} · ${esc(l.company)}</div></div>
+        <div style="color:var(--i2)">${esc(l.action)}<div style="font-size:10.5px;color:var(--i3)">${[l.reason&&REASON_CODE[l.reason]?REASON_CODE[l.reason]+' '+l.reason:'', (l.tags||[]).join(', '), l.note, l.flag].filter(Boolean).map(esc).join(' · ')}</div></div>
+      </div>`).join('') : '<div style="padding:24px;text-align:center;font-size:12px;color:var(--i3)">Nothing matches.</div>'}
+      ${ls.length>300?`<div style="padding:10px 14px;font-size:11px;color:var(--i3)">Showing the latest 300 of ${ls.length}; the download has them all.</div>`:''}
+    </div></div>`;
+}
+function downloadLog(){
+  const rows = [['when','who','role','list','prospect','company','micro_segment','decision','item','first_pass','reason_code','reason','cause','tags','action','channel','version','seconds','queue_position','flag','checked','note']];
+  logsOf(analyticsRuns(), ownerNow()).forEach(l=>rows.push([new Date(l.at).toISOString(), l.who, l.role, l.list, l.prospect, l.company, l.segment, l.decision, l.kind||'', l.decisive?(l.firstPass?'yes':'no'):'',
+    REASON_CODE[l.reason]||'', l.reason||'', l.cause||'', (l.tags||[]).join('; '), l.action, l.channel, l.version||1, l.secs??'', l.position??'', l.flag||'', l.flag?(l.checked?'yes':'no'):'', l.note||'']));
+  saveText('decision_log.csv', DemandAI.toCSV(rows));
+}
+
+/* ═══════════════ VALIDATION: method, baseline, sample and threshold for each gate; data sufficiency ═══════════════ */
+function renderValidation(){
+  const runs = analyticsRuns(), T = DemandAI.CONFIG, edit = isManager(), m = runs.length ? measure(runs, null) : null;
+  const inp = (id, v, unit) => edit ? `<input id="${id}" type="number" value="${v}" style="width:84px;padding:5px 8px;border:1px solid var(--bdk);border-radius:6px;font-size:12px;text-align:right"> <span style="color:var(--i3);font-size:11px">${unit}</span>` : `${v} ${unit}`;
+  const gate = (title, rows) => apanel(title, '', rows.map(([k,v])=>`<div style="display:grid;grid-template-columns:110px 1fr;gap:12px;padding:8px 0;border-bottom:1px solid var(--s75);font-size:12px;align-items:baseline"><span style="color:var(--i3)">${k}</span><span style="color:var(--i1);line-height:1.5">${v}</span></div>`).join(''));
+  const rd = runs.length ? readiness(runs) : [];
+  const gaps = rd.filter(x=>!x.ok).length;
+  const verdict = !rd.length ? '' : !gaps ? ['Sufficient','var(--pos-lt)','var(--pos)'] : gaps <= 2 ? ['Sufficient with gaps','var(--warn-lt)','var(--warn)'] : ['Not yet sufficient','var(--neg-lt)','var(--neg)'];
+  return `${two(
+    gate('G1 · Reduced human effort', [
+      ['Method', 'Minutes people spend per usable first action: review time in the exception queue plus spot-check time, divided by the recommendations released ready to use.'],
+      ['Baseline', inp('cfgBase', T.g1BaselineMinutes, 'min per first action')+'<div style="font-size:10.5px;color:var(--i3);margin-top:3px">Timed by the client on the same data, before measurement starts.</div>'],
+      ['Sample', m ? `${m.released} usable first actions; ${Math.round(Object.values(runs).reduce((t,run)=>t+run.saved.log.filter(l=>l.decisive).reduce((s,l)=>s+(l.secs||0),0),0)/60*10)/10} min of review` : 'No data yet'],
+      ['Threshold', inp('cfgG1', T.g1Threshold, '% less than the baseline')],
+    ]),
+    gate('G2 · Recommendation acceptance', [
+      ['Method', 'Share accepted on first pass (as it is or edited) among recommendations a person judged: every exception decided in the queue plus the weekly spot-check of items that proceeded. The two paths are weighted by how many items took each.'],
+      ['Baseline', 'None: acceptance is measured directly.'],
+      ['Sample', m ? `${m.exc.n} exception decisions and ${m.auto.n} spot-checks; spot-check share ${inp('cfgSpot', Math.round(T.spotCheckShare*100), '% of proceeded items, weekly')}` : `Spot-check share ${inp('cfgSpot', Math.round(T.spotCheckShare*100), '% of proceeded items, weekly')}`],
+      ['Threshold', inp('cfgG2', T.g2Threshold, '% accepted')],
+    ]))}
+    ${apanel('Counting rules', '', arow('A gate is too early to call below', edit?inp('cfgMin', T.minDecisions, 'decisions'):`${T.minDecisions} decisions`)
+      + arow('First pass only', 'An alternative accepted after a rejection is reported as "within one alternative"')
+      + arow('Checked before counting', 'Decisions under 5 seconds or in a run of identical decisions')
+      + arow('Proceed criteria: deal-size threshold', edit?inp('cfgDeal', T.dealSize.threshold/1000, 'k USD'):`${T.dealSize.threshold/1000}k USD`)
+      + (edit ? `<div style="margin-top:12px;padding:9px 12px;background:var(--warn-lt);color:var(--warn);border-radius:var(--rsm);font-size:11.5px">Agree these at kickoff. Changing them during measurement moves the goalposts, so each change makes a new configuration version and is dated. The scoring weights can't be changed in the POC.</div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px"><span style="flex:1;font-size:11px;color:var(--i3);align-self:center">Saved in this browser; every screen uses them.</span><button class="btn btn-primary btn-sm" onclick="saveValidation()">Save the settings</button></div>` : '<div style="font-size:11px;color:var(--i3);margin-top:10px">Set by the sales manager or admin.</div>'))}
+    ${apanel('Configuration versions', `<span style="font-size:11px;color:var(--i2)">Now: ${esc(DemandAI.configVersion())}</span>`, [{v:1, at:null, by:'', changes:['Starting values']}].concat(DemandAI.configOverrides()._history||[]).reverse().map(h=>arow(`v${h.v} · ${esc(h.changes.join('; '))}`, h.at?`${fmtDate(h.at)}${h.by?' · '+esc(h.by):''}`:'Kickoff')).join(''))}
+    ${rd.length ? apanel('Data sufficiency · the readiness gate before measurement', `<span style="${pillCss(verdict[1], verdict[2])}">${verdict[0]}</span>`,
+      rd.map(x=>`<div style="display:grid;grid-template-columns:150px 150px 1fr 22px;gap:12px;padding:8px 0;border-bottom:1px solid var(--s75);font-size:12px;align-items:baseline">
+        <b style="color:var(--i1)">${x.k}</b><span style="color:var(--i1)">${esc(x.show)}</span><span style="color:var(--i3)">${esc(x.need)}${!x.ok&&x.fix?`<span style="display:block;color:var(--warn);margin-top:2px">To close: ${esc(x.fix)}</span>`:''}</span>
+        <span style="color:${x.ok?'var(--pos)':'var(--warn)'};font-weight:700">${x.ok?'✓':'!'}</span></div>`).join('')
+      + '<div style="font-size:11px;color:var(--i3);margin-top:8px">Thresholds for each check are agreed at kickoff. Measurement starts once the gate is passed.</div>') : ''}`;
+}
+function saveValidation(){
+  const v = id => { const el = document.getElementById(id); return el ? Number(el.value) : NaN; };
+  const o = { g1BaselineMinutes:v('cfgBase'), g1Threshold:v('cfgG1'), g2Threshold:v('cfgG2'), minDecisions:v('cfgMin'), spotCheckShare:v('cfgSpot')/100, dealThreshold:v('cfgDeal')*1000 };
+  Object.keys(o).forEach(k=>{ if(!isFinite(o[k]) || o[k] < 0) delete o[k]; });
+  if(!DemandAI.saveConfig(o, me().who)){ showToast("This browser blocks storage, so the settings can't be kept"); return; }
+  A_RUNS = null; showToast('Settings saved'); renderMain();
+}
+
+/* ═══════════════ 7.4 WEEKLY SUMMARY: the week's gates, work done, exceptions and decision reasons, as a report ═══════════════ */
+let WEEK = null;
+function weekLogs(runs, owner, week){ return logsOf(runs, owner).filter(l=>isoWeek(l.at)===week); }
+function weekData(runs, owner, week){
+  const ls = weekLogs(runs, owner, week), dec1 = ls.filter(l=>l.decisive);
+  const counts = l => !l.flag || l.checked, first = dec1.filter(l=>l.firstPass && counts(l));
+  const rate = xs => xs.length ? Math.round(xs.filter(l=>l.accepted).length/xs.length*100) : null;
+  const reasons = {}; dec1.filter(l=>!l.accepted).forEach(l=>{ reasons[l.reason]=(reasons[l.reason]||0)+1; });
+  const exceptions = {}; ls.filter(l=>l.decision==='To the exception queue').forEach(l=>(l.note||'').split(' · ').forEach(n=>{ const k = n.replace(/:.*$/,''); if(k) exceptions[k]=(exceptions[k]||0)+1; }));
+  const secs = dec1.reduce((t,l)=>t+(l.secs||0),0), released = ls.filter(l=>/^Proceeded on its own|^Accepted|^Approved and released/.test(l.decision) && l.kind!=='spot').length;
+  return { ls, rows: [
+    ['Recommendations built', ls.filter(l=>l.kind==='system' && /^Proceeded on its own|^To the exception queue/.test(l.decision)).length],
+    ['Proceeded on their own', ls.filter(l=>l.decision==='Proceeded on its own').length],
+    ['Sent to the exception queue', ls.filter(l=>l.decision==='To the exception queue').length],
+    ['Decisions made', `${dec1.length} (${dec1.filter(l=>l.kind==='spot').length} spot-check ratings)`],
+    ['G2 first-pass acceptance', first.length ? `${rate(first)}% of ${first.length} (exceptions ${rate(first.filter(l=>l.kind==='exception'))??'—'}%, spot-checks ${rate(first.filter(l=>l.kind==='spot'))??'—'}%)` : '—'],
+    ['G1 review time', `${Math.round(secs/60*10)/10} min${released?` · ${Math.round(secs/60/released*10)/10} min per usable first action (baseline ${DemandAI.CONFIG.g1BaselineMinutes})`:''}`],
+    ['Outcomes marked', ls.filter(l=>/^Outcome/.test(l.decision)).length],
+    ['Interventions on items that proceeded', ls.filter(l=>l.intervention).length],
+    ['Flagged decisions waiting for a check', dec1.filter(l=>l.flag && !l.checked).length],
+  ], exceptions, reasons };
+}
+function weekText(runs, owner, week){
+  const w = weekData(runs, owner, week), list = o => Object.keys(o).length ? Object.entries(o).sort((a,b)=>b[1]-a[1]).map(([k,n])=>`- ${k}: ${n}`) : ['- None'];
+  return [`# Weekly summary · ${week}`, ``, `For the business-unit lead${owner?` · ${repName(owner)}`:''}. Generated ${new Date().toLocaleString()}.`, ``, `## Gates and work done`, ...w.rows.map(([k,v])=>`- ${k}: ${v}`), ``, `## Why items went to a person`, ...list(w.exceptions), ``, `## Rejection reasons`, ...list(w.reasons)].join('\n');
+}
+function renderWeekly(){
+  const runs = analyticsRuns(); if(!runs.length) return noData();
+  const owner = ownerNow();
+  const weeks = [...new Set(runs.flatMap(run=>run.saved.log.map(l=>isoWeek(l.at))).concat([isoWeek(Date.now())]))].sort().reverse();
+  if(!WEEK || !weeks.includes(WEEK)) WEEK = weeks[0];
+  const w = weekData(runs, owner, WEEK), prevWeek = weeks[weeks.indexOf(WEEK)+1], p = prevWeek ? weekData(runs, owner, prevWeek) : null;
+  const list = o => Object.keys(o).length ? Object.entries(o).sort((a,b)=>b[1]-a[1]).map(([k,n])=>arow(esc(k), n)).join('') : '<div style="font-size:12px;color:var(--i3)">None this week.</div>';
+  return `${repFilter(`<span style="font-size:12px;color:var(--i2);margin-left:10px">Week</span><select onchange="WEEK=this.value;renderMain()" style="padding:6px 9px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:12px">${weeks.map(x=>`<option ${x===WEEK?'selected':''}>${x}</option>`).join('')}</select>
+      <button class="btn btn-primary btn-sm" style="margin-left:auto" onclick="saveText('weekly_summary_${WEEK}.md', weekText(analyticsRuns(), ownerNow(), WEEK))">Download the report (.md)</button>`)}
+    ${apanel(`Week ${esc(WEEK)} · for the business-unit lead`, p?`<span style="font-size:10.5px;color:var(--i3)">compared with ${esc(prevWeek)}</span>`:'', w.rows.map(([k,v],i)=>arow(k, v, p ? `last week: ${p.rows[i][1]}` : '')).join(''))}
+    ${two(apanel('Why items went to a person', '', list(w.exceptions)), apanel('Rejection reasons', '', list(w.reasons)))}`;
+}
+
+/* ═══════════════ 7.5 PILOT READOUT, and the decision: validators judge their area, the sponsor decides ═══════════════ */
+const READOUT_KEY = 'demandai_readout_v1';
+const VALIDATORS = [['sales','Sales lead','The recommendations and the actions'],['marketing','Marketing','The messages, proof and brand'],['reps','Reps','Usefulness in daily work'],['compliance','Compliance','Sensitive content and approvals']];
+function readoutState(){ try{ return JSON.parse(localStorage.getItem(READOUT_KEY)||'{}'); }catch(e){ return {}; } }
+function saveReadoutState(s){ try{ localStorage.setItem(READOUT_KEY, JSON.stringify(s)); return true; }catch(e){ return false; } }
+function judge(area){
+  const v = document.querySelector(`input[name=v_${area}]:checked`), note = (document.getElementById('vn_'+area)||{}).value || '';
+  if(!v){ showToast('Choose a judgement'); return; }
+  const s = readoutState(); s.validators = s.validators || {}; s.validators[area] = { verdict:v.value, note, by:me().who, role:getRole(), at:Date.now() };
+  saveReadoutState(s); showToast('Judgement recorded'); renderMain();
+}
+function sponsorDecide(){
+  const v = document.querySelector('input[name=sponsor]:checked'), note = (document.getElementById('sponsorNote')||{}).value || '';
+  if(!v){ showToast('Choose a decision'); return; }
+  const s = readoutState(); s.sponsor = { decision:v.value, note, by:me().who, role:getRole(), at:Date.now() };
+  saveReadoutState(s); showToast('Decision recorded'); renderMain();
+}
+function betterData(runs, owner){
+  const it = itemsOf(runs, owner), logs = logsOf(runs, owner), out = [];
+  readiness(runs).filter(x=>!x.ok && x.fix).forEach(x=>out.push(`${x.k}: ${x.fix} (now ${x.show})`));
+  const low = it.filter(x=>x.r.result.confidence==='low').length; if(low) out.push(`Primary-persona contacts for ${low} account${low===1?'':'s'} that went to a person with low confidence`);
+  const noProof = it.filter(x=>x.x.noProof).length; if(noProof) out.push(`Approved proof for ${noProof} recommendation${noProof===1?'':'s'} that became a task because none was found`);
+  const unknownDeal = it.filter(x=>!DemandAI.estimateDealSize(x.r.account)).length; if(unknownDeal) out.push(`Revenue or headcount for ${unknownDeal} account${unknownDeal===1?'':'s'}, so the deal-size rule can be applied`);
+  const dataRej = logs.filter(l=>l.decisive && !l.accepted && l.cause==='data'); if(dataRej.length) out.push(`${dataRej.length} rejection${dataRej.length===1?'':'s'} came from gaps in the client's data (${[...new Set(dataRej.map(l=>l.reason))].join(', ')})`);
+  return out;
+}
+function readoutText(runs, owner){
+  const m = measure(runs, owner), T = DemandAI.CONFIG, st = funnelStages(runs, owner), rs = readoutState();
+  const pct = v => v===null ? 'not enough data' : Math.round(v)+'%';
+  const g1s = gateState(m.saved, T.g1Threshold, m.released), g2s = gateState(m.weighted, T.g2Threshold, m.pooled.n);
+  const said = s => ({none:'open', early:`too early to call (fewer than ${T.minDecisions})`, met:'met', below:'not met'})[s];
+  const it = itemsOf(runs, owner), logs = logsOf(runs, owner);
+  const tierLine = ['A','B','C'].map(t=>{ const keys = new Set(it.filter(x=>x.r.person.tier===t).map(x=>x.run.saved.id+'|'+x.r.key)); const j = logs.filter(l=>l.decisive&&l.firstPass&&keys.has(l.runId+'|'+l.key)); return `tier ${t}: ${j.length?Math.round(j.filter(l=>l.accepted).length/j.length*100)+'% of '+j.length:'not judged'}`; }).join('; ');
+  const tags = {}; logs.filter(l=>l.accepted).forEach(l=>(l.tags||[]).forEach(t=>{ tags[t]=(tags[t]||0)+1; }));
+  const bd = betterData(runs, owner), V = rs.validators || {};
+  return [
+    `# Pilot readout`, ``, `Generated ${new Date().toLocaleString()} from ${runs.length} segmented list${runs.length===1?'':'s'}${owner?` · ${repName(owner)}`:''}. ${DemandAI.configVersion()}; lists built under ${[...new Set(runs.map(r=>(r.saved.configVersion||'Config v1').split(' · ')[0]))].join(', ')}.`, ``,
+    `## The two success gates`,
+    `- G1 reduced human effort: ${m.saved===null?'not enough data':Math.round(m.saved)+'% less'} (${m.minutes===null?'—':(Math.round(m.minutes*10)/10)+' min'} per usable first action against a ${m.base} min baseline; threshold ${T.g1Threshold}% less): ${said(g1s)}`,
+    `- G2 recommendation acceptance: ${pct(m.weighted)} on first pass, weighted across both paths (threshold ${T.g2Threshold}%): ${said(g2s)}`,
+    `  - Proceeded path: ${pct(m.auto.pct)} of ${m.auto.n} spot-checks, from ${m.autoN} items`,
+    `  - Exception path: ${pct(m.exc.pct)} of ${m.exc.n} decisions, from ${m.excN} items`,
+    `  - Within one alternative: ${pct(m.alternatives.pct)} of ${m.alternatives.n}`, ``,
+    `## Work done`, ...st.map(s=>`- ${s.k}: ${s.n} (${s.sub})`), ``,
+    `## Supporting evidence`,
+    `- Prioritisation accuracy, first-pass acceptance by tier: ${tierLine}`,
+    `- Edits: ${m.edits.none} accepted as they were, ${m.edits.minor} minor, ${m.edits.major} major`,
+    `- Interventions on items that proceeded: ${m.interventions}; flagged decisions still to check: ${m.flagged}`, ``,
+    `## Decision reasons`,
+    ...(Object.keys(m.reasons).length ? Object.entries(m.reasons).sort((a,b)=>b[1]-a[1]).map(([k,n])=>`- ${REASON_CODE[k]||''} ${k}: ${n}`) : ['- No rejections yet']),
+    `- By cause: ${m.causes.data} from gaps in the client's data, ${m.causes.system} from the system's judgement, ${m.causes.other} other; ${m.compliance} compliance send-backs`,
+    `- What worked (acceptance tags): ${Object.keys(tags).length ? Object.entries(tags).sort((a,b)=>b[1]-a[1]).map(([k,n])=>`${k} ${n}`).join(', ') : 'none yet'}`, ``,
+    `## What better data would add`, ...(bd.length ? bd.map(x=>`- ${x}`) : ['- No data gaps found']), ``,
+    `## Validators`, ...VALIDATORS.map(([k,l,a])=>`- ${l} (${a}): ${V[k] ? `${V[k].verdict} · ${V[k].by}, ${fmtDate(V[k].at)}${V[k].note?` · ${V[k].note}`:''}` : 'not yet judged'}`), ``,
+    `## Sponsor decision`, `- ${rs.sponsor ? `${rs.sponsor.decision} · ${rs.sponsor.by}, ${fmtDate(rs.sponsor.at)}${rs.sponsor.note?` · ${rs.sponsor.note}`:''}` : 'Not yet decided'}`,
+  ].join('\n');
+}
+function renderReadout(){
+  const runs = analyticsRuns(); if(!runs.length) return noData();
+  const owner = ownerNow(), text = readoutText(runs, owner), rs = readoutState(), V = rs.validators || {};
+  const html = text.split('\n## Validators')[0].split('\n').map(l=>l.startsWith('# ')?`<div style="font-family:var(--fd);font-size:18px;font-weight:700;color:var(--i1);margin-bottom:4px">${esc(l.slice(2))}</div>`
+    : l.startsWith('## ')?`<div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--brand);margin:16px 0 6px">${esc(l.slice(3))}</div>`
+    : l.startsWith('  - ')?`<div style="font-size:12.5px;color:var(--i2);padding:2px 0 2px 28px">· ${esc(l.slice(4))}</div>`
+    : l.startsWith('- ')?`<div style="font-size:12.5px;color:var(--i1);padding:3px 0 3px 12px">· ${esc(l.slice(2))}</div>`
+    : l ? `<div style="font-size:12px;color:var(--i3)">${esc(l)}</div>` : '').join('');
+  const radio = (name, opts, cur) => opts.map(o=>`<label style="display:inline-flex;align-items:center;gap:5px;margin-right:12px;font-size:12px;color:var(--i1);cursor:pointer"><input type="radio" name="${name}" value="${o}" ${cur===o?'checked':''} style="accent-color:var(--brand)">${o}</label>`).join('');
+  const validators = VALIDATORS.map(([k,l,a])=>`<div style="padding:10px 0;border-bottom:1px solid var(--s75)">
+      <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:6px"><b style="font-size:12.5px;color:var(--i1)">${l}</b><span style="font-size:11px;color:var(--i3)">${a}</span>
+        ${V[k]?`<span style="margin-left:auto;font-size:11px;color:var(--i2)">${esc(V[k].verdict)} · ${esc(V[k].by)}, ${fmtDate(V[k].at)}</span>`:''}</div>
+      ${radio('v_'+k, ['Satisfied','Satisfied with concerns','Not satisfied'], V[k]&&V[k].verdict)}
+      <div style="display:flex;gap:8px;margin-top:6px"><input id="vn_${k}" value="${esc(V[k]?V[k].note:'')}" placeholder="What they found" style="flex:1;padding:6px 9px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:12px"><button class="btn btn-sec btn-sm" onclick="judge('${k}')">Record</button></div>
+    </div>`).join('');
+  const canDecide = ['Admin','Sales manager'].includes(getRole());
+  return `${repFilter(`<button class="btn btn-primary btn-sm" style="margin-left:auto" onclick="saveText('pilot_readout.md', readoutText(analyticsRuns(), ownerNow()))">Download the readout (.md)</button>`)}
+    <div class="panel" style="margin-bottom:16px"><div class="panel-body" style="padding:20px 24px">${html}</div></div>
+    ${two(apanel('Validators judge their area', '', validators),
+      apanel('The sponsor decides on production', rs.sponsor?`<span style="font-size:11px;color:var(--i2)">${esc(rs.sponsor.decision)} · ${esc(rs.sponsor.by)}</span>`:'',
+        `<div style="font-size:12px;color:var(--i2);margin-bottom:10px;line-height:1.5">Once the validators have judged, the sponsor decides with the gates, the evidence and their judgements in front of them.</div>
+        ${radio('sponsor', ['Go to production','Extend the pilot','Stop'], rs.sponsor&&rs.sponsor.decision)}
+        <input id="sponsorNote" value="${esc(rs.sponsor?rs.sponsor.note:'')}" placeholder="Reasons and conditions" style="width:100%;margin-top:10px;padding:7px 10px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:12px">
+        <div style="display:flex;justify-content:flex-end;margin-top:10px">${canDecide?`<button class="btn btn-primary btn-sm" onclick="sponsorDecide()">Record the decision</button>`:'<span style="font-size:11px;color:var(--i3)">Recorded by the sponsor (admin or sales manager in the demo).</span>'}</div>`))}`;
+}
+
+
+/* ═══════════════ LEARNING LOOP: the POC records; production learns ═══════════════ */
+function outcomeRecords(runs, owner){
+  const out = [];
+  runs.forEach(run=>{ const keep = RUN; RUN = run; run.seg.recs.forEach(r=>{ if(!owner || ownerOf(r)===owner) out.push(outcomeRecord(r)); }); RUN = keep; });
+  return out;
+}
+function downloadOutcomes(){
+  const rs = outcomeRecords(analyticsRuns(), ownerNow());
+  const cols = [['list','list'],['account','account'],['vertical','vertical'],['status','status'],['tier','tier'],['micro_segment','segment'],['grouped_on','groupedOn'],['signals','signals'],['action','action'],['recommended','recommended'],['runner_up','runnerUp'],
+    ['contact','contact'],['contact_title','contactTitle'],['channel','channel'],['draft','draft'],['path','path'],['exceptions','exceptions'],['decision','decision'],['reason_code','reasonCode'],['reason','reason'],['cause','cause'],['tags','tags'],
+    ['alternative_needed','alternativeNeeded'],['alternative_accepted','alternativeAccepted'],['outcome','outcome'],['final_status','finalStatus'],['owner','owner'],['config_version','config'],['brand_version','brand']];
+  const rows = [cols.map(c=>c[0])].concat(rs.map(o=>cols.map(([,k])=>{ const v = o[k]; return Array.isArray(v) ? v.join('; ') : v===null ? '' : typeof v==='boolean' ? (v?'yes':'no') : v; })));
+  saveText('outcome_log.csv', DemandAI.toCSV(rows));
+}
+function renderLoop(){
+  const runs = analyticsRuns(); if(!runs.length) return noData();
+  const rs = outcomeRecords(runs, ownerNow());
+  const judged = rs.filter(o=>/^Accepted|^Edited|^Rejected/.test(o.decision));
+  const ok = o => /^Accepted|^Edited/.test(o.decision), won = o => ['Replied','Meeting booked'].includes(o.outcome);
+  const group = (keyFn) => { const m = new Map(); rs.forEach(o=>{ const k = keyFn(o); if(!m.has(k)) m.set(k, []); m.get(k).push(o); }); return [...m.entries()]; };
+  const stat = list => { const j = list.filter(o=>judged.includes(o)); return { n:list.length, j:j.length, a:j.filter(ok).length, w:list.filter(won).length, rate: j.length ? j.filter(ok).length/j.length*100 : null }; };
+  const MIN = 3;
+  // 8.2 Preferred actions: an action that keeps being accepted in a segment, and keeps leading to replies or meetings
+  const actions = group(o=>o.segment+' · '+o.action).map(([k,l])=>({ k, ...stat(l) })).sort((a,b)=>b.n-a.n);
+  // 8.3 Self-correction: a segment that keeps getting rejected, with its reasons
+  const segs = group(o=>o.segment).map(([k,l])=>{ const s = stat(l), rr = {}; l.filter(o=>o.decision==='Rejected').forEach(o=>{ rr[o.reason]=(rr[o.reason]||0)+1; }); return { k, ...s, top:Object.entries(rr).sort((a,b)=>b[1]-a[1])[0] }; });
+  // 8.4 Weights: which signals and fit criteria sat behind accepted and rejected recommendations
+  const sigRows = [...new Set(rs.flatMap(o=>o.signals))].map(t=>({ k:t, ...stat(rs.filter(o=>o.signals.includes(t))) })).sort((a,b)=>(b.rate??-1)-(a.rate??-1));
+  const fitRows = [...group(o=>o.status), ...group(o=>'Tier '+o.tier), ...group(o=>o.vertical)].map(([k,l])=>({ k, ...stat(l) }));
+  const allRate = judged.length ? judged.filter(ok).length/judged.length*100 : null;
+  const table = (head, rows) => `<table style="width:100%;border-collapse:collapse;font-size:12px"><tr style="color:var(--i3);font-size:10px;text-transform:uppercase;letter-spacing:.06em">${head.map((h,i)=>`<td style="padding:6px 0;${i?'text-align:right':''}">${h}</td>`).join('')}</tr>${rows.join('')||`<tr><td colspan="${head.length}" style="padding:10px 0;color:var(--i3)">Nothing yet.</td></tr>`}</table>`;
+  const tr = cells => `<tr style="border-top:1px solid var(--s75)">${cells.map((c,i)=>`<td style="padding:8px 0;${i?'text-align:right':''}">${c}</td>`).join('')}</tr>`;
+  const flag = (t, tone) => `<span style="${pillCss(tone==='g'?'var(--pos-lt)':tone==='w'?'var(--warn-lt)':'var(--s100)', tone==='g'?'var(--pos)':tone==='w'?'var(--warn)':'var(--i3)')}">${t}</span>`;
+  const complete = rs.filter(o=>o.signals.length && o.action && o.contact && o.channel && o.draft && o.config).length;
+  return `${repFilter(`<button class="btn btn-primary btn-sm" style="margin-left:auto" onclick="downloadOutcomes()">Download the outcome log (.csv)</button>`)}
+    <div style="display:flex;gap:14px;align-items:flex-start;padding:14px 16px;background:var(--brand-lt);border-radius:var(--rmd);margin-bottom:16px">
+      <div style="flex:1;font-size:12.5px;color:var(--i1);line-height:1.6"><b>In the POC the loop records; in production it learns.</b> Every recommendation keeps a full record below. Nothing here changes the scoring or the actions during the pilot: the only immediate change is the one alternative after a rejection, for that account alone. The panels show the evidence production starts from, as proposals only.</div>
+      <div style="text-align:right;flex-shrink:0;font-size:11px;color:var(--i2)">${esc(DemandAI.configVersion())}<div style="color:var(--i3)">${complete} of ${rs.length} records complete</div></div>
+    </div>
+    ${apanel('8.1 Outcome log · one record per recommendation', `<span style="font-size:10.5px;color:var(--i3)">${rs.length} records</span>`, `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11.5px;min-width:980px">
+      <tr style="color:var(--i3);font-size:10px;text-transform:uppercase;letter-spacing:.06em">${['Account · micro-segment','Signals behind it','Action · contact · channel','Decision','Alternative','Outcome','Config'].map(h=>`<td style="padding:6px 8px 6px 0">${h}</td>`).join('')}</tr>
+      ${rs.map(o=>`<tr style="border-top:1px solid var(--s75);vertical-align:top">
+        <td style="padding:8px 8px 8px 0"><b style="color:var(--i1)">${esc(o.account)}</b><div style="color:var(--i3)">${esc(o.segment)} · tier ${esc(o.tier)}</div></td>
+        <td style="padding:8px 8px 8px 0;color:var(--i2)">${esc(o.signals.join(', '))}</td>
+        <td style="padding:8px 8px 8px 0;color:var(--i1)">${esc(o.action)}<div style="color:var(--i3)">${esc(o.contact)} · ${esc(o.channel)}</div></td>
+        <td style="padding:8px 8px 8px 0;color:var(--i1)">${esc(o.decision)}${o.reasonCode?`<div style="color:var(--i3)">${esc(o.reasonCode)} ${esc(o.reason)}</div>`:''}${o.tags?`<div style="color:var(--i3)">${esc(o.tags)}</div>`:''}</td>
+        <td style="padding:8px 8px 8px 0;color:var(--i2)">${o.alternativeNeeded ? (o.alternativeAccepted===null ? 'Needed, not decided' : o.alternativeAccepted ? 'Needed, accepted' : 'Needed, rejected') : '—'}</td>
+        <td style="padding:8px 8px 8px 0;color:var(--i2)">${esc(o.outcome||'—')}</td>
+        <td style="padding:8px 0;color:var(--i3);font-size:10.5px">${esc(o.config.replace(' · scoring weights fixed',''))}<div>${esc(o.brand)}</div></td></tr>`).join('')}
+    </table></div>`)}
+    ${apanel('Which actions worked in which segments', `<span style="font-size:10.5px;color:var(--i3)">production: preferred actions (8.2)</span>`, table(['Micro-segment · action','Recommended','Judged','Accepted','Replies or meetings',''],
+      actions.map(x=>tr([esc(x.k), x.n, x.j, x.rate===null?'—':pct0(x.rate), x.w, x.j>=MIN && x.rate>=70 && x.w ? flag('Preferred-action candidate','g') : x.j<MIN ? flag(`Needs ${MIN}+ judged`) : ''])))
+      + '<div style="font-size:11px;color:var(--i3);margin-top:8px">In production, an action that keeps being accepted in a segment and keeps leading to replies or meetings becomes the preferred action there, and is weighed first for the next similar account.</div>')}
+    ${apanel('Segments that keep getting rejected', `<span style="font-size:10.5px;color:var(--i3)">production: self-correction (8.3)</span>`, table(['Micro-segment','Judged','Accepted','Most common rejection',''],
+      segs.map(x=>tr([esc(x.k), x.j, x.rate===null?'—':pct0(x.rate), x.top?`${esc(x.top[0])} (${x.top[1]})`:'—', x.j>=MIN && x.rate!==null && x.rate<50 ? flag('Would be paused for review','w') : ''])))
+      + '<div style="font-size:11px;color:var(--i3);margin-top:8px">In production, a segment that keeps being rejected is paused and sent for review with its reasons: "wrong contact" points at the persona order, "wrong action" at the action set.</div>')}
+    ${two(apanel('Which signals sat behind accepted recommendations', `<span style="font-size:10.5px;color:var(--i3)">production: weights (8.4)</span>`, table(['Signal','Judged','Accepted'],
+        sigRows.map(x=>tr([esc(x.k)+(x.j>=MIN && allRate!==null && x.rate!==null && Math.abs(x.rate-allRate)>=20 ? ` ${flag(x.rate>allRate?'Review: weight up?':'Review: weight down?', x.rate>allRate?'g':'w')}`:''), x.j, x.rate===null?'—':pct0(x.rate)]))) + `<div style="font-size:11px;color:var(--i3);margin-top:8px">Compared with ${allRate===null?'—':pct0(allRate)} overall.</div>`),
+      apanel('Which fit criteria sat behind them', '', table(['Group','Judged','Accepted'], fitRows.map(x=>tr([esc(x.k), x.j, x.rate===null?'—':pct0(x.rate)])))
+        + '<div style="font-size:11px;color:var(--i3);margin-top:8px">"Wrong fit" and "signal too weak" rejections point straight at the scoring.</div>'))}
+    ${apanel('POC versus production', '', `<table style="width:100%;border-collapse:collapse;font-size:12px">
+      ${[['Step','In the POC','In production'],['Outcome log','Every decision, reason, tag and outcome recorded, with the configuration version','The same, plus outcomes read automatically from the client’s tools'],
+         ['Rejection handling','One alternative per account, immediately','The same'],['Preferred actions','Evidence only (above)','Accepted actions weighed first in each segment'],
+         ['Self-correction','Evidence only (above)','Struggling segments paused and reviewed'],['Weight recalibration','Weights stay fixed, so the baseline holds','Weights tuned from evidence, with the sales manager’s sign-off; a new configuration version, the old one kept, accounts re-scored']]
+        .map((r,i)=>`<tr style="${i?'border-top:1px solid var(--s75)':'color:var(--i3);font-size:10px;text-transform:uppercase;letter-spacing:.06em'}">${r.map((c,j)=>`<td style="padding:8px 10px 8px 0;${i&&!j?'font-weight:600;color:var(--i1)':i?'color:var(--i2)':''}">${c}</td>`).join('')}</tr>`).join('')}</table>`)}`;
+}
+
+function repFilter(extra){
+  return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">${isManager()?`<span style="font-size:12px;color:var(--i2)">Rep</span>
+    <select onchange="REP_FILTER=this.value||null;renderMain()" style="padding:6px 9px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:12px">
+      <option value="">Everyone</option>${Object.keys(REPS).map(e=>`<option value="${e}" ${REP_FILTER===e?'selected':''}>${esc(repName(e))}</option>`).join('')}</select>`
+    : `<span style="font-size:12px;color:var(--i2)">Your results · ${esc(repName(myEmail()))}</span>`}${extra||''}</div>`;
+}
+
+renderMain();
+setTimeout(()=>{ const _setRole = setRole; setRole = function(r){ _setRole(r); renderMain(); }; }, 0);
+
+setTimeout(()=>{ try{ DemandAI.reviewBadge(); }catch(e){} }, 0);
+const PAGE_ID = '13-analytics.html';
+
+/* ═══════════════ ROLE ENGINE — shared across every screen ═══════════════ */
+const ALL_ROLES = ['Admin','Sales manager','Sales rep','Viewer','Platform admin'];
+const ROLE_PERSON = {
+  'Admin':'Rajiv Nair', 'Sales manager':'Pavan Kumar', 'Sales rep':'Sofia Ahlgren',
+  'Viewer':'Elena Vogel', 'Platform admin':'Shantanu Rao'
+};
+const ROLE_NAV_ALLOWED = {
+  'Admin': ['index.html','14-review.html','09-setup.html','07-content.html','08-users.html','10-prospecting.html','11-scoring.html','12-nba.html','15-content-studio.html','13-analytics.html'],
+  'Sales manager': ['index.html','14-review.html','10-prospecting.html','11-scoring.html','12-nba.html','15-content-studio.html','07-content.html','13-analytics.html','09-setup.html','08-users.html'],
+  'Sales rep': ['index.html','14-review.html','10-prospecting.html','11-scoring.html','12-nba.html','15-content-studio.html','07-content.html','13-analytics.html'],
+  'Viewer': ['13-analytics.html'],
+  'Platform admin': [],
+};
+function getThisPageId(){
+  if(typeof PAGE_ID !== 'undefined') return PAGE_ID;
+  try { return location.pathname.split('/').pop(); } catch(e){ return ''; }
+}
+function getRole(){
+  try { return 'Admin'; }
+  catch(e){ return 'Sales manager'; }
+}
+function setRole(role){
+  try { localStorage.setItem('demandai_role', role); } catch(e){}
+  const ov = document.getElementById('roleModalOverlay');
+  if(ov) ov.style.display = 'none';
+  applyRoleToNav();
+}
+function applyRoleToNav(){
+  const role = getRole();
+  const allowed = ROLE_NAV_ALLOWED[role] || [];
+  document.querySelectorAll('.nav-item').forEach(a=>{
+    const href = (a.getAttribute('href')||'').split('?')[0];
+    a.style.display = '';
+  });
+  const unEl = document.querySelector('.nav-un');
+  const urEl = document.querySelector('.nav-ur');
+  const avEl = document.querySelector('.nav-av');
+  if(unEl) unEl.textContent = ROLE_PERSON[role];
+  if(urEl) urEl.textContent = role;
+  if(avEl) avEl.textContent = ROLE_PERSON[role].split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+
+  const thisPage = getThisPageId();
+  const pageIsKnown = Object.values(ROLE_NAV_ALLOWED).some(list => list.includes(thisPage));
+  if(!pageIsKnown){ return; } // can't verify this page's id reliably here — don't block access on a guess
+  if(!allowed.includes(thisPage)){
+    const main = document.querySelector('.main') || document.getElementById('mainArea');
+    const PAGE_NAMES = {'index.html':'Today','09-setup.html':'Setup','07-content.html':'Content library','08-users.html':'Users and roles','10-prospecting.html':'Prospecting','11-scoring.html':'Account Scoring','12-nba.html':'Next Best Action','13-analytics.html':'Analytics','14-review.html':'Review','15-content-studio.html':'Content studio'};
+    const firstAllowedHref = allowed[0] || 'index.html';
+    if(main) main.innerHTML = `
+      <div class="topbar"><div class="topbar-l"><span class="tb-title">No access</span></div></div>
+      <div class="canvas" style="display:flex;align-items:center;justify-content:center;min-height:70vh">
+        <div style="text-align:center;max-width:360px">
+          <div style="font-size:28px;margin-bottom:10px">🔒</div>
+          <div style="font-family:var(--fd);font-size:15px;font-weight:700;color:var(--i1);margin-bottom:6px">Not available for this role</div>
+          <div style="font-size:12px;color:var(--i3);line-height:1.6">${role} doesn't have access to this screen. Switch role from the sidebar, or use the menu to go to <a href="${firstAllowedHref}" style="color:var(--brand)">${PAGE_NAMES[firstAllowedHref]||firstAllowedHref}</a>.</div>
+        </div>
+      </div>`;
+  }
+}
+function renderRoleSwitcher(){ return;
+  const foot = document.querySelector('.nav-foot');
+  if(!foot || document.getElementById('roleSwitchBtn')) return;
+  const btn = document.createElement('div');
+  btn.id = 'roleSwitchBtn';
+  btn.style.cssText = 'padding:8px 10px 0;cursor:pointer;';
+  btn.innerHTML = `<div style="font-size:10px;color:var(--r3);text-decoration:underline;text-align:center">Switch role (demo)</div>`;
+  btn.onclick = openRoleModal;
+  foot.appendChild(btn);
+}
+function openRoleModal(){
+  let ov = document.getElementById('roleModalOverlay');
+  if(!ov){
+    ov = document.createElement('div');
+    ov.id = 'roleModalOverlay';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(20,26,33,.45);z-index:700;display:flex;align-items:center;justify-content:center;';
+    ov.onclick = (e)=>{ if(e.target===ov) ov.style.display='none'; };
+    document.body.appendChild(ov);
+  }
+  const current = getRole();
+  ov.innerHTML = `<div style="background:var(--surf);border-radius:var(--rlg);box-shadow:var(--sh-lg);width:360px;padding:20px;" onclick="event.stopPropagation()">
+    <div style="font-family:var(--fd);font-size:14px;font-weight:700;color:var(--i1);margin-bottom:4px">Preview as a role</div>
+    <div style="font-size:11px;color:var(--i3);margin-bottom:14px">Changes what you see, matching what that role actually has access to. If this screen isn't available for the new role, use the sidebar to go to one that is.</div>
+    ${ALL_ROLES.map(r=>`<div onclick="setRole('${r}')" style="padding:10px 12px;border-radius:8px;cursor:pointer;margin-bottom:4px;background:${r===current?'var(--brand-lt)':'transparent'};display:flex;align-items:center;justify-content:space-between">
+      <div><div style="font-size:12.5px;font-weight:600;color:var(--i1)">${r}</div><div style="font-size:10.5px;color:var(--i3)">${ROLE_PERSON[r]}</div></div>
+      ${r===current?'<span style="color:var(--brand)">✓</span>':''}
+    </div>`).join('')}
+    <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;margin-top:10px" onclick="document.getElementById('roleModalOverlay').style.display='none'">Close</button>
+  </div>`;
+  ov.style.display = 'flex';
+}
+document.addEventListener('DOMContentLoaded', function(){ applyRoleToNav(); renderRoleSwitcher(); });
+if(document.readyState !== 'loading'){ applyRoleToNav(); renderRoleSwitcher(); }
+
+
+</script>
+</body>
+</html>

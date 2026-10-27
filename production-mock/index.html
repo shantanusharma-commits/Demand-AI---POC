@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Sign in · DemandAI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/mock.css">
+<style>
+body{min-height:100vh;display:grid;grid-template-columns:minmax(360px,44%) 1fr;}
+.brand-side{background:var(--rail);color:var(--r1);padding:40px 48px;display:flex;flex-direction:column;gap:28px;position:relative;overflow:hidden;}
+.brand-side::after{content:'';position:absolute;right:-160px;bottom:-160px;width:420px;height:420px;border-radius:50%;background:radial-gradient(circle,rgba(125,82,162,.45),rgba(125,82,162,0) 70%);}
+.logo{display:flex;align-items:center;gap:10px;font-family:var(--fd);font-weight:600;font-size:17px;}
+.logo img{width:32px;height:32px;border-radius:8px;}
+.brand-side h1{font-family:var(--fd);font-size:34px;line-height:1.15;font-weight:600;letter-spacing:-.025em;margin:24px 0 0;max-width:460px;}
+.brand-side h1 em{font-style:normal;color:var(--brand-mid);}
+.brand-side p{color:var(--r2);font-size:14.5px;line-height:1.6;max-width:440px;margin:0;}
+.pts{display:flex;flex-direction:column;gap:12px;max-width:440px;}
+.pt{display:flex;gap:12px;align-items:flex-start;font-size:13.5px;color:var(--r2);line-height:1.5;}
+.pt b{color:var(--r1);}
+.pt .n{width:24px;height:24px;border-radius:7px;background:var(--ract);color:var(--brand-mid);display:inline-flex;align-items:center;justify-content:center;font-family:var(--fd);font-weight:700;font-size:12px;flex-shrink:0;}
+.story{margin-top:auto;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 18px;border-radius:var(--rmd);background:rgba(255,255,255,.06);border:1px solid var(--rb);text-decoration:none;color:var(--r1);position:relative;z-index:1;transition:background var(--fast);}
+.story:hover{background:rgba(255,255,255,.1);}
+.story .t{font-weight:700;font-size:14px;}
+.story .d{font-size:12px;color:var(--r3);margin-top:2px;}
+.story .go{color:var(--brand-mid);font-weight:700;font-size:13px;white-space:nowrap;}
+.form-side{display:flex;align-items:center;justify-content:center;padding:40px 24px;}
+.box{width:100%;max-width:520px;}
+.box h2{font-family:var(--fd);font-size:24px;font-weight:600;letter-spacing:-.02em;margin:0 0 4px;}
+.box .sub{font-size:13.5px;margin-bottom:22px;}
+.ws-card{border:1px solid var(--border);background:var(--surf);border-radius:var(--rlg);padding:16px 18px;margin-bottom:14px;box-shadow:var(--sh);}
+.ws-card .hd{display:flex;align-items:center;gap:10px;margin-bottom:4px;}
+.ws-card .hd b{font-size:15px;font-family:var(--fd);font-weight:600;}
+.ws-card .ds{font-size:12.5px;color:var(--i2);line-height:1.5;margin-bottom:12px;}
+.persona{display:flex;align-items:center;gap:12px;width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:var(--rmd);text-align:left;margin-bottom:8px;transition:border-color var(--fast),background var(--fast);}
+.persona:hover{border-color:var(--brand-mid);background:var(--brand-lt);}
+.persona .nm{font-weight:700;font-size:13.5px;}
+.persona .rl{font-size:12px;color:var(--i3);}
+.persona .arrow{margin-left:auto;color:var(--brand);font-weight:700;font-size:12.5px;}
+.or{display:flex;align-items:center;gap:10px;color:var(--i3);font-size:11.5px;margin:18px 0 12px;}
+.or::before,.or::after{content:'';flex:1;height:1px;background:var(--border);}
+.sso{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.legal{font-size:11px;color:var(--i3);margin-top:18px;text-align:center;}
+@media (max-width:860px){body{grid-template-columns:1fr;}.brand-side{padding:28px 20px;}.brand-side h1{font-size:26px;}}
+</style>
+</head>
+<body>
+<section class="brand-side">
+  <div class="logo"><img src="assets/logo.png" alt=""> DemandAI</div>
+  <div>
+    <h1>Know <em>who</em> to contact, <em>why now</em>, and <em>what to say</em>.</h1>
+  </div>
+  <p>DemandAI finds the right accounts, notices when they're ready to buy, and writes the next step. Your sellers approve or edit; the system learns from every outcome.</p>
+  <div class="pts">
+    <div class="pt"><span class="n">1</span><div><b>Prospect.</b> A clean, verified list from your own ICP, without the duplicates or existing customers.</div></div>
+    <div class="pt"><span class="n">2</span><div><b>Score.</b> Fit × Timing, so reps call the accounts where something just changed.</div></div>
+    <div class="pt"><span class="n">3</span><div><b>Act.</b> The next best action and a ready draft, on the right channel.</div></div>
+    <div class="pt"><span class="n">↻</span><div><b>Learn.</b> Every reply, meeting and silence makes the next recommendation better.</div></div>
+  </div>
+  <a class="story" href="story.html">
+    <div><div class="t">What we're selling</div><div class="d">One-page overview: scope, the three flows, the learning loop and the battle card</div></div>
+    <span class="go">Open →</span>
+  </a>
+</section>
+
+<section class="form-side">
+  <div class="box">
+    <h2>Sign in</h2>
+    <div class="sub muted">Demo: pick who you are. No password needed.</div>
+
+    <div class="ws-card">
+      <div class="hd"><span class="badge b-brand nodot">Sales</span><b>Sales workspace</b></div>
+      <div class="ds">Opens on Today. Chat first: the AI has done the research overnight; you approve, edit or ask. No setup screens.</div>
+      <button class="persona" onclick="signIn('sofia','app.html')"><span class="av" style="background:#0094DA;width:36px;height:36px;font-size:12px">SA</span><div><div class="nm">Sofia Ahlgren</div><div class="rl">Sales rep · works her own accounts</div></div><span class="arrow">Sign in →</span></button>
+      <button class="persona" onclick="signIn('pavan','app.html')"><span class="av" style="background:#7D52A2;width:36px;height:36px;font-size:12px">PK</span><div><div class="nm">Pavan Kumar</div><div class="rl">Sales manager · oversees 4 reps and can act on any item</div></div><span class="arrow">Sign in →</span></button>
+    </div>
+
+    <div class="ws-card">
+      <div class="hd"><span class="badge b-grey nodot">Admin</span><b>Admin console</b></div>
+      <div class="ds">Set-up and the process behind the chat: signal and lead uploads, integrations, email connectivity, content library, templates, users and settings.</div>
+      <button class="persona" onclick="signIn('rajiv','admin/index.html')"><span class="av" style="background:#5E3A80;width:36px;height:36px;font-size:12px">RN</span><div><div class="nm">Rajiv Nair</div><div class="rl">Sales operations admin</div></div><span class="arrow">Sign in →</span></button>
+    </div>
+
+    <div class="or">or sign in with your company account</div>
+    <div class="sso"><button class="btn lg" disabled title="Placeholder">Single sign-on</button><button class="btn lg" disabled title="Placeholder">Email link</button></div>
+    <div class="legal">Mock for discussion. Every company and person shown is invented.</div>
+  </div>
+</section>
+<script>
+function signIn(id, href){
+  try { localStorage.setItem('dmock_user', id); if (id === 'rajiv') localStorage.setItem('demandai_role', 'Admin'); } catch (e) {}
+  location.href = href;
+}
+</script>
+</body>
+</html>

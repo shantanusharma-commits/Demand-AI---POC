@@ -1,0 +1,1884 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>For Review — DemandAI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --brand:#7D52A2;--brand-dk:#5E3A80;--brand-lt:#F0EBF8;--brand-mid:#C9B3E8;
+  --sec:#0094DA;--sec-lt:#E6F4FC;--sec-dk:#005E8E;
+  --ter:#FF8820;--ter-lt:#FFF0E0;--ter-dk:#B85800;
+  --pos:#2E7D5A;--pos-lt:#EAF5F0;
+  --warn:#C4751A;--warn-lt:#FDF6E8;
+  --neg:#B23F3F;--neg-lt:#FBECEC;
+  --rail:#130D1C;--rb:rgba(255,255,255,.07);
+  --r1:#fff;--r2:rgba(255,255,255,.76);--r3:rgba(255,255,255,.43);--r4:rgba(255,255,255,.21);
+  --rhov:rgba(255,255,255,.05);--ract:rgba(125,82,162,.22);
+  --bg:#F5F6F9;--surf:#fff;--border:#E5E9EE;--bdk:#D1D7DE;
+  --i1:#141A21;--i2:#4A5664;--i3:#9DA8B5;--i4:#C9D1DA;
+  --s50:#F4F6F8;--s75:#ECEFF3;--s100:#E1E6EC;--s200:#C9D1DA;--s300:#9DA8B5;
+  --fd:"Sora",system-ui,sans-serif;
+  --fb:"Plus Jakarta Sans",-apple-system,sans-serif;
+  --fm:"JetBrains Mono",monospace;
+  --rsm:8px;--rmd:12px;--rlg:16px;
+  --ease:cubic-bezier(.4,0,.2,1);--fast:120ms;--base:200ms;
+  --sh:0 2px 8px rgba(20,26,33,.07),0 1px 3px rgba(20,26,33,.05);
+  --sh-lg:0 8px 40px rgba(20,26,33,.14),0 2px 8px rgba(20,26,33,.08);
+  --nav-w:224px;--chat-w:400px;--hh:54px;--tabs-h:42px;
+}
+*,*::before,*::after{box-sizing:border-box;}
+html{font-size:16px;-webkit-font-smoothing:antialiased;}
+body{margin:0;font-family:var(--fb);font-size:14px;background:var(--bg);color:var(--i1);overflow:hidden;height:100vh;}
+button{font:inherit;cursor:pointer;border:none;background:none;color:inherit;padding:0;}
+input,textarea,select{font:inherit;}
+:root{color-scheme:light;}
+input,textarea,select{background-color:#fff;color:var(--i1);}
+textarea[readonly],input[readonly]{background-color:var(--s50);}
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-thumb{background:var(--s200);border-radius:2px;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.55;transform:scale(1.3);}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+@keyframes slideLeft{from{opacity:0;transform:translateX(24px);}to{opacity:1;transform:translateX(0);}}
+@keyframes slideDown{from{opacity:0;transform:translateY(-5px);}to{opacity:1;transform:translateY(0);}}
+@keyframes msgIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
+@keyframes barGrow{from{width:0}to{width:var(--bw)}}
+
+/* ─── SHELL ─────────────────────────────── */
+.shell{display:grid;grid-template-columns:var(--nav-w) 1fr;height:100vh;width:100vw;}
+
+/* ─── NAV ─────────────────────────────── */
+.nav{background:var(--rail);display:flex;flex-direction:column;height:100vh;overflow:hidden;border-right:1px solid var(--rb);}
+.nav-brand{display:flex;align-items:center;gap:9px;padding:13px 13px 11px;border-bottom:1px solid var(--rb);flex-shrink:0;}
+.nav-nm{font-family:var(--fd);font-size:14px;font-weight:600;color:var(--r1);letter-spacing:-.01em;}
+.nav-org{font-size:10px;color:var(--r3);margin-top:1px;}
+.nav-body{flex:1;overflow-y:auto;padding:6px 0;}
+.nav-body::-webkit-scrollbar{width:3px;}
+.nav-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.07);}
+.nav-sec{padding:8px 14px 3px;font-size:9px;letter-spacing:.09em;text-transform:uppercase;color:var(--r4);font-weight:600;}
+.nav-item{display:flex;text-decoration:none;align-items:center;gap:9px;height:32px;padding:0 10px;margin:1px 6px;border-radius:7px;color:var(--r3);font-size:12.5px;font-weight:500;cursor:pointer;position:relative;transition:background var(--fast) var(--ease),color var(--fast) var(--ease);}
+.nav-item:hover{background:var(--rhov);color:var(--r2);}
+.nav-item.active{background:var(--ract);color:var(--r1);}
+.nav-item.active::before{content:'';position:absolute;left:0;top:7px;bottom:7px;width:2.5px;background:var(--brand-mid);border-radius:0 2px 2px 0;}
+.nav-ic{width:15px;height:15px;flex-shrink:0;opacity:.7;}
+.nav-item.active .nav-ic{opacity:1;color:var(--brand-mid);}
+.nav-lbl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.nav-div{height:1px;background:var(--rb);margin:6px 10px;}
+.nav-foot{padding:10px;border-top:1px solid var(--rb);flex-shrink:0;}
+.nav-user{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:var(--rsm);cursor:pointer;transition:background var(--fast) var(--ease);}
+.nav-user:hover{background:var(--rhov);}
+.nav-av{width:28px;height:28px;border-radius:7px;background:linear-gradient(135deg,var(--brand),var(--brand-dk));color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;}
+.nav-un{font-size:12px;color:var(--r2);font-weight:500;}
+.nav-ur{font-size:10px;color:var(--r4);margin-top:1px;}
+
+/* ─── MAIN ─────────────────────────────── */
+.main{display:flex;flex-direction:column;height:100vh;overflow:hidden;min-width:0;}
+
+/* Topbar */
+.topbar{height:var(--hh);padding:0 20px;display:flex;align-items:center;justify-content:space-between;background:var(--surf);border-bottom:1px solid var(--border);flex-shrink:0;gap:10px;}
+.topbar-l{display:flex;align-items:center;gap:10px;flex:1;min-width:0;}
+.tb-title{font-family:var(--fd);font-size:15px;font-weight:600;color:var(--i1);}
+.tb-badge{display:inline-flex;align-items:center;gap:4px;font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 9px;border-radius:999px;}
+.badge-live{background:var(--pos-lt);color:var(--pos);}
+.badge-dot{width:5px;height:5px;border-radius:50%;background:currentColor;animation:pulse 1.6s ease-in-out infinite;}
+.badge-neutral{background:var(--s100);color:var(--i3);}
+.topbar-r{display:flex;align-items:center;gap:7px;flex-shrink:0;}
+.btn{display:inline-flex;align-items:center;gap:6px;font-family:var(--fb);font-size:12.5px;font-weight:600;height:30px;padding:0 12px;border-radius:var(--rsm);border:1px solid transparent;cursor:pointer;white-space:nowrap;transition:all var(--fast) var(--ease);}
+.btn-primary{background:var(--brand);color:#fff;}
+.btn-primary:hover{background:var(--brand-dk);}
+.btn-sec{background:var(--surf);border-color:var(--bdk);color:var(--i1);}
+.btn-sec:hover{background:var(--s75);}
+.btn-copilot{background:var(--brand-lt);border-color:var(--brand-mid);color:var(--brand-dk);}
+.btn-copilot:hover{background:var(--brand-mid);}
+.btn-copilot.active{background:var(--brand);color:#fff;border-color:var(--brand);}
+.btn-ghost{color:var(--i2);}
+.btn-ghost:hover{background:var(--s75);}
+.btn-sm{height:27px;font-size:11.5px;padding:0 10px;border-radius:6px;}
+
+/* Tabs */
+.ftabs{height:var(--tabs-h);padding:0 20px;display:flex;align-items:stretch;gap:0;border-bottom:1px solid var(--border);background:var(--surf);flex-shrink:0;}
+.ftab{display:flex;align-items:center;gap:6px;padding:0 16px;font-size:13px;font-weight:500;color:var(--i3);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;transition:color var(--fast) var(--ease);}
+.ftab:hover{color:var(--i2);}
+.ftab.active{color:var(--i1);border-bottom-color:var(--brand);}
+.ftab-cnt{font-family:var(--fm);font-size:10.5px;color:var(--i4);}
+.ftab.active .ftab-cnt{color:var(--brand);}
+
+/* Canvas */
+.canvas{flex:1;overflow-y:auto;padding:16px 20px 40px;}
+.canvas::-webkit-scrollbar{width:5px;}
+
+/* ─── STATS STRIP ─────────────────────── */
+.stats{display:grid;grid-template-columns:repeat(5,1fr);background:var(--surf);border:1px solid var(--border);border-radius:var(--rmd);overflow:hidden;margin-bottom:16px;}
+.stat{padding:13px 16px;border-right:1px solid var(--border);}
+.stat:last-child{border-right:none;}
+.stat-lbl{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--i3);font-weight:600;margin-bottom:4px;}
+.stat-val{font-family:var(--fd);font-size:24px;font-weight:700;letter-spacing:-.03em;line-height:1;margin-bottom:3px;}
+.stat-sub{font-size:11px;color:var(--i3);}
+.sv1{color:var(--brand);}
+.sv2{color:var(--sec);}
+.sv3{color:var(--ter-dk);}
+.sv4{color:var(--pos);}
+.sv5{color:var(--i1);}
+
+/* ─── MAIN LAYOUT: full-width list, detail as fixed right drawer ─── */
+.score-layout{display:block;}
+/* dim-overview handled inline */
+
+/* Detail drawer — slides in from the right over the content */
+.detail-drawer{
+  position:fixed;top:0;right:0;bottom:0;
+  width:360px;
+  background:var(--surf);
+  border-left:1px solid var(--border);
+  box-shadow:var(--sh-lg);
+  display:flex;flex-direction:column;
+  z-index:300;
+  transform:translateX(100%);
+  transition:transform var(--base) var(--ease);
+  overflow-y:auto;
+}
+.detail-drawer.open{transform:translateX(0);}
+.detail-drawer::-webkit-scrollbar{width:4px;}
+.drawer-hdr{
+  position:sticky;top:0;z-index:2;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 16px;
+  background:var(--surf);
+  border-bottom:1px solid var(--border);
+}
+.drawer-title{font-family:var(--fd);font-size:13px;font-weight:600;color:var(--i1);}
+.drawer-sub{font-size:10.5px;color:var(--i3);margin-top:1px;}
+.drawer-close{width:26px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:6px;color:var(--i3);cursor:pointer;flex-shrink:0;transition:all var(--fast);}
+.drawer-close:hover{background:var(--s75);color:var(--i1);}
+.drawer-body{padding:14px 16px 24px;flex:1;}
+
+/* Score list */
+.score-list{background:var(--surf);border:1px solid var(--border);border-radius:var(--rmd);overflow:hidden;}
+.sl-toolbar{display:flex;align-items:center;gap:8px;padding:9px 14px;border-bottom:1px solid var(--border);flex-wrap:wrap;}
+.sl-srch{display:flex;align-items:center;gap:6px;background:var(--s50);border:1px solid var(--border);border-radius:var(--rsm);padding:0 10px;height:29px;min-width:160px;flex:1;max-width:220px;transition:border-color var(--fast);}
+.sl-srch:focus-within{border-color:var(--brand-mid);}
+.sl-srch input{border:none;background:transparent;font-size:12.5px;color:var(--i1);outline:none;width:100%;}
+.sl-srch input::placeholder{color:var(--i3);}
+.sl-seg-filter{display:flex;gap:4px;margin-left:auto;}
+.seg-pill{display:inline-flex;align-items:center;font-size:11px;font-weight:600;padding:3px 10px;border-radius:999px;cursor:pointer;border:1px solid var(--border);color:var(--i3);background:var(--surf);white-space:nowrap;transition:all var(--fast);}
+.seg-pill:hover{border-color:var(--brand-mid);color:var(--brand);}
+.seg-pill.active{background:var(--brand);border-color:var(--brand);color:#fff;}
+
+.sl-head{display:grid;grid-template-columns:minmax(160px,2.5fr) 72px 72px 72px 110px 180px;padding:0 14px;height:32px;background:var(--s50);border-bottom:1px solid var(--border);align-items:center;gap:6px;}
+.sl-th{font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--i3);font-weight:600;white-space:nowrap;}
+
+.sl-row{display:grid;grid-template-columns:minmax(160px,2.5fr) 72px 72px 72px 110px 180px;padding:6px 14px;min-height:60px;border-bottom:1px solid var(--border);align-items:center;gap:6px;cursor:pointer;transition:background var(--fast);}
+.sl-row:last-child{border-bottom:none;}
+.sl-row:hover{background:var(--s50);}
+.sl-row.selected{background:var(--brand-lt);}
+
+.co-cell{display:flex;align-items:center;gap:9px;min-width:0;}
+.co-av{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-family:var(--fd);font-size:10px;font-weight:700;color:#fff;flex-shrink:0;}
+.co-nm{font-size:12.5px;font-weight:600;color:var(--i1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.co-ind{font-size:10.5px;color:var(--i3);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+/* Score badges */
+.sc{display:inline-flex;align-items:center;justify-content:center;min-width:34px;height:20px;padding:0 5px;border-radius:4px;font-family:var(--fm);font-size:11px;font-weight:700;}
+.sc-h{background:var(--pos-lt);color:var(--pos);}
+.sc-m{background:var(--warn-lt);color:var(--warn);}
+.sc-l{background:var(--neg-lt);color:var(--neg);}
+
+/* Composite bar */
+.comp-bar{display:flex;align-items:center;gap:5px;}
+.comp-track{flex:1;height:4px;background:var(--s100);border-radius:2px;overflow:hidden;}
+.comp-fill{height:4px;border-radius:2px;animation:barGrow .5s var(--ease) forwards;}
+.comp-val{font-family:var(--fm);font-size:11px;color:var(--i2);min-width:20px;text-align:right;flex-shrink:0;}
+
+/* Delta */
+.delta{font-family:var(--fm);font-size:10.5px;font-weight:600;padding:1px 5px;border-radius:3px;white-space:nowrap;}
+.delta-up{background:var(--pos-lt);color:var(--pos);}
+.delta-dn{background:var(--neg-lt);color:var(--neg);}
+.delta-flat{background:var(--s100);color:var(--i3);}
+
+/* ─── PANEL (used in tabs) ─────────── */
+.panel{background:var(--surf);border:1px solid var(--border);border-radius:var(--rmd);overflow:hidden;}
+.panel-hdr{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border-bottom:1px solid var(--border);}
+.panel-ttl{font-size:11px;font-weight:600;color:var(--i2);letter-spacing:.04em;text-transform:uppercase;}
+.panel-body{padding:12px 14px;}
+
+/* Score breakdown in detail */
+.dim-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--s75);}
+.dim-row:last-child{border-bottom:none;}
+.dim-lbl{font-size:11.5px;color:var(--i2);width:74px;flex-shrink:0;}
+.dim-track{flex:1;height:5px;background:var(--s100);border-radius:3px;overflow:hidden;}
+.dim-fill{height:5px;border-radius:3px;transition:width .5s var(--ease);}
+.dim-val{font-family:var(--fm);font-size:12px;font-weight:700;min-width:26px;text-align:right;flex-shrink:0;}
+
+/* Signal log */
+.sig-row{display:flex;align-items:flex-start;gap:8px;padding:7px 0;border-bottom:1px solid var(--s75);}
+.sig-row:last-child{border-bottom:none;}
+.sig-ic{width:24px;height:24px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0;margin-top:1px;}
+.sig-lbl{font-size:11.5px;color:var(--i1);font-weight:500;line-height:1.4;}
+.sig-meta{font-size:10px;color:var(--i3);margin-top:2px;}
+.sig-impact{margin-left:auto;font-family:var(--fm);font-size:11px;font-weight:700;flex-shrink:0;}
+.sig-up{color:var(--pos);}
+.sig-dn{color:var(--neg);}
+
+/* Sparkline */
+.spark{display:flex;align-items:flex-end;gap:2px;height:28px;}
+.spark-bar{flex:1;border-radius:2px 2px 0 0;min-width:3px;}
+
+/* Lookalikes */
+.like-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--s75);cursor:pointer;}
+.like-row:last-child{border-bottom:none;}
+.like-row:hover .like-nm{color:var(--brand);}
+.like-av{width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:var(--fd);font-size:9.5px;font-weight:700;color:#fff;flex-shrink:0;}
+.like-nm{font-size:12px;font-weight:600;color:var(--i1);transition:color var(--fast);}
+.like-meta{font-size:10.5px;color:var(--i3);margin-top:1px;}
+.like-match{margin-left:auto;font-family:var(--fm);font-size:11px;font-weight:700;color:var(--brand);flex-shrink:0;}
+
+/* Empty detail state */
+.detail-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px 16px;gap:8px;text-align:center;}
+
+/* ─── DIMENSION OVERVIEW (below list on Scores tab) */
+/* dim-overview now defined in score-layout block above */
+/* dov-num used by the inline dimension strip */
+.dov-num{font-family:var(--fd);font-weight:700;letter-spacing:-.03em;line-height:1;}
+.dov-dist{display:flex;gap:2px;height:5px;border-radius:3px;overflow:hidden;}
+.dov-seg{height:100%;}
+
+/* ─── SEGMENT MAP TAB ─── */
+.seg-map-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border);}
+.seg-map-ttl{font-family:var(--fd);font-size:13px;font-weight:600;color:var(--i1);}
+.seg-grid{display:grid;grid-template-columns:repeat(4,1fr);}
+.seg-cell{padding:14px 16px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);cursor:pointer;transition:background var(--fast);}
+.seg-cell:hover{background:var(--s50);}
+.seg-cell:nth-child(4n){border-right:none;}
+.seg-cell:nth-last-child(-n+4){border-bottom:none;}
+.seg-nm{font-size:12.5px;font-weight:600;color:var(--i1);margin-bottom:3px;}
+.seg-desc{font-size:10.5px;color:var(--i3);margin-bottom:8px;line-height:1.5;}
+.seg-count{font-family:var(--fd);font-size:20px;font-weight:700;letter-spacing:-.03em;line-height:1;margin-bottom:2px;}
+.seg-sub{font-size:10.5px;color:var(--i3);}
+.seg-bar-wrap{height:3px;background:var(--s100);border-radius:2px;margin-top:8px;overflow:hidden;}
+.seg-bar-fill{height:3px;border-radius:2px;}
+
+/* ─── HISTORY TAB ─── */
+.hist-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--s75);}
+.hist-row:last-child{border-bottom:none;}
+.hist-dir{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+
+/* ─── THRESHOLD TAB ─── */
+.thresh-body{padding:18px 20px;display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+.thresh-dim{display:flex;flex-direction:column;gap:10px;}
+.thresh-dim-ttl{font-size:10.5px;font-weight:600;color:var(--i2);letter-spacing:.05em;text-transform:uppercase;margin-bottom:2px;padding-bottom:6px;border-bottom:1px solid var(--border);}
+.thresh-row{display:flex;align-items:center;gap:10px;}
+.thresh-lbl{font-size:11.5px;color:var(--i2);min-width:90px;}
+.thresh-slider{flex:1;accent-color:var(--brand);cursor:pointer;height:4px;}
+.thresh-val{font-family:var(--fm);font-size:12px;font-weight:600;color:var(--i1);min-width:26px;text-align:right;}
+.thresh-footer{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-top:1px solid var(--border);background:var(--s50);}
+.thresh-hint{font-size:12px;color:var(--i3);}
+.thresh-hint strong{color:var(--warn);font-weight:600;}
+
+/* ─── CHAT PANEL ─────────────────────── */
+.chat-panel{position:fixed;top:0;right:0;bottom:0;width:var(--chat-w);background:var(--surf);border-left:1px solid var(--border);box-shadow:var(--sh-lg);display:flex;flex-direction:column;z-index:400;transform:translateX(100%);transition:transform var(--base) var(--ease);}
+.chat-panel.open{transform:translateX(0);}
+.chat-panel.expanded{position:fixed;inset:0;width:100vw;height:100vh;border-left:none;z-index:450;}
+.chat-panel.expanded .hist-section{display:none;}
+.chat-panel.expanded .chat-msgs,.chat-panel.expanded .sugg-wrap,.chat-panel.expanded .composer-wrap{padding-left:24px;padding-right:24px;}
+
+.chat-top{height:var(--hh);padding:0 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);flex-shrink:0;gap:8px;}
+.chat-top-l{display:flex;align-items:center;gap:9px;min-width:0;flex:1;}
+.chat-ttl{font-size:13px;font-weight:600;color:var(--i1);}
+.chat-scope{font-size:10.5px;color:var(--i3);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.chat-top-acts{display:flex;align-items:center;gap:2px;flex-shrink:0;}
+.ct-ic{width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:6px;color:var(--i3);cursor:pointer;transition:all var(--fast);}
+.ct-ic:hover{background:var(--s75);color:var(--i1);}
+.ct-ic.active{background:var(--brand-lt);color:var(--brand);}
+
+.hist-section{border-bottom:1px solid var(--border);flex-shrink:0;overflow:hidden;max-height:220px;transition:max-height var(--base) var(--ease);}
+.hist-section.collapsed{max-height:0;border-bottom:none;}
+.hist-hdr{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;cursor:pointer;user-select:none;}
+.hist-lbl{font-size:10.5px;font-weight:600;color:var(--i2);letter-spacing:.03em;}
+.hist-chev{color:var(--i3);transition:transform var(--fast);}
+.hist-section.collapsed .hist-chev{transform:rotate(-90deg);}
+.hist-list{padding:0 10px 8px;overflow-y:auto;max-height:160px;}
+.hist-list::-webkit-scrollbar{width:3px;}
+.hist-item{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:7px;cursor:pointer;transition:background var(--fast);}
+.hist-item:hover{background:var(--s50);}
+.hist-item.active{background:var(--brand-lt);}
+.hist-item-nm{flex:1;font-size:12px;font-weight:500;color:var(--i2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.hist-item.active .hist-item-nm{color:var(--brand-dk);}
+
+.chat-msgs{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;}
+.chat-msgs::-webkit-scrollbar{width:4px;}
+.msg{animation:msgIn var(--base) var(--ease);}
+.msg-a{display:flex;align-items:flex-start;gap:8px;}
+.msg-ic{width:24px;height:24px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;}
+.msg-bub{background:var(--s50);border:1px solid var(--border);border-radius:var(--rmd);padding:10px 12px;font-size:12.5px;color:var(--i1);line-height:1.6;max-width:calc(100% - 32px);}
+.msg-bub strong{font-weight:600;}
+.msg-bub em{font-style:normal;color:var(--i2);background:var(--s100);padding:1px 5px;border-radius:3px;font-size:12px;}
+.msg-u{display:flex;justify-content:flex-end;}
+.msg-ub{background:var(--brand);color:#fff;border-radius:var(--rmd);padding:10px 12px;font-size:12.5px;line-height:1.6;max-width:86%;}
+.msg-time{font-size:9.5px;color:var(--i4);margin-top:3px;padding:0 2px;}
+
+/* Chat action chips */
+.chat-acts{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;}
+.ca{display:inline-flex;align-items:center;gap:4px;padding:5px 10px;border-radius:16px;font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid;transition:all var(--fast);}
+.ca-pri{background:var(--brand);border-color:var(--brand);color:#fff;}
+.ca-pri:hover{background:var(--brand-dk);}
+.ca-sec{background:var(--surf);border-color:var(--bdk);color:var(--i1);}
+.ca-sec:hover{background:var(--s75);}
+.ca-ghost{background:transparent;border-color:var(--border);color:var(--i2);}
+.ca-ghost:hover{border-color:var(--bdk);color:var(--i1);}
+
+/* Suggestions */
+.sugg-wrap{padding:4px 14px 8px;}
+.sugg-lbl{font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--i3);font-weight:600;margin-bottom:6px;}
+.sugg{display:flex;align-items:center;gap:7px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--rsm);font-size:12px;color:var(--i2);cursor:pointer;background:var(--surf);margin-bottom:3px;transition:all var(--fast);}
+.sugg:hover{border-color:var(--brand-mid);background:var(--brand-lt);color:var(--brand-dk);}
+.sugg svg{color:var(--brand);flex-shrink:0;}
+
+/* Typing */
+.typing-bub{display:inline-flex;align-items:center;gap:4px;padding:12px 14px;background:var(--s50);border:1px solid var(--border);border-radius:var(--rmd);}
+.typing-bub span{width:6px;height:6px;border-radius:50%;background:var(--s300);}
+.typing-bub span:nth-child(1){animation:pulse .9s ease-in-out infinite;}
+.typing-bub span:nth-child(2){animation:pulse .9s ease-in-out .18s infinite;}
+.typing-bub span:nth-child(3){animation:pulse .9s ease-in-out .36s infinite;}
+
+/* Composer */
+.composer-wrap{border-top:1px solid var(--border);padding:10px 13px 13px;background:var(--bg);flex-shrink:0;}
+.composer{display:flex;align-items:flex-end;gap:7px;background:var(--surf);border:1.5px solid var(--border);border-radius:12px;padding:8px 9px;transition:border-color var(--fast);}
+.composer:focus-within{border-color:var(--brand-mid);}
+.cta{flex:1;border:none;background:transparent;font-size:13px;color:var(--i1);outline:none;resize:none;min-height:20px;max-height:90px;line-height:1.5;}
+.cta::placeholder{color:var(--i3);}
+.composer-btns{display:flex;align-items:center;gap:5px;}
+.att-btn{width:28px;height:28px;border-radius:7px;color:var(--i3);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all var(--fast);}
+.att-btn:hover{background:var(--s75);color:var(--i1);}
+.send-btn{width:32px;height:32px;border-radius:9px;background:var(--brand);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:background var(--fast),transform var(--fast);}
+.send-btn:hover{background:var(--brand-dk);transform:scale(1.04);}
+.send-btn.off{background:var(--s200);cursor:default;transform:none;}
+.composer-hint{font-size:10px;color:var(--i4);margin-top:5px;text-align:center;}
+
+/* Dropdown */
+.dd{position:relative;display:inline-block;}
+.ddm{position:absolute;top:calc(100% + 5px);right:0;min-width:200px;background:var(--surf);border:1px solid var(--border);border-radius:var(--rmd);box-shadow:var(--sh-lg);z-index:200;overflow:hidden;display:none;}
+.ddm.open{display:block;animation:slideDown 100ms var(--ease);}
+.ddi{display:flex;align-items:center;gap:9px;padding:9px 14px;font-size:13px;color:var(--i1);cursor:pointer;transition:background var(--fast);}
+.ddi:hover{background:var(--s50);}
+.ddi svg{color:var(--i3);flex-shrink:0;}
+.dd-sep{height:1px;background:var(--border);margin:3px 0;}
+
+/* Toast */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--i1);color:#fff;font-size:12.5px;font-weight:500;padding:9px 18px;border-radius:999px;z-index:900;pointer-events:none;animation:fadeUp .2s var(--ease);}
+
+
+/* ─── Data tables and tags (Prospecting, Scoring) ─── */
+.dt-wrap{overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none;}
+.dt-wrap::-webkit-scrollbar{display:none;}
+.dt{width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed;font-size:12.5px;}
+.dt th{padding:11px 16px;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--i3);text-align:left;background:var(--s50);border-bottom:1px solid var(--border);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.dt td{padding:13px 16px;color:var(--i2);border-bottom:1px solid var(--s75);vertical-align:middle;line-height:1.45;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dt tr:last-child td{border-bottom:none;}
+.dt tbody tr{transition:background var(--fast);}
+.dt tbody tr:hover td{background:#FAFBFC;}
+.dt tbody tr.click{cursor:pointer;}
+.dt th.num,.dt td.num{text-align:right;}
+.stat-link{position:relative;cursor:pointer;display:block;text-decoration:none;transition:background var(--fast) var(--ease);}
+.stat-link:hover{background:var(--brand-lt);}
+.stat-link::after{content:'›';position:absolute;top:10px;right:14px;font-size:17px;color:var(--i4);transition:color var(--fast) var(--ease),transform var(--fast) var(--ease);}
+.stat-link:hover::after{color:var(--brand);transform:translateX(2px);}
+.stat-link:hover .stat-lbl{color:var(--brand);}
+.col-btn{display:inline-flex;align-items:center;gap:5px;border:none;background:transparent;font:inherit;letter-spacing:inherit;text-transform:inherit;color:inherit;cursor:pointer;padding:3px 6px;margin:-3px -6px;border-radius:5px;}
+.col-btn:hover{background:var(--s100);color:var(--brand);}
+.col-btn.on{color:var(--brand);background:var(--brand-lt);}
+.col-btn svg{flex-shrink:0;opacity:.75;}
+.col-menu{position:fixed;z-index:400;min-width:200px;background:var(--surf);border:1px solid var(--border);border-radius:var(--rmd);box-shadow:var(--sh-lg);padding:6px;}
+.col-menu button{display:flex;align-items:center;gap:8px;width:100%;text-align:left;padding:7px 10px;border-radius:var(--rsm);font-size:12.5px;color:var(--i1);}
+.col-menu button:hover{background:var(--s50);}
+.col-menu .n{margin-left:auto;font-size:11px;color:var(--i3);}
+.col-menu .ck{width:12px;color:var(--brand);font-weight:700;}
+.col-filt{appearance:none;-webkit-appearance:none;border:none;background:transparent;font:inherit;letter-spacing:inherit;text-transform:inherit;color:inherit;cursor:pointer;padding:0;max-width:100%;outline:none;}
+.col-filt:hover{color:var(--brand);}
+.col-filt.on{color:var(--brand);}
+.dt td.num{font-family:var(--fm);font-variant-numeric:tabular-nums;}
+.dt td.wrap{white-space:normal;}
+.dt .dt-main{color:var(--i1);font-weight:600;overflow:hidden;text-overflow:ellipsis;}
+.dt .val{color:var(--i1);overflow:hidden;text-overflow:ellipsis;}
+.dt .sub{display:block;font-size:11px;color:var(--i3);margin-top:2px;overflow:hidden;text-overflow:ellipsis;}
+.dt .muted{color:var(--i4);}
+.dt .person{display:flex;align-items:center;gap:10px;min-width:0;}
+.dt .person > div:last-child{min-width:0;}
+.clamp2{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;white-space:normal;}
+.dt-empty{padding:28px;text-align:center;font-size:12.5px;color:var(--i3);}
+.tag{display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 10px;border-radius:999px;font-family:var(--fb);font-size:11px;font-weight:600;letter-spacing:0;text-transform:none;white-space:nowrap;background:var(--s75);color:var(--i2);vertical-align:middle;}
+.tag::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0;}
+.tag-green{background:#E8F5EE;color:#24704F;}
+.tag-amber{background:#FDF2E1;color:#A8620F;}
+.tag-red{background:#FBEAEA;color:#A83A3A;}
+.tag-blue{background:#E4F2FB;color:#00659A;}
+.tag-violet{background:#F0EAF8;color:#6A4290;}
+.tag-teal{background:#E3F4F2;color:#1B7369;}
+.tag-pink{background:#FBE9F1;color:#A1386A;}
+.tag-grey{background:#EEF1F4;color:#5B6774;}
+.tags{display:flex;flex-wrap:wrap;gap:6px;}
+
+/* ─── Checks pop-up ─── */
+@keyframes ckspin{to{transform:rotate(360deg);}}
+@keyframes ckpop{from{transform:scale(.6);opacity:0;}to{transform:scale(1);opacity:1;}}
+.ck{width:22px;height:22px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;}
+.ck-wait{border:2px solid var(--s100);}
+.ck-run{border:2.5px solid var(--brand-lt);border-top-color:var(--brand);animation:ckspin .7s linear infinite;}
+.ck-ok{background:var(--pos);color:#fff;animation:ckpop .2s var(--ease);}
+.ck-warn{background:var(--warn);color:#fff;animation:ckpop .2s var(--ease);}
+.ck-stop{background:var(--neg);color:#fff;animation:ckpop .2s var(--ease);}
+.ck-info{background:var(--s300);color:#fff;animation:ckpop .2s var(--ease);}
+.ck-row{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--s75);transition:opacity var(--base);}
+.ck-row.pending{opacity:.45;}
+
+/* ─── Checkboxes: grey when empty, brand colour when ticked ─── */
+.dt input[type=checkbox]{-webkit-appearance:none;appearance:none;width:16px;height:16px;margin:0;border-radius:4px;border:1.5px solid var(--s200);background:var(--s75);cursor:pointer;vertical-align:middle;display:inline-grid;place-content:center;transition:background var(--fast),border-color var(--fast);}
+.dt input[type=checkbox]:hover{border-color:var(--s300);}
+.dt input[type=checkbox]:checked,.dt input[type=checkbox]:indeterminate{background:var(--brand);border-color:var(--brand);}
+.dt input[type=checkbox]:checked::after{content:'';width:9px;height:5px;border:2px solid #fff;border-top:0;border-right:0;transform:translateY(-1px) rotate(-45deg);}
+.dt input[type=checkbox]:indeterminate::after{content:'';width:8px;height:2px;background:#fff;border-radius:1px;}
+.dt input[type=checkbox]:focus-visible{outline:2px solid var(--brand-mid);outline-offset:2px;}
+
+/* ─── Queue rows: lead with why it needs you ─── */
+.why{display:flex;flex-direction:column;gap:4px;}
+.why-l{font-size:12px;color:var(--i2);line-height:1.45;}
+.why-l b{color:var(--i1);font-weight:600;}
+tr.held td{opacity:.6;}
+.btn-decide{background:var(--brand-lt);border-color:var(--brand-mid);color:var(--brand-dk);}
+.btn-decide:hover{background:var(--brand);color:#fff;border-color:var(--brand);}
+.btn[disabled]{opacity:.4;cursor:default;}
+/* ─── Workspace: one item, the whole screen ─── */
+.ws{flex:1;min-height:0;display:flex;flex-direction:column;background:var(--bg);}
+.ws-crumb{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--i3);min-width:0;}
+.ws-crumb a{color:var(--i3);text-decoration:none;white-space:nowrap;}
+.ws-crumb a:hover{color:var(--brand);}
+.ws-crumb b{color:var(--i1);font-family:var(--fd);font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ws-hero{margin:14px 20px 0;padding:14px 18px;border-radius:var(--rmd);background:var(--surf);border:1px solid var(--border);border-left:5px solid var(--warn);box-shadow:var(--sh);}
+.ws-hero.t-neg{border-left-color:var(--neg);background:linear-gradient(90deg,var(--neg-lt),var(--surf) 55%);}
+.ws-hero.t-warn{border-left-color:var(--warn);background:linear-gradient(90deg,var(--warn-lt),var(--surf) 55%);}
+.ws-hero.t-sec{border-left-color:var(--sec);background:linear-gradient(90deg,var(--sec-lt),var(--surf) 55%);}
+.ws-hero.t-brand{border-left-color:var(--brand);background:linear-gradient(90deg,var(--brand-lt),var(--surf) 55%);}
+.ws-hero.t-pos{border-left-color:var(--pos);background:linear-gradient(90deg,var(--pos-lt),var(--surf) 55%);}
+.ws-hero-tags{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px;}
+.ws-hero-line{font-family:var(--fd);font-size:17px;font-weight:600;color:var(--i1);line-height:1.4;letter-spacing:-.01em;}
+.ws-hero-call{font-size:13.5px;color:var(--i1);margin-top:4px;font-weight:500;}
+.ws-missing{margin-top:10px;padding:8px 10px;border-radius:var(--rsm);background:rgba(255,255,255,.7);border:1px dashed var(--warn);font-size:12.5px;color:var(--i1);display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.ws-missing select{padding:5px 8px;border:1px solid var(--bdk);border-radius:6px;font-size:12.5px;}
+.ws-impact{margin-top:10px;font-size:12px;color:var(--i2);}
+.ws-grid{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1.45fr) minmax(320px,1fr);gap:14px;padding:14px 20px;}
+.ws-col{min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:12px;padding-bottom:4px;}
+.ws-card{background:var(--surf);border:1px solid var(--border);border-radius:var(--rmd);padding:12px 14px;}
+.ws-card-h{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11px;font-weight:600;color:var(--i2);letter-spacing:.04em;text-transform:uppercase;margin-bottom:8px;}
+.ws-card-h .btn,.ws-card-h .ws-sub,.ws-card-h .tag{text-transform:none;letter-spacing:0;}
+.ws-action{font-size:14px;color:var(--i1);line-height:1.45;}
+.ws-sub{font-size:11.5px;color:var(--i3);font-weight:400;}
+.ws-manual{margin-top:10px;font-size:12px;}
+.ws-manual summary{cursor:pointer;color:var(--brand);font-weight:600;}
+.ws-manual input{padding:7px 10px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:12.5px;}
+.ws-to{display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--s50);border-radius:var(--rsm);margin-bottom:10px;font-size:12.5px;color:var(--i1);}
+.ws-lbl{display:flex;justify-content:space-between;font-size:11px;font-weight:600;color:var(--i2);margin:10px 0 5px;}
+.ws-lbl span{font-weight:400;color:var(--i3);}
+.ws-in{width:100%;padding:8px 10px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:13px;color:var(--i1);font-family:var(--fb);line-height:1.55;resize:vertical;outline:none;}
+.ws-in:focus{border-color:var(--brand-mid);box-shadow:0 0 0 3px var(--brand-lt);}
+.ws-in[readonly]{background:var(--s50);}
+.ws-body{min-height:190px;}
+.ws-checks{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px;}
+.ws-fact{display:grid;grid-template-columns:96px 1fr;gap:10px;padding:7px 0;border-top:1px solid var(--s75);font-size:12.5px;color:var(--i1);line-height:1.45;}
+.ws-fact:first-of-type{border-top:none;}
+.ws-fk{font-size:11.5px;color:var(--i3);}
+.ws-cp{display:flex;flex-direction:column;border-color:var(--brand-mid);min-height:260px;}
+.ws-cp .ws-card-h{color:var(--brand-dk);}
+.ws-cp-body{flex:1;overflow-y:auto;font-size:12.5px;color:var(--i1);line-height:1.5;}
+.ws-cp-qs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;}
+.ws-cp-you{margin:10px 0 6px auto;max-width:85%;width:fit-content;padding:6px 10px;background:var(--brand-lt);border-radius:12px 12px 2px 12px;}
+.ws-cp-a{display:flex;gap:8px;}
+.ws-cp-a > div{flex:1;min-width:0;}
+.ws-quote{margin:6px 0;padding:6px 10px;border-left:3px solid var(--brand-mid);background:var(--s50);border-radius:0 6px 6px 0;font-size:12px;}
+.ws-quote mark{background:#FBE3B8;padding:0 2px;border-radius:2px;}
+.ws-cp-f{display:flex;gap:8px;margin-top:10px;}
+.ws-cp-f input{flex:1;min-width:0;padding:8px 10px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:12.5px;outline:none;}
+.ws-teach{border-style:dashed;border-color:var(--brand-mid);background:#FCFAFE;}
+.ws-locked{display:flex;flex-direction:column;gap:4px;margin-top:8px;font-size:12px;color:var(--i3);}
+.ws-locked label{display:flex;gap:6px;align-items:center;}
+.ws-bar{display:flex;align-items:center;gap:8px;padding:10px 20px;background:var(--surf);border-top:1px solid var(--border);box-shadow:0 -4px 14px rgba(20,26,33,.05);}
+.ws-bar input{width:260px;max-width:30vw;padding:7px 10px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:12.5px;}
+.ws-teach-in{flex:1;min-width:0;display:flex;align-items:center;gap:8px;padding:0 4px 0 10px;border:1px dashed var(--brand-mid);border-radius:var(--rsm);background:#FCFAFE;height:34px;}
+.ws-teach-in input{flex:1;min-width:0;width:auto;max-width:none;border:none;background:transparent;outline:none;padding:0;}
+.ws-teach-k{font-size:11.5px;font-weight:700;color:var(--brand-dk);white-space:nowrap;}
+.ws-bar .btn{height:34px;padding:0 14px;}
+.ws-modal{background:var(--surf);border-radius:var(--rlg);box-shadow:var(--sh-lg);width:100%;max-width:440px;padding:18px 20px;max-height:90vh;overflow-y:auto;}
+.ws-modal-h{font-family:var(--fd);font-size:15px;font-weight:700;color:var(--i1);margin-bottom:6px;}
+.ws-modal-f{display:flex;justify-content:flex-end;gap:8px;margin-top:14px;}
+.ws-radio{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--i1);padding:6px 0;}
+.ws-rj{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+.ws-rjb{text-align:left;padding:8px 10px;border:1px solid var(--border);border-radius:var(--rsm);background:var(--surf);display:flex;flex-direction:column;gap:2px;}
+.ws-rjb b{font-size:12.5px;color:var(--i1);}
+.ws-rjb span{font-size:11px;color:var(--i3);}
+.ws-rjb:hover{border-color:var(--brand-mid);}
+.ws-rjb.on{border-color:var(--brand);background:var(--brand-lt);}
+@media (max-width:1100px){ .ws-grid{display:block;overflow-y:auto;} .ws-col{overflow:visible;margin-bottom:12px;} .ws-hero-line{font-size:15.5px;} }
+
+/* ─── Roomier queue ─── */
+.tab-why{font-size:12.5px;color:var(--i2);line-height:1.55;margin-bottom:14px;padding:10px 14px;background:var(--surf);border:1px solid var(--border);border-radius:var(--rmd);}
+.tab-why b{color:var(--i1);}
+#rows .dt td{padding:18px 16px;}
+#rows .dt th{padding:12px 16px;}
+#rows .dt .dt-main{font-size:13.5px;}
+#rows .dt td.wrap .val,#rows .dt td.wrap .sub,#rows .dt td.wrap .dt-main{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;}
+#rows .dt .person > div:last-child{min-width:0;}
+#rows .dt .act{-webkit-line-clamp:3;color:var(--i1);}
+/* With Copilot open beside the list, the table is narrower: less padding, more lines, nothing cut off. */
+body.cp-push #rows .dt td,body.cp-push #rows .dt th{padding-left:10px;padding-right:10px;}
+body.cp-push #rows .dt .clamp2{-webkit-line-clamp:5;}
+body.cp-push #rows .dt .co-av{display:none;}
+body.cp-push #rows .dt td.wrap span{overflow-wrap:normal;}
+body.cp-push #rows .dt th{white-space:normal;line-height:1.3;}
+body.cp-push #rows .dt td.wrap > span[style]{font-size:11.5px !important;}
+
+.why-t{display:flex;gap:6px;align-items:center;}
+.why-more{font-size:11px;font-weight:700;color:var(--i3);background:var(--s75);border-radius:999px;padding:1px 7px;}
+.act{font-size:13px;color:var(--i1);font-weight:500;line-height:1.45;}
+/* ─── Shown, but off until after the pilot ─── */
+.soon{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border:1px dashed var(--bdk);border-radius:var(--rsm);background:var(--s50);color:var(--i3);font-size:12px;font-weight:600;cursor:help;}
+.soon:hover{border-color:var(--brand-mid);color:var(--i2);}
+.soon-b{font-size:9.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--brand-dk);background:var(--brand-lt);border-radius:999px;padding:1px 6px;}
+.ws-soon-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px dashed var(--border);}
+/* ─── Copilot chat: grows from the bottom ─── */
+.ws-col-chat{overflow:hidden;}
+.ws-chat{flex:1;min-height:0;display:flex;flex-direction:column;background:var(--surf);border:1px solid var(--brand-mid);border-radius:var(--rmd);overflow:hidden;}
+.ws-chat-h{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 14px;background:var(--brand-lt);font-size:12px;font-weight:700;color:var(--brand-dk);letter-spacing:.02em;}
+.ws-chat-body{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;}
+.ws-chat-stack{margin-top:auto;padding:12px 14px;display:flex;flex-direction:column;gap:12px;}
+.ws-chat-foot{border-top:1px solid var(--border);padding:10px 12px 12px;background:var(--surf);}
+.ws-chat-foot .ws-cp-qs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;}
+.cp-chip{height:27px;padding:0 10px;border-radius:999px;border:1px solid var(--brand-mid);background:var(--surf);color:var(--brand-dk);font-size:11.5px;font-weight:600;}
+.cp-chip:hover{background:var(--brand-lt);}
+.ws-chat-foot .soon{height:27px;border-radius:999px;font-size:11.5px;}
+.ws-chat-foot .ws-cp-f{margin-top:0;}
+.ws-chat-foot .ws-cp-f input{border-radius:999px;padding:8px 14px;}
+.ws-chat-foot .ws-cp-f .btn{width:34px;height:34px;border-radius:50%;justify-content:center;padding:0;font-size:15px;}
+.cp-me{align-self:flex-end;max-width:85%;padding:8px 12px;background:var(--brand);color:#fff;border-radius:14px 14px 4px 14px;font-size:12.5px;}
+.cp-ai{display:flex;gap:8px;align-items:flex-start;}
+.cp-av{width:24px;height:24px;border-radius:7px;background:linear-gradient(135deg,var(--brand),var(--brand-dk));color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.cp-ai-b{flex:1;min-width:0;font-size:12.5px;color:var(--i1);line-height:1.5;}
+.cp-intro,.cp-p{margin-bottom:6px;}
+.cp-card{border:1px solid var(--border);border-radius:var(--rmd);overflow:hidden;background:var(--surf);box-shadow:var(--sh);}
+.cp-card-h{padding:8px 12px;background:var(--s50);border-bottom:1px solid var(--border);font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--i2);}
+.cp-card-b{padding:6px 12px 8px;}
+.cp-card-f{padding:7px 12px;border-top:1px solid var(--s75);font-size:11.5px;color:var(--i3);}
+.cp-card-f a{color:var(--brand);font-weight:600;text-decoration:none;}
+.cp-kv{display:grid;grid-template-columns:88px 1fr;gap:10px;padding:6px 0;border-top:1px solid var(--s75);font-size:12.5px;}
+.cp-kv:first-child{border-top:none;}
+.cp-kv > span{color:var(--i3);font-size:11.5px;}
+.cp-sel{padding:3px 6px;border:1px solid var(--bdk);border-radius:6px;font-size:12px;}
+.cp-tbl{width:100%;border-collapse:collapse;font-size:12px;}
+.cp-tbl th{text-align:left;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--i3);padding:4px 6px 4px 0;}
+.cp-tbl td{padding:6px 6px 6px 0;border-top:1px solid var(--s75);}
+.cp-row{display:flex;gap:8px;align-items:center;padding:4px 0;}
+.cp-tl{display:flex;flex-direction:column;}
+.cp-tl-i{display:flex;gap:10px;padding:6px 0;position:relative;}
+.cp-dot{width:8px;height:8px;border-radius:50%;background:var(--brand-mid);margin-top:5px;flex-shrink:0;box-shadow:0 0 0 3px var(--brand-lt);}
+/* ─── Purpose, grouping, row actions ─── */
+.purpose{display:block;gap:18px;align-items:start;margin-bottom:14px;padding:14px 18px;background:var(--surf);border:1px solid var(--border);border-radius:var(--rmd);}
+.pp-t{font-family:var(--fd);font-size:15px;font-weight:700;color:var(--i1);margin-bottom:4px;}
+.pp-d{font-size:12.5px;color:var(--i2);line-height:1.55;}
+.pp-k{font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--i3);margin-bottom:6px;}
+.pp-a{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--i2);padding:3px 0;}
+.pp-a b{color:var(--i1);min-width:100px;}
+.pp-i{width:22px;height:22px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;}
+.pp-i.ok{background:var(--pos-lt);color:var(--pos);} .pp-i.no{background:var(--neg-lt);color:var(--neg);} .pp-i.own{background:var(--brand-lt);color:var(--brand-dk);}
+.pp-tip{font-size:11px;color:var(--i3);margin-top:6px;}
+.grp-tg{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--i2);cursor:pointer;white-space:nowrap;}
+.grp-tg input{accent-color:var(--brand);}
+tr.grp td{background:var(--s50) !important;padding:10px 16px !important;border-bottom:1px solid var(--border);}
+.grp-in{display:flex;align-items:center;gap:10px;}
+.grp-n{font-size:12px;font-weight:700;color:var(--i1);}
+.grp-d{flex:1;font-size:12px;color:var(--i3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.dt td:last-child{overflow:visible;}
+.row-acts{display:inline-flex;gap:4px;margin-right:6px;opacity:0;transition:opacity var(--fast);}
+tr:hover .row-acts,tr:focus-within .row-acts{opacity:1;}
+.ra{width:30px;height:30px;border-radius:8px;border:1px solid var(--border);background:var(--surf);font-size:13px;font-weight:700;cursor:pointer;}
+.ra.ok{color:var(--pos);} .ra.ok:hover{background:var(--pos);color:#fff;border-color:var(--pos);}
+.ra.no{color:var(--neg);} .ra.no:hover{background:var(--neg);color:#fff;border-color:var(--neg);}
+.ra.own{color:var(--brand-dk);} .ra.own:hover{background:var(--brand);color:#fff;border-color:var(--brand);}
+/* ─── Workspace v3 ─── */
+.ws-scroll{flex:1;min-height:0;overflow-y:auto;}
+.ws-scroll .ws-grid{flex:none;display:grid;grid-template-columns:minmax(0,1.55fr) minmax(300px,1fr);align-items:start;}
+.ws-scroll .ws-col{overflow:visible;}
+.ws-sec-h{font-size:11px;font-weight:600;color:var(--i2);letter-spacing:.04em;text-transform:uppercase;margin:2px 0 -4px;}
+.opts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;}
+.opt{background:var(--surf);border:1.5px solid var(--border);border-radius:var(--rmd);padding:11px 12px;display:flex;flex-direction:column;gap:4px;min-width:0;}
+.opt.pickable{cursor:pointer;} .opt.pickable:hover{border-color:var(--brand-mid);box-shadow:var(--sh);}
+.opt.on{border-color:var(--brand);background:var(--brand-lt);}
+.opt-h{display:flex;justify-content:space-between;align-items:center;font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--i3);}
+.opt.on .opt-h{color:var(--brand-dk);}
+.opt-ck{color:var(--brand-dk);letter-spacing:0;text-transform:none;font-size:11.5px;}
+.opt-use{color:var(--brand);letter-spacing:0;text-transform:none;font-size:11.5px;}
+.opt-a{font-size:13.5px;font-weight:700;color:var(--i1);line-height:1.35;}
+.opt-w{font-size:11.5px;color:var(--i2);line-height:1.45;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
+.opt-m{display:flex;gap:4px;flex-wrap:wrap;align-items:center;margin-top:4px;font-size:11px;color:var(--i3);}
+.opt-m span:first-child{margin-right:2px;}
+.opt-own{border-style:dashed;}
+.opt-none{background:var(--s50);}
+.ws-person{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px;border:1px solid var(--border);border-radius:var(--rmd);margin-bottom:12px;}
+.wp-av{width:40px;height:40px;font-size:13px;border-radius:10px;}
+.wp-name{font-family:var(--fd);font-size:14px;font-weight:700;color:var(--i1);}
+.wp-title{font-size:12px;color:var(--i2);margin-top:1px;}
+.wp-chips{display:flex;gap:5px;flex-wrap:wrap;margin-top:6px;}
+.wp-reach{text-align:right;}
+.wp-row{display:flex;gap:6px;align-items:center;justify-content:flex-end;flex-wrap:wrap;}
+.wp-mail{font-size:12.5px;color:var(--i1);}
+.ws-facts{padding:0;overflow:hidden;}
+.ws-facts .cp-card{border:none;box-shadow:none;}
+.ws-dock{background:var(--surf);border-top:1px solid var(--border);padding:10px 20px 12px;box-shadow:0 -4px 14px rgba(20,26,33,.05);}
+.ws-dock-row{display:flex;gap:12px;align-items:center;}
+.ws-dock .cp-bar{flex:1;max-width:none;margin:0;}
+.ws-dec{display:flex;gap:8px;align-items:center;flex-shrink:0;}
+.ws-dec .btn{height:40px;padding:0 16px;}
+.ws-dec kbd{font-family:var(--fm);font-size:10px;padding:1px 5px;border-radius:4px;background:rgba(255,255,255,.25);border:1px solid rgba(0,0,0,.08);margin-left:4px;}
+.ws-dec .btn-sec kbd{background:var(--s75);}
+.ws-dock .cp-sheet{left:20px;right:20px;max-width:none;}
+.ws-dock #wsCpStack{display:flex;flex-direction:column;gap:10px;}
+.ws-dock .ws-cp-qs{display:flex;flex-wrap:wrap;gap:6px;padding:8px 14px 10px;border-top:1px solid var(--s75);}
+/* ─── Teach the system pop-up ─── */
+.teach-pop{position:fixed;right:24px;bottom:96px;width:380px;max-width:calc(100vw - 32px);background:var(--surf);border:1px solid var(--brand-mid);border-radius:14px;box-shadow:var(--sh-lg);z-index:700;animation:fadeUp .2s var(--ease);overflow:hidden;}
+.tp-h{display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--brand-lt);font-size:12.5px;font-weight:700;color:var(--brand-dk);}
+.tp-sub{flex:1;font-weight:400;color:var(--i2);font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tp-h button{border:none;background:none;cursor:pointer;color:var(--i2);}
+.tp-l{font-size:11.5px;font-weight:600;color:var(--i2);padding:10px 12px 6px;}
+.tp-tags{display:flex;flex-wrap:wrap;gap:6px;padding:0 12px;}
+.tp-tag{height:26px;padding:0 10px;border-radius:999px;border:1px solid var(--border);background:var(--surf);font-size:11.5px;color:var(--i2);cursor:pointer;}
+.tp-tag.on{background:var(--pos-lt);border-color:var(--pos);color:var(--pos);font-weight:600;}
+.teach-pop input{display:block;width:calc(100% - 24px);margin:10px 12px 0;padding:8px 10px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:12.5px;outline:none;}
+.tp-soon{display:flex;gap:6px;flex-wrap:wrap;padding:8px 12px 0;}
+.tp-soon .soon{height:24px;font-size:11px;white-space:nowrap;}
+.tp-f{display:flex;align-items:center;gap:6px;padding:10px 12px;}
+.tp-bar{flex:1;height:3px;background:var(--s75);border-radius:2px;overflow:hidden;}
+.tp-bar i{display:block;height:100%;background:var(--brand-mid);animation:tpbar 12s linear forwards;}
+.teach-pop.held .tp-bar i{animation-play-state:paused;}
+@keyframes tpbar{from{width:100%}to{width:0}}
+@media (max-width:1100px){ .opts{grid-template-columns:1fr;} .ws-scroll .ws-grid{grid-template-columns:1fr;} .ws-dock-row{flex-wrap:wrap;} .purpose{grid-template-columns:1fr;} }
+
+/* ─── Workspace v4: only what helps the decision ─── */
+.opts.one{grid-template-columns:minmax(0,1fr);}
+.opts{grid-template-columns:repeat(2,minmax(0,1fr));}
+.own{display:flex;align-items:center;gap:10px;width:100%;margin-top:10px;border-radius:var(--rmd);font:inherit;text-align:left;}
+.own-add{padding:10px 14px;border:1.5px dashed var(--bdk);background:var(--surf);color:var(--i2);font-size:12.5px;cursor:pointer;}
+.own-add:hover{border-color:var(--brand);color:var(--brand-dk);background:#FCFAFE;}
+.own-add kbd{margin-left:auto;font-family:var(--fm);font-size:10px;padding:1px 6px;border-radius:4px;background:var(--s75);color:var(--i3);}
+.own-i{width:26px;height:26px;border-radius:7px;background:var(--brand-lt);color:var(--brand-dk);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;}
+.own-edit{flex-direction:column;align-items:stretch;gap:8px;padding:12px 14px;border:1.5px solid var(--brand);background:#FCFAFE;}
+.own-k{font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--brand-dk);}
+.own-f{display:flex;align-items:center;gap:6px;}
+.own-f .ws-sub{flex:1;}
+.own-on{padding:10px 12px;border:1.5px solid var(--brand);background:var(--brand-lt);}
+.own-b{flex:1;min-width:0;}
+.own-a{font-size:13.5px;font-weight:700;color:var(--i1);margin-top:2px;}
+.fxs{margin-top:12px;border-top:1px dashed var(--bdk);padding-top:10px;display:flex;flex-direction:column;gap:8px;}
+.fxs-h{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--i3);display:flex;gap:10px;align-items:center;}
+.fxs-done{letter-spacing:0;text-transform:none;font-weight:600;color:var(--pos);font-size:11.5px;}
+.fx{background:rgba(255,255,255,.85);border:1px solid var(--border);border-radius:var(--rsm);padding:9px 12px;}
+.fx-h{display:flex;align-items:center;gap:10px;}
+.fx-t{font-size:13px;font-weight:700;color:var(--i1);}
+.fx-st{margin-left:auto;font-size:11.5px;}
+.fx-n{color:var(--neg);font-weight:600;} .fx-ok{color:var(--pos);font-weight:600;}
+.fx-d{font-size:12.5px;color:var(--i2);margin-top:3px;line-height:1.5;display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;}
+.fx-a{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px;}
+.fx-f{font-size:12px;font-weight:600;} .fx-f.ok{color:var(--pos);} .fx-f.no{color:var(--neg);}
+.fx-sel{height:27px;padding:0 8px;border:1px solid var(--bdk);border-radius:6px;font-size:12px;max-width:340px;background:var(--surf);}
+.fx-form{display:flex;flex-wrap:wrap;gap:6px;align-items:center;width:100%;}
+.fx-in{height:29px;padding:0 9px;border:1px solid var(--bdk);border-radius:6px;font-size:12.5px;min-width:220px;flex:1;outline:none;}
+.fx-in:focus{border-color:var(--brand-mid);box-shadow:0 0 0 3px var(--brand-lt);}
+.fx-ck{font-size:12px;color:var(--i2);display:inline-flex;gap:4px;align-items:center;}
+.fx-err{font-size:12px;color:var(--neg);margin-top:4px;}
+mark.k-sensitive{background:#FBD5D5;color:inherit;border-radius:3px;box-shadow:0 0 0 1px #F2A7A7;}
+mark.k-claim{background:#FDE7B8;color:inherit;border-radius:3px;box-shadow:0 0 0 1px #F3C969;}
+mark.k-brand{background:#E8DDF4;color:inherit;border-radius:3px;box-shadow:0 0 0 1px #CDB6E6;}
+.hl{position:relative;}
+.ws-msg > .hl{padding:0 !important;}
+.hl-back{position:absolute;inset:0;white-space:pre-wrap;overflow-wrap:break-word;word-break:normal;color:transparent;pointer-events:none;overflow:hidden;background:var(--surf);}
+.hl-back mark{color:transparent;}
+.hl-back mark.flash{animation:hlflash 1.4s ease;}
+@keyframes hlflash{0%,60%{box-shadow:0 0 0 3px var(--neg);}100%{}}
+.hl-ta{position:relative;background:transparent !important;resize:none;overflow:hidden;}
+.ws-msg{padding:0;overflow:hidden;}
+.wm-to{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--s75);}
+.wm-who{flex:1;min-width:0;display:flex;flex-direction:column;}
+.wm-who b{font-size:13.5px;color:var(--i1);}
+.wm-who span{font-size:11.5px;color:var(--i3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.wm-reach{font-size:12.5px;color:var(--i1);display:flex;align-items:center;gap:6px;white-space:nowrap;}
+.ws-msg > div:not(.wm-to):not(.wm-foot){padding:10px 14px 0;}
+.ws-msg .ws-in{border:none;border-radius:0;padding:10px 14px;box-shadow:none;}
+.ws-msg .ws-subj{font-weight:700;border-bottom:1px solid var(--s75);}
+.ws-msg .ws-body{min-height:220px;}
+.ws-msg .ws-in:focus{background:#FCFAFE;box-shadow:none;}
+.wm-foot{display:flex;align-items:center;gap:8px;padding:8px 14px;border-top:1px solid var(--s75);background:var(--s50);}
+.wm-foot .ws-checks{margin:0;}
+.wm-ok{font-size:11.5px;color:var(--pos);font-weight:600;}
+.ws-kf{padding:12px 16px;}
+.kf{display:grid;grid-template-columns:92px 1fr;gap:10px;padding:8px 0;border-top:1px solid var(--s75);font-size:12.5px;color:var(--i1);line-height:1.45;}
+.ws-kf .ws-card-h + .kf{border-top:none;}
+.kf-k{font-size:11.5px;color:var(--i3);}
+.kf-more{font-size:11px;color:var(--i3);margin-top:8px;padding-top:8px;border-top:1px dashed var(--border);}
+</style>
+</head>
+<body>
+<div class="shell">
+<nav class="nav">
+  <div class="nav-brand">
+    <div style="width:26px;height:26px;flex-shrink:0">
+      <svg width="26" height="26" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+        <image href="data:image/png;base64,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" width="200" height="200"/>
+      </svg>
+    </div>
+    <div><div class="nav-nm">DemandAI</div></div>
+  </div>
+  <div class="nav-body">
+    <a class="nav-item " href="index.html">
+      <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 10.5L12 3l9 7.5V21a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></svg>
+      <span class="nav-lbl">Admin home</span>
+    </a>
+    <div class="nav-div"></div>
+    <div class="nav-sec">Set up</div>
+    <a class="nav-item " href="09-setup.html">
+      <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      <span class="nav-lbl">Data and signals</span>
+    </a>
+    <a class="nav-item " href="integrations.html">
+      <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 2v6"/><path d="M15 2v6"/><path d="M6 8h12v4a6 6 0 0 1-12 0z"/><path d="M12 18v4"/></svg>
+      <span class="nav-lbl">Integrations and email</span>
+    </a>
+    <a class="nav-item " href="07-content.html">
+      <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      <span class="nav-lbl">Content library</span>
+    </a>
+    <a class="nav-item " href="settings.html">
+      <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+      <span class="nav-lbl">Templates and settings</span>
+    </a>
+    <a class="nav-item " href="08-users.html">
+      <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <span class="nav-lbl">Users and roles</span>
+    </a>
+    <div class="nav-div"></div>
+    <div class="nav-sec">The process behind the chat</div>
+    <a class="nav-item " href="10-prospecting.html">
+      <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      <span class="nav-lbl">Prospecting</span>
+    </a>
+    <a class="nav-item " href="11-scoring.html">
+      <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      <span class="nav-lbl">Account Scoring</span>
+    </a>
+    <a class="nav-item " href="12-nba.html">
+      <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+      <span class="nav-lbl">Micro-segments & NBA</span>
+    </a>
+    <a class="nav-item " href="15-content-studio.html">
+      <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+      <span class="nav-lbl">Content studio</span>
+    </a>
+    <a class="nav-item active" href="14-review.html">
+      <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      <span class="nav-lbl">Review queue</span>
+    </a>
+    <div class="nav-div"></div>
+    <div class="nav-sec">Measure</div>
+    <a class="nav-item " href="13-analytics.html">
+      <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      <span class="nav-lbl">Analytics</span>
+    </a>
+  </div>
+  <div class="nav-foot">
+    <div class="nav-user">
+      <div class="nav-av">PK</div>
+      <div><div class="nav-un">Pavan Kumar</div><div class="nav-ur">Sales manager</div></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;gap:6px;padding:8px 8px 0;font-size:10.5px"><a href="../app.html" onclick="localStorage.setItem('dmock_user','pavan')" style="color:var(--brand-mid);text-decoration:none">Sales workspace →</a><a href="../index.html" style="color:var(--r3)">Sign out</a></div>
+  </div>
+</nav>
+
+<!-- ════ MAIN ════ -->
+<main class="main" id="mainArea"></main>
+
+<!-- Detail drawer -->
+<div class="detail-drawer" id="detailDrawer">
+  <div class="drawer-hdr">
+    <div>
+      <div class="drawer-title" id="detTitle">Recommendation</div>
+      <div class="drawer-sub" id="detSub">—</div>
+    </div>
+    <div class="drawer-close" onclick="closeDrawer()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </div>
+  </div>
+  <div class="drawer-body" id="detBody">
+    <div class="detail-empty" style="padding:40px 0">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--i4)" stroke-width="1.5" stroke-linecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      <div style="font-size:11.5px;color:var(--i4);line-height:1.5;text-align:center">Click any row<br>to see the breakdown</div>
+    </div>
+  </div>
+</div>
+</div><!-- /shell -->
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="demandai-engine.js"></script>
+<script src="demandai-sample-data.js"></script>
+<script src="demandai-nba.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="demandai-content.js"></script>
+<script src="demandai-copilot.js"></script>
+<script>
+function showToast(msg){document.querySelectorAll('.toast').forEach(t=>t.remove());const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2600);}
+function initials(n){return String(n).split(' ').filter(Boolean).map(w=>w[0]).join('').slice(0,2).toUpperCase();}
+function avColor(id){const c=['#7D52A2','#0094DA','#FF8820','#2E7D5A','#B23F3F'];let h=0;for(const ch of String(id))h+=ch.charCodeAt(0);return c[h%c.length];}
+function closeDrawer(){ document.getElementById('detailDrawer').classList.remove('open'); }
+function esc(s){return String(s===undefined||s===null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function fallbackDownload(name, text){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'text/csv'}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},0);}
+// On claude.ai the page can't start a download itself: the viewer confirms a save. Opened as a plain file, it downloads directly.
+async function download(name, text){
+  let dl = null;
+  try{ dl = window.claude && window.claude.use ? await window.claude.use('downloads') : null; }catch(e){ dl = null; }
+  if(!dl){ fallbackDownload(name, text); return; }
+  try{ await dl.save({filename:name, data:text}); showToast(name+' saved'); }
+  catch(e){ if(e && e.code==='declined') return; showToast(e && e.code==='rate_limited' ? 'A save is already open' : "This view can't save files"); }
+}
+function todayIso(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+const fmt1 = n => n===undefined||n===null ? '—' : (Math.round(n*10)/10).toLocaleString('en-US',{minimumFractionDigits:n%1?1:0,maximumFractionDigits:1});
+const fmtDate = t => new Date(t).toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'});
+
+function readFileToGrids(file){
+  return new Promise((resolve,reject)=>{
+    const isCsv = /\.csv$/i.test(file.name), isXlsx = /\.(xlsx|xls)$/i.test(file.name);
+    if(!isCsv && !isXlsx){ reject(new Error('Use a .csv or .xlsx file')); return; }
+    const reader = new FileReader();
+    reader.onerror = ()=>reject(new Error('Could not read the file'));
+    reader.onload = ev=>{
+      try{
+        if(isCsv){ resolve([{sheet:'(CSV)', grid:DemandAI.parseCSV(ev.target.result)}]); return; }
+        if(typeof XLSX==='undefined'){ reject(new Error('The Excel reader did not load. Save the sheet as CSV and upload that instead')); return; }
+        const wb = XLSX.read(new Uint8Array(ev.target.result),{type:'array',cellDates:true});
+        resolve(wb.SheetNames.map(n=>({sheet:n, grid:XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true,defval:''})})));
+      }catch(e){ reject(e); }
+    };
+    if(isCsv) reader.readAsText(file); else reader.readAsArrayBuffer(file);
+  });
+}
+function pickSheet(grids){
+  const has = g => g.grid.slice(0,10).some(r=>(r||[]).some(c=>String(c).trim().toLowerCase().replace(/\*/g,'').replace(/\s+/g,'_')==='signal_type'));
+  return grids.find(g=>/signal template/i.test(g.sheet) && has(g)) || grids.find(has) || grids[0];
+}
+
+/* ═══════════════ SHARED PIECES: tables, tags, pop-ups ═══════════════ */
+function table(cols, rows, empty){
+  return `<div class="dt-wrap"><table class="dt">
+    <colgroup>${cols.map(c=>`<col style="width:${c[1]}">`).join('')}</colgroup>
+    <thead><tr>${cols.map(c=>`<th class="${c[2]||''}">${c[0]}</th>`).join('')}</tr></thead>
+    <tbody>${rows || `<tr><td colspan="${cols.length}" class="dt-empty">${empty}</td></tr>`}</tbody>
+  </table></div>`;
+}
+const cell = (v, sub, cls='val') => `<span class="${cls}" title="${esc(v||'')}">${v?esc(v):'<span class="muted">—</span>'}</span>${sub?`<span class="sub" title="${esc(String(sub).replace(/<[^>]+>/g,''))}">${sub}</span>`:''}`;
+const SEG_TONE = {Inquiry:'tag-blue',Modernisation:'tag-violet','Service renewal':'tag-teal',Project:'tag-amber',Leadership:'tag-pink',Engagement:'tag-green'};
+function tagChip(t){ const c = DemandAI.CONFIG.signalTypes[t]; return `<span class="tag ${(c&&SEG_TONE[c.segment])||'tag-grey'}">${esc(t)}</span>`; }
+function tierPill(t){
+  const m = {A:['tag-green','Tier A'],B:['tag-amber','Tier B'],C:['tag-blue','Tier C'],'Watch list':['tag-grey','Watch list'],'Below fit floor':['tag-grey','Below floor'],Excluded:['tag-red','Excluded']}[t];
+  return `<span class="tag ${m[0]}">${m[1]}</span>`;
+}
+function overlay(id){
+  let ov = document.getElementById(id);
+  if(!ov){ ov=document.createElement('div'); ov.id=id; ov.style.cssText='position:fixed;inset:0;background:rgba(20,26,33,.45);z-index:600;display:flex;align-items:center;justify-content:center;padding:16px'; document.body.appendChild(ov); }
+  ov.style.display='flex'; return ov;
+}
+const hide = id => { const el=document.getElementById(id); if(el) el.style.display='none'; };
+function search(fn, ph){ return `<div class="sl-srch"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="color:var(--i3);flex-shrink:0"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><input type="text" placeholder="${ph}" value="${esc(q)}" oninput="q=this.value.toLowerCase();${fn}()"></div>`; }
+const pill = (cur,id,label) => `<div class="seg-pill ${cur===id?'active':''}" onclick="filt='${id}';renderResults()">${label}</div>`;
+
+/* ═══════════════ FOR REVIEW: only what needs a person, one item at a time ═══════════════ */
+let view = 'queue', q = '', RUNS = {}, MISSING = [], SPOT = null;
+const _closeDrawer = closeDrawer;
+closeDrawer = function(){ openKey = null; _closeDrawer(); };
+function ALL_RUNS(){ return Object.values(RUNS); }
+function loadRuns(){
+  RUNS = {}; MISSING = [];
+  DemandAI.loadSegmentations().forEach(saved=>{
+    const c = compute(saved.src, saved.id, saved.createdAt, saved.brandVersion);
+    if(c){ sensitiveToApprovals(saved, c.seg.recs); RUNS[saved.id] = { saved, ...c }; } else MISSING.push(saved.name);
+  });
+}
+// Every item across all lists, newest list first, each list in its own order (shuffled within each tier).
+function items(){
+  return Object.values(RUNS).sort((a,b)=>b.saved.createdAt-a.saved.createdAt)
+    .flatMap(run=>run.seg.recs.map(r=>({ id: run.saved.id+'::'+r.key, run, r })));
+}
+function withRun(it, fn){ const keep = RUN; RUN = it.run; try{ return fn(); } finally { RUN = keep; } }
+const decOf = it => withRun(it, ()=>dec(it.r.key));
+// The recommended order: whatever is due first comes first.
+const dueOfIt = it => withRun(it, ()=>dueOf(it.r, dec(it.r.key)));
+const catsOfIt = it => withRun(it, ()=>reasonCats(it.r, dec(it.r.key)));
+const myQueue = () => items().filter(it=>withRun(it, ()=>inQueue(dec(it.r.key)) && mine(it.r) && !pausedInfo(it.r))).sort((a,b)=>dueOfIt(a)-dueOfIt(b));
+// Filters arriving from Today (?due=today&reason=sensitive&kind=exception).
+let FILT = { due:null, reason:null, kind:null, seg:null, rep:null, ch:null }, LOGF = null;
+const SOON = ['overdue','today','tomorrow','2days'];
+const dueIs = (it, f) => f==='soon' ? SOON.includes(dueBucket(dueOfIt(it))) : dueBucket(dueOfIt(it))===f;
+const filtered = its => its.filter(it=>(!FILT.due || dueIs(it, FILT.due)) && (!FILT.reason || catsOfIt(it).includes(FILT.reason))
+  && (!FILT.kind || (FILT.kind==='spot' ? decOf(it).spot==='pending' : decOf(it).spot!=='pending'))
+  && (!FILT.seg || it.r.segment===FILT.seg) && (!FILT.rep || withRun(it, ()=>ownerOf(it.r))===FILT.rep)
+  && (!FILT.ch || withRun(it, ()=>draftOf(it.r).channel)===FILT.ch));
+/* Filters live in the column headers (Why it's here, Channel, Due, Owner); a tag in a row filters by its value.
+   What's applied shows as chips above the list, with how many rows are left. */
+const FILT_KEYS = ['due','reason','kind','seg','rep','ch'];
+const DUE_OPTS = [['soon','Next 2 days'],['overdue','Overdue'],['today','Due today'],['tomorrow','Due tomorrow'],['later','Due later']];
+const FUNNEL = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h18l-7 8.5V19l-4 2v-8.5z"/></svg>';
+// A filterable column header: its name and a funnel; the funnel turns purple when the column is filtered.
+const COLOPTS = {};
+function colFilter(label, key, opts){
+  const cur = key==='why' ? (FILT.kind ? 'k:'+FILT.kind : FILT.reason ? 'r:'+FILT.reason : '') : (FILT[key]||'');
+  COLOPTS[key] = { label, opts };
+  return `<button class="col-btn ${cur?'on':''}" title="Filter by ${esc(label.toLowerCase())}" onclick="event.stopPropagation();colMenu(this,'${key}')">${esc(label)} ${FUNNEL}</button>`;
+}
+function colMenu(btn, key){
+  document.querySelectorAll('.col-menu').forEach(m=>m.remove());
+  const { label, opts } = COLOPTS[key], cur = key==='why' ? (FILT.kind ? 'k:'+FILT.kind : FILT.reason ? 'r:'+FILT.reason : '') : (FILT[key]||'');
+  const base = view==='queue' ? myQueue() : items().filter(it=>decOf(it).status==='Awaiting approval' && withRun(it, ()=>mine(it.r) && !pausedInfo(it.r)));
+  const count = v => { const keep = FILT; const patch = key==='why' ? { kind: v.startsWith('k:') ? v.slice(2) : null, reason: v.startsWith('r:') ? v.slice(2) : null } : { [key]: v || null };
+    FILT = Object.assign({}, FILT, patch); const n = view==='queue' ? filtered(base).length : base.filter(it=>(!FILT.rep || withRun(it, ()=>ownerOf(it.r))===FILT.rep) && (!FILT.ch || withRun(it, ()=>draftOf(it.r).channel)===FILT.ch)).length; FILT = keep; return n; };
+  const m = document.createElement('div'); m.className = 'col-menu';
+  m.innerHTML = `<div style="padding:4px 10px 6px;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--i3)">Filter by ${esc(label.toLowerCase())}</div>`
+    + [['', 'All'], ...opts].map(([v,l])=>`<button onclick="colFilt('${key}','${esc(v)}')"><span class="ck">${v===cur?'✓':''}</span>${esc(l)}<span class="n">${count(v)}</span></button>`).join('');
+  document.body.appendChild(m);
+  const r = btn.getBoundingClientRect(); m.style.top = (r.bottom + 6) + 'px'; m.style.left = Math.max(8, Math.min(r.left - 6, window.innerWidth - m.offsetWidth - 12)) + 'px';
+  setTimeout(()=>document.addEventListener('click', function c(e){ if(!m.contains(e.target)){ m.remove(); document.removeEventListener('click', c); } }), 0);
+}
+function colFilt(key, v){
+  document.querySelectorAll('.col-menu').forEach(m=>m.remove());
+  if(key==='why') return setFilt({ kind: v.startsWith('k:') ? v.slice(2) : null, reason: v.startsWith('r:') ? v.slice(2) : null });
+  setFilt({ [key]: v || null });
+}
+function filterSummary(total, shown){
+  const lbl = { due: v=>(DUE_OPTS.find(o=>o[0]===v)||[,v])[1], reason: v=>REASON_CATS[v], kind: v=>v==='spot'?'Spot-checks':'Exceptions', seg: v=>v, rep: v=>repName(v), ch: v=>v };
+  const on = FILT_KEYS.filter(k=>FILT[k] && (view==='queue' || ['rep','ch'].includes(k)));
+  return `${on.map(k=>`<span class="seg-pill active" onclick='setFilt(${JSON.stringify({[k]:null})})' title="Remove this filter">${esc(lbl[k](FILT[k]))}${FILT.preset&&k==='due'?' (recommended)':''} ✕</span>`).join('')}
+    ${on.length ? '' : `<span style="font-size:11.5px;color:var(--i3);display:inline-flex;align-items:center;gap:5px">${FUNNEL} Filter from the column headers, or click any tag, channel, date or owner in the list</span>`}
+    <span style="margin-left:auto;font-size:11.5px;color:var(--i3);white-space:nowrap">Showing <b style="color:var(--i1)">${shown}</b> of ${total}</span>
+    ${on.length ? `<a href="#" onclick="setFilt(null);return false" style="font-size:11.5px;color:var(--brand);font-weight:600;text-decoration:none;white-space:nowrap">Clear filters</a>` : ''}`;
+}
+function setFilt(patch, preset){
+  FILT = patch ? Object.assign({}, FILT, patch, {preset: !!preset}) : { due:null, reason:null, kind:null, seg:null, rep:null, ch:null };
+  history.replaceState(null, '', location.pathname);
+  if(view==='log' || (patch && ['due','reason','kind'].some(k=>k in patch && patch[k]))) view = 'queue';
+  render();
+}
+const pausedCount = () => items().filter(it=>withRun(it, ()=>(inQueue(dec(it.r.key)) || dec(it.r.key).status==='Awaiting approval') && mine(it.r) && pausedInfo(it.r))).length;
+function queuePos(key){ const i = myQueue().findIndex(it=>it.run===RUN && it.r.key===key); return i<0 ? null : i+1; }
+// One click from the row: accept (or rate a spot-check) as it is, or approve a held message. Rejecting needs a
+// reason, so that still opens the item. The time counted is from when the list was shown.
+let ROWS_AT = Date.now();
+function quickDecide(id){
+  const it = items().find(x=>x.id===id); if(!it) return;
+  closeDrawer(); document.getElementById('detBody').innerHTML = '';
+  RUN = it.run; openedAt = ROWS_AT; pickTags = new Set();
+  if(dec(it.r.key).status==='Awaiting approval') managerApprove(it.r.key); else accept(it.r.key);
+  const l = it.run.saved.log[0]; if(l && l.key===it.r.key){ l.note = [l.note, 'From the queue row'].filter(Boolean).join(' · '); RUN = it.run; persist(); }
+}
+
+function render(){
+  WS = null;
+  const mgr = isManager(), all = items();
+  const queue = myQueue();
+  const approvals = all.filter(it=>decOf(it).status==='Awaiting approval' && withRun(it, ()=>mine(it.r) && !pausedInfo(it.r)));
+  const rel = all.filter(it=>decOf(it).status==='Released' && withRun(it, ()=>mine(it.r)));
+  const logs = Object.values(RUNS).flatMap(run=>run.saved.log.map(l=>({...l, runId:run.saved.id}))).sort((a,b)=>b.at-a.at)
+    .filter(l=>mgr || l.who===me().who);
+  const auto = all.filter(it=>decOf(it).passed).length;
+  const ft = (id,label,n) => `<div class="ftab ${view===id?'active':''}" onclick="view='${id}';q='';LOGF=null;render()">${label} <span class="ftab-cnt">${n}</span></div>`;
+  const m = measure(Object.values(RUNS), mgr ? null : myEmail());
+  const pc = x => x.pct===null ? '—' : Math.round(x.pct)+'%';
+  const tile = (lbl, val, sub, go, tip, tone) => `<a class="stat stat-link" href="#" title="${esc(tip)}" onclick="${go};return false"><div class="stat-lbl">${lbl}</div><div class="stat-val" style="${tone?`color:${tone}`:'color:var(--i1)'}">${val}</div><div class="stat-sub">${sub}</div></a>`;
+  const stat = (label, x, sub) => `<div style="flex:1;min-width:120px;padding:10px 14px;border-right:1px solid var(--border)"><div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--i3)">${label}</div><div style="font-family:var(--fd);font-size:19px;font-weight:700;color:var(--i1);margin-top:2px">${pc(x)}</div><div style="font-size:10.5px;color:var(--i3)">${sub||`${x.a} of ${x.n} accepted`}</div></div>`;
+  document.getElementById('mainArea').innerHTML = `
+    <div class="topbar">
+      <div class="topbar-l"><span class="tb-title">For Review</span><span class="tb-badge badge-neutral">${mgr?'Everyone\'s items':'Your items · '+esc(repName(myEmail()))}</span></div>
+      <div class="topbar-r">
+        ${Copilot.button()}
+        <div style="position:relative">
+          <button class="btn btn-sec btn-sm" onclick="event.stopPropagation();toggleExport()">Export <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg></button>
+          <div id="exportMenu" style="display:none;position:absolute;right:0;top:34px;width:270px;background:var(--surf);border:1px solid var(--border);border-radius:var(--rmd);box-shadow:var(--sh-lg);padding:6px;z-index:250">
+            ${[['exportAll(\'approved\')','Released messages','Emails and LinkedIn messages ready to use'],
+               ['exportAll(\'tasks\')','Tasks for the team','Calls and follow-ups owned by a person'],
+               ['exportAll(\'log\')','Decision log','Who decided what, when and why']].map(([fn,t,d])=>
+              `<button onclick="toggleExport(false);${fn}" style="display:block;width:100%;text-align:left;padding:9px 10px;border-radius:var(--rsm)" onmouseover="this.style.background='var(--s50)'" onmouseout="this.style.background=''">
+                <span style="display:block;font-size:12.5px;font-weight:600;color:var(--i1)">${t}</span><span style="display:block;font-size:11px;color:var(--i3)">${d}</span></button>`).join('')}
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="ftabs">${mgr?ft('approvals','Approvals',approvals.length):''}${ft('queue',mgr?'Queue':'My queue',queue.length)}${ft('log','Decision log',logs.length)}</div>
+    <div class="canvas">
+      ${all.length ? (view==='log' ? `<div class="tab-why"><b>Decision log</b>: who decided what, when and why.</div>` : `<div class="purpose">
+          <div class="pp-main"><div class="pp-t">${view==='approvals' ? 'Approvals: sensitive messages wait for you' : 'For Review: what the system could not decide'}</div>
+            <div class="pp-d">${view==='approvals'
+              ? 'These messages mention a plant incident, security or regulation, so nothing goes out until the sales manager approves it. They come here straight from the system.'
+              : `The system sends most outreach on its own (<b>${auto}</b> went ahead without anyone). These ${queue.length} need a person because something is missing or risky. Each row says why; open one to approve, reject or write your own.`}</div></div>
+        </div>`) :
+        `<div style="font-size:12.5px;color:var(--i2);margin-bottom:12px">Nothing yet. Items arrive here when you build micro-segments. <a href="12-nba.html" style="color:var(--brand);font-weight:600;text-decoration:none">Go to Micro-segments &amp; NBA →</a></div>`}
+      ${all.length ? `<div class="stats" style="grid-template-columns:repeat(5,1fr);margin-bottom:14px">
+        ${tile('G2 · first pass', m.weighted===null?'—':Math.round(m.weighted)+'%', `weighted by path${m.partial&&m.weighted!==null?' · one path so far':''}`, "location.href='13-analytics.html?tab=gates'", 'Open the success gates in Analytics')}
+        ${tile('Proceeded path', pc(m.auto), `${m.auto.a} of ${m.auto.n} spot-checks · ${m.autoN} items`, "setFilt({kind:'spot',reason:null,due:null})", 'Show the spot-checks to rate')}
+        ${tile('Exception path', pc(m.exc), `${m.exc.a} of ${m.exc.n} decided · ${m.excN} items`, "setFilt({kind:'exception',due:null})", 'Show the exceptions')}
+        ${tile('Within one alternative', pc(m.alternatives), `${m.alternatives.a} of ${m.alternatives.n} accepted`, "setFilt({reason:'alternative',kind:null,due:null})", 'Show the alternatives waiting')}
+        ${tile('Flagged', m.flagged, `fast or repetitive, to check · ${m.interventions} intervention${m.interventions===1?'':'s'}`, "LOGF='flagged';view='log';render()", 'Show the flagged decisions in the log', m.flagged?'var(--warn)':'')}
+      </div>` : ''}
+      <div class="score-list">
+        <div class="sl-toolbar">${search(view==='log'?'drawLog':'draw', view==='log'?'Search the log…':'Search prospects, companies or actions…')}${view!=='log'?'<div id="filtSum" style="display:flex;align-items:center;gap:6px;flex:1;flex-wrap:wrap"></div><label class="grp-tg"><input type="checkbox" '+(GROUP?'checked':'')+' onchange="GROUP=this.checked;draw()"> Group by reason</label><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();colsMenu(this)" title="Choose the columns">⚙ Columns</button>':LOGF?`<span class="seg-pill active" onclick="LOGF=null;render()">Flagged, to check ✕</span>`:''}</div>
+        <div id="rows"></div>
+      </div>
+      ${MISSING.length?`<div style="font-size:11px;color:var(--i3);margin-top:10px">Not shown: ${esc(MISSING.join(', '))} (the prospect list behind it was deleted).</div>`:''}
+    </div>`;
+  if(view==='log') drawLog(); else draw();
+}
+/* ═══════════════ THE QUEUE: lead with why the system needs you, then the action ═══════════════
+   Each row says in plain words where the system is stuck and what it wants to do. "Decide →" opens the item in a
+   full-screen workspace with everything needed to decide; other columns are the reviewer's choice. */
+const COLS_KEY = 'demandai_review_cols_v1';
+const OPT_COLS = [['channel','Channel'],['seg','Micro-segment'],['due','Due'],['owner','Owner'],['list','List']];
+function colsOn(){ try{ const s = JSON.parse(localStorage.getItem(COLS_KEY)||'null'); if(s) return s; }catch(e){} return { due:true, owner:true }; }
+function setCol(k, on){ const s = colsOn(); s[k] = on; try{ localStorage.setItem(COLS_KEY, JSON.stringify(s)); }catch(e){} draw(); }
+function colsMenu(btn){
+  document.querySelectorAll('.col-menu').forEach(m=>m.remove());
+  const s = colsOn(), m = document.createElement('div'); m.className = 'col-menu';
+  m.innerHTML = `<div style="padding:4px 10px 6px;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--i3)">Columns</div>
+    <div style="padding:2px 10px 6px;font-size:11px;color:var(--i3)">Why it needs you, the action and the prospect always show.</div>`
+    + OPT_COLS.filter(([k])=>k!=='owner' || isManager()).map(([k,l])=>`<label style="display:flex;align-items:center;gap:8px;padding:7px 10px;font-size:12.5px;cursor:pointer"><input type="checkbox" ${s[k]?'checked':''} onchange="setCol('${k}',this.checked)" style="accent-color:var(--brand)">${esc(l)}</label>`).join('');
+  document.body.appendChild(m);
+  const r = btn.getBoundingClientRect(); m.style.top = (r.bottom + 6) + 'px'; m.style.left = Math.max(8, r.right - m.offsetWidth) + 'px';
+  setTimeout(()=>document.addEventListener('click', function c(e){ if(!m.contains(e.target)){ m.remove(); document.removeEventListener('click', c); } }), 0);
+}
+
+/* Why it needs you, in plain words: what is stuck, and the call the reviewer has to make. */
+const SENSITIVE_RE = /\b(incident|accident|explosion|fatalit\w*|injur\w*|lawsuit|security|cyber|breach\w*|vulnerab\w*|regulat\w*|compliance|emission\w*)\b/i;
+const firstOf = c => (c.firstName || String(c.name||'').split(' ')[0] || 'them');
+function stuck(r, d){
+  const lr = liveRec(r), c = lr.contact, x = draftOf(r), cats = reasonCats(r, d), { chk } = checksOf(r), cat = cats[0];
+  const term = (DemandAIDraftText(x).match(SENSITIVE_RE)||[])[0];
+  const L = {
+    sensitive: [`The message mentions “${term||'a sensitive topic'}”, a sensitive topic.`, `Should this go to ${firstOf(c)} as it is, or change first?`],
+    claim: [`The message makes a claim with no approved source: “${(chk.unsupported[0]||{}).text||'a claim'}”.`, 'Remove or replace the claim, or reject the draft.'],
+    low: [`No contact in the primary persona. ${c.name} is ${c.jobTitle||'in another role'}.`, `Is ${firstOf(c)} the right person to approach at ${r.account.name}?`],
+    small: [`No micro-segment: fewer than ${DemandAI.CONFIG.minSegmentAccounts} accounts share its signal.`, 'Pick the micro-segment to release it into, then accept.'],
+    deal: [(()=>{ const ds = DemandAI.estimateDealSize(r.account); return ds ? `The deal looks small: about USD ${Math.round(ds.value/1000)}k against a ${Math.round(DemandAI.CONFIG.dealSize.threshold/1000)}k threshold.` : 'The deal looks below the size threshold.'; })(), `Is ${r.account.name} worth this outreach anyway?`],
+    brand: [`The message breaks a brand rule: ${chk.flags.filter(f=>f.rule!=='Sensitive term').map(f=>f.rule.toLowerCase()+' ('+f.detail+')').join(', ')||'brand rules'}.`, 'Edit the message, or reject it for a new one.'],
+    reach: [`No way to reach ${firstOf(c)}: ${(t=>t.charAt(0).toLowerCase()+t.slice(1))(String(x.why||'No verified email or LinkedIn').split(':')[0].replace(/\.$/,''))}.`, 'Find a way to reach them, or put it on hold until the data is fixed.'],
+    spot: ['It passed every check and went ahead on its own. It was picked for this week\'s spot-check.', 'Would you have sent this? Rate it.'],
+    alternative: [`You rejected “${d.alternativeOf||'the first recommendation'}”. This is the one alternative.`, 'Use this alternative, or reject it to close the account for the pilot.'],
+    sentback: [`Sent back by the sales manager: “${d.sentBackNote||''}”.`, 'Change what they asked, then accept again.'],
+    intervention: ['You stepped in after it went ahead on its own.', 'Edit it, or reject it.'],
+    fixed: ['Every reason it was here is fixed.', 'Approve it to send it out, or reject it.'],
+    other: [(d.reasons||exceptionReasons(r))[0] || 'The system could not decide it alone.', 'Accept, change or reject it.'],
+  }[cat] || ['The system could not decide it alone.', 'Accept, change or reject it.'];
+  const missing = cats.includes('reach') ? 'A way to reach the contact' : cats.includes('small') ? 'A micro-segment' : '';
+  return { cat, label: REASON_CATS[cat] || whyHere(d), line: L[0], call: L[1], also: cats.slice(1).map(k=>REASON_CATS[k]).filter(Boolean), missing };
+}
+const CAT_TONE = { fixed:'pos', sensitive:'neg', claim:'neg', brand:'warn', low:'warn', small:'warn', deal:'warn', reach:'neg', spot:'sec', alternative:'brand', sentback:'warn', intervention:'brand', other:'warn' };
+const toneTag = t => ({neg:'tag-red', warn:'tag-amber', sec:'tag-blue', brand:'tag-violet'})[t] || 'tag-grey';
+const onHold = d => !!(d && d.hold);
+function segAccounts(seg){ const g = RUN && RUN.seg.segments.find(s=>s.name===seg); return g ? new Set(g.recs.map(x=>x.account.id)).size : 0; }
+
+function draw(){
+  const el = document.getElementById('rows'); if(!el) return;
+  const mgr = isManager(), on = colsOn();
+  const base = view==='queue' ? myQueue() : view==='approvals' ? items().filter(it=>decOf(it).status==='Awaiting approval' && withRun(it, ()=>mine(it.r) && !pausedInfo(it.r))) : null;
+  let its = view==='queue' ? filtered(base)
+    : view==='approvals' ? base.filter(it=>(!FILT.rep || withRun(it, ()=>ownerOf(it.r))===FILT.rep) && (!FILT.ch || withRun(it, ()=>draftOf(it.r).channel)===FILT.ch))
+    : items().filter(it=>decOf(it).status==='Released' && withRun(it, ()=>mine(it.r)));
+  if(q) its = its.filter(it=>withRun(it, ()=>(liveRec(it.r).contact.name+' '+it.r.account.name+' '+chosenAction(it.r)).toLowerCase().includes(q)));
+  if(view==='queue') its = its.filter(it=>!onHold(decOf(it))).concat(its.filter(it=>onHold(decOf(it))));     // on hold goes last
+  WS_LIST = its.map(it=>it.id);
+  const src = base || [], cats = {}; src.forEach(it=>catsOfIt(it).forEach(c=>{ cats[c] = 1; }));
+  const whyOpts = [['k:exception','Exceptions'],['k:spot','Spot-checks'], ...Object.keys(REASON_CATS).filter(c=>cats[c] && c!=='spot').map(c=>['r:'+c, REASON_CATS[c]])];
+  const chOpts = [...new Set(src.map(it=>withRun(it, ()=>draftOf(it.r).channel)))].map(c=>[c,c]);
+  const repOpts = Object.keys(REPS).map(e=>[e, repName(e)]);
+  const show = { channel:on.channel, seg:on.seg, due:on.due && view!=='released', owner:on.owner && mgr, list:on.list };
+  const cols = [['Prospect','20%'], [view==='queue' ? colFilter('Why it needs you','why',whyOpts) : view==='approvals' ? 'Why it needs you' : 'Released','31%'], ['Recommended action','22%']];
+  if(show.channel) cols.push([base ? colFilter('Channel','ch',chOpts) : 'Channel','8%']);
+  if(show.seg) cols.push(['Micro-segment','11%']);
+  if(show.due) cols.push([view==='queue' ? colFilter('Due','due',DUE_OPTS) : 'Due','12%']);
+  if(show.owner) cols.push([base ? colFilter('Owner','rep',repOpts) : 'Owner','12%']);
+  if(show.list) cols.push(['List','12%']);
+  cols.push(['','108px']);     // just the button: the room goes to the reason and the action
+  const sum = document.getElementById('filtSum'); if(sum) sum.innerHTML = base ? filterSummary(base.length, its.length) : '';
+  ROWS_AT = Date.now();
+  // Group by reason: the most common first, so similar items are decided one after another.
+  if(GROUP && view==='queue' && its.length){
+    const cnt = {}; its.forEach(it=>{ const c = catsOfIt(it)[0]; cnt[c] = (cnt[c]||0)+1; });
+    its = its.slice().sort((a,b)=>(cnt[catsOfIt(b)[0]]-cnt[catsOfIt(a)[0]]) || String(catsOfIt(a)[0]).localeCompare(catsOfIt(b)[0]) || (onHold(decOf(a))-onHold(decOf(b))));
+    WS_LIST = its.map(it=>it.id);
+  }
+  let lastCat = null;
+  const grpRow = it => { if(!(GROUP && view==='queue')) return ''; const c = catsOfIt(it)[0]; if(c===lastCat) return ''; lastCat = c;
+    const n = its.filter(x=>catsOfIt(x)[0]===c).length;
+    return `<tr class="grp"><td colspan="${cols.length}"><div class="grp-in"><span class="tag ${toneTag(CAT_TONE[c])}">${esc(REASON_CATS[c]||c)}</span><span class="grp-n">${n} item${n===1?'':'s'}</span><span class="grp-d">${esc(GROUP_WHY[c]||'')}</span>${n>1?`<button class="btn btn-sec btn-sm" onclick="reviewGroup('${c}')">Review these ${n} →</button>`:''}</div></td></tr>`; };
+  el.innerHTML = table(cols, its.map(it=>grpRow(it) + withRun(it, ()=>{
+      const r = it.r, d = dec(r.key), lr = liveRec(r), x = draftOf(r), s = stuck(r, d), tone = CAT_TONE[s.cat];
+      const why = view==='released' ? `<span class="tag tag-green">${d.released==='auto'?'On its own':d.released==='approved'?'Approved':'Accepted'}</span>${d.outcome?`<span class="sub">${esc(d.outcome)}</span>`:''}`
+        : `<div class="why"><div class="why-t"><span class="tag ${view==='approvals'?'tag-red':toneTag(tone)}" ${view==='queue'?`style="cursor:pointer" title="Show only these" onclick='event.stopPropagation();setFilt(${JSON.stringify(d.spot==='pending'?{kind:'spot',reason:null}:{reason:s.cat,kind:null})})'`:''}>${esc(view==='approvals'?'Sensitive content':s.label)}</span>${s.also.length?`<span class="why-more" title="${esc(s.also.join(', '))}">+${s.also.length}</span>`:''}${onHold(d)?'<span class="tag tag-grey">On hold</span>':''}</div>
+            <span class="why-l clamp2" title="${esc(s.line)}">${esc(s.line)}</span></div>`;
+      return `<tr class="click ${onHold(d)?'held':''}" onclick="openItem('${it.id}')">
+        <td class="wrap"><div class="person"><div class="co-av" style="background:${avColor(lr.contact.name)}">${initials(lr.contact.name)}</div><div>${cell(lr.contact.name, esc(r.account.name), 'dt-main')}</div></div></td>
+        <td class="wrap">${why}</td>
+        <td class="wrap"><span class="clamp2 act" title="${esc(chosenAction(r))}">${esc(chosenAction(r))}</span></td>
+        ${show.channel ? `<td><span style="cursor:pointer" title="Show only ${esc(x.channel)}" onclick='event.stopPropagation();setFilt(${JSON.stringify({ch:x.channel})})'>${cell(x.channel)}</span></td>` : ''}
+        ${show.seg ? `<td>${segTag(segOf(r))}</td>` : ''}
+        ${show.due ? (()=>{ const t = dueOf(r, d), b = dueBucket(t); return `<td class="wrap"><span style="${view==='queue'?'cursor:pointer;':''}font-size:12.5px;font-weight:600;color:${b==='overdue'||b==='today'?'var(--neg)':b==='tomorrow'?'var(--warn)':'var(--i2)'}" ${view==='queue'?`title="Show only these" onclick='event.stopPropagation();setFilt(${JSON.stringify({due: b==='2days'?'soon':b})})'`:''}>${b==='overdue' ? 'Overdue' : b==='today' ? 'Today' : b==='tomorrow' ? 'Tomorrow' : esc(new Date(t).toLocaleDateString(undefined,{weekday:'short', day:'numeric', month:'short'}))}</span><span class="sub">${b==='overdue' ? esc('since ' + new Date(t).toLocaleDateString(undefined,{day:'numeric', month:'short'})) : b==='today'||b==='tomorrow' ? esc('by ' + new Date(t).toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'})) : 'by 5:00 PM'}</span></td>`; })() : ''}
+        ${show.owner ? `<td class="wrap"><span style="cursor:pointer" title="Show only ${esc(repName(ownerOf(r)))}" onclick='event.stopPropagation();setFilt(${JSON.stringify({rep:ownerOf(r)||null})})'>${cell(repName(ownerOf(r)))}</span></td>` : ''}
+        ${show.list ? `<td>${cell(it.run.saved.name)}</td>` : ''}
+        <td style="text-align:right;white-space:nowrap">${view==='released' ? `<button class="btn btn-sec btn-sm" onclick="event.stopPropagation();openItem('${it.id}')">Open</button>`
+          : `<button class="btn btn-decide btn-sm" onclick="event.stopPropagation();openItem('${it.id}')">${view==='approvals'?'Review':'Open'} →</button>`}</td>
+      </tr>`;})).join(''),
+    view==='queue' ? 'Nothing needs you right now.' : view==='approvals' ? 'No sensitive items waiting for approval.' : 'Nothing released yet.');
+}
+
+/* ═══════════════ THE WORKSPACE: one item, the whole screen, everything needed to decide ═══════════════
+   L1 · Why it needs you and the call to make (top). L2 · The action and the exact message that would go out, the
+   contact, and the facts that back it (one screen, no scroll at 1440×900). L3 · Show the working, on demand.
+   The decision bar stays put. Corrections are captured to teach the system. */
+let WS = null, WS_LIST = [];
+function openItem(id){
+  const it = items().find(x=>x.id===id); if(!it) return;
+  closeDrawer(); document.querySelectorAll('.col-menu').forEach(m=>m.remove());
+  if(!WS_LIST.includes(id)){ const q = myQueue().filter(x=>!onHold(decOf(x))).map(x=>x.id); WS_LIST = q.includes(id) ? q : [id]; }
+  RUN = it.run; openedAt = Date.now(); pickTags = new Set(); pickCode = null;
+  WS = { id, key: it.r.key, run: it.run, from: view, teach: '', asked: [] };
+  renderWs();
+}
+function wsItem(){ return WS && items().find(x=>x.id===WS.id); }
+function wsMode(d){ return inQueue(d) ? 'decide' : d.status==='Awaiting approval' ? 'approve' : 'view'; }
+function wsGo(step){
+  const i = WS_LIST.indexOf(WS.id), j = i + step;
+  if(j < 0 || j >= WS_LIST.length) return;
+  saveTeach(); openItem(WS_LIST[j]);
+}
+function leaveWs(){ saveTeach(); WS = null; closeDrawer(); render(); }
+function saveTeach(){ const t = document.getElementById('wsTeach'); if(WS && t) WS.teach = t.value; }
+const hasNext = () => myQueue().some(it=>!onHold(decOf(it)));
+function nextItem(){
+  const f = filtered(myQueue()).filter(it=>!onHold(decOf(it))), w = f.length ? f : myQueue().filter(it=>!onHold(decOf(it)));
+  if(!w.length){ WS = null; showToast('Your queue is clear'); render(); return; }
+  WS_LIST = w.map(it=>it.id); openItem(w[0].id);
+}
+// After any change: stay on the item while it still needs this reviewer in the same way, otherwise go to the next one.
+function onDecision(){
+  if(!WS){ render(); return; }
+  const it = wsItem(); if(!it){ leaveWs(); return; }
+  RUN = it.run; const d = dec(it.r.key), decided = WS.decided; WS.decided = false;
+  if(decided && WS.mode==='decide' && inQueue(d) && !onHold(d)){ renderWs(); showToast('An alternative came back: it is the next thing to decide'); return; }
+  if(!decided && wsMode(d)===WS.mode){ renderWs(); return; }
+  const mode = WS.mode, i = WS_LIST.indexOf(WS.id);
+  const rest = WS_LIST.filter(id=>{ if(id===WS.id) return false; const x = items().find(y=>y.id===id); if(!x) return false; const dd = decOf(x); return mode==='approve' ? dd.status==='Awaiting approval' : inQueue(dd) && !onHold(dd); });
+  const nextId = rest.find(id=>WS_LIST.indexOf(id) > i) || rest[0];
+  if(nextId){ WS_LIST = WS_LIST.filter(id=>id===nextId || rest.includes(id)); openItem(nextId); }
+  else { WS = null; render(); showToast(mode==='approve' ? 'No more approvals waiting' : 'Done: nothing else in this list needs you right now'); }
+}
+// Content added in the message box re-draws the workspace, not the side panel.
+function wsReopen(key){ if(WS && WS.key===key){ renderWs(); return true; } return false; }
+
+/* ═══════════════ FIX THE REASON: each reason the item is here, with the way to fix it right on the account ═══════════════ */
+const MARK_KINDS = { sensitive:'Sensitive', claim:'No source', brand:'Brand rule' };
+// Where each problem sits in the message text: [start, end, kind].
+function marksIn(text, x){
+  const out = [], add = (re, kind) => { let m; while((m = re.exec(text))){ out.push([m.index, m.index + m[0].length, kind]); if(!m[0].length) re.lastIndex++; } };
+  add(new RegExp(SENSITIVE_RE.source, 'gi'), 'sensitive');
+  const chk = DemandAI.checkDraft(x);
+  chk.unsupported.forEach(u=>{ const i = text.indexOf(u.text); if(i>=0) out.push([i, i+u.text.length, 'claim']); });
+  chk.flags.filter(f=>f.rule!=='Sensitive term').forEach(f=>{ const w = (String(f.detail).match(/^"(.+)"$/)||[])[1]; if(!w) return;
+    let i = text.toLowerCase().indexOf(w.toLowerCase()); while(i>=0){ out.push([i, i+w.length, 'brand']); i = text.toLowerCase().indexOf(w.toLowerCase(), i+1); } });
+  out.sort((a,b)=>a[0]-b[0] || b[1]-a[1]);
+  return out.filter((m, i) => !out.slice(0, i).some(p => m[0] < p[1]));          // no overlaps: the first one wins
+}
+function hlHtml(text, marks){
+  let h = '', at = 0;
+  marks.forEach(([s, e, k])=>{ h += esc(text.slice(at, s)) + `<mark class="k-${k}">${esc(text.slice(s, e))}</mark>`; at = e; });
+  return h + esc(text.slice(at)) + '\n ';
+}
+const mainField = () => document.getElementById('dBody') || document.getElementById('dNote');
+function paintMarks(){
+  const it = wsItem(), ta = mainField(), back = document.getElementById('hlBack'); if(!it || !ta || !back) return [];
+  RUN = it.run; const x = draftFromFields(it.r), marks = marksIn(ta.value, x);
+  back.innerHTML = hlHtml(ta.value, marks);
+  ta.style.height = 'auto'; ta.style.height = Math.max(ta.scrollHeight, 160) + 'px';
+  return marks;
+}
+// "Show me": scrolls to the first highlighted part and selects it.
+function wsShow(kind){
+  const ta = mainField(); if(!ta) return; const m = marksIn(ta.value, draftFromFields(wsItem().r)).find(z=>z[2]===kind); if(!m) return;
+  const el = document.querySelector(`#hlBack mark.k-${kind}`); if(el) el.scrollIntoView({ block:'center', behavior:'smooth' });
+  ta.focus({ preventScroll:true }); ta.setSelectionRange(m[0], m[1]);
+  if(el){ el.classList.add('flash'); setTimeout(()=>el.classList.remove('flash'), 1400); }
+}
+// Takes out the whole sentence around the first highlighted part of this kind.
+function wsCut(kind){
+  const ta = mainField(); if(!ta) return; const t = ta.value, m = marksIn(t, draftFromFields(wsItem().r)).find(z=>z[2]===kind); if(!m) return;
+  let s = m[0]; while(s > 0 && !/[.?!\n]/.test(t[s-1])) s--;
+  let e = m[1]; while(e < t.length && !/[.?!\n]/.test(t[e])) e++;
+  if(/[.?!]/.test(t[e]||'')) e++;
+  const cite = t.slice(e).match(/^\s*\[[^\]]+, \d{4}\]/); if(cite) e += cite[0].length;
+  while(e < t.length && t[e]===' ') e++;
+  ta.value = (t.slice(0, s).replace(/[ ]+$/,'') + (s && t[s-1]!=='\n' && t[e] && t[e]!=='\n' ? ' ' : '') + t.slice(e)).replace(/\n{3,}/g, '\n\n');
+  wsLiveCheck(); showToast('Sentence removed. It is saved when you approve.');
+}
+// Swaps the unsourced claim for an approved one, with its citation.
+function wsReplaceClaim(id){
+  const ta = mainField(), c = DemandAI.approvedClaims().find(z=>z.id===id); if(!ta || !c) return;
+  const u = DemandAI.checkDraft(draftFromFields(wsItem().r)).unsupported[0]; if(!u) return;
+  const t = ta.value, i = t.indexOf(u.text); if(i < 0) return;
+  let e = i + u.text.length; const cite = t.slice(e).match(/^\s*\[[^\]]+, \d{4}\]/); if(cite) e += cite[0].length;
+  ta.value = t.slice(0, i) + `${c.claim} [${c.type}, ${c.year}]` + t.slice(e);
+  wsLiveCheck(); showToast('Claim replaced with an approved one');
+}
+// A reason fixed by a person's call (the contact is right, the deal is worth it, the micro-segment is set).
+function wsFix(cat, note){
+  const it = wsItem(); RUN = it.run; const key = it.r.key, d = dec(key);
+  setDec(key, { fixed: [...new Set((d.fixed||[]).concat(cat))] }); logIt(it.r, 'Fixed: ' + (REASON_CATS[cat]||cat), { note: note||'' }); persist(); renderWs();
+}
+function wsAssignSeg(v){ const it = wsItem(); RUN = it.run; if(!v) return; setDec(it.r.key, { assignedSeg: v }); wsFix('small', 'Micro-segment: ' + v); }
+function wsSwitchContact(row){
+  const it = wsItem(); RUN = it.run; const p = it.r.result.people.find(z=>z.contact.row===row); if(!p) return;
+  setDec(it.r.key, { contactRow: row, draft: null, edited: false, channel: null }); wsFix('low', 'Switched to ' + p.contact.name);
+}
+// The contact's email or LinkedIn: saved once, used everywhere the contact appears.
+function wsSaveContact(){
+  const it = wsItem(); RUN = it.run; const c = liveRec(it.r).contact, v = id => (document.getElementById(id)||{}).value || '';
+  const res = DemandAI.saveContactFix(it.r.account.name, c.name, { email: v('fxEmail').trim(), verified: (document.getElementById('fxVer')||{}).checked, linkedin: v('fxLi').trim(), by: me().who });
+  const er = document.getElementById('fxErr'); if(res.error){ if(er) er.textContent = res.error; return; }
+  // Every list that holds this contact drafts again with the new channel.
+  const id = WS.id; loadRuns();
+  Object.values(RUNS).forEach(run=>{ const keep = RUN; RUN = run; run.seg.recs.forEach(x=>{ const lc = liveRec(x).contact;
+    if(x.account.name===it.r.account.name && lc.name===c.name){ const dx = dec(x.key); if(dx.draft && dx.draft.unreachable) setDec(x.key, { draft:null, channel:null }); logIt(x, 'Contact added', { note: [v('fxEmail'), v('fxLi')].filter(Boolean).join(' · ') }); persist(); } }); RUN = keep; });
+  WS.id = id; showToast(`Saved for ${c.name}: Prospecting, Scoring, Micro-segments and For Review now use it`); renderWs();
+}
+function fixBlock(r, d, mode, can){
+  if(mode==='view') return '';
+  const cats = mode==='approve' ? ['sensitive'] : reasonCats(r, d);
+  const c = liveRec(r).contact, first = firstOf(c), x = draftOf(r), chk = DemandAI.checkDraft(x), { conf } = checksOf(r);
+  const showBtn = k => `<button class="btn btn-ghost btn-sm" onclick="wsShow('${k}')">Show me ↓</button>`;
+  const row = (k, title, body, acts) => `<div class="fx" data-k="${k}"><div class="fx-h"><span class="fx-t">${title}</span><span class="fx-st" id="fxSt-${k}"></span></div>${body?`<div class="fx-d">${body}</div>`:''}${acts?`<div class="fx-a">${acts}</div>`:''}</div>`;
+  const rows = cats.map(k=>{
+    if(k==='sensitive') return row(k, 'Sensitive content', `${[...new Set((DemandAIDraftText(x).match(new RegExp(SENSITIVE_RE.source,'gi'))||[]).map(w=>w.toLowerCase()))].map(w=>`<mark class="k-sensitive">${esc(w)}</mark>`).join(' ') || '<mark class="k-sensitive">Highlighted</mark>'} — highlighted in red in the message. ${mode==='approve' ? 'Keep it, edit it, or send it back.' : 'You can edit it; anything sensitive still goes to the sales manager.'}`,
+      showBtn(k) + (can ? `<button class="btn btn-ghost btn-sm" onclick="wsCut('sensitive')">Remove that sentence</button>` : ''));
+    if(k==='claim'){ const u = chk.unsupported[0], fits = DemandAI.approvedClaims();
+      return row(k, 'Claim with no source', `<mark class="k-claim">“${esc((u||{}).text||'A claim')}”</mark> isn't an approved claim. Swap it for one that is, or take it out.`,
+        showBtn(k) + (can ? `<select class="fx-sel" onchange="if(this.value)wsReplaceClaim(this.value)"><option value="">Replace with an approved claim…</option>${fits.map(z=>`<option value="${esc(z.id)}">${esc(z.title)} (${esc(z.type)}, ${z.year})</option>`).join('')}</select><button class="btn btn-ghost btn-sm" onclick="wsCut('claim')">Remove it</button>` : '')); }
+    if(k==='brand') return row(k, 'Brand or rule check', `${esc(chk.flags.filter(f=>f.rule!=='Sensitive term').map(f=>f.rule+': '+String(f.detail).replace(/"/g,'')).join(' · ')||'A brand rule')}. <mark class="k-brand">Highlighted</mark> where it is in the text.`, showBtn(k));
+    if(k==='reach') return row(k, `A way to reach ${esc(first)}`, `No verified email and no LinkedIn URL on file. Add one: it is saved for ${esc(c.name)} everywhere they appear.`,
+      can ? `<div class="fx-form"><input id="fxEmail" class="fx-in" placeholder="Work email, e.g. ${esc(first.toLowerCase())}@${esc(r.account.name.toLowerCase().split(' ')[0])}.example" value="${esc(c.emailRaw||'')}">
+        <label class="fx-ck"><input type="checkbox" id="fxVer"> Verified</label>
+        <input id="fxLi" class="fx-in" placeholder="or LinkedIn URL" value="${esc(c.linkedinRaw||'')}">
+        <button class="btn btn-primary btn-sm" onclick="wsSaveContact()">Save contact</button></div><div class="fx-err" id="fxErr"></div>` : '');
+    if(k==='low'){ const lr = liveRec(r), sg = (r.signal||{}), others = r.result.people.filter(p=>p.contact.row!==c.row && !p.contact.optOut);
+      const factor = (ok, t) => `<span class="fx-f ${ok?'ok':'no'}">${ok?'✓':'✗'} ${t}</span>`;
+      return row(k, 'Low confidence', `${factor(!chk.unsupported.length, chk.claims.length ? `${chk.claims.length-chk.unsupported.length} of ${chk.claims.length} claims verified` : 'No product claims')}${factor(!chk.flags.length, chk.flags.length ? `${chk.flags.length} open flag${chk.flags.length>1?'s':''}` : 'No open flags')}${factor((sg.weight||0) >= 30, `${(sg.weight||0) >= 60 ? 'Strong' : (sg.weight||0) >= 30 ? 'Moderate' : 'Weak'} signal`)}${factor(r.result.confidence!=='low', r.result.confidence==='low' ? `No one in the primary persona: ${esc(first)} is ${esc(c.jobTitle||'in another role')}` : 'Contact in the primary persona')}`,
+        can ? `<button class="btn btn-sec btn-sm" onclick="wsFix('low','${esc(first)} is the right person')">Yes, ${esc(first)} is the right person</button>${others.slice(0,3).map(p=>`<button class="btn btn-ghost btn-sm" onclick="wsSwitchContact(${p.contact.row})">Switch to ${esc(p.contact.name)} <span class="ws-sub">· ${esc(p.contact.jobTitle||p.contact.persona)}</span></button>`).join('')}` : ''); }
+    if(k==='small') return row(k, 'No micro-segment', `Fewer than ${DemandAI.CONFIG.minSegmentAccounts} accounts share its signal. Pick the one to release it into.`,
+      can ? `<select id="assignSeg" class="fx-sel" onchange="wsAssignSeg(this.value)"><option value="">Pick a micro-segment…</option>${segChoices().map(nm=>`<option ${(d.assignedSeg)===nm?'selected':''}>${esc(nm)}</option>`).join('')}</select><span class="ws-sub">Suggested: ${esc(r.prominent||'')}</span>` : '');
+    if(k==='deal'){ const ds = DemandAI.estimateDealSize(r.account);
+      return row(k, 'Below deal size', ds ? `About USD ${Math.round(ds.value/1000)}k against a ${Math.round(DemandAI.CONFIG.dealSize.threshold/1000)}k threshold (${esc(ds.basis)}).` : '', can ? `<button class="btn btn-sec btn-sm" onclick="wsFix('deal','Worth it anyway')">It's worth it anyway</button>` : ''); }
+    if(k==='fixed') return '';
+    return '';
+  }).filter(Boolean);
+  const done = (d.fixed||[]).filter(k=>REASON_CATS[k]).concat(mode==='decide' && (d.reasons||[]).some(t=>/^Can't reach/.test(t)) && !cats.includes('reach') ? ['reach'] : []);
+  if(!rows.length && !done.length) return '';
+  return `<div class="fxs"><div class="fxs-h">${rows.length ? 'How to fix it' : 'Fixed'} ${done.length ? `<span class="fxs-done">${done.map(k=>`✓ ${k==='reach' ? 'Contact added' : esc(REASON_CATS[k])}`).join(' · ')}</span>` : ''}</div>${rows.join('')}</div>`;
+}
+// Live: a text problem shows as fixed the moment it is gone from the message.
+function fixStatus(marks){
+  ['sensitive','claim','brand'].forEach(k=>{ const el = document.getElementById('fxSt-'+k); if(!el) return; const n = marks.filter(m=>m[2]===k).length;
+    el.innerHTML = n ? `<span class="fx-n">${n} in the message</span>` : '<span class="fx-ok">✓ Gone from the message</span>'; });
+}
+
+function renderWs(){
+  const it = wsItem(); if(!it){ leaveWs(); return; }
+  RUN = it.run;
+  const r = it.r, key = r.key, d = dec(key), lr = liveRec(r), c = lr.contact, x = draftOf(r), s = stuck(r, d), tone = CAT_TONE[s.cat];
+  const mode = wsMode(d), live = mode==='decide' && mine(r) && !pausedInfo(r), canEdit = live || (mode==='approve' && isManager());
+  WS.mode = mode; WS.decided = false;
+  const i = WS_LIST.indexOf(WS.id), n = WS_LIST.length;
+  const seg = segOf(r), tr = seg ? trackRecord(seg) : trackRecord(), { conf } = checksOf(r);
+  const fromLbl = { queue: isManager() ? 'Queue' : 'My queue', approvals: 'Approvals', released: 'Released', log: 'Decision log' }[WS.from] || 'Queue';
+  const noReach = s.missing==='A way to reach the contact';
+
+  // 1 · Why it needs you: the reason, the call to make, and what is missing. Nothing else.
+  const due = (()=>{ const t = dueOf(r, d), b = dueBucket(t); return `<span class="tag ${b==='overdue'||b==='today'?'tag-red':b==='tomorrow'?'tag-amber':'tag-grey'}">${esc(dueLabel(t))}</span>`; })();
+  const hero = mode==='view'
+    ? `<div class="ws-hero t-pos"><div class="ws-hero-tags">${statusPill(d, r)}</div><div class="ws-hero-line">Nothing to decide: ${esc(statusLabel(d, r)[0].toLowerCase())}${d.by?` by ${esc(d.by)}`:''}.</div></div>`
+    : `<div class="ws-hero t-${mode==='approve'?'neg':tone}">
+        <div class="ws-hero-tags">${mode==='approve' ? '<span class="tag tag-violet">Approval</span><span class="tag tag-red">Sensitive content</span>' : `<span class="tag ${toneTag(tone)}">${esc(s.label)}</span>`}${s.also.map(a=>`<span class="tag tag-grey">+ ${esc(a)}</span>`).join('')}${due}${onHold(d)?`<span class="tag tag-grey">On hold: ${esc(d.hold.why)}</span>`:''}</div>
+        <div class="ws-hero-line">${esc(s.line)}</div>
+        <div class="ws-hero-call">${mode==='approve' ? `Approve it, edit it first, send it back to ${esc(repName(ownerOf(r)).split(' ')[0])}, or reject it.` : esc(s.call)}</div>
+        ${fixBlock(r, d, mode, canEdit)}
+      </div>`;
+
+  // 2 · The action: recommended and runner-up side by side, and your own below them.
+  const can = live || (mode==='approve' && isManager());
+  const A = optionFacts(r, r.action), B = r.runnerUp ? optionFacts(r, r.runnerUp.action) : null;
+  const firstLine = t => String(t||'').replace(/^[^:]{3,40}:\s*/,'').replace(/^./, m=>m.toUpperCase());
+  const opt = (title, action, why, f, chosen, click) => `<div class="opt ${chosen?'on':''} ${click&&!chosen?'pickable':''}" ${click&&!chosen?`onclick="${click}"`:''}>
+      <div class="opt-h"><span>${title}</span>${chosen ? '<span class="opt-ck">✓ Chosen</span>' : click ? '<span class="opt-use">Use this →</span>' : ''}</div>
+      <div class="opt-a">${esc(action)}</div><div class="opt-w">${esc(firstLine(why))}</div>
+      ${f ? `<div class="opt-m"><span class="tag tag-grey">${esc(f.channel)}</span><span class="tag ${f.conf==='High'?'tag-green':f.conf==='Medium'?'tag-amber':'tag-red'}">${esc(f.conf)} confidence</span>${f.ok?'':`<span class="tag tag-red">✗ ${esc(f.flags[0]||'A check fails')}</span>`}</div>` : ''}</div>`;
+  const ownBar = d.manual
+    ? `<div class="own own-on"><span class="own-i">✎</span><div class="own-b"><div class="own-k">Your action · chosen</div><div class="own-a">${esc(d.manual)}</div></div>${can ? `<button class="btn btn-ghost btn-sm" onclick="WS.own=true;renderWs()">Change</button><button class="btn btn-ghost btn-sm" onclick="wsPick('rec')">Use the recommended</button>` : ''}</div>`
+    : WS.own
+    ? `<div class="own own-edit"><div class="own-k">Your own action</div>
+        <textarea id="manualAct" class="ws-in" rows="2" placeholder="What should happen instead? e.g. Invite them to the site visit in May" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();wsUseOwn();}"></textarea>
+        <div class="own-f"><span class="ws-sub">The message is redrafted for your action, then you approve it as usual.</span><button class="btn btn-ghost btn-sm" onclick="WS.own=false;renderWs()">Cancel</button><button class="btn btn-primary btn-sm" onclick="wsUseOwn()">Use my action</button></div></div>`
+    : can ? `<button class="own own-add" onclick="wsOwn()"><span class="own-i">✎</span><span><b>Neither fits?</b> Write your own action</span><kbd>W</kbd></button>` : '';
+  const options = `<div class="opts${r.runnerUp?'':' one'}">
+      ${opt('Recommended', r.action, r.reason, A, !d.manual && !d.useRunner, can ? `wsPick('rec')` : '')}
+      ${r.runnerUp ? opt('Runner-up', r.runnerUp.action, r.runnerUp.reason, B, !d.manual && d.useRunner, can ? `wsPick('run')` : '') : ''}
+    </div>${ownBar}`;
+
+  // 3 · Who it goes to, and the exact message
+  const ro = canEdit ? '' : 'readonly';
+  const fieldsHtml = x.channel==='Email'
+    ? `<input id="dSubj" class="ws-in ws-subj" value="${esc(x.subject)}" ${ro} oninput="wsLiveCheck()" aria-label="Subject">
+       <div class="hl"><div class="hl-back ws-in ws-body" id="hlBack" aria-hidden="true"></div><textarea id="dBody" class="ws-in ws-body hl-ta" ${ro} oninput="wsLiveCheck()" aria-label="Message">${esc(x.body)}</textarea></div>`
+    : x.channel==='LinkedIn'
+    ? `<div class="hl"><div class="hl-back ws-in" id="hlBack" aria-hidden="true"></div><textarea id="dNote" class="ws-in hl-ta" style="min-height:96px" ${ro} oninput="wsLiveCheck()" aria-label="Connection note">${esc(x.note)}</textarea></div>`
+    : `<textarea id="dTask" class="ws-in" ${ro} aria-label="Task">${esc(x.task||'')}</textarea>`;
+  const reach = x.channel==='Email'
+    ? (c.email ? `${esc(c.email)} ${c.emailVerified ? '<span class="tag tag-green">Verified</span>' : '<span class="tag tag-amber">Not verified</span>'}` : '<span class="tag tag-red">No email on file</span>')
+    : x.channel==='LinkedIn' ? (c.linkedin ? `<span class="ws-sub">LinkedIn ·</span> ${esc(c.linkedin.replace(/^https?:\/\/(www\.)?/,''))}` : 'LinkedIn connection note') : 'A task for the team';
+  const msgBlock = `<div class="ws-card ws-msg">
+      <div class="wm-to"><div class="co-av" style="background:${avColor(c.name)}">${initials(c.name)}</div>
+        <div class="wm-who"><b>${esc(c.name)}</b><span>${esc(c.jobTitle||'')}${c.persona?` · ${esc(c.persona)} persona`:''}</span></div>
+        <div class="wm-reach">${reach}</div></div>
+      ${typeof ContentLink!=='undefined' && (x.channel==='Email'||x.channel==='LinkedIn') ? ContentLink.messageBar(key, d.content, x.channel, canEdit) : ''}
+      ${fieldsHtml}
+      <div class="wm-foot"><div class="ws-checks" id="wsChecks"></div><span style="flex:1"></span><span class="ws-sub" id="wsWords"></span>
+        ${x.channel==='Email' ? soon('✉ Send', 'Sends from the rep\'s mailbox. In the pilot you copy the message and send it yourself') : x.channel==='LinkedIn' ? soon('🔗 Send', 'Sends through the rep\'s LinkedIn. In the pilot you copy the note') : ''}</div>
+    </div>`;
+
+  // 4 · Key facts: only what helps the decision
+  const failing = fourChecks(r).filter(([,ok])=>!ok);
+  const sig = r.signal || {};
+  const fact = (k, v) => `<div class="kf"><div class="kf-k">${k}</div><div class="kf-v">${v}</div></div>`;
+  const facts = `<div class="ws-card ws-kf"><div class="ws-card-h"><span>Key facts</span></div>
+      ${fact('Why now', `<b>${esc(sig.type||'Signal')}</b>${sig.age!==undefined?` <span class="ws-sub">· ${sig.age} days ago</span>`:''}<div class="ws-sub">${esc(firstLine(r.reason))}</div>`)}
+      ${fact('Checks', failing.length ? failing.map(([k])=>`<span class="tag tag-red">✗ ${esc(k)}</span>`).join(' ') + ' <span class="ws-sub">the rest pass</span>' : '<span class="tag tag-green">✓ All pass</span>')}
+      ${fact('Confidence', `<span class="tag ${conf.level==='High'?'tag-green':conf.level==='Medium'?'tag-amber':'tag-red'}">${esc(conf.level)}</span>`)}
+      ${fact('Track record', tr.n ? `Reps agreed <b>${tr.a} of ${tr.n}</b> times${seg?` in ${esc(seg)}`:''}` : '<span class="ws-sub">No decisions yet</span>')}
+      ${fact('Owner', esc(repName(ownerOf(r))))}
+      <div class="kf-more">More in Copilot: ask “Show the signals”, “Show the brief and proof” or “Show the history”.</div>
+    </div>`;
+
+  // 5 · The bottom: ask Copilot (it opens beside the account), and decide
+  const sensitive = isSensitive(draftOf(r));
+  const approveLbl = sensitive && !isManager() && mode!=='approve' && d.spot!=='pending' ? 'Approve, send to manager' : 'Approve';
+  const buttons = mode==='approve' ? (isManager() ? `<button class="btn btn-sec" onclick="openSendBack('${key}')">Send back</button><button class="btn btn-sec" onclick="openReject('${key}')">Reject <kbd>R</kbd></button><button class="btn btn-primary" onclick="wsApprove('${key}')">${approveLbl} <kbd>A</kbd></button>` : '<span class="ws-sub">Waiting for the sales manager.</span>')
+    : mode==='view' ? `<button class="btn btn-sec" onclick="leaveWs()">Back to the list</button>`
+    : !live ? `<span class="ws-sub">${pausedInfo(r) ? 'Its micro-segment is paused.' : `In ${esc(repName(ownerOf(r)))}'s queue.`}</span>`
+    : `${onHold(d) ? `<button class="btn btn-ghost" onclick="takeOffHold('${key}')">Take off hold</button>` : `<button class="btn ${noReach?'btn-primary':'btn-ghost'}" onclick="openHold('${key}')">Put on hold</button>`}
+       <button class="btn btn-sec" onclick="openReject('${key}')">Reject <kbd>R</kbd></button>
+       ${noReach ? '' : `<button class="btn btn-primary" onclick="wsAccept('${key}')">${approveLbl} <kbd>A</kbd></button>`}`;
+  const dockH = `<div class="ws-dock"><div class="ws-dock-row">
+        <form class="cp-bar" onsubmit="wsAsk(document.getElementById('wsQ').value);return false"><span class="cp-spark">${Copilot.icon('spark', 17)}</span><input id="wsQ" autocomplete="off" placeholder="Ask Copilot about ${esc(r.account.name)}… (press /)"><button class="cp-send" type="submit" aria-label="Send">${Copilot.icon('send', 16)}</button></form>
+        <div class="ws-dec">${buttons}</div>
+      </div></div>`;
+
+  document.getElementById('mainArea').innerHTML = `
+    <div class="topbar">
+      <div class="topbar-l"><nav class="ws-crumb"><a href="#" onclick="leaveWs();return false">For Review</a><span>›</span><a href="#" onclick="leaveWs();return false">${esc(fromLbl)}</a><span>›</span><b>${esc(c.name)} · ${esc(r.account.name)}</b></nav></div>
+      <div class="topbar-r">
+        <span class="ws-sub">${n>1 ? `${i+1} of ${n}` : ''}</span>
+        <button class="btn btn-sec btn-sm" ${i<=0?'disabled':''} onclick="wsGo(-1)" title="Previous (←)">‹</button>
+        <button class="btn btn-sec btn-sm" ${i>=n-1?'disabled':''} onclick="wsGo(1)" title="Next (→)">›</button>
+        <button class="btn btn-ghost btn-sm" onclick="leaveWs()" title="Back to the list (Esc)">✕ Close</button>
+      </div>
+    </div>
+    <div class="ws">
+      <div class="ws-scroll">
+        ${hero}
+        <div class="ws-grid">
+          <div class="ws-col">${mode==='view' ? '' : options}${msgBlock}</div>
+          <div class="ws-col">${facts}</div>
+        </div>
+      </div>
+      ${dockH}
+    </div>`;
+  wsLiveCheck();
+  if(WS.own){ const m = document.getElementById('manualAct'); if(m) m.focus(); }
+}
+/* The text box at the bottom of the account opens Copilot beside it; closing Copilot leaves the account as it was. */
+function wsContext(){ const it = wsItem(); RUN = it.run; return Copilot.recText ? Copilot.recText(it.r) : ''; }
+function wsAsk(q){
+  q = String(q||'').trim(); if(!q) return;
+  const it = wsItem(), r = it.r, d = dec(r.key), s = stuck(r, d), c = liveRec(r).contact;
+  document.getElementById('wsQ').value = '';
+  if(Copilot.isOpen() && document.getElementById('cpPanel').dataset.ctx===WS.id) return Copilot.ask2(q);
+  Copilot.panelOpen({ ctx: WS.id, title: `${c.name} · ${r.account.name}`, sub: r.account.name, answer: wsAnswer, context: wsContext, chips: ['How do I fix it?'].concat(cpQs(r, s).map(([,l])=>l)), q });
+  document.getElementById('cpPanel').dataset.ctx = WS.id;
+}
+
+// Copilot's answers about the open account: the question decides which card comes back. Nothing matched: null,
+// so Copilot can ask Claude (when allowed) or say plainly that it can't answer.
+const WS_INTENTS = [
+  ['spotwhy', /spot.?check|why was it picked/], ['before', /rejected before|manager (say|said|want)|sent back|what did .* say/],
+  ['term', /sensitiv|incident|security|cyber|which (word|part|bit)|what.*(flag|highlight)/], ['claims', /approved claim|claims? (fit|instead)|replace .*claim/],
+  ['claim', /claim|source|unsourced|cite|citation/], ['contact', /e-?mail|linkedin|phone|reach (them|him|her)|contact (detail|info)|how (do|can|should) i (reach|contact)/],
+  ['people', /who else|other (contact|people|person)|someone else|colleague|anyone else|right person|decision maker/],
+  ['fix', /\bfix|correct|resolve|clear (it|this)|what (do|should) i (need to )?do|next step|how do i get/], ['conf', /confiden|how sure|certain|why (low|medium|high)/],
+  ['segs', /segment/], ['deal', /deal|size|worth|revenue|budget|money|value/], ['rules', /rule|brand|tone|length|too long|word count/],
+  ['compare', /runner|differ|alternative|compare|other option|second option/], ['similar', /similar|track record|agree|how did|past|worked before/],
+  ['signals', /signal|why now|when did|trigger|event|happened at/], ['brief', /brief|proof|angle|objection|case study|pitch/],
+  ['history', /history|log|version|changed|who (did|edited|touched)/], ['ifreject', /reject|say no|decline/],
+  ['ifaccept', /approve|accept|what happens|send it|release/], ['due', /due|deadline|by when|how long|urgent/],
+  ['owner', /owner|whose|assigned|which rep|who owns/], ['message', /message|draft|subject|wording|summar|what does it say|email say/],
+  ['account', /account|company|about (them|this|the account)|who (is|are) they|industry|customer|employees|country/],
+  ['why', /why|reason|here|need me|stuck|problem|wrong|issue/],
+];
+function wsAnswer(q){
+  const t = String(q).toLowerCase(), hit = WS_INTENTS.find(([,re])=>re.test(t));
+  if(!hit) return null;
+  const k = hit[0]; return WS_EXTRA[k] ? WS_EXTRA[k]() : cpAnswer(k);
+}
+const WS_EXTRA = {
+  conf(){ const it = wsItem(); RUN = it.run; const r = it.r, { chk, conf } = checksOf(r), w = (r.signal||{}).weight || 0, c = liveRec(r).contact;
+    const f = (ok, t) => `<div class="cp-kv"><span style="color:${ok?'var(--pos)':'var(--neg)'};font-weight:700">${ok?'✓':'✗'}</span><div>${t}</div></div>`;
+    return `<p>Confidence is <b>${esc(conf.level)}</b>. It is worked out from four things:</p>` + cpCard('What sets the confidence',
+      f(!chk.unsupported.length, chk.claims.length ? `${chk.claims.length-chk.unsupported.length} of ${chk.claims.length} claims have an approved source` : 'No product claims in the message')
+      + f(!chk.flags.length, chk.flags.length ? `${chk.flags.length} brand or rule flag${chk.flags.length>1?'s':''} open` : 'No brand or rule flags')
+      + f(w >= 30, `${w >= 60 ? 'Strong' : w >= 30 ? 'Moderate' : 'Weak'} signal (weight ${Math.round(w)})`)
+      + f(r.result.confidence!=='low', r.result.confidence==='low' ? `No one in the primary persona at ${esc(r.account.name)}: ${esc(c.name)} is ${esc(c.jobTitle||'in another role')}` : 'Someone in the primary persona'),
+      'Fix the ✗ items in “How to fix it” at the top of the account.'); },
+  fix(){ const it = wsItem(); RUN = it.run; const r = it.r, d = dec(r.key), cats = reasonCats(r, d);
+    if(cats[0]==='fixed') return '<p>Everything that held it back is fixed. Approve it to send it out, or reject it.</p>';
+    const how = { sensitive:'Check the red highlights in the message: keep, edit or remove them. A manager still approves it.', claim:'Swap the amber claim for an approved one, or remove it.',
+      low:`Confirm ${esc(firstOf(liveRec(r).contact))} is the right person, or switch to someone else at the account.`, reach:'Add a verified email or a LinkedIn URL; it is saved everywhere the contact appears.',
+      small:'Pick the micro-segment to release it into.', deal:'Decide whether it is worth it anyway.', brand:'Edit the highlighted words.', spot:'Rate it: approve if you would have sent it, reject if not.',
+      alternative:'Use this alternative, or reject it to close the account for the pilot.', sentback:'Change what the manager asked, then approve again.' };
+    return `<p>Here is what to do, in order:</p><ol>${cats.map(c=>`<li><b>${esc(REASON_CATS[c]||c)}</b>: ${how[c]||'Approve, change or reject it.'}</li>`).join('')}</ol><p class="cpp-muted">Each one has its own fix in “How to fix it” at the top of the account.</p>`; },
+  contact(){ const it = wsItem(); RUN = it.run; const c = liveRec(it.r).contact, x = draftOf(it.r);
+    return cpCard(`How to reach ${esc(c.name)}`, cpKv('Email', c.email ? `${esc(c.email)} ${c.emailVerified?'<span class="tag tag-green">Verified</span>':'<span class="tag tag-amber">Not verified</span>'}` : '<span class="ws-sub">None on file</span>')
+      + cpKv('LinkedIn', c.linkedin ? esc(c.linkedin) : '<span class="ws-sub">None on file</span>') + cpKv('Channel', `${esc(x.channel)}${x.why?` <span class="ws-sub">· ${esc(x.why)}</span>`:''}`),
+      c.email || c.linkedin ? '' : 'Add an email or LinkedIn URL in “How to fix it”.'); },
+  ifreject(){ return `<p>Rejecting asks you for a reason, and the reason decides what comes back:</p><ul>${REJECT.slice(0,8).map(([,l,o])=>`<li><b>${esc(l)}</b>: ${esc(o)}</li>`).join('')}</ul>`; },
+  due(){ const it = wsItem(); RUN = it.run; const d = dec(it.r.key), t = dueOf(it.r, d); return `<p>It is due <b>${esc(dueLabel(t).replace(/^By /,'by '))}</b>${dueBucket(t)==='overdue'?', and it is overdue':''}. The deadline comes from why it is here: the most urgent reason sets it.</p>`; },
+  owner(){ const it = wsItem(); RUN = it.run; return `<p>It belongs to <b>${esc(repName(ownerOf(it.r)))}</b>.${isManager()?' You can reassign it from the Micro-segments & NBA screen.':''}</p>`; },
+  message(){ const it = wsItem(); RUN = it.run; const x = draftFromFields(it.r), chk = DemandAI.checkDraft(x), words = DemandAIDraftText(x).split(/\s+/).filter(Boolean).length;
+    return cpCard(`The ${esc(x.channel==='LinkedIn'?'LinkedIn note':x.channel.toLowerCase())}`, (x.subject?cpKv('Subject', esc(x.subject)):'') + cpKv('Length', `${words} words`)
+      + cpKv('Checks', chk.flags.length || chk.unsupported.length ? chk.flags.map(f=>`<span class="tag tag-red">✗ ${esc(f.rule)}</span>`).concat(chk.unsupported.map(()=>'<span class="tag tag-red">✗ Claim with no source</span>')).join(' ') : '<span class="tag tag-green">✓ Brand and claims pass</span>')
+      + cpKv('Opens with', esc(DemandAIDraftText(x).split(/\n+/).filter(Boolean).slice(x.channel==='Email'?2:0, x.channel==='Email'?3:1).join(' ').slice(0, 180) || '')) ); },
+};
+function wsSheet(on){ WS.sheet = on; const sh = document.getElementById('wsSheet'); if(!sh) return; sh.style.display = on ? 'flex' : 'none';
+  if(on){ const b = document.getElementById('wsCp'); if(!WS.chat.length) document.getElementById('wsCpStack').innerHTML = '<div class="cp-p" style="color:var(--i2)">Ask me anything about this account, or pick a question below.</div>'; b.scrollTop = b.scrollHeight; } }
+function wsPick(which){
+  const it = wsItem(); RUN = it.run; const key = it.r.key, d = dec(key);
+  if(which==='rec' && d.manual){ change(key, 'Back to the recommended action', ()=>setDec(key, {manual:null, useRunner:false, draft:null, edited:false})); persist(); refresh(); return; }
+  if(which==='run' && d.manual){ change(key, 'Switched to the runner-up', ()=>setDec(key, {manual:null, useRunner:true, draft:null, edited:false})); persist(); refresh(); return; }
+  if((which==='run') !== !!d.useRunner) swapAction(key);
+}
+function wsOwn(){ WS.own = true; renderWs(); }
+function wsUseOwn(){ WS.own = false; addManual(wsItem().r.key); }
+
+/* Teach the system: a short card after each decision. Optional, it goes away on its own, and it is
+   logged against the item just decided (the workspace has already moved on). */
+const WRONG_TAGS = ['Wrong action','Wrong person','Wrong channel','Message off','Bad timing'];
+let TEACH = null;
+function teachAfter(it, decision, rejected){
+  if(!it) return;
+  const old = document.getElementById('teachPop'); if(old) old.remove();
+  clearTimeout(window._tp);
+  const r = it.r, who = withRun(it, ()=>liveRec(r).contact.name), seg = withRun(it, ()=>segOf(r));
+  TEACH = { it, tags: new Set(), decision };
+  const el = document.createElement('div'); el.id = 'teachPop'; el.className = 'teach-pop';
+  el.innerHTML = `<div class="tp-h"><span>✦ Teach the system</span><span class="tp-sub">${esc(decision)} · ${esc(who)}</span><button onclick="teachClose()" title="Skip">✕</button></div>
+    <div class="tp-l">${rejected ? 'What was wrong?' : 'What did it get right?'}</div>
+    <div class="tp-tags">${(rejected ? WRONG_TAGS : ACCEPT_TAGS).map(t=>`<button class="tp-tag" onclick="this.classList.toggle('on');TEACH.tags.has('${esc(t)}')?TEACH.tags.delete('${esc(t)}'):TEACH.tags.add('${esc(t)}')">${esc(t)}</button>`).join('')}</div>
+    <input id="tpNote" placeholder="What should it do next time for accounts like this?" onkeydown="if(event.key==='Enter')teachSave()">
+    <div class="tp-soon">${soon('Apply to similar accounts', 'Uses your note on the other accounts' + (seg ? ' in ' + seg : '') + ' like this one')}${soon('Autopilot for these', 'Lets Autopilot decide cases like this once reps agree with the system often enough')}</div>
+    <div class="tp-f"><span class="tp-bar"><i></i></span><button class="btn btn-ghost btn-sm" onclick="teachClose()">Skip</button><button class="btn btn-primary btn-sm" onclick="teachSave()">Save</button></div>`;
+  document.body.appendChild(el);
+  const stop = () => { clearTimeout(window._tp); el.classList.add('held'); };
+  el.addEventListener('mouseenter', stop); el.addEventListener('focusin', stop);
+  window._tp = setTimeout(teachClose, 12000);
+}
+function teachSave(){
+  if(!TEACH) return; const note = (document.getElementById('tpNote')||{}).value || '', tags = [...TEACH.tags];
+  if(note.trim() || tags.length){ const it = TEACH.it; withRun(it, ()=>{ logIt(it.r, 'Taught the system', {note:[tags.join(', '), note.trim()].filter(Boolean).join(' · '), tags}); persist(); }); showToast('Thanks: saved for the learning loop'); }
+  teachClose();
+}
+function teachClose(){ clearTimeout(window._tp); const el = document.getElementById('teachPop'); if(el) el.remove(); TEACH = null; }
+
+/* Send back (approvals): what should change, in a small form. */
+function openSendBack(key){
+  const ov = overlay('sendOverlay');
+  ov.innerHTML = `<div class="ws-modal"><div class="ws-modal-h">Send it back</div><div class="ws-sub" style="margin-bottom:8px">It goes back to ${esc(repName(ownerOf(recOf(key))))}'s queue with your note.</div>
+    <textarea id="sbNote" class="ws-in" style="min-height:70px" placeholder="What should change?"></textarea>
+    <div class="ws-modal-f"><button class="btn btn-ghost" onclick="hide('sendOverlay')">Cancel</button><button class="btn btn-primary" onclick="doSendBack('${key}')">Send back</button></div></div>`;
+  setTimeout(()=>document.getElementById('sbNote').focus(), 30);
+}
+function doSendBack(key){ if(!(document.getElementById('sbNote').value||'').trim()){ showToast('Say what should change'); return; } const it = wsItem(); hide('sendOverlay'); WS.decided = true; sendBack(key); teachAfter(it, 'Sent back', true); }
+
+/* From the list: approve, reject or write your own without opening the item; or work through one reason at a time. */
+function rowApprove(id){ const it = items().find(x=>x.id===id); quickDecide(id); teachAfter(it, 'Approved'); }
+function rowReject(id, btn){
+  document.querySelectorAll('.col-menu').forEach(m=>m.remove());
+  const m = document.createElement('div'); m.className = 'col-menu';
+  m.innerHTML = `<div style="padding:4px 10px 6px;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--i3)">Reject: why?</div>`
+    + REJECT.filter(([c])=>c!=='R12').map(([c,l,w])=>`<button onclick="rowRejectDo('${id}','${c}')" title="${esc(w)}"><span class="ck"></span>${esc(l)}<span class="n" style="font-size:10.5px">${esc(w)}</span></button>`).join('')
+    + `<button onclick="document.querySelectorAll('.col-menu').forEach(m=>m.remove());openItem('${id}');openReject(WS.key)"><span class="ck"></span>Other… (opens it)</button>`;
+  document.body.appendChild(m);
+  const rc = btn.getBoundingClientRect(); m.style.top = Math.min(rc.bottom + 6, window.innerHeight - m.offsetHeight - 10) + 'px'; m.style.left = Math.max(8, rc.right - m.offsetWidth) + 'px';
+  setTimeout(()=>document.addEventListener('click', function c(e){ if(!m.contains(e.target)){ m.remove(); document.removeEventListener('click', c); } }), 0);
+}
+function rowRejectDo(id, code){
+  document.querySelectorAll('.col-menu').forEach(m=>m.remove());
+  const it = items().find(x=>x.id===id); if(!it) return;
+  RUN = it.run; openedAt = ROWS_AT; pickCode = code;
+  const ov = document.getElementById('rejectOverlay'); if(ov) ov.remove();
+  const tmp = document.createElement('input'); tmp.id = 'rjNote'; tmp.type = 'hidden'; document.body.appendChild(tmp);
+  reject(it.r.key); tmp.remove();
+  teachAfter(it, 'Rejected: ' + REJECT.find(x=>x[0]===code)[1], true);
+}
+function rowOwn(id){ openItem(id); WS.own = true; renderWs(); }
+function reviewGroup(cat){
+  const ids = filtered(myQueue()).filter(it=>!onHold(decOf(it)) && catsOfIt(it)[0]===cat).map(it=>it.id);
+  if(!ids.length) return; WS_LIST = ids; view = 'queue'; openItem(ids[0]);
+}
+let GROUP = true;
+const GROUP_WHY = { sensitive:'The message mentions a sensitive topic', claim:'A claim has no approved source', low:'No contact in the primary persona', small:'No micro-segment yet',
+  deal:'The deal looks below the size threshold', brand:'A brand rule is broken', reach:'No way to reach the contact', spot:'Went ahead on its own; rate it', alternative:'The one alternative after a rejection',
+  sentback:'Sent back by the sales manager', intervention:'Stepped in after it went ahead', other:'' };
+function wsCompare(){ saveTeach(); WS.compare = !WS.compare; renderWs(); }
+// The brand and claim checks re-run as the reviewer edits the message.
+function wsLiveCheck(){
+  const it = wsItem(), box = document.getElementById('wsChecks'); if(!it || !box) return;
+  RUN = it.run; const x = draftFromFields(it.r), chk = DemandAI.checkDraft(x);
+  const w = document.getElementById('wsWords');
+  if(w) w.textContent = x.channel==='Email' ? `${x.body.split(/\s+/).filter(Boolean).length} words` : x.channel==='LinkedIn' ? `${x.note.length}/200` : '';
+  const bad = chk.flags.map(f=>`<span class="tag ${f.rule==='Sensitive term'?'tag-red':'tag-amber'}" title="${esc(f.detail)}">✗ ${esc(f.rule)}</span>`).concat(chk.unsupported.map(u=>`<span class="tag tag-red" title="${esc(u.text)}">✗ Claim with no source</span>`));
+  box.innerHTML = bad.length ? bad.join('') : '<span class="wm-ok">✓ Brand and claims pass</span>';
+  fixStatus(paintMarks());
+}
+function wsAccept(key){
+  saveTeach(); const it = wsItem(), before = JSON.stringify(it.run.saved.decisions[key]||{});
+  if(!it.r.segment && dec(key).spot!=='pending' && !((document.getElementById('assignSeg')||{}).value || dec(key).assignedSeg)){ accept(key); return; }   // accept() asks for the segment
+  WS.decided = true; accept(key);
+  if(WS && WS.id===it.id && JSON.stringify(it.run.saved.decisions[key]||{})===before){ WS.decided = false; return; }
+  teachAfter(it, it.run.saved.decisions[key] && it.run.saved.decisions[key].status==='Awaiting approval' ? 'Approved, sent to the manager' : 'Approved');
+}
+function logTeach(){ const it = wsItem(); const t = (WS && WS.teach||'').trim(); if(it && t){ RUN = it.run; logIt(it.r, 'Taught the system', {note:t}); persist(); WS.teach = ''; } }
+
+/* Put on hold: data is missing or someone else has to answer first. It stays in the queue, at the end. */
+const HOLD_WHY = ['Missing contact details','Missing account data','Waiting for someone to confirm','Other'];
+function openHold(key){
+  saveTeach();
+  const ov = overlay('holdOverlay');
+  ov.innerHTML = `<div class="ws-modal"><div class="ws-modal-h">Put on hold</div>
+    <div class="ws-sub" style="margin-bottom:10px">It stays in your queue, at the end, until you take it off hold. Nothing is sent.</div>
+    ${HOLD_WHY.map((w,i)=>`<label class="ws-radio"><input type="radio" name="holdWhy" value="${esc(w)}" ${i===0?'checked':''}> ${esc(w)}</label>`).join('')}
+    <input id="holdNote" class="ws-in" placeholder="What are you waiting for? (optional)" style="margin-top:8px">
+    <div class="ws-modal-f"><button class="btn btn-ghost" onclick="hide('holdOverlay')">Cancel</button><button class="btn btn-primary" onclick="doHold('${key}')">Put on hold</button></div></div>`;
+}
+function doHold(key){
+  const why = (document.querySelector('input[name=holdWhy]:checked')||{}).value || 'Other', note = (document.getElementById('holdNote').value||'').trim();
+  const r = recOf(key); setDec(key, {hold:{why, note, by:me().who, at:Date.now()}});
+  logTeach(); logIt(r, 'Put on hold', {note:[why, note].filter(Boolean).join(' · ')}); persist(); hide('holdOverlay');
+  WS.decided = true; showToast('On hold: it waits at the end of your queue'); refresh();
+}
+function takeOffHold(key){ const r = recOf(key); setDec(key, {hold:null}); logIt(r, 'Taken off hold', {}); persist(); showToast('Back in the queue'); renderWs(); }
+
+/* Reject: the reason decides what comes back. What to do next time is captured for the learning loop. */
+function openReject(key){
+  saveTeach(); pickCode = null;
+  const r = recOf(key), d = dec(key), seg = segOf(r);
+  const ov = overlay('rejectOverlay');
+  ov.innerHTML = `<div class="ws-modal" style="max-width:620px"><div class="ws-modal-h">Why reject it?</div>
+    <div class="ws-sub" style="margin-bottom:10px">The reason decides what happens next.${d.alternativeUsed?' This is already the alternative, so a rejection closes the account for the pilot.':''}</div>
+    <div class="ws-rj">${REJECT.map(([code,l,w])=>`<button class="ws-rjb" onclick="pickRj(this,'${code}')"><b>${esc(l)}</b><span>${esc(w)}</span></button>`).join('')}</div>
+    <input id="rjNote" class="ws-in" placeholder="Comment (needed for Other)" style="margin-top:10px">
+    <div class="ws-modal-f"><button class="btn btn-ghost" onclick="hide('rejectOverlay')">Cancel</button><button class="btn btn-primary" onclick="doReject('${key}')">Reject</button></div></div>`;
+}
+function pickRj(btn, code){ pickCode = code; document.querySelectorAll('.ws-rjb').forEach(b=>b.classList.toggle('on', b===btn)); }
+function doReject(key){
+  if(!pickCode){ showToast('Pick a reason'); return; }
+  const note = document.getElementById('rjNote').value;
+  if(pickCode==='R12' && !note.trim()){ showToast('"Other" needs a comment'); return; }
+  hide('rejectOverlay');
+  // reject() reads the comment from #rjNote: keep a copy where it looks once the overlay is hidden.
+  const it = wsItem(), label = (REJECT.find(x=>x[0]===pickCode)||[])[1];
+  WS.decided = true; reject(key); teachAfter(it, 'Rejected: ' + label, true);
+}
+
+/* Features that come after the pilot are shown, switched off, so people can see what the product will do. */
+const soon = (label, what) => `<button type="button" class="soon" title="After the pilot: ${esc(what)}" onclick="soonInfo(${esc(JSON.stringify(label.replace(/^\S+\s/,'')))},${esc(JSON.stringify(what))})">${esc(label)}<span class="soon-b">After the pilot</span></button>`;
+function soonInfo(label, what){ showToast(`${label}: after the pilot. ${what}.`); }
+
+/* Approving: a manager's edit to the message is saved, rated and versioned before release. */
+function wsApprove(key){
+  const r = recOf(key), before = draftOf(r), after = draftFromFields(r);
+  if(JSON.stringify(before)!==JSON.stringify(after)){ const rt = editRating(before, after);
+    change(key, `Edited by the sales manager before approving (${rt.rating}: ${rt.why})`, ()=>setDec(key, {draft:after, edited:true, editRating:rt.rating})); }
+  const it = wsItem(); managerApprove(key); teachAfter(it, 'Approved');
+}
+
+/* ═══ Copilot in the workspace: a chat that grows from the bottom. It opens with the facts behind the
+   recommendation as a card; every answer is a card too (people, signals, claims, history), not a wall of text. ═══ */
+const CP_Q = {
+  sensitive: [['term','What exactly is sensitive?'],['ifaccept','What happens if I approve?']],
+  claim: [['claim','Which claim has no source?'],['claims','Which approved claims fit instead?']],
+  low: [['people','Who else could we contact there?']],
+  small: [['segs','Which micro-segment fits best?']],
+  deal: [['deal','How is the deal size worked out?']],
+  brand: [['rules','Which rule does it break?']],
+  reach: [['people','Who else could we contact there?']],
+  spot: [['spotwhy','Why was it picked for a spot-check?']],
+  alternative: [['before','What was rejected before?']],
+  sentback: [['before','What did the manager say?']],
+};
+const CP_COMMON = [['signals','Show the signals'],['compare','How does the runner-up differ?'],['similar','How did similar items go?'],['brief','Show the brief and proof'],['history','Show the history']];
+const cpQs = (r, s) => (CP_Q[s.cat]||[]).concat(CP_COMMON.filter(([k])=>k!=='compare' || r.runnerUp)).slice(0,4);
+function chipsHtml(r, s){
+  const asked = new Set((WS.chat||[]).map(m=>m.k).filter(Boolean));
+  const qs = (CP_Q[s.cat]||[]).concat(CP_COMMON.filter(([k])=>k!=='compare' || r.runnerUp)).filter(([k])=>!asked.has(k)).slice(0,4);
+  return qs.map(([k,l])=>`<button type="button" class="cp-chip" onclick="cpAsk(null,'${k}',${esc(JSON.stringify(l))})">${esc(l)}</button>`).join('')
+    + soon('🔎 Search the client\'s knowledge base', 'Answers from the client\'s own documents, CRM notes and past conversations');
+}
+const cpCard = (title, body, foot) => `<div class="cp-card">${title?`<div class="cp-card-h">${title}</div>`:''}<div class="cp-card-b">${body}</div>${foot?`<div class="cp-card-f">${foot}</div>`:''}</div>`;
+const cpKv = (k, v) => `<div class="cp-kv"><span>${k}</span><div>${v}</div></div>`;
+function factsCard(){
+  const it = wsItem(); RUN = it.run;
+  const r = it.r, key = r.key, d = dec(key), seg = segOf(r), { conf } = checksOf(r), tr = seg ? trackRecord(seg) : trackRecord();
+  const sig = r.signal || {}, sigs = (r.person && r.person.signals) || [];
+  return cpCard('Why the system recommends it',
+    cpKv('Why now', `<b>${esc(sig.type||'Signal')}</b>${sig.age!==undefined?` <span class="ws-sub">· ${sig.age} days ago</span>`:''}<div class="ws-sub">${esc(r.reason.replace(/^[^:]+:\s*/,''))}</div>`)
+    + cpKv('Checks', `<span class="tags" style="display:inline-flex;flex-wrap:wrap;gap:4px">${fourChecks(r).map(([k,ok])=>`<span class="tag ${ok?'tag-green':'tag-red'}">${ok?'✓':'✗'} ${esc(k)}</span>`).join('')}</span>`)
+    + cpKv('Confidence', `<span class="tag ${conf.level==='High'?'tag-green':conf.level==='Medium'?'tag-amber':'tag-red'}">${esc(conf.level)}</span> <span class="ws-sub">${esc(conf.reason.replace(/^\w+:\s*/,''))}</span>`)
+    + cpKv('Track record', tr.n ? `Reps agreed <b>${tr.a} of ${tr.n}</b> times${seg?` in ${esc(seg)}`:''}${tr.early?' <span class="ws-sub">· early days</span>':''}` : '<span class="ws-sub">No decisions yet</span>')
+    + cpKv('Account', `${esc(r.account.name)} <span class="ws-sub">· ${esc(r.account.vertical||'')} · ${esc(r.status)}</span>`)
+    + cpKv('Owner', isManager() && inQueue(d) ? `<select onchange="reassign('${key}',this.value)" class="cp-sel">${['',...Object.keys(REPS)].map(e=>`<option value="${e}" ${ownerOf(r)===e?'selected':''}>${esc(repName(e))}</option>`).join('')}</select>` : esc(repName(ownerOf(r)))),
+    sigs.length>1 ? `${sigs.length} signals on this contact · <a href="#" onclick="cpAsk(null,'signals','Show the signals');return false">see them all</a>` : '');
+}
+function chatHtml(){
+  return (WS.chat||[]).map(m=>{
+    if(m.who==='me') return `<div class="cp-me">${esc(m.q)}</div>`;
+    const body = m.kind==='facts' ? `<div class="cp-intro">Here is what I know about this one. Ask me anything below.</div>${factsCard()}` : m.a;
+    return `<div class="cp-ai"><span class="cp-av">✦</span><div class="cp-ai-b">${body}</div></div>`;
+  }).join('');
+}
+function cpAnswer(k){
+  const it = wsItem(); RUN = it.run;
+  const r = it.r, key = r.key, d = dec(key), lr = liveRec(r), x = draftOf(r), { chk, conf } = checksOf(r), p = t => `<div class="cp-p">${t}</div>`;
+  switch(k){
+    case 'term': { const t = DemandAIDraftText(x), ss = t.split(/(?<=[.?!])\s+|\n+/).filter(z=>SENSITIVE_RE.test(z));
+      return ss.length ? cpCard('Lines that mention a sensitive topic', ss.map(z=>`<div class="ws-quote">${esc(z).replace(SENSITIVE_RE, m=>`<mark>${m}</mark>`)}</div>`).join(''), 'A plant incident, security or regulation needs a person, so it never goes out on its own.')
+        : p('The signal behind it touches a sensitive topic, even though the message does not name it.'); }
+    case 'ifaccept': return p(isManager() ? 'Approving releases it straight away to the rep, ready to use. Your edits are saved and versioned first.' : 'It goes to the sales manager first. It goes out only once they approve it.');
+    case 'claim': return chk.unsupported.length ? cpCard('Claim with no approved source', chk.unsupported.map(u=>`<div class="ws-quote">${esc(u.text)}</div>`).join(''), 'It reads like a product claim and does not match an approved source word for word.') : p('No unsupported claim in the message now.');
+    case 'claims': { const seg = segOf(r) || r.prominent, cs = DemandAI.approvedClaims().filter(c=>(c.segments||[]).includes(seg));
+      return cs.length ? cpCard(`Approved claims for ${esc(seg)}`, cs.map(c=>`<div class="ws-quote">${esc(c.claim)} <span class="ws-sub">[${esc(c.type)}, ${c.year}]</span></div>`).join(''), 'Paste one into the message word for word, with its citation.') : p('No approved claim for this micro-segment.'); }
+    case 'people': { const ppl = ((r.result && r.result.people) || []).map(pp=>pp.contact).filter(cc=>cc.row!==lr.contact.row);
+      return ppl.length ? cpCard(`Other contacts at ${esc(r.account.name)}`, `<table class="cp-tbl"><tr><th>Name</th><th>Role</th><th>Reach</th></tr>${ppl.map(cc=>`<tr><td><b>${esc(cc.name)}</b></td><td>${esc(cc.jobTitle||'')}${cc.persona?` <span class="ws-sub">· ${esc(cc.persona)}</span>`:''}</td><td>${cc.email&&cc.emailVerified?'Email':cc.linkedin?'LinkedIn':'<span class="ws-sub">None</span>'}</td></tr>`).join('')}</table>`, 'Reject with “Wrong contact” to get the next one.') : p(`No other contact at ${esc(r.account.name)} in the list.`); }
+    case 'segs': { const segs = [...new Set(((r.person && r.person.signals) || []).map(sg=>(DemandAI.CONFIG.signalTypes[sg.type]||{}).segment).filter(Boolean))];
+      return cpCard('Micro-segments its signals point to', segs.map(sg=>`<div class="cp-row">${segTag(sg)}<span class="ws-sub">${sg===r.prominent?'strongest signal · suggested':''}</span></div>`).join('') || '—', 'Pick one in the banner above, then accept.'); }
+    case 'deal': { const ds = DemandAI.estimateDealSize(r.account); return ds ? cpCard('Deal size', cpKv('Estimate', `about USD ${Math.round(ds.value/1000)}k`) + cpKv('Threshold', `USD ${Math.round(DemandAI.CONFIG.dealSize.threshold/1000)}k, set in Setup`), 'Worked out from the account\'s size and type.') : p('No estimate for this account.'); }
+    case 'rules': return chk.flags.length ? cpCard('Brand rules it breaks', chk.flags.map(f=>`<div class="ws-quote"><b>${esc(f.rule)}</b>: ${esc(f.detail)}</div>`).join('')) : p('It passes every brand rule now.');
+    case 'spotwhy': return p('Each week a random share of what went ahead on its own goes to each rep to rate. If reps would not have sent these, the checks need tightening.');
+    case 'before': return d.sentBackNote ? cpCard('What the sales manager said', `<div class="ws-quote">${esc(d.sentBackNote)}</div>`) : (d.rejections||[]).length ? cpCard('Rejected before', (d.rejections||[]).map(x=>`<div class="ws-quote">${esc(x.label)}${x.note?': '+esc(x.note):''}</div>`).join('')) : p(`The first recommendation was ${esc(d.alternativeOf||'rejected')}.`);
+    case 'signals': { const sigs = (r.person && r.person.signals) || [];
+      return cpCard(`Signals on ${esc(lr.contact.name)}`, `<div class="cp-tl">${sigs.map(sg=>`<div class="cp-tl-i"><span class="cp-dot"></span><div><b>${esc(sg.type)}</b> <span class="ws-sub">${sg.age!==undefined?sg.age+' days ago':''}${sg.source?' · '+esc(sg.source):''}</span><div class="ws-sub">${esc(sg.detail||'')}</div></div></div>`).join('') || '—'}</div>`,
+        r.fallback ? `Grouped on its second signal: fewer than ${DemandAI.CONFIG.minSegmentAccounts} accounts shared the strongest one.` : ''); }
+    case 'brief': { const b = DemandAI.briefFor(lr, chosenAction(r), {asOf:asOf(), channel:d.channel});
+      return cpCard('The brief and proof', cpKv('Angle', esc(b.angle)) + cpKv('Proof', b.proof ? `${esc(b.proof.title)} <span class="ws-sub">· ${esc(b.proof.type)}, ${b.proof.year}</span>` : '<span class="ws-sub">No approved proof</span>') + cpKv('Objection', esc(b.objection))
+        + cpKv('Claims', chk.claims.length ? chk.claims.map(cl=>`<span style="color:${cl.verified?'var(--pos)':'var(--neg)'}">${cl.verified?'✓':'✗'}</span> ${esc(cl.text)}`).join('<br>') : '<span class="ws-sub">None</span>') + cpKv('Confidence', esc(conf.reason))); }
+    case 'history': { const hist = RUN.saved.log.filter(l=>l.key===key), vs = versions(r);
+      return cpCard('History', `<div class="cp-tl">${hist.map(l=>`<div class="cp-tl-i"><span class="cp-dot"></span><div><b>${esc(l.decision)}</b> <span class="ws-sub">· ${esc(l.who)} · ${fmtDate(l.at)}</span>${l.note?`<div class="ws-sub">${esc(l.note)}</div>`:''}</div></div>`).join('') || '<span class="ws-sub">Nothing yet.</span>'}</div>`, vs.length>1 ? `${vs.length} versions of the message` : ''); }
+    default: return `<div class="cp-p">${itemAnswer(key, k)}</div>`;
+  }
+}
+function cpAsk(text, k, label){
+  const it = wsItem(); if(!it) return;
+  const q = label || String(text||'').trim(); if(!q) return;
+  if(!k){ const t = q.toLowerCase();
+    k = /sensitiv|security|incident/.test(t) ? 'term' : /approved claim|instead/.test(t) ? 'claims' : /claim|source/.test(t) ? 'claim' : /who else|other contact|contact|person/.test(t) ? 'people'
+      : /segment/.test(t) ? 'segs' : /deal|size|worth/.test(t) ? 'deal' : /rule|brand/.test(t) ? 'rules' : /runner|differ|alternative/.test(t) ? 'compare'
+      : /similar|track|agree|how did/.test(t) ? 'similar' : /signal|why now|when/.test(t) ? 'signals' : /brief|proof|angle|objection/.test(t) ? 'brief'
+      : /history|log|before|version/.test(t) ? 'history' : /account|company|know/.test(t) ? 'account' : /approve|accept|happen/.test(t) ? 'ifaccept' : 'why'; }
+  let a; try{ a = cpAnswer(k); }catch(e){ a = '<div class="cp-p">Sorry, I could not work that out.</div>'; }
+  WS.chat.push({ who:'me', q }, { who:'ai', k, a }); wsSheet(true); const qi = document.getElementById('wsQ'); if(qi) qi.value = '';
+  const st = document.getElementById('wsCpStack'), qs = document.getElementById('wsCpQs'), r = it.r, d = dec(r.key);
+  if(st){ st.innerHTML = chatHtml(); const b = document.getElementById('wsCp'); b.scrollTop = b.scrollHeight; }
+  if(qs) qs.innerHTML = chipsHtml(r, stuck(r, d));
+  const f = document.querySelector('.ws-cp-f input'); if(f) f.value = '';
+}
+
+document.addEventListener('keydown', e=>{
+  if(!WS) return; const tag = (e.target.tagName||'').toLowerCase();
+  if(e.key==='Escape'){ if(Copilot.isOpen()){ Copilot.closePanel(); return; } if(document.getElementById('teachPop')){ teachClose(); return; } if(WS.sheet){ wsSheet(false); if(document.activeElement) document.activeElement.blur(); return; } const ov = [...document.querySelectorAll('#holdOverlay,#rejectOverlay,#sendOverlay')].find(o=>o.style.display!=='none'); if(ov){ ov.style.display='none'; return; } if(document.getElementById('detailDrawer').classList.contains('open')){ closeDrawer(); return; } leaveWs(); return; }
+  if(['input','textarea','select'].includes(tag)) return;
+  if(e.key==='ArrowRight') wsGo(1); if(e.key==='ArrowLeft') wsGo(-1);
+  if(e.metaKey || e.ctrlKey || e.altKey || document.querySelector('[id$=Overlay][style*="flex"]')) return;
+  const k = e.key.toLowerCase(), bar = document.querySelector('.ws-dec');
+  if(k==='/'){ e.preventDefault(); const q = document.getElementById('wsQ'); if(q) q.focus(); }
+  else if(k==='a' && bar){ const b = [...bar.querySelectorAll('.btn-primary')].find(x=>/Approve/.test(x.textContent)); if(b){ e.preventDefault(); b.click(); } }
+  else if(k==='r' && bar){ const b = [...bar.querySelectorAll('.btn')].find(x=>/^Reject/.test(x.textContent.trim())); if(b){ e.preventDefault(); b.click(); } }
+  else if(k==='w' && WS.mode==='decide'){ e.preventDefault(); wsOwn(); }
+  else if(k==='h' && bar){ const b = [...bar.querySelectorAll('.btn')].find(x=>/hold/i.test(x.textContent)); if(b){ e.preventDefault(); b.click(); } }
+});
+
+function drawLog(){
+  const el = document.getElementById('rows'); if(!el) return;
+  const mgr = isManager();
+  let ls = Object.values(RUNS).flatMap(run=>run.saved.log.map(l=>({...l, runId:run.saved.id}))).sort((a,b)=>b.at-a.at).filter(l=>mgr || l.who===me().who);
+  if(LOGF==='flagged') ls = ls.filter(l=>l.flag && !l.checked);
+  if(q) ls = ls.filter(l=>(l.who+' '+l.prospect+' '+l.company+' '+l.decision+' '+l.action+' '+l.note).toLowerCase().includes(q));
+  const tone = d => /^Accepted|^Approved/.test(d)?'tag-green':/^Rejected/.test(d)?'tag-red':/^Outcome/.test(d)?'tag-violet':/^Went ahead/.test(d)?'tag-blue':'tag-grey';
+  const kindLbl = {exception:'Exception', spot:'Spot-check', alternative:'Alternative'};
+  el.innerHTML = table([['When','12%'],['Who','12%'],['Prospect','15%'],['Decision','24%'],['Action','19%'],['Note','18%']],
+    ls.map(l=>`<tr class="click" onclick="openItem('${l.runId}::${l.key}')">
+      <td>${cell(fmtDate(l.at), timeOf(l.at)+(l.secs!=null?` · ${l.secs}s`:''))}</td>
+      <td>${cell(l.who, esc(l.role))}</td>
+      <td>${cell(l.prospect, esc(l.company))}</td>
+      <td class="wrap"><span class="tag ${tone(l.decision)}">${esc(l.decision)}</span>${l.decisive?`<span class="sub">${esc(kindLbl[l.kind]||'')}${l.firstPass?' · first pass':''}${l.position?` · #${l.position} in queue`:''}</span>`:''}
+        ${l.flag?`<span class="sub" style="color:var(--warn)">${esc(l.flag)}${l.checked?' · checked':''}</span>${mgr&&!l.checked?`<button class="btn btn-ghost btn-sm" style="margin-top:4px" onclick="event.stopPropagation();markChecked('${l.runId}',${l.at},'${l.key}')">Checked, count it</button>`:''}`:''}</td>
+      <td class="wrap"><span class="clamp2" style="font-size:12px;color:var(--i1)">${esc(l.action)}</span><span class="sub">${esc(l.channel)}${l.linkedTo?` · alternative to ${esc(l.linkedTo)}`:''}</span></td>
+      <td class="wrap"><span class="clamp2" style="font-size:12px;color:var(--i2)">${[l.tags&&l.tags.length?l.tags.join(', '):'', l.note].filter(Boolean).map(esc).join(' · ')||'<span class="muted">—</span>'}</span></td>
+    </tr>`).join(''), 'No decisions yet.');
+}
+// A flagged decision counts toward G2 only once a manager has checked it.
+function markChecked(runId, at, key){
+  const run = RUNS[runId]; if(!run) return;
+  const l = run.saved.log.find(x=>x.at===at && x.key===key); if(!l) return;
+  l.checked = true; RUN = run; logIt(recOf(key), 'Flagged decision checked', {note:l.flag}); persist(); RUN = null; render();
+}
+function toggleExport(on){
+  const m = document.getElementById('exportMenu'); if(!m) return;
+  const show = on===undefined ? m.style.display==='none' : on;
+  m.style.display = show ? 'block' : 'none';
+  if(show) setTimeout(()=>document.addEventListener('click', function c(e){ if(!m.contains(e.target)){ m.style.display='none'; document.removeEventListener('click', c); } }), 0);
+}
+// Exports across every list: the shared exporters work on one list, so collect their rows list by list.
+function exportAll(kind){
+  const runs = Object.values(RUNS); let rows = null;
+  const keepDl = window.download; window.download = (name, csv) => { const g = DemandAI.parseCSV(csv); rows = rows ? rows.concat(g.slice(1)) : g; };
+  const keepToast = window.showToast; window.showToast = ()=>{};
+  try{ runs.forEach(run=>{ RUN = run; ({approved:exportApproved, tasks:exportTasks, log:exportLog})[kind](); }); }
+  finally{ window.download = keepDl; window.showToast = keepToast; RUN = null; }
+  if(!rows || rows.length<2){ showToast(kind==='approved'?'No released messages yet':kind==='tasks'?'No released tasks yet':'No decisions yet'); return; }
+  download({approved:'released_messages.csv', tasks:'tasks.csv', log:'decision_log.csv'}[kind], DemandAI.toCSV(rows));
+}
+
+/* ═══════════════ BOOT ═══════════════ */
+const PAGE_ID = '14-review.html';
+setTimeout(()=>{
+  const _setRole = setRole; setRole = function(r){ _setRole(r); closeDrawer(); view='queue'; render(); };
+  loadRuns(); SPOT = weeklySpotCheck(Object.values(RUNS)); reviewBadge(); render();
+  const P = new URLSearchParams(location.search), id = P.get('item');
+  FILT = { due:P.get('due'), reason:P.get('reason'), kind:P.get('kind'), seg:P.get('seg'), rep:P.get('rep'), ch:P.get('ch') };
+  // Land on the work: a manager with approvals waiting starts there; otherwise the queue, in the recommended view.
+  const fromLink = FILT.due || FILT.reason || FILT.kind || FILT.seg || FILT.rep;
+  if(!fromLink && !id){ FILT.due = 'soon'; FILT.preset = true; if(!filtered(myQueue()).length){ FILT.due = null; FILT.preset = false; } }
+  if(['approvals','log','queue'].includes(P.get('view')) && (P.get('view')!=='approvals' || isManager())) view = P.get('view');
+  else if(!fromLink && !id && isManager() && items().some(it=>decOf(it).status==='Awaiting approval' && withRun(it, ()=>mine(it.r) && !pausedInfo(it.r)))) view = 'approvals';
+  render();
+  if(id) openItem(id);
+}, 0);
+
+/* ═══════════════ ROLE ENGINE — shared across every screen ═══════════════ */
+const ALL_ROLES = ['Admin','Sales manager','Sales rep','Viewer','Platform admin'];
+const ROLE_PERSON = {
+  'Admin':'Rajiv Nair', 'Sales manager':'Pavan Kumar', 'Sales rep':'Sofia Ahlgren',
+  'Viewer':'Elena Vogel', 'Platform admin':'Shantanu Rao'
+};
+const ROLE_NAV_ALLOWED = {
+  'Admin': ['index.html','14-review.html','09-setup.html','07-content.html','08-users.html','10-prospecting.html','11-scoring.html','12-nba.html','15-content-studio.html','13-analytics.html'],
+  'Sales manager': ['index.html','14-review.html','10-prospecting.html','11-scoring.html','12-nba.html','15-content-studio.html','07-content.html','13-analytics.html','09-setup.html','08-users.html'],
+  'Sales rep': ['index.html','14-review.html','10-prospecting.html','11-scoring.html','12-nba.html','15-content-studio.html','07-content.html','13-analytics.html'],
+  'Viewer': ['13-analytics.html'],
+  'Platform admin': [],
+};
+function getThisPageId(){
+  if(typeof PAGE_ID !== 'undefined') return PAGE_ID;
+  try { return location.pathname.split('/').pop(); } catch(e){ return ''; }
+}
+function getRole(){
+  try { return 'Admin'; }
+  catch(e){ return 'Sales manager'; }
+}
+function setRole(role){
+  try { localStorage.setItem('demandai_role', role); } catch(e){}
+  const ov = document.getElementById('roleModalOverlay');
+  if(ov) ov.style.display = 'none';
+  applyRoleToNav();
+}
+function applyRoleToNav(){
+  const role = getRole();
+  const allowed = ROLE_NAV_ALLOWED[role] || [];
+  document.querySelectorAll('.nav-item').forEach(a=>{
+    const href = (a.getAttribute('href')||'').split('?')[0];
+    a.style.display = '';
+  });
+  const unEl = document.querySelector('.nav-un');
+  const urEl = document.querySelector('.nav-ur');
+  const avEl = document.querySelector('.nav-av');
+  if(unEl) unEl.textContent = ROLE_PERSON[role];
+  if(urEl) urEl.textContent = role;
+  if(avEl) avEl.textContent = ROLE_PERSON[role].split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+
+  const thisPage = getThisPageId();
+  const pageIsKnown = Object.values(ROLE_NAV_ALLOWED).some(list => list.includes(thisPage));
+  if(!pageIsKnown){ return; } // can't verify this page's id reliably here — don't block access on a guess
+  if(!allowed.includes(thisPage)){
+    const main = document.querySelector('.main') || document.getElementById('mainArea');
+    const PAGE_NAMES = {'index.html':'Today','09-setup.html':'Setup','07-content.html':'Content library','08-users.html':'Users and roles','10-prospecting.html':'Prospecting','11-scoring.html':'Account Scoring','12-nba.html':'Next Best Action','13-analytics.html':'Analytics','14-review.html':'Review','15-content-studio.html':'Content studio'};
+    const firstAllowedHref = allowed[0] || 'index.html';
+    if(main) main.innerHTML = `
+      <div class="topbar"><div class="topbar-l"><span class="tb-title">No access</span></div></div>
+      <div class="canvas" style="display:flex;align-items:center;justify-content:center;min-height:70vh">
+        <div style="text-align:center;max-width:360px">
+          <div style="font-size:28px;margin-bottom:10px">🔒</div>
+          <div style="font-family:var(--fd);font-size:15px;font-weight:700;color:var(--i1);margin-bottom:6px">Not available for this role</div>
+          <div style="font-size:12px;color:var(--i3);line-height:1.6">${role} doesn't have access to this screen. Switch role from the sidebar, or use the menu to go to <a href="${firstAllowedHref}" style="color:var(--brand)">${PAGE_NAMES[firstAllowedHref]||firstAllowedHref}</a>.</div>
+        </div>
+      </div>`;
+  }
+}
+function renderRoleSwitcher(){ return;
+  const foot = document.querySelector('.nav-foot');
+  if(!foot || document.getElementById('roleSwitchBtn')) return;
+  const btn = document.createElement('div');
+  btn.id = 'roleSwitchBtn';
+  btn.style.cssText = 'padding:8px 10px 0;cursor:pointer;';
+  btn.innerHTML = `<div style="font-size:10px;color:var(--r3);text-decoration:underline;text-align:center">Switch role (demo)</div>`;
+  btn.onclick = openRoleModal;
+  foot.appendChild(btn);
+}
+function openRoleModal(){
+  let ov = document.getElementById('roleModalOverlay');
+  if(!ov){
+    ov = document.createElement('div');
+    ov.id = 'roleModalOverlay';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(20,26,33,.45);z-index:700;display:flex;align-items:center;justify-content:center;';
+    ov.onclick = (e)=>{ if(e.target===ov) ov.style.display='none'; };
+    document.body.appendChild(ov);
+  }
+  const current = getRole();
+  ov.innerHTML = `<div style="background:var(--surf);border-radius:var(--rlg);box-shadow:var(--sh-lg);width:360px;padding:20px;" onclick="event.stopPropagation()">
+    <div style="font-family:var(--fd);font-size:14px;font-weight:700;color:var(--i1);margin-bottom:4px">Preview as a role</div>
+    <div style="font-size:11px;color:var(--i3);margin-bottom:14px">Changes what you see, matching what that role actually has access to. If this screen isn't available for the new role, use the sidebar to go to one that is.</div>
+    ${ALL_ROLES.map(r=>`<div onclick="setRole('${r}')" style="padding:10px 12px;border-radius:8px;cursor:pointer;margin-bottom:4px;background:${r===current?'var(--brand-lt)':'transparent'};display:flex;align-items:center;justify-content:space-between">
+      <div><div style="font-size:12.5px;font-weight:600;color:var(--i1)">${r}</div><div style="font-size:10.5px;color:var(--i3)">${ROLE_PERSON[r]}</div></div>
+      ${r===current?'<span style="color:var(--brand)">✓</span>':''}
+    </div>`).join('')}
+    <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;margin-top:10px" onclick="document.getElementById('roleModalOverlay').style.display='none'">Close</button>
+  </div>`;
+  ov.style.display = 'flex';
+}
+document.addEventListener('DOMContentLoaded', function(){ applyRoleToNav(); renderRoleSwitcher(); });
+if(document.readyState !== 'loading'){ applyRoleToNav(); renderRoleSwitcher(); }
+
+
+</script>
+</body>
+</html>
