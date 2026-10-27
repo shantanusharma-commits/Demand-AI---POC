@@ -52,6 +52,13 @@ A rep sees only their own accounts, campaigns, replies and numbers. The manager 
 
 Opening a person or a reply brings up a focused panel; the chat and the view behind it are blurred until you close it. Loading shows a short placeholder instead of redrawing, and the AI's steps appear one by one before the answer.
 
+## Where each thing is tracked
+
+- **Campaigns (NBC):** one sequence for 10+ accounts that share a trigger. Tracked in Campaigns.
+- **Next best actions (NBA):** one account at a time. Tracked in the Next best actions module: prepared, went ahead on their own, waiting for approval, delivered, open and reply rates, a Prepared → Sent → Delivered → Opened → Replied bar, filters (went ahead, waiting, opened, replied, bounced) and a By micro-segment view. Opening a person shows the delivery steps for their action.
+- **Approvals:** only the exceptions from both, the next best actions that failed a check and campaigns waiting to be confirmed.
+- **Segments:** the groups behind both; segments that aren't campaigns list their next best actions.
+
 ## Next best actions
 
 A next best action goes ahead on its own when it passes six checks: high confidence, proven message, not sensitive, identity confirmed, not in another sequence, not picked for a spot-check. Only the ones that fail a check wait for a person, with the failed check shown. Approvals shows them, with tabs Needs you, With Pavan (manager sign-off), Went ahead and Decided; the manager also confirms campaigns there. Segments that aren't campaigns list their next best actions.
