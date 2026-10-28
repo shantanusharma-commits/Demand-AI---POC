@@ -159,3 +159,31 @@ wb._sheets = [wb[n] for n in order]
 wb.active = 0
 wb.save(os.path.join(d, spec['file']))
 print('saved', spec['file'], len(accs), 'accounts', len(queue), 'queue items', len(S), 'script steps')
+
+# ── Split into the two upload files and the answer key ──
+from openpyxl import Workbook
+src = load_workbook(os.path.join(d, spec['file']))
+for sheet, out in (('Lead template', 'Golden_1_Prospects.xlsx'), ('Signal template', 'Golden_2_Signals.xlsx')):
+    w = Workbook(); ws = w.active; ws.title = sheet
+    for r in src[sheet].iter_rows(values_only=True): ws.append(list(r))
+    for c in ws[1]: c.font = Font(bold=True)
+    for col in ws.columns: ws.column_dimensions[col[0].column_letter].width = min(40, max(10, *(len(str(c.value or '')) + 2 for c in col)))
+    ws.freeze_panes = 'A2'; w.save(os.path.join(d, out))
+for n in ('Lead template', 'Signal template'): del src[n]
+SWAP = [('Prospecting: upload this file (it reads "Lead template"). Save the list as "Golden".', 'Prospecting: upload Golden_1_Prospects.xlsx. Save the list as "Golden".'),
+        ('2. Account Scoring: choose the "Golden" list, set Score as of to 2026-10-20, and drop this same file (it reads "Signal template"). Save the scored list.',
+         '2. Account Scoring: choose the "Golden" list, set Score as of to 2026-10-20, and drop Golden_2_Signals.xlsx on box 2.'),
+        ('Prospecting: upload this file, View the list, Save and go to Scoring. Scoring: Score as of 2026-10-20, drop this same file, View the scores.',
+         'Prospecting: upload Golden_1_Prospects.xlsx, View the list, Save and go to Scoring. Scoring: Score as of 2026-10-20, drop Golden_2_Signals.xlsx, View the scores.'),
+        ('run the default way', 'uploaded the default way'), ('The answer key was produced by reading this file', 'The answer key was produced by reading the two files')]
+for ws in src:
+    for row in ws.iter_rows():
+        for c in row:
+            if isinstance(c.value, str):
+                for a, b in SWAP: c.value = c.value.replace(a, b)
+hw = src['How to use']; hw.insert_rows(2)
+hw['A2'] = 'Files: Golden_1_Prospects.xlsx (the lead file for Prospecting) and Golden_2_Signals.xlsx (the signal file for Account Scoring). This workbook is the answer key.'
+hw['A2'].font = Font(name=F, size=10, bold=True); hw['A2'].alignment = Alignment(wrap_text=True, vertical='top')
+src.save(os.path.join(d, 'Golden_3_Answer_key.xlsx'))
+os.remove(os.path.join(d, spec['file']))
+print('split into Golden_1_Prospects.xlsx, Golden_2_Signals.xlsx, Golden_3_Answer_key.xlsx')

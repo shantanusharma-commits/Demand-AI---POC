@@ -11,8 +11,10 @@ const spec = JSON.parse(fs.readFileSync(specPath, 'utf8'));
 
 const has = (g, a) => g.grid.slice(0, 10).some(r => (r || []).some(c => String(c).trim().toLowerCase().replace(/\*/g, '').replace(/\s+/g, '_') === a));
 const pick = (gs, re, a) => gs.find(g => re.test(g.sheet) && has(g, a)) || gs.find(g => has(g, a)) || gs[0];
-const wb = XLSX.read(fs.readFileSync(path.join(dir, spec.file)), { type: 'buffer', cellDates: true });
-const gs = wb.SheetNames.map(n => ({ sheet: n, grid: XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, raw: true, defval: '' }) }));
+// Reads the combined workbook while building, or the two upload files once they are split.
+const files = fs.existsSync(path.join(dir, spec.file)) ? [spec.file] : ['Golden_1_Prospects.xlsx', 'Golden_2_Signals.xlsx'];
+const gs = files.flatMap(f => { const wb = XLSX.read(fs.readFileSync(path.join(dir, f)), { type: 'buffer', cellDates: true });
+  return wb.SheetNames.map(n => ({ sheet: n, grid: XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, raw: true, defval: '' }) })); });
 const asOf = spec.asOf;
 const L = E.processLeads(pick(gs, /lead template/i, 'company_name').grid, {});
 const list = { accounts: L.accounts, contacts: L.contacts };
