@@ -945,7 +945,8 @@ export const studioItems = pgTable('studio_items', {
   type: text('type').notNull(),
   title: text('title').notNull(),
   topic: text('topic').notNull(),
-  segment: text('segment').notNull(),
+  /** Who it is written for, in the person's words; empty for a general reader (D-45: not a micro-segment). */
+  audience: text('audience').notNull().default(''),
   tone: text('tone').notNull(),
   length: text('length').notNull(),
   sources: text('sources').array().notNull().default(sql`'{}'::text[]`),

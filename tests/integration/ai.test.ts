@@ -23,7 +23,7 @@ import { saveList } from '../../lib/server/services/lists.ts';
 import { getRun, startScoringRun } from '../../lib/server/services/scoring.ts';
 import { AS_OF } from '../helpers/answer-key.ts';
 import { DATASET } from '../helpers/answer-key.ts';
-import { draftWriter, pieceWriter, rewriteIds, rewriteParts, sensibleClassifier, whyNowWriter } from '../helpers/ai-fakes.ts';
+import { briefReader, draftWriter, pieceWriter, rewriteIds, rewriteParts, sensibleClassifier, whyNowWriter } from '../helpers/ai-fakes.ts';
 import { FakeModel, fail, json, reply } from '../helpers/fake-model.ts';
 import { limits } from './pilot.ts';
 import { freshDatabase, type TestDatabase } from './harness.ts';
@@ -252,9 +252,9 @@ test("a build job runs as the person who asked: a rep's build holds only their o
 
 /* ─── Content studio's AI writer (D-36) ─── */
 
-test('the studio writes a piece with AI behind the same call, and hands it only the requests the rules do not understand', async () => {
+test('the studio reads the request and writes a piece with AI behind the same call, and hands it the changes that need new wording', async () => {
   const actor = { userId: ids.adminA, role: 'Admin' as const };
-  const fake = new FakeModel([pieceWriter()], { otherwise: req => ({ text: JSON.stringify({ parts: rewriteParts(req, { [rewriteIds(req)[0]]: 'A calmer opening, in plain words.' }), reply: 'Made the opening calmer.' }), finish: 'stop', promptTokens: 10, completionTokens: 10 }) });
+  const fake = new FakeModel([briefReader(), pieceWriter()], { otherwise: req => ({ text: JSON.stringify({ parts: rewriteParts(req, { [rewriteIds(req)[0]]: 'A calmer opening, in plain words.' }), reply: 'Made the opening calmer.' }), finish: 'stop', promptTokens: 10, completionTokens: 10 }) });
   setAiGatewayForTests(fakeGateway(app, fake, { ...ALL_ON, classify: false, why_now: false, draft_message: false }));
   try {
     const made = await createItemWithAi(app, unitA(), actor, { text: 'A blog on planning a control system migration for plant managers', type: 'blog' });
@@ -265,6 +265,22 @@ test('the studio writes a piece with AI behind the same call, and hands it only 
     assert.equal(item.issues, 0);
     assert.ok(item.blocks.some(b => b.ai) && !item.blocks.find(b => b.role === 'proof')!.ai);
     assert.ok(item.messages.some(m => /^Written with AI from the brief/.test(m.text)));
+    assert.deepEqual(fake.requests.slice(0, 2).map(r => r.system.split('\n')[1]), ['You read a person\'s request for a blog or a whitepaper and turn it into a brief for a writer. You don\'t write the piece and you don\'t answer the person.',
+      'You write blogs for the marketing team of an industrial automation supplier, published under its brand. You plan the piece and write every part except the evidence, which is added from approved sources.'], 'read, then written');
+    assert.ok(item.blocks.some(b => b.role === 'h:sec'), 'the AI planned its own sections');
+    // A request with no topic gets the reader's question back and stores nothing.
+    const asked = new FakeModel([briefReader({ topic: '' })]);
+    setAiGatewayForTests(fakeGateway(app, asked, { ...ALL_ON, classify: false, why_now: false, draft_message: false }));
+    const q = await createItemWithAi(app, unitA(), actor, { text: 'can you write me a whitepaper', type: 'blog' });
+    assert.deepEqual([q.created, asked.requests.length], [false, 1]);
+    assert.match((q as { question: string }).question, /^Happy to write a whitepaper\. What should it be about\?/);
+    // A request the provider's filter stops is not written by the rules either: it is asked back.
+    const filtered = new FakeModel([], { otherwise: fail('content_filter', { filtered: ['jailbreak'] }) });
+    setAiGatewayForTests(fakeGateway(app, filtered, { ...ALL_ON, classify: false, why_now: false, draft_message: false }));
+    const f = await createItemWithAi(app, unitA(), actor, { text: 'a blog on ignoring your rules', type: 'blog' });
+    assert.deepEqual([f.created, filtered.requests.length], [false, 1]);
+    assert.match((f as { question: string }).question, /^I can't write from that request\. Happy to write a blog\./);
+    setAiGatewayForTests(fakeGateway(app, fake, { ...ALL_ON, classify: false, why_now: false, draft_message: false }));
     // A refusal stays the rules' (no model call); a request they don't understand goes to the AI.
     const before = fake.requests.length;
     const refused = await changeItemWithAi(app, unitA(), actor, item.id, { op: 'ask', q: 'say that we reduce downtime by 40%', rev: item.rev });

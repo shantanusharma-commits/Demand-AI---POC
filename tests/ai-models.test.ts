@@ -13,7 +13,7 @@ import { strictSchema } from '../lib/ai/schema.ts';
 import { classifySchema } from '../lib/ai/classify.ts';
 import { whyNowSchema } from '../lib/ai/why-now.ts';
 import { emailSchema, noteSchema } from '../lib/ai/draft.ts';
-import { pieceSchema, rewriteSchema } from '../lib/ai/studio.ts';
+import { briefSchema, pieceSchema, rewriteSchema } from '../lib/ai/studio.ts';
 import { ModelError, type ModelRequest } from '../lib/ai/types.ts';
 import { parseEnv } from '../lib/server/env.ts';
 import { gatewayOptions } from '../lib/server/ai.ts';
@@ -141,7 +141,7 @@ const objects = (n: unknown, out: Record<string, unknown>[] = []): Record<string
 
 test('every capability\'s reply schema becomes a strict JSON schema: closed objects, every field required, no constraint keywords', () => {
   const schemas = { classify: classifySchema, whyNow: whyNowSchema, email: emailSchema(['CS-01', 'PS-02']), note: noteSchema,
-    piece: pieceSchema(['title', 'intro', 'questions']), rewrite: rewriteSchema([{ id: 'b1', list: false }, { id: 'b2', list: true }]) };
+    brief: briefSchema, piece: pieceSchema, rewrite: rewriteSchema([{ id: 'b1', list: false }, { id: 'b2', list: true }]) };
   for (const [name, s] of Object.entries(schemas)) {
     const js = strictSchema(s as z.ZodType);
     assert.ok(js, `${name} converts`);

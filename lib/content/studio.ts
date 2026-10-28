@@ -6,9 +6,12 @@
    - a piece is a list of blocks of plain text (headings, paragraphs, lists, quotes), never stored HTML: nothing a
      person types can run in another person's browser. Inline bold, italic and links are not ported;
    - every change a person asks for in the chat is worked out here, on the server, so the stored piece is the one
-     source of truth. With AI on (lib/ai/studio.ts) the model words a new piece's parts and the requests these rules
-     don't understand; the proof stays the approved claims, the checks stay these, and these rules are the fallback. */
-import { approvedClaims, checkContent, PLAYBOOK, type BrandPack, type CheckResult, type Claim, type Play } from '../engine/nba.ts';
+     source of truth. With AI on (lib/ai/studio.ts) the model reads the request, plans and words a new piece, and
+     writes any change that needs new wording; the proof stays the approved claims, the checks stay these, and these
+     rules are the fallback;
+   - a piece is on any topic, for any reader (D-45): the audience is whoever the person names, or a general reader,
+     never one of the micro-segments, and its proof is the approved claims that fit the topic. */
+import { approvedClaims, checkContent, type BrandPack, type CheckResult, type Claim, type Play } from '../engine/nba.ts';
 
 export const TYPES = {
   blog: { label: 'Blog', ic: '📝', skill: 'blog-post', about: 'A headline, short sections and one call to action' },
@@ -33,31 +36,30 @@ export function toneAsked(text: string): Tone | null {
 }
 export const LENGTHS = ['Short', 'Medium', 'Long'] as const;
 export type Length = (typeof LENGTHS)[number];
-export const AUDIENCE: Record<string, string> = {
-  Modernisation: 'Sites planning a control system migration', Inquiry: 'Accounts that asked us a question',
-  'Service renewal': 'Customers with a renewal coming up', Project: 'Teams starting a new project',
-  Leadership: 'Newly appointed plant leaders', Engagement: 'Accounts reading our content',
-};
-const PERSONA: Record<string, string> = { Modernisation: 'plant and automation managers', Inquiry: 'engineering teams', 'Service renewal': 'site maintenance leads',
-  Project: 'project and design leads', Leadership: 'new plant leaders', Engagement: 'operations teams' };
-// Words in a request that point at a micro-segment's audience.
-const SEG_WORDS: [string, RegExp][] = [['Modernisation', /migrat|legacy|moderni[sz]|end of support|end-of-support|upgrade|obsolete/i],
-  ['Service renewal', /renew|service contract|support contract|lifecycle|cover/i], ['Project', /project|expansion|greenfield|front-end design|new plant|design/i],
-  ['Leadership', /new (plant )?(leader|manager|director)|first 100|appointed|priorit/i], ['Inquiry', /inquir|enquir|quote|asked/i],
-  ['Engagement', /webinar|newsletter|engag|content/i]];
+/** Who a piece is for, as shown: the person's own words, or a general reader when they named nobody. */
+export const audienceLabel = (audience: string) => audience.trim() || 'General readers';
 export const SUGGESTIONS: Record<ContentType, string[]> = {
-  blog: ['A blog on planning a control system migration for plant managers', 'A short blog for customers with a service renewal coming up', 'A blog on settling control scope early in a new project'],
-  whitepaper: ['A whitepaper on legacy control system modernisation for plant managers', 'A detailed whitepaper on lifecycle planning for site maintenance leads', 'A whitepaper on front-end design decisions for project leads'],
+  blog: ['A blog on how AI can help sales teams plan their week', 'A short blog on planning a control system migration for plant managers', 'A blog on what to ask before renewing a service contract'],
+  whitepaper: ['A whitepaper on cybersecurity for operational technology', 'A detailed whitepaper on lifecycle planning for site maintenance leads', 'A whitepaper on using plant data to plan maintenance'],
+};
+/** About how many words a piece runs to, and how many sections it has between its opening and its close (D-45). */
+export const WORDS: Record<ContentType, Record<Length, [number, number]>> = {
+  blog: { Short: [300, 500], Medium: [700, 900], Long: [1200, 1600] },
+  whitepaper: { Short: [800, 1100], Medium: [1400, 1800], Long: [2200, 2800] },
+};
+export const SECTIONS: Record<ContentType, Record<Length, [number, number]>> = {
+  blog: { Short: [2, 3], Medium: [3, 5], Long: [5, 7] },
+  whitepaper: { Short: [3, 4], Medium: [4, 6], Long: [6, 8] },
 };
 
 export type BlockTag = 'h1' | 'h2' | 'p' | 'ul' | 'ol' | 'blockquote';
 export const BLOCK_TAGS: BlockTag[] = ['h1', 'h2', 'p', 'ul', 'ol', 'blockquote'];
-/** One block of a piece. `role` names what the writer made it for (title, intro, h:why for its heading, free when a
- *  person wrote it), `v` which wording, `edited` whether a person changed it, `ai` whether the AI wrote it (Phase 6);
- *  a list's text is its items. */
+/** One block of a piece. `role` names what the writer made it for (title, intro, h:why for its heading, sec and h:sec
+ *  for a section the AI planned, free when a person wrote it), `v` which wording, `edited` whether a person changed it,
+ *  `ai` whether the AI wrote it (Phase 6); a list's text is its items. */
 export type Block = { id: string; tag: BlockTag; role: string; v: number; edited?: boolean; text: string | string[]; ai?: boolean };
-/** What the writer needs to know about a piece. */
-export type Piece = { type: ContentType; topic: string; seg: string; tone: Tone; length: Length; sources: string[]; title: string; blocks: Block[] };
+/** What the writer needs to know about a piece. `audience` is empty for a general reader. */
+export type Piece = { type: ContentType; topic: string; audience: string; tone: Tone; length: Length; sources: string[]; title: string; blocks: Block[] };
 
 const newId = () => globalThis.crypto.randomUUID().slice(0, 8);
 const cap = (s: string) => { s = String(s || '').trim(); return s.charAt(0).toUpperCase() + s.slice(1); };
@@ -75,21 +77,26 @@ export const LAYOUT: Record<ContentType, Record<Length, string[]>> = {
 };
 export const HEAD: Record<string, string[]> = {
   why: ['Why it matters now', 'Why now, not later'], questions: ['Questions worth asking', 'Questions for your team'],
-  proof: ['What comparable sites did', 'Evidence from comparable sites'], objection: ['A common concern', 'What we often hear'],
+  proof: ['What the evidence shows', 'Evidence'], objection: ['A common concern', 'What we often hear'],
   cta: ['Next step', 'Where to start'], steps: ['A practical sequence', 'How to sequence the work'], pitfalls: ['Where plans slip', 'What to watch for'],
   summary: ['Executive summary', 'In brief'], challenge: ['The challenge', 'What makes it hard'], good: ['What good looks like', 'The outcome to aim for'],
 };
 const LIST_ROLES: Record<string, BlockTag> = { questions: 'ul', steps: 'ol' };
-type Ctx = { title: string; topic: string; persona: string; fw: Play; claims: Claim[]; tone: Tone };
+type Ctx = { title: string; topic: string; persona: string; fw: Pick<Play, 'objection' | 'response' | 'questions'>; claims: Claim[]; tone: Tone };
+// The rules' framing when there's no AI: the same for every topic and reader (D-45).
+const PLAY: Ctx['fw'] = {
+  objection: 'We are not ready to look at this yet', response: 'That is common. A short conversation now costs little, and it keeps the decision and the timing in your hands.',
+  questions: ['What would change if you acted on this now?', 'What would you need to see before you start?', 'Who else needs to be part of the decision?'],
+};
 const GEN: Record<string, (c: Ctx, v: number) => string | string[]> = {
-  title: (c, v) => [c.title, `${cap(c.topic)}: what to settle first`, `What comparable sites learned about ${lc(c.topic)}`][v % 3],
+  title: (c, v) => [c.title, `${cap(c.topic)}: what to settle first`, `${cap(c.topic)}: a practical guide`][v % 3],
   intro: (c, v) => [
-    `Most ${c.persona} we work with know the moment is coming. The question is whether they set the timing, or the timing is set for them. This post covers what to settle first, and what comparable sites did.`,
-    `${cap(c.topic)} rarely starts as a project. It starts as a question someone on site asks, and it's easier to answer while there's still time to plan. Here is how we'd approach it.`,
-    `If ${lc(c.topic)} is on your list this year, you're not alone. The sites that handled it well made a few decisions early. This post walks through them.`][v % 3],
+    `Most ${c.persona} know the moment is coming. The question is whether they set the timing, or the timing is set for them. This post covers what to settle first, and where to start.`,
+    `${cap(c.topic)} rarely starts as a project. It starts as a question someone asks, and it's easier to answer while there's still time to plan. Here is how we'd approach it.`,
+    `If ${lc(c.topic)} is on your list this year, you're not alone. The teams that handle it well make a few decisions early. This post walks through them.`][v % 3],
   why: (_c, v) => [
     'Timing is the hidden cost. Decide early, and the decision stays in your hands: the work fits a window you choose, the people you need are booked, and nothing is rushed.',
-    'Waiting rarely makes the decision easier. The options narrow as dates get closer, and the work ends up scheduled around constraints rather than around the plant.',
+    'Waiting rarely makes the decision easier. The options narrow as dates get closer, and the work ends up scheduled around constraints rather than around your priorities.',
     'The earlier the question is asked, the more options there are. Planning early turns a forced change into a planned one.'][v % 3],
   questions: (c, v) => [c.fw.questions.slice(), c.fw.questions.concat(['Who else needs to be part of the decision?']),
     ['What has changed on site in the last two years?'].concat(c.fw.questions.slice(0, 2))][v % 3],
@@ -98,29 +105,29 @@ const GEN: Record<string, (c: Ctx, v: number) => string | string[]> = {
   objection: (c, v) => [`"${noDot(c.fw.objection)}." ${c.fw.response}`, `We often hear: "${noDot(c.fw.objection)}." ${c.fw.response}`,
     `It's fair to ask whether now is the time. ${c.fw.response}`][v % 3],
   cta: (_c, v) => [
-    'If this is on your list, a short conversation is a good place to start. We can share how comparable sites sequenced the work, and what they would do differently.',
+    'If this is on your list, a short conversation is a good place to start. We can share how others sequenced the work, and what they would do differently.',
     'Start with one question: what would we need to know to plan this properly? If it helps, we can walk through it with your team.',
-    'Talk to your account team about where to start. A short call is usually enough to see whether it is worth planning now.'][v % 3],
+    'Get in touch to talk about where to start. A short call is usually enough to see whether it is worth planning now.'][v % 3],
   steps: (_c, v) => [
-    ['Agree the window you want to work in.', 'List what has to keep running, and what can stop.', 'Settle the scope with the people who will run it.', 'Plan the cutover, and the way back if something goes wrong.'],
+    ['Agree the window you want to work in.', 'List what has to keep running, and what can stop.', 'Settle the scope with the people who will run it.', 'Plan the change, and the way back if something goes wrong.'],
     ['Write down the date you cannot move.', 'Work back from it to the decisions you need.', 'Name one owner for each decision.'],
-    ['Start with what the site needs to keep doing.', 'Agree the scope before the design is fixed.', 'Book the people who know the current system.', 'Choose the window, then plan backwards.']][v % 3],
+    ['Start with what has to keep working.', 'Agree the scope before the details are fixed.', 'Involve the people who know how things work today.', 'Choose the window, then plan backwards.']][v % 3],
   pitfalls: (_c, v) => [
-    'Plans slip in predictable places. The scope grows after the design is fixed, the people who know the old system are not in the room, or the window is agreed before the work is understood. Naming these early is most of the cure.',
-    'Most delays trace back to one of three things: a scope that keeps moving, missing knowledge of the current system, or a window agreed too late.'][v % 2],
+    'Plans slip in predictable places. The scope grows after the details are fixed, the people who know how things work today are not in the room, or the date is agreed before the work is understood. Naming these early is most of the cure.',
+    'Most delays trace back to one of three things: a scope that keeps moving, missing knowledge of how things work today, or a date agreed too late.'][v % 2],
   summary: (c, v) => [
-    `${cap(c.topic)} is a decision most ${c.persona} will face. This paper sets out what to decide first, a practical sequence, and what comparable sites did.`,
-    `This paper is for ${c.persona} looking at ${lc(c.topic)}. It covers the decisions to make early and how comparable sites approached them.`][v % 2],
+    `${cap(c.topic)} is a decision most ${c.persona} will face. This paper sets out what to decide first, a practical sequence, and where to start.`,
+    `This paper is for ${c.persona} looking at ${lc(c.topic)}. It covers the decisions to make early and how to approach them.`][v % 2],
   challenge: (_c, v) => [
-    "The difficulty is rarely technical. It's timing, scope and people: deciding before the date is forced, agreeing what is in and out, and keeping the people who know the site involved.",
-    'Every site has a version of the same problem. The current setup still runs, the people who know it are busy, and the next window is closer than it looks.'][v % 2],
+    "The difficulty is rarely technical. It's timing, scope and people: deciding before the date is forced, agreeing what is in and out, and keeping the people who know the work involved.",
+    'Most teams have a version of the same problem. What they have today still works, the people who know it are busy, and the next deadline is closer than it looks.'][v % 2],
   good: (_c, v) => [
-    'A good outcome looks ordinary. The work fits a window the site chose, the team knows the plan, and nothing surprises operations.',
-    'The aim is a change that operations barely notice: planned, scoped with the people who run the plant, and finished inside the window.'][v % 2],
+    'A good outcome looks ordinary. The work fits a window you chose, the team knows the plan, and nothing surprises the people doing the work.',
+    'The aim is a change people barely notice: planned, scoped with the people it affects, and finished on time.'][v % 2],
 };
 // Extra sentences when asked for more detail (no product claims).
-const MORE = ['That is usually where the real decisions sit.', 'It helps to write the answer down and share it with the people who run the plant.',
-  'Comparable sites found it easier once one person owned the plan.', 'None of this needs a decision today, only a date to decide by.'];
+const MORE = ['That is usually where the real decisions sit.', 'It helps to write the answer down and share it with the people it affects.',
+  'It gets easier once one person owns the plan.', 'None of this needs a decision today, only a date to decide by.'];
 const CONTRACT: [RegExp, string][] = [[/\bI'm\b/g, 'I am'], [/\bit's\b/g, 'it is'], [/\bIt's\b/g, 'It is'], [/\byou're\b/g, 'you are'], [/\bYou're\b/g, 'You are'],
   [/\bdon't\b/g, 'do not'], [/\bcan't\b/g, 'cannot'], [/\bwon't\b/g, 'will not'], [/\bwe'll\b/g, 'we will'], [/\bwe'd\b/g, 'we would'],
   [/\byou'd\b/g, 'you would'], [/\bWhat's\b/g, 'What is'], [/\bthat's\b/g, 'that is'], [/\bthere's\b/g, 'there is'], [/\bwe're\b/g, 'we are'],
@@ -133,9 +140,8 @@ function toneize(text: string | string[], tone: Tone, role: string): string | st
   if (tone === 'Warm') { if (role === 'intro' || role === 'summary') t += ' We hope it helps.'; if (role === 'cta') t += ' We would be glad to help.'; }
   return t;
 }
-function ctxOf(p: Pick<Piece, 'title' | 'topic' | 'seg' | 'sources' | 'tone'>, pack: BrandPack): Ctx {
-  const fw = pack.framework?.[p.seg] || PLAYBOOK[p.seg] || PLAYBOOK.Engagement;
-  return { title: p.title, topic: p.topic || p.title, persona: PERSONA[p.seg] || 'teams', fw, claims: approvedClaims(pack).filter(c => p.sources.includes(c.id)), tone: p.tone };
+function ctxOf(p: Pick<Piece, 'title' | 'topic' | 'audience' | 'sources' | 'tone'>, pack: BrandPack): Ctx {
+  return { title: p.title, topic: p.topic || p.title, persona: lc(p.audience) || 'teams', fw: PLAY, claims: approvedClaims(pack).filter(c => p.sources.includes(c.id)), tone: p.tone };
 }
 function genBlock(c: Ctx, role: string, v: number): Block {
   return { id: newId(), tag: role === 'title' ? 'h1' : LIST_ROLES[role] || 'p', role, v, text: toneize(GEN[role](c, v), c.tone, role) };
@@ -146,26 +152,30 @@ export const ROLE_PURPOSE: Record<string, string> = {
   why: 'why acting early matters', questions: 'a list of 3 to 5 questions the reader should ask their team', objection: 'a common concern, quoted, and a calm answer to it',
   cta: 'the close: one easy next step with the account team', steps: 'a numbered list of 3 to 5 practical steps', pitfalls: 'where plans usually slip, and how to avoid it',
   summary: 'an executive summary: who it is for and what it covers', challenge: 'what makes the problem hard in practice', good: 'what a good outcome looks like',
+  sec: 'part of a section of the piece, under its heading', 'h:sec': 'a section heading, under 8 words',
 };
-/** The parts the AI may word for a piece (the proof is always the approved claims, word for word). */
-export const aiRoles = (type: ContentType, length: Length): string[] => LAYOUT[type][length].filter(r => r !== 'proof');
-export const isListRole = (role: string) => !!LIST_ROLES[role];
 
-/** The piece laid out for its type and length with the given wording per part, each marked as the AI's; the proof
- *  comes from the approved claims word for word, and a part without usable wording keeps the rules' text. */
-export function layoutWith(p: Pick<Piece, 'type' | 'length' | 'title' | 'topic' | 'seg' | 'sources' | 'tone'>, pack: BrandPack, parts: Record<string, string | string[]>): Block[] {
-  const c = ctxOf(p, pack), out: Block[] = [];
-  for (const role of LAYOUT[p.type][p.length]) {
-    if (role === 'proof' && !c.claims.length) continue;
-    if (HEAD[role]) out.push({ id: newId(), tag: 'h2', role: 'h:' + role, v: 0, text: HEAD[role][0] });
-    const tag: BlockTag = role === 'title' ? 'h1' : LIST_ROLES[role] || 'p', given = role === 'proof' ? undefined : parts[role];
-    out.push(given !== undefined && Array.isArray(given) === (tag === 'ul' || tag === 'ol') ? { id: newId(), tag, role, v: 0, text: given, ai: true } : genBlock(c, role, 0));
+/** A piece the AI planned (D-45): its own title, opening, sections and close. */
+export type Plan = { title: string; intro: string[]; sections: { heading: string; paragraphs: string[]; list: string[]; numbered: boolean }[]; close: { heading: string; text: string } };
+/** The blocks of a piece the AI planned, each marked as the AI's. The proof is the approved claims it picked, word for
+ *  word with their citations, in their own section before the close; a whitepaper opens with its executive summary. */
+export function fromPlan(type: ContentType, plan: Plan, claims: Claim[]): Block[] {
+  const ai = (tag: BlockTag, role: string, text: string | string[]): Block => ({ id: newId(), tag, role, v: 0, text, ai: true });
+  const out: Block[] = [ai('h1', 'title', plan.title)];
+  if (type === 'whitepaper') out.push({ id: newId(), tag: 'h2', role: 'h:summary', v: 0, text: HEAD.summary[0] });
+  for (const t of plan.intro) out.push(ai('p', type === 'whitepaper' ? 'summary' : 'intro', t));
+  for (const s of plan.sections) {
+    out.push(ai('h2', 'h:sec', s.heading));
+    for (const t of s.paragraphs) out.push(ai('p', 'sec', t));
+    if (s.list.length) out.push(ai(s.numbered ? 'ol' : 'ul', 'sec', s.list));
   }
+  if (claims.length) out.push({ id: newId(), tag: 'h2', role: 'h:proof', v: 0, text: HEAD.proof[0] }, { id: newId(), tag: 'p', role: 'proof', v: 0, text: claims.map(cited).join(' ') });
+  out.push(ai('h2', 'h:cta', plan.close.heading), ai('p', 'cta', plan.close.text));
   return out;
 }
 
 /** The piece as the writer lays it out for its type and length; no approved source, no proof section. */
-export function generate(p: Pick<Piece, 'type' | 'length' | 'title' | 'topic' | 'seg' | 'sources' | 'tone'>, pack: BrandPack): Block[] {
+export function generate(p: Pick<Piece, 'type' | 'length' | 'title' | 'topic' | 'audience' | 'sources' | 'tone'>, pack: BrandPack): Block[] {
   const c = ctxOf(p, pack), out: Block[] = [];
   for (const role of LAYOUT[p.type][p.length]) {
     if (role === 'proof' && !c.claims.length) continue;
@@ -177,39 +187,57 @@ export function generate(p: Pick<Piece, 'type' | 'length' | 'title' | 'topic' | 
 
 /* ─── Reading a request: type, topic, audience, tone and length ─── */
 
-export type Brief = { type: ContentType; topic: string; seg: string; tone: Tone; length: Length; audienceText: string; ok: boolean };
+/** What a request asks for. `audience` is who the person named, empty for a general reader; `ok` is false when it
+ *  doesn't say what the piece is about. With AI on, the model reads the request (lib/ai/studio.ts); these rules are
+ *  the fallback. */
+export type Brief = { type: ContentType; topic: string; audience: string; tone: Tone; length: Length; ok: boolean };
+/** The type a request names, else the one the person picked (the rules decide it, with AI on too). */
+export const typeOf = (q: string, typeHint: ContentType): ContentType => /white\s?-?paper/i.test(q) ? 'whitepaper' : /\b(blog|article|post)\b/i.test(q) ? 'blog' : typeHint;
 export function parseBrief(q: string, typeHint: ContentType, brandTone: string): Brief {
   const s = String(q || '').trim();
-  const type: ContentType = /white\s?-?paper/i.test(s) ? 'whitepaper' : /\b(blog|article|post)\b/i.test(s) ? 'blog' : typeHint;
-  const forM = s.match(/\bfor\s+(.+?)(?:[,.;]|\s+(?:in|with|that|and keep|keep it)\b|$)/i);
+  const type = typeOf(s, typeHint);
+  const forM = s.match(/\b(?:for|aimed at|targeting)\s+(.+?)(?:[,.;]|\s+(?:in|with|that|on|about|covering|around|and keep|keep it)\b|$)/i);
   let topic = '';
   const onM = s.match(/\b(?:on|about|covering|around)\s+(.+?)(?:\s+for\s+|[,.;]|\s+(?:in a|with a|keep it)\b|$)/i);
   if (onM) topic = onM[1];
   else topic = s.replace(/\b(please|can you|could you|write|draft|create|generate|make|me|us|a|an|the|new|short|long|detailed|formal|warm|friendly|blog|post|article|white\s?-?paper)\b/gi, ' ')
     .replace(forM ? forM[0] : '', ' ').replace(/\s+/g, ' ').trim();
   topic = topic.replace(/^(on|about)\s+/i, '').replace(/[.?!]+$/, '').trim();
-  const hay = s + ' ' + (forM ? forM[1] : '');
-  const seg = (SEG_WORDS.find(([, re]) => re.test(hay)) || ['Modernisation'])[0];
+  // "for" also starts phrases that aren't a reader ("what to look for in a CRM").
+  const audience = forM && !/^(?:in|on|at|to|it|this|that|now)\b/i.test(forM[1]) ? noDot(forM[1]).replace(/^(?:the|our)\s+/i, '') : '';
   // Only Formal or Warm from the brief's words: "direct" is as likely to be part of the topic (direct digital control).
   const asked = toneAsked(s);
   const tone: Tone = asked === 'Formal' || asked === 'Warm' ? asked : ((TONES as readonly string[]).includes(brandTone) ? brandTone as Tone : 'Direct');
   const length: Length = /\b(short|brief|quick)\b/i.test(s) ? 'Short' : /\b(long|detailed|in-depth|comprehensive|thorough)\b/i.test(s) ? 'Long' : 'Medium';
-  return { type, topic, seg, tone, length, audienceText: forM ? forM[1].trim() : '', ok: topic.split(/\s+/).filter(w => w.length > 2).length >= 2 };
+  return { type, topic, audience, tone, length, ok: topic.split(/\s+/).filter(w => w.length > 2).length >= 2 };
 }
-/** What to ask back when a request doesn't say what the piece is about. */
+/** What to ask back when a request doesn't say what the piece is about (never who it's for: D-45). */
 export const briefQuestion = (type: ContentType) =>
-  `Happy to write a ${TYPES[type].label.toLowerCase()}. What should it be about, and who is it for? For example: “${SUGGESTIONS[type][0].replace(/^A (short |detailed )?(blog|whitepaper) /i, '')}”.`;
+  `Happy to write a ${TYPES[type].label.toLowerCase()}. What should it be about? For example: “${SUGGESTIONS[type][0].replace(/^A (short |detailed )?(blog|whitepaper) /i, '')}”.`;
 
-/** A new piece from a brief: the approved claims for its audience are its sources. */
-export function newPiece(b: Pick<Brief, 'type' | 'topic' | 'seg' | 'tone' | 'length'>, pack: BrandPack): Piece {
-  const sources = approvedClaims(pack).filter(c => (c.segments || []).includes(b.seg)).map(c => c.id);
-  const base = { type: b.type, topic: b.topic, seg: b.seg, tone: b.tone, length: b.length, sources, title: cap(b.topic) };
+// Words that say nothing about what a claim is about.
+const STOP = new Set(['mention', 'include', 'talk', 'about', 'with', 'that', 'this', 'from', 'proof', 'source', 'example', 'evidence', 'case', 'study', 'some', 'more',
+  'please', 'blog', 'whitepaper', 'paper', 'post', 'article', 'write', 'your', 'their', 'what', 'when', 'where', 'which', 'into', 'over', 'most', 'help', 'helps',
+  'make', 'using', 'guide', 'team', 'teams', 'they', 'them', 'have', 'will', 'should', 'could', 'would']);
+/** Approved claims that share words with the text (their title or the claim itself), most shared first; unexpired
+ *  ones only, given the date. With AI on, the model picks a new piece's claims instead. */
+export function relevantClaims(text: string, pack: BrandPack, asOf?: string): Claim[] {
+  const words = [...new Set(String(text).toLowerCase().match(/[a-z]{4,}/g) || [])].filter(w => !STOP.has(w));
+  return approvedClaims(pack).filter(c => !asOf || !c.expiry || c.expiry >= asOf)
+    .map(c => ({ c, s: words.filter(w => (c.title + ' ' + c.claim).toLowerCase().includes(w)).length })).filter(x => x.s)
+    .sort((a, b) => b.s - a.s).map(x => x.c);
+}
+
+/** A new piece from a brief, written by the rules: the approved claims that fit its topic are its sources. */
+export function newPiece(b: Pick<Brief, 'type' | 'topic' | 'audience' | 'tone' | 'length'>, pack: BrandPack, asOf?: string): Piece {
+  const sources = relevantClaims(b.topic, pack, asOf).slice(0, 3).map(c => c.id);
+  const base = { type: b.type, topic: b.topic, audience: b.audience, tone: b.tone, length: b.length, sources, title: cap(b.topic) };
   return { ...base, blocks: generate(base, pack) };
 }
 export function planLine(p: Piece, pack: BrandPack, brandV: number): string {
   const srcs = approvedClaims(pack).filter(c => p.sources.includes(c.id)).map(c => c.id);
-  return `I'll write a ${p.length.toLowerCase()} ${TYPES[p.type].label.toLowerCase()} on **${p.topic}** for ${lc(AUDIENCE[p.seg] || p.seg)}, in a ${p.tone.toLowerCase()} voice, using the ${TYPES[p.type].skill} instructions and Brand v${brandV}.` +
-    (srcs.length ? ` It can cite ${srcs.join(', ')}, the approved sources for this audience.` : ' There is no approved source for this audience, so it will make no product claims.');
+  return `I'll write a ${p.length.toLowerCase()} ${TYPES[p.type].label.toLowerCase()} on **${p.topic}** for ${p.audience ? lc(p.audience) : 'a general reader'}, in a ${p.tone.toLowerCase()} voice, using the ${TYPES[p.type].skill} instructions and Brand v${brandV}.` +
+    (srcs.length ? ` It can cite ${srcs.join(', ')}, the approved sources that fit the topic.` : ' No approved source fits the topic, so it makes no product claims.');
 }
 
 /* ─── Text, checks and what a piece cites ─── */
@@ -233,8 +261,11 @@ export const titleOf = (blocks: Block[], fallback: string) => {
 
 /* ─── Changes: one block or the whole piece. Each returns the new blocks and what to say. ─── */
 
-/** `unknown`: the rules didn't understand the request (not a refusal); the AI writer may take it (Phase 6). */
-export type Change = { blocks: Block[]; reply: string; tone?: Tone; length?: Length; sources?: string[]; select?: string | null; changed: boolean; unknown?: boolean };
+/** `unknown`: the rules didn't understand the request (not a refusal); the AI writer may take it (Phase 6). `ai`: the
+ *  change needs new wording, which the AI writer gives instead when it's on (D-45): what to ask it, on these blocks,
+ *  for this part (null for every part nobody edited). The rules' own result is the fallback. */
+export type Change = { blocks: Block[]; reply: string; tone?: Tone; length?: Length; sources?: string[]; select?: string | null; changed: boolean; unknown?: boolean;
+  ai?: { blocks: Block[]; target: string | null; ask: string } };
 const sentences = (t: string) => String(t).split(/(?<=[.?!])\s+(?!\[)/).filter(Boolean);
 const CLAIMY = /(\d+\s?%|\b(reduces?|reduced|improves?|improved|increases?|increased|cuts? (downtime|costs?)|savings|uptime|faster|proven|guarantee\w*)\b)/i;
 const kindOf = (b: Block) => (b.tag === 'h1' ? 'title' : b.tag === 'h2' ? 'heading' : 'paragraph');
@@ -259,22 +290,20 @@ function lengthen(b: Block): Block | null {
   return { ...b, text: (b.text as string).trim() + ' ' + m, edited: true };
 }
 function retone(b: Block, tone: Tone, p: Piece, pack: BrandPack): Block {
-  if (!b.edited && GEN[b.role]) return regenBlock(b, { ...p, tone }, pack, true) ?? b;
+  // The rules' wording replaces only their own: never what the AI or a person wrote.
+  if (!b.edited && !b.ai && GEN[b.role]) return regenBlock(b, { ...p, tone }, pack, true) ?? b;
   if (tone !== 'Formal') return b;
   const fix = (t: string) => CONTRACT.reduce((s, [a, r]) => s.replace(a, r), t);
   return { ...b, text: Array.isArray(b.text) ? b.text.map(fix) : fix(b.text) };
 }
-/** An approved claim that fits the request (words from its title or text), or, when proof is asked for, one this
- *  piece's audience may cite that it doesn't cite yet. */
+/** An approved claim that fits the request (words from its title or text), or, when proof is asked for, one that fits
+ *  the piece's topic that it doesn't cite yet. */
 function claimFor(q: string, p: Piece, pack: BrandPack): Claim | null {
-  const words = String(q).toLowerCase().match(/[a-z]{4,}/g) || [];
-  const stop = new Set(['mention', 'include', 'talk', 'about', 'with', 'that', 'this', 'from', 'proof', 'source', 'example', 'evidence', 'case', 'study', 'some', 'more', 'please']);
-  const pool = approvedClaims(pack);
-  const scored = pool.map(c => ({ c, s: words.filter(w => !stop.has(w) && (c.title + ' ' + c.claim).toLowerCase().includes(w)).length })).filter(x => x.s).sort((a, b) => b.s - a.s);
-  if (scored.length) return scored[0].c;
+  const asked = relevantClaims(q, pack);
+  if (asked.length) return asked[0];
   if (/proof|example|case|evidence|source/i.test(q)) {
     const used = textOf(p.blocks);
-    return pool.find(c => p.sources.includes(c.id) && !used.includes(c.claim)) || pool.find(c => (c.segments || []).includes(p.seg) && !used.includes(c.claim)) || null;
+    return approvedClaims(pack).find(c => p.sources.includes(c.id) && !used.includes(c.claim)) || relevantClaims(p.topic, pack).find(c => !used.includes(c.claim)) || null;
   }
   return null;
 }
@@ -285,13 +314,15 @@ function beforeClose(blocks: Block[], add: Block[]): Block[] {
 }
 const replace = (blocks: Block[], b: Block) => blocks.map(x => (x.id === b.id ? b : x));
 
-/** Regenerate one block, or say why not. */
+/** Regenerate one block, or say why not. A part the AI planned has no rules' wording: only the AI writes another. */
 export function regenerate(p: Piece, target: string, pack: BrandPack): Change {
   const b = p.blocks.find(x => x.id === target);
   if (!b) return { blocks: p.blocks, reply: 'That part is not in the piece any more.', changed: false };
+  if (b.role === 'free') return { blocks: p.blocks, reply: "You wrote that one yourself, so there's no generated version to swap in. Tell me what to change in it.", changed: false };
+  const ai = { blocks: p.blocks, target, ask: 'Write another version of this part.' };
   const n = regenBlock(b, p, pack);
-  if (!n) return { blocks: p.blocks, reply: "You wrote that one yourself, so there's no generated version to swap in. Tell me what to change in it.", changed: false };
-  return { blocks: replace(p.blocks, n), reply: `Rewrote that ${kindOf(b)}. Nothing else changed.`, select: target, changed: true };
+  if (!n) return { blocks: p.blocks, reply: "Only the AI writer can write another version of that part, and it isn't available right now. Tell me what to change in it.", changed: false, ai };
+  return { blocks: replace(p.blocks, n), reply: `Rewrote that ${kindOf(b)}. Nothing else changed.`, select: target, changed: true, ai };
 }
 export function removeBlock(p: Piece, target: string): Change {
   const blocks = p.blocks.filter(x => x.id !== target);
@@ -299,8 +330,9 @@ export function removeBlock(p: Piece, target: string): Change {
 }
 export function setTone(p: Piece, tone: Tone, pack: BrandPack, target?: string | null): Change {
   const b = target ? p.blocks.find(x => x.id === target) : null;
-  if (b) return { blocks: replace(p.blocks, retone(b, tone, p, pack)), reply: `Made that part ${tone.toLowerCase()}. The rest is still ${p.tone.toLowerCase()}.`, select: target, changed: true };
-  return { blocks: p.blocks.map(x => retone(x, tone, p, pack)), tone, changed: true,
+  const ai = { blocks: p.blocks, target: b ? b.id : null, ask: `Rewrite it in a ${tone.toLowerCase()} voice.` };
+  if (b) return { blocks: replace(p.blocks, retone(b, tone, p, pack)), reply: `Made that part ${tone.toLowerCase()}. The rest is still ${p.tone.toLowerCase()}.`, select: target, changed: true, ai };
+  return { blocks: p.blocks.map(x => retone(x, tone, p, pack)), tone, changed: true, ai,
     reply: `Switched the piece to a ${tone.toLowerCase()} tone. Paragraphs you edited yourself keep your wording${tone === 'Formal' ? ', with contractions written out' : ''}.` };
 }
 /** The whole piece rewritten at another length (people's own edits are replaced; the screen asks first). */
@@ -327,17 +359,22 @@ export function change(p: Piece, q: string, pack: BrandPack, target?: string | n
   }
   if (/\b(title|headline)\b/.test(low) && !el) {
     const h = p.blocks.find(b => b.tag === 'h1'), n = h && regenBlock(h, p, pack);
-    if (h && n) return { blocks: replace(p.blocks, n), reply: `New title: “${n.text}”. Ask again for another option.`, changed: true };
+    if (h && n) return { blocks: replace(p.blocks, n), reply: `New title: “${n.text}”. Ask again for another option.`, changed: true, ai: { blocks: p.blocks, target: h.id, ask: q } };
   }
   if (/\b(intro|opening|first paragraph|summary)\b/.test(low) && !el) {
     const o = p.blocks.find(b => b.role === 'intro' || b.role === 'summary'), n = o && regenBlock(o, p, pack);
-    if (o && n) return { blocks: replace(p.blocks, n), reply: 'Rewrote the opening. It stays selected, so you can ask for another version or a specific change.', select: o.id, changed: true };
+    if (o && n) return { blocks: replace(p.blocks, n), reply: 'Rewrote the opening. It stays selected, so you can ask for another version or a specific change.', select: o.id, changed: true,
+      ai: { blocks: p.blocks, target: o.id, ask: q } };
   }
   if ((m = q.match(/add (?:a )?(?:section|paragraph|part|chapter) (?:on|about) (.+)/i))) {
     const topic = noDot(m[1]), formal = p.tone === 'Formal';
-    const add: Block[] = [{ id: newId(), tag: 'h2', role: 'free', v: 0, text: cap(topic), edited: true },
-      { id: newId(), tag: 'p', role: 'free', v: 0, edited: true, text: `${cap(topic)} is worth its own conversation. ${formal ? 'It is' : "It's"} usually where plans differ most from site to site, so start with how your site handles it today and what you would want to change.` }];
-    return { blocks: beforeClose(p.blocks, add), reply: `Added a section on ${topic} before the close. It makes no product claims; edit it, or ask me to add proof from an approved source.`, select: add[1].id, changed: true };
+    const text = `${cap(topic)} is worth its own section. ${formal ? 'It is' : "It's"} usually where approaches differ most, so start with how it is handled today and what you would want to change.`;
+    const add: Block[] = [{ id: newId(), tag: 'h2', role: 'free', v: 0, text: cap(topic), edited: true }, { id: newId(), tag: 'p', role: 'free', v: 0, edited: true, text }];
+    // With AI on, the AI writes the new section in place of an empty one (given the rules' text, it kept it).
+    const body: Block = { id: newId(), tag: 'p', role: 'sec', v: 0, text: '(Not written yet.)' };
+    return { blocks: beforeClose(p.blocks, add), reply: `Added a section on ${topic} before the close. It makes no product claims; edit it, or ask me to add proof from an approved source.`, select: add[1].id, changed: true,
+      ai: { blocks: beforeClose(p.blocks, [{ id: newId(), tag: 'h2', role: 'h:sec', v: 0, text: cap(topic) }, body]), target: body.id,
+        ask: `Write this new section, about ${topic}: a paragraph of 3 to 5 sentences for the piece's reader, on the piece's topic.` } };
   }
   const mention = q.match(/\b(?:mention|include|talk about)\b\s+(?:the\s+)?(.+)/i);
   if (/proof|case study|example|evidence|source|cite/.test(low) || mention) {
@@ -355,7 +392,7 @@ export function change(p: Piece, q: string, pack: BrandPack, target?: string | n
       const what = noDot(mention[1]), b = el && el.tag === 'p' ? el : p.blocks.find(x => x.role === 'cta') ?? p.blocks.filter(x => !Array.isArray(x.text)).at(-1);
       if (b) return { blocks: replace(p.blocks, { ...b, text: (b.text as string).trim() + ` Is ${lc(what)} part of your plans?`, edited: true }), reply: `There's no approved source on ${what}, so I added it as a question rather than a claim.`, changed: true };
     }
-    return { ...same, reply: "Every approved source for this audience is already cited. Add another one in the Content library and I'll use it word for word." };
+    return { ...same, reply: "No other approved source fits this piece. Add one in the Content library and I'll use it word for word." };
   }
   const tone = toneAsked(low);
   if (tone) return setTone(p, tone, pack, el?.id);
@@ -367,16 +404,17 @@ export function change(p: Piece, q: string, pack: BrandPack, target?: string | n
     return { blocks, reply: el ? 'Shortened it. Cited claims are kept as they are.' : `Shortened ${n} part${n > 1 ? 's' : ''}. Cited claims are kept as they are.`, changed: true, select: el?.id };
   }
   if (/long|detail|expand|elaborate|\bmore\b/.test(low)) {
-    if (el) { const l = lengthen(el); return l ? { blocks: replace(p.blocks, l), reply: 'Added a line. No new claims.', select: el.id, changed: true } : { ...same, reply: "I've added all I can without making claims. Ask me to add proof from an approved source." }; }
+    const ai = { blocks: p.blocks, target: el?.id ?? null, ask: q };
+    if (el) { const l = lengthen(el); return l ? { blocks: replace(p.blocks, l), reply: 'Added a line. No new claims.', select: el.id, changed: true, ai } : { ...same, reply: "I've added all I can without making claims. Ask me to add proof from an approved source.", ai }; }
     const c = ctxOf(p, pack);
     const missing = LAYOUT[p.type].Long.filter(r => !p.blocks.some(b => b.role === r) && !(r === 'proof' && !c.claims.length));
-    if (!missing.length) return { ...same, reply: 'It already has every section for this type. Ask me to add a section on a specific topic.' };
+    if (!missing.length) return { ...same, reply: 'It already has every section for this type. Ask me to add a section on a specific topic.', ai };
     const r = missing[0], add = [...(HEAD[r] ? [{ id: newId(), tag: 'h2' as BlockTag, role: 'h:' + r, v: 0, text: HEAD[r][0] }] : []), genBlock(c, r, 0)];
-    return { blocks: beforeClose(p.blocks, add), reply: `Added “${HEAD[r] ? HEAD[r][0] : r}”.`, select: add.at(-1)!.id, changed: true };
+    return { blocks: beforeClose(p.blocks, add), reply: `Added “${HEAD[r] ? HEAD[r][0] : r}”.`, select: add.at(-1)!.id, changed: true, ai };
   }
   if (/regenerate|rewrite|again|another|different/.test(low)) {
     if (el) { const r = regenerate(p, el.id, pack); return r.changed ? { ...r, reply: 'Here is another version.' } : r; }
-    return { blocks: generate(p, pack), reply: 'Rewrote the whole piece from the brief. Your earlier version is one Undo away.', select: null, changed: true };
+    return { blocks: generate(p, pack), reply: 'Rewrote the whole piece from the brief. Your earlier version is one Undo away.', select: null, changed: true, ai: { blocks: p.blocks, target: null, ask: q } };
   }
   if (/remove|delete|drop/.test(low) && el) return { ...removeBlock(p, el.id), reply: 'Removed it.' };
   return { ...same, unknown: true, reply: `I can change ${el ? 'that part' : 'the piece'}: make it shorter or longer, change the tone (direct, formal, warm), rewrite it, change the title, add a section on a topic, or add proof from an approved source. To start something new, ask for another blog or whitepaper. I won't add claims that aren't in the approved sources.` };

@@ -1,5 +1,6 @@
-// Content studio on the server against PostgreSQL (D-36): a vague request asks back and stores nothing; a piece is
-// written with its audience's approved sources and the conversation kept; chat changes and own edits are saved with a
+// Content studio on the server against PostgreSQL (D-36, D-45): a request with no topic asks back and stores nothing;
+// a piece is written for the reader named (or a general reader) with the approved sources that fit its topic, and the
+// conversation kept; chat changes and own edits are saved with a
 // revision guard; an unbacked claim is refused; only a piece whose checks pass goes into the Content library, and one
 // that fails again drops back to draft; Word and Markdown files; reps add library pieces to outreach messages (one, or
 // every message with the same action in the micro-segment); business units don't see each other's pieces.
@@ -10,7 +11,7 @@ import type pg from 'pg';
 import { createDb, withTenant, type Db, type TenantContext } from '../../lib/server/db/tenant.ts';
 import type { Actor } from '../../lib/server/services/lists.ts';
 import { changeItem, createItem, exportItem, getItem, listItems, saveBlocks, setContent, setReady, type ItemView } from '../../lib/server/services/studio.ts';
-import type { Block } from '../../lib/content/studio.ts';
+import { relevantClaims, type Block } from '../../lib/content/studio.ts';
 import { itemDetail } from '../../lib/server/services/recommendations.ts';
 import { HttpError } from '../../lib/server/http/errors.ts';
 import { freshDatabase, type TestDatabase } from './harness.ts';
@@ -47,7 +48,7 @@ before(async () => {
 after(async () => { await db?.drop(); });
 
 let piece: ItemView;
-test('a vague request asks back and stores nothing; a clear one writes a piece with its audience’s sources and keeps the conversation', async () => {
+test('a request with no topic asks back and stores nothing; a clear one writes a piece for its reader with the sources that fit its topic', async () => {
   const vague = await as(admin(), s => createItem(s, mgr(), { text: 'write a blog', type: 'blog' }));
   assert.deepEqual([vague.created, (await one(`SELECT count(*)::int n FROM studio_items`)).n], [false, 0]);
   assert.match((vague as { question: string }).question, /^Happy to write a blog\. What should it be about/);
@@ -55,12 +56,18 @@ test('a vague request asks back and stores nothing; a clear one writes a piece w
   assert.equal(made.created, true);
   piece = (made as { item: ItemView }).item;
   const live = await one(`SELECT pack FROM brand_versions WHERE business_unit_id = $1 ORDER BY version_no DESC LIMIT 1`, [ids.buA]);
-  const expected = live.pack.claims.filter((c: { status: string; segments: string[] }) => c.status === 'approved' && c.segments.includes('Modernisation')).map((c: { id: string }) => c.id);
-  assert.deepEqual([piece.type, piece.seg, piece.status, piece.issues, piece.rev, piece.sources], ['blog', 'Modernisation', 'Draft', 0, 1, expected]);
+  const expected = relevantClaims('planning a control system migration', live.pack, new Date().toISOString().slice(0, 10)).slice(0, 3).map(c => c.id);
+  assert.ok(expected.length > 0);
+  assert.deepEqual([piece.type, piece.audience, piece.status, piece.issues, piece.rev, piece.sources], ['blog', 'plant managers', 'Draft', 0, 1, expected]);
   assert.deepEqual(piece.cited.sort(), [...expected].sort());
   assert.deepEqual(piece.messages.map(m => m.who), ['me', 'ai', 'ai']);
   assert.match(piece.messages[1].text, /^I'll write a medium blog on \*\*planning a control system migration\*\*/);
   assert.equal((await one(`SELECT count(*)::int n FROM audit_log WHERE action = 'studio.created'`)).n, 1);
+  // Any topic, for any reader (D-45): nothing about it is a micro-segment, and no approved source fits, so no claims.
+  const sales = (await as(admin(), s => createItem(s, mgr(), { text: 'A blog on how AI can help in sales for AI marketers', type: 'blog' })) as { item: ItemView }).item;
+  assert.deepEqual([sales.audience, sales.sources, sales.cited, sales.issues], ['AI marketers', [], [], 0]);
+  assert.match(sales.messages[1].text, /for AI marketers, .* No approved source fits the topic, so it makes no product claims\.$/);
+  assert.equal((await one(`SELECT audience FROM studio_items WHERE id = $1`, [sales.id])).audience, 'AI marketers');
 });
 
 test('chat changes and own edits are saved with a revision guard; an unbacked claim is refused; undo restores', async () => {

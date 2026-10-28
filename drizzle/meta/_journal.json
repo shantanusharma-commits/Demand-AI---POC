@@ -302,6 +302,20 @@
       "when": 1793109805947,
       "tag": "0042_copilot_chats_security",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1793169991683,
+      "tag": "0043_studio_audience",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1793170002644,
+      "tag": "0044_studio_drop_segment",
+      "breakpoints": true
     }
   ]
 }

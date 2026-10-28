@@ -6,7 +6,7 @@
    message text doesn't change: an email attaches the pieces as Word files, a LinkedIn note shares them as links. */
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { AUDIENCE, TYPES, type Block, type ContentType } from '@/lib/content/studio';
+import { audienceLabel, TYPES, type Block, type ContentType } from '@/lib/content/studio';
 import { sx } from '@/lib/sx';
 import { api, errorText, type WireDeep } from '@/lib/client/api';
 import { showToast } from '@/lib/ui';
@@ -46,7 +46,6 @@ export function ContentPicker({ recId, channel, seg, action, current, sameAction
   const [preview, setPreview] = useState<Record<string, WireDeep<ItemView>>>({});
   const [q, setQ] = useState('');
   const [type, setType] = useState('');
-  const [fits, setFits] = useState(false);
   const [scope, setScope] = useState<'one' | 'all'>('one');
   const [busy, setBusy] = useState(false);
   const close = useRef(onClose);
@@ -57,12 +56,12 @@ export function ContentPicker({ recId, channel, seg, action, current, sameAction
     api<{ items: Summary[] }>('/api/studio/items').then(r => {
       if (gone) return;
       setItems(r.items);
-      setCur(c => c ?? (r.items.find(x => x.status === 'Ready' && x.seg === seg) ?? r.items.find(x => x.status === 'Ready'))?.id ?? null);
+      setCur(c => c ?? r.items.find(x => x.status === 'Ready')?.id ?? null);
     }, err => { if (!gone) showToast(errorText(err)); });
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close.current(); };
     document.addEventListener('keydown', onKey);
     return () => { gone = true; document.removeEventListener('keydown', onKey); };
-  }, [seg]);
+  }, []);
   useEffect(() => {
     if (!cur || preview[cur]) return;
     let gone = false;
@@ -70,8 +69,9 @@ export function ContentPicker({ recId, channel, seg, action, current, sameAction
     return () => { gone = true; };
   }, [cur, preview]);
 
-  const all = (items ?? []).slice().sort((a, b) => (a.status === 'Ready' ? 0 : 1) - (b.status === 'Ready' ? 0 : 1) || Number(b.seg === seg) - Number(a.seg === seg) || Date.parse(b.updatedAt) - Date.parse(a.updatedAt));
-  const list = all.filter(it => (!q || `${it.title} ${it.topic}`.toLowerCase().includes(q.toLowerCase())) && (!type || it.type === type) && (!fits || it.seg === seg));
+  // A piece is for any reader, not a micro-segment (D-45): the library is searched by title, topic and reader.
+  const all = (items ?? []).slice().sort((a, b) => (a.status === 'Ready' ? 0 : 1) - (b.status === 'Ready' ? 0 : 1) || Date.parse(b.updatedAt) - Date.parse(a.updatedAt));
+  const list = all.filter(it => (!q || `${it.title} ${it.topic} ${it.audience}`.toLowerCase().includes(q.toLowerCase())) && (!type || it.type === type));
   const toggle = (id: string, on: boolean) => { setSel(s => (on ? [...new Set([...s, id])] : s.filter(x => x !== id))); setCur(id); };
   const pv = cur ? preview[cur] : null, curSum = cur ? all.find(x => x.id === cur) : null;
   const paras = pv ? (pv.blocks as Block[]).filter(b => b.tag === 'p').slice(0, 2).map(b => String(b.text)) : [];
@@ -93,18 +93,17 @@ export function ContentPicker({ recId, channel, seg, action, current, sameAction
       <div className="cp-b">
         <div className="cp-col"><div className="cp-ch">Content library</div>
           <div className="cp-tools"><input aria-label="Search content" placeholder="Search content" value={q} onChange={e => setQ(e.target.value)} />
-            {[['', 'All'], ['blog', 'Blogs'], ['whitepaper', 'Whitepapers']].map(([k, l]) => <button key={k || 'all'} className={'cp-pill' + (type === k ? ' on' : '')} onClick={() => setType(k)}>{l}</button>)}
-            {seg ? <button className={'cp-pill' + (fits ? ' on' : '')} onClick={() => setFits(f => !f)}>Fits {seg}</button> : null}</div>
+            {[['', 'All'], ['blog', 'Blogs'], ['whitepaper', 'Whitepapers']].map(([k, l]) => <button key={k || 'all'} className={'cp-pill' + (type === k ? ' on' : '')} onClick={() => setType(k)}>{l}</button>)}</div>
           <div className="cp-sc">{!items ? <div className="cp-none">Loading…</div> : list.length ? list.map(it => it.status === 'Ready'
             ? <div key={it.id} className={'cp-it' + (cur === it.id ? ' cur' : '')} onClick={() => setCur(it.id)}>
               <input type="checkbox" checked={sel.includes(it.id)} aria-label={`Add ${it.title}`} onClick={e => e.stopPropagation()} onChange={e => toggle(it.id, e.target.checked)} />
-              <div><b>{it.title}</b><small>{TYPES[it.type].label} · {AUDIENCE[it.seg] || it.seg} · in {it.usage} message{it.usage === 1 ? '' : 's'}</small>{it.seg === seg ? <div><span className="cp-fit">Fits {seg}</span></div> : null}</div></div>
+              <div><b>{it.title}</b><small>{TYPES[it.type].label} · {audienceLabel(it.audience)} · in {it.usage} message{it.usage === 1 ? '' : 's'}</small></div></div>
             : <div key={it.id} className="cp-it off" title="Not in the library yet"><input type="checkbox" disabled aria-label={`${it.title} is a draft`} /><div><b>{it.title}</b><small>Draft: add it to the Content library first, from Content studio</small></div></div>)
             : <div className="cp-none">Nothing matches. <a href="/studio" target="_blank" rel="noopener">Write it in Content studio</a>.</div>}</div></div>
         <div className="cp-col cp-pv"><div className="cp-ch">Preview</div><div className="cp-sc">{curSum ? <>
           <small className="cp-sub">{TYPES[curSum.type].label} · {curSum.createdBy}</small><h3>{curSum.title}</h3>
           {pv ? paras.map((t, i) => <p key={i}>{t}</p>) : <p className="cp-sub">Loading the preview…</p>}
-          <div className="cp-kv"><span>Written for</span><b>{AUDIENCE[curSum.seg] || curSum.seg}</b></div>
+          <div className="cp-kv"><span>Written for</span><b>{audienceLabel(curSum.audience)}</b></div>
           <div className="cp-kv"><span>Approved claims</span><b>{curSum.cited.length ? curSum.cited.map(id => <span key={id} className="cp-cl">{id}</span>) : 'No product claims'}</b></div>
           <div className="cp-kv"><span>Brand checks</span><b>{curSum.issues ? `${curSum.issues} to fix` : 'All pass'} · Brand v{curSum.brandVersionNo}</b></div>
           <div className="cp-kv"><span>Already in</span><b>{curSum.usage} message{curSum.usage === 1 ? '' : 's'}</b></div>

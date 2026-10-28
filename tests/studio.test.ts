@@ -12,13 +12,19 @@ const piece = (q: string, hint: S.ContentType = 'blog') => S.newPiece(brief(q, h
 const roles = (bs: S.Block[]) => bs.map(b => b.role);
 const text = (bs: S.Block[]) => S.textOf(bs);
 
-test('reading a brief: type, topic, audience, tone and length; too vague to write asks back', () => {
+test('reading a brief: type, topic, reader, tone and length; any topic for any reader, and only a missing topic asks back', () => {
   assert.deepEqual(brief('A short whitepaper on legacy control system modernisation for plant managers'),
-    { type: 'whitepaper', topic: 'legacy control system modernisation', seg: 'Modernisation', tone: pack.voice.preset, length: 'Short', audienceText: 'plant managers', ok: true });
+    { type: 'whitepaper', topic: 'legacy control system modernisation', audience: 'plant managers', tone: pack.voice.preset, length: 'Short', ok: true });
   const b = brief('Write a detailed, formal blog about service contract renewal');
-  assert.deepEqual([b.type, b.seg, b.tone, b.length, b.ok], ['blog', 'Service renewal', 'Formal', 'Long', true]);
+  assert.deepEqual([b.type, b.audience, b.tone, b.length, b.ok], ['blog', '', 'Formal', 'Long', true], 'no reader named: a general reader');
+  // Not bound to the micro-segments (D-45): the reader is whoever the person names.
+  const sales = brief('A blog on how AI can help in sales for AI marketers');
+  assert.deepEqual([sales.topic, sales.audience], ['how AI can help in sales', 'AI marketers']);
+  assert.equal(brief('A blog on what to look for in a CRM').audience, '', 'a "for" inside the topic is not a reader');
   assert.equal(brief('write a blog').ok, false);
-  assert.match(S.briefQuestion('whitepaper'), /^Happy to write a whitepaper\. What should it be about, and who is it for\?/);
+  assert.match(S.briefQuestion('whitepaper'), /^Happy to write a whitepaper\. What should it be about\? For example/);
+  assert.doesNotMatch(S.briefQuestion('blog'), /who is it for/i, 'never asks who it is for');
+  assert.deepEqual([S.audienceLabel(''), S.audienceLabel('AI marketers')], ['General readers', 'AI marketers']);
 });
 
 test('the layout follows the type and length; without an approved source there is no proof section', () => {
@@ -31,14 +37,21 @@ test('the layout follows the type and length; without an approved source there i
   assert.ok(!roles(S.generate({ ...p, sources: [] }, pack)).includes('proof'), 'no approved source, no proof section');
 });
 
-test('a new piece cites only its audience’s approved claims, word for word, and passes the brand checks', () => {
+test('a new piece cites the approved claims that fit its topic, word for word, and passes the brand checks; none fit, no proof', () => {
   const p = piece('A blog on planning a control system migration for plant managers');
-  const expected = pack.claims.filter(c => c.status === 'approved' && c.segments.includes('Modernisation')).map(c => c.id);
-  assert.deepEqual(p.sources, expected);
+  const expected = ['CS-01', 'WB-05', 'CS-04'];
+  assert.deepEqual(p.sources, expected, 'the claims that share the most words with the topic, at most three');
   const chk = S.checksOf(p.blocks, pack, '2026-10-23');
   assert.deepEqual([S.issuesOf(chk), S.citedIn(chk).sort()], [0, [...expected].sort()]);
   assert.match(S.summaryFor(p, chk, 1), /^Done\. I used the blog-post instructions and Brand v1 \(Direct voice\)\. It cites .+ word for word from the approved sources\. All brand checks pass\./);
   assert.equal(p.title, 'Planning a control system migration');
+  assert.match(S.planLine(p, pack, 3), /^I'll write a medium blog on \*\*planning a control system migration\*\* for plant managers, .* It can cite CS-01, CS-04, WB-05, the approved sources that fit the topic\.$/);
+  const sales = piece('A blog on how AI can help in sales for AI marketers');
+  assert.deepEqual([sales.sources, roles(sales.blocks).includes('proof'), sales.audience], [[], false, 'AI marketers']);
+  assert.equal(S.issuesOf(S.checksOf(sales.blocks, pack, '2026-10-23')), 0);
+  assert.match(S.planLine(sales, pack, 3), /for AI marketers, .* No approved source fits the topic, so it makes no product claims\.$/);
+  assert.match(S.planLine({ ...sales, audience: '' }, pack, 3), / for a general reader, /);
+  assert.doesNotMatch(text(sales.blocks), /\b(site|plant|comparable sites)\b/i, 'the rules\' wording fits any topic');
 });
 
 test('tone: formal writes contractions out; warm adds a line to the opening and the close', () => {
@@ -118,6 +131,32 @@ test('changes: shorter keeps cited claims; longer adds the next section; title, 
   assert.match(S.change(p, 'do something clever', pack).reply, /^I can change the piece: make it shorter or longer/);
   const len = S.setLength(p, 'Short', pack);
   assert.deepEqual([len.length, roles(len.blocks).filter(r => !r.startsWith('h:'))], ['Short', S.LAYOUT.blog.Short]);
+  // With AI on, a change that needs new wording is the AI's, on these blocks; the rules' result is the fallback (D-45).
+  assert.deepEqual([longer.ai?.target, longer.ai?.ask], [null, 'add more detail']);
+  assert.equal(sec.ai!.blocks.find(b => b.id === sec.ai!.target)!.role, 'sec', 'the AI writes the new section in place of the placeholder');
+  assert.equal(re.ai!.target, why.id);
+  assert.equal(S.change(p, 'rewrite the intro', pack).ai!.target, p.blocks.find(b => b.role === 'intro')!.id);
+  assert.equal(S.change(p, 'make it shorter', pack).ai, undefined, 'shortening stays with the rules');
+  assert.equal(S.change(p, 'say it reduces downtime by 30%', pack).ai, undefined, 'and so does a refusal');
+});
+
+test('a piece the AI planned: its own sections, the picked claims word for word before the close; only the AI rewords its parts', () => {
+  const plan: S.Plan = { title: 'How AI helps sales teams plan', intro: ['An opening.'], sections: [{ heading: 'Start small', paragraphs: ['One paragraph.'], list: ['One', 'Two'], numbered: true }],
+    close: { heading: 'Next step', text: 'Talk to us.' } };
+  const c = pack.claims.find(x => x.id === 'CS-01')!;
+  const blocks = S.fromPlan('blog', plan, [c]);
+  assert.deepEqual(blocks.map(b => [b.tag, b.role]), [['h1', 'title'], ['p', 'intro'], ['h2', 'h:sec'], ['p', 'sec'], ['ol', 'sec'], ['h2', 'h:proof'], ['p', 'proof'], ['h2', 'h:cta'], ['p', 'cta']]);
+  assert.ok(blocks.filter(b => !b.role.endsWith('proof')).every(b => b.ai) && !blocks.find(b => b.role === 'proof')!.ai, 'the proof is never the AI\'s');
+  assert.equal(blocks.find(b => b.role === 'proof')!.text, S.cited(c));
+  assert.deepEqual(S.fromPlan('whitepaper', plan, []).slice(0, 3).map(b => b.role), ['title', 'h:summary', 'summary'], 'a whitepaper opens with its summary');
+  assert.ok(!S.fromPlan('blog', plan, []).some(b => b.role === 'proof'), 'no claim picked, no proof section');
+  const p: S.Piece = { type: 'blog', topic: 'how AI helps sales teams plan', audience: '', tone: 'Direct', length: 'Medium', sources: ['CS-01'], title: plan.title, blocks };
+  const part = blocks.find(b => b.role === 'sec')!;
+  const re = S.regenerate(p, part.id, pack);
+  assert.deepEqual([re.changed, re.ai?.target], [false, part.id], 'no rules wording for it: only the AI writes another version');
+  const warm = S.setTone(p, 'Warm', pack);
+  assert.equal(warm.blocks.find(b => b.role === 'intro')!.text, 'An opening.', 'the rules never swap their wording in for the AI\'s');
+  assert.equal(warm.ai!.ask, 'Rewrite it in a warm voice.');
 });
 
 test('files: Markdown for the website and the parts of a Word file, escaped, with "Client" in the header', () => {

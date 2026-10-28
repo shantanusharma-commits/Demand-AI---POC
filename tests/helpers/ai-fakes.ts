@@ -69,18 +69,35 @@ export function draftWriter(over?: (ask: ReturnType<typeof draftAsk>, n: number)
   };
 }
 
-/** The parts a piece request asks for, from its format line. */
-export function pieceRoles(req: ModelRequest): { role: string; list: boolean }[] {
-  const fmt = req.system.slice(req.system.lastIndexOf('Format:'));
-  return [...fmt.matchAll(/"(\w+)": (\[|")/g)].filter(m => m[1] !== 'parts').map(m => ({ role: m[1], list: m[2] === '[' }));
+/** What a piece request (content.piece v2) asks for: its word target, the topic, and the approved claim IDs offered. */
+export function pieceAsk(req: ModelRequest): { min: number; max: number; topic: string; claimIds: string[] } {
+  const body = req.messages[0].content, m = body.match(/: (\d+) to (\d+) words in all/);
+  return { min: Number(m?.[1] ?? 300), max: Number(m?.[2] ?? 500), topic: body.match(/^Topic: "(.*)"$/m)?.[1] ?? '',
+    claimIds: [...body.slice(body.indexOf('<claims>')).matchAll(/^([A-Z]+-\d+) \(/gm)].map(x => x[1]) };
 }
-/** A piece writer: plain wording for every part, or `over` for some. */
-export function pieceWriter(over: Record<string, string | string[]> = {}): StepFn {
-  return req => json({ parts: Object.fromEntries(pieceRoles(req).map(({ role, list }) => [role, over[role] ?? (list
-    ? ['What does the site need to keep running?', 'Who owns the decision?', 'When is the next window?']
-    : role === 'title' ? 'Planning the change before the date is set for you' : `A plain paragraph for the ${role} part, with no claims in it.`)])) });
+// A paragraph of plain words that passes every brand and claim check (38 words, no numbers, no claim words).
+const PARA = 'Start with the people who will do the work and agree what matters most to them. Write the answer down, then share it with everyone it affects. A short plan agreed early keeps the decision in your hands.';
+const HEADINGS = ['Where to begin', 'Who to involve', 'What to settle first', 'Where plans slip', 'How to keep it moving', 'What good looks like', 'Questions for your team',
+  'Keeping people informed', 'Choosing the moment', 'Checking progress', 'Learning as you go', 'Making it stick'];
+/** A piece writer: a plan of plain paragraphs that reaches the word target and cites the first approved claim offered;
+ *  `over` replaces any part of it. */
+export function pieceWriter(over: Record<string, unknown> = {}): StepFn {
+  return req => {
+    const a = pieceAsk(req), n = Math.ceil((a.min + a.max) / 2 / 38), count = Math.min(12, Math.max(2, Math.ceil((n - 2) / 5))), per = Math.min(6, Math.max(1, Math.ceil((n - 2) / count)));
+    return json({ title: 'Planning the change before the date is set for you', intro: [PARA],
+      sections: HEADINGS.slice(0, count).map((heading, i) => ({ heading, paragraphs: Array(per).fill(PARA), list: i === 0 ? ['Who owns the decision?', 'What has to keep working?', 'When is the next window?'] : [], numbered: false })),
+      claims: a.claimIds.slice(0, 1), close: { heading: 'Where to start', text: 'A short conversation is a good place to start, with the people it affects.' }, ...over });
+  };
+}
+/** A request reader (content.brief): the topic from "on …" or "about …" and the reader from "for …", or `over`. */
+export function briefReader(over: Record<string, unknown> = {}): StepFn {
+  return req => {
+    const r = req.messages[0].content.match(/<request>\n"(.*)"\n<\/request>/s)?.[1] ?? '';
+    const topic = r.match(/\b(?:on|about)\s+(.+?)(?:\s+for\s+|$)/i)?.[1] ?? '', audience = r.match(/\bfor\s+(.+)$/i)?.[1] ?? '';
+    return json({ topic, audience, tone: null, length: null, ...over });
+  };
 }
 /** The part IDs a rewrite request offers. */
 export const rewriteIds = (req: ModelRequest) => [...req.messages[0].content.matchAll(/^\[([\w-]+)\] \(/gm)].map(m => m[1]);
-/** A rewrite's parts as content.rewrite v2 answers: every offered part, null where it stays as it is. */
+/** A rewrite's parts as content.rewrite v2 and v3 answer: every offered part, null where it stays as it is. */
 export const rewriteParts = (req: ModelRequest, changes: Record<string, string | string[]>) => Object.fromEntries(rewriteIds(req).map(id => [id, changes[id] ?? null]));

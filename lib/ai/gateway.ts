@@ -33,6 +33,9 @@ export type Prompt = {
   reasoning?: ReasoningEffort;
   /** Send to this model whatever the capability's route (the health check tries each). */
   route?: 'main' | 'small';
+  /** How long one attempt may take, for a template that writes a lot (a long piece); AI_TIMEOUT_MS otherwise. Still
+   *  inside the caller's deadline. */
+  timeoutMs?: number;
 };
 
 /** Why a call didn't give a usable answer. The first two never reach a model and are not recorded. */
@@ -268,7 +271,7 @@ export class AiGateway {
     try {
       for (let pass = 0; pass < 2; pass++) {
         const res = await this.send(client, { system: prompt.system, messages, json, schema, maxTokens, temperature: prompt.temperature ?? 0.2,
-          ...(reasoning ? { reasoning } : {}) }, ctx, deadline, tally);
+          ...(reasoning ? { reasoning } : {}) }, ctx, deadline, tally, prompt.timeoutMs);
         if (res.finish === 'content_filter' || res.finish === 'refusal') {
           tally.filtered = res.finish === 'refusal' ? ['refusal'] : res.filtered ?? [];
           breaker.neutral();
@@ -308,7 +311,7 @@ export class AiGateway {
 
   /** One request with its retries. Throws ModelError (or BusyError) when it gives up. */
   private async send(client: ModelClient, req: Omit<Parameters<ModelClient['complete']>[0], 'signal'>, ctx: CallContext, deadline: number,
-    tally: { attempts: number; promptTokens: number; completionTokens: number; providerRequestId: string | null; model: string | null }): Promise<ModelResponse> {
+    tally: { attempts: number; promptTokens: number; completionTokens: number; providerRequestId: string | null; model: string | null }, timeoutMs = this.o.timeoutMs): Promise<ModelResponse> {
     for (let attempt = 0; ; attempt++) {
       const left = deadline - this.o.now();
       if (left < 1000) throw new ModelError('timeout', 'The call ran out of time');
@@ -316,7 +319,7 @@ export class AiGateway {
       let res: ModelResponse;
       try {
         tally.attempts++;
-        res = await this.attempt(client, req, ctx, Math.min(this.o.timeoutMs, deadline - this.o.now()));
+        res = await this.attempt(client, req, ctx, Math.min(timeoutMs, deadline - this.o.now()));
       } catch (err) {
         if (!(err instanceof ModelError) || (err.kind !== 'rate_limited' && err.kind !== 'server') || attempt >= this.o.maxRetries) throw err;
         if (err.retryAfterMs !== undefined && err.retryAfterMs > this.o.maxRetryAfterMs) throw err;

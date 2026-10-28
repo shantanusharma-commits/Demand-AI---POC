@@ -84,7 +84,7 @@ Every request runs in a transaction that sets `app.user_id`, `app.business_unit_
 | Table | Holds |
 |---|---|
 | `brand_versions` †, `brand_drafts`, `brand_documents` | The brand pack per unit (voice, keywords, claims with owners and expiry, frameworks), its unsaved draft, guideline documents |
-| `studio_items`, `studio_messages` † | Content studio pieces (plain-text blocks with a revision guard) and their conversations |
+| `studio_items`, `studio_messages` † | Content studio pieces (plain-text blocks with a revision guard, for the reader the person named or a general reader: D-45) and their conversations |
 | `readouts`, `readout_signoffs` † | The pilot readout per unit and the verdicts per success area and the sponsor's decision (D-27, D-38) |
 
 ### Jobs and AI
