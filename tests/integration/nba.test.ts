@@ -147,7 +147,8 @@ test('5.9 engage-once: an account released in an earlier build is set aside in t
   const next = await as(admin(), s => getNbaRun(s, again.runId));
   const names = new Set(released.rows.map(r => r.name));
   assert.ok(next.engaged.length >= names.size);
-  for (const n of names) assert.ok(next.engaged.some(e => e.name === n && /Sample scored · \d{4}-\d{2}-\d{2}, \d{4}-\d{2}-\d{2}/.test(e.label)), n);
+  // "Build name · date", plus the date it was engaged only when that's another day: the same date isn't said twice.
+  for (const n of names) assert.ok(next.engaged.some(e => e.name === n && /^Sample scored · \d{4}-\d{2}-\d{2}(, \d{4}-\d{2}-\d{2})?$/.test(e.label) && !/(\d{4}-\d{2}-\d{2}), \1$/.test(e.label)), n);
   assert.ok(next.recs.every(r => !names.has(r.account.name)), 'no released account is recommended again');
   assert.equal(again.stats.engagedOnce, next.engaged.length);
 });

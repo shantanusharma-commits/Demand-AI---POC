@@ -158,7 +158,8 @@ export function buildSegments(results: NbaResult[], opts: { min?: number; keys?:
   const accounts = results.filter(r => r.people && (r.signalCount ?? 0) > 0)
     .map(r => ({ r, ranks: segmentRanks(r) }))
     .filter(a => a.ranks.length && (!keep || a.r.people!.some(p => keep.has(a.r.account.id + '|' + p.contact.row))));
-  // 5.9 Engage-once: an account already recommended in this pilot is set aside as a process rule, not a low score.
+  // 5.9 Engage-once: an account already engaged in an earlier build (released, or rejected as already engaged) is set
+  // aside as a process rule, not a low score.
   const engaged = opts.engaged || new Map<string, string>();
   const engagedOnce: Segmentation['engagedOnce'] = [];
   for (let i = accounts.length - 1; i >= 0; i--) {

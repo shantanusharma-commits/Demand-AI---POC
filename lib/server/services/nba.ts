@@ -72,6 +72,9 @@ function queueOrder(recs: Rec[], seed: string): Rec[] {
 
 export type BuildStep = { key: string; sev: '' | 'info' | 'warn'; label: string };
 const pl = (n: number, w: string) => `${n} ${w}${n === 1 ? '' : 's'}`;
+/** Where an account was engaged before: "build name, date". A build's name already ends with the date it was built, so
+ *  that date isn't said twice; labels stored before this rule are tidied the same way when read. */
+const engagedLabel = (label: string) => label.replace(/ · (\d{4}-\d{2}-\d{2}), \1$/, ' · $1');
 
 /* ─── Building ─── */
 
@@ -93,7 +96,7 @@ export async function planNbaBuild(scope: TenantScope, actor: Actor, input: { ha
   const names = [...new Set(results.map(r => r.account.name.toLowerCase()))];
   const { rows: hits } = await scope.tx.execute<{ name: string; run_name: string; engaged_at: string | Date }>(
     sql`select name, run_name, engaged_at from nba_engaged_accounts(${'{' + names.map(n => '"' + n.replace(/["\\]/g, m => '\\' + m) + '"').join(',') + '}'}::text[], ${now.toISOString()}::timestamptz)`);
-  const engaged = new Map(hits.map(e => [e.name, `${e.run_name}, ${new Date(e.engaged_at).toISOString().slice(0, 10)}`]));
+  const engaged = new Map(hits.map(e => [e.name, engagedLabel(`${e.run_name}, ${new Date(e.engaged_at).toISOString().slice(0, 10)}`)]));
   const seg = buildSegments(results, { keys: [...keys.keys()], engaged });
   if (!seg.recs.length && !seg.engagedOnce.length) throw badRequest('No prospects with a live signal to group.');
   return { handoffId, scoringRunId, keys, run, brand, pack, asOf, checkDate, seg };
@@ -306,7 +309,7 @@ export async function getNbaRun(scope: TenantScope, id: string) {
     return m ? { name, theme: m.theme, origin: 'person' as const, by: m.by } : { name, theme: name, origin: 'system' as const, by: null };
   });
   const visibleEngaged = (r.engaged as { name: string; label: string; ownerEmail: string | null }[])
-    .filter(e => scope.ctx.scope === 'all' || (!!e.ownerEmail && scope.ctx.ownerEmails.includes(e.ownerEmail))).map(({ name, label }) => ({ name, label }));
+    .filter(e => scope.ctx.scope === 'all' || (!!e.ownerEmail && scope.ctx.ownerEmails.includes(e.ownerEmail))).map(({ name, label }) => ({ name, label: engagedLabel(label) }));
   return {
     id: r.id, name: r.name, asOf: r.asOf, createdAt: r.createdAt, by: r.by, createdBy: r.createdBy, source: r.scoringName || r.listName, sourceFile: r.sourceFile,
     configVersionNo: r.configVersionNo, brandVersionNo: r.brandVersionNo, engineVersion: r.engineVersion,

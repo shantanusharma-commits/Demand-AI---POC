@@ -41,7 +41,7 @@ export const SEG_TONE: Record<string, string> = { Inquiry: 'tag-blue', Modernisa
 const SHOW_LABEL: Record<string, string> = { proceeded: 'Went ahead on their own', waiting: 'Waiting for a person', meeting: 'Meeting booked', released: 'Released: ready to use', rejected: 'Not accepted' };
 const SEG_STEPS: [string, string, string][] = [
   ['read', 'Read the scored accounts', 'The highest-priority prospects, or the ones chosen in Scoring'],
-  ['engage', 'Engage-once rule', 'Accounts already recommended in this pilot are set aside'],
+  ['engage', 'Engage-once rule', 'Accounts already engaged in an earlier build are set aside'],
   ['group', 'Group by the strongest signal', `At least ${CONFIG.minSegmentAccounts} different accounts each; an account is in one only`],
   ['fallback', 'Join on the next signal', 'Only a micro-segment formed on strongest signals; the rest go to a person'],
   ['except', 'Exception check', 'Accounts that fit no segment go to a person'],
@@ -354,7 +354,9 @@ export function NbaScreen() {
         <span style={sx('font-size:12px;font-weight:600;color:var(--i1)')}>{pl(unseg.length, 'account')}</span><span style={sx('color:var(--i3)')}>›</span>
         {canPause ? <button className="btn btn-ghost btn-sm" onClick={e => { e.stopPropagation(); void pause('', !r.paused['']); }}>{r.paused[''] ? 'Resume' : 'Pause'}</button> : null}</div> : null}
       {r.engaged.length ? <div style={sx('display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surf);border:1px solid var(--border);border-radius:var(--rmd);margin-top:8px')}>
-        <span className="tag tag-grey">Engaged once</span><span style={sx('flex:1;font-size:12px;color:var(--i2)')}>{r.engaged.map(e => e.name).join(', ')}: already recommended in this pilot ({[...new Set(r.engaged.map(e => e.label))].join('; ')}), so not recommended again.</span>
+        <span className="tag tag-grey">Engaged once</span><div style={sx('flex:1;font-size:12px;color:var(--i2)')}>
+          <div style={sx('color:var(--i1);font-weight:600;margin-bottom:2px')}>{pl(accOf(r.recs).length + r.engaged.length, 'account')} in this build: {accOf(r.recs).length} recommended above, {r.engaged.length} set aside here.</div>
+          Already engaged in an earlier build ({[...new Set(r.engaged.map(e => e.label))].join('; ')}), so not recommended again: {r.engaged.map(e => e.name).join(', ')}.</div>
         <span style={sx('font-size:12px;font-weight:600;color:var(--i1)')}>{pl(r.engaged.length, 'account')}</span></div> : null}
     </>;
   }
