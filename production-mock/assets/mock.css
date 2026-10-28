@@ -1202,3 +1202,5 @@ button.cu:hover{border-color:var(--brand-mid);}
 .composer.big .tagpop,.composer.big .menu.up{top:calc(100% + 6px);bottom:auto;}
 @container (max-width:980px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr));}.an-grid{grid-template-columns:1fr;}}
 @container (max-width:560px){.kpis{grid-template-columns:1fr;}.cv-a .btn:not(.pri){display:none;}.cv-a{gap:2px;}.cv-t{white-space:normal;font-size:14.5px;}}
+.tp-search{padding:2px 6px 6px;}
+.tp-search input{width:100%;height:32px;border:1px solid var(--bdk);border-radius:8px;padding:0 10px;font:inherit;font-size:12.5px;}

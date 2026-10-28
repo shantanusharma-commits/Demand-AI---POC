@@ -20,7 +20,8 @@ Open `index.html` in Chrome or Edge (double-click). Fonts need an internet conne
 ## How it works: one continuous chat
 
 - **Left: anchors.** Today, the views (Accounts, Segments, Campaigns, Approvals, Content studio) and recent chats. Help and the profile menu (switch user, product overview, walkthrough, sign out) sit at the top and bottom.
-- **Middle: the chat.** Results come back as tiles (lists with actions). The chat box can start something new, work with any agent (prospecting, scoring, segments & NBA, campaigns, inbox, content, analytics), pick which accounts to work on, tag a task with # (it opens in its own window), add an account with @, and take dictation.
+- **Middle: the chat, always a session.** Clicking an anchor never replaces it: the view opens on the right and what you ask is stored as a chat in Recent chats.
+- **The chat.** Results come back as tiles (lists with actions). The chat box can start something new, work with any agent (prospecting, scoring, segments & NBA, campaigns, inbox, content, analytics), pick which accounts to work on, pick the accounts to work on (your portfolio, all accounts, or one account from a searchable list), tag a task with # (it opens in its own window), and take dictation.
 - **Right: the pane.** Expanding a tile, opening a person, a reply, a campaign or analytics opens it beside the chat, with the two headers aligned. The chat then talks about what's open ("Talking about…"). Back, full screen and close are in the pane header.
 - **AI or person.** ✦ marks what the AI did on its own; a person icon marks what someone did or approved.
 
@@ -31,6 +32,10 @@ The chat box first. Then **What the AI did** since you last logged in, today or 
 ## Objectives, notes, reminders and catch-up
 
 Say what you want to do ("I want to work my red accounts this week") and the chat names itself after the objective and tracks progress (3 of 5). Leave notes ("Note: …") and reminders ("Remind me on Wednesday at 9 to …"). Recent chats show progress and a red ! when a reminder is due. Reopening the chat adds a catch-up tile: what the AI did meanwhile, what you did, and what's left.
+
+## Prospecting from any request, in one session
+
+Ask for any role, place and industry ("find marketing managers in Sydney, Australia in tech"). The chat builds the list (shown on the right), then in the same session: "Score this list", "Route to NBA and NBC" (a trigger shared by 10+ accounts becomes a draft campaign; every other account gets a next best action that goes ahead only if it passes every check), "Assign them to Kenji" (manager), "Send them", "Send an update to Pavan". The new segments and campaign show up in Segments, Campaigns and Approvals too. The chat is named after the list.
 
 ## Replies and analytics, in the chat
 
