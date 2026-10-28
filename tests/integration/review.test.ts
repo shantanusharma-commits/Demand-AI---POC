@@ -6,6 +6,7 @@
 import test, { after, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import type pg from 'pg';
 import { and, eq } from 'drizzle-orm';
 import { serializeConfig } from '../../lib/engine/config.ts';
@@ -24,7 +25,7 @@ import {
 } from '../../lib/server/services/review.ts';
 import { claimUsage } from '../../lib/server/services/brand.ts';
 import { HttpError } from '../../lib/server/http/errors.ts';
-import { freshDatabase, type TestDatabase } from './harness.ts';
+import { freshDatabase, MIGRATIONS_DIR, type TestDatabase } from './harness.ts';
 import { seedBasics, type Basics } from './fixtures.ts';
 import { AS_OF, DATASET } from '../helpers/answer-key.ts';
 
@@ -411,4 +412,54 @@ test('no micro-segment of its own: it joins one of the system’s with an approv
   const head = String(exp.csv).split('\n')[0];
   assert.match(head, /,list_joined,micro_segment_joined\r?$/);
   assert.ok(String(exp.csv).includes(`,${name}`), 'the created micro-segment is in the export');
+});
+
+test('D-46, migration 0045: a message drafted with a citation gets a next version without it; one with an outcome, and earlier versions, stay as they were', async () => {
+  // Messages as they were drafted before D-46: the approved claim, then its citation.
+  const taken: string[] = [];
+  const cited = async () => {
+    const r = await one(`SELECT r.id, r.draft_version, d.draft, d.checks FROM recommendations r JOIN drafts d ON d.recommendation_id = r.id AND d.version = r.draft_version
+      WHERE r.nba_run_id = $1 AND r.status = 'Waiting' AND r.outcome IS NULL AND d.channel = 'Email' AND d.draft->'proof'->>'claim' IS NOT NULL AND NOT (r.id = ANY($2))
+      ORDER BY r.position LIMIT 1`, [runId, taken]);
+    taken.push(r.id);
+    const p = r.draft.proof, cite = `[${p.type}, ${p.year}]`, body = String(r.draft.body).replace(p.claim, `${p.claim} ${cite}`);
+    assert.ok(body.includes(cite));
+    await owner.query(`INSERT INTO drafts (business_unit_id, recommendation_id, version, channel, action, contact_row, draft, checks, confidence, reason, brand_version_id, created_by)
+      SELECT business_unit_id, recommendation_id, version + 1, channel, action, contact_row, $3, checks, confidence, reason, brand_version_id, created_by
+      FROM drafts WHERE recommendation_id = $1 AND version = $2`, [r.id, r.draft_version, { ...r.draft, body }]);
+    await owner.query(`UPDATE recommendations SET draft_version = $2 WHERE id = $1`, [r.id, r.draft_version + 1]);
+    return { id: r.id as string, version: r.draft_version + 1, claim: p.claim as string, cite, body, checks: r.checks };
+  };
+  const waiting = await cited(), answered = await cited();
+  await owner.query(`UPDATE recommendations SET outcome = 'Sent' WHERE id = $1`, [answered.id]);
+  const piece = await one(`INSERT INTO studio_items (business_unit_id, type, title, topic, tone, length, blocks, brand_version_no, created_by, updated_by)
+    VALUES ($1, 'blog', 'Probe', 'migration', 'Direct', 'Short', $2, 1, $3, $3) RETURNING id, rev`,
+    [ids.buA, JSON.stringify([{ v: 0, id: 'p1', tag: 'p', role: 'proof', text: 'One claim. [Case study, 2025] Another claim. [One-pager, 2026]' }]), ids.adminA]);
+
+  const migration = readFileSync(join(MIGRATIONS_DIR, '0045_claims_without_citation.sql'), 'utf8').split('--> statement-breakpoint');
+  const apply = async () => { for (const s of migration) if (s.trim()) await owner.query(s); };
+  const drafts = async () => (await one(`SELECT count(*)::int n FROM drafts`)).n as number;
+  const before = await drafts();
+  await apply();
+  assert.equal(await drafts(), before + 1, 'one new version: the waiting message');
+
+  const d = (await as(admin(), s => itemDetail(s, mgr(), waiting.id))).draft;
+  assert.equal(d.version, waiting.version + 1);
+  assert.equal(d.reason, 'Citation removed from the approved claim (D-46)');
+  assert.equal(d.body, waiting.body.replace(` ${waiting.cite}`, ''));
+  assert.ok(d.body?.includes(waiting.claim));
+  assert.equal(d.words, d.body?.split(/\s+/).filter(Boolean).length);
+  assert.deepEqual((await one(`SELECT checks FROM drafts WHERE recommendation_id = $1 AND version = $2`, [waiting.id, d.version])).checks, waiting.checks);
+  assert.ok((await one(`SELECT draft->>'body' b FROM drafts WHERE recommendation_id = $1 AND version = $2`, [waiting.id, waiting.version])).b.includes(waiting.cite), 'the version before is kept');
+  const sent = await one(`SELECT r.draft_version, d.draft->>'body' b FROM recommendations r JOIN drafts d ON d.recommendation_id = r.id AND d.version = r.draft_version WHERE r.id = $1`, [answered.id]);
+  assert.deepEqual([sent.draft_version, sent.b], [answered.version, answered.body], 'a message with an outcome stays as it went out');
+
+  const p = await one(`SELECT rev, blocks FROM studio_items WHERE id = $1`, [piece.id]);
+  assert.equal(p.blocks[0].text, 'One claim. Another claim.');
+  assert.equal(p.rev, piece.rev + 1);
+
+  // Nothing is left to change the second time.
+  await apply();
+  assert.equal(await drafts(), before + 1);
+  assert.equal((await one(`SELECT rev FROM studio_items WHERE id = $1`, [piece.id])).rev, piece.rev + 1);
 });
