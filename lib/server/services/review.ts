@@ -465,6 +465,9 @@ export async function checkFlagged(scope: TenantScope, actor: Actor, logId: stri
 
 export type LogRow = {
   id: string; seq: number; at: Date; who: string; role: string; recommendationId: string; runId: string; prospect: string; company: string; segment: string;
+  /** The list (build) the item is in, and the micro-segment it is in now: the one the system formed, or the one a
+   *  person picked or created for it (`picked`). '' when it has none. */
+  list: string; joined: string; picked: boolean;
   decision: string; kind: string | null; decisive: boolean; firstPass: boolean | null; reason: string; tags: string[]; action: string; channel: string;
   draftVersion: number | null; openedAt: Date | null; seconds: number | null; queuePosition: number | null; flag: string | null; checked: boolean; linkedTo: string; note: string;
 };
@@ -486,12 +489,15 @@ export async function decisionLogRows(scope: TenantScope, actor: Actor, query: {
     decision: decisionLog.decision, kind: decisionLog.kind, decisive: decisionLog.decisive, firstPass: decisionLog.firstPass, reason: decisionLog.reason, tags: decisionLog.tags,
     action: decisionLog.action, channel: decisionLog.channel, draftVersion: decisionLog.draftVersion, openedAt: decisionLog.openedAt, seconds: decisionLog.seconds,
     queuePosition: decisionLog.queuePosition, flag: decisionLog.flag, checked: checkedSql, linkedTo: linked, note: decisionLog.note,
+    list: nbaRuns.name, formed: recommendations.segment, assigned: recommendations.assignedSegment,
   }).from(decisionLog).leftJoin(users, eq(users.id, decisionLog.createdBy)).leftJoin(recommendations, eq(recommendations.id, decisionLog.recommendationId))
+    .leftJoin(nbaRuns, eq(nbaRuns.id, decisionLog.nbaRunId))
     .where(and(...conds)).orderBy(desc(decisionLog.seq)).limit(limit + 1);
-  const page = rows.slice(0, limit).map(({ rec, contactRow, createdBy, ...r }) => {
+  const page = rows.slice(0, limit).map(({ rec, contactRow, createdBy, formed, assigned, ...r }) => {
     const re = rec as Rec | null;
     const person = re ? ((re.result.people || []).find(p => p.contact.row === contactRow)?.contact ?? re.contact) : null;
-    return { ...r, who: createdBy === SYSTEM_USER_ID ? 'System' : r.who, prospect: person?.name ?? '', company: re?.account.name ?? '' };
+    return { ...r, who: createdBy === SYSTEM_USER_ID ? 'System' : r.who, prospect: person?.name ?? '', company: re?.account.name ?? '',
+      list: r.list ?? '', joined: formed || assigned || '', picked: !formed && !!assigned };
   });
   return { rows: page, next: rows.length > limit ? page[page.length - 1].seq : null };
 }
@@ -502,12 +508,13 @@ const iso = (d: Date | null | undefined) => (d ? new Date(d).toISOString() : '')
  *  through the CSV writer that neutralises formulas (G-052). */
 export async function reviewExport(scope: TenantScope, actor: Actor, kind: 'released-messages' | 'tasks' | 'decision-log'): Promise<{ fileName: string; csv: CsvText; rows: number }> {
   if (kind === 'decision-log') {
-    const out: unknown[][] = [['when', 'who', 'role', 'prospect', 'company', 'micro_segment', 'decision', 'item', 'first_pass', 'reason', 'tags', 'action', 'channel', 'version', 'opened_at', 'seconds', 'queue_position', 'flag', 'checked', 'linked_to', 'note']];
+    const out: unknown[][] = [['when', 'who', 'role', 'prospect', 'company', 'micro_segment', 'decision', 'item', 'first_pass', 'reason', 'tags', 'action', 'channel', 'version', 'opened_at', 'seconds', 'queue_position', 'flag', 'checked', 'linked_to', 'note', 'list_joined', 'micro_segment_joined']];
     let before: number | undefined, total = 0;
     for (;;) {
       const page = await decisionLogRows(scope, actor, { before, limit: 500 });
       for (const l of page.rows) out.push([iso(l.at), l.who, l.role, l.prospect, l.company, l.segment, l.decision, l.kind || '', l.decisive ? (l.firstPass ? 'yes' : 'no') : '',
-        l.reason, l.tags.join('; '), l.action, l.channel, l.draftVersion ?? '', iso(l.openedAt), l.seconds ?? '', l.queuePosition ?? '', l.flag || '', l.flag ? (l.checked ? 'yes' : 'no') : '', l.linkedTo, l.note]);
+        l.reason, l.tags.join('; '), l.action, l.channel, l.draftVersion ?? '', iso(l.openedAt), l.seconds ?? '', l.queuePosition ?? '', l.flag || '', l.flag ? (l.checked ? 'yes' : 'no') : '', l.linkedTo, l.note,
+        l.list, l.joined || 'No micro-segment']);
       total += page.rows.length;
       if (page.next === null) break;
       before = page.next;

@@ -1,7 +1,7 @@
 /* Content studio's writer (D-36; legacy demandai-content.js and 15-content-studio.html): blogs and whitepapers in the
    brand voice, built by rules from the brief and the unit's brand pack. One writer picks the layout for the content
    type and length; the outreach drafts' brand and claim checks run on every piece; a product claim only ever comes
-   from an approved claim, word for word with its citation. Pure functions on a block model shared by the server and
+   from an approved claim, word for word (no citation is added to it). Pure functions on a block model shared by the server and
    the screen. Changes from the original, each deliberate:
    - a piece is a list of blocks of plain text (headings, paragraphs, lists, quotes), never stored HTML: nothing a
      person types can run in another person's browser. Inline bold, italic and links are not ported;
@@ -65,7 +65,8 @@ const newId = () => globalThis.crypto.randomUUID().slice(0, 8);
 const cap = (s: string) => { s = String(s || '').trim(); return s.charAt(0).toUpperCase() + s.slice(1); };
 const lc = (s: string) => { s = String(s || '').trim(); return /^[A-Z][a-z]/.test(s) ? s.charAt(0).toLowerCase() + s.slice(1) : s; };
 const noDot = (s: string) => String(s || '').trim().replace(/[.?!]+$/, '');
-export const cited = (c: Claim) => `${c.claim} [${c.type}, ${c.year}]`;
+/** An approved claim as it goes into a piece: word for word, without a citation (the Content library keeps the source). */
+export const cited = (c: Claim) => c.claim;
 const plain = (b: Block) => (Array.isArray(b.text) ? b.text.join('\n') : b.text);
 
 /* ─── The writer's instructions per type: sections by length, headings, and the words for each part ─── */
@@ -158,7 +159,7 @@ export const ROLE_PURPOSE: Record<string, string> = {
 /** A piece the AI planned (D-45): its own title, opening, sections and close. */
 export type Plan = { title: string; intro: string[]; sections: { heading: string; paragraphs: string[]; list: string[]; numbered: boolean }[]; close: { heading: string; text: string } };
 /** The blocks of a piece the AI planned, each marked as the AI's. The proof is the approved claims it picked, word for
- *  word with their citations, in their own section before the close; a whitepaper opens with its executive summary. */
+ *  word (no citation), in their own section before the close; a whitepaper opens with its executive summary. */
 export function fromPlan(type: ContentType, plan: Plan, claims: Claim[]): Block[] {
   const ai = (tag: BlockTag, role: string, text: string | string[]): Block => ({ id: newId(), tag, role, v: 0, text, ai: true });
   const out: Block[] = [ai('h1', 'title', plan.title)];
@@ -278,10 +279,12 @@ function regenBlock(b: Block, p: Piece, pack: BrandPack, toneOnly = false): Bloc
   const v = toneOnly ? b.v : b.v + 1, g = genBlock(c, b.role, v);
   return { ...b, v, text: g.text, edited: false };
 }
-function shorten(b: Block): Block | null {
+function shorten(b: Block, claims: string[]): Block | null {
   if (Array.isArray(b.text)) return b.text.length <= 2 ? null : { ...b, text: b.text.slice(0, -1), edited: true };
   const s = sentences(b.text); if (s.length < 2) return null;
-  const keep = s.filter(x => /\[[^\]]+, \d{4}\]$/.test(x)), rest = s.filter(x => !keep.includes(x));   // never drop a cited claim
+  // Never drop an approved claim: its words (with an older piece's citation, if it has one).
+  const isClaim = (x: string) => /\[[^\]]+, \d{4}\]$/.test(x) || claims.some(c => c.includes(x.trim()) && x.trim().length > 15);
+  const keep = s.filter(isClaim), rest = s.filter(x => !keep.includes(x));
   return { ...b, text: rest.slice(0, Math.max(1, Math.ceil(rest.length / 2))).concat(keep).join(' '), edited: true };
 }
 function lengthen(b: Block): Block | null {
@@ -347,7 +350,7 @@ export function change(p: Piece, q: string, pack: BrandPack, target?: string | n
   // A request that would add a product claim is checked against the approved sources first.
   const said = q.match(/\b(?:say|claim|mention|add|write|include)\b\s+(?:that\s+)?(.+)/i);
   if (said && CLAIMY.test(said[1]) && !claimFor(said[1], p, pack)) {
-    return { ...same, reply: `I can't add “${said[1].trim()}”. It reads like a product claim and there's no approved source for it. If it's true, add the source to the Content library and I'll cite it word for word.` };
+    return { ...same, reply: `I can't add “${said[1].trim()}”. It reads like a product claim and there's no approved source for it. If it's true, add the source to the Content library and I'll use it word for word.` };
   }
   if (/^(regenerate|rewrite|try again|another version|redo)( this| it)?$/i.test(q.trim()) && el) return regenerate(p, el.id, pack);
   let m: RegExpMatchArray | null;
@@ -386,7 +389,7 @@ export function change(p: Piece, q: string, pack: BrandPack, target?: string | n
       if (el && el.tag === 'p') { blocks = replace(p.blocks, { ...el, text: (el.text as string).trim() + ' ' + cited(c), edited: true }); at = el.id; }
       else if (proof) { blocks = (proof.text as string).includes(c.claim) ? p.blocks : replace(p.blocks, { ...proof, text: (proof.text as string).trim() + ' ' + cited(c), edited: true }); at = proof.id; }
       else { const add: Block[] = [{ id: newId(), tag: 'h2', role: 'h:proof', v: 0, text: HEAD.proof[0] }, { id: newId(), tag: 'p', role: 'proof', v: 0, edited: true, text: cited(c) }]; blocks = beforeClose(p.blocks, add); at = add[1].id; }
-      return { blocks, sources, reply: `Added an approved claim, word for word with its citation: ${c.id} · ${c.title} [${c.type}, ${c.year}].`, select: at, changed: true };
+      return { blocks, sources, reply: `Added an approved claim, word for word: ${c.id} · ${c.title} (${c.type}, ${c.year}).`, select: at, changed: true };
     }
     if (mention) {
       const what = noDot(mention[1]), b = el && el.tag === 'p' ? el : p.blocks.find(x => x.role === 'cta') ?? p.blocks.filter(x => !Array.isArray(x.text)).at(-1);
@@ -399,9 +402,10 @@ export function change(p: Piece, q: string, pack: BrandPack, target?: string | n
   if (/short|concise|\bcut\b|trim|tighten/.test(low)) {
     const targets = el ? [el] : p.blocks.filter(b => b.tag === 'p' || b.tag === 'ul' || b.tag === 'ol');
     let n = 0, blocks = p.blocks;
-    for (const t of targets) { const s = shorten(t); if (s) { blocks = replace(blocks, s); n++; } }
+    const claims = approvedClaims(pack).map(c => c.claim);
+    for (const t of targets) { const s = shorten(t, claims); if (s) { blocks = replace(blocks, s); n++; } }
     if (!n) return { ...same, reply: el ? 'That part is already as short as it can go without losing its point.' : 'Everything is already short. Try a shorter length from the canvas toolbar.' };
-    return { blocks, reply: el ? 'Shortened it. Cited claims are kept as they are.' : `Shortened ${n} part${n > 1 ? 's' : ''}. Cited claims are kept as they are.`, changed: true, select: el?.id };
+    return { blocks, reply: el ? 'Shortened it. Approved claims are kept as they are.' : `Shortened ${n} part${n > 1 ? 's' : ''}. Approved claims are kept as they are.`, changed: true, select: el?.id };
   }
   if (/long|detail|expand|elaborate|\bmore\b/.test(low)) {
     const ai = { blocks: p.blocks, target: el?.id ?? null, ask: q };

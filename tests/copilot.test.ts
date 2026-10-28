@@ -81,16 +81,35 @@ const ITEM: C.ItemFacts = {
 
 test('one item: why, fix, runner-up, confidence, account, contact and more from the rules', () => {
   const t = (q: string) => JSON.stringify(C.itemAnswer(ITEM, q));
-  assert.match(t('Why is it here?'), /couldn't decide it alone: Unsupported claim/);
-  assert.match(t('How do I fix it?'), /\*\*Unsupported claim\*\*: Swap the claim for an approved one/);
-  assert.match(t('How does the runner-up differ?'), /the channel changes from Email to LinkedIn; confidence goes from Low to Medium; it has no approved proof; it passes every check/);
+  assert.match(t('Why is it here?'), /could not decide it on its own:.*it is not one of the approved claims in the Content library/);
+  assert.match(t('How do I fix it?'), /One thing to sort out:.*\*\*Unsupported claim\*\*: A sentence reads like a product claim.*pick \\"Replace with an approved claim\\", or click \\"Remove it\\"/);
+  assert.match(t('How does the runner-up differ?'), /The runner-up is \*\*Invite to a short briefing\*\*: their webinar\..*If you switch, it goes by LinkedIn instead of Email; confidence goes from Low to Medium; it has no approved proof; it passes every check\..*click \\"Use this →\\"/);
   assert.match(t('Why is the confidence what it is?'), /Confidence is \*\*Low\*\*/);
-  assert.match(t('What do we know about this account?'), /\*\*Northwind Refining\*\* · Refining · net-new · Thailand · tier A · deal about USD 420k/);
-  assert.match(t('How do I reach them?'), /email verified, no LinkedIn URL\. The message goes by \*\*Email\*\*/);
-  assert.match(t('How did similar items go?'), /\*\*5 of 6\*\* times \(83%\); early days/);
+  assert.match(t('What do we know about this account?'), /\*\*Northwind Refining\*\* is a refining company in Thailand, and not a customer yet\. Ana is in tier A \(top priority: a strong fit with a recent signal\)\. The first deal is estimated at about USD 420k\./);
+  assert.match(t('How do I reach them?'), /For Ana Reyes we have an email address that is verified and no LinkedIn URL\. The message goes by \*\*Email\*\*: verified, sendable email/);
+  assert.match(t('How did similar items go?'), /in the Modernisation micro-segment, reps agreed with the system's first suggestion \*\*5 of 6\*\* times \(83%\)\. It is early days/);
   assert.match(t('what does the message say?'), /Written by","AI, then the same checks/);
   assert.match(t('who else is at the account?'), /Lim Kok Wai/);
   assert.equal(C.itemAnswer(ITEM, 'tell me a joke'), null);
+});
+
+// The tester's three questions (28 Oct 2026) on an inquiry below deal size: whole sentences, what each term means and
+// the button to press, never "net-new · tier B" or "Second option in the Inquiry library".
+test('Copilot answers in plain words: what is wrong, what it means and what to click', () => {
+  const below: C.ItemFacts = { ...ITEM, who: 'Đức Dang', title: 'Category Manager, MRO', persona: 'None', account: { name: 'Emerald Bay Petroleum', vertical: 'Refining', existingCustomer: false, country: 'Vietnam' },
+    tier: 'B', cats: ['deal'], reasons: ['Below the deal-size threshold: about USD 210k against 250k'], deal: { value: 210000, below: true, basis: 'Revenue band' }, dealThreshold: 250000,
+    options: { recommended: { action: 'Call to follow up on the inquiry', reason: 'Inquiry or RFQ: alarm management', channel: 'Email', proof: 'Legacy migration', ok: true, flags: [], conf: 'Medium' },
+      runnerUp: { action: 'Route the inquiry to the sales owner', reason: 'Second option in the Inquiry library', channel: 'Email', proof: 'Legacy migration', ok: true, flags: [], conf: 'Medium' } },
+    whyNow: 'Inquiry or RFQ (2026-08-20): Enquiry via website on alarm management', signals: [{ type: 'Inquiry or RFQ', date: '2026-08-20', detail: 'Enquiry via website on alarm management', source: 'Web form' }] };
+  const t = (q: string) => JSON.stringify(C.itemAnswer(below, q));
+  assert.match(t('How do I fix it?'), /The first deal is estimated at about USD 210k, below the USD 250k threshold\. If Emerald Bay Petroleum is worth contacting anyway, click \\"It's worth it anyway\\"\. If not, reject it\./);
+  assert.match(t('How does the runner-up differ?'), /it is the system's second choice for prospects who asked a question or for a quote\..*Both go by Email, with the same confidence \(Medium\) and the same checks/);
+  assert.doesNotMatch(t('How does the runner-up differ?'), /library/);
+  const acct = t('What do we know about this account?');
+  assert.match(acct, /is a refining company in Vietnam, and not a customer yet\. Đức is in tier B \(second priority: a good fit with a signal\)\. The first deal is estimated at about USD 210k, below the USD 250k threshold\./);
+  assert.match(acct, /20 Aug 2026/);
+  assert.doesNotMatch(acct, /net-new| · /);
+  assert.match(t('Why now?'), /What made it timely: they sent an inquiry on 20 Aug 2026: Enquiry via website on alarm management\./);
 });
 
 // A file like the testers' P04_duplicates.xlsx: rows 2–7, three people (two of them called Ivan Lo), repeats merged.

@@ -4,7 +4,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { AiGateway } from '../lib/ai/gateway.ts';
-import { assemble, claimsFor, draftPrompt, draftProblems, eligible, writeDraft, type DraftAsk } from '../lib/ai/draft.ts';
+import { assemble, claimsFor, draftPrompt, draftProblems, eligible, NO_CLAIM, topicWords, writeDraft, type DraftAsk } from '../lib/ai/draft.ts';
 import * as E from '../lib/demandai-engine.ts';
 import * as S from '../lib/demandai-sample-data.ts';
 import * as N from '../lib/engine/nba.ts';
@@ -51,12 +51,13 @@ test('the prompt carries the action, the role, the signal, the brief and the cla
   }
 });
 
-test('the server puts the chosen claim in word for word with its citation, in the brand voice; the checks pass', () => {
+test('the server puts the chosen claim in word for word, without a citation, in the brand voice; the checks pass', () => {
   const a = emailAsk(), p = draftPrompt(a);
   const d = assemble(a, { subject: 'about your question', opening: 'Thanks for getting in touch about this.', bridge: 'A short conversation is usually the quickest way to work out what fits your site.',
     ask: 'Would a short call next week help?', claimId: p.claims[0].id }, p.claims, 'call-1');
   const c = p.claims[0];
-  assert.ok(d.body!.includes(`${c.claim} [${c.type}, ${c.year}]`));
+  assert.ok(d.body!.includes(`\n${c.claim}\n`));
+  assert.doesNotMatch(d.body!, /\[[^\]]+, \d{4}\]/, 'no citation');
   assert.match(d.body!, new RegExp(`^${N.VOICE_PRESETS.Direct.greeting.replace('{first}', a.rec.contact.firstName || a.rec.contact.name.split(' ')[0])}`));
   assert.ok(d.body!.endsWith(`${N.VOICE_PRESETS.Direct.closing}\n${pack.voice.signoff}`));
   assert.deepEqual([d.proof?.id, d.ai?.callId, d.channel], [c.id, 'call-1', 'Email']);
@@ -66,14 +67,44 @@ test('the server puts the chosen claim in word for word with its citation, in th
 });
 
 test('an invented claim, a banned word, pricing or an ungrounded fact is a problem', () => {
-  const a = emailAsk(), p = draftPrompt(a);
-  const mk = (bridge: string) => assemble(a, { subject: 'about your question', opening: 'Thanks for getting in touch.', bridge, ask: 'Would a call help?', claimId: p.claims[0].id }, p.claims, '');
-  const probs = (bridge: string) => draftProblems(a, mk(bridge), `x. Thanks for getting in touch. ${bridge} Would a call help?`, p.facts);
+  const a = emailAsk(), p = draftPrompt(a), open = `Thanks for getting in touch about ${topicWords(a).join(' ')}.`;
+  const mk = (bridge: string) => assemble(a, { subject: 'about your question', opening: open, bridge, ask: 'Would a call help?', claimId: p.claims[0].id }, p.claims, '');
+  const probs = (bridge: string) => draftProblems(a, mk(bridge), `x. ${open} ${bridge} Would a call help?`, p.facts);
   assert.deepEqual(probs('It fits how most sites plan this work.'), []);
   assert.ok(probs('Our approach reduces downtime by 30% at sites like yours.').some(x => /reads like a product claim/.test(x)));
   assert.ok(probs('It is a guaranteed way to plan.').some(x => /Banned claim/.test(x)));
   assert.ok(probs('We can offer a discount this quarter.').some(x => /Pricing/.test(x)));
   assert.ok(probs('Your Jakarta site is a good fit.').some(x => /"Jakarta" is not in the signal or the brief/.test(x)));
+});
+
+// Testers (28 Oct 2026): "Thanks for getting in touch about this." for an inquiry on alarm management, with a
+// control-system-migration case study as its proof.
+test('a message is about its signal: the opening names the topic, and a proof that is not about it is left out', async () => {
+  const a = emailAsk(), p = draftPrompt(a), topic = topicWords(a);
+  assert.ok(topic.length, 'the sample signal has a topic');
+  assert.match(p.system, /Never just "this", "your question"/);
+  assert.match(p.system, /choose "none"/);
+  const vague = assemble(a, { subject: 'about your question', opening: 'Thanks for getting in touch about this.', bridge: 'A short call helps.', ask: 'Would a call help?', claimId: p.claims[0].id }, p.claims, '');
+  const said = (opening: string) => draftProblems(a, vague, `about your question. ${opening} A short call helps. Would a call help?`, p.facts, `about your question. ${opening}`);
+  assert.ok(said('Thanks for getting in touch about this.').some(x => /say what their signal is about/.test(x)), 'a vague opening fails');
+  assert.deepEqual(said(`Thanks for getting in touch about ${topic.join(' ')}.`), [], 'naming the topic passes');
+  // As a person writes it: no tracking, no dates as numbers, no job title read back to them.
+  const t0 = topic.join(' '), title = a.rec.contact.jobTitle!;
+  assert.ok(said(`You clicked the email on ${t0}.`).some(x => /click, open or visit/.test(x)));
+  assert.ok(said(`Thanks for asking about ${t0} on ${a.rec.signal.date || '2026-08-20'}.`).some(x => /not as numbers/.test(x)));
+  assert.ok(said(`As ${title}, ${t0} matters to you.`).some(x => /Write to them as "you"/.test(x)));
+  assert.match(p.system, /don't answer it in the message/);
+  // No claim is about the topic: the email goes without a proof line, and it still passes every check.
+  const none = assemble(a, { subject: 'about your question', opening: `Thanks for getting in touch about ${topic[0]}.`, bridge: 'A short call helps.', ask: 'Would a call help?', claimId: NO_CLAIM }, p.claims, '');
+  assert.equal(none.proof, null);
+  assert.ok(!p.claims.some(c => none.body!.includes(c.claim)));
+  assert.match(none.body!, /\n\nWould a call help\?\n\n/);
+  const chk = N.checkDraft(none, pack, checkDate);
+  assert.deepEqual([chk.flags, chk.claims], [[], []]);
+  const vagueModel = new FakeModel([draftWriter(x => ({ subject: 'about your question', opening: 'Thanks for getting in touch about this.', bridge: 'A short call helps.', ask: 'Would a call help?', claimId: x.claimIds[0] })), draftWriter()]);
+  const r = await writeDraft(gateway(vagueModel), CTX, a);
+  assert.equal(r.ok, true);
+  assert.match(vagueModel.requests[1].messages.at(-1)!.content, /say what their signal is about/, 'the regeneration says why');
 });
 
 test('a failing draft gets one regeneration that quotes the failure; failing again, the rules\' draft stands', async () => {
@@ -83,7 +114,7 @@ test('a failing draft gets one regeneration that quotes the failure; failing aga
   assert.equal(r1.ok, true);
   assert.equal(fixed.requests.length, 2);
   assert.match(fixed.requests[1].messages.at(-1)!.content, /reads like a product claim/);
-  if (r1.ok) assert.equal(r1.draft.ai?.template, 'draft.message@2');
+  if (r1.ok) assert.equal(r1.draft.ai?.template, 'draft.message@3');
   const never = new FakeModel([], { otherwise: draftWriter(() => ({ subject: 'best in class', opening: 'Hope you are well.', bridge: 'Best-in-class results!', ask: 'Call?', claimId: 'CS-01' })) });
   const r2 = await writeDraft(gateway(never), CTX, a);
   assert.deepEqual([r2.ok, r2.ok === false && r2.reason, never.requests.length], [false, 'checks_failed', 2]);
@@ -116,7 +147,7 @@ test('a connection note is written without a claim and kept within its length; t
   const fake = new FakeModel([], { otherwise: draftWriter() });
   const r = await writeDraft(gateway(fake), CTX, note);
   assert.equal(r.ok, true);
-  if (r.ok) { assert.match(r.draft.note!, /^Hi \S+, thanks for the interest/); assert.ok(r.draft.note!.length <= E.CONFIG.brand.maxNote); }
+  if (r.ok) { assert.match(r.draft.note!, /^Hi \S+, thanks for the interest in /); assert.ok(r.draft.note!.length <= E.CONFIG.brand.maxNote); }
   assert.deepEqual(draftAsk(fake.requests[0]).claimIds, [], 'no claim is offered for a note');
   const long = new FakeModel([], { otherwise: draftWriter(() => ({ note: 'a '.repeat(150) })) });
   const r2 = await writeDraft(gateway(long), CTX, note);

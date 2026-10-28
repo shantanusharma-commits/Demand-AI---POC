@@ -225,18 +225,17 @@ export function StudioScreen({ initialItem }: { initialItem?: string }) {
           {tile('used', 'In messages', used, 'added by reps to email or LinkedIn', 'var(--brand)')}
         </div>
         {libF ? <div style={sx('display:flex;gap:8px;align-items:center;margin:0 0 10px;font-size:12px;color:var(--i2)')}>Showing <span className="seg-pill-a" role="button" onClick={() => setLibF(null)}>{label[libF] || libF} ✕</span></div> : null}
-        <div className="sv-list"><table className="sv-tbl"><colgroup><col style={sx('width:28%')} /><col style={sx('width:10%')} /><col style={sx('width:16%')} /><col style={sx('width:11%')} /><col style={sx('width:9%')} /><col style={sx('width:11%')} /><col style={sx('width:15%')} /></colgroup>
-          <thead><tr><th>Content</th><th>Type</th><th>Audience</th><th>Brand checks</th><th>In messages</th><th>Saved</th><th /></tr></thead>
-          <tbody>{!items ? <tr><td colSpan={7} className="sv-empty">Loading…</td></tr> : rows.length ? rows.map(x => <tr key={x.id} onClick={() => void openItem(x.id)}>
+        <div className="sv-list"><table className="sv-tbl"><colgroup><col style={sx('width:32%')} /><col style={sx('width:11%')} /><col style={sx('width:18%')} /><col style={sx('width:13%')} /><col style={sx('width:11%')} /><col style={sx('width:15%')} /></colgroup>
+          <thead><tr><th>Content</th><th>Type</th><th>Audience</th><th>Brand checks</th><th>Saved</th><th /></tr></thead>
+          <tbody>{!items ? <tr><td colSpan={6} className="sv-empty">Loading…</td></tr> : rows.length ? rows.map(x => <tr key={x.id} onClick={() => void openItem(x.id)}>
             <td><div className="sv-name"><div className="sv-ic">{TYPES[x.type].ic}</div><div style={sx('min-width:0')}><div className="sv-t" title={x.title}>{x.title}</div><div className="sv-s">{statusTag(x.status)}</div></div></div></td>
             <td><span className="sv-link" onClick={e => { e.stopPropagation(); setLibF(x.type); }}>{TYPES[x.type].label}</span><div className="sv-s">{x.length} · {x.tone}</div></td>
             <td><div className="sv-v">{audienceLabel(x.audience)}</div></td>
             <td>{x.issues ? <span className="tag tag-red">{x.issues} to fix</span> : <span className="tag tag-green">All pass</span>}<div className="sv-s">Brand v{x.brandVersionNo}</div>{x.ai ? <div style={sx('margin-top:4px')}><AiTag confidence={x.ai.confidence} /></div> : null}</td>
-            <td><div className="sv-v">{x.usage}</div><div className="sv-s">message{x.usage === 1 ? '' : 's'}</div></td>
             <td><div className="sv-v">{fmtWhen(x.updatedAt)}</div><div className="sv-s">{x.updatedBy}</div></td>
             <td style={sx('text-align:right;white-space:nowrap')}><button className="btn btn-sec btn-sm" onClick={e => { e.stopPropagation(); void openItem(x.id); }}>Open</button>{' '}
               <a className="btn btn-ghost btn-sm" title="Download as Word" href={`/api/studio/items/${x.id}/docx`} onClick={e => e.stopPropagation()} style={sx('text-decoration:none')}>.docx</a></td>
-          </tr>) : <tr><td colSpan={7} className="sv-empty">{list.length ? 'Nothing matches this filter.' : <>Nothing saved yet. <a href="#" onClick={e => { e.preventDefault(); setTab('new'); }} style={sx('color:var(--brand);font-weight:600')}>Write a blog or whitepaper</a>.</>}</td></tr>}</tbody></table></div>
+          </tr>) : <tr><td colSpan={6} className="sv-empty">{list.length ? 'Nothing matches this filter.' : <>Nothing saved yet. <a href="#" onClick={e => { e.preventDefault(); setTab('new'); }} style={sx('color:var(--brand);font-weight:600')}>Write a blog or whitepaper</a>.</>}</td></tr>}</tbody></table></div>
       </div></div></>;
   }
 
@@ -266,7 +265,7 @@ export function StudioScreen({ initialItem }: { initialItem?: string }) {
           <div className="composer"><div className="box"><textarea aria-label={it ? 'Ask for a change' : 'Reply'} rows={1} value={input} placeholder={tgt ? 'What should change in this part?' : it ? 'Ask for a change…' : 'Reply…'}
             onChange={e => setInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }} />
             <button className="send" aria-label="Send" disabled={!input.trim() || !!busy} onClick={() => send()}>↑</button></div>
-            <div className="sub" style={sx('text-align:center;margin-top:6px;font-size:11px')}>Only approved sources are cited. Every change runs the brand checks.</div></div>
+            <div className="sub" style={sx('text-align:center;margin-top:6px;font-size:11px')}>Only approved claims are used, word for word. Every change runs the brand checks.</div></div>
         </div>
         {it && canvas ? canvasView(it) : null}
       </div></div></>;

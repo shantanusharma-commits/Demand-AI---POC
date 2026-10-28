@@ -197,15 +197,15 @@ function queueData(f: C.QueueFacts, al: Aliases): { data: string; partial: strin
     `Track record (first-time decisions agreeing with the system): ${f.track.n ? `${f.track.a} of ${f.track.n}` : 'none yet'}.`].join('\n'), partial: [q.partial, a.partial].filter((p): p is string => !!p) };
 }
 
-function itemData(f: C.ItemFacts, al: Aliases): { data: string; partial: string[] } {
+export function itemData(f: C.ItemFacts, al: Aliases): { data: string; partial: string[] } {
   const ppl = budget('other people at the account', f.people, BUDGET.people, p => `${al.token(p.name)} (${p.jobTitle || 'no title'}, ${p.persona} persona, reach: ${p.reach})`);
   return { data: [
-    `Account: ${f.account.name} · ${f.account.vertical} · ${f.account.existingCustomer ? 'existing customer' : 'net-new'}${f.account.country ? ` · ${f.account.country}` : ''}${f.tier ? ` · tier ${f.tier}` : ''}`,
+    `Account: ${f.account.name}, ${f.account.vertical ? `a ${f.account.vertical.toLowerCase()} company` : 'a company'}${f.account.country ? ` in ${f.account.country}` : ''}, ${f.account.existingCustomer ? 'already a customer' : 'not a customer yet'}.${f.tier ? ` The contact is in tier ${f.tier}${C.TIER_MEANS[f.tier] ? ` (${C.TIER_MEANS[f.tier]})` : ''}.` : ''}`,
     `Contact: ${al.token(f.who)}, ${f.title || 'no title'}, ${f.persona} persona. Email: ${f.reach.email ? (f.reach.verified ? 'verified' : 'not verified') : 'none'}. LinkedIn: ${f.reach.linkedin ? 'yes' : 'none'}.`,
     ppl.text, `Micro-segment: ${f.segment || 'none'}. Status: ${f.status}${f.spot === 'pending' ? ' (spot-check)' : ''}.`, `Why now: ${f.whyNow}`,
     `Signals: ${f.signals.map(s => `${s.type} ${s.date}: ${s.detail} (source: ${s.source})`).join('; ') || 'none'}`,
     `Recommended action: ${f.options.recommended.action} (${f.options.recommended.channel}, confidence ${f.options.recommended.conf}). Chosen: ${f.action}.`,
-    f.options.runnerUp ? `Runner-up: ${f.options.runnerUp.action} (${f.options.runnerUp.channel}, confidence ${f.options.runnerUp.conf}). Why: ${f.options.runnerUp.reason}` : 'No runner-up.',
+    f.options.runnerUp ? `Runner-up: ${f.options.runnerUp.action} (${f.options.runnerUp.channel}, confidence ${f.options.runnerUp.conf}). Why: ${C.optionWhy(f.options.runnerUp.reason)}.` : 'No runner-up.',
     f.cats.length ? `Why it needs a person: ${f.cats.map(c => R.REASON_CATS[c] || c).join(', ')}. Detail: ${f.reasons.join(' · ') || '—'}` : '',
     f.dueText ? `${f.dueText}.` : '', `Checks: ${f.fourChecks.map(c => `${c.name} ${c.ok ? 'pass' : 'FAIL'}`).join(', ')}.`, `Confidence: ${f.confidence.reason}.`,
     f.deal ? `Estimated deal size: about USD ${Math.round(f.deal.value / 1000)}k (threshold ${Math.round(f.dealThreshold / 1000)}k; basis: ${f.deal.basis}).` : '',

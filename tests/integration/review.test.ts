@@ -398,4 +398,17 @@ test('no micro-segment of its own: it joins one of the system’s with an approv
   await assert.rejects(owner.query(`DELETE FROM custom_segments`), /append-only/);
   const other = await withTenant(app, { userId: ids.repB, businessUnitId: ids.buB, scope: 'all', ownerEmails: [] }, s => s.tx.select().from(customSegments));
   assert.equal(other.length, 0);
+
+  // The decision log says which list each item is in and the micro-segment it joined (testers, 28 Oct 2026): the one a
+  // person created or picked, else the one the system formed. The export carries both.
+  const runName = (await one(`SELECT name FROM nba_runs WHERE id = $1`, [smallRun])).name;
+  const log = (await as(admin(), s => decisionLogRows(s, mgr(), {}))).rows;
+  const mineRows = log.filter(l => l.recommendationId === it0.id);
+  assert.ok(mineRows.length && mineRows.every(l => l.list === runName && l.joined === name && l.picked), JSON.stringify(mineRows.map(l => [l.list, l.joined, l.picked])));
+  const formedRow = log.find(l => l.runId === runId && l.decision !== 'Assigned' && l.joined && !l.picked);
+  if (formedRow) assert.equal(formedRow.joined, (await one(`SELECT segment FROM recommendations WHERE id = $1`, [formedRow.recommendationId])).segment);
+  const exp = await as(admin(), s => reviewExport(s, mgr(), 'decision-log'));
+  const head = String(exp.csv).split('\n')[0];
+  assert.match(head, /,list_joined,micro_segment_joined\r?$/);
+  assert.ok(String(exp.csv).includes(`,${name}`), 'the created micro-segment is in the export');
 });

@@ -161,9 +161,12 @@ export function ReviewScreen() {
     const j = ws.list.indexOf(ws.id) + step;
     if (j >= 0 && j < ws.list.length) void openItem(ws.list[j], ws.list, ws.from);
   }
+  /** The log after a change: what was just decided shows at once, even before the log tab is opened again. */
+  const freshLog = () => { void loadLog(!!log?.flagged).catch(() => { /* the log tab loads it again */ }); };
   /** After a decision: stay while the item still needs this reviewer in the same way, otherwise go to the next one. */
   async function afterDecision(id: string, mode: 'decide' | 'approve', toast: string) {
     const fresh = await loadQueue();
+    freshLog();
     const row = fresh.items.find(r => r.id === id);
     const still = row && (mode === 'approve' ? row.status === 'Awaiting approval' : R.inQueue({ status: row.status as R.RecStatus, spot: row.spot as R.RecState['spot'] }) && !row.hold);
     if (still) { await reloadItem(id); showToast(mode === 'decide' && row.why === 'alternative' ? 'An alternative came back: it is the next thing to decide' : toast); return; }
@@ -239,7 +242,7 @@ export function ReviewScreen() {
   }
   async function fix(body: { kind: 'low' | 'deal' | 'small'; contactRow?: number; segment?: string }) {
     if (!ws?.item) return;
-    if (await call(ws.item.id, 'fixes', body)) { await reloadItem(ws.item.id); void loadQueue(); }
+    if (await call(ws.item.id, 'fixes', body)) { await reloadItem(ws.item.id); void loadQueue(); freshLog(); }
   }
   /** A micro-segment of the reviewer's own for an item the system could not group, with the waiting items they tick. */
   async function createSegment() {
@@ -248,7 +251,7 @@ export function ReviewScreen() {
     if (name.length < 3) { showToast('Give the micro-segment a name of at least 3 characters'); return; }
     if (!await call(id, 'fixes', { kind: 'small', create: { name, also } })) return;
     showToast(also.length ? `Created “${name}” with ${also.length + 1} accounts in it` : `Created “${name}” and put it there`);
-    await reloadItem(id); void loadQueue();
+    await reloadItem(id); void loadQueue(); freshLog();
   }
   function startTeach(id: string, decision: string, rejected: boolean) { setTeach({ id, decision, rejected, tags: [], note: '', held: false }); }
   async function saveTeach() {
@@ -409,21 +412,23 @@ export function ReviewScreen() {
   }
   function logTable(): ReactNode {
     let ls = log?.rows ?? [];
-    if (q) ls = ls.filter(l => `${l.who} ${l.prospect} ${l.company} ${l.decision} ${l.action} ${l.note}`.toLowerCase().includes(q));
+    if (q) ls = ls.filter(l => `${l.who} ${l.prospect} ${l.company} ${l.decision} ${l.action} ${l.note} ${l.list} ${l.joined}`.toLowerCase().includes(q));
     const tone = (d: string) => /^Accepted|^Approved/.test(d) ? 'tag-green' : /^Rejected/.test(d) ? 'tag-red' : /^Outcome/.test(d) ? 'tag-violet' : /^Proceeded/.test(d) ? 'tag-blue' : 'tag-grey';
     const kindLbl: Record<string, string> = { exception: 'Exception', spot: 'Spot-check', alternative: 'Alternative', intervention: 'Intervention' };
-    return <div className="dt-wrap"><table className="dt">
-      <colgroup>{['12%', '12%', '15%', '24%', '19%', '18%'].map((w, i) => <col key={i} style={{ width: w }} />)}</colgroup>
-      <thead><tr><th>When</th><th>Who</th><th>Prospect</th><th>Decision</th><th>Action</th><th>Note</th></tr></thead>
-      <tbody>{!log ? <tr><td colSpan={6} className="dt-empty">Loading…</td></tr> : ls.length ? ls.map(l => <tr key={l.id} className="click" onClick={() => void openItem(l.recommendationId, [l.recommendationId], 'log')}>
+    return <div className="dt-wrap"><table className="dt dt-log">
+      <colgroup>{['11%', '8%', '12%', '17%', '13%', '12%', '15%', '12%'].map((w, i) => <col key={i} style={{ width: w }} />)}</colgroup>
+      <thead><tr><th>When</th><th>Who</th><th>Prospect</th><th>Decision</th><th style={sx('white-space:normal')}>List joined</th><th style={sx('white-space:normal')}>Micro-segment joined</th><th>Action</th><th>Note</th></tr></thead>
+      <tbody>{!log ? <tr><td colSpan={8} className="dt-empty">Loading…</td></tr> : ls.length ? ls.map(l => <tr key={l.id} className="click" onClick={() => void openItem(l.recommendationId, [l.recommendationId], 'log')}>
         <td><span className="val">{fmtDate(l.at)}</span><span className="sub">{timeOf(l.at)}{l.seconds !== null ? ` · ${l.seconds}s` : ''}</span></td>
         <td><span className="val">{l.who}</span><span className="sub">{l.role}</span></td>
         <td><span className="val">{l.prospect}</span><span className="sub">{l.company}</span></td>
         <td className="wrap"><span className={`tag ${tone(l.decision)}`}>{l.decision}</span>{l.decisive ? <span className="sub">{kindLbl[l.kind || ''] || ''}{l.firstPass ? ' · first pass' : ''}{l.queuePosition ? ` · #${l.queuePosition} in queue` : ''}</span> : null}
           {l.flag ? <><span className="sub" style={sx('color:var(--warn)')}>{l.flag}{l.checked ? ' · checked' : ''}</span>{mgr && !l.checked ? <button className="btn btn-ghost btn-sm" style={sx('margin-top:4px')} onClick={e => { e.stopPropagation(); void markChecked(l); }}>Checked, count it</button> : null}</> : null}</td>
+        <td className="wrap"><span className="clamp2" style={sx('font-size:12px;color:var(--i1)')} title={l.list}>{l.list || <span className="muted">—</span>}</span></td>
+        <td className="wrap">{l.joined ? <><span className="clamp2 brk" style={sx('font-size:12px;color:var(--i1)')} title={l.joined}>{l.joined}</span>{l.picked ? <span className="sub">Picked in For Review</span> : null}</> : <span className="muted">No micro-segment</span>}</td>
         <td className="wrap"><span className="clamp2" style={sx('font-size:12px;color:var(--i1)')}>{l.action}</span><span className="sub">{l.channel}{l.linkedTo ? ` · alternative to ${l.linkedTo}` : ''}</span></td>
         <td className="wrap"><span className="clamp2" style={sx('font-size:12px;color:var(--i2)')}>{[l.tags.length ? l.tags.join(', ') : '', l.note].filter(Boolean).join(' · ') || <span className="muted">—</span>}</span></td>
-      </tr>) : <tr><td colSpan={6} className="dt-empty">No decisions yet.</td></tr>}</tbody>
+      </tr>) : <tr><td colSpan={8} className="dt-empty">No decisions yet.</td></tr>}</tbody>
     </table>{log?.next ? <div style={sx('padding:10px 14px;font-size:11.5px;color:var(--i3)')}>Showing the newest 200. Export the decision log for all of it.</div> : null}</div>;
   }
   function listScreen(): ReactNode {
@@ -498,8 +503,12 @@ export function ReviewScreen() {
     const c = it.contact, first = c.firstName || c.name.split(' ')[0];
     const setField = (k: keyof Fields, v: string) => setWs(ww => ww && ww.fields ? { ...ww, fields: { ...ww.fields, [k]: v } } : ww);
     const mainKey: keyof Fields = x.channel === 'Email' ? 'body' : 'note';
+    // A sensitive word in an email's subject: the check reads the subject too, so it is shown there.
+    const subjHit = x.channel === 'Email' ? new RegExp(R.SENSITIVE_RE.source, 'i').exec(f.subject) : null;
     const showMe = (kind: string) => {
       const m = marks.find(z => z[2] === kind), ta = document.getElementById(x.channel === 'Email' ? 'dBody' : 'dNote') as HTMLTextAreaElement | null;
+      const subj = document.getElementById('dSubj') as HTMLInputElement | null;
+      if (!m && kind === 'sensitive' && subjHit && subj) { subj.scrollIntoView({ block: 'center', behavior: 'smooth' }); subj.focus({ preventScroll: true }); subj.setSelectionRange(subjHit.index, subjHit.index + subjHit[0].length); return; }
       if (!m || !ta) return;
       const el = document.querySelector(`#hlBack mark.k-${kind}`); if (el) { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 1400); }
       ta.focus({ preventScroll: true }); ta.setSelectionRange(m[0], m[1]);
@@ -518,13 +527,15 @@ export function ReviewScreen() {
       const cl = it.claims.find(z => z.id === id), u = chk.unsupported[0]; if (!cl || !u) return;
       const i0 = text.indexOf(u.text); if (i0 < 0) return;
       let e = i0 + u.text.length; const cite = text.slice(e).match(/^\s*\[[^\]]+, \d{4}\]/); if (cite) e += cite[0].length;
-      setField(mainKey, text.slice(0, i0) + `${cl.claim} [${cl.type}, ${cl.year}]` + text.slice(e));
+      setField(mainKey, text.slice(0, i0) + cl.claim + text.slice(e));
       showToast('Claim replaced with an approved one. It is saved with your decision.');
     };
     const fixRow = (k: string, title: string, body: ReactNode, acts: ReactNode) => <div key={k} className="fx" data-k={k}><div className="fx-h"><span className="fx-t">{title}</span>
-      <span className="fx-st">{['sensitive', 'claim', 'brand'].includes(k) ? (marks.some(m => m[2] === k) ? <span className="fx-n">{marks.filter(m => m[2] === k).length} in the message</span> : <span className="fx-ok">✓ Gone from the message</span>) : null}</span></div>
+      <span className="fx-st">{['sensitive', 'claim', 'brand'].includes(k) ? (inText(k) ? <span className="fx-n">{marks.filter(m => m[2] === k).length + (k === 'sensitive' && subjHit ? 1 : 0)} in the message</span> : <span className="fx-ok">✓ Gone from the message</span>) : null}</span></div>
       {body ? <div className="fx-d">{body}</div> : null}{acts ? <div className="fx-a">{acts}</div> : null}</div>;
-    const showBtn = (k: string) => <button className="btn btn-ghost btn-sm" onClick={() => showMe(k)}>Show me ↓</button>;
+    // Showing or cutting needs the words to be in the message: once they're gone, the row says so instead.
+    const inBody = (k: string) => marks.some(m => m[2] === k), inText = (k: string) => inBody(k) || (k === 'sensitive' && !!subjHit);
+    const showBtn = (k: string) => inText(k) ? <button className="btn btn-ghost btn-sm" onClick={() => showMe(k)}>Show me ↓</button> : null;
     const deal = it.deal;
     /* No micro-segment: the system's with an approved message and the ones people created (same theme as the message
        first), or a new one of the reviewer's own, which may hold fewer than the system's minimum. */
@@ -561,11 +572,11 @@ export function ReviewScreen() {
         <span className="ws-sub">{same.length ? `Suggested: ${same[0].name}` : `No ${it.prominent} micro-segment yet: create one`}</span></>;
     };
     const fixRows = mode === 'view' ? [] : cats.map(k => {
-      if (k === 'sensitive') return fixRow(k, 'Sensitive content', <>{[...new Set((text.match(new RegExp(R.SENSITIVE_RE.source, 'gi')) || []).map(z => z.toLowerCase()))].map(z => <mark key={z} className="k-sensitive">{z}</mark>)} — highlighted in red in the message. {mode === 'approve' ? 'Keep it, edit it, or send it back.' : 'You can edit it; anything sensitive still goes to the sales manager.'}</>,
-        <>{showBtn(k)}{canEdit ? <button className="btn btn-ghost btn-sm" onClick={() => cut('sensitive')}>Remove that sentence</button> : null}</>);
+      if (k === 'sensitive') return fixRow(k, 'Sensitive content', <>{[...new Set((((subjHit ? f.subject + '\n' : '') + text).match(new RegExp(R.SENSITIVE_RE.source, 'gi')) || []).map(z => z.toLowerCase()))].map(z => <mark key={z} className="k-sensitive">{z}</mark>)} — {inBody(k) ? `highlighted in red in the message${subjHit ? ', and in the subject line' : ''}` : subjHit ? 'in the subject line' : 'highlighted in red in the message'}. {mode === 'approve' ? 'Keep it, edit it, or send it back.' : 'You can edit it; anything sensitive still goes to the sales manager.'}</>,
+        <>{showBtn(k)}{canEdit && inBody(k) ? <button className="btn btn-ghost btn-sm" onClick={() => cut('sensitive')}>Remove that sentence</button> : null}</>);
       if (k === 'claim') return fixRow(k, 'Claim with no source', <><mark className="k-claim">“{chk.unsupported[0]?.text || 'A claim'}”</mark> isn&apos;t an approved claim. Swap it for one that is, or take it out.</>,
         <>{showBtn(k)}{canEdit ? <><select className="fx-sel" value="" onChange={e => { if (e.target.value) replaceClaim(e.target.value); }}><option value="">Replace with an approved claim…</option>{it.claims.map(z => <option key={z.id} value={z.id}>{z.title} ({z.type}, {z.year})</option>)}</select>
-          <button className="btn btn-ghost btn-sm" onClick={() => cut('claim')}>Remove it</button></> : null}</>);
+          {inText(k) ? <button className="btn btn-ghost btn-sm" onClick={() => cut('claim')}>Remove it</button> : null}</> : null}</>);
       if (k === 'brand') return fixRow(k, 'Brand or rule check', <>{chk.flags.filter(z => z.rule !== 'Sensitive term').map(z => z.rule + ': ' + String(z.detail).replace(/"/g, '')).join(' · ') || 'A brand rule'}. <mark className="k-brand">Highlighted</mark> where it is in the text.</>, showBtn(k));
       if (k === 'reach') return fixRow(k, `A way to reach ${first}`, <>No verified email and no LinkedIn URL on file for {c.name}. Add one in <Link href="/prospecting" style={sx('color:var(--brand);font-weight:600')}>Prospecting</Link> (a correction to their row: it is kept and used when the list is rebuilt), and put this on hold meanwhile.</>, null);
       if (k === 'low') {
@@ -589,7 +600,7 @@ export function ReviewScreen() {
           {s.also.map(a => <span key={a} className="tag tag-grey">+ {a}</span>)}<span className={`tag ${b === 'overdue' || b === 'today' ? 'tag-red' : b === 'tomorrow' ? 'tag-amber' : 'tag-grey'}`}>{R.dueLabel(t, now)}</span>
           {st.holdWhy ? <span className="tag tag-grey">On hold: {st.holdWhy}</span> : null}</div>
         <div className="ws-hero-line">{s.line}</div>
-        <div className="ws-hero-call">{mode === 'approve' ? `Approve it, edit it first, send it back to ${(it.owner.name || 'the rep').split(' ')[0]}, or reject it.` : s.call}</div>
+        <div className="ws-hero-call">{mode === 'approve' ? `Approve it, edit it first, send it back to ${it.owner.name ? it.owner.name.split(' ')[0] : 'the rep'}, or reject it.` : s.call}</div>
         {fixRows.length || done.length ? <div className="fxs"><div className="fxs-h">{fixRows.length ? 'How to fix it' : 'Fixed'} {done.length ? <span className="fxs-done">{done.map(k => `✓ ${R.REASON_CATS[k]}`).join(' · ')}</span> : null}</div>{fixRows}</div> : null}
       </div>;
     const A = it.options.recommended, B = it.options.runnerUp;

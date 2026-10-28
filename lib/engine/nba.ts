@@ -267,11 +267,13 @@ export const COLLATERAL: Claim[] = [
 export const BRAND_RULES = {
   banned: ['guarantee', 'guaranteed', 'best-in-class', 'best in class', 'world-class', 'cheapest', 'risk-free', 'no-brainer', '100%'],
   pricing: /(\$\s?\d|\bUSD\b|\bprice|\bpricing\b|\bdiscount|\bfree of charge\b)/i,
-  // A plant incident, security or regulation needs a person's judgement.
-  sensitive: /\b(incident|accident|explosion|fatalit|injur|lawsuit|security|cyber|breach|vulnerab|regulat|compliance|emission)/i,
+  // A plant incident, security or regulation needs a person's judgement. The whole word matches ("cybersecurity"), so
+  // the check and the highlight in For Review find the same words.
+  sensitive: /\b(?:incident|accident|explosion|fatalit|injur|lawsuit|security|cyber|breach|vulnerab|regulat|compliance|emission)\w*/i,
   maxWords: 120,
 };
 const cite = (item: Pick<Claim, 'type' | 'year'>) => `[${item.type}, ${item.year}]`;
+const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 export const VOICE_PRESETS: Record<string, { greeting: string; closing: string; about: string }> = {
   Direct: { greeting: 'Hi {first},', closing: 'Best,', about: "Short sentences, the prospect's own trigger first, one point, one question." },
@@ -366,7 +368,7 @@ function opener(sg: NbaSignal, account: NbaAccount): string {
 export const segmentOfAction = (action: string, rec?: Pick<Rec, 'segment' | 'prominent'>) =>
   Object.keys(CONFIG.segmentLibrary).find(k => CONFIG.segmentLibrary[k].includes(action)) || (rec && (rec.segment || rec.prominent)) || 'Engagement';
 // The evidence behind an action: the prospect's own signal in the action's segment, else the one they were grouped on.
-function evidenceFor(rec: Rec, action: string): NbaSignal {
+export function evidenceFor(rec: Rec, action: string): NbaSignal {
   const seg = segmentOfAction(action, rec);
   const own = rec.person && rec.person.signals.find(sg => segmentOf(sg) === seg);
   return own || rec.signal;
@@ -441,7 +443,7 @@ export function draftFor(rec: Rec, action: string, opts: { asOf?: string; channe
   // 'clean' is the one automatic regeneration after a failed brand or rule check: the opener drops the source wording.
   const ev = evidenceFor(rec, action);
   const open = opener(variant === 'clean' ? { ...ev, detail: '' } : ev, rec.account);
-  const proofs = proofFor(action, rec, opts.asOf, brand), proof = proofs.item, proofLine = proof ? `${proof.claim} ${cite(proof)}` : '';
+  const proofs = proofFor(action, rec, opts.asOf, brand), proof = proofs.item, proofLine = proof ? proof.claim : '';
   const cta = variant === 'tone' || variant === 'alt' ? copy.alt || copy.cta : copy.cta;
   const base = { why: ch.why, proof, noProof: !proof, unreachable: !!ch.unreachable };
   if (!proof) {
@@ -497,18 +499,25 @@ export function checkDraft(d: Partial<Draft>, brand: BrandPack = defaultBrand(),
     if (bw > (vc.maxWords || BRAND_RULES.maxWords)) flags.push({ rule: 'Length', detail: `Body is ${bw} words (limit ${vc.maxWords || BRAND_RULES.maxWords})` });
   }
   if (d.channel === 'LinkedIn' && (d.note || '').length > CONFIG.brand.maxNote) flags.push({ rule: 'Length', detail: `Connection note is ${d.note!.length} characters (limit ${CONFIG.brand.maxNote})` });
-  // Claims: anything citing a source, or that reads like a product claim. A claim is verified only when it is an
-  // approved, unexpired item's claim, word for word, with that item's citation.
-  const sentences = text.split(/\n+/).flatMap(l => l.split(/(?<=[.?!]|\d{4}\])\s+(?!\[)/)).map(s => s.trim()).filter(Boolean);
-  const claimLike = /(\d+\s?%|\b(reduces?|reduced|improves?|improved|increases?|increased|cuts? (downtime|costs?)|savings|uptime|faster|proven|within one|guarantee\w*)\b)/i;
+  // Claims: an approved item's claim, word for word, is verified (up to its expiry). It goes out without a citation; an
+  // older draft's citation after it is still read as part of it. Anything else that cites a source or reads like a
+  // product claim is unsupported.
   const claims: CheckResult['claims'] = [];
+  let rest = text;
+  for (const c of approvedClaims(brand).filter(x => x.claim).sort((a, b) => b.claim.length - a.claim.length)) {
+    const at = new RegExp(`${esc(c.claim)}(?:\\s*${esc(cite(c))})?`, 'g');
+    if (!at.test(rest)) continue;
+    const expired = !!(asOf && c.expiry < asOf);
+    claims.push({ text: c.claim, source: `${c.id} · ${c.title}`, verified: !expired, ...(expired ? { reason: `${c.id} expired on ${c.expiry}` } : {}) });
+    rest = rest.replace(at, '\n');
+  }
+  const sentences = rest.split(/\n+/).flatMap(l => l.split(/(?<=[.?!]|\d{4}\])\s+(?!\[)/)).map(s => s.trim()).filter(Boolean);
+  const claimLike = /(\d+\s?%|\b(reduces?|reduced|improves?|improved|increases?|increased|cuts? (downtime|costs?)|savings|uptime|faster|proven|within one|guarantee\w*)\b)/i;
   for (const s of sentences) {
     const m = s.match(/\[([^\]]+, \d{4})\]\s*$/);
     if (!m && !claimLike.test(s)) continue;
     const bare = s.replace(/\s*\[[^\]]+, \d{4}\]\s*$/, '');
-    const src = approvedClaims(brand).find(c => cite(c) === `[${m ? m[1] : ''}]` && c.claim === bare);
-    const expired = !!(src && asOf && src.expiry < asOf);
-    claims.push({ text: bare, source: src ? `${src.id} · ${src.title}` : '', verified: !!src && !expired, ...(expired ? { reason: `${src!.id} expired on ${src!.expiry}` } : {}) });
+    if (bare) claims.push({ text: bare, source: '', verified: false });
   }
   const seen = new Set<string>();
   const uniq = claims.filter(c => !seen.has(c.text) && !!seen.add(c.text));

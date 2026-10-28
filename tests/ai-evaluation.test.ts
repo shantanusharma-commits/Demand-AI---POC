@@ -44,7 +44,9 @@ test('a classifier that knows the answers meets the target; one that calls every
   assert.match(md, /\| Out-of-ICP accounts classified core \| \d+ \| 0 \|/);
   assert.match(md, /Classification target not met\./);
   assert.equal(oracle.whyNow.worded, oracle.whyNow.asked);
-  assert.equal(oracle.drafts.passing, oracle.drafts.written);
+  // The evaluation's own target: every AI draft passes, or carries only the sensitive flag the rules' draft has too (a
+  // draft that names its signal's topic names a sensitive one when the signal is about security).
+  assert.equal(oracle.drafts.passing + oracle.drafts.sensitive, oracle.drafts.written);
 });
 
 test('a draft whose only flag is the sensitive term the rules\' draft also has is counted apart, not as failing', async () => {

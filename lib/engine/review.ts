@@ -8,7 +8,7 @@
    - due dates are worked out where they are shown (the browser's time zone), from when the item reached For Review. */
 import { CONFIG, clean, lowerFirst } from '../demandai-engine.ts';
 import {
-  allowedChannels, briefFor, callScript, draftFor, estimateDealSize, type BrandPack, type CheckResult, type Draft, type Rec,
+  allowedChannels, BRAND_RULES, briefFor, callScript, draftFor, estimateDealSize, type BrandPack, type CheckResult, type Draft, type Rec,
 } from './nba.ts';
 
 export const SEG_MEANS: Record<string, string> = {
@@ -176,7 +176,8 @@ export function statusLabel(st: Pick<RecState, 'status' | 'spot' | 'released'> &
 }
 
 /* Why it needs you, in plain words: what is stuck, and the call the reviewer has to make. */
-export const SENSITIVE_RE = /\b(incident|accident|explosion|fatalit\w*|injur\w*|lawsuit|security|cyber|breach\w*|vulnerab\w*|regulat\w*|compliance|emission\w*)\b/i;
+/** The brand check's own rule: the words it flags are the words For Review highlights and offers to remove. */
+export const SENSITIVE_RE = BRAND_RULES.sensitive;
 const firstOf = (c: { firstName?: string; name: string }) => (c.firstName || String(c.name || '').split(' ')[0] || 'them');
 export type Stuck = { cat: string; label: string; line: string; call: string; also: string[]; missing: string };
 export function stuck(r: Rec, st: RecState, draft: Draft, chk: CheckResult, cats: string[]): Stuck {

@@ -176,12 +176,14 @@ test('no recommendation is sendable to someone who cannot be contacted (G-007)',
 });
 
 // legacy engine.test.js:251
-test('drafts cite one approved proof point and pass the brand and claim checks', () => {
+// Since 28 Oct 2026 the approved claim goes in word for word without its citation ("[Webinar recording, 2026]").
+test('drafts carry one approved proof point, word for word with no citation, and pass the brand and claim checks', () => {
   const r = sampleRecs();
   const rec = r.recs.find(x => x.contact.name === 'Aditi Rao')!;
   const d = N.draftFor(rec, E.CONFIG.segmentLibrary.Engagement[0], { asOf: S.SAMPLE_AS_OF });
   assert.equal(d.channel, 'Email');
-  assert.match(d.body!, /\[Webinar recording, 2026\]/);
+  assert.ok(d.body!.includes(N.COLLATERAL.find(c => c.id === 'WB-05')!.claim));
+  assert.doesNotMatch(d.body!, /\[[^\]]+, \d{4}\]/);
   const chk = N.checkDraft(d);
   assert.deepEqual([chk.flags.length, chk.claims.length, chk.unsupported.length], [0, 1, 0]);
   assert.match(N.confidenceFor(rec, d, chk).reason, /1 of 1 claim verified, no open flags/);
@@ -255,7 +257,7 @@ test('a published brand pack changes the drafts and the checks', () => {
   const draft = N.draftFor(rec, rec.action, { asOf: S.SAMPLE_AS_OF, brand: v2 });
   assert.match(draft.body!, /^Dear Aditi,/);
   assert.match(draft.body!, /Kind regards,\nClient Sales$/);
-  assert.doesNotMatch(draft.body!, /Webinar recording/);   // the withdrawn claim is no longer cited
+  assert.ok(!draft.body!.includes(N.COLLATERAL.find(c => c.id === 'WB-05')!.claim));   // the withdrawn claim is no longer used
   const flags = N.checkDraft({ ...draft, body: draft.body!.replace('Kind regards', 'Great synergy with Rivalco! Kind regards') }, v2).flags.map(f => f.rule);
   assert.ok(flags.includes('Banned claim') && flags.includes('Competitor name') && flags.includes('Tone of voice'));
   assert.equal(N.checkDraft({ channel: 'Email', subject: 'hello', body: 'Compared with Rivalco. Worth a chat?' }).flags.length, 0, 'the starting pack has no competitors');

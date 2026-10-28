@@ -379,6 +379,10 @@ button.ftab{background:none;border-top:0;border-left:0;border-right:0;font-famil
 .dt th.num,.dt td.num{text-align:right;}
 .dt td.num{font-family:var(--fm);font-variant-numeric:tabular-nums;}
 .dt td.wrap{white-space:normal;}
+/* The decision log has eight columns: tighter sides, and a long micro-segment name wraps instead of being cut. */
+.dt.dt-log{min-width:820px;}
+.dt.dt-log th,.dt.dt-log td{padding-left:10px;padding-right:10px;}
+.dt.dt-log .brk{overflow-wrap:anywhere;}
 .dt .dt-main{color:var(--i1);font-weight:600;overflow:hidden;text-overflow:ellipsis;}
 .dt .val{color:var(--i1);overflow:hidden;text-overflow:ellipsis;}
 .dt .sub{display:block;font-size:11px;color:var(--i3);margin-top:2px;overflow:hidden;text-overflow:ellipsis;}

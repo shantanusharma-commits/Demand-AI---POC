@@ -130,3 +130,32 @@ test('a booked meeting brings a call script built from what was sent, why now an
   assert.match(s.ask, /^Close on a next step: .*, with a date in the next two weeks\.$/);
   assert.ok(E.CONFIG.reviewDue.sensitive === 0 && E.CONFIG.spotCheckShare === 0.2);
 });
+
+// Testers (28 Oct 2026): "Show me" and "Remove that sentence" did nothing on a message about "cybersecurity": the
+// check matched "cyber" at the start of the word, the highlight wanted "cyber" as a whole word, so nothing was found.
+test('the sensitive words For Review highlights are the ones the check flags, as whole words', () => {
+  assert.equal(R.SENSITIVE_RE, N.BRAND_RULES.sensitive, 'one rule');
+  const body = 'Thanks for joining our session on cybersecurity for refinery control systems. Happy to go one level deeper.';
+  assert.ok(N.checkDraft({ channel: 'Email', subject: 'after the session', body }).flags.some(f => f.rule === 'Sensitive term'));
+  assert.deepEqual(body.match(new RegExp(R.SENSITIVE_RE.source, 'gi')), ['cybersecurity']);
+  assert.deepEqual('An incident, new regulations and emissions.'.match(new RegExp(R.SENSITIVE_RE.source, 'gi')), ['incident', 'regulations', 'emissions']);
+  assert.equal(R.SENSITIVE_RE.test('Secure your site'), false, '"secure" is not "security"');
+  const r = R.stuck(recs()[0], st(), { channel: 'Email', subject: 'hi', body, why: '', proof: null, noProof: false, unreachable: false } as N.Draft,
+    N.checkDraft({ channel: 'Email', subject: 'hi', body }), ['sensitive']);
+  assert.match(r.line, /mentions “cybersecurity”/);
+});
+
+// Since 28 Oct 2026 an approved claim goes out word for word without a citation; older drafts keep theirs.
+test('an approved claim is verified word for word with no citation; an old citation is still read; anything else is unsupported', () => {
+  const c = N.COLLATERAL.find(x => x.id === 'CS-01')!, wrap = (mid: string) => ({ channel: 'Email', subject: 'your question', body: `Hi Pat,\n\nThanks for asking.\n\n${mid}\n\nWorth a call?\n\nBest,\nClient Team` });
+  const plain = N.checkDraft(wrap(c.claim), brand, S.SAMPLE_AS_OF);
+  assert.deepEqual([plain.claims.length, plain.unsupported.length, plain.claims[0].source], [1, 0, `${c.id} · ${c.title}`]);
+  const old = N.checkDraft(wrap(`${c.claim} [${c.type}, ${c.year}]`), brand, S.SAMPLE_AS_OF);
+  assert.deepEqual([old.claims.length, old.unsupported.length], [1, 0], 'the citation is part of the claim, not a claim of its own');
+  const expired = N.checkDraft(wrap(c.claim), brand, '2099-01-01');
+  assert.match(expired.unsupported[0].reason!, /expired on/);
+  const made = N.checkDraft(wrap('Our platform cuts downtime by 30%.'), brand, S.SAMPLE_AS_OF);
+  assert.deepEqual(made.unsupported.map(u => u.text), ['Our platform cuts downtime by 30%.']);
+  const cited = N.checkDraft(wrap('A refinery did well. [Case study, 2025]'), brand, S.SAMPLE_AS_OF);
+  assert.deepEqual(cited.unsupported.map(u => u.text), ['A refinery did well.'], 'a citation on words that are not an approved claim');
+});

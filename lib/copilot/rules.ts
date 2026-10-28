@@ -3,7 +3,7 @@
 // functions over the facts the server loads for the caller (owner-scoped as everywhere). A question these don't
 // match returns null and may go to the model. Copilot reads; people decide: nothing here changes data, and a request
 // to approve goes to an Autopilot plan the person confirms.
-import { REASON_CATS, REJECT, SEG_MEANS } from '../engine/review.ts';
+import { REASON_CATS, REJECT, SEG_MEANS, SENSITIVE_RE } from '../engine/review.ts';
 import type { AutopilotPlan, CopilotBlock } from './types.ts';
 
 export type TR = { n: number; a: number; pct: number | null; early: boolean };
@@ -170,87 +170,155 @@ export type ItemFacts = {
   dueText: string; signals: { type: string; date: string; detail: string; source: string }[]; manager: boolean;
 };
 
-const HOW: Record<string, string> = {
-  sensitive: 'Check the red highlights in the message: keep, edit or remove them. A manager still approves it.', claim: 'Swap the claim for an approved one, or remove it.',
-  low: 'Confirm the contact is the right person, or switch to someone else at the account.', reach: 'Add a verified email or a LinkedIn URL in Prospecting (a correction); it is saved everywhere the contact appears.',
-  small: 'Pick the micro-segment to release it into.', deal: 'Decide whether it is worth it anyway.', brand: 'Edit the highlighted words.', spot: 'Rate it: approve if you would have sent it, reject if not.',
-  alternative: 'Use this alternative, or reject it to close the account for the pilot.', sentback: 'Change what the manager asked, then approve again.', intervention: 'Edit or reject it: you stepped in on it.',
-};
+/* Answers a rep reads at a glance: whole sentences in plain words, what a term means the first time it comes up, and the
+   button to press. Testers found "Below deal size: Decide whether it is worth it anyway" and "net-new · tier B" hard
+   to act on (28 Oct 2026). */
+const usd = (n: number) => `USD ${Math.round(n / 1000)}k`;
+const firstOf = (who: string) => who.split(' ')[0] || who;
+const lower = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
+const quoted = (xs: string[]) => xs.map(x => `"${x}"`).join(', ');
+const dateOf = (d: string) => { const t = Date.parse(d); return Number.isNaN(t) ? d : new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }); };
+export const TIER_MEANS: Record<string, string> = { A: 'top priority: a strong fit with a recent signal', B: 'second priority: a good fit with a signal', C: 'lower priority: a weaker fit or an older signal',
+  'Watch list': 'a good fit with no recent signal yet' };
+/** Who a micro-segment's prospects are, to finish "prospects …". */
+const SEG_WHO: Record<string, string> = { Inquiry: 'who asked a question or for a quote', Modernisation: 'whose installed system is nearing end of support',
+  'Service renewal': 'whose service contract is coming up for renewal', Project: 'with a capital project under way', Leadership: 'with a new leader in a buying role',
+  Engagement: 'who engaged with our content or events' };
+/** The engine's reason for an option, in plain words. */
+export function optionWhy(reason: string): string {
+  const lib = reason.match(/^Second option in the (.+) library$/);
+  if (lib) return `it is the system's second choice for prospects ${SEG_WHO[lib[1]] || `in ${lib[1]}`}`;
+  if (/^Second option for its strongest signal$/.test(reason)) return "it is the system's second choice for this prospect's strongest signal";
+  return lower(String(reason || 'it is the other option').replace(/^[^:]{3,40}:\s*/, ''));
+}
+const sensitiveWords = (lines: string[]) => [...new Set(lines.flatMap(l => l.match(new RegExp(SENSITIVE_RE.source, 'gi')) ?? []).map(w => w.toLowerCase()))];
+const SIGNAL_SAYS: Record<string, string> = { 'Inquiry or RFQ': 'they sent an inquiry', 'Installed system near end of support': 'their installed system is nearing end of support',
+  'Service contract renewal': 'their service contract is coming up for renewal', 'Capital project': 'a capital project was announced', 'Leadership change': 'a new leader took up the role',
+  'Webinar attended': 'they attended a webinar', 'Webinar registered': 'they registered for a webinar', 'Content download': 'they downloaded our content', 'Email clicked': 'they clicked a link in our email' };
+/** Why the signal makes it timely, as a sentence: "What made it timely: they attended a webinar on 17 Oct 2026: Cybersecurity …". */
+function whyNowLine(f: ItemFacts): string {
+  const s = f.signals.find(x => f.whyNow.includes(x.type)) ?? f.signals[0];
+  if (!s) return `What made it timely: ${f.whyNow}.`;
+  return `What made it timely: ${SIGNAL_SAYS[s.type] || lower(s.type)}${s.date ? ` on ${dateOf(s.date)}` : ''}${s.detail ? `: ${s.detail.replace(/\.$/, '')}` : ''}.`;
+}
+
+/** For each reason an item needs a person: what is wrong, in plain words, and what to do about it on the screen. */
+function reasonOf(f: ItemFacts, c: string): { what: string; todo: string } {
+  const first = firstOf(f.who), words = sensitiveWords(f.sensitiveLines);
+  switch (c) {
+    case 'sensitive': return { what: `The message mentions ${words.length ? quoted(words) : 'a sensitive topic'}. A plant incident, security or regulation always needs a person's judgement.`,
+      todo: `Read the red highlights in the message and keep, edit or remove them ("Remove that sentence" takes the whole sentence out). ${f.manager ? 'Then approve it.' : 'The sales manager still approves it before it goes out.'}` };
+    case 'claim': return { what: 'A sentence reads like a product claim, but it is not one of the approved claims in the Content library.',
+      todo: 'Under "How to fix it", pick "Replace with an approved claim", or click "Remove it".' };
+    case 'low': return { what: `Nobody at ${f.account.name} is in the primary persona (the roles the system contacts first). ${first} is ${f.title || 'in another role'}.`,
+      todo: `If ${first} is still the right person, click "Yes, ${first} is the right person". If not, switch to someone else listed there.` };
+    case 'reach': return { what: `There is no verified email and no LinkedIn URL for ${f.who}.`, todo: 'Add one in Prospecting (it is kept when the list is rebuilt), and put this item on hold until then.' };
+    case 'small': return { what: 'The system could not put it in a micro-segment: fewer than 3 accounts share its kind of signal.',
+      todo: 'Under "How to fix it", pick a micro-segment from the list, or create a new one.' };
+    case 'deal': return { what: f.deal ? `The first deal is estimated at about ${usd(f.deal.value)}, below the ${usd(f.dealThreshold)} threshold.` : 'The deal looks below the size threshold.',
+      todo: `If ${f.account.name} is worth contacting anyway, click "It's worth it anyway". If not, reject it.` };
+    case 'brand': { const rules = f.flags.filter(x => x !== 'Sensitive term').map(x => x.toLowerCase());
+      return { what: `The message breaks a brand rule${rules.length ? `: ${rules.join(', ')}` : ''}.`, todo: 'Edit the highlighted words in the message.' }; }
+    case 'spot': return { what: 'It passed every check and went ahead on its own. It was picked at random for this week\'s spot-check.', todo: 'Approve it if you would have sent it; reject it if not.' };
+    case 'alternative': return { what: 'You rejected the first suggestion, so this is the one alternative.', todo: 'Approve it if it fits. Rejecting it closes the account for the pilot.' };
+    case 'sentback': { const n = f.history.find(h => /sent back/i.test(h.decision))?.note;
+      return { what: `The sales manager sent it back${n ? `: "${n}"` : ''}.`, todo: 'Make that change in the message, then approve it again.' }; }
+    case 'intervention': return { what: 'You stepped in after it went ahead on its own.', todo: 'Edit it, or reject it.' };
+    default: return { what: 'The system could not decide it on its own.', todo: 'Approve it, change it, or reject it.' };
+  }
+}
 
 export function itemAnswer(f: ItemFacts, text: string): CopilotBlock[] | null {
   const t = text.toLowerCase();
   const is = (re: RegExp) => re.test(t);
-  if (is(/spot.?check|why was it picked/)) return [P(f.spot === 'pending' ? 'It passed every check and went ahead on its own; it was picked at random for this week\'s spot-check, so a person rates it.' : 'It is not a spot-check.')];
+  const first = firstOf(f.who);
+  if (is(/spot.?check|why was it picked/)) return [P(f.spot === 'pending' ? 'It passed every check and went ahead on its own. It was picked at random for this week\'s spot-check, so a person rates it: approve it if you would have sent it, reject it if not.' : 'It is not a spot-check.')];
   if (is(/rejected before|manager (say|said|want)|sent back|what did .* say/)) {
     const h = f.history.filter(x => /reject|sent back|send back/i.test(x.decision));
-    return [h.length ? { t: 'list', items: h.slice(0, 5).map(x => `${x.decision} · ${x.who}${x.note ? `: ${x.note}` : ''}`) } : P('Nobody has rejected it or sent it back.')];
+    return [h.length ? { t: 'list', items: h.slice(0, 5).map(x => `${x.decision}, by ${x.who}${x.note ? `: "${x.note}"` : ''}`) } : P('Nobody has rejected it or sent it back.')];
   }
   if (is(/sensitiv|incident|security|cyber|which (word|part|bit)|what.*(flag|highlight)/)) {
-    return f.sensitiveLines.length ? [P('Lines that mention a sensitive topic:'), { t: 'list', items: f.sensitiveLines.slice(0, 5) }, NOTE('A plant incident, security or regulation needs a person, so it never goes out on its own.')]
-      : [P(f.cats.includes('sensitive') ? 'The signal behind it touches a sensitive topic, even though the message does not name it.' : 'Nothing in the message reads as sensitive.')];
+    const words = sensitiveWords(f.sensitiveLines);
+    return f.sensitiveLines.length ? [P(`The message mentions ${quoted(words)}, which counts as a sensitive topic. These sentences have it:`), { t: 'list', items: f.sensitiveLines.slice(0, 5) },
+      NOTE('A plant incident, security or regulation always needs a person, so it never goes out on its own. Edit or remove the red highlights, or keep them; the sales manager approves it before it goes out.')]
+      : [P(f.cats.includes('sensitive') ? 'The message no longer has a sensitive word in it. It still waits for the sales manager, who approves it before it goes out.' : 'Nothing in the message reads as sensitive.')];
   }
-  if (is(/approved claim|claims? (fit|instead)|replace .*claim/)) return [f.claims.length ? { t: 'list', items: f.claims.map(c => `${c.id} · ${c.title}`) } : P('No approved claim fits this case yet. Add one in the Content library.')];
-  if (is(/claim|source|unsourced|cite|citation/)) return [P(f.claimsTotal ? `${f.claimsTotal - f.claimsUnsupported} of ${f.claimsTotal} claims in the message have an approved source.${f.claimsUnsupported ? ' Swap the unsupported one for an approved claim, or remove it.' : ''}` : 'The message makes no product claim.')];
+  if (is(/approved claim|claims? (fit|instead)|replace .*claim/)) return [f.claims.length ? P('These approved claims fit this case. Pick one under "How to fix it" to put it in word for word:') : P('No approved claim fits this case yet. Marketing can add one in the Content library.'),
+    ...(f.claims.length ? [{ t: 'list' as const, items: f.claims.map(c => `${c.title} (${c.id})`) }] : [])];
+  if (is(/claim|source|unsourced|cite|citation/)) return [P(f.claimsTotal ? `${f.claimsTotal - f.claimsUnsupported} of the ${pl(f.claimsTotal, 'claim')} in the message ${f.claimsTotal === 1 ? 'is' : 'are'} approved, word for word.${f.claimsUnsupported ? ' Replace the other with an approved claim, or remove it.' : ''}` : 'The message makes no product claim.')];
   if (is(/e-?mail|linkedin|phone|reach (them|him|her)|contact (detail|info)|how (do|can|should) i (reach|contact)/)) {
-    return [P(`${f.who}: ${f.reach.email ? `email ${f.reach.verified ? 'verified' : 'not verified'}` : 'no email'}, ${f.reach.linkedin ? 'a LinkedIn URL' : 'no LinkedIn URL'}. The message goes by **${f.channel}**: ${f.channelWhy}`)];
+    const has = [f.reach.email ? `an email address${f.reach.verified ? ' that is verified' : ' that is not verified yet'}` : 'no email address', f.reach.linkedin ? 'a LinkedIn URL' : 'no LinkedIn URL'];
+    return [P(`For ${f.who} we have ${has.join(' and ')}. The message goes by **${f.channel}**: ${lower(f.channelWhy)}`)];
   }
   if (is(/who else|other (contact|people|person)|someone else|colleague|anyone else|right person|decision maker/)) {
-    return [f.people.length ? { t: 'table', head: ['Person', 'Role', 'Persona', 'Reach'], rows: f.people.slice(0, 8).map(p => [p.name, p.jobTitle, p.persona, p.reach]) } : P(`Nobody else at ${f.account.name} is in the list.`)];
+    return [f.people.length ? P(`Other people at ${f.account.name} in the list:`) : P(`Nobody else at ${f.account.name} is in the list.`),
+      ...(f.people.length ? [{ t: 'table' as const, head: ['Person', 'Role', 'Persona', 'Reach'], rows: f.people.slice(0, 8).map(p => [p.name, p.jobTitle, p.persona, p.reach]) }] : [])];
   }
   if (is(/\bfix|correct|resolve|clear (it|this)|what (do|should) i (need to )?do|next step|how do i get/)) {
-    if (f.cats[0] === 'fixed') return [P('Everything that held it back is fixed. Approve it to release it, or reject it.')];
-    return [P('Here is what to do, in order:'), { t: 'list', ordered: true, items: f.cats.map(c => `**${REASON_CATS[c] || c}**: ${HOW[c] || 'Approve, change or reject it.'}`) }];
+    if (f.cats[0] === 'fixed') return [P('Everything that held it back is fixed. Click **Approve** to release it, or reject it.')];
+    const rs = f.cats.map(c => ({ c, ...reasonOf(f, c) }));
+    return [P(rs.length === 1 ? 'One thing to sort out:' : `${rs.length} things to sort out, in this order:`),
+      { t: 'list', ordered: rs.length > 1, items: rs.map(r => `**${REASON_CATS[r.c] || r.c}**: ${r.what} ${r.todo}`) },
+      NOTE(f.status === 'Awaiting approval' ? 'Then click **Approve** at the bottom right, or send it back to the rep.' : 'Then click **Approve** at the bottom right. Nothing is sent by DemandAI: the owner sends it from their own mailbox or LinkedIn.')];
   }
   if (is(/confiden|how sure|certain|why (low|medium|high)/)) {
     const w = f.signalWeight;
-    return [P(`Confidence is **${f.confidence.level}**. It is worked out from four things:`), { t: 'checks', checks: [
-      { name: f.claimsTotal ? `${f.claimsTotal - f.claimsUnsupported} of ${f.claimsTotal} claims have an approved source` : 'No product claims in the message', ok: !f.claimsUnsupported },
-      { name: f.flags.length ? `${pl(f.flags.length, 'brand or rule flag')} open` : 'No brand or rule flags', ok: !f.flags.length },
-      { name: `${w >= 60 ? 'Strong' : w >= 30 ? 'Moderate' : 'Weak'} signal (weight ${Math.round(w)})`, ok: w >= 30 },
-      { name: f.primaryPersona ? 'Someone in the primary persona' : `No one in the primary persona at ${f.account.name}`, ok: f.primaryPersona }] }];
+    return [P(`Confidence is **${f.confidence.level}**. It comes from four things; each ✗ lowers it:`), { t: 'checks', checks: [
+      { name: f.claimsTotal ? `${f.claimsTotal - f.claimsUnsupported} of ${f.claimsTotal} claims are approved` : 'The message makes no product claim', ok: !f.claimsUnsupported },
+      { name: f.flags.length ? `${pl(f.flags.length, 'brand or rule check')} failing` : 'Every brand and rule check passes', ok: !f.flags.length },
+      { name: `The signal is ${w >= 60 ? 'strong' : w >= 30 ? 'moderate' : 'weak'}`, ok: w >= 30 },
+      { name: f.primaryPersona ? `${first} is in the primary persona (the roles the system contacts first)` : `Nobody at ${f.account.name} is in the primary persona`, ok: f.primaryPersona }] }];
   }
   if (is(/deal|size|worth|revenue|budget|money|value/)) {
-    return [P(f.deal ? `Estimated deal size: about **USD ${Math.round(f.deal.value / 1000)}k** (threshold ${Math.round(f.dealThreshold / 1000)}k; basis: ${f.deal.basis}).${f.deal.below ? ' It is below the deal-size threshold, so a person decides whether it is worth it.' : ''}` : 'There is not enough company data to estimate the deal size.')];
+    return [P(f.deal ? `The first deal with ${f.account.name} is estimated at about **${usd(f.deal.value)}** (from ${lower(f.deal.basis)}). ${f.deal.below ? `That is below the ${usd(f.dealThreshold)} threshold, so a person decides whether it is worth contacting them anyway.` : `That is above the ${usd(f.dealThreshold)} threshold.`}`
+      : `There is not enough company data to estimate a deal size for ${f.account.name}.`)];
   }
   if (is(/runner|differ|alternative|compare|other option|second option/)) {
     const A = f.options.recommended, B = f.options.runnerUp;
-    if (!B) return [P('There is no runner-up for this one.')];
+    if (!B) return [P('There is no runner-up for this one: the system had only one suitable action.')];
     const diff: string[] = [];
-    if (A.channel !== B.channel) diff.push(`the channel changes from ${A.channel} to ${B.channel}`);
+    if (A.channel !== B.channel) diff.push(`it goes by ${B.channel} instead of ${A.channel}`);
     if (A.conf !== B.conf) diff.push(`confidence goes from ${A.conf} to ${B.conf}`);
-    if (A.proof !== B.proof) diff.push(B.proof ? `it cites "${B.proof}"` : 'it has no approved proof');
+    if (A.proof !== B.proof) diff.push(B.proof ? `it uses "${B.proof}" as proof` : 'it has no approved proof');
     if (A.ok !== B.ok) diff.push(B.ok ? 'it passes every check' : `it fails ${B.flags.join(', ')}`);
-    return [P(`Switching to **${B.action}**: ${diff.length ? diff.join('; ') : 'same channel, confidence and checks; only the action and the message change'}.`), NOTE(`Why the runner-up: ${B.reason}`)];
+    return [P(`The recommended action is **${A.action}**. The runner-up is **${B.action}**: ${optionWhy(B.reason)}.`),
+      P(diff.length ? `If you switch, ${diff.join('; ')}.` : `Both go by ${A.channel}, with the same confidence (${A.conf}) and the same checks. Only the action and the message change.`),
+      NOTE('To switch, click "Use this →" on the runner-up card. The message is rewritten for it, and it still waits for your approval.')];
   }
   if (is(/similar|track record|agree|how did|past|worked before/)) {
-    const s = f.track.segment;
-    return [P(s && s.n ? `In ${f.segment || 'items with no micro-segment'}, reps accepted the first recommendation **${s.a} of ${s.n}** times (${s.pct}%)${s.early ? '; early days, so read it as a hint' : ''}.` : `No decisions yet in ${f.segment || 'this group'}.`),
-      P(Object.keys(f.outcomes).length ? `Outcomes marked so far: ${Object.entries(f.outcomes).map(([k, n]) => `${k} ${n}`).join(' · ')}.` : 'No outcomes marked in this group yet.')];
+    const s = f.track.segment, where = f.segment ? `in the ${f.segment} micro-segment` : 'with no micro-segment';
+    return [P(s && s.n ? `For items ${where}, reps agreed with the system's first suggestion **${s.a} of ${s.n}** times (${s.pct}%).${s.early ? ' It is early days, so read it as a hint.' : ''}` : `Nobody has decided an item ${where} yet, so there is no track record.`),
+      P(Object.keys(f.outcomes).length ? `What happened after they went out: ${Object.entries(f.outcomes).map(([k, n]) => `${k.toLowerCase()} ${n}`).join(', ')}.` : 'No outcomes have been marked for them yet.')];
   }
   if (is(/signal|why now|when did|trigger|event|happened at/)) {
-    return [P(`Why now: ${f.whyNow}`), ...(f.signals.length ? [{ t: 'table' as const, head: ['Signal', 'Date', 'What happened', 'Source'], rows: f.signals.slice(0, 6).map(s => [s.type, s.date, s.detail, s.source]) }] : [])];
+    return [P(whyNowLine(f)), ...(f.signals.length > 1 ? [P(`Everything we know ${first} did recently:`), { t: 'table' as const, head: ['Date', 'Signal', 'Details', 'Source'], rows: f.signals.slice(0, 6).map(s => [dateOf(s.date), s.type, s.detail, s.source]) }] : [])];
   }
   if (is(/brief|proof|angle|objection|case study|pitch/)) {
-    return [{ t: 'list', items: [`**Angle**: ${f.brief.angle}`, `**Proof**: ${f.brief.proof || 'none approved'}`, `**Objection to expect**: ${f.brief.objection}`, `**The ask**: ${f.brief.ask}`] }];
+    return [P('What the message is built on:'), { t: 'list', items: [`**The approach**: ${f.brief.angle}`, `**Proof**: ${f.brief.proof || 'no approved claim fits'}`, `**What they may say**: "${f.brief.objection.replace(/^"|"$/g, '')}"`, `**The ask**: ${f.brief.ask}`] }];
   }
-  if (is(/history|log|version|changed|who (did|edited|touched)/)) return [f.history.length ? { t: 'list', items: f.history.slice(0, 8).map(x => `${x.decision} · ${x.who}${x.note ? `: ${x.note}` : ''}`) } : P('Nothing has happened to it yet.')];
-  if (is(/reject|say no|decline/)) return [P('Rejecting asks you for a reason, and the reason decides what comes back:'), { t: 'list', items: REJECT.slice(0, 8).map(([, l, o]) => `**${l}**: ${o}`) }];
+  if (is(/history|log|version|changed|who (did|edited|touched)/)) return [f.history.length ? { t: 'list', items: f.history.slice(0, 8).map(x => `${x.decision}, by ${x.who}${x.note ? `: ${x.note}` : ''}`) } : P('Nothing has happened to it yet.')];
+  if (is(/reject|say no|decline/)) return [P('Rejecting asks you for a reason, and the reason decides what comes back:'), { t: 'list', items: REJECT.slice(0, 8).map(([, l, o]) => `**${l}**: ${lower(o)}`) }];
   if (is(/approve|accept|what happens|send it|release/)) {
-    return [P(`Approving releases the message to ${f.owner || 'the owner'} to send from their own mailbox or LinkedIn${f.cats.includes('sensitive') ? '; because it is sensitive, the sales manager approves it first' : ''}. Nothing is sent by DemandAI.`)];
+    return [P(`Approving releases the message to ${f.owner || 'its owner'}, who sends it from their own mailbox or LinkedIn. DemandAI sends nothing itself.${f.cats.includes('sensitive') && f.status !== 'Awaiting approval' && !f.manager ? ' Because it mentions a sensitive topic, the sales manager approves it first.' : ''}`)];
   }
-  if (is(/\bdue|deadline|by when|how long|urgent/)) return [P(`It is ${f.dueText ? mid(f.dueText) : 'not waiting for anyone'}. The deadline comes from why it is here: the most urgent reason sets it.`)];
-  if (is(/owner|whose|assigned|which rep|who owns/)) return [P(`It belongs to **${f.owner || 'nobody yet'}**.${f.manager ? ' You can reassign it from the item.' : ''}`)];
+  if (is(/\bdue|deadline|by when|how long|urgent/)) return [P(f.dueText ? `It is ${mid(f.dueText)}. The most urgent reason it is here sets the deadline.` : 'It is not waiting for anyone.')];
+  if (is(/owner|whose|assigned|which rep|who owns/)) return [P(`It belongs to **${f.owner || 'nobody yet'}**.${f.manager ? ' You can give it to another rep from the item.' : ''}`)];
   if (is(/message|draft|subject|wording|summar|what does it say|email say/)) {
-    return [{ t: 'table', head: ['', ''], rows: [['Channel', f.channel], ...(f.subject ? [['Subject', f.subject]] : []), ['Length', `${f.words} words`], ['Opens with', f.opening], ['Written by', f.aiDraft ? 'AI, then the same checks' : 'the rules']] }];
+    return [{ t: 'table', head: ['', ''], rows: [['Goes by', f.channel], ...(f.subject ? [['Subject', f.subject]] : []), ['Length', `${f.words} words`], ['Opens with', f.opening], ['Written by', f.aiDraft ? 'AI, then the same checks' : 'the rules']] }];
   }
   if (is(/account|company|about (them|this|the account)|who (is|are) they|industry|customer|employees|country/)) {
-    return [P(`**${f.account.name}** · ${f.account.vertical} · ${f.account.existingCustomer ? 'existing customer' : 'net-new'}${f.account.country ? ` · ${f.account.country}` : ''}${f.tier ? ` · tier ${f.tier}` : ''}${f.deal ? ` · deal about USD ${Math.round(f.deal.value / 1000)}k` : ''}`),
-      ...(f.signals.length ? [{ t: 'table' as const, head: ['Signal', 'Date', 'What happened'], rows: f.signals.slice(0, 6).map(s => [s.type, s.date, s.detail]) }] : [])];
+    const v = String(f.account.vertical || '').trim();
+    return [P(`**${f.account.name}** is ${v ? `a ${v.toLowerCase()} company` : 'a company'}${f.account.country ? ` in ${f.account.country}` : ''}, and ${f.account.existingCustomer ? 'already a customer' : 'not a customer yet'}.`
+      + `${f.tier ? ` ${first} is in tier ${f.tier}${TIER_MEANS[f.tier] ? ` (${TIER_MEANS[f.tier]})` : ''}.` : ''}`
+      + `${f.deal ? ` The first deal is estimated at about ${usd(f.deal.value)}${f.deal.below ? `, below the ${usd(f.dealThreshold)} threshold` : ''}.` : ''}`),
+      ...(f.signals.length ? [P(`What ${first} did recently:`), { t: 'table' as const, head: ['Date', 'Signal', 'Details'], rows: f.signals.slice(0, 6).map(s => [dateOf(s.date), s.type, s.detail]) }] : [])];
   }
   if (is(/why|reason|here|need me|stuck|problem|wrong|issue/)) {
-    return [P(f.spot === 'pending' ? 'It passed every check and went ahead on its own; it was picked at random for this week\'s spot-check.'
-      : f.status === 'Awaiting approval' ? 'The draft has sensitive content, so it waits for the sales manager\'s approval before anything goes out.'
-      : f.reasons.length ? `The system couldn't decide it alone: ${f.reasons.join('; ')}.` : `It is ${f.status.toLowerCase()}.`), { t: 'checks', checks: f.fourChecks }, NOTE(`Why now: ${f.whyNow}`)];
+    const head = f.spot === 'pending' ? 'It passed every check and went ahead on its own. It was picked at random for this week\'s spot-check, so a person rates it.'
+      : f.status === 'Awaiting approval' ? `The message mentions ${sensitiveWords(f.sensitiveLines).length ? quoted(sensitiveWords(f.sensitiveLines)) : 'a sensitive topic'}, so the sales manager approves it before anything goes out.`
+      : f.cats.length && f.cats[0] !== 'fixed' ? 'The system could not decide it on its own:' : f.reasons.length ? `The system could not decide it on its own: ${f.reasons.join('; ')}.` : `It is ${f.status.toLowerCase()}.`;
+    const list = f.spot !== 'pending' && f.status !== 'Awaiting approval' && f.cats.length && f.cats[0] !== 'fixed' ? [{ t: 'list' as const, items: f.cats.map(c => reasonOf(f, c).what) }] : [];
+    return [P(head), ...list, { t: 'checks', checks: f.fourChecks }, NOTE(`${whyNowLine(f)} Ask "How do I fix it?" for the steps.`)];
   }
   return null;
 }

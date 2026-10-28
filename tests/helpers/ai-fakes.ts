@@ -57,14 +57,23 @@ export function draftAsk(req: ModelRequest): { channel: string; claimIds: string
   return { channel: u.match(/^Channel: (\w+)/m)?.[1] ?? '', claimIds: [...u.matchAll(/^- ([A-Z]{2}-\d{2}): /gm)].map(m => m[1]), signal: u.match(/^Signal: (".*")$/m)?.[1] ?? '' };
 }
 
-/** A drafter that writes plain, grounded copy and picks the first approved claim, or answers with `over`. */
+/** What a drafting request's signal is about: its detail, without the type and the date ("alarm management"). */
+export function signalTopic(signal: string): string {
+  const s = signal ? String(JSON.parse(signal)) : '';
+  const d = s.replace(/^[^:]+:\s*/, '').replace(/\s*\(\d{4}-\d{2}-\d{2}\)$/, '').replace(/\.$/, '').split(/\s+/).slice(0, 8).join(' ');
+  return /^[A-Z][a-z]/.test(d) ? d.charAt(0).toLowerCase() + d.slice(1) : d;
+}
+
+/** A drafter that writes plain, grounded copy about the signal's topic and picks the first approved claim, or answers
+ *  with `over`. */
 export function draftWriter(over?: (ask: ReturnType<typeof draftAsk>, n: number) => Record<string, unknown> | null): StepFn {
   return (req, n) => {
     const a = draftAsk(req);
     const own = over?.(a, n);
     if (own) return json(own);
-    return json(a.channel === 'LinkedIn' ? { note: 'thanks for the interest in this topic; it would be good to compare notes on how sites approach it.' }
-      : { subject: 'about your question', opening: 'Thanks for getting in touch about this.', bridge: 'A short conversation is usually the quickest way to work out what fits your site.',
+    const topic = signalTopic(a.signal) || 'this topic';
+    return json(a.channel === 'LinkedIn' ? { note: `thanks for the interest in ${topic}; it would be good to compare notes.` }
+      : { subject: 'about your question', opening: `Thanks for getting in touch about ${topic}.`, bridge: 'A short conversation is usually the quickest way to work out what fits your site.',
         ask: 'Would a short call next week help?', claimId: a.claimIds[0] });
   };
 }
