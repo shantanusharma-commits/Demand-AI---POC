@@ -8,49 +8,33 @@ Open `index.html` in Chrome or Edge (double-click). Fonts need an internet conne
 
 | File | What it is |
 |---|---|
-| `index.html` | Sign in. Pick Sofia (sales rep), Pavan (sales manager) or Rajiv (admin). Links to the overview |
-| `story.html` | What we're selling, as a product page: the three questions, how it works (find → score → segment → act → track → learn), the scoring engine, the three process flows, product vs. client POC, the learning loop, the battle card, the roadmap and open decisions |
-| `app.html` | Sales workspace. Today is a home page: the greeting and the chat box at the top, then the brief and the to-do table, with metrics, updates and a leaderboard on the right. Inbox is a mail client and Analytics a dashboard, neither with a chat. Every chat is one screen: Today chats and each module's own chat (Accounts, Segments, Campaigns, Approvals, and Analytics for the manager). The screen splits, chat on the left and the view on the right, only when you expand a list, open an item or open the module. Asking from Today starts a chat session that stays under Recent chats |
+| `index.html` | Sign in. Pick Sofia (sales rep), Pavan (sales manager) or Rajiv (admin). Links to the product overview and the demo walkthrough |
+| `story.html` | Product overview: the three questions, how it works, the scoring engine, the three process flows, product vs. client POC, the learning loop, the battle card, the roadmap and open decisions |
+| `walkthrough.html` | The demo, scene by scene: what to click, what to type and what to say, in story order |
+| `app.html` | Sales workspace: one continuous chat. Today on top; the left side holds anchors (Accounts, Segments, Campaigns, Approvals, Content studio) and recent chats; anything you open sits in a pane on the right |
 | `admin/index.html` | Admin home: held records, set-up health, data freshness, the monthly learning job, the system jobs |
 | `admin/integrations.html` | CRM, contact-data providers, signal sources, rep mailboxes, LinkedIn, team chat (placeholders) |
-| `admin/settings.html` | ICP, closed-won mapping, who decides what, thresholds, message templates, the system jobs (overnight sweep, weekly prospect refresh, monthly learning) |
+| `admin/settings.html` | ICP, closed-won mapping, who decides what, thresholds, message templates, the system jobs |
 | `admin/07-…15-*.html` | The legacy prototype screens (setup, content, users, prospecting, scoring, NBA, analytics, review), copied with the admin sidebar |
+
+## How it works: one continuous chat
+
+- **Left: anchors.** Today, the views (Accounts, Segments, Campaigns, Approvals, Content studio) and recent chats. Help and the profile menu (switch user, product overview, walkthrough, sign out) sit at the top and bottom.
+- **Middle: the chat.** Results come back as tiles (lists with actions). The chat box can start something new, work with any agent (prospecting, scoring, segments & NBA, campaigns, inbox, content, analytics), pick which accounts to work on, tag a task with # (it opens in its own window), add an account with @, and take dictation.
+- **Right: the pane.** Expanding a tile, opening a person, a reply, a campaign or analytics opens it beside the chat, with the two headers aligned. The chat then talks about what's open ("Talking about…"). Back, full screen and close are in the pane header.
+- **AI or person.** ✦ marks what the AI did on its own; a person icon marks what someone did or approved.
 
 ## Today
 
-The chat box comes first, under the greeting; any blocker shows on top of it. Below: the AI's brief (prospects who said yes, next best actions due today only (NBA), campaigns to create today (NBC)) and the to-do table. On the right: today's metrics against targets, the most important updates, and the weekly leaderboard. The rep sees their own accounts; the manager sees the team.
+The chat box first. Then **What the AI did** since you last logged in, today or this week (accounts re-checked, segments updated, campaign steps sent, next best actions that went ahead, replies, meetings), with the key events. Then **your numbers** (each opens its list). Then **what it handed to you**, most urgent first; each opens in its own window.
 
-## The flow in the chat
+## Objectives, notes, reminders and catch-up
 
-Find prospects → save as a list → score the list → route to NBA and NBC → track the campaigns and the inbox → what the system learned. Each answer suggests the next step. Result tables come back as a card (save, download, add to campaign); expand one to open the full table beside the chat, with search and more columns.
+Say what you want to do ("I want to work my red accounts this week") and the chat names itself after the objective and tracks progress (3 of 5). Leave notes ("Note: …") and reminders ("Remind me on Wednesday at 9 to …"). Recent chats show progress and a red ! when a reminder is due. Reopening the chat adds a catch-up tile: what the AI did meanwhile, what you did, and what's left.
 
-## Accounts and lists
+## Replies and analytics, in the chat
 
-A list is a saved selection of accounts, so lists live in Accounts as tabs next to "All accounts". Save a list from the chat, from a result table, from a segment, or with "Save as a list" on the current view.
-
-## Campaigns
-
-Email and LinkedIn only. Open a campaign to see its numbers, then the accounts in it: what each person gets (email, LinkedIn or both), their current step, and Approve. The sequence sits below; Edit sequence opens the step editor. Clicking a person opens their drawer: details on the left, and Overview, Engagement, Activity and Notes on the right. Engagement shows the personalised steps and "Approve" for a draft sequence. The AI drafts the sequence; anyone can add an email or LinkedIn touch, remove, reorder, change the day, channel or format, edit the text, or rewrite a touch with AI. Sent touches are locked. Reps send drafts to the manager, who confirms.
-
-## Segments
-
-Micro-segments → segment (metric cards; Accounts, Activity and Replies tabs) → person panel → activity. A segment with 10 or more accounts in 7 days runs as a campaign once the manager confirms; below that, each account gets its own next best action. Sensitive segments never become campaigns.
-
-## Content studio
-
-"What should we write?": describe a blog or whitepaper. It's written in a canvas beside the chat. Change it by asking ("Make it shorter", "Add proof", "More formal", "Rewrite the intro", "Add a section on…") or click a paragraph to change only that one. Tone and length can be set directly. Add it to the Content library when it's right; saved pieces are under Saved content.
-
-## Phone
-
-The navigation becomes icons and Today stacks into one column. When a list is expanded, the view replaces the chat.
-
-## Work is individual
-
-A rep sees only their own accounts, campaigns, replies and numbers. The manager sees everyone's, can filter any view by rep, move accounts to another rep, and assign tasks; an assigned task appears in that rep's to-do list on Today (try it: assign as Pavan, then "Switch to Sofia"). The manager's metrics switch between Team and Mine.
-
-## Person and reply views
-
-Opening a person or a reply brings up a focused panel; the chat and the view behind it are blurred until you close it. Loading shows a short placeholder instead of redrawing, and the AI's steps appear one by one before the answer.
+There is no separate inbox or analytics screen. "Show me the replies I received today" brings a tile of replies; open one for the conversation and a drafted answer on the right. "Show me last week's analytics" opens the dashboard on the right; follow up with "which pipeline did the AI drive on its own?", "which accounts are hot?", "which are stuck?" and "pull the last interaction for Eastgate".
 
 ## Where each thing is tracked
 
@@ -66,19 +50,17 @@ A next best action goes ahead on its own when it passes six checks: high confide
 
 ## Person panel
 
-Send and Copilot sit under the person's name. In a campaign, Engagement shows that person's sequence as a timeline: each step's day, channel, format, message and what it was built from (the signal, the message structure and the outreach practice it follows). Edit any unsent message, remove a step, add an email or LinkedIn step, or ask Copilot ("make step 1 shorter", "use cost framing", "add a LinkedIn step", "why these messages?"). Changes apply to that person only.
+Send sits in the pane header; the chat beside it is the copilot. In a campaign, Engagement shows that person's sequence as a timeline: each step's day, channel, format, message and what it was built from (the signal, the message structure and the outreach practice it follows). Edit any unsent message, remove a step, add an email or LinkedIn step, or ask Copilot ("make step 1 shorter", "use cost framing", "add a LinkedIn step", "why these messages?"). Changes apply to that person only.
 
-## Inbox
 
-Laid out like a mail client: folders (Inbox, Needs a reply, Positive, Objection, Meetings, Out of office, Sent, Archived) and channel filters on the left, the conversation list in the middle with unread in bold, and the reading pane on the right with the earlier message, a reply drafted by the AI that runs the brand checks, Send, Mark handled, Archive and Mark as unread. On a phone the list and the message are separate screens. When someone replies, their remaining campaign steps pause (an assumption to confirm). The manager can reassign the thread.
-
-## Analytics (manager; the admin has its own page)
-
-A dashboard page, not a chat. Metric cards first: meetings booked against target, reply rate, positive replies, accepted first time (G2), went ahead on their own, time to a first action (G1), pipeline influenced and overdue items, each with its trend over the last five periods and the change against the previous one. Then the funnel, each rep, each campaign, and what the system learned. Switch between this week and this month, or pick a rep to see only their numbers.
 
 ## Scoring and routing
 
 Every score is out of 100: Fit (0–100) × Timing (stacked signal points as a share of 200, 0–100) ÷ 100; tiers A ≥ 40, B ≥ 20, C above 0. "Score this list" shows the Score flow step by step (collect, qualify, weigh by tier, decay, stack into Timing, Fit × Timing ÷ 100) with the top account worked through; "How scoring works" in Accounts shows the same. "Route to NBA and NBC" then sends the segment that crosses the threshold to one campaign and gives every other account its own next best action.
+
+## Work is individual
+
+A rep sees only their own accounts, campaigns, replies and numbers. The manager sees everyone's, can filter any view by rep, move an account to another rep from the person pane or a reply, and assign work from the chat ("Assign calling back Larkspur to Kenji"); assigned work appears in that rep's list on Today (assign as Pavan, then switch to Sofia).
 
 ## Roles
 
@@ -88,7 +70,7 @@ Every score is out of 100: Fit (0–100) × Timing (stacked signal points as a s
 
 ## Things to try in the chat
 
-"Find prospects like my last 10 wins", "Score this list", "Route to NBA and NBC", "Which replies are objections?", "Where is the funnel leaking?" (manager), "Prepare the next actions", "Build the campaign", "How are the campaigns doing?", "Write a blog on planning a control system migration", "Why is Juniper ranked first?", "What should I do with Cedar?", "Make it shorter", "Use cost framing", "What worked last month?", "How is my team doing?" (manager).
+"Find prospects like my last 10 wins", "Score this list", "Route to NBA and NBC", "Which replies are objections?", "Where is the funnel leaking?" (manager), "Prepare the next actions", "Build the campaign", "How are the campaigns doing?", "Write a blog on planning a control system migration", "Why is Juniper ranked first?", "What should I do with Cedar?", "Make it shorter", "Use cost framing", "What worked last month?", "How is my team doing?" (manager), "I want to work my red accounts this week", "Show me last week's analytics", "Show me the replies I received today", "Assign calling back Larkspur to Kenji" (manager).
 
 ## Files
 

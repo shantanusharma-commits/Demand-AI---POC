@@ -14,10 +14,10 @@
   let me = USERS[store.get('dmock_user') || 'sofia'] || USERS.sofia;
   if (me.role === 'admin') { location.href = 'admin/index.html'; return; }
   const isMgr = me.role === 'manager';
-  const STATE_KEY = 'dmock_state_v5_' + me.id;
+  const STATE_KEY = 'dmock_state_v6_' + me.id;
   let saved = {};
   try { saved = JSON.parse(store.get(STATE_KEY, true) || '{}'); } catch (e) { saved = {}; }
-  const S = Object.assign({ chats: null, cur: 'home', mchat: {}, studio: { doc: null, thread: [] }, decisions: {}, todosDone: {}, notes: {}, outcomes: {}, drafts: {}, runs: [], camp: {}, handled: {}, lists: [], read: {}, archived: {}, pseq: {}, cop: {}, seq: {}, content: [], enrollOK: {}, starred: {} }, saved);
+  const S = Object.assign({ chats: null, cur: 'home', mchat: {}, studio: { doc: null, thread: [] }, decisions: {}, todosDone: {}, notes: {}, outcomes: {}, drafts: {}, runs: [], camp: {}, handled: {}, lists: [], redDone: {}, read: {}, archived: {}, pseq: {}, cop: {}, seq: {}, content: [], enrollOK: {}, starred: {} }, saved);
   const save = () => store.set(STATE_KEY, JSON.stringify(S), true);
   /* Shared across sign-ins in this tab: what the manager assigns shows up for the rep */
   let shared = {};
@@ -30,6 +30,7 @@
   const FIND_STEPS = () => ['Turned your request into an ICP filter: refining, petrochemicals and gas · SEA · 500+ staff · reliability, operations and I&amp;C leaders', 'Searched the primary contact provider, then the fallback for the misses', 'Cross-checked fallback hits and gave everyone an identity tier', 'Removed 4 existing customers and 3 accounts another rep owns (CRM, read-only)', 'Ranked by similarity to your last 10 wins'];
   if (!S.chats) {
     S.chats = [
+      { id: 'red', title: 'Red accounts · week of 26 Oct', when: 'Mon', last: 'Mon 26 Oct, 17:20', unseen: true, obj: { text: 'Reach my 10 red accounts this week', red: true, doneIds: ['juniper', 'eastgate', 'quartzolefins'] }, notes: [{ t: 'Budi at Juniper prefers LinkedIn', d: 'Mon' }, { t: 'Cedar: wait for the renewal comparison before calling', d: 'Mon' }], reminder: { when: 'Today 09:00', text: 'pick up the rest of the red accounts', due: true }, thread: [{ who: 'me', text: 'I want to work my red accounts this week' }, { who: 'ai', kind: 'redList' }, { who: 'me', text: 'Done Juniper, Eastgate and Quartz. Remind me on Tuesday at 9 to pick up the rest.' }, { who: 'ai', kind: 'text', html: 'Noted: 3 done. I\'ll remind you Tuesday at 09:00 and open this chat with a catch-up of what happened in between.' }] },
       { id: 'flow', title: 'Lookalikes of my last 10 wins', when: 'Mon', thread: [{ who: 'me', text: 'Find refiners and petrochem plants like my last 10 wins' }, { who: 'ai', kind: 'prospects', steps: FIND_STEPS() }] },
       { id: 'cedar', title: 'Cedar renewal prep', when: 'Fri', thread: [{ who: 'me', text: 'What should I do with Cedar?' }, { who: 'ai', kind: 'nba', id: 'cedar' }] },
     ];
@@ -93,6 +94,14 @@
     edit: '<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>',
     inbox: '<polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>',
     bars: '<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>',
+    mic: '<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v1a7 7 0 0 0 14 0v-1"/><line x1="12" y1="18" x2="12" y2="22"/>',
+    user: '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+    target: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>',
+    note: '<path d="M4 4h16v12l-4 4H4z"/><polyline points="16 20 16 16 20 16"/><line x1="8" y1="9" x2="16" y2="9"/><line x1="8" y1="13" x2="13" y2="13"/>',
+    bell: '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>',
+    help: '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
+    full: '<polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>',
+    min: '<polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/>',
     hour: '<path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.17a2 2 0 0 0-.59-1.42L12 12l-4.41 4.41A2 2 0 0 0 7 17.83V22"/><path d="M7 2v4.17a2 2 0 0 0 .59 1.42L12 12l4.41-4.41A2 2 0 0 0 17 6.17V2"/>',
   };
   const ic = (n, sz = 15, sw = 2) => `<svg width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[n]}</svg>`;
@@ -170,30 +179,80 @@
   }
 
   /* ─── Routing: #today or a module; a result or a record opens in the canvas beside the chat ─── */
-  const MODULES = Object.assign({ inbox: 'Inbox', accounts: 'Accounts', segments: 'Segments', campaigns: 'Campaigns', approvals: 'Approvals', studio: 'Content studio' }, isMgr ? { analytics: 'Analytics' } : {});
+  const MODULES = { accounts: 'Accounts', segments: 'Segments', campaigns: 'Campaigns', approvals: 'Approvals', studio: 'Content studio' };
   const MOD_IC = { inbox: 'inbox', accounts: 'users', segments: 'layers', campaigns: 'megaphone', approvals: 'task', studio: 'pen', analytics: 'bars' };
   function view() { const r = (location.hash || '').slice(1); return MODULES[r] ? r : null; }
   function go(r) { if (view() === r || (!r && !view())) renderAll(); else location.hash = r ? '#' + r : '#today'; }
-  function nav(r) { art = null; recId = null; thrId = null; ctx = null; expanded = false; if (!r) S.cur = 'home'; if (r === 'campaigns') campSel = null; if (r === 'segments') segSel = null; if (r === 'studio') S.studio.doc = null; go(r); }
+  function nav(r) { art = null; recId = null; thrId = null; ctx = null; expanded = !!r && r !== 'studio'; paneFull = false; notesOpen = false; if (!r) S.cur = 'home'; if (r === 'campaigns') campSel = null; if (r === 'segments') segSel = null; if (r === 'studio') S.studio.doc = null; go(r); }
   function openMod(r) { art = null; recId = null; thrId = null; expanded = true; go(r); }
   window.addEventListener('hashchange', () => renderAll());
 
-  /* ─── Side navigation ─── */
+  /* ─── Side navigation: Today, the anchors, recent chats; help and profile in menus ─── */
   function renderNav() {
     const v = view(), n = badgeCount();
+    const chatBadge = c => { const ob = c.obj ? `<em class="pg">${objDone(c)}/${objTotal(c)}</em>` : ''; return ob + (c.unseen || (c.reminder && c.reminder.due && !c.seenRem) ? '<em class="bang" title="Needs attention">!</em>' : ''); };
     $('side').innerHTML = `
-      <div class="side-brand"><img src="assets/logo.png" alt=""><div><div class="nm">DemandAI</div><div class="org">Sales workspace</div></div></div>
+      <div class="side-brand"><img src="assets/logo.png" alt=""><div><div class="nm">DemandAI</div><div class="org">Sales workspace</div></div>
+        <div class="dd side-help"><button class="ic-btn" title="Help" onclick="App.toggleMenu('helpMenu')">${ic('help', 16)}</button><div class="menu" id="helpMenu"><a href="story.html">${ic('book', 14)} Product overview</a><a href="walkthrough.html">${ic('chat', 14)} Demo walkthrough</a><button onclick="App.toast('Setup and configuration live with your admin')">${ic('layers', 14)} Setup and configuration</button></div></div></div>
       <button class="side-new" onclick="App.newChat()">${ic('plus', 14)}<span>New chat</span></button>
-      <a class="side-item ${!v ? 'on' : ''}" href="#today" onclick="App.nav(null);return false" title="Today">${ic('home', 16)}<span class="lbl-t">Today</span></a>
+      <a class="side-item ${!v && S.cur === 'home' ? 'on' : ''}" href="#today" onclick="App.nav(null);return false" title="Today">${ic('home', 16)}<span class="lbl-t">Today</span></a>
       <div class="side-sep"></div>
-      <nav class="side-nav" aria-label="Modules">${Object.keys(MODULES).map(k => `<a class="side-item ${v === k ? 'on' : ''}" href="#${k}" onclick="App.nav('${k}');return false" title="${MODULES[k]}">${ic(MOD_IC[k], 16)}<span class="lbl-t">${MODULES[k]}</span>${(k === 'approvals' ? n : k === 'inbox' ? threads().filter(needsReply).length : 0) ? `<span class="cnt">${k === 'approvals' ? n : threads().filter(needsReply).length}</span>` : ''}</a>`).join('')}</nav>
+      <nav class="side-nav" aria-label="Anchors">${Object.keys(MODULES).map(k => `<a class="side-item ${v === k ? 'on' : ''}" href="#${k}" onclick="App.nav('${k}');return false" title="${MODULES[k]}">${ic(MOD_IC[k], 16)}<span class="lbl-t">${MODULES[k]}</span>${k === 'approvals' && n ? `<span class="cnt">${n}</span>` : ''}</a>`).join('')}</nav>
       <div class="side-sec">Recent chats</div>
-      <div class="side-recent">${S.chats.map(c => `<button class="${!v && c.id === S.cur ? 'on' : ''}" onclick="App.openChat('${c.id}')" title="${esc(c.title)}">${ic('chat', 13)}<span>${esc(c.title)}</span><i>${esc(c.when)}</i></button>`).join('')}</div>
-      <div class="side-foot">
-        <div class="side-user">${avatar(me, 30)}<div class="lbl-t"><div class="nm">${esc(me.name)}</div><div class="rl">${isMgr ? 'Sales manager · 4 reps' : 'Sales rep'}</div></div></div>
-        <div class="side-links lbl-t"><button onclick="App.switchUser('${isMgr ? 'sofia' : 'pavan'}')">Switch to ${isMgr ? 'Sofia (rep)' : 'Pavan (manager)'}</button><a href="story.html">What we're selling</a><a href="index.html" onclick="App.signOut()">Sign out</a></div>
+      <div class="side-recent">${S.chats.map(c => `<button class="${!v && c.id === S.cur ? 'on' : ''}" onclick="App.openChat('${c.id}')" title="${esc(c.title)}">${ic(c.obj ? 'target' : 'chat', 13)}<span>${esc(c.title)}</span>${chatBadge(c)}<i>${esc(c.when)}</i></button>`).join('')}</div>
+      <div class="side-foot dd">
+        <button class="side-me" onclick="App.toggleMenu('meMenu')">${avatar(me, 30)}<span class="lbl-t"><span class="nm">${esc(me.name)}</span><span class="rl">${isMgr ? 'Sales manager · 4 reps' : 'Sales rep'}</span></span>${ic('upa', 14)}</button>
+        <div class="menu up" id="meMenu"><button onclick="App.switchUser('${isMgr ? 'sofia' : 'pavan'}')">${ic('users', 14)} Switch to ${isMgr ? 'Sofia (rep)' : 'Pavan (manager)'}</button><a href="story.html">${ic('book', 14)} Product overview</a><a href="walkthrough.html">${ic('chat', 14)} Demo walkthrough</a><div class="sep"></div><a href="index.html" onclick="App.signOut()">${ic('left', 14)} Sign out</a></div>
       </div>`;
   }
+
+  /* ─── The chat box, everywhere: any agent, scope, starters, # to tag a task, @ for an account, voice ─── */
+  const AGENTS = {
+    auto: { name: 'Any agent', ic: 'spark', d: 'Picks the right agent for what you ask' },
+    prospect: { name: 'Prospecting agent', ic: 'search', d: 'Finds people and checks their identity', q: 'Find prospects like my last 10 wins' },
+    score: { name: 'Scoring agent', ic: 'layers', d: 'Fit × Timing from live signals', q: 'Score this list' },
+    segment: { name: 'Segments & NBA agent', ic: 'bolt', d: 'Groups accounts and prepares next actions', q: 'Route to NBA and NBC' },
+    campaign: { name: 'Campaign agent', ic: 'megaphone', d: 'Builds and runs email and LinkedIn sequences', q: 'How are the campaigns doing?' },
+    inbox: { name: 'Inbox agent', ic: 'inbox', d: 'Replies, each with a suggested answer', q: 'Show me the replies I received today' },
+    content: { name: 'Content agent', ic: 'pen', d: 'Blogs and whitepapers in the brand voice', q: 'Write a blog on planning a control system migration' },
+    analytics: { name: 'Analytics agent', ic: 'bars', d: 'Numbers that lead to an action', q: 'Show me last week\'s analytics' },
+  };
+  const STARTERS = [['search', 'Find opportunities', 'Find prospects like my last 10 wins'], ['target', 'Plan my week', 'I want to work my red accounts this week'], ['clock', 'Catch me up', 'Catch me up on what happened since I last logged in'], ['inbox', 'Replies I received', 'Show me the replies I received today'], ['bars', 'Analytics', 'Show me last week\'s analytics'], ['layers', 'Segments and campaigns', 'Which segments are campaigns?'], ['pen', 'Write something', 'Write a blog on planning a control system migration']];
+  const SCOPES = () => [['mine', isMgr ? 'My team\'s accounts' : 'My portfolio'], ['all', 'All accounts'], ['one', 'One account…']];
+  const scopeLabel = () => S.scopeSel === 'one' && ctx ? acct(ctx).name : (SCOPES().find(x => x[0] === (S.scopeSel || 'mine')) || SCOPES()[0])[1];
+  function composerHtml(home) {
+    const v = view(), studio = v === 'studio', ag = AGENTS[S.agent || 'auto'];
+    const ph = studio ? (S.studio.sel != null ? 'Change this paragraph…' : 'Ask for a change…') : recId ? `Ask about ${first(acct(recId).contact.name)}: "make step 1 shorter", "why these messages?"` : S.agent && S.agent !== 'auto' ? `Ask the ${ag.name.toLowerCase()}…` : v ? `Ask about ${MODULES[v].toLowerCase()}…` : 'Ask anything. # to pick a task, @ for an account';
+    return `<div class="composer ${home ? 'big' : ''}">
+      ${paneCtx()}<div class="ctx" id="ctx">${ctxChip()}</div>
+      <label class="sr" for="composer">Message DemandAI</label>
+      <textarea id="composer" rows="${home ? 2 : 1}" placeholder="${esc(ph)}" onkeydown="App.key(event)" oninput="App.compInput(this)"></textarea>
+      <div class="tagpop" id="tagpop"></div>
+      <div class="composer-f">
+        ${studio ? '<span class="muted" style="font-size:11px">Only approved sources are cited. Every change runs the brand checks.</span>' : `<div class="cmp-tools">
+          <div class="dd"><button class="cbtn" onclick="App.toggleMenu('startMenu')" title="Start something new">${ic('plus', 13)}<span class="cl">Start</span></button><div class="menu up" id="startMenu"><div class="mh">Start something new</div>${STARTERS.map(([i, l, q]) => `<button onclick="App.ask(${js(q)})">${ic(i, 14)} ${l}</button>`).join('')}</div></div>
+          <div class="dd"><button class="cbtn ${S.agent && S.agent !== 'auto' ? 'on' : ''}" onclick="App.toggleMenu('agentMenu')" title="Work with any agent">${ic(ag.ic, 13)}<span class="cl">${esc(ag.name)}</span>${ic('downa', 11)}</button><div class="menu up wide" id="agentMenu"><div class="mh">Work with an agent</div>${Object.entries(AGENTS).map(([k, x]) => `<button class="${(S.agent || 'auto') === k ? 'on' : ''}" onclick="App.setAgent('${k}')">${ic(x.ic, 15)}<span><b>${x.name}</b><i>${x.d}</i></span></button>`).join('')}</div></div>
+          <div class="dd"><button class="cbtn" onclick="App.toggleMenu('scopeMenu')" title="Which accounts">${ic('users', 13)}<span class="cl">${esc(scopeLabel())}</span>${ic('downa', 11)}</button><div class="menu up" id="scopeMenu"><div class="mh">Work on</div>${SCOPES().map(([k, l]) => `<button class="${(S.scopeSel || 'mine') === k ? 'on' : ''}" onclick="App.setScopeSel('${k}')">${l}</button>`).join('')}</div></div>
+          <button class="cbtn" title="Tag a task: it opens in its own window" onclick="App.tagTask()"># <span class="cl">Task</span></button>
+          <button class="cbtn" title="Add an account" onclick="App.focusComposer('@')">@</button>
+        </div>`}
+        <div class="sp"></div>
+        <button class="mic" id="micBtn" title="Dictate" onclick="App.voice()">${ic('mic', 16)}</button>
+        <button class="send" onclick="App.send()" title="Send">${ic('send', 16)}</button>
+      </div>
+    </div>`;
+  }
+  /* What the chat is focused on while something is open on the right */
+  function paneCtx() {
+    let t = '';
+    if (recId) t = `${acct(recId).contact.name} · ${acct(recId).name}`;
+    else if (thrId) { const r = REPLIES.find(x => x.id === thrId); t = r ? `Reply from ${r.from}` : ''; }
+    else if (art === 'camp' || (view() === 'campaigns' && expanded && campSel)) t = campOf(campSel) ? campOf(campSel).name : '';
+    else if (view() === 'segments' && expanded && segSel) t = segOf(segSel).name;
+    else if (art) t = ART_NAME[art] || (TABLES[art] ? TABLES[art]().title : '');
+    return t ? `<div class="pane-ctx">${ic('expand', 11)} Talking about <b>${esc(t)}</b></div>` : '';
+  }
+  const ART_NAME = { analytics: 'Analytics', replies: 'Replies', approvals: 'Approvals' };
 
   /* ─── Chats: Today sessions, one chat per module, one per document ─── */
   const MOD_INTRO = {
@@ -231,28 +290,25 @@
   function renderChat() {
     const c = chat(), v = view();
     if (!c) { $('chat').innerHTML = ''; return; }
+    const ob = c.obj, done = ob ? objDone(c) : 0;
     $('chat').innerHTML = `
       <div class="chat-h">
         <span class="ai-mark">${ic('spark', 13)}</span>
-        <div class="ttl">${v === 'studio' ? `<button class="back-l" onclick="App.nav('studio')">${ic('left', 13)} Content studio</button>` : esc(c.title)}</div>
+        <div class="ttl">${v === 'studio' ? `<button class="back-l" onclick="App.nav('studio')">${ic('left', 13)} Content studio</button>` : esc(c.title)}${c.agent && c.agent !== 'auto' ? `<span class="badge b-brand nodot">${esc(AGENTS[c.agent].name)}</span>` : ''}</div>
         <div class="sp"></div>
         ${v && v !== 'studio' && !expanded ? `<button class="btn sm" onclick="App.expand()">${ic('expand', 12)} Open ${MODULES[v]}</button>` : ''}
+        ${v ? '' : `<button class="ic-btn" title="Notes" onclick="App.toggleNotes()">${ic('note', 15)}</button>`}
         <button class="ic-btn" title="${v && v !== 'studio' ? 'Clear this chat' : 'New chat'}" onclick="App.newChat()">${ic('plus', 15)}</button>
       </div>
+      ${!v && (ob || (c.notes && c.notes.length) || c.reminder) ? `<div class="obj">
+        ${ob ? `<div class="obj-r">${ic('target', 14)}<span class="t">${esc(objText(c))}</span><span class="prog"><i style="width:${Math.round(done / objTotal(c) * 100)}%"></i></span><b>${done} of ${objTotal(c)}</b></div>` : ''}
+        <div class="obj-r sm">${c.reminder ? `<span class="${c.reminder.due ? 'due-now' : ''}">${ic('bell', 13)} ${esc(c.reminder.when)} · ${esc(c.reminder.text)}</span>` : ''}<button class="lnk" onclick="App.toggleNotes()">${ic('note', 13)} Notes (${(c.notes || []).length})</button><button class="lnk" onclick="App.focusComposer('Remind me on Thursday at 9 to ')">${ic('bell', 13)} ${c.reminder ? 'Change reminder' : 'Set a reminder'}</button></div>
+        ${notesOpen ? `<div class="notes">${(c.notes || []).map(n => `<div class="note">${ic('note', 12)} ${esc(n.t)}<i>${esc(n.d)}</i></div>`).join('') || '<div class="muted" style="font-size:12px">No notes yet.</div>'}<div class="note-add"><label class="sr" for="noteIn">Note</label><input id="noteIn" placeholder="Leave yourself a note…" onkeydown="if(event.key==='Enter')App.addChatNote(this.value)"><button class="btn sm" onclick="App.addChatNote(document.getElementById('noteIn').value)">Add</button></div></div>` : ''}
+      </div>` : !v && notesOpen ? `<div class="obj"><div class="notes"><div class="note-add"><label class="sr" for="noteIn">Note</label><input id="noteIn" placeholder="Leave yourself a note…" onkeydown="if(event.key==='Enter')App.addChatNote(this.value)"><button class="btn sm" onclick="App.addChatNote(document.getElementById('noteIn').value)">Add</button></div></div></div>` : ''}
       <div class="thread" id="thread"><div class="thread-in">${c.thread.map(renderMsg).join('')}</div></div>
       <div class="composer-wrap">
         <div class="hints">${hints().map(h => `<button class="chip" onclick="App.ask(${js(h)})">${esc(h)}</button>`).join('')}</div>
-        <div class="composer">
-          <div class="ctx" id="ctx">${ctxChip()}</div>
-          <label class="sr" for="composer">Message DemandAI</label>
-          <textarea id="composer" rows="1" placeholder="${v === 'studio' ? (S.studio.sel != null ? 'Change this paragraph…' : 'Ask for a change…') : v ? `Ask about ${MODULES[v].toLowerCase()}…` : 'Find, score, segment, act, track… type @ to add an account'}" onkeydown="App.key(event)" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
-          <div class="composer-f">
-            ${v === 'studio' ? '' : `<button class="ic-btn" title="Add an account" onclick="App.focusComposer('@')">@</button>`}
-            <span class="muted" style="font-size:11px">${v === 'studio' ? 'Only approved sources are cited. Every change runs the brand checks.' : 'Scripted demo · nothing is sent'}</span>
-            <div class="sp"></div>
-            <button class="send" onclick="App.send()" title="Send">${ic('send', 16)}</button>
-          </div>
-        </div>
+        ${composerHtml(false)}
       </div>`;
     const th = $('thread'); th.scrollTop = th.scrollHeight;
   }
@@ -274,6 +330,14 @@
     prospects: () => ({ title: 'Lookalikes of your last 10 wins', rows: listAccounts(), cols: ['company', 'contact', 'title', 'country', 'size', 'industry', 'identity', 'linkedin'] }),
     scored: () => ({ title: 'Lookalikes of your last 10 wins · scored', rows: listAccounts().slice().sort((p, q) => q.score - p.score), cols: ['company', 'tier', 'score', 'fit', 'timing', 'whynow', 'owner', 'contact'] }),
     segmented: () => ({ title: 'Lookalikes of your last 10 wins · by micro-segment', rows: listAccounts().slice().sort((p, q) => (p.seg || 'z').localeCompare(q.seg || 'z')), cols: ['company', 'segment', 'mode', 'tier', 'score', 'contact', 'owner'] }),
+    red: () => ({ title: 'Red accounts · week of 26 Oct', rows: redAccounts(), cols: ['objDone', 'company', 'contact', 'score', 'status', 'by'] }),
+    emailsSent: () => ({ title: 'Emails sent this week', rows: ACCOUNTS.filter(mine).filter(a => a.activity.some(x => x.k === 'sent')), cols: ['company', 'contact', 'sentAt', 'by', 'status'] }),
+    liTouches: () => ({ title: 'LinkedIn touches this week', rows: ACCOUNTS.filter(mine).filter(a => (a.nba && a.nba.channel === 'LinkedIn' && /auto|sent/.test(a.nba.status)) || (a.campaign && seqOf(campOf(a.campaign)).some(t => t.ch === 'LinkedIn' && sent(t)))), cols: ['company', 'contact', 'by', 'status'] }),
+    meetings: () => ({ title: 'Meetings booked this week', rows: ACCOUNTS.filter(mine).filter(a => /Meeting/.test(a.campState || '') || /Meeting/.test(a.outcome || '')), cols: ['company', 'contact', 'by', 'status', 'owner'] }),
+    sequenced: () => ({ title: 'In a sequence', rows: ACCOUNTS.filter(mine).filter(a => a.campaign), cols: ['company', 'contact', 'campaign', 'status', 'by'] }),
+    aiPipeline: () => ({ title: 'Pipeline the AI drove on its own', rows: ACCOUNTS.filter(mine).filter(a => ((a.nba && a.nba.status === 'auto' && !a.campaign) || (a.campaign && campOf(a.campaign).status === 'Running' && !/Taken out/.test(a.campState))) && a.score > 0).sort((p, q) => hsh(q.id) % 180 - hsh(p.id) % 180), cols: ['company', 'pipe', 'by', 'status', 'owner'] }),
+    hot: () => ({ title: 'Hot accounts: high score, opened, no reply yet', rows: ACCOUNTS.filter(mine).filter(a => a.score >= 35 && (/Opened|Clicked/.test(a.campState || '') || (a.nba && !a.campaign && /auto|sent/.test(a.nba.status) && track(a).stage === 3))), cols: ['company', 'score', 'status', 'by', 'owner'] }),
+    stuck: () => ({ title: 'Stuck: waiting, bounced or overdue', rows: ACCOUNTS.filter(mine).filter(a => (a.nba && !a.campaign && (a.nba.status === 'review' || track(a).cls === 'b-neg')) || /Waiting/.test(a.campState || '')), cols: ['company', 'contact', 'status', 'owner'] }),
     ranked: () => ({ title: `Who to contact first · ${isMgr ? 'team' : 'your accounts'}`, rows: ACCOUNTS.filter(mine).filter(a => a.score > 0), cols: ['company', 'tier', 'score', 'whynow', 'segment', 'status', 'owner'] }),
   };
   const COL = {
@@ -294,6 +358,11 @@
     segment: ['Micro-segment', a => a.seg ? esc(a.segment) : '<span class="muted">—</span>'],
     mode: ['Mode', a => a.seg ? modeBadge(segOf(a.seg)) : '<span class="badge b-grey nodot">Watch</span>'],
     status: ['Status', a => stepBadge(a)],
+    by: ['Done by', a => a.campaign ? byAI('Campaign step') : a.nba && a.nba.status === 'auto' ? byAI('Went ahead') : a.nba && a.nba.status === 'sent' ? byMe('Approved by ' + first(USERS[a.owner].name)) : S.redDone[a.id] || RED_DONE.includes(a.id) ? byMe(first(USERS[a.owner].name)) : '<span class="muted">—</span>'],
+    sentAt: ['Last sent', a => { const x = a.activity.filter(y => y.k === 'sent').pop(); return x ? `<span class="sm">${esc(x.when)}</span>` : '—'; }],
+    pipe: ['Pipeline', a => `<span class="mono">USD ${40 + hsh(a.id) % 180}k</span>`],
+    campaign: ['Campaign', a => a.campaign ? esc(campOf(a.campaign).name) : '—'],
+    objDone: ['', a => `<span class="ckd ${S.redDone[a.id] || RED_DONE.includes(a.id) ? 'on' : ''}">${S.redDone[a.id] || RED_DONE.includes(a.id) ? ic('check', 11, 3) : ''}</span>`],
   };
   function tableCard(key, note) {
     const t = TABLES[key]();
@@ -316,7 +385,7 @@
         <p>${isMgr ? `Here's the team's day. <b>${today.length}</b> action${today.length === 1 ? ' needs' : 's need'} you today, <b>${hot.length}</b> prospects said yes, and <b>one new campaign</b> is ready for you to confirm.` : `Here's your day. <b>${today.length}</b> action${today.length === 1 ? '' : 's'} to decide today and <b>${hot.length}</b> prospect${hot.length === 1 ? '' : 's'} to answer. Everything else went ahead on its own.`}</p>
         ${hot.length ? `<div class="ccard" style="border-color:#F1D3D3"><div class="ccard-h"><span class="t" style="color:var(--neg)">${ic('flame', 14)} Answer first · they said yes</span><span class="muted" style="font-size:11px">fast lane</span></div><div class="ccard-b" style="padding:2px 14px">${hot.map(r => `<div class="mini-row"><div class="grow row-link" onclick="App.openThread('${r.id}')"><div class="nm">${esc(r.from)} · ${esc(acct(r.acc).name)}${isMgr ? ` <span class="muted" style="font-weight:400">· ${esc(first(USERS[r.owner].name))}</span>` : ''}</div><div class="sm">"${esc(r.text)}"</div></div><span class="due ${r.at.startsWith('Today') ? 'hot' : 'soon'}" style="font-size:11px">${esc(r.at)}</span><button class="btn sm pri" onclick="App.openThread('${r.id}')">${isMgr ? 'Open' : 'Reply'}</button></div>`).join('')}</div></div>` : ''}
         <div class="ccard"><div class="ccard-h"><span class="t">${ic('bolt', 14)} Next best actions that need you today</span><span class="badge b-sec nodot">${today.length}</span></div>
-          <div class="ccard-b" style="padding:0">${today.length ? `<div class="tbl-wrap"><table class="tbl nba-tbl"><thead><tr><th>Account · contact</th><th>Action</th><th>Why it needs you</th><th></th></tr></thead><tbody>${today.map(a => { const d = S.decisions[a.id]; return `<tr><td class="row-link" onclick="App.openRecord('${a.id}','engage')"><div class="nm">${esc(a.name)}</div><div class="sm">${esc(a.contact.name)}${isMgr ? ' · ' + esc(first(USERS[a.owner].name)) : ''}</div></td><td>${esc(a.nba.action)}<div class="sm">${a.nba.channel} · ${esc(a.segment)}</div></td><td><span class="badge ${REASON[reasonOf(a)]}">${reasonOf(a)}</span></td><td style="white-space:nowrap">${d ? `<span class="badge b-grey nodot">${decLabel(d)}</span>` : /auto|sent/.test(a.nba.status) ? '<span class="badge b-pos">Went ahead</span>' : `${!a.nba.reason || (isMgr && a.nba.sensitive) ? `<button class="btn sm pri" onclick="App.approve('${a.id}')">${isMgr && a.nba.sensitive ? 'Sign off' : 'Approve'}</button> ` : ''}<button class="btn sm" onclick="App.openRecord('${a.id}','engage')">Review</button>`}</td></tr>`; }).join('')}</tbody></table></div>` : '<div class="empty">Nothing to decide today.</div>'}</div>
+          <div class="ccard-b" style="padding:0">${today.length ? `<div class="tbl-wrap"><table class="tbl nba-tbl"><thead><tr><th>Account · contact</th><th>Action</th><th>Why it needs you</th><th></th></tr></thead><tbody>${today.map(a => { const d = S.decisions[a.id]; return `<tr><td class="row-link" onclick="App.openRecord('${a.id}','engage')"><div class="nm">${esc(a.name)}</div><div class="sm">${esc(a.contact.name)}${isMgr ? ' · ' + esc(first(USERS[a.owner].name)) : ''}</div></td><td>${esc(a.nba.action)}<div class="sm">${a.nba.channel} · ${esc(a.segment)}</div></td><td><span class="badge ${REASON[reasonOf(a)]}">${reasonOf(a)}</span></td><td style="white-space:nowrap">${d ? `<span class="badge b-grey nodot">${decLabel(d)}</span>` : /auto|sent/.test(a.nba.status) ? byAI('Went ahead') : `${!a.nba.reason || (isMgr && a.nba.sensitive) ? `<button class="btn sm pri" onclick="App.approve('${a.id}')">${isMgr && a.nba.sensitive ? 'Sign off' : 'Approve'}</button> ` : ''}<button class="btn sm" onclick="App.openRecord('${a.id}','engage')">Review</button>`}</td></tr>`; }).join('')}</tbody></table></div>` : '<div class="empty">Nothing to decide today.</div>'}</div>
           <div class="ccard-f"><span class="muted" style="font-size:11.5px">${auto} went ahead on their own${later ? ` · ${later} more due later this week` : ''}</span><div style="flex:1"></div>${today.some(a => !a.nba.reason && !S.decisions[a.id]) && !isMgr ? '<button class="btn sm pri" onclick="App.approveAll()">Approve all ready</button>' : ''}${openBtn('Approvals', "App.openMod('approvals')")}</div></div>
         <div class="ccard"><div class="ccard-h"><span class="t">${ic('megaphone', 14)} Campaigns to create today · NBC</span><span class="muted" style="font-size:11px">from today's scored list</span></div>
           <div class="ccard-b">
@@ -379,6 +448,16 @@
     todo: () => `<p>Your list, most urgent first:</p><div class="ccard"><div class="ccard-b" style="padding:2px 14px">${todos().map(x => `<div class="mini-row row-link" onclick="App.runTodo('${x.id}')"><div class="grow"><div class="nm">${esc(x.t)}</div><div class="sm">${esc(x.d)}</div></div><span class="due ${x.cls}" style="font-size:11px">${esc(x.due)}</span></div>`).join('')}</div></div>`,
     approvalsList: () => { const items = apprItems(isMgr ? 'needs' : 'todo'); return items.length ? `<p>${isMgr ? 'These need your sign-off:' : 'Waiting for you:'}</p><div class="ccard"><div class="ccard-b" style="padding:2px 14px">${items.map(apprMini).join('')}</div></div>` : '<p>Nothing is waiting for you right now.</p>'; },
     docCard: () => { const d = S.studio.doc; return d ? `<button class="doc-card" onclick="App.focusDoc()"><span class="doc-ic">${ic(d.type === 'Whitepaper' ? 'doc' : 'pen', 18)}</span><span><b>${esc(d.title)}</b><span class="sm">${esc(d.type)} · Open in the canvas</span></span></button>` : ''; },
+    inboxTile: () => { const th = threads(); return `<p>${th.filter(needsReply).length} repl${th.filter(needsReply).length === 1 ? 'y needs' : 'ies need'} an answer${isMgr ? ' across the team' : ''}. Each has a drafted answer. Open one to read it and reply.</p>
+      <div class="tcard"><div class="tcard-h"><span class="t">${ic('inbox', 15)} Replies</span><span class="muted" style="font-size:12px">${th.length} conversations · email and LinkedIn</span><div class="sp"></div><button class="ic-btn" title="Open beside the chat" onclick="App.openArt('replies')">${ic('expand', 15)}</button></div>
+      <div style="padding:2px 14px">${th.map(r => `<div class="mini-row row-link" onclick="App.openThread('${r.id}')">${chIc(r.ch)}<div class="grow"><div class="nm">${esc(r.from)} <span class="muted" style="font-weight:400">· ${esc(acct(r.acc).name)}${isMgr ? ' · ' + esc(first(USERS[r.owner].name)) : ''}</span></div><div class="sm">"${esc(r.text)}"</div></div><span class="badge ${KIND_B[r.kind]}">${r.kind}</span>${S.handled[r.id] ? byMe('Answered') : ''}</div>`).join('')}</div>
+      <button class="tcard-more" onclick="App.openArt('replies')">Open all replies beside the chat ${ic('expand', 12)}</button></div>`; },
+    anTile: () => { const reps = isMgr ? REPS : [me.id], sum = k => reps.reduce((n, r) => n + TEAM_STATS[r][k], 0); return `<p>Here's last week${isMgr ? ' for the team' : ''}. The dashboard is open on the right. Ask me to dig in: "which pipeline did the AI drive on its own?", "which accounts are hot?", "which are stuck?"</p>
+      <div class="an-mini">${[['Meetings', `${sum('meetings')} / ${sum('target')}`], ['Reply rate', pct(sum('replies'), sum('sent'))], ['Accepted first time', Math.round(sum('accept') / reps.length) + '%'], ['Overdue', sum('overdue')]].map(([k, v]) => `<div><b>${v}</b><span>${k}</span></div>`).join('')}</div>
+      <div class="next-row">${openBtn('Open the dashboard', "App.openArt('analytics')")}${btn('Which pipeline did the AI drive on its own?', 'Which pipeline did the AI drive on its own?', true)}${btn('Which accounts are hot?', 'Which accounts are hot?')}</div>`; },
+    metricList: m => `<p>${m.intro}</p>${tableCard(m.table)}`,
+    redList: () => { const ra = redAccounts(); return `<p>Here are your <b>${ra.length} red accounts</b> (tier A, highest score first). I named this chat after the objective and will track it: tell me when you've done one, leave notes, or ask me to remind you.</p>${tableCard('red')}<div class="next-row">${btn('Remind me on Wednesday at 9 to pick up the rest', 'Remind me on Wednesday at 9 to pick up the rest')}${btn('Note: Budi prefers LinkedIn', 'Note: Budi prefers LinkedIn')}</div>`; },
+    catchup: m => { const c = chat(); return c && c.obj && c.obj.red ? catchupHtml(c) : `<p>Since you last logged in (Mon 26 Oct, 18:40):</p><div class="cu-grid sm">${catchData('last').map(([i, v, l]) => `<div class="cu"><span class="cu-ic">${ic(i, 14)}</span><b>${v}</b><span class="l">${l}</span></div>`).join('')}</div><p>Then it left ${todos().length} things for you. Ask "what should I do first?" or tag one with #.</p>`; },
     help: () => `<p>I can run the whole flow. Try:</p><div class="hints" style="margin:4px 0">${['Find prospects like my last 10 wins', 'Score this list', 'Create micro-segments', 'Prepare the next actions', 'Build the campaign', 'How are the campaigns doing?', 'What did we learn this week?', 'Write a blog on planning a control system migration'].map(h => `<button class="chip" onclick="App.ask(${js(h)})">${esc(h)}</button>`).join('')}</div>`,
   };
   function modCard(v) {
@@ -400,7 +479,7 @@
     const d = S.decisions[a.id];
     return `<div class="mini-row"><div class="grow row-link" onclick="App.openRecord('${a.id}','engage')"><div class="nm">${esc(a.contact.name)} · ${esc(a.name)}</div><div class="sm">${esc(a.nba.action)}${isMgr ? ' · ' + esc(first(USERS[a.owner].name)) : ''}</div></div>
       <span class="badge ${REASON[reasonOf(a)]}">${reasonOf(a)}</span>
-      ${d ? `<span class="badge b-grey nodot">${decLabel(d)}</span>` : /auto|sent/.test(a.nba.status) ? '<span class="badge b-pos">Went ahead</span>' : `${!a.nba.reason || (isMgr && a.nba.sensitive) ? `<button class="btn sm pri" onclick="App.approve('${a.id}')">${isMgr && a.nba.sensitive ? 'Sign off' : 'Approve'}</button>` : ''}<button class="btn sm" onclick="App.openRecord('${a.id}','engage')">Review</button>`}</div>`;
+      ${d ? `<span class="badge b-grey nodot">${decLabel(d)}</span>` : /auto|sent/.test(a.nba.status) ? byAI('Went ahead') : `${!a.nba.reason || (isMgr && a.nba.sensitive) ? `<button class="btn sm pri" onclick="App.approve('${a.id}')">${isMgr && a.nba.sensitive ? 'Sign off' : 'Approve'}</button>` : ''}<button class="btn sm" onclick="App.openRecord('${a.id}','engage')">Review</button>`}</div>`;
   }
   function nbaCard(a, note) {
     if (a.campaign) { const c = campOf(a.campaign); return `<p><b>${esc(a.name)}</b> is in the campaign <b>${esc(c.name)}</b>, so it follows the campaign's steps instead of its own action. Current state: ${esc(a.campState)}.</p><div class="next-row">${openBtn('Campaign', `App.goCampaign('${c.id}')`)}${openBtn('Person', `App.openRecord('${a.id}','engage')`)}</div>`; }
@@ -425,6 +504,24 @@
   function respond(text) {
     const t = text.toLowerCase(), lk = lastKind(), v = view();
     if (v === 'studio') return studioRespond(t, text);
+    if (recId && /shorter|cost|step \d|why these|why this|remove step|add an? (email|linkedin)|runner|formal|friendl|send (it|now)|rewrite/.test(t)) return { kind: 'text', html: copRespond(acct(recId), t) };
+    const c0 = chat();
+    if (/^note[:\s]|leave (myself )?a note/.test(t) && c0) { const n = text.replace(/^note[:\s]*/i, '').replace(/leave (myself )?a note[:\s]*/i, '').trim() || text; (c0.notes = c0.notes || []).push({ t: n, d: 'Today' }); return { kind: 'text', html: `Noted: "${esc(n)}". It's in this chat's notes.` }; }
+    if (/remind me/.test(t) && c0) { const d = (t.match(/(monday|tuesday|wednesday|thursday|friday|tomorrow)/) || ['', 'tomorrow'])[1], tm = (t.match(/at (\d{1,2})/) || ['', '9'])[1]; const when = `${d.charAt(0).toUpperCase() + d.slice(1)} ${tm}:00`; const what = text.replace(/^.*?remind me( on)?( \w+day| tomorrow)?( at \d{1,2})?( to)?/i, '').trim() || 'pick this up'; c0.reminder = { when, text: what, due: false }; return { kind: 'text', html: `I'll remind you ${esc(when)} to ${esc(what)}. When you're back, this chat opens with a catch-up of what happened in between.` }; }
+    const asg = t.match(/assign (.+) to (sofia|marco|aisha|kenji)/);
+    if (asg && isMgr) { shared.tasks.push({ t: text.match(/assign (.+) to /i)[1], to: asg[2], acc: '', due: 'Today', done: false }); saveShared(); return { kind: 'text', html: `Assigned to ${USERS[asg[2]].name}. It's in their list on Today.` }; }
+    if (/red accounts|tier.?a accounts|plan my week|work my .*accounts/.test(t)) return { kind: 'redList', steps: ['Pulled your tier-A accounts, highest score first', 'Checked what the AI already did on each this week'] };
+    if (/catch me up|since i last|what happened/.test(t)) return { kind: 'catchup' };
+    if (/pipeline|autonomous|drive on its own|drove on its own/.test(t)) return { kind: 'metricList', table: 'aiPipeline', open: 'aiPipeline', intro: 'Pipeline on accounts where the AI did the work on its own: next best actions that went ahead and running campaign steps. Open any account to see its last interaction.', steps: ['Matched open opportunities to accounts the AI worked on its own'] };
+    if (/\bhot\b/.test(t)) return { kind: 'metricList', table: 'hot', open: 'hot', intro: 'High score, opened recently, no reply yet. Worth a personal touch now.' };
+    if (/stuck|overdue/.test(t)) return { kind: 'metricList', table: 'stuck', open: 'stuck', intro: 'Waiting on a person, bounced, or held for a campaign decision.' };
+    if (/emails sent/.test(t)) return { kind: 'metricList', table: 'emailsSent', open: 'emailsSent', intro: 'Every email that went out this week, and who sent it: the AI on its own or a person.' };
+    if (/linkedin touches/.test(t)) return { kind: 'metricList', table: 'liTouches', open: 'liTouches', intro: 'LinkedIn connection requests and messages this week.' };
+    if (/meetings booked/.test(t)) return { kind: 'metricList', table: 'meetings', open: 'meetings', intro: 'Meetings booked this week.' };
+    if (/in a sequence|sequenced/.test(t)) return { kind: 'metricList', table: 'sequenced', open: 'sequenced', intro: 'Everyone in a campaign sequence right now.' };
+    if (/analytics|last week|my numbers|dashboard/.test(t)) return { kind: 'anTile', open: 'analytics', steps: ['Pulled last week\'s outcomes'] };
+    if (/emails i received|replies i received|received today|inbox|any repl|show me the replies/.test(t)) return { kind: 'inboxTile', open: 'replies' };
+    if (/last interaction|pull (up )?(the )?last/.test(t)) { const a = findAccount(t) || (ctx ? acct(ctx) : null); if (a) { const r = REPLIES.find(x => x.acc === a.id); return r ? { kind: 'text', html: `The last interaction with ${esc(a.name)} is ${esc(r.from)}'s reply (${esc(r.at)}). It's open on the right with a drafted answer.`, openThr: r.id } : { kind: 'text', html: `Here's ${esc(a.name)}'s activity, newest first. It's open on the right.`, openRec: a.id, tab: 'activity' }; } }
     const tch = t.match(/add an? (email|linkedin) (touch|step)/);
     if (tch) {
       const cid = findCampaign(t) || campSel || 'c5', ch = tch[1] === 'email' ? 'Email' : 'LinkedIn';
@@ -445,7 +542,7 @@
     if (/route|nba and nbc|nbc and nba|micro|segment (this|the|them)|create.*segment|group (this|them|the list)/.test(t)) return { kind: 'listSegments', steps: ['Tagged each account by its strongest trigger', 'Checked each micro-segment against the campaign threshold (10 in 7 days)', 'Routed: 10 accounts → one campaign (NBC), 6 → next best actions (NBA)', 'Drafted the campaign sequence and the next actions · brand checks passed'] };
     if (/prepare.*(next )?action|next actions|\bnba\b/.test(t) && !/which/.test(t)) return { kind: 'nbaList', steps: ['De-dup check: no open opportunities, owners confirmed', 'Read CRM history and warm paths', 'Chose email or LinkedIn per contact and wrote the drafts', 'Brand, claims and banned-word checks passed'] };
     if (/build.*campaign|create.*campaign|draft.*campaign|\bnbc\b/.test(t) && !/which/.test(t)) return { kind: 'flowCampaign', steps: ['Used the structure closest to this trigger (provisional: no outcomes yet)', 'Planned 4 steps across email and LinkedIn', 'Personalised each step per person', 'Checked nobody is already in another sequence'] };
-    if (/draft a reply|reply to dian/.test(t)) return { kind: 'text', html: 'Here\'s a reply with three times from your calendar:<div class="draft" style="margin-top:8px">Hi Dian,\n\nGreat to hear from you. I can do Tuesday 3 Nov at 10:00, Wednesday 4 Nov at 14:00 or Thursday 5 Nov at 09:30 (Jakarta time). I\'ll bring our lead engineer for hydrocracker projects.\n\nBest,\nSofia</div><div class="next-row"><button class="btn sm pri" onclick="App.handleReply(\'reastgate\')">Approve &amp; send</button></div>', steps: ['Read the reply: positive, asks for times next week', 'Checked your calendar for free slots', 'Wrote the reply'] };
+    if (/draft a reply|reply to dian/.test(t)) return { kind: 'text', html: 'Here\'s a reply with three times from your calendar:<div class="draft" style="margin-top:8px">Hi Dian,\n\nGreat to hear from you. I can do Tuesday 3 Nov at 10:00, Wednesday 4 Nov at 14:00 or Thursday 5 Nov at 09:30 (Jakarta time). I\'ll bring our lead engineer for hydrocracker projects.\n\nBest,\nSofia</div><div class="next-row"><button class="btn sm pri" onclick="App.handleReply(\'reastgate\')">Approve &amp; send</button></div>', steps: ['Read the reply: positive, asks for times next week', 'Checked your calendar for free slots', 'Wrote the reply'], openThr: 'reastgate' };
     if (/write|blog|whitepaper/.test(t)) { startDoc(/whitepaper/.test(t) ? 'Whitepaper' : 'Blog', text); return { kind: 'text', html: `Started it in Content studio: <b>${esc(S.studio.doc.title)}</b>.` }; }
     const a = findAccount(t) || (ctx ? acct(ctx) : null);
     if (/close to|almost/.test(t)) { const b = SEGMENTS.find(s => s.mode === 'Building'); return { kind: 'text', html: `<b>${esc(b.name)}</b> has ${b.building} of the 10 accounts it needs in the 7-day window. If two more arrive this week, it becomes a campaign; until then each account has its own next best action.` }; }
@@ -456,7 +553,7 @@
     if (isMgr && /team|reps?\b|overdue|coach|kenji|marco|aisha/.test(t) && !/rank/.test(t)) return { kind: 'team', steps: ['Pulled each rep\'s queue, outcomes and approvals this week'] };
     if (/next best actions doing|how are my (next|actions)|nba.*(doing|deliver)|bounc/.test(t)) { const all = nbaRows(), T = track, b = all.filter(a => T(a).cls === 'b-neg'); if (/bounc/.test(t)) return { kind: 'text', html: b.length ? `${b.length} bounced: ${b.map(a => `<a href="#segments" onclick="App.openRecord('${a.id}','engage');return false">${esc(a.contact.name)} · ${esc(a.name)}</a>`).join(', ')}. The address is being re-checked with the second provider before a retry.` : 'Nothing bounced.' }; return { kind: 'text', html: `${all.length} next best actions this week: ${all.filter(a => T(a).how === 'Went ahead on its own').length} went ahead on their own, ${all.filter(a => T(a).stage === 0).length} wait for approval. ${all.filter(a => T(a).stage >= 2).length} delivered, ${all.filter(a => T(a).stage >= 3).length} opened, ${all.filter(a => T(a).stage >= 4).length} replied, ${b.length} bounced. <a href="#segments" onclick="App.openMod('segments');return false">See them by segment</a>` }; }
     if (/went ahead/.test(t)) { const w = apprItems('ahead'); return { kind: 'text', html: `${w.length} next best actions went ahead on their own${isMgr ? ' across the team' : ''}, because they passed all six checks: ${w.slice(0, 5).map(a => `<a href="#approvals" onclick="App.openRecord('${a.id}','engage');return false">${esc(a.name)}</a>`).join(', ')}${w.length > 5 ? ' and more' : ''}.` }; }
-    if (/approv|waiting|needs me|needs my/.test(t) && !/approve all/.test(t)) return { kind: 'approvalsList' };
+    if (/approv|waiting|needs me|needs my/.test(t) && !/approve all/.test(t)) return { kind: 'approvalsList', open: 'approvals' };
     if (/campaign|sequence|turnaround/.test(t)) return { kind: 'campaign', id: findCampaign(t) || 'c1' };
     if (/learn|worked|working|what changed|readout/.test(t)) return { kind: 'learned', steps: ['Read 214 outcomes logged this month (wins and misses)', 'Re-ran pattern promotion and demotion', 'Compared signal sources by conversion'] };
     if (/to ?do|what should i do first|my day|first today/.test(t)) return { kind: 'todo' };
@@ -484,16 +581,18 @@
   }
   function ask(text) {
     if (!text || !text.trim()) return;
-    if (!view() && S.cur === 'home') { const id = 'n' + Date.now(); S.chats.unshift({ id, title: 'New chat', when: 'Now', thread: [] }); S.cur = id; renderAll(); }
+    if (!view() && S.cur === 'home') { const id = 'n' + Date.now(); S.chats.unshift({ id, title: 'New chat', when: 'Now', agent: S.agent || 'auto', thread: [] }); S.cur = id; renderAll(); }
     const c = chat();
     if (!c) return;
     c.thread = c.thread.filter(m => m.who !== 'typing');
     if (c.title === 'New chat') c.title = text.length > 38 ? text.slice(0, 36) + '…' : text;
     c.thread.push({ who: 'me', text });
-    const reply = respond(text);
+    let reply = respond(text);
+    if (reply.kind === 'help' && S.agent && AGENTS[S.agent] && AGENTS[S.agent].q) reply = respond(AGENTS[S.agent].q);
+    if (reply.kind === 'redList' && !c.obj && !view()) { c.title = 'Red accounts · week of 26 Oct'; c.obj = { text: 'Reach my 10 red accounts this week', red: true, doneIds: [] }; }
     const steps = reply.steps || [];
     save(); renderAll();
-    const finish = () => { c.thread = c.thread.filter(m => m.who !== 'typing'); const m = Object.assign({ who: 'ai', fresh: true }, reply); c.thread.push(m); save(); renderAll(); m.fresh = false; };
+    const finish = () => { c.thread = c.thread.filter(m => m.who !== 'typing'); const m = Object.assign({ who: 'ai', fresh: true }, reply); c.thread.push(m); if (reply.open) { art = reply.open; recId = null; thrId = null; } if (reply.openThr) { recId = null; thrId = reply.openThr; S.read[thrId] = true; } if (reply.openRec) { thrId = null; recId = reply.openRec; recTab = reply.tab || 'engage'; } save(); renderAll(); m.fresh = false; };
     const box = document.querySelector('#thread .thread-in'), th = $('thread');
     if (!box) { finish(); return; }
     /* Steps appear one by one in place, then the answer fades in: no full redraw while thinking */
@@ -538,57 +637,108 @@
   }
   const seqSpan = c => { const sq = seqOf(c); return `${sq.length} steps · ${sq.length ? sq[sq.length - 1].day + 1 : 0} days`; };
 
-  /* ─── Home (Today): the greeting and the chat box first; the brief, to-do and numbers below ─── */
+  /* ─── Today: the chat box first, then what the system did since you were last here, the numbers, and what needs you ─── */
+  const byAI = (t = 'AI') => `<span class="by ai" title="Done by the AI on its own">✦ ${t}</span>`;
+  const byMe = t => `<span class="by hu" title="Done or approved by a person">${ic('user', 11)} ${t}</span>`;
   function metrics() {
     const own = a => a.owner === me.id, ts = TEAM_STATS, sum = k => REPS.reduce((n, r) => n + ts[r][k], 0);
-    if (!isMgr) return [['users', 'Sequenced', ACCOUNTS.filter(a => a.campaign && own(a)).length, 30], ['mail', 'Emails sent', ts[me.id].sent, 40], ['li', 'LinkedIn touches', 5, 20], ['reply', 'Replies to answer', myReplies().filter(r => r.kind !== 'Out of office').length, null], ['task', 'To decide today', todayNBA().length, null], ['check', 'Meetings this week', ts[me.id].meetings, ts[me.id].target], ['up', 'Accepted first time', ts[me.id].accept + '%', null]];
-    if (homeMet === 'mine') return [['task', 'Sign-offs waiting', apprItems('needs').length, null], ['megaphone', 'Campaigns to confirm', CAMPAIGNS.filter(c => (c.status === 'Ready to confirm' || S.camp[c.id] === 'Sent for confirmation') && S.camp[c.id] !== 'Confirmed').length, null], ['check', 'Decided today', Object.keys(S.decisions).length, null], ['users', 'Work reassigned', Object.keys(shared.assign).length, null], ['pen', 'Tasks assigned', shared.tasks.length, null], ['reply', 'Replies across the team', myReplies().length, null]];
-    return [['mail', 'Emails sent', sum('sent'), 160], ['reply', 'Replies', sum('replies'), null], ['check', 'Meetings this week', sum('meetings'), sum('target')], ['up', 'Accepted first time', Math.round(sum('accept') / REPS.length) + '%', null], ['task', 'Open items', sum('todo'), null], ['alert', 'Overdue', sum('overdue'), null]];
+    if (!isMgr) return [['users', 'In a sequence', ACCOUNTS.filter(a => a.campaign && own(a)).length, 30, 'Show me who is in a sequence'], ['mail', 'Emails sent', ts[me.id].sent, 40, 'Show me emails sent this week'], ['li', 'LinkedIn touches', 5, 20, 'Show me LinkedIn touches this week'], ['reply', 'Replies to answer', myReplies().filter(r => r.kind !== 'Out of office').length, null, 'Show me the replies I received today'], ['check', 'Meetings this week', ts[me.id].meetings, ts[me.id].target, 'Show me meetings booked this week'], ['up', 'Accepted first time', ts[me.id].accept + '%', null, 'Show me last week\'s analytics']];
+    return [['mail', 'Emails sent', sum('sent'), 160, 'Show me emails sent this week'], ['reply', 'Replies', sum('replies'), null, 'Show me the replies I received today'], ['check', 'Meetings this week', sum('meetings'), sum('target'), 'Show me meetings booked this week'], ['up', 'Accepted first time', Math.round(sum('accept') / REPS.length) + '%', null, 'Show me last week\'s analytics'], ['alert', 'Overdue', sum('overdue'), null, 'Which accounts are stuck?'], ['task', 'Waiting for approval', apprItems(isMgr ? 'needs' : 'todo').length, null, 'What needs me?']];
   }
+  const PER = { last: 'Since you last logged in', today: 'Today', week: 'This week' };
+  function catchData(per) {
+    const k = per === 'last' ? 0.4 : per === 'today' ? 1 : 4.2, m = isMgr ? 1 : 0.32, n = x => Math.max(1, Math.round(x * k * m));
+    const went = ACCOUNTS.filter(a => a.nba && a.nba.status === 'auto' && !a.campaign && mine(a)).length;
+    return [['bolt', n(214), 'accounts re-checked', `${n(61)} new signals · ${n(24)} qualified`, 'Who should I call first?'],
+      ['layers', per === 'week' ? 9 : per === 'today' ? 4 : 2, 'micro-segments updated', '1 crossed the campaign threshold', 'Which segments are campaigns?'],
+      ['megaphone', n(26), 'campaign steps sent', 'email and LinkedIn', 'How are the campaigns doing?'],
+      ['spark', per === 'last' ? Math.max(1, Math.round(went / 2)) : per === 'today' ? went : went * 3, 'next best actions went ahead', 'passed every check', 'What went ahead today?'],
+      ['reply', per === 'last' ? 2 : myReplies().length + (per === 'week' ? 4 : 0), 'replies came in', 'each with a drafted answer', 'Show me the replies I received today'],
+      ['check', per === 'week' ? (isMgr ? 7 : 2) : 1, 'meetings booked', 'from replies to the system\'s messages', 'Show me meetings booked this week']];
+  }
+  const URG = { hot: 0, soon: 1, ok: 2 };
   function renderHome() {
-    const td = todos(), blk = myBlockers().find(b => b.k === 'neg');
-    const q = ($('todoQ') && $('todoQ').value || '').toLowerCase();
-    const tdRows = td.filter(x => !q || (x.t + x.d).toLowerCase().includes(q));
+    const td = todos().slice().sort((p, q) => URG[p.cls] - URG[q.cls]), per = S.catchPer || 'last', blk = myBlockers().find(b => b.k === 'neg');
     $('main').className = 'home-pg';
-    $('main').innerHTML = `<div class="hm"><div class="hm-main">
-        <h1 class="hm-greet">${greeting()}, ${esc(first(me.name))}. ${isMgr ? 'Here\'s your team\'s day.' : 'Ready to prospect?'}</h1>
-        <div class="hm-box ${blk ? 'warn' : ''}">${blk ? `<div class="hm-note"><b>${esc(blk.t)}</b><span>${esc(blk.d)}</span></div>` : ''}
-          <div class="composer"><div class="ctx" id="ctx">${ctxChip()}</div><label class="sr" for="composer">Message DemandAI</label>
-            <textarea id="composer" rows="2" placeholder="Find, score, segment, act, track… type @ to add an account" onkeydown="App.key(event)" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
-            <div class="composer-f"><button class="ic-btn" title="Add an account" onclick="App.focusComposer('@')">@</button><span class="muted" style="font-size:11px">Scripted demo · nothing is sent</span><div class="sp"></div><button class="send" onclick="App.send()" title="Send">${ic('send', 16)}</button></div></div></div>
-        <div class="hints hm-hints">${hints().map(h => `<button class="chip" onclick="App.ask(${js(h)})">${esc(h)}</button>`).join('')}</div>
-        <section class="hm-card"><div class="hm-card-h"><span class="hm-ic">${ic('spark', 15)}</span><b>Today's brief</b><span class="muted">prepared overnight · 06:00</span></div><div class="hm-brief">${RENDER.brief({ home: true })}</div></section>
-        <section class="hm-card"><div class="hm-card-h"><span class="hm-ic">${ic('task', 15)}</span><b>To do</b><span class="badge b-grey nodot">${td.filter(x => !S.todosDone[x.id]).length} open</span><div class="sp"></div><div class="search">${ic('search', 14)}<label class="sr" for="todoQ">Search</label><input id="todoQ" placeholder="Search…" value="${esc(q)}" oninput="App.renderAll()"></div></div>
-          <div class="tbl-wrap"><table class="tbl todo-tbl"><thead><tr><th style="width:34px"><span class="sr">Done</span></th><th>Task</th><th>Details</th><th>Due</th></tr></thead><tbody>
-          ${tdRows.map(x => `<tr class="${S.todosDone[x.id] ? 'done' : ''}"><td><button class="ck" aria-label="Mark done" onclick="App.doneTodo('${x.id}')">${S.todosDone[x.id] ? ic('check', 11, 3) : ''}</button></td><td class="row-link" onclick="App.runTodo('${x.id}')"><div class="nm">${esc(x.t)}</div>${x.from ? `<span class="badge b-ter nodot" style="margin-top:4px">From ${esc(x.from)}</span>` : ''}</td><td class="row-link" onclick="App.runTodo('${x.id}')"><div class="sm">${esc(x.d)}</div></td><td><span class="due ${x.cls}">${esc(x.due)}</span></td></tr>`).join('') || '<tr><td colspan="4" class="empty">No tasks match.</td></tr>'}
-          </tbody></table></div></section>
-        ${isMgr ? teamCard() : ''}
-      </div>
-      <aside class="hm-side">
-        <section class="hm-card"><div class="hm-card-h"><b>${isMgr ? (homeMet === 'mine' ? 'My metrics' : 'Team metrics') : 'My metrics'}</b><div class="sp"></div>${isMgr ? `<div class="seg">${[['team', 'Team'], ['mine', 'Mine']].map(([k, l]) => `<button class="${homeMet === k ? 'on' : ''}" onclick="App.setHomeMet('${k}')">${l}</button>`).join('')}</div>` : '<span class="muted" style="font-size:12px">This week</span>'}</div>
-          ${metrics().map(([i, k, v, t]) => `<div class="met"><span class="met-ic">${ic(i, 15)}</span><span class="grow">${k}</span><b>${v}${t ? `<i> / ${t}</i>` : ''}</b></div>`).join('')}</section>
-        <section class="hm-card"><div class="hm-card-h"><b>Most important updates</b></div><div style="padding:2px 14px 6px">${updates().slice(0, 5).map(u => `<button class="upd-i" ${u.on ? `onclick="${u.on}"` : ''}><span class="ic k-${u.k}">${ic(u.icon, 13)}</span><div class="grow"><div class="nm">${esc(u.t)}</div><div class="sm">${esc(u.d)}</div></div><span class="when">${esc(u.when)}</span></button>`).join('')}</div></section>
-      </aside></div>`;
-    if (q) { const s = $('todoQ'); s.focus(); s.setSelectionRange(q.length, q.length); }
+    $('main').innerHTML = `<div class="hm1">
+      <h1 class="hm-greet">${greeting()}, ${esc(first(me.name))}.</h1>
+      <div class="hm-sub">${isMgr ? 'Your team\'s day. The AI did the groundwork; here\'s what needs you.' : 'The AI did the groundwork while you were away. Here\'s what needs you.'}</div>
+      ${composerHtml(true)}
+      <div class="hints hm-hints">${hints().map(h => `<button class="chip" onclick="App.ask(${js(h)})">${esc(h)}</button>`).join('')}</div>
+
+      <section class="hm-sec">
+        <div class="hm-sec-h"><h2>${ic('spark', 16)} What the AI did ${per === 'last' ? 'since you last logged in' : per === 'today' ? 'today' : 'this week'}</h2><span class="muted">${per === 'last' ? 'Mon 26 Oct, 18:40 → now' : per === 'today' ? 'Tue 27 Oct' : 'Mon 26 Oct – now'}</span><div class="sp"></div><div class="seg">${Object.entries(PER).map(([k, l]) => `<button class="${per === k ? 'on' : ''}" onclick="App.setCatch('${k}')">${l}</button>`).join('')}</div></div>
+        <div class="cu-grid">${catchData(per).map(([i, v, l, d, q]) => `<button class="cu" onclick="App.ask(${js(q)})"><span class="cu-ic">${ic(i, 15)}</span><b>${v}</b><span class="l">${l}</span><span class="d">${d}</span></button>`).join('')}</div>
+        <div class="cu-ev">${updates().slice(0, 4).map(u => `<button class="cu-e" ${u.on ? `onclick="${u.on}"` : ''}><span class="ic k-${u.k}">${ic(u.icon, 13)}</span><span class="grow"><b>${esc(u.t)}</b><span>${esc(u.d)}</span></span>${u.k === 'neg' ? '' : /replied|booked/.test(u.t) ? '' : byAI()}<span class="when">${esc(u.when)}</span></button>`).join('')}</div>
+        <div class="legend">${byAI('done by the AI on its own')} ${byMe('done or approved by a person')}</div>
+      </section>
+
+      <section class="hm-sec">
+        <div class="hm-sec-h"><h2>${ic('bars', 16)} ${isMgr ? 'Your team\'s numbers' : 'Your numbers'}</h2><span class="muted">this week · open any for the list</span></div>
+        <div class="mt-grid">${metrics().map(([i, k, v, t, q]) => `<button class="mt" onclick="App.ask(${js(q)})"><span class="mt-h">${ic(i, 14)} ${k}</span><b>${v}${t ? `<i> / ${t}</i>` : ''}</b>${t ? `<span class="bar"><i style="width:${Math.min(100, Math.round(parseInt(v, 10) / t * 100))}%"></i></span>` : ''}</button>`).join('')}</div>
+      </section>
+
+      <section class="hm-sec">
+        <div class="hm-sec-h"><h2>${ic('task', 16)} Then it handed these to you</h2><span class="muted">most urgent first · ${td.filter(x => !S.todosDone[x.id]).length} open · each opens in its own window</span></div>
+        ${blk ? `<div class="blk neg" style="margin-bottom:10px">${ic('alert', 15)}<div class="grow"><b>${esc(blk.t)}</b><span>${esc(blk.d)}</span></div></div>` : ''}
+        <div class="nd">${td.map(x => `<div class="nd-r ${S.todosDone[x.id] ? 'done' : ''}"><button class="ck" aria-label="Mark done" onclick="App.doneTodo('${x.id}')">${S.todosDone[x.id] ? ic('check', 11, 3) : ''}</button><span class="urg ${x.cls}"></span><button class="nd-m" onclick="App.openTask('${x.id}')"><b>${esc(x.t)}</b><span>${esc(x.d)}</span></button>${x.from ? `<span class="badge b-ter nodot">From ${esc(x.from)}</span>` : byAI('prepared')}<span class="due ${x.cls}">${esc(x.due)}</span><button class="ic-btn" title="Open in its own window" onclick="App.openTask('${x.id}')">${ic('expand', 14)}</button></div>`).join('')}</div>
+      </section>
+    </div>`;
   }
-  /* The manager's team card: each rep's work, and assigning work to anyone */
-  function teamCard() {
-    const opts = sel => REPS.map(r => `<option value="${r}" ${sel === r ? 'selected' : ''}>${esc(USERS[r].name)}</option>`).join('');
-    const overdue = ACCOUNTS.filter(a => a.owner === 'kenji' && a.nba && /ready|review/.test(a.nba.status) && !S.decisions[a.id]).slice(0, 2);
-    return `<section class="hm-card"><div class="hm-card-h"><span class="hm-ic">${ic('users', 15)}</span><b>Team</b><span class="muted">each rep's work · assign to anyone</span></div>
-      <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Rep</th><th>Open</th><th>Overdue</th><th>Replies</th><th>Meetings</th><th>Accepted</th><th></th></tr></thead><tbody>
-        ${REPS.map(r => { const t = TEAM_STATS[r]; return `<tr><td><div style="display:flex;gap:8px;align-items:center">${avatar(USERS[r], 24)}<span class="nm">${esc(USERS[r].name)}</span></div></td><td>${t.todo + shared.tasks.filter(x => x.to === r).length}</td><td>${t.overdue ? `<span class="badge b-neg">${t.overdue}</span>` : '0'}</td><td>${t.replies}</td><td>${t.meetings} / ${t.target}</td><td>${t.accept}%</td><td style="white-space:nowrap"><button class="btn sm" onclick="App.viewRep('${r}')">View work</button></td></tr>`; }).join('')}
-      </tbody></table></div>
-      ${overdue.length ? `<div class="assign-sug">${ic('spark', 14)}<div class="grow"><b>Kenji is behind.</b> Move ${overdue.map(a => esc(a.name)).join(' and ')} to Aisha?</div><button class="btn sm pri" onclick="App.reassign(${js(overdue.map(a => a.id))},'aisha')">Move to Aisha</button></div>` : ''}
-      <div class="assign-f"><div class="lbl">Assign a task</div>
-        <div class="assign-row"><label class="sr" for="asT">Task</label><input class="edit" id="asT" placeholder="e.g. Call back Larkspur about the comparison" style="flex:2 1 220px">
-          <label class="sr" for="asR">Rep</label><select class="sel" id="asR">${opts('kenji')}</select>
-          <label class="sr" for="asA">Account</label><select class="sel" id="asA"><option value="">No account</option>${ACCOUNTS.filter(a => !a.generated || a.nba).slice(0, 30).map(a => `<option value="${a.id}">${esc(a.name)}</option>`).join('')}</select>
-          <label class="sr" for="asD">Due</label><select class="sel" id="asD"><option>Today</option><option>Tomorrow</option><option>Fri 30 Oct</option></select>
-          <button class="btn sm pri" onclick="App.assignTask()">Assign</button></div>
-        ${shared.tasks.length ? `<div style="margin-top:10px">${shared.tasks.map(x => `<div class="mini-row"><span class="badge b-ter nodot">${esc(first(USERS[x.to].name))}</span><div class="grow"><div class="nm">${esc(x.t)}</div><div class="sm">${x.acc ? esc(acct(x.acc).name) + ' · ' : ''}due ${esc(x.due)}</div></div><span class="muted" style="font-size:11px">${x.done ? 'Done' : 'Open'}</span></div>`).join('')}</div>` : ''}
-      </div></section>`;
+
+  /* ─── Tasks: tagging one (#) opens it in its own window: a chat for the task with the work open on the right ─── */
+  function taskTarget(x) {
+    if (x.id.startsWith('rep-')) return { thr: x.id.slice(4) };
+    if (/^(m1|t2|t3)$/.test(x.id)) return { art: 'approvals' };
+    if (x.id === 'm2') return { camp: 'c1' };
+    if (x.id === 'm6') return { camp: 'c5' };
+    if (x.id === 't6') return { camp: 'c5', tab: 'steps' };
+    if (x.id === 't4') { const s = apprItems('todo').find(a => a.nba.sensitive); return s ? { rec: s.id, tab: 'engage' } : {}; }
+    if (x.id === 't5') return { rec: 'sapphire', tab: 'activity' };
+    if (x.id === 'm3') return { ask: 'How is my team doing?' };
+    if (x.id === 'm5') return { ask: 'What did we learn this week?' };
+    if (x.id.startsWith('as-')) { const s = shared.tasks[+x.id.slice(3)]; return s && s.acc ? { rec: s.acc, tab: 'engage' } : {}; }
+    return {};
   }
+  function openTask(id) {
+    const x = todos().find(t => t.id === id); if (!x) return;
+    const g = taskTarget(x), cid = 'task-' + id;
+    let c = S.chats.find(k => k.id === cid);
+    if (!c) { c = { id: cid, title: x.t, when: 'Now', task: id, thread: [{ who: 'ai', kind: 'text', html: `<b>${esc(x.t)}</b><br>${esc(x.d)}. Due ${esc(x.due)}.<br><br>${g.ask ? 'Here\'s what I found:' : 'I\'ve opened it on the right. Ask me anything about it, or tell me what to change.'}` }] }; S.chats.unshift(c); }
+    S.cur = cid; art = null; recId = null; thrId = null; ctx = null;
+    if (g.thr) { thrId = g.thr; S.read[g.thr] = true; }
+    if (g.rec) { recId = g.rec; recTab = g.tab || 'engage'; ctx = g.rec; }
+    if (g.art) art = g.art;
+    if (g.camp) { art = 'camp'; campSel = g.camp; campTab = g.tab || 'enroll'; }
+    save(); location.hash = '#today'; renderAll();
+    if (g.ask && c.thread.length < 2) ask(g.ask);
+  }
+
+  /* ─── Chat objectives, notes, reminders and the catch-up tile ─── */
+  const RED_DONE = ['juniper', 'eastgate', 'quartzolefins'];
+  const redAccounts = () => ACCOUNTS.filter(a => mine(a) && a.tier === 'A').sort((p, q) => q.score - p.score).slice(0, 10);
+  const objDone = c => c.obj && c.obj.red ? redAccounts().filter(a => (c.obj.doneIds || []).includes(a.id) || S.redDone[a.id]).length : c.obj ? c.obj.done || 0 : 0;
+  function catchupHtml(c) {
+    const ra = redAccounts(), done = ra.filter(a => (c.obj.doneIds || []).includes(a.id) || S.redDone[a.id]), left = ra.filter(a => !done.includes(a));
+    const sys = left.filter(a => (a.nba && a.nba.status === 'auto') || a.campaign).slice(0, 4), need = left.filter(a => a.nba && a.nba.status === 'review'), rep = REPLIES.filter(r => ra.some(a => a.id === r.acc));
+    return `<div class="cu-tile"><div class="cu-h">${ic('clock', 15)} <b>Catch-up</b><span class="muted">since you were here · ${esc(c.last || 'Mon 26 Oct, 17:20')}</span><div class="sp"></div><span class="prog"><i style="width:${Math.round(done.length / ra.length * 100)}%"></i></span><b>${done.length} of ${ra.length}</b></div>
+      <div class="cu-b"><div class="cu-col"><div class="lbl">${byAI('The AI did meanwhile')}</div>${sys.map(a => `<div class="cu-li">${chIc(a.nba ? a.nba.channel : 'Email')} <a href="#today" onclick="App.openRecord('${a.id}','engage');return false">${esc(a.name)}</a> · ${a.campaign ? esc(a.campState.toLowerCase()) : 'next best action went ahead · ' + esc(track(a).label.toLowerCase())}</div>`).join('')}${rep.map(r => `<div class="cu-li">${ic('reply', 12)} <a href="#today" onclick="App.openThread('${r.id}');return false">${esc(r.from)}</a> replied · ${esc(r.kind.toLowerCase())}</div>`).join('')}</div>
+        <div class="cu-col"><div class="lbl">${byMe('You did')}</div>${done.map(a => `<div class="cu-li">${ic('check', 12)} ${esc(a.name)}</div>`).join('') || '<div class="cu-li muted">Nothing yet</div>'}</div>
+        <div class="cu-col"><div class="lbl">${ic('task', 12)} To close the objective</div>${need.map(a => `<div class="cu-li"><span class="badge b-ter nodot">Needs you</span> <a href="#today" onclick="App.openRecord('${a.id}','engage');return false">${esc(a.name)}</a></div>`).join('')}<div class="cu-li">${left.length - need.length} more to work through</div></div></div>
+      <div class="cu-f"><button class="btn sm pri" onclick="App.openArt('red')">${ic('expand', 12)} Open the ${left.length} left</button><button class="btn sm" onclick="App.ask('Remind me on Thursday at 9 to finish my red accounts')">${ic('bell', 12)} Remind me Thursday</button><button class="btn sm" onclick="App.focusComposer('Note: ')">${ic('note', 12)} Leave a note</button></div></div>`;
+  }
+
+  /* # in the chat box: pick a task (or an objective chat) and it opens in its own window */
+  function showTags(q) {
+    const pop = $('tagpop'); if (!pop) return;
+    const ql = q.toLowerCase(), tasks = todos().filter(x => !S.todosDone[x.id] && (!ql || (x.t + x.d).toLowerCase().includes(ql))).sort((p, q2) => URG[p.cls] - URG[q2.cls]);
+    const objs = S.chats.filter(c => c.obj && (!ql || c.title.toLowerCase().includes(ql)));
+    pop.innerHTML = `<div class="mh">Tag a task · it opens in its own window</div>${tasks.map(x => `<button onclick="App.pickTask('${x.id}')"><span class="urg ${x.cls}"></span><span class="grow"><b>${esc(x.t)}</b><i>${esc(x.d)}</i></span><em>${esc(x.due)}</em></button>`).join('')}${objs.map(c => `<button onclick="App.pickChat('${c.id}')">${ic('target', 14)}<span class="grow"><b>${esc(c.title)}</b><i>${esc(objText(c))} · ${objDone(c)} of ${objTotal(c)}</i></span></button>`).join('') || ''}${tasks.length || objs.length ? '' : '<div class="empty">No matching task</div>'}`;
+    pop.classList.add('open');
+  }
+  function hideTags() { const pop = $('tagpop'); if (pop) pop.classList.remove('open'); }
+  const objTotal = c => c.obj.red ? redAccounts().length : c.obj.total;
+  const objText = c => c.obj.red ? `Reach my ${redAccounts().length} red accounts this week` : c.obj.text;
 
   /* ─── Scoring, shown as the process it follows ─── */
   const RAW = { 1: 100, 2: 60, 3: 30 };
@@ -625,30 +775,6 @@
   function subjOf(r) { const out = acct(r.acc).activity.filter(x => x.msg).pop(); return r.ch === 'Email' ? 'Re: ' + (out ? out.msg.subject : r.source) : 'LinkedIn message · ' + r.source; }
   const FOLDERS = [['all', 'Inbox', 'inbox'], ['needs', 'Needs a reply', 'reply'], ['Positive', 'Positive', 'up'], ['Objection', 'Objection', 'alert'], ['Meeting booked', 'Meetings', 'check'], ['Out of office', 'Out of office', 'clock'], ['sent', 'Sent', 'plane'], ['archived', 'Archived', 'savei']];
   const inFolder = (r, k) => k === 'archived' ? !!S.archived[r.id] : k === 'sent' ? !!S.handled[r.id] : !S.archived[r.id] && (k === 'all' || (k === 'needs' ? needsReply(r) : r.kind === k));
-  function renderInbox() {
-    const src = threads(), q = ($('ibQ') && $('ibQ').value || '').toLowerCase();
-    const list = src.filter(r => inFolder(r, inboxTab) && (ibCh === 'all' || r.ch === ibCh) && (!q || (r.from + acct(r.acc).name + r.text).toLowerCase().includes(q)));
-    if (!thrId && innerWidth > 900 && list.length) thrId = list[0].id;
-    const cur = thrId ? REPLIES.find(x => x.id === thrId) : null;
-    $('main').className = 'ibx-pg';
-    $('main').innerHTML = `<div class="ibx ${cur ? 'has-sel' : ''}">
-      <aside class="ibx-f">
-        <div class="ibx-ttl">Inbox</div>
-        <button class="btn pri ibx-new" onclick="App.toast('New messages start from a campaign step or a next best action (mock)')">${ic('pen', 14)} <span>New message</span></button>
-        <nav class="ibx-nav">${FOLDERS.map(([k, l, i]) => { const n = k === 'all' ? src.filter(r => inFolder(r, 'all') && unread(r)).length : src.filter(r => inFolder(r, k)).length; return `<button class="${inboxTab === k ? 'on' : ''}" onclick="App.setInboxTab('${k}')" title="${l}">${ic(i, 15)}<span>${l}</span><i>${n || ''}</i></button>`; }).join('')}</nav>
-        <div class="ibx-sec">Channel</div>
-        <nav class="ibx-nav">${[['all', 'All channels', 'layers'], ['Email', 'Email', 'mail'], ['LinkedIn', 'LinkedIn', 'li']].map(([k, l, i]) => `<button class="${ibCh === k ? 'on' : ''}" onclick="App.setIbCh('${k}')" title="${l}">${ic(i, 15)}<span>${l}</span></button>`).join('')}</nav>
-        <div class="ibx-sec">Mailbox</div>${isMgr ? `<div class="ibx-mb">${ownerSel()}</div>` : `<div class="ibx-mb muted">${esc(mailbox({ owner: me.id }))}</div>`}
-      </aside>
-      <section class="ibx-l">
-        <div class="ibx-lh"><div class="search">${ic('search', 14)}<label class="sr" for="ibQ">Search mail</label><input id="ibQ" placeholder="Search mail" value="${esc(q)}" oninput="App.renderAll()"></div></div>
-        <div class="ibx-lt"><b>${FOLDERS.find(f => f[0] === inboxTab)[1]}</b><span class="muted">${list.length} conversation${list.length === 1 ? '' : 's'}</span></div>
-        <div class="ibx-rows">${list.map(r => { const a = acct(r.acc); return `<button class="ibx-r ${unread(r) ? 'unread' : ''} ${thrId === r.id ? 'on' : ''}" onclick="App.openThread('${r.id}')">${pAvatar(a, 34)}<div class="grow"><div class="ibx-r1"><span class="fr">${esc(r.from)}</span><span class="when">${esc(r.at)}</span></div><div class="ibx-r2">${esc(subjOf(r))}</div><div class="ibx-r3">${esc(r.text)}</div><div class="ibx-r4">${chIc(r.ch)}<span class="badge ${KIND_B[r.kind]}">${r.kind}</span>${isMgr ? `<span>${esc(first(USERS[r.owner].name))}</span>` : ''}${S.handled[r.id] ? '<span>· replied</span>' : ''}</div></div></button>`; }).join('') || '<div class="empty">No conversations here.</div>'}</div>
-      </section>
-      <section class="ibx-v">${cur ? readingPane(cur) : `<div class="ibx-empty">${ic('inbox', 40, 1.5)}<div>Select a conversation to read it</div></div>`}</section>
-    </div>`;
-    if (q) { const s = $('ibQ'); s.focus(); s.setSelectionRange(q.length, q.length); }
-  }
   function readingPane(r) {
     const a = acct(r.acc), out = a.activity.filter(x => x.msg).pop(), done = S.handled[r.id], rep = USERS[a.owner];
     return `<div class="rp-h"><div class="rp-top"><button class="ic-btn rp-back" title="Back to the list" onclick="App.closeThread()">${ic('left', 16)}</button><h2>${esc(subjOf(r))}</h2>
@@ -672,11 +798,10 @@
 
   /* ─── Analytics (sales manager) ─── */
   function renderAnalytics() {
-    const reps = ownerF === 'all' ? REPS : [ownerF], sum = k => reps.reduce((n, r) => n + TEAM_STATS[r][k], 0);
-    /* A dashboard page, not a chat: the important numbers first as cards, then the detail */
-    $('main').className = 'an-pg';
-    $('main').innerHTML = `<div class="an-h"><div><h1>Analytics</h1><div class="sub">Pilot week 3 · ${ownerF === 'all' ? 'whole team' : esc(USERS[ownerF].name)} · ${anPer === 'week' ? 'Mon 26 Oct – Sun 1 Nov' : 'October 2026'}</div></div><div class="an-ctl"><div class="seg">${[['week', 'This week'], ['month', 'This month']].map(([k, l]) => `<button class="${anPer === k ? 'on' : ''}" onclick="App.setAnPer('${k}')">${l}</button>`).join('')}</div>${ownerSel()}</div></div><div class="an-b" id="cv"></div>`;
-    const cv = $('cv'), mo = anPer === 'month' ? 3.6 : 1, n = x => Math.round(x * mo), share = ownerF === 'all' ? 1 : 0.27;
+    const reps = !isMgr ? [me.id] : ownerF === 'all' ? REPS : [ownerF], sum = k => reps.reduce((n, r) => n + TEAM_STATS[r][k], 0);
+    const cv = frame('Analytics', `Pilot week 3 · ${!isMgr ? 'your numbers' : ownerF === 'all' ? 'whole team' : esc(USERS[ownerF].name)} · ${anPer === 'week' ? 'Mon 26 Oct – Sun 1 Nov' : 'October 2026'}`, `<div class="seg">${[['week', 'This week'], ['month', 'This month']].map(([k, l]) => `<button class="${anPer === k ? 'on' : ''}" onclick="App.setAnPer('${k}')">${l}</button>`).join('')}</div>${ownerSel()}`);
+    cv.classList.add('an-b');
+    const mo = anPer === 'month' ? 3.6 : 1, n = x => Math.round(x * mo), share = ownerF === 'all' ? 1 : 0.27;
     const spark = (pts, up) => { const mx = Math.max(...pts), mn = Math.min(...pts), w = 88, h = 30, xy = pts.map((v, i) => `${(i / (pts.length - 1) * w).toFixed(1)},${(h - 3 - (v - mn) / ((mx - mn) || 1) * (h - 6)).toFixed(1)}`); return `<svg class="spk" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-hidden="true"><polyline points="${xy.join(' ')}" fill="none" stroke="${up ? 'var(--pos)' : 'var(--neg)'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="${xy[xy.length - 1].split(',')[0]}" cy="${xy[xy.length - 1].split(',')[1]}" r="2.5" fill="${up ? 'var(--pos)' : 'var(--neg)'}"/></svg>`; };
     /* Each card: the value, its last five periods, and the change against the previous period (green when it moved the right way) */
     const kpi = (icn, k, shown, v, sub, unit, betterUp, steady, goal) => {
@@ -703,7 +828,7 @@
     cv.innerHTML = `${kpis}
       <div class="an-grid">
         <section class="card"><div class="card-h"><span class="lbl">Funnel · this month</span></div><div class="card-b">${funnel.map(([k, v]) => `<div class="fn-r"><span>${k}</span><div class="fn-b"><i style="width:${Math.max(3, v / funnel[0][1] * 100)}%"></i></div><b class="mono">${v}</b></div>`).join('')}</div></section>
-        <section class="card"><div class="card-h"><span class="lbl">By rep</span></div><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Rep</th><th>Sent</th><th>Replies</th><th>Meetings</th><th>Accepted</th><th>Overdue</th></tr></thead><tbody>${REPS.map(r => { const t = TEAM_STATS[r]; return `<tr class="row-link ${ownerF === r ? 'sel-row' : ''}" onclick="App.setOwner('${r}')"><td><div style="display:flex;gap:8px;align-items:center">${avatar(USERS[r], 22)}${esc(USERS[r].name)}</div></td><td>${t.sent}</td><td>${t.replies}</td><td>${t.meetings}/${t.target}</td><td>${t.accept}%</td><td>${t.overdue ? `<span class="badge b-neg">${t.overdue}</span>` : '0'}</td></tr>`; }).join('')}</tbody></table></div></section>
+        <section class="card"><div class="card-h"><span class="lbl">${isMgr ? 'By rep' : 'You'}</span></div><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Rep</th><th>Sent</th><th>Replies</th><th>Meetings</th><th>Accepted</th><th>Overdue</th></tr></thead><tbody>${reps.map(r => { const t = TEAM_STATS[r]; return `<tr class="row-link ${ownerF === r ? 'sel-row' : ''}" onclick="App.setOwner('${r}')"><td><div style="display:flex;gap:8px;align-items:center">${avatar(USERS[r], 22)}${esc(USERS[r].name)}</div></td><td>${t.sent}</td><td>${t.replies}</td><td>${t.meetings}/${t.target}</td><td>${t.accept}%</td><td>${t.overdue ? `<span class="badge b-neg">${t.overdue}</span>` : '0'}</td></tr>`; }).join('')}</tbody></table></div></section>
       </div>
       <section class="card" style="margin-top:14px"><div class="card-h"><span class="lbl">Campaigns</span></div><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Campaign</th><th>Status</th><th>Accounts</th><th>Reply rate</th><th>Positive</th><th>Meetings</th></tr></thead><tbody>${CAMPAIGNS.map(c => { const st = campStats(c); return `<tr class="row-link" onclick="App.goCampaign('${c.id}')"><td class="nm">${esc(c.name)}</td><td>${campBadge(c)}</td><td>${st.total}</td><td>${pct(st.replies, st.started)}</td><td>${st.positive}</td><td>${st.meetings}</td></tr>`; }).join('')}</tbody></table></div></section>
       <section class="card" style="margin-top:14px"><div class="card-h"><span class="lbl">What the system learned</span></div><div class="card-b" style="padding:2px 16px">${LEARNED.map(l => `<div class="mini-row"><span class="badge b-${l.k} nodot">${l.k === 'pos' ? '↑' : l.k === 'neg' ? '↓' : l.k === 'warn' ? '!' : 'i'}</span><div class="grow"><div class="nm">${esc(l.t)}</div><div class="sm" style="white-space:normal">${esc(l.d)}</div></div></div>`).join('')}</div></section>`;
@@ -715,15 +840,20 @@
   }
 
   /* ─── Module and canvas frames ─── */
-  function frame(title, sub, actions, closable) {
+  function frame(title, sub, actions) {
     $('main').className = 'canvas';
-    $('main').innerHTML = `<div class="cv-h"><div class="cv-ht"><div class="cv-t">${title}</div>${sub ? `<div class="cv-s">${sub}</div>` : ''}</div><div class="cv-a">${actions || ''}<button class="ic-btn" onclick="App.closeCanvas()" title="Close">${ic('x', 16)}</button></div></div><div class="cv-b" id="cv"></div>`;
+    const under = (recId || thrId) && (art || (view() && view() !== 'studio' && expanded));
+    $('main').innerHTML = `<div class="cv-h">${under ? `<button class="ic-btn" title="Back" onclick="App.back()">${ic('left', 16)}</button>` : ''}<div class="cv-ht"><div class="cv-t">${title}</div>${sub ? `<div class="cv-s">${sub}</div>` : ''}</div><div class="cv-a">${actions || ''}<button class="ic-btn" title="${paneFull ? 'Exit full screen' : 'Full screen'}" onclick="App.paneFull()">${ic(paneFull ? 'min' : 'full', 15)}</button><button class="ic-btn" onclick="App.closePane()" title="Close">${ic('x', 16)}</button></div></div><div class="cv-b" id="cv"></div>`;
     return $('cv');
   }
   const filt = (label, ic2, on) => `<button class="fchip ${on ? 'on' : ''}">${ic2 ? ic(ic2, 13) : ''}${label}</button>`;
 
   /* Result table opened beside the chat */
   function renderArt() {
+    if (art === 'analytics') return renderAnalytics();
+    if (art === 'replies') return renderReplies();
+    if (art === 'approvals') return renderApprovals();
+    if (art === 'camp') return renderCampaign();
     const t = TABLES[art]();
     const cv = frame(`${ic('table', 16)} ${esc(t.title)}`, `${t.rows.length} records`, `<button class="ic-btn" title="Save as a list" onclick="App.ask('Save as a list')">${ic('savei', 16)}</button><button class="ic-btn" title="Download" onclick="App.toast('Downloads are a placeholder in the mock')">${ic('dl', 16)}</button><button class="btn sm pri" onclick="App.ask('Build the campaign')">${ic('plane', 13)} Add to campaign</button>`, true);
     const q = ($('artQ') && $('artQ').value || '').toLowerCase();
@@ -758,7 +888,7 @@
     if (!a.nba) return '<span class="badge b-grey nodot">Waiting for a signal</span>';
     const d = S.decisions[a.id];
     if (d) return `<span class="badge b-grey nodot">${decLabel(d)}</span>`;
-    if (a.nba.status === 'auto') return '<span class="badge b-pos">Went ahead</span>';
+    if (a.nba.status === 'auto') return byAI('Went ahead');
     if (a.nba.status === 'sent') return `<span class="badge b-sec">${esc(a.outcome || 'Sent')}</span>`;
     return `<span class="badge ${REASON[reasonOf(a)]}">${reasonOf(a) === 'Ready' ? 'Ready for OK' : reasonOf(a)}</span>`;
   }
@@ -805,7 +935,7 @@
   }
   function nbaTable(rows) {
     return `<div class="card tbl-wrap"><table class="tbl"><thead><tr><th>Person</th><th>Next best action</th><th>How it went out</th><th>Delivery</th><th>When</th>${isMgr ? '<th>Rep</th>' : ''}</tr></thead><tbody>
-      ${rows.map(a => { const t = track(a); return `<tr class="row-link" onclick="App.openRecord('${a.id}','engage')"><td><div style="display:flex;gap:9px;align-items:center">${pAvatar(a)}<div><div class="nm">${esc(a.contact.name)}</div><div class="sm">${esc(a.name)} · ${tierBadge(a.tier)} ${sc(a)}</div></div></div></td><td>${esc(a.nba.action)}<div class="sm">${chIc(a.nba.channel)} ${a.nba.channel}</div></td><td><span class="badge ${t.how === 'Went ahead on its own' ? 'b-pos' : t.how === 'Needs a person' ? 'b-ter' : 'b-sec'} nodot">${t.how}</span></td><td><div class="dlv-c">${dots(t)}<span class="badge ${t.cls}">${esc(t.label)}</span></div></td><td class="sm">${esc(t.when || '—')}</td>${isMgr ? `<td>${esc(first(USERS[a.owner].name))}</td>` : ''}</tr>`; }).join('') || `<tr><td colspan="6" class="empty">${isMgr ? 'No next best actions here.' : 'None of your accounts have a next best action in this segment.'}</td></tr>`}
+      ${rows.map(a => { const t = track(a); return `<tr class="row-link" onclick="App.openRecord('${a.id}','engage')"><td><div style="display:flex;gap:9px;align-items:center">${pAvatar(a)}<div><div class="nm">${esc(a.contact.name)}</div><div class="sm">${esc(a.name)} · ${tierBadge(a.tier)} ${sc(a)}</div></div></div></td><td>${esc(a.nba.action)}<div class="sm">${chIc(a.nba.channel)} ${a.nba.channel}</div></td><td>${t.how === 'Went ahead on its own' ? byAI('Went ahead on its own') : t.how === 'Needs a person' ? '<span class="badge b-ter nodot">Needs a person</span>' : byMe(t.how)}</td><td><div class="dlv-c">${dots(t)}<span class="badge ${t.cls}">${esc(t.label)}</span></div></td><td class="sm">${esc(t.when || '—')}</td>${isMgr ? `<td>${esc(first(USERS[a.owner].name))}</td>` : ''}</tr>`; }).join('') || `<tr><td colspan="6" class="empty">${isMgr ? 'No next best actions here.' : 'None of your accounts have a next best action in this segment.'}</td></tr>`}
     </tbody></table></div>`;
   }
   function renderSegment() {
@@ -831,7 +961,6 @@
     const list = CAMPAIGNS.slice().sort((p, q) => order.indexOf(p.status) - order.indexOf(q.status));
     const cv = frame('Campaigns', `${list.length} campaigns · email and LinkedIn`, `<button class="btn sm pri" onclick="App.ask('Build the campaign')">${ic('plus', 13)} New campaign</button>`);
     cv.innerHTML = `<div class="toolbar">${ownerSel()}${filt('Starred', 'star', false)}${filt('Active', '', false)}<div class="search" style="margin-left:auto">${ic('search', 14)}<input placeholder="Search…" aria-label="Search campaigns"></div></div>
-      <div class="placeholder-note" style="margin:6px 0 12px">${ic('mail', 16)}<div><b>Placeholder.</b> Sending through email and LinkedIn connects after the pilot. Nothing is sent from the mock.</div></div>
       <div class="srow-list">${list.map(c => { const st = campStats(c); return `<div class="srow" onclick="App.goCampaign('${c.id}')">
         <div class="srow-n"><div class="nm">${esc(c.name)} ${campBadge(c)}${c.status === 'Running' ? '<span class="live-dot" title="Active"></span>' : ''}</div><div class="sm">${seqSpan(c)} · ${esc(c.seg ? segOf(c.seg).trigger : 'archived segment')}</div></div>
         <div class="srow-m"><div><b>${st.total}</b><span>Total enrollments</span></div><div><b>${st.progress}</b><span>In progress</span></div><div><b>${st.finished}</b><span>Finished</span></div><div><b>${pct(st.replies, st.started)}</b><span>Reply rate</span></div><div><b>${st.positive || '-'}</b><span>Positive</span></div><div><b>${st.positive + st.objection || '-'}</b><span>Positive + objection</span></div></div>
@@ -852,7 +981,7 @@
       ${c.blockers.map(b => `<div class="blk ${b.k}" style="margin-top:10px">${ic('alert', 15)}<div class="grow"><b>Blocker</b><span>${esc(b.x)}</span></div></div>`).join('')}
       <div class="sec-row"><div class="lbl">Accounts in this campaign · ${accs.length}</div><div class="sp"></div>${isMgr ? ownerSel() : ''}${todo.length ? `<button class="btn sm pri" onclick="App.approveEnrollAll('${c.id}')">Approve all ${todo.length}</button>` : ''}</div>
       <div class="card tbl-wrap"><table class="tbl"><thead><tr><th>Person</th><th>Company</th><th>Messages</th><th>Current step</th><th>Status</th>${isMgr ? '<th>Owner</th>' : ''}<th></th></tr></thead><tbody>
-        ${accs.map(a => { const done = sq.filter(sent).length, cur = sq[Math.min(done, sq.length - 1)]; return `<tr class="row-link" onclick="App.openRecord('${a.id}','engage')"><td><div style="display:flex;gap:9px;align-items:center">${pAvatar(a)}<div><div class="nm">${esc(a.contact.name)}</div><div class="sm">${esc(a.contact.title)}</div></div></div></td><td>${esc(a.name)}</td><td><div class="chns">${msgs}</div></td><td class="sm">${cur ? `Step ${Math.min(done + 1, sq.length)} of ${sq.length}<div>${cur.ch === 'Email' ? 'Email · ' + esc(cur.fmt) : 'LinkedIn · ' + esc(cur.fmt)}</div>` : '—'}</td><td>${S.enrollOK[a.id] ? '<span class="badge b-pos">Approved</span>' : stateBadge(a.campState)}</td>${isMgr ? `<td>${esc(first(USERS[a.owner].name))}</td>` : ''}<td style="white-space:nowrap" onclick="event.stopPropagation()">${needsOK(a) ? `<button class="btn sm pri" onclick="App.approveEnroll('${a.id}')">Approve</button> ` : ''}<button class="btn sm" onclick="App.openRecord('${a.id}','engage')">Open</button></td></tr>`; }).join('') || '<tr><td colspan="7" class="empty">None of your accounts are in this campaign.</td></tr>'}</tbody></table></div>
+        ${accs.map(a => { const done = sq.filter(sent).length, cur = sq[Math.min(done, sq.length - 1)]; return `<tr class="row-link" onclick="App.openRecord('${a.id}','engage')"><td><div style="display:flex;gap:9px;align-items:center">${pAvatar(a)}<div><div class="nm">${esc(a.contact.name)}</div><div class="sm">${esc(a.contact.title)}</div></div></div></td><td>${esc(a.name)}</td><td><div class="chns">${msgs}</div></td><td class="sm">${cur ? `Step ${Math.min(done + 1, sq.length)} of ${sq.length}<div>${cur.ch === 'Email' ? 'Email · ' + esc(cur.fmt) : 'LinkedIn · ' + esc(cur.fmt)}</div>` : '—'}</td><td>${S.enrollOK[a.id] ? byMe('Approved') : stateBadge(a.campState)}</td>${isMgr ? `<td>${esc(first(USERS[a.owner].name))}</td>` : ''}<td style="white-space:nowrap" onclick="event.stopPropagation()">${needsOK(a) ? `<button class="btn sm pri" onclick="App.approveEnroll('${a.id}')">Approve</button> ` : ''}<button class="btn sm" onclick="App.openRecord('${a.id}','engage')">Open</button></td></tr>`; }).join('') || '<tr><td colspan="7" class="empty">None of your accounts are in this campaign.</td></tr>'}</tbody></table></div>
       <div class="sec-row" style="margin-top:20px"><div class="lbl">Sequence · ${seqSpan(c)}</div><div class="sp"></div>${c.status !== 'Completed' ? `<button class="btn sm" onclick="App.setCampTab('${campTab === 'steps' ? 'enroll' : 'steps'}')">${ic('edit', 13)} ${campTab === 'steps' ? 'Done editing' : 'Edit sequence'}</button>` : ''}</div>
       ${campTab === 'steps' ? `<div class="seq-h"><span class="muted" style="font-size:12px">Written by the AI from the ${s ? s.proven.toLowerCase() : ''} message structure, personalised per person. Sent steps are locked.</span><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn sm" onclick="App.seqAdd('${c.id}','Email')">${ic('plus', 12)} Email step</button><button class="btn sm" onclick="App.seqAdd('${c.id}','LinkedIn')">${ic('plus', 12)} LinkedIn step</button>${S.seq[c.id] ? `<button class="btn sm ghost" onclick="App.seqReset('${c.id}')">Reset to the AI draft</button>` : ''}</div></div>
           <div class="seq">${sq.map((t, i) => touchEditor(c, t, i, sq.length)).join('')}</div>
@@ -908,7 +1037,7 @@
       ${isMgr && apprTab === 'needs' ? CAMPAIGNS.filter(c => (c.status === 'Ready to confirm' || S.camp[c.id] === 'Sent for confirmation') && S.camp[c.id] !== 'Confirmed').map(c => `<div class="card" style="margin-bottom:10px"><div class="card-b" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap"><span class="badge b-ter">Campaign</span><div class="grow" style="min-width:200px"><b>${esc(c.name)}</b><div class="sm muted" style="font-size:12px">${c.accounts.length} people · ${seqSpan(c)} · email and LinkedIn</div></div><button class="btn sm pri" onclick="App.confirmCampaign('${c.id}')">Confirm</button><button class="btn sm" onclick="App.goCampaign('${c.id}','steps')">Review steps</button></div></div>`).join('') : ''}
       <div class="card tbl-wrap">${items.length ? `<table class="tbl"><thead><tr><th>Person</th><th>Next best action</th><th>Micro-segment</th><th>Checks</th>${isMgr ? '<th>Rep</th>' : ''}<th>Due</th><th></th></tr></thead><tbody>
         ${items.map(a => { const d = S.decisions[a.id]; return `<tr class="row-link" onclick="App.openRecord('${a.id}','engage')"><td><div style="display:flex;gap:9px;align-items:center">${pAvatar(a)}<div><div class="nm">${esc(a.contact.name)}</div><div class="sm">${esc(a.name)}</div></div></div></td><td>${esc(a.nba.action)}<div class="sm">${chIc(a.nba.channel)} ${a.nba.channel}</div></td><td><span class="seg-link" onclick="event.stopPropagation();App.openSegment('${a.seg}')">${esc(a.segment)}</span></td><td><div class="gcell">${gateCell(a)}</div>${a.nba.reasonNote && !/auto|sent/.test(a.nba.status) ? `<div class="sm" style="max-width:260px;white-space:normal;margin-top:4px">${esc(a.nba.reasonNote)}</div>` : ''}</td>${isMgr ? `<td>${esc(first(USERS[a.owner].name))}</td>` : ''}<td style="white-space:nowrap">${esc(a.nba.due)}</td>
-          <td style="white-space:nowrap" onclick="event.stopPropagation()">${d ? `<span class="badge b-grey nodot">${decLabel(d)}</span>` : /auto|sent/.test(a.nba.status) ? '<span class="badge b-pos">Went ahead</span>' : `${!a.nba.reason || (isMgr && a.nba.sensitive) ? `<button class="btn sm pri" onclick="App.approve('${a.id}')">${isMgr && a.nba.sensitive ? 'Sign off' : 'Approve'}</button> ` : ''}<button class="btn sm" onclick="App.openRecord('${a.id}','engage')">Review</button>`}</td></tr>`; }).join('')}
+          <td style="white-space:nowrap" onclick="event.stopPropagation()">${d ? `<span class="badge b-grey nodot">${decLabel(d)}</span>` : /auto|sent/.test(a.nba.status) ? byAI('Went ahead') : `${!a.nba.reason || (isMgr && a.nba.sensitive) ? `<button class="btn sm pri" onclick="App.approve('${a.id}')">${isMgr && a.nba.sensitive ? 'Sign off' : 'Approve'}</button> ` : ''}<button class="btn sm" onclick="App.openRecord('${a.id}','engage')">Review</button>`}</td></tr>`; }).join('')}
         </tbody></table>` : `<div class="empty">Nothing here. ${apprTab === 'done' ? 'Decisions you make show up here.' : 'You\'re all caught up.'}</div>`}</div>`;
   }
 
@@ -917,11 +1046,11 @@
   function renderRecord() {
     const a = acct(recId), o = USERS[a.owner];
     const tabs = [['overview', 'Overview'], ['engage', 'Engagement'], ['activity', 'Activity'], ['notes', 'Notes']];
-    $('focus').innerHTML = `<div class="pdrawer ${copOpen ? 'cop-on' : ''}">
+    const cv = frame(`${esc(a.contact.name)} <span class="muted" style="font-weight:400;font-size:13px">· ${esc(a.name)}</span>`, `${esc(a.contact.title)} · ${tierBadge(a.tier)} ${sc(a)}`, `<button class="btn sm" onclick="App.askAbout('${a.id}')">${ic('spark', 13)} Ask in the chat</button><button class="btn sm pri" onclick="App.sendNow('${a.id}')">${ic('plane', 13)} Send</button>`);
+    cv.className = 'cv-b rec-cv';
+    cv.innerHTML = `<div class="pdrawer">
       <div class="pd-left">
-        <div class="pd-top"><button class="ic-btn" title="Close" onclick="App.closeFocus()">${ic('x', 16)}</button><span class="li-ic" style="margin-left:auto">${ic('li', 16)}</span></div>
         <div class="who"><span class="av" style="background:${o.color};width:54px;height:54px;font-size:18px">${initials(a.contact.name)}</span><div><div class="nm" style="font-family:var(--fd);font-size:19px">${esc(a.contact.name)}</div><div class="tl">${esc(a.contact.title)}</div><div class="tl"><span class="logo-dot">${esc(a.name[0])}</span> ${esc(a.name)}</div></div></div>
-        <div class="pd-cta"><button class="btn pri" onclick="App.sendNow('${a.id}')">${ic('plane', 14)} Send</button><button class="btn ${copOpen ? 'on' : ''}" onclick="App.toggleCop()">${ic('spark', 14)} Copilot</button></div>
         <div class="sec-t">Details</div>
         <dl class="kv"><dt>Name</dt><dd>${esc(a.contact.name)}</dd><dt>Title</dt><dd>${esc(a.contact.title)}</dd><dt>Email</dt><dd>${esc(a.contact.email)}</dd><dt>Identity</dt><dd>${idBadge(a.contact.idTier)}</dd><dt>Record owner</dt><dd>${isMgr ? `<label class="sr" for="recOwner">Owner</label><select class="sel" id="recOwner" onchange="App.reassign(['${a.id}'],this.value)">${REPS.map(r => `<option value="${r}" ${a.owner === r ? 'selected' : ''}>${esc(USERS[r].name)}</option>`).join('')}</select>` : esc(o.name)}</dd><dt>Score</dt><dd>${tierBadge(a.tier)} ${sc(a)}</dd><dt>Lead source</dt><dd>${a.fromList ? 'Prospecting · Lookalikes of my last 10 wins' : 'Signals · overnight sweep'}</dd></dl>
         <div class="sec-t">Company</div>
@@ -931,8 +1060,7 @@
         <div class="rec-tabs pill">${tabs.map(([k, l]) => `<button class="rec-tab ${recTab === k ? 'on' : ''}" onclick="App.setRecTab('${k}')">${l}</button>`).join('')}</div>
         <div class="rec-pane">${recPane(a)}</div>
       </div>
-      ${copOpen ? copPane(a) : ''}</div>`;
-    const t = $('copT'); if (t) t.scrollTop = t.scrollHeight;
+      </div>`;
   }
 
   /* Each person's own copy of the campaign sequence: their messages can be edited, and steps added or removed */
@@ -951,7 +1079,7 @@
     return `<div class="sv ${t.ch === 'Email' ? 'em' : 'lk'} ${isSent ? 'done' : ''} ${i === done ? 'next' : ''}">
       <div class="sv-rail"><span class="sv-day">Day ${t.day}</span><span class="sv-node">${isSent ? ic('check', 13, 3) : chIc(t.ch)}</span></div>
       <div class="sv-card">
-        <div class="sv-h"><span class="sv-ch">${t.ch} · ${esc(t.fmt)}</span><span class="sv-st">${isSent ? esc(t.state) : i === done ? 'Next step' : 'Scheduled'}</span>${isSent ? '' : `<span class="sv-tools"><button class="ic-btn" title="Edit this message" onclick="App.pEditStep('${a.id}',${i})">${ic('edit', 13)}</button><button class="ic-btn" title="Remove this step for ${esc(first(a.contact.name))}" onclick="App.pRemove('${a.id}',${i})">${ic('trash', 13)}</button></span>`}</div>
+        <div class="sv-h"><span class="sv-ch">${t.ch} · ${esc(t.fmt)}</span>${isSent ? byAI('Sent') : ''}<span class="sv-st">${isSent ? esc(t.state) : i === done ? 'Next step' : 'Scheduled'}</span>${isSent ? '' : `<span class="sv-tools"><button class="ic-btn" title="Edit this message" onclick="App.pEditStep('${a.id}',${i})">${ic('edit', 13)}</button><button class="ic-btn" title="Remove this step for ${esc(first(a.contact.name))}" onclick="App.pRemove('${a.id}',${i})">${ic('trash', 13)}</button></span>`}</div>
         ${t.ch === 'Email' ? `<div class="sv-subj">${esc(t.subject || c.name)}</div><div class="sv-to">${esc(USERS[a.owner].name)} to ${esc(a.contact.name)}</div>` : ''}
         ${editing ? `<label class="sr" for="pBody">Message</label><textarea class="edit" id="pBody" style="min-height:150px">${esc(t.body)}</textarea><div class="sv-ed"><button class="btn sm pri" onclick="App.pSave('${a.id}',${i})">Save</button><button class="btn sm" onclick="App.pEditStep(null)">Cancel</button><span class="muted">The brand and claim checks run when you save</span></div>` : `<div class="sv-body">${esc(t.body)}</div>`}
         <div class="sv-why"><span class="muted">Built from</span>${basis(a, t, i, sq).map(x => `<span class="why ${x[0]}">${x[1]}</span>`).join('')}</div>
@@ -961,7 +1089,7 @@
   function campEngage(a) {
     const c = campOf(a.campaign), sq = pseqOf(a), ok = S.enrollOK[a.id] || c.status === 'Running' || S.camp[c.id] === 'Confirmed';
     const chans = [...new Set(sq.map(t => t.ch))];
-    return `<div class="eng-h"><div class="lbl">${ic('plane', 13)} Campaign</div><div class="eng-grid"><div><span>Campaign</span><a href="#campaigns" onclick="App.goCampaign('${c.id}');return false">${esc(c.name)}</a></div><div><span>Status</span>${S.enrollOK[a.id] ? '<span class="badge b-pos">Approved</span>' : stateBadge(a.campState)}</div><div><span>Mailbox</span>${esc(mailbox(a))}</div><div><span>Messages</span><div class="chns">${chans.map(ch => `<span class="chn">${chIc(ch)} ${ch} ×${sq.filter(t => t.ch === ch).length}</span>`).join('')}</div></div></div></div>
+    return `<div class="eng-h"><div class="lbl">${ic('plane', 13)} Campaign</div><div class="eng-grid"><div><span>Campaign</span><a href="#campaigns" onclick="App.goCampaign('${c.id}');return false">${esc(c.name)}</a></div><div><span>Status</span>${S.enrollOK[a.id] ? byMe('Approved') : stateBadge(a.campState)}</div><div><span>Mailbox</span>${esc(mailbox(a))}</div><div><span>Messages</span><div class="chns">${chans.map(ch => `<span class="chn">${chIc(ch)} ${ch} ×${sq.filter(t => t.ch === ch).length}</span>`).join('')}</div></div></div></div>
       ${ok ? '' : `<div class="ready"><div class="grow">${esc(first(a.contact.name))}'s personalised sequence is ready to launch. Approve to continue.</div><button class="btn pri" onclick="App.approveEnroll('${a.id}')">Approve</button></div>`}
       ${S.pseq[a.id] ? `<div class="tv-note">${ic('edit', 13)} You changed ${esc(first(a.contact.name))}'s sequence. The rest of the campaign is unchanged. <button class="btn sm ghost" onclick="App.pReset('${a.id}')">Reset to the campaign sequence</button></div>` : ''}
       <div class="seqv">${sq.map((t, i) => stepView(a, c, t, i, sq)).join('')}</div>
@@ -983,14 +1111,6 @@
   const gateCell = a => { const f = gate(a).filter(x => !x[1]); return f.length ? f.map(x => `<span class="badge b-warn nodot">✕ ${x[0]}</span>`).join(' ') : '<span class="badge b-pos nodot">✓ All 6 checks</span>'; };
 
   /* Copilot inside the person panel: change this person's messages and steps by asking */
-  function copPane(a) {
-    const th = S.cop[a.id] || [];
-    const chips = a.campaign ? ['Make step 1 shorter', 'Add a LinkedIn step', 'Use cost framing in step 1', 'Why these messages?'] : ['Make it shorter', 'Use cost framing', 'Why this action?', 'Use the runner-up'];
-    return `<aside class="cop"><div class="cop-h"><span class="ai-mark">${ic('spark', 12)}</span><b>Copilot</b><span class="muted">· ${esc(a.contact.name)}</span><span class="sp"></span><button class="ic-btn" title="Close Copilot" onclick="App.toggleCop()">${ic('x', 14)}</button></div>
-      <div class="cop-t" id="copT"><div class="cm ai">I can rewrite ${esc(first(a.contact.name))}'s messages, add or remove steps, explain what each message is built from, or send now.</div>${th.map(m => `<div class="cm ${m.who}">${m.who === 'me' ? esc(m.text) : m.html}</div>`).join('')}</div>
-      <div class="cop-c"><div class="cop-chips">${chips.map(h => `<button class="chip" onclick="App.copAsk(${js(h)})">${esc(h)}</button>`).join('')}</div>
-        <div class="composer"><label class="sr" for="copIn">Ask Copilot</label><textarea id="copIn" rows="2" placeholder="Ask for a change…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();App.copAsk(this.value)}"></textarea><div class="composer-f"><span class="muted" style="font-size:11px">Every change runs the brand checks</span><div class="sp"></div><button class="send" onclick="App.copAsk(document.getElementById('copIn').value)" title="Send">${ic('send', 15)}</button></div></div></div></aside>`;
-  }
   function copRespond(a, t) {
     if (/send/.test(t)) { App.sendNow(a.id); return 'Sent (placeholder: nothing leaves the mock).'; }
     if (a.campaign) {
@@ -1010,7 +1130,7 @@
   }
   /* The campaign sequence as a journey: day, channel and wait between steps */
   function seqTrack(c, sq) {
-    return `<div class="trk">${sq.map((t, i) => `<div class="trk-s ${t.ch === 'Email' ? 'em' : 'lk'} ${sent(t) ? 'done' : ''}"><div class="trk-d">Day ${t.day}</div><div class="trk-n"><span class="trk-dot">${sent(t) ? ic('check', 13, 3) : chIc(t.ch)}</span>${i < sq.length - 1 ? `<span class="trk-l"><i>${sq[i + 1].day - t.day} days</i></span>` : ''}</div><div class="trk-c"><b>Step ${i + 1} · ${t.ch}</b><span class="f">${esc(t.fmt)}</span><span class="x">${esc(t.ch === 'Email' ? (t.subject || c.name) : t.t)}</span><em>${esc(t.state || 'Not started')}</em></div></div>`).join('')}</div>`;
+    return `<div class="trk">${sq.map((t, i) => `<div class="trk-s ${t.ch === 'Email' ? 'em' : 'lk'} ${sent(t) ? 'done' : ''}"><div class="trk-d">Day ${t.day}</div><div class="trk-n"><span class="trk-dot">${sent(t) ? ic('check', 13, 3) : chIc(t.ch)}</span>${i < sq.length - 1 ? `<span class="trk-l"><i>${sq[i + 1].day - t.day} days</i></span>` : ''}</div><div class="trk-c"><b>Step ${i + 1} · ${t.ch}</b><span class="f">${esc(t.fmt)}</span><span class="x">${esc(t.ch === 'Email' ? (t.subject || c.name) : t.t)}</span><em>${sent(t) ? '✦ ' : ''}${esc(t.state || 'Not started')}</em></div></div>`).join('')}</div>`;
   }
   function recPane(a) {
     if (recTab === 'overview') {
@@ -1025,7 +1145,7 @@
       return `<div class="sec-t">What happened</div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 14px">${['Sent', 'Replied', 'Meeting booked', 'No response'].map(x => `<button class="chip" style="${out === x ? 'border-color:var(--brand);color:var(--brand-dk);background:var(--brand-lt)' : ''}" onclick="App.logOutcome('${a.id}','${x}')">${x}</button>`).join('')}</div>
         <div class="sec-t">Timeline · open any step for detail</div>
-        <div class="timeline">${list.map((x, i) => `<button class="tl-row" onclick="App.toggleAct(${i})"><span class="ic k-${x.k}">${ic(ACT_IC[x.k] || 'clock', 13)}</span><div class="grow"><div class="nm">${esc(x.t)}</div><div class="sm">${esc(x.d)}</div>${actOpen === i ? actDetail(a, x) : ''}</div><span class="when">${esc(x.when)}</span></button>`).join('')}</div>`;
+        <div class="timeline">${list.map((x, i) => `<button class="tl-row" onclick="App.toggleAct(${i})"><span class="ic k-${x.k}">${ic(ACT_IC[x.k] || 'clock', 13)}</span><div class="grow"><div class="nm">${esc(x.t)}</div><div class="sm">${esc(x.d)}</div>${actOpen === i ? actDetail(a, x) : ''}</div>${/signal|score|segment|campaign|nba|watch|wait/.test(x.k) || (x.k === 'sent' && a.nba && a.nba.status === 'auto') ? byAI() : x.k === 'sent' ? byMe(first(USERS[a.owner].name)) : ''}<span class="when">${esc(x.when)}</span></button>`).join('')}</div>`;
     }
     if (recTab === 'notes') {
       return `<label class="sr" for="noteBox">Note</label><textarea class="edit" style="min-height:90px" id="noteBox" placeholder="Add a note…"></textarea><div style="margin:8px 0 16px"><button class="btn pri sm" onclick="App.addNote('${a.id}')">Save note</button></div>
@@ -1122,43 +1242,59 @@
     save(); if (!silent) { toast('Approved all ready items. Scheduled for the next send window (placeholder).'); renderAll(); }
   }
   function goCampaign(id, tab) { art = null; recId = null; thrId = null; expanded = true; campSel = id; campTab = tab || 'enroll'; go('campaigns'); }
-  function openRecord(id, tab) { recId = id; thrId = null; recTab = tab || 'engage'; actOpen = null; ctx = id; if (recTab === 'engage' && !acct(id).nba && !acct(id).campaign) recTab = 'overview'; renderAll(); }
-  let lastKey = null;
-  function openThread(id) { recId = null; thrId = id; S.read[id] = true; save(); if (view() !== 'inbox') location.hash = '#inbox'; else renderAll(); }
-  /* A person or a reply opens in a focused panel; everything behind it is blurred */
-  function renderFocus() {
-    const on = !!recId;
-    $('ws').classList.toggle('focused', on);
-    $('fscrim').classList.toggle('open', on);
-    if (recId) renderRecord();
-    $('focus').classList.toggle('open', on);
+  function openRecord(id, tab) { const t0 = tab || 'engage', tb = t0 === 'engage' && !acct(id).nba && !acct(id).campaign ? 'overview' : t0; if (atHome()) return openPaneChat('acc-' + id, acct(id).name, () => { recId = id; recTab = tb; ctx = id; actOpen = null; }, `${esc(acct(id).contact.name)} at ${esc(acct(id).name)} is open on the right. Ask me anything about them, or tell me what to change in their messages.`); recId = id; thrId = null; recTab = tb; actOpen = null; ctx = id; renderAll(); }
+  let lastKey = null, paneFull = false, notesOpen = false;
+  /* From Today there's no chat yet: opening something starts a chat for it, with the item open on the right */
+  function openPaneChat(cid, title, set, intro) {
+    let c = S.chats.find(k => k.id === cid);
+    if (!c) { c = { id: cid, title, when: 'Now', thread: [{ who: 'ai', kind: 'text', html: intro || 'It\'s open on the right. Ask me anything about it, or tell me what to change.' }] }; S.chats.unshift(c); }
+    S.cur = cid; art = null; recId = null; thrId = null; set(); save(); location.hash = '#today'; renderAll();
+  }
+  const atHome = () => !view() && S.cur === 'home';
+  function openThread(id) {
+    const r = REPLIES.find(x => x.id === id); if (!r) return;
+    S.read[id] = true; save();
+    if (atHome()) return openPaneChat('rep-' + id, `Reply from ${r.from}`, () => { thrId = id; }, `${esc(r.from)} at ${esc(acct(r.acc).name)} replied (${esc(r.kind.toLowerCase())}). The conversation and a drafted answer are open on the right.`);
+    recId = null; thrId = id; renderAll();
+  }
+  function renderThreadPane() {
+    const r = REPLIES.find(x => x.id === thrId); if (!r) { thrId = null; return renderAll(); }
+    const a = acct(r.acc);
+    const cv = frame(esc(subjOf(r)), `<span class="badge ${KIND_B[r.kind]}">${r.kind}</span> <span class="badge b-grey nodot">${chIc(r.ch)} ${r.ch}</span> <span class="badge b-brand nodot">${r.sourceKind === 'Campaign' ? 'Campaign: ' + esc(r.source) : 'Next best action'}</span>`, `<button class="ic-btn" title="Archive" onclick="App.archive('${r.id}')">${ic('savei', 15)}</button><button class="ic-btn" title="Mark as unread" onclick="App.markUnread('${r.id}')">${ic('mail', 15)}</button><button class="btn sm" onclick="App.openRecord('${a.id}','activity')">${ic('user', 13)} Open account</button>`);
+    const h = readingPane(r);
+    cv.innerHTML = h.slice(h.indexOf('<div class="rp-b">'));
+  }
+  function renderReplies() {
+    const src = threads(), tabs = [['all', 'All'], ['needs', 'Needs a reply'], ['Positive', 'Positive'], ['Objection', 'Objection'], ['Meeting booked', 'Meetings'], ['Out of office', 'Out of office'], ['sent', 'Answered']];
+    const inTab = (r, k) => k === 'all' || (k === 'needs' ? needsReply(r) : k === 'sent' ? !!S.handled[r.id] : r.kind === k);
+    const list = src.filter(r => inTab(r, inboxTab) && (ibCh === 'all' || r.ch === ibCh));
+    const cv = frame('Replies', `${src.filter(needsReply).length} need an answer · email and LinkedIn`, `<label class="sr" for="ibChSel">Channel</label><select class="sel" id="ibChSel" onchange="App.setIbCh(this.value)">${[['all', 'All channels'], ['Email', 'Email'], ['LinkedIn', 'LinkedIn']].map(([k, l]) => `<option value="${k}" ${ibCh === k ? 'selected' : ''}>${l}</option>`).join('')}</select>${ownerSel()}`);
+    cv.innerHTML = `<div class="dtabs" style="margin-top:0">${tabs.map(([k, l]) => `<button class="${inboxTab === k ? 'on' : ''}" onclick="App.setInboxTab('${k}')">${l} <i>${src.filter(r => inTab(r, k)).length}</i></button>`).join('')}</div>
+      <div class="card">${list.map(r => { const a = acct(r.acc); return `<button class="ibx-r ${unread(r) ? 'unread' : ''}" onclick="App.openThread('${r.id}')">${pAvatar(a, 34)}<div class="grow"><div class="ibx-r1"><span class="fr">${esc(r.from)} <span class="muted" style="font-weight:400">· ${esc(a.name)}</span></span><span class="when">${esc(r.at)}</span></div><div class="ibx-r2">${esc(subjOf(r))}</div><div class="ibx-r3">${esc(r.text)}</div><div class="ibx-r4">${chIc(r.ch)}<span class="badge ${KIND_B[r.kind]}">${r.kind}</span>${S.handled[r.id] ? byMe('Answered') : byAI('Answer drafted')}${isMgr ? `<span>${esc(first(USERS[r.owner].name))}</span>` : ''}</div></div></button>`; }).join('') || '<div class="empty">Nothing here.</div>'}</div>`;
   }
   function renderAll() {
-    const v = view(), tok = ++loadTok;
-    const home = !v && S.cur === 'home' && !art, studioHome = v === 'studio' && !S.studio.doc, inboxV = (v === 'inbox' || v === 'analytics') && !art;
-    const split = !!art || !!(v && v !== 'studio' && v !== 'inbox' && v !== 'analytics' && expanded) || (v === 'studio' && !!S.studio.doc);
-    $('ws').classList.toggle('canvas-open', split);
-    $('ws').classList.toggle('home', home);
-    $('ws').classList.toggle('nochat', studioHome || inboxV);
-    $('ws').classList.toggle('solo', !split && !home && !studioHome && !inboxV);
+    const v = view(), tok = ++loadTok, home = atHome();
+    const studioHome = v === 'studio' && !S.studio.doc && !recId && !art;
+    const pane = !home && (!!(art || recId || thrId) || !!(v && v !== 'studio' && expanded) || (v === 'studio' && !!S.studio.doc));
+    const W = $('ws').classList;
+    W.toggle('canvas-open', pane); W.toggle('home', home); W.toggle('nochat', studioHome); W.toggle('solo', !pane && !home && !studioHome); W.toggle('pane-full', pane && paneFull); W.remove('focused');
     renderNav(); renderChat();
-    const MODR = { inbox: renderInbox, accounts: renderAccounts, segments: renderSegments, campaigns: renderCampaigns, approvals: renderApprovals, studio: renderStudio, analytics: renderAnalytics };
-    const draw = art ? renderArt : v === 'studio' || v === 'inbox' || v === 'analytics' || (v && expanded) ? MODR[v] : home ? renderHome : () => { $('main').className = ''; $('main').innerHTML = ''; };
-    const key = [v, home, expanded, art, campSel, segSel, listSel, studioTab, !!S.studio.doc].join('|');
+    const MODR = { accounts: renderAccounts, segments: renderSegments, campaigns: renderCampaigns, approvals: renderApprovals, studio: renderStudio };
+    const draw = home ? renderHome : recId ? renderRecord : thrId ? renderThreadPane : art ? renderArt : (v === 'studio' || (v && expanded)) ? MODR[v] : () => { $('main').className = ''; $('main').innerHTML = ''; };
+    const key = [v, home, expanded, art, recId, thrId, campSel, segSel, listSel, studioTab, !!S.studio.doc, S.cur].join('|');
     const fresh = key !== lastKey;
     lastKey = key;
-    if (fresh && split && v !== 'studio') {
+    if (fresh && pane && v !== 'studio') {
       skeleton();
-      setTimeout(() => { if (tok !== loadTok) return; draw(); $('main').classList.add('fadein'); }, 280);
+      setTimeout(() => { if (tok !== loadTok) return; draw(); $('main').classList.add('fadein'); }, 260);
     } else {
       draw();
       if (fresh) { const cv = $('cv'); if (cv) cv.scrollTop = 0; $('main').scrollTop = 0; }
     }
-    renderFocus();
   }
 
   window.App = {
-    ask, toast, nav, openRecord, openThread, approve, approveAll: () => approveAll(false), goCampaign, decide, renderAll,
+    ask, toast, nav, openRecord, approve, approveAll: () => approveAll(false), goCampaign, decide, renderAll,
     send() { const el = $('composer'); const v = el.value; el.value = ''; ask(v); },
     key(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); App.send(); } },
     focusComposer(v) { const el = $('composer'); if (!el) return; el.focus(); if (v) el.value = v; },
@@ -1173,11 +1309,11 @@
       S.chats.unshift({ id, title: 'New chat', when: 'Now', thread: [{ who: 'ai', kind: 'text', html: 'New chat. What should I work on? I can find prospects, score them, build micro-segments, prepare next actions and campaigns, track them, and tell you what the system learned.' }] });
       S.cur = id; ctx = null; art = null; recId = null; thrId = null; save(); go(null); setTimeout(() => $('composer') && $('composer').focus(), 0);
     },
-    openChat(id) { S.cur = id; art = null; recId = null; thrId = null; save(); go(null); },
-    closeCanvas() { if (art) art = null; else expanded = false; renderAll(); },
+    openChat(id) { S.cur = id; art = null; recId = null; thrId = null; notesOpen = false; const c = S.chats.find(k => k.id === id); if (c && c.unseen) { c.thread.push({ who: 'ai', kind: 'catchup', fresh: true }); c.unseen = false; if (c.reminder) c.seenRem = true; } save(); go(null); },
+    closeCanvas() { if (recId || thrId) { recId = null; thrId = null; } else if (art) art = null; else expanded = false; renderAll(); },
     expand() { art = null; recId = null; thrId = null; expanded = true; renderAll(); },
     openMod,
-    openArt(k) { art = k; recId = null; thrId = null; artMore = false; renderAll(); },
+    openArt(k) { if (atHome()) return openPaneChat('art-' + k, ART_NAME[k] || TABLES[k]().title, () => { art = k; }); art = k; recId = null; thrId = null; artMore = false; renderAll(); },
     toggleMore() { artMore = !artMore; renderAll(); },
     doneTodo(id) { S.todosDone[id] = !S.todosDone[id]; if (id.startsWith('as-')) { const x = shared.tasks[+id.slice(3)]; if (x) { x.done = S.todosDone[id]; saveShared(); } } save(); renderAll(); },
     runTodo(id) { const t = todos().find(x => x.id === id); if (t) t.go(); },
@@ -1189,8 +1325,33 @@
     closeThread() { thrId = null; renderAll(); },
     archive(id) { S.archived[id] = true; thrId = null; save(); toast('Archived'); renderAll(); },
     markUnread(id) { S.read[id] = false; thrId = null; save(); toast('Marked as unread'); renderAll(); },
+    openTask, openThread,
+    back() { if (recId || thrId) { recId = null; thrId = null; } else art = null; renderAll(); },
+    closePane() { recId = null; thrId = null; art = null; paneFull = false; if (view() && view() !== 'studio') expanded = false; renderAll(); },
+    paneFull() { paneFull = !paneFull; renderAll(); },
+    toggleMenu(id) { const m = $(id), was = m && m.classList.contains('open'); document.querySelectorAll('.menu.open').forEach(x => x.classList.remove('open')); if (m && !was) m.classList.add('open'); },
+    setAgent(k) { S.agent = k; const c = chat(); if (c && !view()) c.agent = k; save(); renderAll(); setTimeout(() => $('composer') && $('composer').focus(), 0); },
+    setScopeSel(k) { S.scopeSel = k; save(); renderAll(); if (k === 'one') App.focusComposer('@'); },
+    setCatch(k) { S.catchPer = k; save(); renderAll(); },
+    toggleNotes() { notesOpen = !notesOpen; renderAll(); if (notesOpen) setTimeout(() => $('noteIn') && $('noteIn').focus(), 0); },
+    addChatNote(v) { const c = chat(); if (!c || !v || !v.trim()) return; (c.notes = c.notes || []).push({ t: v.trim(), d: 'Today' }); save(); renderAll(); setTimeout(() => $('noteIn') && $('noteIn').focus(), 0); },
+    askAbout(id) { ctx = id; renderChat(); const el = $('composer'); if (el) el.focus(); toast(`The chat is focused on ${acct(id).contact.name}`); },
+    tagTask() { const el = $('composer'); if (!el) return; el.focus(); showTags(''); },
+    compInput(el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; const m = el.value.match(/#([^#\n]*)$/); if (m) showTags(m[1]); else hideTags(); },
+    pickTask(id) { hideTags(); const el = $('composer'); if (el) el.value = el.value.replace(/#[^#\n]*$/, ''); openTask(id); },
+    pickChat(id) { hideTags(); App.openChat(id); },
+    voice() {
+      const el = $('composer'), b = $('micBtn'); if (!el || !b || b.classList.contains('on')) return;
+      b.classList.add('on'); const ph = el.placeholder; el.placeholder = 'Listening…';
+      const end = () => { b.classList.remove('on'); el.placeholder = ph; el.focus(); };
+      const sim = () => { const p = view() ? (MOD_HINTS[view()] || ['What needs me?'])[0] : 'Catch me up on what happened since I last logged in'; let i = 0; el.value = ''; const iv = setInterval(() => { el.value = p.slice(0, ++i); if (i >= p.length) { clearInterval(iv); end(); } }, 30); };
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SR) { setTimeout(sim, 800); return; }
+      /* Real dictation where the browser allows it; otherwise (or if nothing is heard) a scripted phrase */
+      let simmed = false; const simOnce = () => { if (!simmed) { simmed = true; sim(); } };
+      try { const r = new SR(); let got = false; r.lang = 'en-US'; r.interimResults = true; r.onresult = e => { got = true; el.value = Array.from(e.results).map(x => x[0].transcript).join(''); }; r.onerror = () => { if (!got) simOnce(); else end(); }; r.onend = () => { if (got) end(); }; setTimeout(() => { if (!got) { try { r.abort(); } catch (e) { /* already stopped */ } simOnce(); } }, 2500); r.start(); } catch (e) { setTimeout(simOnce, 800); }
+    },
     closeFocus() { recId = null; thrId = null; pEdit = null; renderAll(); },
-    toggleCop() { copOpen = !copOpen; renderAll(); if (copOpen) setTimeout(() => $('copIn') && $('copIn').focus(), 0); },
     copAsk(text) { if (!text || !text.trim() || !recId) return; const a = acct(recId), th = S.cop[a.id] = S.cop[a.id] || []; th.push({ who: 'me', text }); th.push({ who: 'ai', html: copRespond(a, text.toLowerCase()) }); save(); renderAll(); },
     sendNow(id) { const a = acct(id); if (a.campaign) { S.enrollOK[id] = true; save(); toast(`Next step sent to ${a.contact.name} now (placeholder: nothing is sent)`); renderAll(); } else if (a.nba && !/auto|sent/.test(a.nba.status) && !S.decisions[id]) approve(id); else toast('Nothing is waiting to send for this person'); },
     pEditStep(id, i) { pEdit = id ? `${id}:${i}` : null; renderAll(); },
@@ -1202,7 +1363,6 @@
     setOwner(r) { ownerF = r; renderAll(); },
     setAnPer(k) { anPer = k; renderAll(); },
     setInboxTab(k) { inboxTab = k; thrId = null; renderAll(); },
-    setHomeMet(k) { homeMet = k; renderAll(); },
     toggleProc() { showProc = !showProc; renderAll(); },
     viewRep(r) { ownerF = r; toast(`Showing ${USERS[r].name}'s accounts`); openMod('accounts'); },
     reassign(ids, r) { ids.forEach(id => { const a = acct(id); if (a) { a.owner = r; shared.assign[id] = r; } }); saveShared(); toast(`Moved ${ids.length === 1 ? acct(ids[0]).name : ids.length + ' accounts'} to ${USERS[r].name}`); renderAll(); },
@@ -1245,7 +1405,7 @@
     useRunnerUp(id) { ctx = id; ask('Use the runner-up'); },
     closeDrawer() { $('drawer').classList.remove('open'); $('scrim').classList.remove('open'); },
   };
-  document.addEventListener('click', e => { if (!e.target.closest('.menu,.btn')) document.querySelectorAll('.menu.open').forEach(m => m.classList.remove('open')); });
-  document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; if ($('drawer').classList.contains('open')) App.closeDrawer(); else if (recId) App.closeFocus(); else if (art || (view() && view() !== 'studio' && expanded)) App.closeCanvas(); });
+  document.addEventListener('click', e => { if (!e.target.closest('.menu,.btn,.cbtn,.ic-btn,.side-me')) document.querySelectorAll('.menu.open').forEach(m => m.classList.remove('open')); if (!e.target.closest('.tagpop,.cbtn,#composer')) hideTags(); });
+  document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; const tp = $('tagpop'); if (tp && tp.classList.contains('open')) return hideTags(); if (document.querySelector('.menu.open')) return document.querySelectorAll('.menu.open').forEach(m => m.classList.remove('open')); if ($('drawer').classList.contains('open')) App.closeDrawer(); else if (recId || thrId) App.back(); else if (art || (view() && view() !== 'studio' && expanded)) App.closePane(); });
   renderAll();
 })();
