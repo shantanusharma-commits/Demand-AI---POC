@@ -8,7 +8,7 @@
     marco: { id: 'marco', name: 'Marco Lindqvist', role: 'rep', title: 'Account executive · Thailand, Vietnam', color: '#FF8820' },
     aisha: { id: 'aisha', name: 'Aisha Rahman', role: 'rep', title: 'Account executive · Indonesia', color: '#2E7D5A' },
     kenji: { id: 'kenji', name: 'Kenji Mori', role: 'rep', title: 'Account executive · Philippines', color: '#B23F3F' },
-    pavan: { id: 'pavan', name: 'Pavan Kumar', role: 'manager', title: 'Sales manager · SEA', color: '#7D52A2' },
+    pavan: { id: 'pavan', name: 'Daniel Brooks', role: 'manager', title: 'Sales manager · SEA', color: '#7D52A2' },
     rajiv: { id: 'rajiv', name: 'Rajiv Nair', role: 'admin', title: 'Sales operations admin', color: '#5E3A80' },
   };
   const REPS = ['sofia', 'marco', 'aisha', 'kenji'];
@@ -32,7 +32,7 @@
       id: 'juniper', name: 'Juniper Petrochem', industry: 'Petrochemicals', country: 'Singapore', size: '2,400 staff', fit: 88, owner: 'sofia',
       segment: 'Exec hire', motivation: 'Growth',
       contact: { name: 'Budi Hartono', title: 'VP Reliability & Maintenance', email: 'b.hartono@juniperpetro.example', phone: '+65 6123 4410', linkedin: true, idTier: 1 },
-      warm: { score: 72, note: 'Pavan is a 1st-degree connection; 2 past projects in CRM (2023 safety audit).' },
+      warm: { score: 72, note: 'Daniel is a 1st-degree connection; 2 past projects in CRM (2023 safety audit).' },
       signals: [
         s('New exec hire', 1, 2, 0.95, 'Budi Hartono joined as VP Reliability & Maintenance (from a competitor\'s customer site).', 'Job-change alerts'),
         s('Visited pricing page', 1, 1, 0.8, 'Two visits to the asset-performance pricing page this week.', 'Website visitor ID'),
@@ -144,15 +144,15 @@
       id: 'meridian', name: 'Meridian Olefins', industry: 'Petrochemicals', country: 'Thailand', size: '4,100 staff', fit: 90, owner: 'marco',
       segment: 'Exec hire', motivation: 'Growth',
       contact: { name: 'Somchai Rattana', title: 'Chief Operating Officer', email: 's.rattana@meridianolefins.example', phone: '+66 38 600 210', linkedin: true, idTier: 1 },
-      warm: { score: 66, note: 'Pavan met him at an industry forum (CRM note, 2025).' },
+      warm: { score: 66, note: 'Daniel met him at an industry forum (CRM note, 2025).' },
       signals: [
         s('New exec hire', 1, 5, 0.9, 'Somchai Rattana appointed COO.', 'Job-change alerts'),
         s('Expansion / capex approved', 1, 9, 0.7, 'New cracker debottlenecking project announced.', 'Funding & news'),
       ],
       nba: { action: 'Introduce Client to the new leader', runnerUp: 'Executive briefing invitation', channel: 'Email', confidence: 'Medium', proven: true, reason: 'Medium confidence', reasonNote: 'C-level contact: the recommended route is through the manager\'s warm path.', status: 'review', due: 'Today 15:00', sensitive: true,
         subject: 'A note from Client on your new role',
-        body: 'Dear Somchai,\n\nCongratulations on your appointment as COO of Meridian Olefins. Pavan Kumar mentioned meeting you at last year\'s forum.\n\nWith the debottlenecking project starting, we\'d welcome the chance to share how other olefins producers kept the cracker online during similar projects.\n\nWould a short executive briefing be useful?\n\nWarm regards,\nMarco' },
-      history: [{ d: '18 Aug 2025', t: 'Forum meeting (Pavan)', o: 'Note: interested in APM' }],
+        body: 'Dear Somchai,\n\nCongratulations on your appointment as COO of Meridian Olefins. Daniel Brooks mentioned meeting you at last year\'s forum.\n\nWith the debottlenecking project starting, we\'d welcome the chance to share how other olefins producers kept the cracker online during similar projects.\n\nWould a short executive briefing be useful?\n\nWarm regards,\nMarco' },
+      history: [{ d: '18 Aug 2025', t: 'Forum meeting (Daniel)', o: 'Note: interested in APM' }],
     },
     {
       id: 'saltmarsh', name: 'Saltmarsh Refinery', industry: 'Refining', country: 'Vietnam', size: '1,500 staff', fit: 68, owner: 'marco',
@@ -210,7 +210,7 @@
     },
     {
       id: 'lotus', name: 'Lotus Chemicals', industry: 'Petrochemicals', country: 'Vietnam', size: '800 staff', fit: 58, owner: 'marco',
-      segment: '—', motivation: 'Cost',
+      segment: '–', motivation: 'Cost',
       contact: { name: 'Nguyen Thi Hoa', title: 'Plant Engineer', email: 'hoa.nguyen@lotuschem.example', phone: '', linkedin: true, idTier: 1 },
       warm: { score: 5, note: 'No connection.' },
       signals: [],
@@ -218,7 +218,7 @@
     },
     {
       id: 'orchid', name: 'Orchid Energy', industry: 'Refining', country: 'Thailand', size: '5,200 staff', fit: 93, owner: 'marco',
-      segment: '—', motivation: 'Growth',
+      segment: '–', motivation: 'Growth',
       contact: { name: 'Kittipong Chai', title: 'VP Operations', email: 'k.chai@orchidenergy.example', phone: '+66 2 610 4400', linkedin: true, idTier: 1 },
       warm: { score: 55, note: '2 CRM contacts; Marco is connected.' },
       signals: [s('Hiring surge', 2, 70, 0.6, 'Engineering hiring (2 months ago).', 'Hiring data')],
@@ -314,7 +314,7 @@
     const a = genAccount(seg, { name, country, owner: TERR[country] });
     a.fromList = 'L1'; if (seg) HAND_SEG[a.id] = seg; ACCOUNTS.push(a);
   });
-  ACCOUNTS.forEach(a => { a.seg = HAND_SEG[a.id] || null; const sg = SEGMENTS.find(x => x.id === a.seg); a.segment = sg ? sg.name : '—'; });
+  ACCOUNTS.forEach(a => { a.seg = HAND_SEG[a.id] || null; const sg = SEGMENTS.find(x => x.id === a.seg); a.segment = sg ? sg.name : '–'; });
 
   /* Next best actions for generated accounts in NBA segments: most went ahead on their own, a few wait for a person. */
   const ACTION = { s1: ['Introduce Client to the new leader', 'Share a peer case study from their sector'], s3: ['Share the regulation summary', 'Offer an emissions-monitoring assessment'],
@@ -336,7 +336,7 @@
     a.points = Math.round(ws.reduce((t, w, i) => t + w / Math.pow(2, i), 0) * 10) / 10;
     a.timing = Math.min(100, Math.round(a.points / 2));
     a.score = Math.round(a.fit * a.timing / 100);
-    a.tier = a.score >= 40 ? 'A' : a.score >= 20 ? 'B' : a.score > 0 ? 'C' : '—';
+    a.tier = a.score >= 40 ? 'A' : a.score >= 20 ? 'B' : a.score > 0 ? 'C' : '–';
     a.whyNow = a.signals.length ? a.signals.slice().sort((p, q) => q.weight - p.weight)[0] : null;
   });
   ACCOUNTS.sort((p, q) => q.score - p.score);
@@ -350,7 +350,7 @@
         { day: 4, ch: 'LinkedIn', fmt: 'Checklist (carousel)', t: 'The pre-turnaround health checklist a peer refinery used.', state: '' },
         { day: 9, ch: 'Email', fmt: 'Plain text', t: 'A direct ask for a pre-turnaround health check, referencing both earlier touches.', state: '' } ],
       explore: '1 of 11 accounts gets a different opening (cost of a delayed restart) to keep the pattern honest.',
-      updates: [{ t: 'Today 06:05', x: 'Crossed the threshold: 11 accounts in 6 days. Waiting for Pavan to confirm.' }, { t: 'Mon 26 Oct', x: '3 more accounts announced shutdowns (8 → 11).' }],
+      updates: [{ t: 'Today 06:05', x: 'Crossed the threshold: 11 accounts in 6 days. Waiting for Daniel to confirm.' }, { t: 'Mon 26 Oct', x: '3 more accounts announced shutdowns (8 → 11).' }],
       blockers: [] },
     { id: 'c2', seg: 's2', name: 'Control-system renewal window', status: 'Running', launched: 'Mon 12 Oct', day: 15,
       touches: [
@@ -428,7 +428,7 @@
     const sig = a.signals.slice().sort((p, q) => q.age - p.age);
     sig.forEach(x => act.push({ k: 'signal', when: x.age === 0 ? 'Today' : `${x.age} day${x.age > 1 ? 's' : ''} ago`, t: `Signal: ${x.type}`, d: `${x.text} (${x.source}, tier ${x.tier})` }));
     if (a.signals.length) act.push({ k: 'score', when: 'Today 06:00', t: `Scored ${a.score}/100 · tier ${a.tier}`, d: `Fit ${a.fit} × Timing ${a.timing} ÷ 100. Passed the observable, predictive and time-bound checks.` });
-    if (a.seg) act.push({ k: 'segment', when: 'Today 06:02', t: `Joined micro-segment: ${a.segment}`, d: `Strongest trigger: ${a.whyNow ? a.whyNow.type : '—'}.` });
+    if (a.seg) act.push({ k: 'segment', when: 'Today 06:02', t: `Joined micro-segment: ${a.segment}`, d: `Strongest trigger: ${a.whyNow ? a.whyNow.type : '–'}.` });
     if (a.campaign) {
       const c = CAMPAIGNS.find(x => x.id === a.campaign);
       act.push({ k: 'campaign', when: c.launched || 'Today 06:05', t: c.status === 'Ready to confirm' ? `Held for campaign: ${c.name}` : c.status === 'Draft' ? `In draft campaign: ${c.name}` : `Enrolled in campaign: ${c.name}`, d: c.status === 'Ready to confirm' ? 'Waiting for the sales manager to confirm the campaign.' : c.status === 'Draft' ? 'The sequence is being reviewed before it goes to the sales manager.' : `Touch plan: ${c.touches.map(t => `day ${t.day} ${t.ch.toLowerCase()}`).join(', ')}.` });
@@ -469,10 +469,10 @@
     { id: 'L4', name: 'New leaders to watch', kind: 'Segment', by: 'Sofia', when: 'Fri 23 Oct', seg: 's1', note: 'New reliability and operations leaders' },
   ];
   const CONTENT = [
-    { id: 'k1', type: 'Whitepaper', title: 'Turnaround readiness: the 3 risks refineries miss', status: 'Approved', seg: 's8', led: 'Planned for touch 2 of Turnaround season 2027', by: 'Pavan' },
+    { id: 'k1', type: 'Whitepaper', title: 'Turnaround readiness: the 3 risks refineries miss', status: 'Approved', seg: 's8', led: 'Planned for touch 2 of Turnaround season 2027', by: 'Daniel' },
     { id: 'k2', type: 'Case study', title: 'How a peer site cut unplanned trips by 18%', status: 'In Content library', seg: 's1', led: 'Used in 31 messages · 9 replies · 3 meetings', by: 'Sofia' },
-    { id: 'k3', type: 'LinkedIn post', title: 'What an emissions gap map looks like', status: 'Sent for sign-off', seg: 's3', led: 'Waiting for Pavan', by: 'Sofia' },
-    { id: 'k4', type: 'Blog', title: 'Extend or migrate? A cost model for control-system renewals', status: 'Draft', seg: 's2', led: '—', by: 'Marco' },
+    { id: 'k3', type: 'LinkedIn post', title: 'What an emissions gap map looks like', status: 'Sent for sign-off', seg: 's3', led: 'Waiting for Daniel', by: 'Sofia' },
+    { id: 'k4', type: 'Blog', title: 'Extend or migrate? A cost model for control-system renewals', status: 'Draft', seg: 's2', led: '–', by: 'Marco' },
   ];
 
   const BLOCKERS = [
@@ -480,7 +480,7 @@
     { k: 'warn', who: 'all', t: 'Website-visit signals paused since 02:14', d: 'The visitor-ID connection failed. Visit signals are missing from today\'s scores; the admin has been told.', go: null },
     { k: 'warn', who: 'manager', t: 'Turnaround season 2027 waits for you', d: '11 accounts are held until you confirm the campaign or send them back as individual actions.', go: 'campaign:c1' },
     { k: 'warn', who: 'manager', t: 'Kenji: 3 overdue items, no meetings this week', d: 'The AI suggests moving 2 accounts to Aisha, who has capacity.', go: 'ask:How is my team doing?' },
-    { k: 'warn', who: 'sofia', t: 'Aurora Refining waits for Pavan\'s sign-off', d: 'Sensitive (mentions an incident). Nothing goes out until he approves.', go: 'record:aurora' },
+    { k: 'warn', who: 'sofia', t: 'Aurora Refining waits for Daniel\'s sign-off', d: 'Sensitive (mentions an incident). Nothing goes out until he approves.', go: 'record:aurora' },
   ];
 
   const LEARNED = [

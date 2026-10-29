@@ -3,149 +3,71 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Templates and settings · DemandAI</title>
+<title>Settings · Demand AI admin</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../assets/mock.css">
+<script src="../assets/theme.js"></script>
+<link rel="stylesheet" href="admin-shell.css">
 <link rel="stylesheet" href="admin.css">
 </head>
 <body>
 <div class="shell">
-<nav class="nav">
-  <div class="nav-brand"><img src="../assets/logo.png" alt="" style="width:26px;height:26px;border-radius:7px"><div><div class="nav-nm">DemandAI</div><div class="nav-org">Admin console</div></div></div>
-  <div class="nav-body">
-    <!--ADMIN_NAV-->
-    <a class="nav-item " href="index.html">
-      <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 10.5L12 3l9 7.5V21a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></svg>
-      <span class="nav-lbl">Admin home</span>
-    </a>
-    <div class="nav-div"></div>
-    <div class="nav-sec">Set up</div>
-    <a class="nav-item " href="09-setup.html">
-      <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-      <span class="nav-lbl">Data and signals</span>
-    </a>
-    <a class="nav-item " href="integrations.html">
-      <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 2v6"/><path d="M15 2v6"/><path d="M6 8h12v4a6 6 0 0 1-12 0z"/><path d="M12 18v4"/></svg>
-      <span class="nav-lbl">Integrations and email</span>
-    </a>
-    <a class="nav-item " href="07-content.html">
-      <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-      <span class="nav-lbl">Content library</span>
-    </a>
-    <a class="nav-item active" href="settings.html">
-      <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
-      <span class="nav-lbl">Templates and settings</span>
-    </a>
-    <a class="nav-item " href="08-users.html">
-      <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-      <span class="nav-lbl">Users and roles</span>
-    </a>
-    <div class="nav-div"></div>
-    <div class="nav-sec">The process behind the chat</div>
-    <a class="nav-item " href="10-prospecting.html">
-      <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-      <span class="nav-lbl">Prospecting</span>
-    </a>
-    <a class="nav-item " href="11-scoring.html">
-      <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-      <span class="nav-lbl">Account Scoring</span>
-    </a>
-    <a class="nav-item " href="12-nba.html">
-      <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-      <span class="nav-lbl">Micro-segments & NBA</span>
-    </a>
-    <a class="nav-item " href="15-content-studio.html">
-      <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-      <span class="nav-lbl">Content studio</span>
-    </a>
-    <a class="nav-item " href="14-review.html">
-      <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-      <span class="nav-lbl">Review queue</span>
-    </a>
-    <div class="nav-div"></div>
-    <div class="nav-sec">Measure</div>
-    <a class="nav-item " href="13-analytics.html">
-      <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-      <span class="nav-lbl">Analytics</span>
-    </a>
-    <!--/ADMIN_NAV-->
-  </div>
-  <div class="nav-foot">
-    <div class="nav-user"><div class="nav-av">RN</div><div><div class="nav-un">Rajiv Nair</div><div class="nav-ur">Admin</div></div></div>
-    <div style="display:flex;justify-content:space-between;gap:6px;padding:8px 8px 0;font-size:10.5px"><a href="../app.html" onclick="localStorage.setItem('dmock_user','pavan')" style="color:var(--brand-mid);text-decoration:none">Sales workspace →</a><a href="../index.html" style="color:var(--r3)">Sign out</a></div>
-  </div>
-</nav>
+<nav class="nav"></nav>
 <main class="main">
-  <div class="a-top"><div><span class="t">Templates and settings</span><span class="d">The rules the AI works within</span></div><button class="btn pri" onclick="toast('Saved. Every change is versioned so past decisions stay explainable (mock)')">Save changes</button></div>
+  <div class="a-top"><div><span class="t">Settings</span><span class="d">How the workspace runs: appearance, notifications, security, data and usage</span></div><div class="a-act"><button class="btn pri" onclick="toast('Saved. Every change is versioned so past decisions stay explainable (mock)')">Save changes</button></div></div>
+  <div class="a-tabs" role="tablist"><button data-t="general">General</button><button data-t="appearance">Appearance</button><button data-t="notifications">Notifications</button><button data-t="security">Security and access</button><button data-t="privacy">Data and privacy</button><button data-t="usage">Usage</button></div>
   <div class="a-canvas">
-    <div class="a-grid">
-      <div class="card c6">
-        <div class="card-h"><span class="lbl">Ideal customer profile</span><span class="badge b-pos">Signed off</span></div>
+    <div class="a-grid" data-pane="general"><div class="card c7"><div class="card-h"><span class="lbl">Workspace</span></div><div class="card-b" ><div class="set-row"><div><div class="k">Workspace name</div><div class="d">Shown to everyone in the sales workspace</div></div><input value="Demand AI · SEA pilot"></div><div class="set-row"><div><div class="k">Organisation</div><div class="d">The client this workspace belongs to</div></div><input value="Client (anonymised)"></div><div class="set-row"><div><div class="k">Time zone</div><div class="d">Used for send windows, the overnight sweep and Your day</div></div><select><option >Singapore (SGT, UTC+8)</option><option >Jakarta (WIB, UTC+7)</option><option >Manila (PHT, UTC+8)</option></select></div><div class="set-row"><div><div class="k">Week starts on</div><div class="d">Your day and the weekly targets</div></div><select><option >Monday</option><option >Sunday</option></select></div><div class="set-row"><div><div class="k">Currency</div><div class="d">Pipeline and deal values</div></div><select><option >USD</option><option >SGD</option><option >MYR</option><option >IDR</option></select></div><div class="set-row"><div><div class="k">Language</div><div class="d">Interface and drafts</div></div><select><option >English (UK)</option><option >English (US)</option></select></div></div></div><div class="card c5"><div class="card-h"><span class="lbl">Sending</span></div><div class="card-b" ><div class="set-row"><div><div class="k">Send window</div><div class="d">Messages wait for the next window in the contact's time zone</div></div><input value="09:00 to 17:00, Mon to Fri"></div><div class="set-row"><div><div class="k">Daily cap per rep</div><div class="d">Across email and LinkedIn</div></div><input value="50"></div><div class="set-row"><div><div class="k">Quiet days</div><div class="d">No sends on public holidays in the contact's country</div></div><span class="switch on" role="switch" tabindex="0" onclick="this.classList.toggle('on');toast('' || (this.classList.contains('on')?'On':'Off') + ' · saved and versioned (mock)')"></span></div><div class="set-row"><div><div class="k">Pause everything</div><div class="d">Stops every automatic send at once</div></div><span class="switch " role="switch" tabindex="0" onclick="this.classList.toggle('on');toast('Automatic sending paused for everyone (mock)' || (this.classList.contains('on')?'On':'Off') + ' · saved and versioned (mock)')"></span></div></div></div><div class="card c12" id="jobs"><div class="card-h"><span class="lbl">System jobs</span><span class="muted sm">Run the process in the background · not user-scheduled</span></div><div class="card-b" style="padding:0"><table class="tbl"><thead><tr><th>Job</th><th>What it does</th><th>When</th><th>Last run</th><th>On</th></tr></thead><tbody>
+<tr><td class="nm">Overnight signal sweep</td><td>Checks every account for new signals, re-scores, prepares next actions for tier A and B</td><td>Every day 06:00</td><td class="sm">Today 06:00 · 4 min</td><td><span class="switch on" role="switch" tabindex="0" onclick="this.classList.toggle('on');toast('' || (this.classList.contains('on')?'On':'Off') + ' · saved and versioned (mock)')"></span></td></tr>
+<tr><td class="nm">Weekly prospect refresh</td><td>Finds new ICP matches and lookalikes, retries held records</td><td>Every Mon 07:00</td><td class="sm">Mon 26 Oct · 11 min</td><td><span class="switch on" role="switch" tabindex="0" onclick="this.classList.toggle('on');toast('' || (this.classList.contains('on')?'On':'Off') + ' · saved and versioned (mock)')"></span></td></tr>
+<tr><td class="nm">Monthly learning job</td><td>Promotes and demotes patterns, re-weights tiers, scores sources</td><td>1st of the month 02:00</td><td class="sm">Thu 1 Oct · 22 min</td><td><span class="switch on" role="switch" tabindex="0" onclick="this.classList.toggle('on');toast('' || (this.classList.contains('on')?'On':'Off') + ' · saved and versioned (mock)')"></span></td></tr>
+<tr><td class="nm">CRM sync</td><td>Reads accounts, contacts and opportunities; read-only</td><td>Every 15 minutes</td><td class="sm">5 minutes ago</td><td><span class="switch on" role="switch" tabindex="0" onclick="this.classList.toggle('on');toast('' || (this.classList.contains('on')?'On':'Off') + ' · saved and versioned (mock)')"></span></td></tr></tbody></table></div></div></div>
+    <div class="a-grid" data-pane="appearance">
+      <div class="card c12">
+        <div class="card-h"><div><span class="lbl">Start from a theme</span><div class="muted" style="font-size:12px;margin-top:3px">Pick one, then fine-tune the colours below. Every theme is flat by default. Current: <b id="curName">Plum</b></div></div><button class="btn sm" onclick="resetTheme()">Reset to default</button></div>
+        <div class="card-b"><div class="th-grid" id="thGrid"></div></div>
+      </div>
+      <div class="card c7">
+        <div class="card-h"><span class="lbl">Colours</span></div>
         <div class="card-b">
-          <div class="field"><label>In the client's own words</label><textarea rows="3" style="width:100%;border:1px solid var(--bdk);border-radius:var(--rsm);padding:8px 10px;font-size:12.5px">Refineries first, then petrochemical and gas-processing plants in Singapore, Malaysia, Thailand, the Philippines, Indonesia and Vietnam, with 500+ staff. We sell to reliability, maintenance, operations and I&amp;C leaders. Leave out existing customers.</textarea></div>
-          <div class="lbl" style="margin-bottom:6px">Turned into a filter</div>
-          <div style="display:flex;gap:6px;flex-wrap:wrap"><span class="badge b-brand nodot">Refining (core)</span><span class="badge b-brand nodot">Petrochemicals</span><span class="badge b-brand nodot">Gas processing</span><span class="badge b-sec nodot">6 SEA countries</span><span class="badge b-sec nodot">500+ staff</span><span class="badge b-ter nodot">Reliability · Maintenance · Operations · I&amp;C</span><span class="badge b-grey nodot">Exclude customers</span></div>
-          <div class="set-row" style="margin-top:10px"><div><div class="k">Closed-won means</div><div class="d">The CRM field and value that marks a customer</div></div><select><option>Opportunity stage = Closed Won</option><option>Account type = Customer</option></select></div>
+          <div class="muted" style="font-size:12px;margin:-4px 0 6px">Type your own hex code (like #1A73E8) or click the swatch to pick one. Status colours (ready, review, blocked) stay fixed so they keep their meaning.</div>
+          <div id="colRows"></div>
         </div>
       </div>
-
-      <div class="card c6">
-        <div class="card-h"><span class="lbl">Who decides what</span><span class="muted" style="font-size:11px">routing for the sales workspace</span></div>
-        <div class="card-b" style="padding:0"><table class="tbl">
-          <thead><tr><th>Item</th><th>Goes to</th><th>If nobody acts</th></tr></thead>
-          <tbody>
-            <tr><td>Passes every check (high confidence, proven message, not sensitive, identity confirmed, not in another sequence)</td><td><select class="sel"><option>Goes ahead on its own</option><option>Rep approves</option></select></td><td class="sm">—</td></tr>
-            <tr><td>Medium confidence</td><td><select class="sel"><option>Rep</option><option>Sales manager</option></select></td><td><select class="sel"><option>Remind after 24 h</option><option>Drop after 48 h</option></select></td></tr>
-            <tr><td>Unproven message (no proven pattern)</td><td><select class="sel"><option>Rep</option><option>Sales manager</option></select></td><td><select class="sel"><option>Remind after 24 h</option></select></td></tr>
-            <tr><td>Sensitive or C-level</td><td><select class="sel"><option>Sales manager</option></select></td><td><select class="sel"><option>Hold</option></select></td></tr>
-            <tr><td>Campaign (10+ accounts in 7 days)</td><td><select class="sel"><option>Sales manager</option></select></td><td><select class="sel"><option>Fall back to separate actions after 48 h</option><option>Wait</option></select></td></tr>
-            <tr><td>Held records, source flags</td><td><select class="sel"><option>Admin</option></select></td><td class="sm">Retries 3 cycles first</td></tr>
-          </tbody></table>
-          <div style="padding:10px 16px;font-size:11.5px;color:var(--i3);border-top:1px solid var(--border)">These are the mock's assumptions for decisions the process documents leave open.</div>
-        </div>
-      </div>
-
-      <div class="card c6">
-        <div class="card-h"><span class="lbl">Thresholds</span><span class="muted" style="font-size:11px">reasoned defaults · version 2026.10</span></div>
+      <div class="card c5">
+        <div class="card-h"><span class="lbl">Preview</span><span class="muted" style="font-size:11.5px">The whole app updates as you change things</span></div>
         <div class="card-b">
-          <div class="set-row"><div><div class="k">Campaign threshold</div><div class="d">Accounts in one micro-segment within the window</div></div><input value="10 accounts in 7 days"></div>
-          <div class="set-row"><div><div class="k">Proven pattern</div><div class="d">Outcomes needed and confidence to graduate</div></div><input value="10 outcomes · ≥ 60%"></div>
-          <div class="set-row"><div><div class="k">Demote when</div><div class="d">Trailing 90-day rate drops below</div></div><input value="60%"></div>
-          <div class="set-row"><div><div class="k">Pattern decay</div><div class="d">Unconfirmed pattern reverts to provisional after</div></div><input placeholder="Not set yet"></div>
-          <div class="set-row"><div><div class="k">Explore share</div><div class="d">Share of a segment that tries a different structure</div></div><input placeholder="Not set yet"></div>
-          <div class="set-row"><div><div class="k">Profile-change cutoff</div><div class="d">Changes newer than this are re-verified</div></div><input value="30 days"></div>
-          <div class="set-row"><div><div class="k">CRM contact link</div><div class="d">Confidence needed to link to a CRM contact</div></div><input value="≥ 70"></div>
+          <div class="pv">
+            <div class="pv-rail"><div class="pv-brand"><img src="../assets/logo.png" alt=""><b>Demand AI</b></div><div class="pv-i on">Today</div><div class="pv-i">Inbox</div><div class="pv-i">Accounts</div></div>
+            <div class="pv-main"><div class="pv-h">Good morning, Daniel</div><div class="pv-s">Cedar needs you most. The renewal offer closes Friday.</div>
+              <div class="pv-card"><div class="pv-k">Pipeline the AI influenced</div><div class="pv-v">USD 1.2M</div><div class="pv-bar"><i></i></div></div>
+              <div class="pv-a"><span class="pv-btn">Review</span><span class="pv-btn2">Skip</span><span class="pv-lnk">Cedar Petrochemicals</span></div></div>
+          </div>
+          <div id="pvWarn"></div>
         </div>
-      </div>
-
-      <div class="card c6">
-        <div class="card-h"><span class="lbl">Message templates</span><span class="muted" style="font-size:11px">structures, never fixed text</span></div>
-        <div class="card-b">
-          <div class="chk"><span class="dot ok">✓</span><div class="grow"><b>Exec hire · email · "first 90 days"</b><div class="sm">Proven · 14 outcomes · 64% positive</div></div><button class="btn sm">View</button></div>
-          <div class="chk"><span class="dot ok">✓</span><div class="grow"><b>Contract renewal · email · "extend vs. migrate"</b><div class="sm">Proven · 21 outcomes · 48% positive</div></div><button class="btn sm">View</button></div>
-          <div class="chk"><span class="dot ok">✓</span><div class="grow"><b>Expansion · email · "automation for the project"</b><div class="sm">Proven · 11 outcomes · 52% positive</div></div><button class="btn sm">View</button></div>
-          <div class="chk"><span class="dot wn">~</span><div class="grow"><b>Compliance deadline · LinkedIn</b><div class="sm">Demoted to provisional · 31% in the last 90 days</div></div><button class="btn sm">View</button></div>
-          <div class="chk"><span class="dot no">+</span><div class="grow"><b>Campaign: 3 touches</b><div class="sm">Day 0 plain text · day 3–5 content piece · day 7–10 direct ask</div></div><button class="btn sm">Edit</button></div>
-          <div style="font-size:11.5px;color:var(--i3);margin-top:8px">Brand voice, banned words and approved claims live in the <a href="07-content.html">Content library</a>.</div>
-        </div>
-      </div>
-
-      <div class="card c12" id="runs">
-        <div class="card-h"><span class="lbl">System jobs</span><span class="muted" style="font-size:11.5px">Run the process in the background · not user-scheduled</span></div>
-        <div class="card-b" style="padding:0"><table class="tbl">
-          <thead><tr><th>Job</th><th>What it does</th><th>When</th><th>For</th><th>On</th></tr></thead>
-          <tbody>
-            <tr><td class="nm">Overnight signal sweep</td><td>Checks every account for new signals, re-scores, prepares next actions for anything in tier A or B</td><td>Every day 06:00</td><td>All reps</td><td><span class="switch on" onclick="this.classList.toggle('on')"></span></td></tr>
-            <tr><td class="nm">Weekly prospect refresh</td><td>Finds new ICP matches and lookalikes, retries held records</td><td>Every Mon 07:00</td><td>All reps</td><td><span class="switch on" onclick="this.classList.toggle('on')"></span></td></tr>
-            <tr><td class="nm">Monthly learning job</td><td>Promotes and demotes patterns, re-weights tiers, scores sources</td><td>1st of the month 02:00</td><td>System</td><td><span class="switch on" onclick="this.classList.toggle('on')"></span></td></tr>
-          </tbody></table></div>
       </div>
     </div>
+    
+    <div class="a-grid" data-pane="notifications"><div class="card c12"><div class="card-h"><span class="lbl">Who hears about what, and where</span><span class="muted sm">People can turn off email and team chat for themselves; in-app stays on</span></div><div class="card-b" style="padding:0"><table class="tbl"><thead><tr><th>When</th><th>Goes to</th><th>In the app</th><th>Email</th><th>Team chat</th></tr></thead><tbody><tr><td class="nm">A prospect replies positively</td><td class="sm">Rep, manager</td><td><input type="checkbox" checked aria-label="on"></td><td><input type="checkbox" checked aria-label="on"></td><td><input type="checkbox" checked aria-label="on"></td></tr><tr><td class="nm">A next best action waits for approval</td><td class="sm">Rep</td><td><input type="checkbox" checked aria-label="on"></td><td><input type="checkbox" checked aria-label="on"></td><td><input type="checkbox"  aria-label="on"></td></tr><tr><td class="nm">An item waits for sign-off</td><td class="sm">Manager</td><td><input type="checkbox" checked aria-label="on"></td><td><input type="checkbox" checked aria-label="on"></td><td><input type="checkbox"  aria-label="on"></td></tr><tr><td class="nm">A campaign of 10 or more needs confirming</td><td class="sm">Manager</td><td><input type="checkbox" checked aria-label="on"></td><td><input type="checkbox" checked aria-label="on"></td><td><input type="checkbox" checked aria-label="on"></td></tr><tr><td class="nm">A champion changes jobs</td><td class="sm">Rep</td><td><input type="checkbox" checked aria-label="on"></td><td><input type="checkbox"  aria-label="on"></td><td><input type="checkbox" checked aria-label="on"></td></tr><tr><td class="nm">A rep falls behind (3 or more overdue)</td><td class="sm">Manager</td><td><input type="checkbox" checked aria-label="on"></td><td><input type="checkbox"  aria-label="on"></td><td><input type="checkbox"  aria-label="on"></td></tr><tr><td class="nm">A data source fails</td><td class="sm">Admin</td><td><input type="checkbox" checked aria-label="on"></td><td><input type="checkbox" checked aria-label="on"></td><td><input type="checkbox" checked aria-label="on"></td></tr><tr><td class="nm">A chat you asked for a reminder on is due</td><td class="sm">Whoever set it</td><td><input type="checkbox" checked aria-label="on"></td><td><input type="checkbox"  aria-label="on"></td><td><input type="checkbox"  aria-label="on"></td></tr></tbody></table></div></div><div class="card c6"><div class="card-h"><span class="lbl">Digests</span></div><div class="card-b" ><div class="set-row"><div><div class="k">Morning catch-up</div><div class="d">The "While you were away" summary, by email</div></div><select><option >Off</option><option >07:30</option><option selected>08:00</option><option >08:30</option></select></div><div class="set-row"><div><div class="k">Weekly team summary</div><div class="d">For managers, Friday afternoon</div></div><select><option >Off</option><option selected>Fri 16:00</option><option >Fri 17:00</option></select></div></div></div><div class="card c6"><div class="card-h"><span class="lbl">Team chat</span></div><div class="card-b" ><div class="set-row"><div><div class="k">Workspace</div><div class="d">Where alerts are posted</div></div><span class="badge b-pos">Connected</span></div><div class="set-row"><div><div class="k">Default channel</div><div class="d">Team alerts; personal alerts go as direct messages</div></div><input value="#sea-demand-ai"></div></div></div></div>
+    <div class="a-grid" data-pane="security"><div class="card c6"><div class="card-h"><span class="lbl">Sign-in</span></div><div class="card-b" ><div class="set-row"><div><div class="k">Single sign-on</div><div class="d">The company identity provider (SAML)</div></div><span class="badge b-pos">On</span></div><div class="set-row"><div><div class="k">Two-step verification</div><div class="d">Required for admins and managers</div></div><span class="switch on" role="switch" tabindex="0" onclick="this.classList.toggle('on');toast('' || (this.classList.contains('on')?'On':'Off') + ' · saved and versioned (mock)')"></span></div><div class="set-row"><div><div class="k">Session timeout</div><div class="d">Signs people out after inactivity</div></div><select><option >30 minutes</option><option >1 hour</option><option selected>8 hours</option></select></div><div class="set-row"><div><div class="k">Allowed networks</div><div class="d">Leave empty to allow any network</div></div><input placeholder="For example 203.0.113.0/24"></div></div></div><div class="card c6"><div class="card-h"><span class="lbl">Data location and keys</span></div><div class="card-b" ><div class="set-row"><div><div class="k">Data stays in</div><div class="d">Where records and drafts are stored</div></div><select><option >Singapore region</option><option >EU region</option></select></div><div class="set-row"><div><div class="k">Encryption keys</div><div class="d">Managed by the platform, rotated every 90 days</div></div><span class="badge b-pos">Rotated 4 Oct</span></div><div class="set-row"><div><div class="k">Agent access (MCP)</div><div class="d">Lets the client's own AI assistants ask Demand AI who to contact and why</div></div><span class="switch " role="switch" tabindex="0" onclick="this.classList.toggle('on');toast('' || (this.classList.contains('on')?'On':'Off') + ' · saved and versioned (mock)')"></span></div><div class="set-row"><div><div class="k">API tokens</div><div class="d">1 active, read-only, for the CRM sync</div></div><button class="btn sm" onclick="toast('Token management (mock)')">Manage</button></div></div></div><div class="card c12"><div class="card-h"><span class="lbl">Who can see what</span></div><div class="card-b" ><div class="set-row"><div><div class="k">Reps see</div><div class="d">Accounts and chats</div></div><select><option >Their own only</option><option >Their own, plus the team read-only</option></select></div><div class="set-row"><div><div class="k">Contact details in exports</div><div class="d">Emails and phone numbers</div></div><select><option >Masked unless the user is a manager or admin</option><option >Always masked</option><option >Shown</option></select></div><div class="set-row"><div><div class="k">Model training</div><div class="d">Client data is never used to train shared models</div></div><span class="badge b-pos">Never</span></div></div></div></div>
+    <div class="a-grid" data-pane="privacy"><div class="card c6"><div class="card-h"><span class="lbl">Retention</span></div><div class="card-b" ><div class="set-row"><div><div class="k">Prospect records with no reply</div><div class="d">Deleted after</div></div><select><option >6 months</option><option selected>12 months</option><option >24 months</option></select></div><div class="set-row"><div><div class="k">Drafts never sent</div><div class="d">Deleted after</div></div><select><option >30 days</option><option selected>90 days</option></select></div><div class="set-row"><div><div class="k">Chats</div><div class="d">Kept for</div></div><select><option >12 months</option><option selected>24 months</option><option >Until deleted</option></select></div><div class="set-row"><div><div class="k">Audit log</div><div class="d">Kept for</div></div><select><option selected>24 months</option><option >36 months</option></select></div></div></div><div class="card c6"><div class="card-h"><span class="lbl">Do-not-contact list</span><span class="badge b-pos">On</span></div><div class="card-b" ><div class="sm" style="margin-bottom:10px">214 names and 9 domains. Anyone on it is knocked out before scoring, and never contacted.</div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm" onclick="toast('Upload a CSV of names, emails or domains (mock)')">Upload a list</button><button class="btn sm" onclick="toast('Download prepared (mock)')">Download</button></div></div></div><div class="card c12"><div class="card-h"><span class="lbl">Deletion and opt-out requests</span><button class="btn sm" onclick="toast('New request logged (mock)')">Log a request</button></div><div class="card-b" style="padding:0"><table class="tbl"><thead><tr><th>Request</th><th>Type</th><th>Received</th><th>Status</th></tr></thead><tbody><tr><td class="nm">Request from a contact at Northcape Olefins</td><td>Erase</td><td class="sm">Received Wed 21 Oct</td><td><span class="badge b-pos">Done Thu 22 Oct</span></td></tr><tr><td class="nm">Request from a contact at Bluewater Gas</td><td>Do not contact</td><td class="sm">Received Mon 26 Oct</td><td><span class="badge b-pos">Done Mon 26 Oct</span></td></tr></tbody></table></div></div><div class="card c12"><div class="card-h"><span class="lbl">Export the workspace</span></div><div class="card-b" ><div class="sm" style="margin-bottom:10px">Accounts, scores, actions, outcomes and the audit log, as CSV files in one archive. Sent to your email when it is ready.</div><button class="btn sm" onclick="toast('Export started. You will get an email when it is ready (mock)')">Start an export</button></div></div></div>
+    <div class="a-grid" data-pane="usage"><div class="card c6"><div class="card-h"><span class="lbl">This month · October</span></div><div class="card-b" ><div class="um"><div class="um-h"><b>Seats</b><span>5 of 10 seats</span></div><div class="zt-bar big" style="margin:6px 0"><i style="width:50%"></i></div><div class="sm">1 admin does not use a seat</div></div><div class="um"><div class="um-h"><b>Contact-data credits</b><span>1,820 of 5,000 credits</span></div><div class="zt-bar big" style="margin:6px 0"><i style="width:36%"></i></div><div class="sm">3,180 left · resets 1 Nov · about 60 a day</div></div><div class="um"><div class="um-h"><b>Messages sent</b><span>412 of 2,000 messages</span></div><div class="zt-bar big" style="margin:6px 0"><i style="width:21%"></i></div><div class="sm">Email and LinkedIn, all reps</div></div><div class="um"><div class="um-h"><b>AI runs</b><span>9,640 of 25,000 runs</span></div><div class="zt-bar big" style="margin:6px 0"><i style="width:39%"></i></div><div class="sm">Scoring, drafting, chat answers and the jobs</div></div></div></div><div class="card c6"><div class="card-h"><span class="lbl">Where the AI runs went</span></div><div class="card-b" style="padding:0"><table class="tbl"><thead><tr><th>Work</th><th>Runs</th><th>Share</th></tr></thead><tbody><tr><td>Overnight sweep and scoring</td><td class="mono">4,210</td><td><span class="ush"><i style="width:44%"></i></span> 44%</td></tr><tr><td>Drafting next best actions</td><td class="mono">2,380</td><td><span class="ush"><i style="width:25%"></i></span> 25%</td></tr><tr><td>Chat answers</td><td class="mono">1,690</td><td><span class="ush"><i style="width:18%"></i></span> 18%</td></tr><tr><td>Content studio</td><td class="mono">760</td><td><span class="ush"><i style="width:8%"></i></span> 8%</td></tr><tr><td>Learning job</td><td class="mono">600</td><td><span class="ush"><i style="width:6%"></i></span> 6%</td></tr></tbody></table></div></div><div class="card c12"><div class="card-h"><span class="lbl">Plan</span></div><div class="card-b" ><div class="set-row"><div><div class="k">Plan</div><div class="d">Pilot · 30 days</div></div><span class="badge b-brand nodot">Pilot</span></div><div class="set-row"><div><div class="k">Pilot ends</div><div class="d">Readout with the success gates G1 and G2</div></div><span class="sm">Wed 16 Dec</span></div><div class="set-row"><div><div class="k">Alerts</div><div class="d">Tell the admin when any meter passes</div></div><select><option selected>80%</option><option >90%</option></select></div></div></div></div>
   </div>
 </main>
 </div>
-<script>function toast(m){document.querySelectorAll('.toast').forEach(t=>t.remove());const t=document.createElement('div');t.className='toast';t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),3000);}</script>
+<script src="admin-shell.js"></script>
+<script>ADM.tabs();
+var cur = DM_savedTheme(), COLS = [['accent','Accent','Buttons, links, progress, selected items'],['dark','Accent dark','Gradients, hover and pressed states'],['text','Text','Headings and body text; lighter greys follow it'],['icons','Icons','Navigation and toolbar icons']];
+function drawThemes(){var g=document.getElementById('thGrid');g.innerHTML=Object.keys(DM_THEMES).map(function(k){var t=DM_THEMES[k];return '<button class="th '+(cur.key===k?'on':'')+'" onclick="pickTheme(\''+k+'\')"><span class="th-sw"><i style="background:'+t.accent+'"></i><i style="background:'+t.dark+'"></i><i style="background:'+t.text+'"></i><i style="background:#F4F6F8"></i></span><b>'+t.name+'</b><em>'+t.desc+'</em><em>'+t.fd+' · '+t.fb+'</em></button>'}).join('');document.getElementById('curName').textContent=cur.key&&DM_THEMES[cur.key]?DM_THEMES[cur.key].name+(cur.custom?' (adjusted)':''):'Custom'}
+function drawCols(){document.getElementById('colRows').innerHTML=COLS.map(function(c){return '<div class="set-row col-row"><div><div class="k">'+c[1]+'</div><div class="d">'+c[2]+'</div></div><span class="col-in"><input type="color" value="'+cur[c[0]]+'" oninput="setCol(\''+c[0]+'\',this.value)" aria-label="'+c[1]+' swatch"><input class="hex" value="'+cur[c[0]].toUpperCase()+'" onchange="setCol(\''+c[0]+'\',this.value)" aria-label="'+c[1]+' hex"></span></div>'}).join('')}
+function warn(){var w=[],r=DM_contrast('#ffffff',cur.accent),t=DM_contrast(cur.text,'#ffffff');if(r<4.5)w.push('White text on this accent is hard to read ('+r.toFixed(1)+':1). Pick a darker accent.');if(t<7)w.push('Text on white reads at '+t.toFixed(1)+':1; aim for 7:1 or more.');document.getElementById('pvWarn').innerHTML=w.length?w.map(function(x){return '<div class="pv-w">'+x+'</div>'}).join(''):'<div class="pv-ok">Contrast passes: white on the accent is '+r.toFixed(1)+':1.</div>'}
+function apply(save){DM_applyTheme(cur);drawThemes();warn();if(save){try{localStorage.setItem('dmock_theme',JSON.stringify(cur))}catch(e){}}}
+function pickTheme(k){cur=Object.assign({key:k},DM_THEMES[k]);drawCols();apply(true);toast(DM_THEMES[k].name+' applied. The sales workspace uses it from the next page load (mock)')}
+function setCol(k,v){if(!/^#?[0-9a-f]{6}$/i.test(v)){toast('Use a six-digit hex code, like #1A73E8');drawCols();return}if(v[0]!=='#')v='#'+v;cur[k]=v;cur.custom=true;drawCols();apply(true)}
+function resetTheme(){try{localStorage.removeItem('dmock_theme')}catch(e){}cur=Object.assign({key:DM_DEFAULT},DM_THEMES[DM_DEFAULT]);drawCols();apply(false);toast('Back to the default theme')}
+drawThemes();drawCols();warn();
+</script>
 </body>
 </html>

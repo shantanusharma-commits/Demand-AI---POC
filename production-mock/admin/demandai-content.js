@@ -35,8 +35,8 @@
   const cited = c => `${c.claim} [${c.type}, ${c.year}]`;
   function who() {
     try { const r = localStorage.getItem('demandai_role') || 'Sales manager';
-      return (typeof ROLE_PERSON !== 'undefined' && ROLE_PERSON[r]) || { Admin: 'Rajiv Nair', 'Sales manager': 'Pavan Kumar', 'Sales rep': 'Sofia Ahlgren' }[r] || 'Pavan Kumar';
-    } catch (e) { return 'Pavan Kumar'; }
+      return (typeof ROLE_PERSON !== 'undefined' && ROLE_PERSON[r]) || { Admin: 'Rajiv Nair', 'Sales manager': 'Daniel Brooks', 'Sales rep': 'Sofia Ahlgren' }[r] || 'Daniel Brooks';
+    } catch (e) { return 'Daniel Brooks'; }
   }
   const brandTone = () => (E.brandPack().voice || {}).preset || 'Direct';
 
@@ -179,8 +179,8 @@
         msgs: [{ who: 'me', text: ask, by: it.by, at }, { who: 'ai', card: it.id, at }, { who: 'ai', text: summaryFor(it), at }] };
       it.conv = conv.id; return { it, conv };
     };
-    const a = mk({ type: 'blog', title: 'Plan the migration before end of support sets the date', topic: 'control system migration', seg: 'Modernisation', status: 'Ready', by: 'Pavan Kumar' }, 'Write a blog on control system migration for plant managers with legacy systems', d(4));
-    const b = mk({ type: 'whitepaper', title: 'Modernising legacy control systems: a planning guide', topic: 'legacy control system modernisation', seg: 'Modernisation', length: 'Long', by: 'Pavan Kumar',
+    const a = mk({ type: 'blog', title: 'Plan the migration before end of support sets the date', topic: 'control system migration', seg: 'Modernisation', status: 'Ready', by: 'Daniel Brooks' }, 'Write a blog on control system migration for plant managers with legacy systems', d(4));
+    const b = mk({ type: 'whitepaper', title: 'Modernising legacy control systems: a planning guide', topic: 'legacy control system modernisation', seg: 'Modernisation', length: 'Long', by: 'Daniel Brooks',
       sources: ['CS-01', 'OP-02', 'BR-03'] }, 'A detailed whitepaper about legacy control system modernisation for plant managers', d(2));
     const c = mk({ type: 'blog', title: 'Renewal season: check the cover still fits', topic: 'service contract renewal', seg: 'Service renewal', length: 'Short', by: 'Sofia Ahlgren', status: 'Ready' }, 'Short blog on service contract renewal for customers with a renewal coming up', d(1));
     S = { v: 2, items: [a.it, b.it, c.it], convs: [a.conv, b.conv, c.conv] };

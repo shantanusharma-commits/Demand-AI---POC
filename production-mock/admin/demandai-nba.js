@@ -145,7 +145,7 @@ function dueLabel(t, now = Date.now()){
 
 /* 3.3 Data sufficiency: the readiness checks before measurement. Used by Analytics (Validation) and Today (blockers). */
 function readiness(runs){
-  const pct0 = v => v===null||v===undefined ? '—' : Math.round(v)+'%';
+  const pct0 = v => v===null||v===undefined ? '–' : Math.round(v)+'%';
   const R = DemandAI.CONFIG.readiness;
   const accounts = runs.flatMap(run=>run.scored.filter(r=>!r.excluded));
   const uniq = new Map(accounts.map(r=>[r.account.name.toLowerCase(), r])); const A = [...uniq.values()];
@@ -448,7 +448,7 @@ function compareActions(r, key, live){
   const d = dec(key);
   if(!r.runnerUp) return `<div style="font-size:12.5px;font-weight:600;color:var(--i1)">${esc(r.action)}</div><div style="font-size:11px;color:var(--i2);margin-top:3px">${esc(r.reason)}</div><div style="font-size:11px;color:var(--i3);margin-top:6px">No runner-up for this one.</div>`;
   const A = optionFacts(r, r.action), B = optionFacts(r, r.runnerUp.action), useB = d.useRunner && !d.manual, useA = !d.useRunner && !d.manual;
-  const cellv = (v, other) => `<span style="${v!==other?'font-weight:700;color:var(--i1)':'color:var(--i2)'}">${esc(v||'—')}</span>`;
+  const cellv = (v, other) => `<span style="${v!==other?'font-weight:700;color:var(--i1)':'color:var(--i2)'}">${esc(v||'–')}</span>`;
   const rowv = (k, a, b) => `<tr><td style="padding:6px 8px 6px 0;font-size:11px;color:var(--i3);vertical-align:top;white-space:nowrap">${k}</td><td style="padding:6px 8px;font-size:12px;vertical-align:top">${a}</td><td style="padding:6px 0 6px 8px;font-size:12px;vertical-align:top">${b}</td></tr>`;
   const head = (t, chosen, other) => `<th style="text-align:left;padding:0 8px 8px;vertical-align:bottom;width:44%"><div style="font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:${chosen?'var(--brand-dk)':'var(--i3)'}">${t}</div>
       <div style="margin-top:6px">${chosen ? '<span class="tag tag-violet">Chosen</span>' : live ? `<button class="btn btn-sec btn-sm" onclick="${other}">Use this instead</button>` : ''}</div></th>`;

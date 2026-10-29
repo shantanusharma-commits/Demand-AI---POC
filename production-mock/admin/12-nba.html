@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Micro-segments &amp; NBA — DemandAI</title>
+<title>Micro-segments &amp; NBA – Demand AI</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -127,7 +127,7 @@ textarea[readonly],input[readonly]{background-color:var(--s50);}
 .score-layout{display:block;}
 /* dim-overview handled inline */
 
-/* Detail drawer — slides in from the right over the content */
+/* Detail drawer – slides in from the right over the content */
 .detail-drawer{
   position:fixed;top:0;right:0;bottom:0;
   width:360px;
@@ -424,82 +424,12 @@ textarea[readonly],input[readonly]{background-color:var(--s50);}
 .dt input[type=checkbox]:indeterminate::after{content:'';width:8px;height:2px;background:#fff;border-radius:1px;}
 .dt input[type=checkbox]:focus-visible{outline:2px solid var(--brand-mid);outline-offset:2px;}
 </style>
+<script src="../assets/theme.js"></script>
+<link rel="stylesheet" href="admin-shell.css">
 </head>
 <body>
 <div class="shell">
-<nav class="nav">
-  <div class="nav-brand">
-    <div style="width:26px;height:26px;flex-shrink:0">
-      <svg width="26" height="26" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-        <image href="data:image/png;base64,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" width="200" height="200"/>
-      </svg>
-    </div>
-    <div><div class="nav-nm">DemandAI</div></div>
-  </div>
-  <div class="nav-body">
-    <a class="nav-item " href="index.html">
-      <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 10.5L12 3l9 7.5V21a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></svg>
-      <span class="nav-lbl">Admin home</span>
-    </a>
-    <div class="nav-div"></div>
-    <div class="nav-sec">Set up</div>
-    <a class="nav-item " href="09-setup.html">
-      <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-      <span class="nav-lbl">Data and signals</span>
-    </a>
-    <a class="nav-item " href="integrations.html">
-      <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 2v6"/><path d="M15 2v6"/><path d="M6 8h12v4a6 6 0 0 1-12 0z"/><path d="M12 18v4"/></svg>
-      <span class="nav-lbl">Integrations and email</span>
-    </a>
-    <a class="nav-item " href="07-content.html">
-      <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-      <span class="nav-lbl">Content library</span>
-    </a>
-    <a class="nav-item " href="settings.html">
-      <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
-      <span class="nav-lbl">Templates and settings</span>
-    </a>
-    <a class="nav-item " href="08-users.html">
-      <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-      <span class="nav-lbl">Users and roles</span>
-    </a>
-    <div class="nav-div"></div>
-    <div class="nav-sec">The process behind the chat</div>
-    <a class="nav-item " href="10-prospecting.html">
-      <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-      <span class="nav-lbl">Prospecting</span>
-    </a>
-    <a class="nav-item " href="11-scoring.html">
-      <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-      <span class="nav-lbl">Account Scoring</span>
-    </a>
-    <a class="nav-item active" href="12-nba.html">
-      <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-      <span class="nav-lbl">Micro-segments & NBA</span>
-    </a>
-    <a class="nav-item " href="15-content-studio.html">
-      <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-      <span class="nav-lbl">Content studio</span>
-    </a>
-    <a class="nav-item " href="14-review.html">
-      <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-      <span class="nav-lbl">Review queue</span>
-    </a>
-    <div class="nav-div"></div>
-    <div class="nav-sec">Measure</div>
-    <a class="nav-item " href="13-analytics.html">
-      <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-      <span class="nav-lbl">Analytics</span>
-    </a>
-  </div>
-  <div class="nav-foot">
-    <div class="nav-user">
-      <div class="nav-av">PK</div>
-      <div><div class="nav-un">Pavan Kumar</div><div class="nav-ur">Sales manager</div></div>
-    </div>
-    <div style="display:flex;justify-content:space-between;gap:6px;padding:8px 8px 0;font-size:10.5px"><a href="../app.html" onclick="localStorage.setItem('dmock_user','pavan')" style="color:var(--brand-mid);text-decoration:none">Sales workspace →</a><a href="../index.html" style="color:var(--r3)">Sign out</a></div>
-  </div>
-</nav>
+<nav class="nav"></nav>
 
 <!-- ════ MAIN ════ -->
 <main class="main" id="mainArea"></main>
@@ -509,7 +439,7 @@ textarea[readonly],input[readonly]{background-color:var(--s50);}
   <div class="drawer-hdr">
     <div>
       <div class="drawer-title" id="detTitle">Recommendation</div>
-      <div class="drawer-sub" id="detSub">—</div>
+      <div class="drawer-sub" id="detSub">–</div>
     </div>
     <div class="drawer-close" onclick="closeDrawer()">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -547,7 +477,7 @@ async function download(name, text){
   catch(e){ if(e && e.code==='declined') return; showToast(e && e.code==='rate_limited' ? 'A save is already open' : "This view can't save files"); }
 }
 function todayIso(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
-const fmt1 = n => n===undefined||n===null ? '—' : (Math.round(n*10)/10).toLocaleString('en-US',{minimumFractionDigits:n%1?1:0,maximumFractionDigits:1});
+const fmt1 = n => n===undefined||n===null ? '–' : (Math.round(n*10)/10).toLocaleString('en-US',{minimumFractionDigits:n%1?1:0,maximumFractionDigits:1});
 const fmtDate = t => new Date(t).toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'});
 
 function readFileToGrids(file){
@@ -580,7 +510,7 @@ function table(cols, rows, empty){
     <tbody>${rows || `<tr><td colspan="${cols.length}" class="dt-empty">${empty}</td></tr>`}</tbody>
   </table></div>`;
 }
-const cell = (v, sub, cls='val') => `<span class="${cls}" title="${esc(v||'')}">${v?esc(v):'<span class="muted">—</span>'}</span>${sub?`<span class="sub" title="${esc(String(sub).replace(/<[^>]+>/g,''))}">${sub}</span>`:''}`;
+const cell = (v, sub, cls='val') => `<span class="${cls}" title="${esc(v||'')}">${v?esc(v):'<span class="muted">–</span>'}</span>${sub?`<span class="sub" title="${esc(String(sub).replace(/<[^>]+>/g,''))}">${sub}</span>`:''}`;
 const SEG_TONE = {Inquiry:'tag-blue',Modernisation:'tag-violet','Service renewal':'tag-teal',Project:'tag-amber',Leadership:'tag-pink',Engagement:'tag-green'};
 function tagChip(t){ const c = DemandAI.CONFIG.signalTypes[t]; return `<span class="tag ${(c&&SEG_TONE[c.segment])||'tag-grey'}">${esc(t)}</span>`; }
 function tierPill(t){
@@ -952,10 +882,10 @@ setTimeout(()=>{
   if(p.get('from')==='scoring' && handoff()){ try{ history.replaceState(null, '', location.pathname); }catch(e){} buildFrom('handoff'); }
 }, 0);
 
-/* ═══════════════ ROLE ENGINE — shared across every screen ═══════════════ */
+/* ═══════════════ ROLE ENGINE – shared across every screen ═══════════════ */
 const ALL_ROLES = ['Admin','Sales manager','Sales rep','Viewer','Platform admin'];
 const ROLE_PERSON = {
-  'Admin':'Rajiv Nair', 'Sales manager':'Pavan Kumar', 'Sales rep':'Sofia Ahlgren',
+  'Admin':'Rajiv Nair', 'Sales manager':'Daniel Brooks', 'Sales rep':'Sofia Ahlgren',
   'Viewer':'Elena Vogel', 'Platform admin':'Shantanu Rao'
 };
 const ROLE_NAV_ALLOWED = {
@@ -995,7 +925,7 @@ function applyRoleToNav(){
 
   const thisPage = getThisPageId();
   const pageIsKnown = Object.values(ROLE_NAV_ALLOWED).some(list => list.includes(thisPage));
-  if(!pageIsKnown){ return; } // can't verify this page's id reliably here — don't block access on a guess
+  if(!pageIsKnown){ return; } // can't verify this page's id reliably here – don't block access on a guess
   if(!allowed.includes(thisPage)){
     const main = document.querySelector('.main') || document.getElementById('mainArea');
     const PAGE_NAMES = {'index.html':'Today','09-setup.html':'Setup','07-content.html':'Content library','08-users.html':'Users and roles','10-prospecting.html':'Prospecting','11-scoring.html':'Account Scoring','12-nba.html':'Next Best Action','13-analytics.html':'Analytics','14-review.html':'Review','15-content-studio.html':'Content studio'};
@@ -1047,5 +977,6 @@ if(document.readyState !== 'loading'){ applyRoleToNav(); renderRoleSwitcher(); }
 
 
 </script>
+<script src="admin-shell.js"></script>
 </body>
 </html>

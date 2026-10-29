@@ -252,7 +252,7 @@ function readTable(grid, { file, sheet, columns, required, anchor }) {
     if (hs.includes(anchor) && hs.filter(h => columns.includes(h)).length >= 2) { headerIdx = i; break; }
   }
   if (headerIdx < 0) {
-    at('—', '—', `Couldn't find the header row (looked for a row containing "${anchor}")`, 'File not processed', 'D3',
+    at('–', '–', `Couldn't find the header row (looked for a row containing "${anchor}")`, 'File not processed', 'D3',
       'Use the template: column names exactly as in the template, in the first rows of the sheet', 'stop');
     return { records: [], issues, headers: [] };
   }
@@ -263,7 +263,7 @@ function readTable(grid, { file, sheet, columns, required, anchor }) {
     `Add the "${c}" column, named exactly as in the template`, c === anchor ? 'stop' : 'flag'));
   headers.forEach((h, i) => {
     if (h && !columns.includes(h)) at(headerIdx + 1, clean(grid[headerIdx][i]), `Column "${clean(grid[headerIdx][i])}" isn't in the template`,
-      'Ignored', '—', 'Remove it, or rename it to a template column if it was meant to be one', 'info');
+      'Ignored', '–', 'Remove it, or rename it to a template column if it was meant to be one', 'info');
   });
   if (missing.includes(anchor)) return { records: [], issues, headers };
   const records = [];
@@ -275,7 +275,7 @@ function readTable(grid, { file, sheet, columns, required, anchor }) {
     // The template's third row holds format hints ("Text*", "Email* (or LinkedIn URL)"): not data.
     const starred = Object.values(rec).filter(v => typeof v === 'string' && /\*/.test(v)).length;
     if (i === headerIdx + 1 && starred >= 2) {
-      at(i + 1, '—', "Row holds the template's format hints, not data", 'Skipped', '—', 'Nothing to fix', 'info');
+      at(i + 1, '–', "Row holds the template's format hints, not data", 'Skipped', '–', 'Nothing to fix', 'info');
       continue;
     }
     records.push(rec);
@@ -348,7 +348,7 @@ function processLeads(grid, { file = 'lead file', sheet = 'Sheet1' } = {}) {
         c.email = normEmail(c.emailRaw);
         const v = yesNo(r.email_verified);
         if (v === null) at(row, 'email_verified', `"${clean(r.email_verified)}" isn't Y or N`, 'Email treated as not verified, so not used as a channel', 'D3', 'Use Y or N');
-        else if (v !== 'Y') at(row, 'email_verified', 'Email not verified', 'Email not used as a channel', '—', 'Verify the address and set email_verified to Y', 'info');
+        else if (v !== 'Y') at(row, 'email_verified', 'Email not verified', 'Email not used as a channel', '–', 'Verify the address and set email_verified to Y', 'info');
         c.emailVerified = v === 'Y';
       } else {
         at(row, 'email', `Email "${c.emailRaw}" is malformed`, c.linkedinRaw ? 'Email not used; LinkedIn only' : 'Email not used', 'D3', 'Correct the address');
@@ -362,9 +362,9 @@ function processLeads(grid, { file = 'lead file', sheet = 'Sheet1' } = {}) {
     if (!c.emailRaw && !c.linkedinRaw) {
       at(row, 'email / linkedin_url', 'No email and no LinkedIn URL', 'Kept on the account, not contactable', 'D3', 'Add a work email or a LinkedIn URL');
     } else if (!c.emailRaw && c.linkedin) {
-      at(row, 'email', 'No email', 'LinkedIn only', '—', 'Add a verified work email if one is held', 'info');
+      at(row, 'email', 'No email', 'LinkedIn only', '–', 'Add a verified work email if one is held', 'info');
     } else if (!c.linkedinRaw && c.email) {
-      at(row, 'linkedin_url', 'No LinkedIn URL', c.emailVerified ? 'Email only' : 'No usable channel until the email is verified', '—', 'Add the LinkedIn profile URL if one is held', 'info');
+      at(row, 'linkedin_url', 'No LinkedIn URL', c.emailVerified ? 'Email only' : 'No usable channel until the email is verified', '–', 'Add the LinkedIn profile URL if one is held', 'info');
     }
 
     // Duplicates (same email or LinkedIn URL): merged into the first row, blanks filled from the repeat
@@ -391,7 +391,7 @@ function processLeads(grid, { file = 'lead file', sheet = 'Sheet1' } = {}) {
     }
 
     const at0 = clean(r.account_type).toLowerCase();
-    if (!at0) { c.accountType = 'other'; at(row, 'account_type', 'Account type is blank', 'Scores 0 for account type', '—', 'Choose from the list', 'info'); }
+    if (!at0) { c.accountType = 'other'; at(row, 'account_type', 'Account type is blank', 'Scores 0 for account type', '–', 'Choose from the list', 'info'); }
     else if (CONFIG.accountTypes[at0]) c.accountType = at0;
     else { c.accountType = 'other'; at(row, 'account_type', `"${clean(r.account_type)}" isn't on the list`, 'Treated as Other', 'D3', 'Choose Owner-operator, EPC contractor, System integrator, Distributor or Other'); }
 
@@ -407,7 +407,7 @@ function processLeads(grid, { file = 'lead file', sheet = 'Sheet1' } = {}) {
     const opt = yn('opt_out', "Can't confirm the contact hasn't opted out: not contactable");
     c.optOut = opt === 'Y';
     c.optOutUnknown = opt === '';
-    if (c.optOut) at(row, 'opt_out', 'Opted out', 'Suppressed: never contacted', '—', 'Nothing to fix', 'info');
+    if (c.optOut) at(row, 'opt_out', 'Opted out', 'Suppressed: never contacted', '–', 'Nothing to fix', 'info');
 
     const consent = clean(r.consent_basis);
     c.consent = consent;
@@ -453,7 +453,7 @@ function classify(industry, siteProcess) {
   }
   // Spec: with no lookup match, the AI classifier chooses. Not connected in this prototype.
   return { vertical: 'Other', level: 'other', confidence: 'low', needsReview: true,
-    reason: `"${industry || '—'}" has no match in the mapping table. The AI classifier would decide here; it isn't connected yet, so this is held as other for review` };
+    reason: `"${industry || '–'}" has no match in the mapping table. The AI classifier would decide here; it isn't connected yet, so this is held as other for review` };
 }
 
 function buildAccounts(contacts, issues, { file, sheet }) {
@@ -627,7 +627,7 @@ function processSignals(grid, list, { file = 'signal file', sheet = 'Sheet1', as
       if (!person) { reject('D4', 'No person named and no contact left at this account', 'contact_email_or_linkedin', 'Name the person this signal concerns'); continue; }
       s.assigned = person.persona === 'Primary' ? 'Auto-assigned to the primary-persona contact' : 'Auto-assigned (no primary-persona contact)';
       issues.push({ file, sheet, row: s.row, field: 'contact_email_or_linkedin', issue: 'No person named',
-        outcome: `Attached to ${person.name} (${person.jobTitle}), flagged as auto-assigned`, code: '—', fix: 'Name the contact responsible for this event', severity: 'info' });
+        outcome: `Attached to ${person.name} (${person.jobTitle}), flagged as auto-assigned`, code: '–', fix: 'Name the contact responsible for this event', severity: 'info' });
     }
     s.personName = person.name; s.contactRow = person.row;
 
@@ -655,7 +655,7 @@ function processSignals(grid, list, { file = 'signal file', sheet = 'Sheet1', as
     s.decay = decayFactor(typeCfg, s.age);
     s.weight = s.tier * s.strength * s.decay;
     s.window = `full for ${typeCfg.full} days, zero at ${typeCfg.zero}`;
-    if (!s.detail) issues.push({ file, sheet, row: s.row, field: 'detail', issue: 'No detail', outcome: 'Qualified; the why-now line can only name the type', code: '—', fix: 'Say what happened', severity: 'info' });
+    if (!s.detail) issues.push({ file, sheet, row: s.row, field: 'detail', issue: 'No detail', outcome: 'Qualified; the why-now line can only name the type', code: '–', fix: 'Say what happened', severity: 'info' });
   }
   return { signals, issues, knockouts, suggested, rowsRead: table.records.length };
 }
