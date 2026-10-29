@@ -1497,3 +1497,13 @@ body.nav-col .side .side-recent button>svg{margin:0;}
 body.nav-col .side .side-recent button.hot>svg{color:var(--ter);}
 body.nav-col .side .side-recent i.attn{position:absolute;top:1px;right:6px;width:16px!important;height:16px!important;font-size:9.5px!important;animation:none!important;}
 body.nav-col .side .side-sec{height:1px;padding:0;margin:8px 12px;background:var(--rb);overflow:hidden;}
+
+/* Score process behind an info toggle */
+.proc-i{margin-top:10px;}
+.proc-i>summary{display:inline-flex;align-items:center;gap:6px;cursor:pointer;list-style:none;font-size:12px;color:var(--i2);padding:3px 9px 3px 6px;border:1px solid var(--border);border-radius:999px;background:#fff;}
+.proc-i>summary::-webkit-details-marker{display:none;}
+.proc-i>summary:hover,.proc-i[open]>summary{color:var(--brand);border-color:var(--brand-mid);}
+.proc-i[open]>.ccard{margin-top:8px;}
+/* Add a step from the top of a person's sequence */
+.seqv-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:14px 0 6px;}
+.seqv-top .sp{flex:1;}

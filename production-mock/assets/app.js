@@ -4,7 +4,7 @@
    page, then a chat beside the document. Results in any chat (tables, sequences) come back as cards that open in a canvas
    beside the chat. Replies are scripted against mock-data.js. */
 (function () {
-  const { USERS, REPS, ACCOUNTS, SEGMENTS, LISTS, CONTENT, CAMPAIGNS, REPLIES, BLOCKERS, LEARNED, TEAM_STATS } = window.MOCK;
+  const { USERS, REPS, ACCOUNTS, SEGMENTS, LISTS, CONTENT, CAMPAIGNS, REPLIES, BLOCKERS, LEARNED, TEAM_STATS, decayed } = window.MOCK;
 
   /* ─── Session (storage can be blocked; the mock still works without it) ─── */
   const store = {
@@ -17,7 +17,7 @@
   const STATE_KEY = 'dmock_state_v10_' + me.id;
   let saved = {};
   try { saved = JSON.parse(store.get(STATE_KEY, true) || '{}'); } catch (e) { saved = {}; }
-  const S = Object.assign({ chats: null, cur: 'home', mchat: {}, studio: { doc: null, thread: [] }, decisions: {}, todosDone: {}, notes: {}, outcomes: {}, drafts: {}, runs: [], camp: {}, handled: {}, lists: [], read: {}, archived: {}, pseq: {}, cop: {}, seq: {}, content: [], enrollOK: {}, starred: {}, today: null, auto: {}, skipR: {} }, saved);
+  const S = Object.assign({ chats: null, cur: 'home', mchat: {}, studio: { doc: null, thread: [] }, decisions: {}, todosDone: {}, notes: {}, outcomes: {}, drafts: {}, runs: [], camp: {}, handled: {}, lists: [], genLists: [], read: {}, archived: {}, pseq: {}, cop: {}, seq: {}, content: [], enrollOK: {}, starred: {}, today: null, auto: {}, skipR: {} }, saved);
   const save = () => store.set(STATE_KEY, JSON.stringify(S), true);
   /* Shared across sign-ins in this tab: what the manager assigns shows up for the rep */
   let shared = {};
@@ -168,7 +168,76 @@
   const myReplies = () => REPLIES.filter(r => (isMgr || r.owner === me.id) && !S.handled[r.id]);
   const myBlockers = () => BLOCKERS.filter(b => b.who === 'all' || (isMgr ? b.who === 'manager' : b.who === me.id)).filter(b => !(b.go === 'campaign:c1' && S.camp.c1));
   function todayNBA() { return openItems().filter(a => mine(a) && /^Today/.test(a.nba.due || '') && (!isMgr || a.nba.sensitive)); }
-  const listAccounts = () => ACCOUNTS.filter(a => a.fromList === 'L1');
+  /* ─── Prospecting from any request: role, place and industry become a list that is scored and routed like any other ─── */
+  const listOf = () => { const c = chat(); return c && c.listId ? c.listId : 'L1'; };
+  const listAccounts = () => ACCOUNTS.filter(a => a.fromList === listOf());
+  const listTitle = () => { const g = S.genLists.find(x => x.id === listOf()); return g ? g.title : 'Lookalikes of your last 10 wins'; };
+  const CITIES = { sydney: ['Sydney', 'Australia'], melbourne: ['Melbourne', 'Australia'], brisbane: ['Brisbane', 'Australia'], perth: ['Perth', 'Australia'], auckland: ['Auckland', 'New Zealand'], singapore: ['Singapore', 'Singapore'], 'kuala lumpur': ['Kuala Lumpur', 'Malaysia'], jakarta: ['Jakarta', 'Indonesia'], bangkok: ['Bangkok', 'Thailand'], manila: ['Manila', 'Philippines'], 'ho chi minh': ['Ho Chi Minh City', 'Vietnam'], london: ['London', 'United Kingdom'], 'new york': ['New York', 'United States'], 'san francisco': ['San Francisco', 'United States'], dubai: ['Dubai', 'United Arab Emirates'], mumbai: ['Mumbai', 'India'], bangalore: ['Bengaluru', 'India'], bengaluru: ['Bengaluru', 'India'], tokyo: ['Tokyo', 'Japan'], 'hong kong': ['Hong Kong', 'Hong Kong'] };
+  const COUNTRIES = { australia: ['Sydney', 'Australia'], 'new zealand': ['Auckland', 'New Zealand'], malaysia: ['Kuala Lumpur', 'Malaysia'], indonesia: ['Jakarta', 'Indonesia'], thailand: ['Bangkok', 'Thailand'], philippines: ['Manila', 'Philippines'], vietnam: ['Ho Chi Minh City', 'Vietnam'], india: ['Mumbai', 'India'], uk: ['London', 'United Kingdom'], 'united kingdom': ['London', 'United Kingdom'], usa: ['New York', 'United States'], 'united states': ['New York', 'United States'], japan: ['Tokyo', 'Japan'], uae: ['Dubai', 'United Arab Emirates'] };
+  const INDUSTRIES = [[/\b(tech|technology|software|saas|digital|cloud|it)\b/, 'Technology'], [/fintech|bank|financ|insur/, 'Financial services'], [/retail|e-?commerce|consumer/, 'Retail'], [/health|medic|pharma/, 'Healthcare'], [/manufactur|industrial/, 'Manufacturing'], [/logistic|shipping|transport/, 'Logistics'], [/energy|utilit|power/, 'Energy'], [/telecom/, 'Telecommunications'], [/refin|petro|chemical|oil and gas/, 'Refining & petrochemicals'], [/educat|universit/, 'Education']];
+  const FUNCS = [[/mark|maket|brand|growth|demand gen/, 'Marketing'], [/\bsales|revenue|business dev/, 'Sales'], [/\bproduct/, 'Product'], [/engineer|develop/, 'Engineering'], [/\bhr\b|people|talent|human res/, 'People'], [/\bfinance|\bcfo|accounting/, 'Finance'], [/operat|\bops\b/, 'Operations'], [/\bcio\b|\bcto\b|security|\bit (manager|director|head)/, 'IT'], [/reliab|maint/, 'Reliability'], [/procure|purchas/, 'Procurement']];
+  function parseICP(text) {
+    const t = ' ' + text.toLowerCase().replace(/[,.]/g, ' ') + ' ';
+    const ck = Object.keys(CITIES).find(k => t.includes(' ' + k + ' ')), nk = Object.keys(COUNTRIES).find(k => t.includes(' ' + k + ' '));
+    const loc = ck ? CITIES[ck] : nk ? COUNTRIES[nk] : null;
+    const ind = (INDUSTRIES.find(([re]) => re.test(t)) || [])[1], fn = (FUNCS.find(([re]) => re.test(t)) || [])[1];
+    const lvl = /\b(cmo|chief)\b/.test(t) ? 'Chief' : /\b(vp|vice president)\b/.test(t) ? 'VP' : /\bheads?\b/.test(t) ? 'Head' : /director/.test(t) ? 'Director' : /manager/.test(t) ? 'Manager' : /\blead\b/.test(t) ? 'Lead' : 'Manager';
+    if (!loc && !fn) return null;
+    return { city: loc ? loc[0] : null, country: loc ? loc[1] : null, industry: ind || null, fn: fn || null, lvl };
+  }
+  const FIRST = ['Olivia', 'Jack', 'Charlotte', 'Liam', 'Amelia', 'Noah', 'Isla', 'Lucas', 'Mia', 'Ethan', 'Chloe', 'Oscar', 'Grace', 'Leo', 'Zoe', 'Henry', 'Ruby', 'Thomas', 'Sophie', 'Max', 'Priya', 'Arjun', 'Mei', 'James'];
+  const LAST = ['Nguyen', 'Smith', 'Patel', 'Wilson', 'Chen', 'Taylor', 'Brown', 'Singh', 'Walker', 'Kelly', 'Murphy', 'Lee', 'Harris', 'Martin', 'Wong', 'Clarke', 'Ryan', 'Thompson', 'Kaur', 'Edwards'];
+  const PRE = ['Harbourline', 'Bluegum', 'Wattlebird', 'Opalcrest', 'Coastline', 'Kestrel', 'Ironbark', 'Northshore', 'Brightwater', 'Saltbush', 'Redgum', 'Silverleaf', 'Tidewell', 'Southwind', 'Lyrebird', 'Cobalt Bay', 'Emberline', 'Paperbark', 'Highfield', 'Riverstone'];
+  const SUF = { Technology: ['Software', 'Labs', 'Cloud', 'Analytics', 'Digital', 'Systems', 'Data', 'AI'], 'Financial services': ['Capital', 'Finance', 'Payments', 'Wealth', 'Lending'], Retail: ['Retail', 'Brands', 'Commerce', 'Stores'], Healthcare: ['Health', 'Medical', 'Care', 'Diagnostics'], Manufacturing: ['Industries', 'Manufacturing', 'Fabrication', 'Works'], Logistics: ['Logistics', 'Freight', 'Transport'], Energy: ['Energy', 'Power', 'Renewables'], Telecommunications: ['Telecom', 'Networks', 'Connect'], Education: ['Learning', 'Education', 'Academy'], 'Refining & petrochemicals': ['Refining', 'Petrochem', 'Olefins'] };
+  const GSIG = [['Funding round', 1, 'Raised a new funding round this month', 'News'], ['New leader in the team', 1, 'A new head of the team started two weeks ago', 'LinkedIn'], ['Hiring in the team', 2, 'Three open roles in the team', 'Job boards'], ['Visited your pricing page', 1, 'Pricing and case-study pages, twice this week', 'Website visitor ID'], ['Tech stack change', 2, 'Switched a core platform', 'Technographics'], ['Event attendance', 3, 'Registered for an industry event', 'Events']];
+  const GACT = { 'New leader in the team': ['Congratulate the new leader and share a 90-day plan', 'LinkedIn', true], 'Visited your pricing page': ['Send a short comparison with a peer example', 'Email', true], 'Hiring in the team': ['Share how peers scaled the team', 'Email', false], 'Tech stack change': ['Share a migration checklist', 'Email', false], 'Event attendance': ['Suggest meeting at the event', 'LinkedIn', false] };
+  function seeded(str) { let h = 2166136261; for (const ch of str) h = Math.imul(h ^ ch.charCodeAt(0), 16777619); return () => { h = Math.imul(h ^ (h >>> 15), 2246822507) ^ Math.imul(h ^ (h >>> 13), 3266489909); h ^= h >>> 16; return (h >>> 0) / 4294967296; }; }
+  function genList(g) {
+    if (ACCOUNTS.some(a => a.fromList === g.id)) return;
+    const r = seeded(g.id + g.q), icp = g.icp, ind = icp.industry || 'Technology', fn = icp.fn || 'Marketing', city = icp.city || 'Sydney', country = icp.country || 'Australia', sufs = SUF[ind] || SUF.Technology;
+    const title = icp.lvl === 'Head' ? `Head of ${fn}` : icp.lvl === 'Chief' ? `Chief ${fn} Officer` : icp.lvl === 'VP' ? `VP ${fn}` : `${fn} ${icp.lvl}`;
+    const used = new Set();
+    for (let i = 0; i < 16; i++) {
+      let name; do { name = `${PRE[Math.floor(r() * PRE.length)]} ${sufs[Math.floor(r() * sufs.length)]}`; } while (used.has(name)); used.add(name);
+      const fnm = FIRST[Math.floor(r() * FIRST.length)], lnm = LAST[Math.floor(r() * LAST.length)], slug = name.toLowerCase().replace(/[^a-z]+/g, '');
+      const lead = i < 10 ? GSIG[0] : GSIG[1 + (i % 5)];
+      const sigs = [lead].concat(GSIG.filter(x => x !== lead && r() > 0.6).slice(0, 2)).map(([type, tier, text, source]) => { const age = 1 + Math.floor(r() * (tier === 1 ? 6 : tier === 2 ? 20 : 40)), strength = Math.round((0.6 + r() * 0.35) * 100) / 100; return { type, tier, text, source, age, strength, weight: Math.round(decayed(tier, age) * strength * 10) / 10 }; });
+      sigs.slice(1).forEach(x => { x.weight = Math.min(x.weight, Math.max(0, sigs[0].weight - 5)); });
+      const ws = sigs.map(x => x.weight).sort((p, q) => q - p);
+      const a = { id: `g${g.id}${i}`, name, generated: true, custom: true, fromList: g.id, owner: g.owner, country, city, industry: ind, size: `${(150 + Math.floor(r() * 4800)).toLocaleString('en-US')} staff`, contact: { name: `${fnm} ${lnm}`, title, email: `${fnm.toLowerCase()}.${lnm.toLowerCase()}@${slug}.example`, idTier: [1, 1, 2, 1, 2, 3, 1, 2, 1, 4, 2, 1, 1, 2, 3, 1][i] }, warm: { score: 15 + Math.floor(r() * 60), note: r() > 0.7 ? 'A 2nd-degree connection through a former colleague.' : 'No connection found.' }, signals: sigs, fit: 52 + Math.floor(r() * 44), seg: null, segment: '', nba: null, campaign: null, campState: '', activity: [{ k: 'crm', when: 'Today', t: 'Found by prospecting', d: `"${g.q}"` }] };
+      a.points = Math.round(ws.reduce((t, w, k) => t + w / Math.pow(2, k), 0) * 10) / 10; a.timing = Math.min(100, Math.round(a.points / 2)); a.score = Math.round(a.fit * a.timing / 100); a.tier = a.score >= 40 ? 'A' : a.score >= 20 ? 'B' : a.score > 0 ? 'C' : '—';
+      a.whyNow = Object.assign({}, sigs.slice().sort((p, q) => q.weight - p.weight)[0]);
+      a.activity.push({ k: 'signal', when: ago(a.whyNow.age), t: 'Signal: ' + a.whyNow.type, d: a.whyNow.text }, { k: 'score', when: 'Today', t: `Scored ${a.score}/100 · tier ${a.tier}`, d: `Fit ${a.fit} × Timing ${a.timing} ÷ 100` });
+      ACCOUNTS.push(a);
+    }
+    ACCOUNTS.filter(a => a.fromList === g.id).sort((p, q) => q.score - p.score).forEach((a, k) => { a.rank = k + 1; if (shared.assign[a.id]) a.owner = shared.assign[a.id]; });
+  }
+  /* Route a generated list: a trigger shared by 10+ accounts becomes a draft campaign (NBC); every other account gets a next best action (NBA) that goes ahead only if it passes every check */
+  function routeList(gid) {
+    const g = S.genLists.find(x => x.id === gid); if (!g || g.routedNow) return;
+    const by = {};
+    ACCOUNTS.filter(a => a.fromList === gid && a.score > 0).forEach(a => { (by[a.whyNow.type] = by[a.whyNow.type] || []).push(a); });
+    Object.entries(by).forEach(([type, accs], k) => {
+      const sid = `gs${gid}${k}`, nbc = accs.length >= 10, place = [g.icp.city, g.icp.industry].filter(Boolean).join(' · ');
+      let s = SEGMENTS.find(x => x.id === sid);
+      if (!s) { s = { id: sid, name: `${type} · ${place}`, mode: nbc ? 'NBC' : 'NBA', trigger: type, why: `${accs.length} accounts from your list "${g.title}" share this trigger${nbc ? ', which crosses the campaign threshold (10 in 7 days)' : ': below the campaign threshold, so each gets its own next best action'}.`, structure: nbc ? 'Congratulate on the news → what peers did next → offer a 20-minute call' : 'Reference the trigger → one useful resource → one ask', proven: GACT[type] && GACT[type][2] ? 'Proven' : 'Provisional', rate: null, outcomes: 0, fromList: true, building: 0 }; SEGMENTS.push(s); }
+      if (nbc) {
+        const cid = 'gc' + gid; let c = campOf(cid);
+        if (!c) { const steps = ['A short note on the news, and one question', 'Connect on LinkedIn, referencing the news', 'A one-page example from a peer', 'Offer a 20-minute call; easy to say no']; c = { id: cid, name: `${type}: ${(g.icp.fn || 'team').toLowerCase()} leaders in ${g.icp.city || 'the region'}`, status: 'Draft', seg: sid, touches: campOf('c5').touches.map((t, i) => Object.assign({}, t, { state: '', t: steps[i] || t.t, subject: t.ch === 'Email' ? (i ? 'How a peer handled the next step' : 'Congratulations on the news') : '' })), accounts: accs.map(a => a.id), updates: [{ t: 'Today', x: `Drafted from your list "${g.title}" after ${accs.length} accounts showed the same trigger.` }], blockers: [], explore: 'Provisional: the first outcomes will set the structure for this audience.', fromList: true, launched: null, day: 0 }; CAMPAIGNS.push(c); }
+        s.campaign = cid;
+        accs.forEach(a => { a.seg = sid; a.segment = s.name; a.campaign = cid; a.campState = 'Draft · not started'; a.activity.push({ k: 'campaign', when: 'Today', t: 'Added to the draft campaign: ' + c.name, d: 'Waiting for confirmation' }); });
+      } else accs.forEach(a => {
+        const [action, ch, proven] = GACT[type] || ['Send a short, relevant note', 'Email', false];
+        a.seg = sid; a.segment = s.name;
+        a.nba = { action, runnerUp: 'Share a peer case study', channel: ch, confidence: a.contact.idTier <= 2 ? 'High' : 'Medium', proven, reason: null, status: 'review', due: 'Today 17:00', subject: ch === 'Email' ? `${type} at ${a.name}` : '', body: `Hi ${first(a.contact.name)},\n\nI noticed this at ${a.name}: ${a.whyNow.text.charAt(0).toLowerCase() + a.whyNow.text.slice(1)}.\n\n${action}: it's short and specific to ${a.industry.toLowerCase()} teams in ${a.city}.\n\nWorth a 20-minute conversation next week?\n\nBest,\n${first(USERS[a.owner].name)}` };
+        const fails = gate(a).filter(x => !x[1]);
+        if (fails.length) Object.assign(a.nba, { reason: { 'High confidence': 'Medium confidence', 'Proven message': 'Unproven message', 'Identity confirmed': 'Identity unconfirmed' }[fails[0][0]] || 'Spot-check', reasonNote: `It didn't pass: ${fails.map(x => x[0].toLowerCase()).join(', ')}.` });
+        else a.nba.status = 'auto';
+        a.activity.push({ k: 'nba', when: 'Today', t: 'Next best action: ' + action, d: `${ch} · ${fails.length ? 'waiting for a person' : 'went ahead on its own'}` });
+      });
+    });
+    g.routed = true; g.routedNow = true;
+  }
 
   function todos() {
     const t = [];
@@ -385,9 +454,9 @@
 
   /* Result tables: a card in the chat that opens in the canvas */
   const TABLES = {
-    prospects: () => ({ title: 'Lookalikes of your last 10 wins', rows: listAccounts(), cols: ['company', 'contact', 'title', 'country', 'size', 'industry', 'identity', 'linkedin'] }),
-    scored: () => ({ title: 'Lookalikes of your last 10 wins · scored', rows: listAccounts().slice().sort((p, q) => q.score - p.score), cols: ['company', 'tier', 'score', 'fit', 'timing', 'whynow', 'owner', 'contact'] }),
-    segmented: () => ({ title: 'Lookalikes of your last 10 wins · by micro-segment', rows: listAccounts().slice().sort((p, q) => (p.seg || 'z').localeCompare(q.seg || 'z')), cols: ['company', 'segment', 'mode', 'tier', 'score', 'contact', 'owner'] }),
+    prospects: () => ({ title: listTitle(), rows: listAccounts(), cols: ['company', 'contact', 'title', 'country', 'size', 'industry', 'identity', 'linkedin'] }),
+    scored: () => ({ title: listTitle() + ' · scored', rows: listAccounts().slice().sort((p, q) => q.score - p.score), cols: ['company', 'tier', 'score', 'fit', 'timing', 'whynow', 'owner', 'contact'] }),
+    segmented: () => ({ title: listTitle() + ' · by micro-segment', rows: listAccounts().slice().sort((p, q) => (p.seg || 'z').localeCompare(q.seg || 'z')), cols: ['company', 'segment', 'mode', 'tier', 'score', 'contact', 'owner'] }),
     sent: () => ({ title: `Emails sent this week · ${isMgr ? 'team' : 'you'}`, rows: ACCOUNTS.filter(a => mine(a) && (a.campaign || (a.nba && /auto|sent/.test(a.nba.status)))), cols: ['company', 'contact', 'status', 'owner'] }),
     ranked: () => ({ title: `Who to contact first · ${isMgr ? 'team' : 'your accounts'}`, rows: ACCOUNTS.filter(mine).filter(a => a.score > 0), cols: ['company', 'tier', 'score', 'whynow', 'segment', 'status', 'owner'] }),
   };
@@ -442,20 +511,20 @@
           <div class="ccard-f">${isMgr && !S.camp.c1 ? '<button class="btn sm pri" onclick="App.confirmCampaign(\'c1\')">Confirm campaign</button><button class="btn sm" onclick="App.toast(\'Kept as 11 separate next actions (mock)\')">Send as separate actions</button>' : !isMgr && !S.camp.c1 ? '<span class="muted" style="font-size:11.5px">Daniel confirms campaigns.</span><button class="btn sm" onclick="App.toast(\'Your accounts were taken out; they get their own actions (mock)\')">Take mine out</button>' : ''}<div style="flex:1"></div>${openBtn('Review the sequence', "App.goCampaign('c1','steps')")}</div></div>
         ${m && m.home ? '' : '<p style="margin-top:8px">I can run the whole flow here: find prospects, score them, build micro-segments, prepare next actions and campaigns, then track them. Try "Find prospects like my last 10 wins".</p>'}`;
     },
-    prospects: () => `<p>I found <b>24 people at ${listAccounts().length} accounts</b> that match your ICP and look like your recent wins. <b>2 are held</b> for a person to check, and I removed 4 existing customers.</p>${tableCard('prospects')}<div class="next-row">${btn('Score this list', 'Score this list', true)}${btn('Save as a list', 'Save as a list')}</div>`,
+    prospects: () => `${listOf() === 'L1' ? `<p>I found <b>24 people at ${listAccounts().length} accounts</b> that match your ICP and look like your recent wins. <b>2 are held</b> for a person to check, and I removed 4 existing customers.</p>` : (() => { const ls = listAccounts(), held = ls.filter(a => a.contact.idTier >= 4).length; return `<p>I found <b>${ls.length} people</b>: ${esc(listTitle())}. ${held ? `<b>${held}</b> ${held === 1 ? 'is' : 'are'} held for a person to check (identity not confirmed). ` : ''}The list is open on the right. Next, I can score it, group it into micro-segments, and route it to campaigns (NBC) and next best actions (NBA), all in this chat.</p>`; })()}${tableCard('prospects')}<div class="next-row">${btn('Score this list', 'Score this list', true)}${btn('Save as a list', 'Save as a list')}</div>`,
     savedList: m => `<p>Saved as <b>${esc(m.name)}</b>. It's a tab in Accounts now, ready to score, segment or use in a campaign.</p><div class="next-row">${openBtn('Open in Accounts', `App.openList('${m.id}')`)}${btn(m.next || 'Score this list', m.next || 'Score this list', true)}</div>`,
-    rankedList: () => { const ls = listAccounts().slice().sort((p, q) => q.score - p.score), n = ls.filter(a => a.score > 0).length; return `<p>Scored with the Score flow. ${n} of ${ls.length} have a live signal; the one with none scores zero and stays watched. Here's the process, with the top account worked through:</p>${scoreProcess(ls[0])}${tableCard('scored')}<div class="next-row">${btn('Route to NBA and NBC', 'Route to NBA and NBC', true)}${btn('Save the scored list', 'Save the scored list')}</div>`; },
+    rankedList: () => { const ls = listAccounts().slice().sort((p, q) => q.score - p.score), n = ls.filter(a => a.score > 0).length; return `<p>Scored with the Score flow. ${n} of ${ls.length} have a live signal${n < ls.length ? '; the ones with none score zero and stay watched' : ''}.</p>${tableCard('scored')}${scoreProcess(ls[0])}<div class="next-row">${btn('Route to NBA and NBC', 'Route to NBA and NBC', true)}${btn('Save the scored list', 'Save the scored list')}</div>`; },
     listSegments: () => {
-      const accs = listAccounts(), c = campOf('c5'), nbc = accs.filter(a => a.campaign === 'c5'), nba = accs.filter(a => a.nba && a.campaign !== 'c5'), watch = accs.filter(a => !a.nba && !a.campaign);
-      return `<p>Grouped the scored list by each account's strongest trigger, then routed it. <b>${nbc.length} accounts share a control-systems hiring surge</b>, which crosses the threshold (10 in 7 days), so they go to <b>one campaign (NBC)</b>. <b>${nba.length}</b> get their own <b>next best action (NBA)</b>${watch.length ? `; ${watch.length} with no live signal stay${watch.length === 1 ? 's' : ''} watched` : ''}.</p>
+      const accs = listAccounts(), cid = (accs.find(a => a.campaign) || {}).campaign, c = cid ? campOf(cid) : null, nbc = accs.filter(a => a.campaign), nba = accs.filter(a => a.nba && !a.campaign), watch = accs.filter(a => !a.nba && !a.campaign), trig = c && segOf(c.seg) ? segOf(c.seg).trigger.toLowerCase() : '';
+      return `<p>Grouped the scored list by each account's strongest trigger, then routed it. ${c ? `<b>${nbc.length} accounts share the same trigger (${esc(trig)})</b>, which crosses the threshold (10 in 7 days), so they go to <b>one campaign (NBC)</b>. ` : 'No trigger reached the campaign threshold (10 in 7 days). '}<b>${nba.length}</b> get their own <b>next best action (NBA)</b>${watch.length ? `; ${watch.length} with no live signal stay${watch.length === 1 ? 's' : ''} watched` : ''}.</p>
         <div class="route">
-          <div class="route-col"><div class="route-h"><span class="badge b-brand">NBC · one campaign</span><b>${nbc.length} accounts</b></div>
+          ${c ? `<div class="route-col"><div class="route-h"><span class="badge b-brand">NBC · one campaign</span><b>${nbc.length} accounts</b></div>
             <div class="nm">${esc(c.name)}</div><div class="touch-mini">${seqOf(c).map(t => `<span>${chIc(t.ch)} <b>Day ${t.day}</b> ${esc(t.fmt)}</span>`).join('')}</div>
             <div class="sm">${nbc.slice(0, 4).map(a => esc(a.name)).join(', ')}${nbc.length > 4 ? ` and ${nbc.length - 4} more` : ''}</div>
-            <div class="next-row">${openBtn('Open campaign', "App.goCampaign('c5')")}${isMgr ? `<button class="btn sm pri" onclick="App.confirmCampaign('c5')">Confirm</button>` : S.camp.c5 ? `<span class="badge b-ter">${esc(S.camp.c5)}</span>` : `<button class="btn sm pri" onclick="App.sendForConfirm('c5')">Send to Daniel</button>`}</div></div>
+            <div class="next-row">${openBtn('Open campaign', `App.goCampaign('${c.id}')`)}${isMgr ? `<button class="btn sm pri" onclick="App.confirmCampaign('${c.id}')">Confirm</button>` : S.camp[c.id] ? `<span class="badge b-ter">${esc(S.camp[c.id])}</span>` : `<button class="btn sm pri" onclick="App.sendForConfirm('${c.id}')">Send to Daniel</button>`}</div></div>` : ''}
           <div class="route-col"><div class="route-h"><span class="badge b-sec">NBA · one at a time</span><b>${nba.length} accounts</b></div>
             ${nba.map(a => `<div class="mini-row row-link" onclick="App.openRecord('${a.id}','engage')">${chIc(a.nba.channel)}<div class="grow"><div class="nm">${esc(a.name)}</div><div class="sm">${esc(a.nba.action)}</div></div>${stepBadge(a)}</div>`).join('')}
-            <div class="next-row">${isMgr ? '' : '<button class="btn sm pri" onclick="App.approveAll()">Approve all ready</button>'}${openBtn('Approvals', "App.openMod('approvals')")}</div></div>
+            <div class="next-row">${btn('Send them', 'Send them', true)}${openBtn('Approvals', "App.openMod('approvals')")}</div></div>
         </div>${tableCard('segmented')}`;
     },
     nbaList: () => {
@@ -464,7 +533,7 @@
         <div class="ccard"><div class="ccard-b" style="padding:2px 14px">${accs.map(a => `<div class="mini-row row-link" onclick="App.openRecord('${a.id}','engage')">${chIc(a.nba.channel)}<div class="grow"><div class="nm">${esc(a.name)} <span class="muted" style="font-weight:400">· ${esc(a.contact.name)}</span></div><div class="sm">${esc(a.nba.action)} · ${esc(a.segment)}</div></div>${stepBadge(a)}</div>`).join('')}</div></div>
         <div class="next-row">${btn('Build the campaign', 'Build the campaign', true)}${openBtn('Approvals', "App.openMod('approvals')")}</div>`;
     },
-    flowCampaign: () => seqCard(campOf('c5'), `Here's the campaign for the 10 hiring-surge accounts: <b>${seqOf(campOf('c5')).length} touches</b>, email and LinkedIn, personalised per person. Add, remove, reorder or rewrite any touch.`),
+    flowCampaign: () => { const c = campOf((listAccounts().find(a => a.campaign) || {}).campaign || 'c5'); return seqCard(c, `Here's the campaign for the ${c.accounts.length} accounts that share a trigger: <b>${seqOf(c).length} touches</b>, email and LinkedIn, personalised per person. Add, remove, reorder or rewrite any touch.`); },
     campaign: m => seqCard(campOf(m.id), esc(segOf(campOf(m.id).seg).why)),
     seqChanged: m => seqCard(campOf(m.id), m.note),
     ranked: () => `<p>Ranked by <b>Fit × Timing</b>. A great fit with no live signal scores zero.</p>${tableCard('ranked')}${scoreProcess()}`,
@@ -741,7 +810,7 @@
   function modCard(v) {
     const card = (title, count, rows) => `<div class="tcard"><div class="tcard-h"><span class="t">${ic(MOD_IC[v], 15)} ${title}</span><span class="muted" style="font-size:12px;white-space:nowrap">${count}</span><div class="sp"></div><button class="ic-btn" title="Open beside the chat" onclick="App.expand()">${ic('expand', 15)}</button></div><div style="padding:2px 14px">${rows}</div><button class="tcard-more" onclick="App.expand()">Open ${MODULES[v]} beside the chat ${ic('expand', 12)}</button></div>`;
     if (v === 'accounts') { const acc = ACCOUNTS.filter(mine).filter(a => a.score > 0).sort((p, q) => q.score - p.score); return card(isMgr ? 'Team accounts' : 'Your accounts', `${acc.length} with a live signal · ${S.lists.length + LISTS.length} saved lists`, acc.slice(0, 5).map(a => `<div class="mini-row row-link" onclick="App.openRecord('${a.id}','overview')">${tierBadge(a.tier)}<div class="grow"><div class="nm">${esc(a.name)} <span class="muted" style="font-weight:400">· ${esc(a.contact.name)}</span></div><div class="sm">${a.whyNow ? esc(a.whyNow.type) + ' · ' + ago(a.whyNow.age) : ''}</div></div>${stepBadge(a)}</div>`).join('')); }
-    if (v === 'segments') return card('Micro-segments', `${SEGMENTS.length} segments`, SEGMENTS.slice(0, 6).map(s => `<div class="mini-row row-link" onclick="App.openSegment('${s.id}')"><div class="grow"><div class="nm">${esc(s.name)}</div><div class="sm">${ACCOUNTS.filter(a => a.seg === s.id).length} accounts · ${esc(s.trigger)}</div></div>${modeBadge(s)}</div>`).join(''));
+    if (v === 'segments') return card('Micro-segments', `${SEGMENTS.length} segments`, SEGMENTS.filter(s => s.fromList).reverse().concat(SEGMENTS.filter(s => !s.fromList)).slice(0, 6).map(s => `<div class="mini-row row-link" onclick="App.openSegment('${s.id}')"><div class="grow"><div class="nm">${esc(s.name)}</div><div class="sm">${ACCOUNTS.filter(a => a.seg === s.id).length} accounts · ${esc(s.trigger)}</div></div>${modeBadge(s)}</div>`).join(''));
     if (v === 'campaigns') return card('Campaigns', `${CAMPAIGNS.length} campaigns`, CAMPAIGNS.map(c => `<div class="mini-row row-link" onclick="App.goCampaign('${c.id}')"><div class="grow"><div class="nm">${esc(c.name)}</div><div class="sm">${esc(progressText(c))}</div></div>${campBadge(c)}</div>`).join(''));
     if (v === 'inbox') { const th = threads(); return card('Inbox', `${th.filter(needsReply).length} need a reply`, th.slice(0, 6).map(r => `<div class="mini-row row-link" onclick="App.openThread('${r.id}')">${chIc(r.ch)}<div class="grow"><div class="nm">${esc(r.from)} <span class="muted" style="font-weight:400">· ${esc(acct(r.acc).name)}</span></div><div class="sm">"${esc(r.text)}"</div></div><span class="badge ${KIND_B[r.kind]}">${r.kind}</span></div>`).join('') || '<div class="empty">No replies yet.</div>'); }
     if (v === 'analytics') return card('Pilot week 3', 'whole team', (sum => [['Meetings this week', `${sum('meetings')} / ${sum('target')}`], ['Reply rate', pct(sum('replies'), sum('sent'))], ['Accepted first time', Math.round(sum('accept') / REPS.length) + '%'], ['Overdue items', sum('overdue')]])(k => REPS.reduce((x, r) => x + TEAM_STATS[r][k], 0)).map(([k, x]) => `<div class="mini-row"><div class="grow nm">${k}</div><b class="mono">${x}</b></div>`).join(''));
@@ -801,17 +870,38 @@
       return { kind: 'seqChanged', id: cid, note: `Added a ${ch} step at the end of <b>${esc(campOf(cid).name)}</b>. The brand checks still pass. Open the steps to edit the wording.` };
     }
     if (/remove (the )?(last )?(touch|step)/.test(t)) { const cid = findCampaign(t) || campSel || 'c5'; editSeq(cid, sq => { const i = sq.map(x => !/Sent|Done/.test(x.state || '')).lastIndexOf(true); if (i >= 0) sq.splice(i, 1); }); return { kind: 'seqChanged', id: cid, note: `Removed the last unsent step from <b>${esc(campOf(cid).name)}</b>.` }; }
+    const findIcp = /\b(find|look for|search|show me|get me|prospect|who are)\b/.test(t) && !/like (my|our) last|replies|analytics|emails sent|meetings|linkedin touches|sequence|pipeline|hot|stuck/.test(t) ? parseICP(text) : null;
+    if (findIcp) {
+      const id = 'Q' + (S.genLists.length + 1) + Date.now().toString(36).slice(-4), place = [findIcp.city, findIcp.country !== findIcp.city ? findIcp.country : null].filter(Boolean).join(', ');
+      const who = findIcp.lvl === 'Head' ? `Heads of ${findIcp.fn || 'the team'}` : findIcp.lvl === 'Chief' ? `Chief ${findIcp.fn || ''} Officers` : findIcp.lvl === 'VP' ? `VPs of ${findIcp.fn || 'the team'}` : `${findIcp.fn || 'Team'} ${findIcp.lvl.toLowerCase()}s`;
+      const g = { id, q: text, icp: findIcp, owner: me.id, title: [who, place, findIcp.industry].filter(Boolean).join(' · ') };
+      S.genLists.push(g); genList(g); if (cc) { cc.listId = id; if (S.chats.includes(cc) && cc.thread.filter(m => m.who === 'me').length <= 1) { cc.title = g.title; cc.naming = false; } }
+      return { kind: 'prospects', open: 'prospects', steps: [`Turned your request into a filter: ${esc(who)}${place ? ' · ' + esc(place) : ''}${findIcp.industry ? ' · ' + esc(findIcp.industry) : ''}`, 'Searched the primary contact provider, then the fallback for the misses', 'Cross-checked fallback hits and gave everyone an identity tier', 'Removed existing customers and accounts another rep owns (CRM, read-only)'] };
+    }
+    const asl = t.match(/assign (them|these|this list|the list|all of them|everyone|those) to (sofia|marco|aisha|kenji)/);
+    if (asl) { if (!isMgr) return { kind: 'text', html: 'Daniel assigns accounts. I can send him the list with a note: say "send an update to Daniel".' }; listAccounts().forEach(a => { a.owner = asl[2]; shared.assign[a.id] = asl[2]; }); saveShared(); return { kind: 'text', html: `Assigned all ${listAccounts().length} accounts on this list to ${USERS[asl[2]].name}. Their next actions and the campaign move with them.` }; }
+    if (/^send( them| it| all| everything)?\.?$|send (them|the (next best )?actions|everything) ?(out|now)?/.test(t)) {
+      const ls = listAccounts(), wait = ls.filter(a => a.nba && a.nba.status === 'review' && !S.decisions[a.id]), cid = (ls.find(a => a.campaign) || {}).campaign;
+      wait.forEach(a => { S.decisions[a.id] = a.nba.sensitive && !isMgr ? 'with-manager' : 'approved'; });
+      if (cid && !S.camp[cid]) S.camp[cid] = isMgr ? 'Confirmed' : 'Sent for confirmation';
+      const went = ls.filter(a => a.nba && a.nba.status === 'auto').length;
+      return { kind: 'text', html: `Done. ${went ? `<b>${went}</b> next best actions had already gone ahead on their own. ` : ''}I approved the other <b>${wait.length}</b>; they go out in the next send window.${cid ? ` The campaign is ${isMgr ? '<b>confirmed</b>: step 1 goes out tomorrow 09:00' : '<b>with Daniel to confirm</b>'}.` : ''} (Nothing leaves the mock.)` };
+    }
+    if (/send (an |a )?update|update (daniel|my manager|the team)/.test(t)) {
+      const ls = listAccounts(), went = ls.filter(a => a.nba && a.nba.status === 'auto').length, wait = ls.filter(a => a.nba && a.nba.status === 'review' && !S.decisions[a.id]).length, inC = ls.filter(a => a.campaign).length;
+      return { kind: 'text', html: `Sent ${isMgr ? 'the team' : 'Daniel'} an update:</p><div class="draft" style="margin-top:8px">${esc(listTitle())}: ${ls.length} people found and scored (${ls.filter(a => a.tier === 'A').length} in tier A). ${inC ? `${inC} share a trigger and are in a draft campaign. ` : ''}${went} next best actions went ahead on their own, ${wait} wait for approval.</div><p>` };
+    }
     if (/save (as a |the )?(scored )?list|save it/.test(t)) {
       const scored = /scored/.test(t) || lk === 'rankedList';
-      const name = scored ? 'Lookalikes of my last 10 wins · scored 27 Oct' : 'Lookalikes of my last 10 wins · 27 Oct';
-      return { kind: 'savedList', id: addList(name, scored ? 'Scored list' : 'Prospect list', scored ? '16 of 17 accounts with a live signal, ranked' : '24 people at 17 accounts', listAccounts().map(a => a.id)), name, next: scored ? 'Create micro-segments' : 'Score this list' };
+      const name = `${listTitle()}${scored ? ' · scored' : ''} · 27 Oct`, n = listAccounts().length;
+      return { kind: 'savedList', id: addList(name, scored ? 'Scored list' : 'Prospect list', scored ? `${listAccounts().filter(a => a.score > 0).length} of ${n} accounts with a live signal, ranked` : `${n} accounts`, listAccounts().map(a => a.id)), name, next: scored ? 'Create micro-segments' : 'Score this list' };
     }
-    if (/score (this|the|that|these|them)|rank (this|them|these)|score (my )?list/.test(t)) return { kind: 'rankedList', steps: ['Collected live signals for the 17 list accounts from 23 sources', 'Qualified 21 of 30 signals: observable, predictive, time-bound', 'Weighed by tier (100 / 60 / 30) and applied decay', 'Stacked into Timing: strongest + ½ second + ¼ third', 'Fit × Timing = Score, then tiers A / B / C'] };
+    if (/score (this|the|that|these|them)|rank (this|them|these)|score (my )?list/.test(t)) return { kind: 'rankedList', steps: [`Collected live signals for the ${listAccounts().length} list accounts from 23 sources`, 'Qualified 21 of 30 signals: observable, predictive, time-bound', 'Weighed by tier (100 / 60 / 30) and applied decay', 'Stacked into Timing: strongest + ½ second + ¼ third', 'Fit × Timing = Score, then tiers A / B / C'] };
     if (/send (the campaign|it) to pavan/.test(t)) { S.camp.c5 = 'Sent for confirmation'; return { kind: 'text', html: 'Sent <b>Control-systems hiring surge</b> to Daniel to confirm. You\'ll see it in Today once he decides.' }; }
     if (/confirm the campaign/.test(t) && isMgr) { S.camp.c5 = 'Confirmed'; return { kind: 'text', html: 'Confirmed <b>Control-systems hiring surge</b>. Step 1 goes out tomorrow 09:00 (placeholder: nothing is sent).' }; }
     if (/objection/.test(t)) { const ob = threads().filter(r => r.kind === 'Objection'); return { kind: 'text', html: ob.length ? `${ob.length} objection${ob.length > 1 ? 's' : ''}: ${ob.map(r => `<a href="#inbox" onclick="App.openThread('${r.id}');return false">${esc(r.from)} · ${esc(acct(r.acc).name)}</a>`).join(', ')}. Each has a suggested reply that doesn't push.` : 'No objections right now.' }; }
     if (/funnel|leak/.test(t)) return { kind: 'text', html: 'The biggest drop is <b>with a live signal → contacted</b>: 33 accounts had a signal but only 24 were contacted within 2 days, mostly because 3 rep mailboxes aren\'t connected. Replies to positive is healthy (8 of 15).' };
-    if (/route|nba and nbc|nbc and nba|micro|segment (this|the|them)|create.*segment|group (this|them|the list)/.test(t)) return { kind: 'listSegments', steps: ['Tagged each account by its strongest trigger', 'Checked each micro-segment against the campaign threshold (10 in 7 days)', 'Routed: 10 accounts → one campaign (NBC), 6 → next best actions (NBA)', 'Drafted the campaign sequence and the next actions · brand checks passed'] };
+    if (/route|nba and nbc|nbc and nba|micro|segment (this|the|them|it)|create.*segment|group (this|them|the list)/.test(t)) { if (listOf() !== 'L1') routeList(listOf()); const ls = listAccounts(); return { kind: 'listSegments', steps: ['Tagged each account by its strongest trigger', 'Checked each micro-segment against the campaign threshold (10 in 7 days)', `Routed: ${ls.filter(a => a.campaign).length} accounts → one campaign (NBC), ${ls.filter(a => a.nba && !a.campaign).length} → next best actions (NBA)`, 'Drafted the campaign sequence and the next actions · brand checks passed'] }; }
     if (/prepare.*(next )?action|next actions|\bnba\b/.test(t) && !/which/.test(t)) return { kind: 'nbaList', steps: ['De-dup check: no open opportunities, owners confirmed', 'Read CRM history and warm paths', 'Chose email or LinkedIn per contact and wrote the drafts', 'Brand, claims and banned-word checks passed'] };
     if (/build.*campaign|create.*campaign|draft.*campaign|\bnbc\b/.test(t) && !/which/.test(t)) return { kind: 'flowCampaign', steps: ['Used the structure closest to this trigger (provisional: no outcomes yet)', 'Planned 4 steps across email and LinkedIn', 'Personalised each step per person', 'Checked nobody is already in another sequence'] };
     if (/draft a reply|reply to dian/.test(t)) return { kind: 'text', html: 'Here\'s a reply with three times from your calendar:<div class="draft" style="margin-top:8px">Hi Dian,\n\nGreat to hear from you. I can do Tuesday 3 Nov at 10:00, Wednesday 4 Nov at 14:00 or Thursday 5 Nov at 09:30 (Jakarta time). I\'ll bring our lead engineer for hydrocracker projects.\n\nBest,\nSofia</div><div class="next-row"><button class="btn sm pri" onclick="App.handleReply(\'reastgate\')">Approve &amp; send</button></div>', steps: ['Read the reply: positive, asks for times next week', 'Checked your calendar for free slots', 'Wrote the reply'] };
@@ -830,7 +920,7 @@
     if (/learn|worked|working|what changed|readout/.test(t)) return { kind: 'learned', steps: ['Read 214 outcomes logged this month (wins and misses)', 'Re-ran pattern promotion and demotion', 'Compared signal sources by conversion'] };
     if (/to ?do|what should i do first|my day|first today/.test(t)) return { kind: 'todo' };
     if (/approve all/.test(t)) { approveAll(true); return { kind: 'text', html: 'Done. Every ready, high-confidence item is approved and scheduled for the next send window (a placeholder in the mock).' }; }
-    if (/find|prospect|look ?alike|new accounts|like my|like our|more accounts/.test(t)) return { kind: 'prospects', steps: FIND_STEPS() };
+    if (/find|prospect|look ?alike|new accounts|like my|like our|more accounts/.test(t)) { if (cc) cc.listId = null; return { kind: 'prospects', steps: FIND_STEPS() }; }
     if (/rank|score|prioriti|who should i call|call first|top accounts/.test(t)) return { kind: 'ranked', steps: ['Pulled live signals from 23 sources', 'Applied tier, decay and stacking', 'Fit × Timing = Score'] };
     if (/thailand.*jump|spike/.test(t)) return { kind: 'text', html: 'Five Thai accounts posted control-systems roles within 2 days, far outside the normal range. The system gave them a temporary tier-1 boost, alerted Marco, and logged the event so signal research can check whether it\'s a new pattern.' };
     if (a && /shorter|cost|formal|friendl|rewrite|runner/.test(t)) return rewrite(a, t);
@@ -964,9 +1054,9 @@
 
   /* ─── Scoring, shown as the process it follows ─── */
   const RAW = { 1: 100, 2: 60, 3: 30 };
-  function scoreProcess(a) {
+  function scoreProcess(a, open) {
     const sig = a ? a.signals.slice().sort((p, q) => q.weight - p.weight) : [];
-    return `<div class="ccard proc"><div class="ccard-h"><span class="t">${ic('layers', 14)} How the score is calculated</span><span class="muted" style="font-size:11px">thresholds v2026.10</span></div>
+    return `<details class="proc-i" ${open ? 'open' : ''}><summary title="How the score is calculated">${ic('help', 14)}<span>How the score is calculated</span></summary><div class="ccard proc"><div class="ccard-h"><span class="t">${ic('layers', 14)} How the score is calculated</span><span class="muted" style="font-size:11px">thresholds v2026.10</span></div>
       <div class="ccard-b"><ol class="proc-steps">
         <li><b>Collect signals</b><span>23 sources: hiring, news, website visits, tech stack, CRM</span></li>
         <li><b>Qualify</b><span>Keep a signal only if it's observable, predictive and time-bound</span></li>
@@ -978,7 +1068,7 @@
       ${a ? `<div class="proc-ex"><div class="lbl">Worked example · ${esc(a.name)}</div>
         ${sig.map((x, i) => `<div class="pe-r"><span class="badge ${x.tier === 1 ? 'b-pos' : x.tier === 2 ? 'b-sec' : 'b-grey'} nodot">T${x.tier}</span><span class="grow">${esc(x.type)} <span class="muted">· ${ago(x.age)}</span></span><span class="mono">${RAW[x.tier]} → ${x.weight}</span><span class="mono pe-m">${i === 0 ? '× 1' : i === 1 ? '× ½' : '× ¼'}</span></div>`).join('')}
         <div class="pe-sum mono">${a.points} points ÷ 2 = Timing ${a.timing} · Fit ${a.fit} × ${a.timing} ÷ 100 = <b>${a.score} / 100</b> → tier ${a.tier}</div></div>` : ''}
-      </div></div>`;
+      </div></div></details>`;
   }
 
   /* ─── Inbox: replies from email and LinkedIn in one place ─── */
@@ -1120,7 +1210,7 @@
       <div class="toolbar">${ownerSel()}
         <label class="sr" for="accT">Tier</label><select class="sel" id="accT" onchange="App.renderAll()">${[['all', 'All tiers'], ['A', 'Tier A'], ['B', 'Tier B'], ['C', 'Tier C']].map(([k, lb]) => `<option value="${k}" ${tf === k ? 'selected' : ''}>${lb}</option>`).join('')}</select>
         <div class="search">${ic('search', 14)}<label class="sr" for="accQ">Search</label><input id="accQ" placeholder="Search accounts, people, segments" value="${esc(q)}" oninput="App.renderAll()"></div><button class="btn sm ghost" onclick="App.toggleProc()">${ic('layers', 13)} ${showProc ? 'Hide' : 'How scoring works'}</button></div>
-      ${showProc ? scoreProcess(rows.find(a => a.score > 0)) : ''}
+      ${showProc ? scoreProcess(rows.find(a => a.score > 0), true) : ''}
       <div class="card tbl-wrap"><table class="tbl"><thead><tr><th>#</th><th>Account</th><th>Person</th><th>Tier</th><th>Score</th><th>Why now</th><th>Micro-segment</th>${isMgr ? '<th>Owner</th>' : ''}<th>Status</th></tr></thead><tbody>
         ${rows.map((a, i) => `<tr class="row-link" onclick="App.openRecord('${a.id}','overview')"><td class="mono muted">${i + 1}</td><td><div class="nm">${esc(a.name)}</div><div class="sm">${esc(a.industry)} · ${esc(a.country)}</div></td><td>${esc(a.contact.name)}<div class="sm">${esc(a.contact.title)}</div></td><td>${tierBadge(a.tier)}</td><td class="mono">${sc(a)}</td><td>${a.whyNow ? `${esc(a.whyNow.type)}<div class="sm">${ago(a.whyNow.age)}</div>` : '<span class="muted">No live signal</span>'}</td><td>${a.seg ? `<span class="seg-link" onclick="event.stopPropagation();App.openSegment('${a.seg}')">${esc(a.segment)}</span>` : '–'}</td>${isMgr ? `<td>${esc(first(USERS[a.owner].name))}</td>` : ''}<td>${stepBadge(a)}</td></tr>`).join('')}</tbody></table></div>`;
     const s = $('accQ'); if (q) { s.focus(); s.setSelectionRange(q.length, q.length); }
@@ -1336,6 +1426,7 @@
     return `<div class="eng-h"><div class="lbl">${ic('plane', 13)} Campaign</div><div class="eng-grid"><div><span>Campaign</span><a href="#campaigns" onclick="App.goCampaign('${c.id}');return false">${esc(c.name)}</a></div><div><span>Status</span>${S.enrollOK[a.id] ? '<span class="badge b-pos">Approved</span>' : stateBadge(a.campState)}</div><div><span>Mailbox</span>${esc(mailbox(a))}</div><div><span>Messages</span><div class="chns">${chans.map(ch => `<span class="chn">${chIc(ch)} ${ch} ×${sq.filter(t => t.ch === ch).length}</span>`).join('')}</div></div></div></div>
       ${ok ? '' : `<div class="ready"><div class="grow">${esc(first(a.contact.name))}'s personalised sequence is ready to launch. Approve to continue.</div><button class="btn pri" onclick="App.approveEnroll('${a.id}')">Approve</button></div>`}
       ${S.pseq[a.id] ? `<div class="tv-note">${ic('edit', 13)} You changed ${esc(first(a.contact.name))}'s sequence. The rest of the campaign is unchanged. <button class="btn sm ghost" onclick="App.pReset('${a.id}')">Reset to the campaign sequence</button></div>` : ''}
+      <div class="seqv-top"><span class="lbl">Sequence · ${sq.length} steps</span><span class="sp"></span><button class="btn sm" onclick="App.pAdd('${a.id}','Email')">${ic('plus', 12)} Email step</button><button class="btn sm" onclick="App.pAdd('${a.id}','LinkedIn')">${ic('plus', 12)} LinkedIn step</button></div>
       <div class="seqv">${sq.map((t, i) => stepView(a, c, t, i, sq)).join('')}</div>
       <div class="seqv-add"><button class="btn sm" onclick="App.pAdd('${a.id}','Email')">${ic('plus', 12)} Email step</button><button class="btn sm" onclick="App.pAdd('${a.id}','LinkedIn')">${ic('plus', 12)} LinkedIn step</button><span class="sp"></span><label class="muted" for="addSeq" style="font-size:12px">Add to another sequence</label><select class="sel" id="addSeq" onchange="App.addToSeq('${a.id}',this.value)"><option value="">Choose…</option>${CAMPAIGNS.filter(x => x.id !== c.id && x.status !== 'Completed').map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join('')}</select></div>`;
   }
@@ -1503,7 +1594,7 @@
     $('ws').classList.toggle('focused', on);
     $('focus').classList.toggle('full', on && focusFull);
     $('fscrim').classList.toggle('open', on);
-    if (recId) renderRecord();
+    if (recId) { const keep = [...$('focus').querySelectorAll('*')].filter(e => e.scrollTop > 0).map(e => [e.className, e.scrollTop]); renderRecord(); keep.forEach(([cls, top]) => { const e = cls && $('focus').getElementsByClassName(cls.split(' ')[0])[0]; if (e) e.scrollTop = top; }); }
     $('focus').classList.toggle('open', on);
   }
   function renderAll() {
@@ -1609,7 +1700,7 @@
     pEditStep(id, i) { pEdit = id ? `${id}:${i}` : null; renderAll(); },
     pSave(id, i) { const v = $('pBody').value; editPseq(id, sq => { sq[i].body = v; }); pEdit = null; toast('Saved. The brand and claim checks pass'); renderAll(); },
     pRemove(id, i) { editPseq(id, sq => sq.splice(i, 1)); toast('Step removed for this person'); renderAll(); },
-    pAdd(id, ch, silent) { editPseq(id, (sq, a) => { const t = newTouch(sq, campOf(a.campaign), ch); t.body = personal(t, a); sq.push(t); }); if (!silent) { toast(`${ch} step added`); renderAll(); } },
+    pAdd(id, ch, silent) { editPseq(id, (sq, a) => { const t = newTouch(sq, campOf(a.campaign), ch); t.body = personal(t, a); sq.push(t); }); if (!silent) { pEdit = `${id}:${S.pseq[id].length - 1}`; toast(`${ch} step added at the end · edit it below`); renderAll(); setTimeout(() => { const el = $('pBody'); if (el) { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); el.focus({ preventScroll: true }); } }, 60); } },
     pReset(id) { delete S.pseq[id]; save(); renderAll(); },
     addToSeq(id, cid) { if (cid) toast(`${acct(id).contact.name} joins ${campOf(cid).name} when this sequence ends (mock)`); },
     setOwner(r) { ownerF = r; renderAll(); },
@@ -1638,7 +1729,7 @@
     seqEdit(cid, i, f, v) { editSeq(cid, sq => { sq[i][f] = f === 'day' ? Math.max(0, parseInt(v, 10) || 0) : v; if (f === 'ch') { sq[i].fmt = FORMATS[v][0]; if (v === 'Email' && !sq[i].subject) sq[i].subject = campOf(cid).name; } if (f === 'day') sq.sort((p, q) => p.day - q.day); }); renderAll(); },
     seqMove(cid, i, d) { editSeq(cid, sq => { const j = i + d; if (j < 0 || j >= sq.length || sent(sq[j])) return; [sq[i], sq[j]] = [sq[j], sq[i]]; const days = sq.map(t => t.day).sort((p, q) => p - q); sq.forEach((t, k) => { t.day = days[k]; }); }); renderAll(); },
     seqRemove(cid, i) { editSeq(cid, sq => { sq.splice(i, 1); }); toast('Step removed'); renderAll(); },
-    seqAdd(cid, ch) { editSeq(cid, (sq, c) => sq.push(newTouch(sq, c, ch))); toast(`${ch} step added at the end`); renderAll(); },
+    seqAdd(cid, ch) { editSeq(cid, (sq, c) => sq.push(newTouch(sq, c, ch))); toast(`${ch} step added at the end`); renderAll(); setTimeout(() => { const el = [...document.querySelectorAll('.tedit:not(.locked)')].pop(); if (el) { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); const m = el.querySelector('textarea'); if (m) m.focus({ preventScroll: true }); } }, 60); },
     seqRewrite(cid, i) { editSeq(cid, sq => { const t = sq[i]; t.t = t.ch === 'LinkedIn' ? `Saw the news at your site. ${t.t.split('.')[0]}. Worth a quick chat?` : `${t.t.split('.')[0]}. Here is what a comparable site learned, in one page, and the first step that kept its options open.`; }); toast('Rewritten. Brand and claim checks still pass'); renderAll(); },
     seqReset(cid) { delete S.seq[cid]; save(); toast('Back to the AI draft'); renderAll(); },
     setStudioTab(k) { studioTab = k; renderAll(); },
@@ -1660,5 +1751,6 @@
   };
   document.addEventListener('click', e => { if (!e.target.closest('.menu,.btn')) document.querySelectorAll('.menu.open').forEach(m => m.classList.remove('open')); });
   document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; if ($('drawer').classList.contains('open')) App.closeDrawer(); else if (recId) App.closeFocus(); else if (art || (view() && view() !== 'studio' && expanded)) App.closeCanvas(); });
+  S.genLists.forEach(g => { genList(g); if (g.routed) routeList(g.id); });
   renderAll();
 })();

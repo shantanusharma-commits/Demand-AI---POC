@@ -19,6 +19,12 @@ Open `index.html` in Chrome or Edge (double-click). Fonts need an internet conne
 | `admin/settings.html` | General, Appearance, Notifications, Security and access, Data and privacy, Usage |
 | `admin/07-…15-*.html` | The legacy prototype screens (setup, content, users, prospecting, scoring, NBA, analytics, review), copied with the admin sidebar |
 
+## Fixes after the 29 Oct review
+
+1. **Prospecting follows the request.** Ask for anyone in any chat ("Find maintenance heads at refineries in Thailand", "Find marketing heads in Sydney working in tech"): the role, place and industry become the list, and the chat is named after it. Scoring, "Route to NBA and NBC", "Save the scored list", "Assign them to Kenji" (manager), "Send them" and "Send an update" all work on that list. When 10 or more accounts share a trigger, they become a new draft campaign in Campaigns; the rest get next best actions in Segments, which go ahead on their own only if they pass the six checks. The new list, segments and campaign stay after a reload. "Find prospects like my last 10 wins" still gives the seeded list.
+2. **Adding a step to a person's sequence.** In a campaign, open a person, then Engagement: **+ Email step** and **+ LinkedIn step** now sit above the sequence as well as below it. The new step opens for editing and scrolls into view, and the panel no longer jumps back to the top. In the campaign itself, **Edit sequence** adds steps the same way.
+3. **The score process is behind an info toggle.** "How the score is calculated" (the six steps and the worked example) is collapsed behind a small ⓘ chip wherever a score is shown. "How scoring works" in Accounts still opens it.
+
 ## Final internal build (28 Oct)
 
 **Sales workspace**
