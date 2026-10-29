@@ -1514,3 +1514,21 @@ body.nav-col .side .side-sec{height:1px;padding:0;margin:8px 12px;background:var
 .st-soon .muted{font-size:11.5px;margin-right:2px;}
 .st-soon .chip[disabled]{opacity:.55;cursor:not-allowed;display:inline-flex;align-items:center;gap:6px;}
 .st-soon .soon{font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;padding:1px 5px;border-radius:999px;background:var(--brand-lt);color:var(--brand-dk);}
+.ibx-lh .search{flex:1;min-width:0;}
+.ibx-lh .back-chip{max-width:130px;margin-right:8px;}
+/* Back to the chat or view you came from */
+.back-chip{display:inline-flex;align-items:center;gap:5px;max-width:220px;height:28px;padding:0 10px 0 7px;margin-right:10px;border:1px solid var(--brand-mid);border-radius:999px;background:var(--brand-lt);color:var(--brand-dk);font:inherit;font-size:12px;font-weight:600;cursor:pointer;flex-shrink:0;white-space:nowrap;}
+.back-chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+.back-chip:hover{background:#fff;}
+/* Owner pickers in lists */
+.own-sel{height:28px;font-size:12px;padding:0 24px 0 8px;max-width:170px;}
+.nba-d{align-items:flex-start;}
+.nba-r{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;}
+/* Analytics cards inside a chat answer */
+.bub .mcards.an-c{grid-template-columns:repeat(2,minmax(0,1fr));margin:8px 0 4px;gap:8px;}
+.bub .mcards.an-c .mcard{padding:10px 12px;box-shadow:none;}
+.bub .mcards.an-c .v{font-size:20px;}
+.bub .mcards.an-c .mcard.row-link{cursor:pointer;}
+.bub .mcards.an-c .mcard.row-link:hover{border-color:var(--brand-mid);}
+@media (max-width:640px){.back-chip{max-width:140px;}}
+.nba-d .sm{white-space:normal;overflow:visible;text-overflow:clip;}

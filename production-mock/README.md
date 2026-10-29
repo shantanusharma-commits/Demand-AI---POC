@@ -32,6 +32,11 @@ Open `index.html` in Chrome or Edge (double-click). Fonts need an internet conne
 7. **Content studio formats.** PPT / PDF, Brochure, Infographic, Single image, Carousel, LinkedIn text post, Podcast and Video show as disabled "Coming soon" options; asking for one says so. Blogs and whitepapers work as before.
 8. **Chat flows in the admin console.** *The process behind the chat* now starts with **Chat flows** (`admin/chats.html`): the ten flows a chat runs (find prospects, score, segment and route, next best actions, campaigns, replies and hand-off, content, objectives and catch-up, analytics, the learning loop), each with example questions, the steps the AI runs as shown in the chat, what it produces, who decides, where it's tracked and links to its settings. The menu items after it follow the same order.
 
+9. **Your chat comes with you.** Opening a campaign, segment, list or Inbox from a chat keeps that chat on the left, so you can scroll up to the scoring, the routing and the next best actions while you look at the campaign. A **back chip** in the header (named for where you came from) returns you there; it works across several hops and from Analytics too.
+10. **Next best actions in the chat show their details.** After "Route to NBA and NBC", each next best action shows the person and title, the action, channel and due time, and whether it passed the six checks or which check it failed.
+11. **Assign next actions and campaigns.** The manager can pick an owner for each next best action and assign the whole campaign or all the next actions in one go, in the chat's routing answer and in the Campaigns, Segments, Accounts and Approvals tables. In the chat: "Assign the campaign to Aisha", "Assign the next actions to Marco". Reps see the owner but can't change it.
+12. **Analytics answers come with cards.** Each answer in the Analytics chat shows the numbers it talks about as cards (meetings, reply rate, positive replies, what went ahead, pipeline, overdue, each rep or each campaign). Click a rep card to filter the dashboard, or a campaign card to open it, then use the back chip to return to Analytics.
+
 ## Final internal build (28 Oct)
 
 **Sales workspace**
