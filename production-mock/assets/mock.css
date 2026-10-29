@@ -1507,3 +1507,10 @@ body.nav-col .side .side-sec{height:1px;padding:0;margin:8px 12px;background:var
 /* Add a step from the top of a person's sequence */
 .seqv-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:14px 0 6px;}
 .seqv-top .sp{flex:1;}
+
+.sv-subj .sv-k{font-weight:500;color:var(--i2);font-size:11px;margin-right:6px;text-transform:uppercase;letter-spacing:.05em;}
+/* Content studio: formats that are not available yet */
+.st-soon{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:12px;}
+.st-soon .muted{font-size:11.5px;margin-right:2px;}
+.st-soon .chip[disabled]{opacity:.55;cursor:not-allowed;display:inline-flex;align-items:center;gap:6px;}
+.st-soon .soon{font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;padding:1px 5px;border-radius:999px;background:var(--brand-lt);color:var(--brand-dk);}

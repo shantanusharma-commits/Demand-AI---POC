@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Chat flows · Demand AI admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/mock.css">
+<script src="../assets/theme.js"></script>
+<link rel="stylesheet" href="admin-shell.css">
+<link rel="stylesheet" href="admin.css">
+<style>
+.flow .card-b{display:flex;flex-direction:column;gap:8px}
+.fl-k{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--i3);margin-top:4px}
+.fl-ask{display:flex;flex-wrap:wrap;gap:6px}
+.fl-ask .badge{white-space:normal;text-align:left}
+.fl-steps{margin:0;padding-left:20px;font-size:12.5px;color:var(--i1);display:flex;flex-direction:column;gap:4px}
+.flow.hl{outline:2px solid var(--brand-mid);outline-offset:2px}
+@media (max-width:900px){.flow.c6{grid-column:span 12}}
+</style>
+</head>
+<body>
+<div class="shell">
+<nav class="nav"></nav>
+<main class="main">
+  <div class="a-top"><div><span class="t">Chat flows</span><span class="d">What each chat runs, step by step, and the rules behind it</span></div></div>
+  <div class="a-tabs" role="tablist"><button data-t="glance">At a glance</button><button data-t="steps">Steps for each flow</button></div>
+  <div class="a-canvas">
+    <div class="a-grid" data-pane="glance"><div class="a-note">Everything in the sales workspace starts in a chat. These are the flows a chat can run, in the order the work usually goes: find, score, segment and route, act, track replies, learn. The steps are the same ones people see in the chat while the AI works. The rules each flow runs within are in <a href="rules.html">Rules</a>, and every action is logged in the <a href="audit.html">Audit log</a>.</div>
+      <div class="card c12"><div class="card-h"><span class="lbl">The flows</span><span class="muted sm">10 flows</span></div><div class="card-b" style="padding:0"><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Flow</th><th>Ask it, for example</th><th>Produces</th><th>Who decides</th><th>Tracked in</th></tr></thead><tbody><tr><td class="nm"><a href="#f0" onclick="ADM.showFlow(0);return false">Find prospects</a></td><td class="sm">Find maintenance heads at refineries in Thailand</td><td class="sm">A list named after the request, open beside the chat. &quot;Save as a list&quot; adds it to Accounts.</td><td class="sm">The AI; held records go to the admin</td><td class="sm">Accounts</td></tr><tr><td class="nm"><a href="#f1" onclick="ADM.showFlow(1);return false">Score</a></td><td class="sm">Score this list</td><td class="sm">The scored list, ranked, with the process behind an ⓘ.</td><td class="sm">The AI</td><td class="sm">Accounts</td></tr><tr><td class="nm"><a href="#f2" onclick="ADM.showFlow(2);return false">Segment and route</a></td><td class="sm">Route to NBA and NBC</td><td class="sm">Segments with their mode, a draft campaign and the next actions.</td><td class="sm">The sales manager confirms campaigns</td><td class="sm">Segments, Campaigns</td></tr><tr><td class="nm"><a href="#f3" onclick="ADM.showFlow(3);return false">Next best actions (NBA)</a></td><td class="sm">Prepare the next actions</td><td class="sm">One action per account, tracked from prepared to replied.</td><td class="sm">The AI within the rules; exceptions go to the rep or manager</td><td class="sm">Segments, Approvals</td></tr><tr><td class="nm"><a href="#f4" onclick="ADM.showFlow(4);return false">Campaigns (NBC)</a></td><td class="sm">Build the campaign</td><td class="sm">A sequence per campaign, editable per person.</td><td class="sm">The sales manager</td><td class="sm">Campaigns, person panel</td></tr><tr><td class="nm"><a href="#f5" onclick="ADM.showFlow(5);return false">Replies and hand-off</a></td><td class="sm">Pull the emails we received today</td><td class="sm">Replies in the chat and in Inbox, each with a drafted answer.</td><td class="sm">The rep sends; the manager can reassign</td><td class="sm">Inbox</td></tr><tr><td class="nm"><a href="#f6" onclick="ADM.showFlow(6);return false">Content</a></td><td class="sm">Write a blog on planning a control system migration</td><td class="sm">A blog or whitepaper. PPT and PDF, brochures, infographics, images, carousels, LinkedIn posts, podcasts and video are coming soon.</td><td class="sm">The person who asked; sign-off for new claims</td><td class="sm">Content studio</td></tr><tr><td class="nm"><a href="#f7" onclick="ADM.showFlow(7);return false">Objectives and catch-up</a></td><td class="sm">Let&#x27;s get our red accounts to a next step this week</td><td class="sm">A named chat in Recent chats with progress, reminders and notes.</td><td class="sm">The person who set the goal</td><td class="sm">Recent chats, Today</td></tr><tr><td class="nm"><a href="#f8" onclick="ADM.showFlow(8);return false">Analytics</a></td><td class="sm">How are we doing this month?</td><td class="sm">An answer in the chat, with the dashboard beside it.</td><td class="sm">Read-only</td><td class="sm">Analytics</td></tr><tr><td class="nm"><a href="#f9" onclick="ADM.showFlow(9);return false">Learning loop</a></td><td class="sm">What did we learn this week?</td><td class="sm">What changed, in the chat and in Analytics. The full run is the monthly learning job.</td><td class="sm">The AI proposes; the admin approves rule changes</td><td class="sm">Analytics, Admin home</td></tr></tbody></table></div></div></div>
+    </div>
+    <div class="a-grid" data-pane="steps"><div class="card c6 flow" id="f0"><div class="card-h"><span class="lbl">1 · Find prospects</span><span class="muted sm">Accounts</span></div><div class="card-b">
+  <div class="fl-k">Ask it</div><div class="fl-ask"><span class="badge b-brand nodot">“Find maintenance heads at refineries in Thailand”</span><span class="badge b-brand nodot">“Find prospects like my last 10 wins”</span></div>
+  <div class="fl-k">Steps the AI runs (shown in the chat as it works)</div><ol class="fl-steps"><li>Turn the request into a filter: role, seniority, place, industry and size</li><li>Search the primary contact provider, then the fallback for the misses</li><li>Cross-check fallback hits and give everyone an identity tier (1 to 4)</li><li>Remove existing customers and accounts another rep owns (CRM, read-only)</li><li>Hold tier-4 identities for a person to check</li></ol>
+  <div class="set-row"><div><div class="k">Produces</div><div class="d">A list named after the request, open beside the chat. &quot;Save as a list&quot; adds it to Accounts.</div></div></div>
+  <div class="set-row"><div><div class="k">Who decides</div><div class="d">The AI; held records go to the admin</div></div></div>
+  <div class="fl-k">Settings</div><div class="fl-ask"><a class="btn sm" href="09-setup.html">Data and signals</a><a class="btn sm" href="rules.html">ICP</a><a class="btn sm" href="10-prospecting.html">Prospecting screen</a></div>
+</div></div><div class="card c6 flow" id="f1"><div class="card-h"><span class="lbl">2 · Score</span><span class="muted sm">Accounts</span></div><div class="card-b">
+  <div class="fl-k">Ask it</div><div class="fl-ask"><span class="badge b-brand nodot">“Score this list”</span><span class="badge b-brand nodot">“Why is Quartz Olefins ranked first?”</span></div>
+  <div class="fl-k">Steps the AI runs (shown in the chat as it works)</div><ol class="fl-steps"><li>Collect live signals from 23 sources: hiring, news, website visits, tech stack, CRM</li><li>Keep a signal only if it is observable, predictive and time-bound</li><li>Weigh by tier: 100, 60 or 30 points, then apply decay</li><li>Stack into Timing: strongest + ½ second + ¼ third, as a share of 200</li><li>Score = Fit × Timing ÷ 100, out of 100; tier A ≥ 40, B ≥ 20</li></ol>
+  <div class="set-row"><div><div class="k">Produces</div><div class="d">The scored list, ranked, with the process behind an ⓘ.</div></div></div>
+  <div class="set-row"><div><div class="k">Who decides</div><div class="d">The AI</div></div></div>
+  <div class="fl-k">Settings</div><div class="fl-ask"><a class="btn sm" href="rules.html">Checks and thresholds</a><a class="btn sm" href="11-scoring.html">Scoring screen</a></div>
+</div></div><div class="card c6 flow" id="f2"><div class="card-h"><span class="lbl">3 · Segment and route</span><span class="muted sm">Segments, Campaigns</span></div><div class="card-b">
+  <div class="fl-k">Ask it</div><div class="fl-ask"><span class="badge b-brand nodot">“Route to NBA and NBC”</span><span class="badge b-brand nodot">“Create micro-segments”</span><span class="badge b-brand nodot">“What&#x27;s close to becoming a campaign?”</span></div>
+  <div class="fl-k">Steps the AI runs (shown in the chat as it works)</div><ol class="fl-steps"><li>Group accounts by their strongest trigger into micro-segments</li><li>Check each segment against the campaign threshold (10 accounts in 7 days)</li><li>10 or more: one draft campaign (NBC) for the whole segment</li><li>Below the threshold: each account gets its own next best action (NBA)</li><li>Sensitive segments never become campaigns</li></ol>
+  <div class="set-row"><div><div class="k">Produces</div><div class="d">Segments with their mode, a draft campaign and the next actions.</div></div></div>
+  <div class="set-row"><div><div class="k">Who decides</div><div class="d">The sales manager confirms campaigns</div></div></div>
+  <div class="fl-k">Settings</div><div class="fl-ask"><a class="btn sm" href="rules.html">Who decides what</a><a class="btn sm" href="12-nba.html">Segments and NBA screen</a></div>
+</div></div><div class="card c6 flow" id="f3"><div class="card-h"><span class="lbl">4 · Next best actions (NBA)</span><span class="muted sm">Segments, Approvals</span></div><div class="card-b">
+  <div class="fl-k">Ask it</div><div class="fl-ask"><span class="badge b-brand nodot">“Prepare the next actions”</span><span class="badge b-brand nodot">“Send them”</span><span class="badge b-brand nodot">“What should I do with Cedar?”</span></div>
+  <div class="fl-k">Steps the AI runs (shown in the chat as it works)</div><ol class="fl-steps"><li>De-dup: no open opportunity, owner confirmed</li><li>Read the CRM history and the warm path</li><li>Pick email or LinkedIn and write the draft from the proven message structure</li><li>Run the brand, claims and banned-word checks</li><li>Run the six checks: high confidence, proven message, not sensitive, identity confirmed, not in another sequence, not picked for a spot-check</li><li>Passes all six: goes ahead on its own. Fails one: waits in Approvals with the failed check</li></ol>
+  <div class="set-row"><div><div class="k">Produces</div><div class="d">One action per account, tracked from prepared to replied.</div></div></div>
+  <div class="set-row"><div><div class="k">Who decides</div><div class="d">The AI within the rules; exceptions go to the rep or manager</div></div></div>
+  <div class="fl-k">Settings</div><div class="fl-ask"><a class="btn sm" href="rules.html">Six checks</a><a class="btn sm" href="14-review.html">Review queue</a></div>
+</div></div><div class="card c6 flow" id="f4"><div class="card-h"><span class="lbl">5 · Campaigns (NBC)</span><span class="muted sm">Campaigns, person panel</span></div><div class="card-b">
+  <div class="fl-k">Ask it</div><div class="fl-ask"><span class="badge b-brand nodot">“Build the campaign”</span><span class="badge b-brand nodot">“Add a LinkedIn step to the turnaround campaign”</span><span class="badge b-brand nodot">“How are the campaigns doing?”</span></div>
+  <div class="fl-k">Steps the AI runs (shown in the chat as it works)</div><ol class="fl-steps"><li>Use the message structure closest to the trigger (proven or provisional)</li><li>Plan the steps across email and LinkedIn, 3 to 5 days apart</li><li>Personalise each step for each person</li><li>Check nobody is already in another sequence</li><li>The manager confirms; step 1 goes out in the next send window</li><li>When someone replies, their remaining steps pause</li></ol>
+  <div class="set-row"><div><div class="k">Produces</div><div class="d">A sequence per campaign, editable per person.</div></div></div>
+  <div class="set-row"><div><div class="k">Who decides</div><div class="d">The sales manager</div></div></div>
+  <div class="fl-k">Settings</div><div class="fl-ask"><a class="btn sm" href="rules.html">Message templates</a><a class="btn sm" href="07-content.html">Content library</a></div>
+</div></div><div class="card c6 flow" id="f5"><div class="card-h"><span class="lbl">6 · Replies and hand-off</span><span class="muted sm">Inbox</span></div><div class="card-b">
+  <div class="fl-k">Ask it</div><div class="fl-ask"><span class="badge b-brand nodot">“Pull the emails we received today”</span><span class="badge b-brand nodot">“Which replies are objections?”</span><span class="badge b-brand nodot">“Draft a reply to Dian”</span></div>
+  <div class="fl-k">Steps the AI runs (shown in the chat as it works)</div><ol class="fl-steps"><li>Collect replies from email and LinkedIn</li><li>Classify each one: positive, objection, meeting booked, out of office</li><li>Pause the remaining campaign steps for that person</li><li>Draft an answer and run the brand checks</li><li>A positive reply can go to the proposal team with its full context</li></ol>
+  <div class="set-row"><div><div class="k">Produces</div><div class="d">Replies in the chat and in Inbox, each with a drafted answer.</div></div></div>
+  <div class="set-row"><div><div class="k">Who decides</div><div class="d">The rep sends; the manager can reassign</div></div></div>
+  <div class="fl-k">Settings</div><div class="fl-ask"><a class="btn sm" href="integrations.html">Rep mailboxes and LinkedIn</a></div>
+</div></div><div class="card c6 flow" id="f6"><div class="card-h"><span class="lbl">7 · Content</span><span class="muted sm">Content studio</span></div><div class="card-b">
+  <div class="fl-k">Ask it</div><div class="fl-ask"><span class="badge b-brand nodot">“Write a blog on planning a control system migration”</span><span class="badge b-brand nodot">“Make it shorter”</span><span class="badge b-brand nodot">“Add proof”</span></div>
+  <div class="fl-k">Steps the AI runs (shown in the chat as it works)</div><ol class="fl-steps"><li>Turn the request into a brief: audience, segment and the angle</li><li>Outline, then write in the brand voice</li><li>Check the claims against the approved list</li><li>Change it by asking, or one paragraph at a time</li><li>Save it to the Content library</li></ol>
+  <div class="set-row"><div><div class="k">Produces</div><div class="d">A blog or whitepaper. PPT and PDF, brochures, infographics, images, carousels, LinkedIn posts, podcasts and video are coming soon.</div></div></div>
+  <div class="set-row"><div><div class="k">Who decides</div><div class="d">The person who asked; sign-off for new claims</div></div></div>
+  <div class="fl-k">Settings</div><div class="fl-ask"><a class="btn sm" href="07-content.html">Brand voice and claims</a><a class="btn sm" href="15-content-studio.html">Content studio screen</a></div>
+</div></div><div class="card c6 flow" id="f7"><div class="card-h"><span class="lbl">8 · Objectives and catch-up</span><span class="muted sm">Recent chats, Today</span></div><div class="card-b">
+  <div class="fl-k">Ask it</div><div class="fl-ask"><span class="badge b-brand nodot">“Let&#x27;s get our red accounts to a next step this week”</span><span class="badge b-brand nodot">“Remind me Friday at 9”</span><span class="badge b-brand nodot">“Note: call Mei after the review”</span><span class="badge b-brand nodot">“Catch me up”</span></div>
+  <div class="fl-k">Steps the AI runs (shown in the chat as it works)</div><ol class="fl-steps"><li>Name the chat for the goal</li><li>List the accounts most urgent first</li><li>Track progress as items get done (by the AI or a person)</li><li>Keep reminders and notes with the chat</li><li>Open with a catch-up when you come back</li></ol>
+  <div class="set-row"><div><div class="k">Produces</div><div class="d">A named chat in Recent chats with progress, reminders and notes.</div></div></div>
+  <div class="set-row"><div><div class="k">Who decides</div><div class="d">The person who set the goal</div></div></div>
+  
+</div></div><div class="card c6 flow" id="f8"><div class="card-h"><span class="lbl">9 · Analytics</span><span class="muted sm">Analytics</span></div><div class="card-b">
+  <div class="fl-k">Ask it</div><div class="fl-ask"><span class="badge b-brand nodot">“How are we doing this month?”</span><span class="badge b-brand nodot">“How is Kenji doing?”</span><span class="badge b-brand nodot">“Where are we stuck?”</span><span class="badge b-brand nodot">“Which campaign is performing best?”</span></div>
+  <div class="fl-k">Steps the AI runs (shown in the chat as it works)</div><ol class="fl-steps"><li>Pull the numbers for the period and the rep you name</li><li>Compare them with the previous period</li><li>Move the dashboard to the same period and rep</li><li>End with what to do about it</li></ol>
+  <div class="set-row"><div><div class="k">Produces</div><div class="d">An answer in the chat, with the dashboard beside it.</div></div></div>
+  <div class="set-row"><div><div class="k">Who decides</div><div class="d">Read-only</div></div></div>
+  <div class="fl-k">Settings</div><div class="fl-ask"><a class="btn sm" href="13-analytics.html">Admin analytics</a></div>
+</div></div><div class="card c6 flow" id="f9"><div class="card-h"><span class="lbl">10 · Learning loop</span><span class="muted sm">Analytics, Admin home</span></div><div class="card-b">
+  <div class="fl-k">Ask it</div><div class="fl-ask"><span class="badge b-brand nodot">“What did we learn this week?”</span><span class="badge b-brand nodot">“What worked last month?”</span></div>
+  <div class="fl-k">Steps the AI runs (shown in the chat as it works)</div><ol class="fl-steps"><li>Read the outcomes: wins, misses, skips and their reasons</li><li>Promote a message structure after 10 outcomes at 60% or better; demote below 60%</li><li>Compare signal sources by how often they convert</li><li>The next run starts from what changed</li></ol>
+  <div class="set-row"><div><div class="k">Produces</div><div class="d">What changed, in the chat and in Analytics. The full run is the monthly learning job.</div></div></div>
+  <div class="set-row"><div><div class="k">Who decides</div><div class="d">The AI proposes; the admin approves rule changes</div></div></div>
+  <div class="fl-k">Settings</div><div class="fl-ask"><a class="btn sm" href="rules.html">Thresholds</a><a class="btn sm" href="index.html">Learning job</a></div>
+</div></div></div>
+  </div>
+</main>
+</div>
+<script src="admin-shell.js"></script>
+<script>ADM.tabs();ADM.showFlow=function(i){var b=document.querySelector('.a-tabs [data-t="steps"]');if(b)b.click();setTimeout(function(){var c=document.getElementById('f'+i);if(!c)return;document.querySelectorAll('.flow.hl').forEach(function(x){x.classList.remove('hl')});c.classList.add('hl');c.scrollIntoView({block:'start',behavior:'smooth'})},30)};</script>
+</body>
+</html>

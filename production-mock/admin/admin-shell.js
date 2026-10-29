@@ -15,13 +15,14 @@
     pen: '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>',
     check: '<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>',
     bars: '<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>',
+    chat: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
     panel: '<rect x="3" y="4" width="18" height="16" rx="2"/><line x1="9" y1="4" x2="9" y2="20"/>'
   };
   var NAV = [
     [null, [['index.html', 'Admin home', 'home']]],
     ['Set up', [['09-setup.html', 'Data and signals', 'data'], ['integrations.html', 'Integrations and email', 'plug'], ['07-content.html', 'Content library', 'book'], ['users.html', 'Users and roles', 'users']]],
     ['Govern', [['rules.html', 'Rules', 'rules'], ['audit.html', 'Audit log', 'audit'], ['settings.html', 'Settings', 'gear']]],
-    ['The process behind the chat', [['10-prospecting.html', 'Prospecting', 'up'], ['11-scoring.html', 'Account scoring', 'pulse'], ['12-nba.html', 'Micro-segments and NBA', 'bolt'], ['15-content-studio.html', 'Content studio', 'pen'], ['14-review.html', 'Review queue', 'check']]],
+    ['The process behind the chat', [['chats.html', 'Chat flows', 'chat'], ['10-prospecting.html', 'Find prospects', 'up'], ['11-scoring.html', 'Score', 'pulse'], ['12-nba.html', 'Segment and route (NBA, NBC)', 'bolt'], ['14-review.html', 'Review queue', 'check'], ['15-content-studio.html', 'Content studio', 'pen']]],
     ['Measure', [['13-analytics.html', 'Analytics', 'bars']]]
   ];
   function svg(n, s) { return '<svg class="nav-ic" width="' + (s || 16) + '" height="' + (s || 16) + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + I[n] + '</svg>'; }

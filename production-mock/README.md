@@ -14,6 +14,7 @@ Open `index.html` in Chrome or Edge (double-click). Fonts need an internet conne
 | `admin/index.html` | Admin home: held records, set-up health, data freshness, the monthly learning job, the system jobs |
 | `admin/integrations.html` | CRM, contact-data providers, signal sources, rep mailboxes, LinkedIn, team chat (placeholders) |
 | `admin/users.html` | People, roles and permissions, teams, invitations |
+| `admin/chats.html` | Chat flows: what each chat runs, step by step, who decides and where it's set |
 | `admin/rules.html` | Who decides what, autonomy ceiling, the six checks, thresholds, ICP, templates, change history |
 | `admin/audit.html` | Audit log of everything the AI and people did |
 | `admin/settings.html` | General, Appearance, Notifications, Security and access, Data and privacy, Usage |
@@ -24,6 +25,12 @@ Open `index.html` in Chrome or Edge (double-click). Fonts need an internet conne
 1. **Prospecting follows the request.** Ask for anyone in any chat ("Find maintenance heads at refineries in Thailand", "Find marketing heads in Sydney working in tech"): the role, place and industry become the list, and the chat is named after it. Scoring, "Route to NBA and NBC", "Save the scored list", "Assign them to Kenji" (manager), "Send them" and "Send an update" all work on that list. When 10 or more accounts share a trigger, they become a new draft campaign in Campaigns; the rest get next best actions in Segments, which go ahead on their own only if they pass the six checks. The new list, segments and campaign stay after a reload. "Find prospects like my last 10 wins" still gives the seeded list.
 2. **Adding a step to a person's sequence.** In a campaign, open a person, then Engagement: **+ Email step** and **+ LinkedIn step** now sit above the sequence as well as below it. The new step opens for editing and scrolls into view, and the panel no longer jumps back to the top. In the campaign itself, **Edit sequence** adds steps the same way.
 3. **The score process is behind an info toggle.** "How the score is calculated" (the six steps and the worked example) is collapsed behind a small ⓘ chip wherever a score is shown. "How scoring works" in Accounts still opens it.
+
+4. **A new step reads as a follow-up.** An email step you add is a reply to the previous email ("Re: …"), and every email step labels its subject and shows "From … · to …", instead of a subject built from the campaign name.
+5. **Lists open beside Today too.** When you find or score a list from the Today chat, the list opens on the right instead of the Today board, and scoring swaps it for the scored list. Click Today in the menu to get the board back.
+6. **The Analytics chat answers from the dashboard.** Ask about meetings against target, reply rate, positive replies, accepted first time, what went ahead on its own, time to a first action, pipeline, overdue items, the funnel, campaigns, or one rep ("How is Kenji doing?"). Naming a rep or "this month" moves the dashboard to match; "we" or "the team" goes back to everyone. "Where are we stuck?" still shows the problems and the fixes.
+7. **Content studio formats.** PPT / PDF, Brochure, Infographic, Single image, Carousel, LinkedIn text post, Podcast and Video show as disabled "Coming soon" options; asking for one says so. Blogs and whitepapers work as before.
+8. **Chat flows in the admin console.** *The process behind the chat* now starts with **Chat flows** (`admin/chats.html`): the ten flows a chat runs (find prospects, score, segment and route, next best actions, campaigns, replies and hand-off, content, objectives and catch-up, analytics, the learning loop), each with example questions, the steps the AI runs as shown in the chat, what it produces, who decides, where it's tracked and links to its settings. The menu items after it follow the same order.
 
 ## Final internal build (28 Oct)
 
