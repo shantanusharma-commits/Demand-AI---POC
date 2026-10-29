@@ -14,6 +14,7 @@ Open `index.html` in Chrome or Edge (double-click). Fonts need an internet conne
 | `admin/index.html` | Admin home: held records, set-up health, data freshness, the monthly learning job, the system jobs |
 | `admin/integrations.html` | CRM, contact-data providers, signal sources, rep mailboxes, LinkedIn, team chat (placeholders) |
 | `admin/users.html` | People, roles and permissions, teams, invitations |
+| `admin/process.html` | The process behind each chat flow, step by step (`#find`, `#score`, `#route`, `#nba`, `#campaigns`, `#replies`, `#content`, `#objectives`, `#analytics`, `#learning`) |
 | `admin/chats.html` | Chat flows: what each chat runs, step by step, who decides and where it's set |
 | `admin/rules.html` | Who decides what, autonomy ceiling, the six checks, thresholds, ICP, templates, change history |
 | `admin/audit.html` | Audit log of everything the AI and people did |
@@ -36,6 +37,8 @@ Open `index.html` in Chrome or Edge (double-click). Fonts need an internet conne
 10. **Next best actions in the chat show their details.** After "Route to NBA and NBC", each next best action shows the person and title, the action, channel and due time, and whether it passed the six checks or which check it failed.
 11. **Assign next actions and campaigns.** The manager can pick an owner for each next best action and assign the whole campaign or all the next actions in one go, in the chat's routing answer and in the Campaigns, Segments, Accounts and Approvals tables. In the chat: "Assign the campaign to Aisha", "Assign the next actions to Marco". Reps see the owner but can't change it.
 12. **Analytics answers come with cards.** Each answer in the Analytics chat shows the numbers it talks about as cards (meetings, reply rate, positive replies, what went ahead, pipeline, overdue, each rep or each campaign). Click a rep card to filter the dashboard, or a campaign card to open it, then use the back chip to return to Analytics.
+
+13. **The process, not the screens, in the admin console.** *The process behind the chat* now lists the ten processes a chat runs (Find prospects, Score, Segment and route, Next best actions, Campaigns, Replies and hand-off, Content, Objectives and catch-up, Analytics, Learning loop) instead of the earlier prototype screens. Each opens `admin/process.html#<flow>`: what it does and how to ask for it, then each step in order, marked as done by the AI, a check, a decision (with what happens on yes and on no) or a person, with the rule or threshold it uses, a link to change it, and what came through the last run. A side panel lists every rule the process runs within. The Review queue moved to Govern; the earlier prototype screens are linked at the bottom of All chat flows.
 
 ## Final internal build (28 Oct)
 
