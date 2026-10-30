@@ -308,24 +308,25 @@ function content(kicker, title, section) {
 
   /* 10 Our understanding: six micro-segments */
   s = content('Account scoring · Segments', 'Our understanding: six reasons a site buys now', 'Understanding');
-  const segRows = [['Inquiry', 'Inquiry or RFQ', 'Answer the question they asked while it is live', 'Call to follow up on the inquiry · Route the inquiry to the sales owner'],
-    ['Modernisation', 'Installed system near end of support', 'Plan the migration before end of support forces the timing', 'Propose a migration-path discussion · Offer a site assessment · Offer a lifecycle service review'],
-    ['Service renewal', 'Service contract renewal', 'Check the cover still fits how the site runs today', 'Offer a renewal review · Route to the service owner'],
-    ['Project', 'Capital project', 'Settle the control scope while the design is still open', 'Share a case study and offer a technical session · Offer a reference-site visit · Offer an early design workshop'],
-    ['Leadership', 'Leadership change', 'Be useful to a new leader setting priorities', 'Introduce Client to the new leader · Share a peer case study · Invite to a short briefing'],
-    ['Engagement', 'Webinar, download or email click', 'Follow up on the topic they chose to engage with', 'Follow up on the topic they engaged with · Invite to a related session']];
-  const hd = t => ({ text: t, options: { bold: true, color: WHITE, fill: { color: INK }, fontSize: 12.5 } });
-  s.addTable([[hd('Micro-segment'), hd('Signal that triggers it'), hd('Angle (the play)'), hd('Actions your team sets in Setup')],
-    ...segRows.map((r, i) => r.map((t, j) => ({ text: t, options: { fontSize: 12, bold: j === 0, fill: { color: i % 2 ? WHITE : MIST } } })))],
-  { x: X0, y: 1.45, w: CW, colW: [1.75, 2.45, 3.1, 4.83], rowH: 0.5, border: { type: 'solid', pt: 0.5, color: HEX.line }, valign: 'middle', margin: 0.07, color: INK });
-  T(s, 'HOW THE NEXT BEST ACTION IS CHOSEN', { x: X0, y: 5.42, w: 6, h: 0.3, fontSize: 12, bold: true, color: RUST, charSpacing: 1.5 });
-  [['Your inputs', 'Your team sets the segments and actions in Setup; they guide the AI.'], ['AI decides', 'The AI picks the action that fits the signal, the person and the account.'],
-   ['Outside the list', 'A new action or segment the AI suggests goes to For Review, tagged, for a person to approve.']].forEach(([h, d], i) => {
-    const x = X0 + i * 4.08;
-    box(s, x, 5.78, 3.9, 1.0, i === 1 ? INK : PALE);
-    disc(s, x + 0.2, 6.05, 0.45, AMBER, String(i + 1), INK, 13);
-    T(s, [{ text: h, options: { bold: true, breakLine: true, fontSize: 14.5 } }, { text: d, options: { fontSize: 12 } }], { x: x + 0.8, y: 5.78, w: 2.95, h: 1.0, valign: 'middle', color: i === 1 ? WHITE : INK });
-  });
+  const segRows = [['Inquiry', 'Inquiry or RFQ', 'Answer the question they asked while it is live', 'Call to follow up on the inquiry · Route the inquiry to the sales owner',
+      'Same play: answer fast. Share the one-shutdown migration case study; route to the sales owner for their region.'],
+    ['Modernisation', 'Installed system near end of support', 'Plan the migration before end of support forces the timing', 'Propose a migration-path discussion · Offer a site assessment · Offer a lifecycle service review',
+      "Their system may be another vendor's: lead with a site assessment and the migration case study, not a lifecycle review."],
+    ['Service renewal', 'Service contract renewal', 'Check the cover still fits how the site runs today', 'Offer a renewal review · Route to the service owner',
+      'Rarely applies: renewals are with existing customers. A new buyer with a renewal elsewhere is treated as Modernisation.'],
+    ['Project', 'Capital project', 'Settle the control scope while the design is still open', 'Share a case study and offer a technical session · Offer a reference-site visit · Offer an early design workshop',
+      'The best way in: the plant-expansion case study, then a reference-site visit so they see a similar site running.'],
+    ['Leadership', 'Leadership change', 'Be useful to a new leader setting priorities', 'Introduce Client to the new leader · Share a peer case study · Invite to a short briefing',
+      'Introduce Client and what comparable sites run; share the peer story on first-100-day priorities.'],
+    ['Engagement', 'Webinar, download or email click', 'Follow up on the topic they chose to engage with', 'Follow up on the topic they engaged with · Invite to a related session',
+      'Send the session recording and invite them to a related session; no sales ask yet.']];
+  const hd = (t, f) => ({ text: t, options: { bold: true, color: f ? INK : WHITE, fill: { color: f ? AMBER : INK }, fontSize: 12 } });
+  s.addTable([[hd('Micro-segment'), hd('Signal that triggers it'), hd('Angle (the play)'), hd('Actions your team sets in Setup'), hd('For a new buyer (net-new account)', true)],
+    ...segRows.map((r, i) => r.map((t, j) => ({ text: t, options: { fontSize: 11, bold: j === 0, fill: { color: j === 4 ? PALE : i % 2 ? WHITE : MIST } } })))],
+  { x: X0, y: 1.45, w: CW, colW: [1.45, 1.85, 2.4, 3.25, 3.18], rowH: 0.62, border: { type: 'solid', pt: 0.5, color: HEX.line }, valign: 'middle', margin: 0.06, color: INK });
+  T(s, [{ text: 'How the action is chosen: ', options: { bold: true } }, { text: 'your team sets the actions in Setup, the AI picks the one that fits the signal and person, and anything outside the list goes to For Review, tagged.' }],
+    { x: X0, y: 6.4, w: CW, h: 0.45, fontSize: 12.5, color: SLATE, valign: 'middle' });
+  s.addNotes('The right-hand column is how the play changes for a fresh buyer, an account that is not yet a customer. The content named is the approved content in the Content library: the migration case study, the site assessment one-pager, the plant-expansion case study, the peer story and the webinar recording.');
 
   /* 11-13 Key questions: NBA */
   questions('Understanding · Micro-segments & NBA · 1 of 3', 'Micro-segments & NBA: key questions (1/3)', 'NEXT BEST ACTION', [
@@ -383,20 +384,32 @@ function content(kicker, title, section) {
   pres.addSection({ title: 'Success criteria' });
   s = pres.addSlide({ masterName: 'CONTENT', sectionTitle: 'Success criteria' });
   s.addText('SUCCESS CRITERIA · THE TWO MAIN MEASURES', { placeholder: 'kicker' }); s.addText('The pilot is judged on two measures: G1 and G2', { placeholder: 'title' });
-  [['G1', 'Human review effort', 'How much time does a person spend making each first action usable?', [['Measured as', 'Review minutes per usable first action, from For Review timings'], ['Compared with', 'Your timed baseline (placeholder: 38 minutes today)'], ['Passes when', 'Effort drops by at least 50%']], '38 min → 19 min or less'],
-   ['G2', 'Acceptance rate', 'How often does a person accept the recommended action on the first pass?', [['Measured as', 'Accepted ÷ decided, first-pass and exception items'], ['Counts as accepted', 'Accepted as is, or within one alternative'], ['Passes when', 'At least 70% are accepted']], '7 of every 10 or more']].forEach(([g, h, q, rows, ex], i) => {
-    const x = X0 + i * 6.15, dark = i === 0;
-    box(s, x, 1.5, 5.9, 4.85, dark ? INK : PALE);
-    T(s, g, { x: x + 0.3, y: 1.65, w: 1.6, h: 1.0, fontSize: 54, bold: true, color: AMBER });
-    T(s, [{ text: h, options: { bold: true, fontSize: 22, breakLine: true } }, { text: q, options: { fontSize: 13, italic: true } }], { x: x + 1.9, y: 1.7, w: 3.8, h: 1.1, color: dark ? WHITE : INK, valign: 'middle' });
-    rows.forEach(([k, v], j) => {
-      box(s, x + 0.3, 3.0 + j * 0.72, 5.3, 0.62, dark ? SLATE : WHITE);
-      T(s, [{ text: k + '   ', options: { bold: true, color: dark ? AMBER : RUST } }, { text: v }], { x: x + 0.5, y: 3.0 + j * 0.72, w: 5.0, h: 0.62, fontSize: 13, color: dark ? WHITE : INK, valign: 'middle' });
-    });
-    T(s, [{ text: 'Example  ', options: { bold: true, color: dark ? AMBER : RUST } }, { text: ex, options: { bold: true } }], { x: x + 0.3, y: 5.3, w: 5.3, h: 0.5, fontSize: 15, color: dark ? WHITE : INK, valign: 'middle' });
-  });
-  T(s, 'Both read "too early to call" until 10 decisions are counted. Baseline, thresholds and the minimum are agreed with you at baselining and can be changed by a manager.', { x: X0, y: 6.45, w: CW, h: 0.5, fontSize: 12, color: GREY });
-  s.addNotes('G1 asks whether the system saves people time; G2 asks whether people trust what it recommends. Spot-checked items count towards both, so the measures are not only drawn from the items people chose to look at.');
+  const gcard = (i, g, h, q, formula, example, pass) => {
+    const x = X0 + i * 6.15, dark = i === 0, fg = dark ? WHITE : INK, ac = dark ? AMBER : RUST;
+    box(s, x, 1.45, 5.9, 4.6, dark ? INK : PALE);
+    T(s, g, { x: x + 0.3, y: 1.55, w: 1.4, h: 0.9, fontSize: 48, bold: true, color: AMBER, valign: 'middle' });
+    T(s, [{ text: h, options: { bold: true, fontSize: 21, breakLine: true } }, { text: q, options: { fontSize: 12.5, italic: true } }], { x: x + 1.7, y: 1.55, w: 4.0, h: 0.9, color: fg, valign: 'middle' });
+    T(s, 'THE FORMULA', { x: x + 0.3, y: 2.6, w: 3, h: 0.25, fontSize: 10.5, bold: true, color: ac, charSpacing: 1 });
+    box(s, x + 0.3, 2.88, 5.3, 1.05, dark ? SLATE : WHITE);
+    T(s, formula, { x: x + 0.45, y: 2.88, w: 5.0, h: 1.05, fontSize: 13, color: fg, valign: 'middle' });
+    T(s, 'WORKED EXAMPLE', { x: x + 0.3, y: 4.05, w: 3, h: 0.25, fontSize: 10.5, bold: true, color: ac, charSpacing: 1 });
+    T(s, example, { x: x + 0.3, y: 4.32, w: 5.3, h: 1.05, fontSize: 12.5, color: fg });
+    T(s, [{ text: 'Passes when  ', options: { bold: true, color: ac } }, { text: pass, options: { bold: true } }], { x: x + 0.3, y: 5.45, w: 5.3, h: 0.45, fontSize: 15, color: fg, valign: 'middle' });
+  };
+  gcard(0, 'G1', 'Human review effort', 'Does DemandAI save people time?',
+    [{ text: 'Minutes per action = ', options: { bold: true } }, { text: 'minutes people spent deciding in For Review ÷ actions released', options: { breakLine: true } },
+     { text: 'Effort saved = ', options: { bold: true } }, { text: '1 − (minutes per action ÷ baseline)' }],
+    '20 actions released; people spent 150 minutes reviewing in total. 150 ÷ 20 = 7.5 minutes per action. Today it takes 38 minutes, so 1 − 7.5 ÷ 38 = 80% less effort.',
+    'effort is at least 50% lower than the baseline');
+  gcard(1, 'G2', 'Acceptance rate', 'Do people trust what it recommends?',
+    [{ text: 'Acceptance = ', options: { bold: true } }, { text: 'recommendations accepted on the first look ÷ recommendations decided', options: { breakLine: true } },
+     { text: 'Counted from: ', options: { bold: true } }, { text: 'the exception queue and the weekly spot-check, weighted by how many items took each path' }],
+    'Spot-check: 8 of 10 accepted (80%), on the 60% of items that went ahead. Queue: 5 of 10 accepted (50%), on the other 40%. 80% × 0.6 + 50% × 0.4 = 68%.',
+    'at least 70% are accepted (68% falls just short)');
+  box(s, X0, 6.2, CW, 0.7, MIST);
+  T(s, [{ text: 'Too early to call: ', options: { bold: true } }, { text: 'neither measure is judged until 10 decisions have been counted (spot-checks plus queue decisions). With 3 decisions, one rejection would swing G2 by 33 points. Baseline (38 min), thresholds and the 10 are agreed with you at baselining.' }],
+    { x: X0 + 0.25, y: 6.2, w: CW - 0.5, h: 0.7, fontSize: 12.5, valign: 'middle' });
+  s.addNotes('G1: the minutes come from how long each For Review decision took, logged automatically. Actions that went ahead on their own take no review minutes, which is where the saving comes from. G2: only first-pass decisions count. Choosing an alternative after a rejection is tracked separately, not as an acceptance.');
 
   const criteria = (title, rows, foot) => {
     const q = pres.addSlide({ masterName: 'CONTENT', sectionTitle: 'Success criteria' });
