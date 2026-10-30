@@ -56,7 +56,7 @@ function content(kicker, title, section) {
     ['shield', fa.FaShieldHalved, HEX.amber], ['brain', fa.FaBrain, HEX.amber], ['search', fa.FaMagnifyingGlassChart, HEX.ink], ['bolt', fa.FaBolt, HEX.ink],
     ['layers', fa.FaLayerGroup, HEX.teal], ['server', fa.FaServer, HEX.teal], ['lock', fa.FaLock, HEX.teal], ['db', fa.FaDatabase, HEX.teal], ['robot', fa.FaRobot, HEX.teal], ['cloud', fa.FaCloud, HEX.teal],
     ['check', fa.FaCircleCheck, HEX.teal], ['stop', fa.FaHand, HEX.rust], ['file', fa.FaFileLines, HEX.ink], ['people', fa.FaPeopleGroup, HEX.ink], ['cal', fa.FaCalendarDays, HEX.ink],
-    ['chat', fa.FaComments, HEX.ink], ['folder', fa.FaFolderOpen, HEX.ink], ['key', fa.FaKey, HEX.ink], ['flag', fa.FaFlagCheckered, HEX.ink], ['arrow', fa.FaArrowRight, HEX.grey]])
+    ['chat', fa.FaComments, HEX.ink], ['folder', fa.FaFolderOpen, HEX.ink], ['key', fa.FaKey, HEX.ink], ['flag', fa.FaFlagCheckered, HEX.ink], ['arrow', fa.FaArrowRight, HEX.grey], ['boltA', fa.FaBolt, HEX.amber]])
     I[k] = await icon(comp, col);
 
   /* 1 Cover */
@@ -95,9 +95,9 @@ function content(kicker, title, section) {
   T(s, 'Micro-segments & Next Best Action', { x: 7.83, y: 2.0, w: 4.7, h: 0.5, fontSize: 22, bold: true, color: WHITE, valign: 'middle' });
   T(s, 'Turns the best prospects into actions your reps can use today', { x: 7.13, y: 2.7, w: 5.3, h: 0.4, fontSize: 14, italic: true, color: LINE });
   T(s, bullets(['Groups accounts that share a reason into micro-segments', 'Recommends the next best action and channel', 'Drafts the first message from approved content only',
-    'Checks brand, consent and sensitive topics', 'Routes exceptions for review; releases the rest to reps']), { x: 7.13, y: 3.3, w: 5.4, h: 2.4, fontSize: 15, color: WHITE });
+    'Checks brand, consent and sensitive topics', 'Routes exceptions to For Review; releases the rest to reps']), { x: 7.13, y: 3.3, w: 5.4, h: 2.4, fontSize: 15, color: WHITE });
   box(s, 7.13, 5.65, 5.2, 0.45, AMBER);
-  T(s, 'Every outcome feeds the next build.', { x: 7.13, y: 5.65, w: 5.2, h: 0.45, align: 'center', valign: 'middle', bold: true, fontSize: 14 });
+  T(s, 'A person decides anything the system cannot.', { x: 7.13, y: 5.65, w: 5.2, h: 0.45, align: 'center', valign: 'middle', bold: true, fontSize: 14 });
   s.addImage({ data: I.arrow, x: 6.38, y: 3.8, w: 0.3, h: 0.3 });
   s.addNotes('Two modules, one flow. Scoring decides who has a reason to buy now; NBA decides what each rep does about it. Nothing is sent automatically in the pilot: reps send from their own tools.');
 
@@ -151,7 +151,7 @@ function content(kicker, title, section) {
       ['Timing Scorer', 'Weights each signal by type and how fresh it is.', 'Agrees the weights'],
       ['Tier Ranker', 'Ranks people into tiers A, B and C and explains why now.', 'Chooses who is handed off']]],
     ['Segment and plan', [['Segmenter', 'Groups accounts that share a reason to buy into micro-segments of three or more.', 'Manager approves new segments'],
-      ['Action Recommender', 'Picks the next best action from the segment play and the signal.', 'Rep accepts or picks another'],
+      ['Action Recommender', 'Picks the next best action from the actions your team set in Setup; the AI chooses the one that fits the signal and person.', 'Rep accepts or picks another'],
       ['Channel Picker', 'Chooses email, LinkedIn or a call, within consent and verification limits.', 'Rep can change the channel'],
       ['Deal Sizer', 'Estimates the first deal and how confident the recommendation is.', 'Manager sets the thresholds']]],
     ['Draft', [['Brief Builder', 'Sets out who, why now, the angle, the proof point and the ask.', 'Marketing owns the plays'],
@@ -162,13 +162,9 @@ function content(kicker, title, section) {
       ['Consent Guard', 'Stops anyone who opted out or has no recognised consent before hand-off.', 'Admin confirms the bases'],
       ['Sensitive-topic Router', 'Sends incidents, security and regulation topics to the sales manager.', 'Manager approves or rejects'],
       ['Spot-checker', 'Draws about 20% of released actions each week, at least one per rep, for rating.', 'Manager rates the sample']]],
-    ['Release and learn', [['Rep Hand-off', "Releases ready actions to each rep's list for today.", 'Rep works the list'],
-      ['Outcome Tracker', 'Records replies, meetings, rejections and the reasons given.', 'Rep logs the outcome'],
-      ['Learning Loop', 'After enough decisions, shifts which actions a segment gets.', 'Manager reviews the change'],
-      ['Metrics Reporter', 'Reports review effort, first-pass acceptance and pipeline.', 'Leaders review trends']]]];
-  const PLATFORM = [['Orchestrator', 'Runs each upload, scoring run and build as a job, in order, and picks up after a restart.', 'Admin watches the jobs'],
-    ['Document Reader', 'Reads Excel and CSV lists and signal files, and guideline documents.', 'No action needed'],
-    ['AI Gateway', 'Every AI call: approved features only, checks, one repair, rules fallback, logging.', 'Admin switches features on']];
+    ['Release and measure', [['Rep Hand-off', "Releases ready actions to each rep's list for today.", 'Rep works the list'],
+      ['Decision Log', 'Records every accept, reject, edit and alternative, with the reason and the review time.', 'Reviewer gives the reason'],
+      ['Metrics Reporter', 'Reports G1 (human review effort) and G2 (acceptance rate) against the agreed thresholds.', 'Leaders review the readout']]]];
   const nAgents = STAGES.reduce((n, st) => n + st[1].length, 0);
   s = content('AI agents · Overview', `${nAgents} agents across the demand journey`, 'Understanding');
   STAGES.forEach(([h, ags], i) => {
@@ -182,10 +178,10 @@ function content(kicker, title, section) {
     });
   });
   box(s, X0, 5.75, CW, 0.75, PALE);
-  T(s, [{ text: 'Behind every stage', options: { bold: true, breakLine: true } }, { text: '3 platform agents', options: { fontSize: 12, color: SLATE } }], { x: X0 + 0.25, y: 5.8, w: 2.4, h: 0.65, fontSize: 14, valign: 'middle' });
-  PLATFORM.forEach(([n], i) => {
-    s.addShape(pres.shapes.OVAL, { x: 3.6 + i * 3.0, y: 5.98, w: 0.3, h: 0.3, fill: { color: TEAL }, line: { color: TEAL, width: 0 } });
-    T(s, n, { x: 4.05 + i * 3.0, y: 5.8, w: 2.5, h: 0.65, fontSize: 14, bold: true, valign: 'middle' });
+  T(s, [{ text: 'Behind every stage: For Review', options: { bold: true, breakLine: true } }, { text: 'People decide what the system could not', options: { fontSize: 12, color: SLATE } }], { x: X0 + 0.25, y: 5.8, w: 3.4, h: 0.65, fontSize: 14, valign: 'middle' });
+  [['Exception queue', "rep's own checks"], ['Approvals', 'sensitive items, sales manager'], ['Weekly spot-check', 'about 20% of released items']].forEach(([n, d], i) => {
+    s.addShape(pres.shapes.OVAL, { x: 4.0 + i * 2.95, y: 5.98, w: 0.3, h: 0.3, fill: { color: TEAL }, line: { color: TEAL, width: 0 } });
+    T(s, [{ text: n, options: { bold: true, breakLine: true } }, { text: d, options: { fontSize: 11, color: SLATE } }], { x: 4.42 + i * 2.95, y: 5.8, w: 2.5, h: 0.65, fontSize: 14, valign: 'middle' });
   });
   T(s, 'Agents prepare the work. Your team makes every decision.', { x: X0, y: 6.62, w: 7, h: 0.3, fontSize: 13, italic: true, color: SLATE });
   s.addNotes('Each agent has one job. Scoring, segmentation, routing and the checks are tested rules, so every result can be traced; AI words the drafts and suggests segments and actions, behind the gateway and switched off until you approve its results. Agents never send, approve or commit on the company\'s behalf.');
@@ -197,21 +193,69 @@ function content(kicker, title, section) {
     steps.forEach((t, i) => {
       const x = X0 + i * (wEach + 0.08);
       s.addShape(i ? pres.shapes.CHEVRON : pres.shapes.PENTAGON, { x, y, w: wEach, h: 1.0, fill: { color: fill }, line: { color: fill, width: 0 } });
-      disc(s, x + (i ? 0.38 : 0.18), y + 0.31, 0.38, i % 2 ? WHITE : AMBER, String(i + 1), INK, 12);
+      disc(s, x + (i ? 0.38 : 0.18), y + 0.31, 0.38, AMBER, String(i + 1), INK, 12);
       T(s, t, { x: x + (i ? 0.85 : 0.65), y, w: wEach - (i ? 1.25 : 0.95), h: 1.0, fontSize: 13, bold: true, color: txt, valign: 'middle' });
     });
   };
-  chevrons(1.95, 'PROSPECT & ACCOUNT SCORING', ['List upload & clean-up', 'Fit scoring against the ICP', 'Signal scoring & tiering'], PALE, INK, 4.0);
-  T(s, 'MICRO-SEGMENTS & NEXT BEST ACTION', { x: X0, y: 3.45, w: 6, h: 0.3, fontSize: 12, bold: true, color: RUST, charSpacing: 1.5 });
-  ['Hand-off of tier A and B', 'Micro-segmentation', 'Next best action', 'Draft & brand check', 'Review & approval', 'Release to reps', 'Outcomes & learning'].forEach((t, i) => {
+  chevrons(1.95, 'PROSPECT & ACCOUNT SCORING', ['Prospect list upload', 'Account fit scoring', 'Signal upload & tiering'], PALE, INK, 4.0);
+  T(s, 'MICRO-SEGMENTS, NEXT BEST ACTION & FOR REVIEW', { x: X0, y: 3.45, w: 7, h: 0.3, fontSize: 12, bold: true, color: RUST, charSpacing: 1.5 });
+  ['Hand-off of tier A and B', 'Micro-segmentation', 'Next best action', 'Draft & checks', 'For Review', 'Release to reps', 'Analytics: G1 and G2'].forEach((t, i) => {
     const x = X0 + i * 1.74;
-    s.addShape(i ? pres.shapes.CHEVRON : pres.shapes.PENTAGON, { x, y: 3.85, w: 1.66, h: 0.75, fill: { color: INK }, line: { color: INK, width: 0 } });
-    disc(s, x + (i ? 0.62 : 0.5), 4.03, 0.4, AMBER, String(i + 1), INK, 12);
+    s.addShape(i ? pres.shapes.CHEVRON : pres.shapes.PENTAGON, { x, y: 3.85, w: 1.66, h: 0.75, fill: { color: i === 4 ? TEAL : INK }, line: { color: i === 4 ? TEAL : INK, width: 0 } });
+    disc(s, x + (i ? 0.62 : 0.5), 4.03, 0.4, AMBER, String(i + 4), INK, 12);
     T(s, t, { x: x + 0.05, y: 4.7, w: 1.55, h: 0.6, fontSize: 13, bold: true, align: 'center' });
   });
   box(s, X0, 5.55, CW, 0.9, MIST);
-  T(s, [{ text: 'Next: ', options: { bold: true } }, { text: 'the workshop walks through each step as your team works today, so the pilot is configured to your process, not ours.' }],
+  T(s, [{ text: 'Next: ', options: { bold: true } }, { text: 'each step is described on the next three slides. The workshop walks through how your team does each one today, so the pilot is configured to your process.' }],
     { x: X0 + 0.3, y: 5.55, w: CW - 0.6, h: 0.9, fontSize: 15, valign: 'middle' });
+
+  // One card per step: what you give, what DemandAI does, what you see.
+  const steps = (kicker, title, list) => {
+    const q = content(kicker, title, 'Understanding');
+    const n = list.length, cw = (CW - (n - 1) * 0.25) / n, fs = n > 3 ? 12.5 : 13.5;
+    list.forEach(([num, name, give, does, see, hi], i) => {
+      const x = X0 + i * (cw + 0.25);
+      box(q, x, 1.55, cw, 0.8, hi ? TEAL : INK);
+      disc(q, x + 0.18, 1.74, 0.42, AMBER, String(num), INK, 13);
+      T(q, name, { x: x + 0.72, y: 1.55, w: cw - 0.85, h: 0.8, fontSize: 16, bold: true, color: WHITE, valign: 'middle' });
+      box(q, x, 2.35, cw, 4.35, MIST, { rectRadius: 0.04 });
+      T(q, [{ text: 'YOU GIVE', options: { bold: true, color: RUST, fontSize: 10.5, charSpacing: 1, breakLine: true } }, { text: give, options: { fontSize: fs } }],
+        { x: x + 0.2, y: 2.5, w: cw - 0.4, h: 0.95 });
+      T(q, 'DEMANDAI DOES', { x: x + 0.2, y: 3.5, w: cw - 0.4, h: 0.25, bold: true, color: RUST, fontSize: 10.5, charSpacing: 1 });
+      T(q, bullets(does, { paraSpaceAfter: 3 }), { x: x + 0.2, y: 3.78, w: cw - 0.35, h: 1.95, fontSize: fs });
+      box(q, x + 0.12, 5.78, cw - 0.24, 0.8, PALE);
+      T(q, [{ text: 'YOU SEE  ', options: { bold: true, color: RUST, fontSize: 10.5, charSpacing: 1, breakLine: true } }, { text: see, options: { fontSize: fs - 0.5 } }],
+        { x: x + 0.25, y: 5.8, w: cw - 0.5, h: 0.76, valign: 'middle' });
+    });
+    return q;
+  };
+  steps('Understanding · Each step · 1 of 3', 'Prospect & Account Scoring, step by step', [
+    [1, 'Prospect list upload', 'Your prospect list in the DemandAI template (Excel or CSV): people, company, site, consent, opt-out, owner.',
+      ['Checks every required column', 'Fixes or flags bad rows: duplicates, missing fields', 'Holds back opt-outs and unknown consent', 'Groups people into accounts by domain'], 'Accounts and contacts loaded, with each issue and its fix.'],
+    [2, 'Account fit scoring', 'Your ICP rubric: vertical, size, site profile, relationship, account type, contact coverage.',
+      ['Scores each account out of 100 on the rubric', 'Applies the fit floor', 'Marks key accounts managed separately'], 'A fit score for every account, with the reason behind it.'],
+    [3, 'Signal upload & tiering', 'Your signals in the signal template: company, contact, signal type, date, detail.',
+      ['Matches each signal to the account and person', 'Weights it by type and age', 'Combines it with fit into a score', 'Ranks people into tiers A, B and C'], 'A ranked prospect list with why now for each person.'],
+  ]);
+  steps('Understanding · Each step · 2 of 3', 'Micro-segments & Next Best Action, step by step', [
+    [4, 'Hand-off', 'The tier A and B prospects with a live signal (or the ones you pick).',
+      ['Keeps only people who can be contacted', 'Counts the rest as held back, with why'], 'Prospects handed to NBA, and who was held back.'],
+    [5, 'Micro-segmentation', 'The segments in your Setup (six to start with).',
+      ['Groups accounts that share a reason to buy', 'Needs at least 3 accounts per segment', 'AI may suggest a new segment for a manager to approve'], 'Segments, each with its accounts and reason.'],
+    [6, 'Next best action', 'The actions you set per segment in Setup.',
+      ['AI picks the action that fits the signal and person', 'Chooses email, LinkedIn or call within consent', 'Estimates the first deal and confidence'], 'One action per prospect, with why.'],
+    [7, 'Draft & checks', 'Your Content library: brand voice, approved claims, plays, banned words.',
+      ['Writes the first message from approved content', 'Checks brand, claims, length, pricing, consent', 'Regenerates once if a check fails'], 'A ready draft, or the check that stopped it.'],
+  ]);
+  steps('Understanding · Each step · 3 of 3', 'For Review, release and Analytics, step by step', [
+    [8, 'For Review', 'Reviewers: each rep for their own items; the sales manager for approvals.',
+      ['Exception queue: items a check could not clear go to the rep', 'Approvals: sensitive topics (incidents, security, regulation) go to the sales manager', 'Weekly spot-check: about 20% of released items, at least one per rep, rated by a person'],
+      'Accept, edit, choose an alternative or reject, with a reason.', true],
+    [9, 'Release to reps', 'Nothing: items that pass every check go ahead on their own.',
+      ["Puts ready actions on each rep's Today list", 'Reps send from their own email or LinkedIn', 'Nothing is sent automatically'], "Each rep's actions for today, ready to use."],
+    [10, 'Analytics', 'The baseline and thresholds you agree (e.g. 38 minutes per action today).',
+      ['G1: human review minutes per usable first action', 'G2: share accepted on the first pass', 'Too early to call until 10 decisions are counted', 'Pilot readout and weekly summary'], 'Whether the pilot meets G1 and G2, and why.'],
+  ]);
 
   /* 8 Key questions: scoring */
   const questions = (kicker, title, tag, cols, ask) => {
@@ -235,42 +279,53 @@ function content(kicker, title, section) {
     ['C. Buying signals & timing', ['Which signals matter most: inquiries, end of support, renewals, projects, new leaders, webinars?', 'Where does each signal come from, and how fresh is it?', 'How long does a signal stay relevant?', 'Do you track installed-base and contract dates?']],
   ], 'Any additional pain points in finding and prioritising prospects?');
 
-  /* 9 Signal sources */
-  s = content('Account scoring · Sources', 'Where DemandAI looks: buying signals for industrial automation', 'Understanding');
-  const tiers = [['TIER 1 · HIGHEST VALUE', 'First-party intent', 'The buyer has raised a hand', ['Website inquiries and RFQs', 'Webinar attendance and registration', 'Content downloads', 'Email clicks']],
-    ['TIER 2', 'Installed base & CRM', 'Timing we already know about', ['Control systems near end of support', 'Service contract renewals', 'Past orders and open opportunities', 'Account ownership']],
-    ['TIER 3', 'Market news', 'Why now, at a new account', ['Capital projects: expansion, FEED, FID', 'Leadership changes', 'Planned shutdowns and turnarounds', 'Industry announcements']],
-    ['TIER 4', 'Contact & firmographic data', 'Who to talk to', ['B2B contact databases', 'Professional networks', 'Company websites', 'Event attendee lists']]];
-  tiers.forEach(([tag, h, sub, items], i) => {
-    const x = X0 + i * 3.06, top = i === 0;
-    box(s, x, 1.55, 2.9, 3.35, top ? INK : MIST);
-    disc(s, x + 0.2, 1.72, 0.42, AMBER, String(i + 1), INK, 13);
-    T(s, tag, { x: x + 0.75, y: 1.72, w: 2.05, h: 0.42, fontSize: 10, bold: true, color: top ? AMBER : RUST, valign: 'middle', charSpacing: 1 });
-    T(s, h, { x: x + 0.2, y: 2.25, w: 2.6, h: 0.4, fontSize: 16, bold: true, color: top ? WHITE : INK, fit: 'shrink' });
-    T(s, sub, { x: x + 0.2, y: 2.68, w: 2.6, h: 0.35, fontSize: 12, italic: true, color: top ? LINE : SLATE });
-    T(s, bullets(items, { paraSpaceAfter: 4 }), { x: x + 0.2, y: 3.1, w: 2.6, h: 1.7, fontSize: 13, color: top ? WHITE : INK });
+  /* 9 What DemandAI receives */
+  s = content('Account scoring · Inputs', 'What DemandAI receives: two files in our templates', 'Understanding');
+  T(s, 'DemandAI does not search the web in the pilot. Your team exports prospects and signals from your own systems into two templates and uploads them.', { x: X0, y: 1.3, w: CW, h: 0.4, fontSize: 14, color: SLATE });
+  const tmpl = [['file', 'Prospect template', 'One row per person. Uploaded in Prospecting.',
+      [['Person', 'first_name, last_name, job_title, seniority'], ['Contact', 'email, email_verified, linkedin_url'], ['Company', 'company_name, company_domain, country, industry, revenue, employees'],
+       ['Site', 'site_name, process type, capacity'], ['Relationship', 'existing_customer, account_type, managed_separately'], ['Consent', 'consent_basis, opt_out'], ['Owner', 'owner_email (the rep)']]],
+    ['bolt', 'Signal template', 'One row per signal. Uploaded in Scoring.',
+      [['Who', 'company_name, company_domain, contact_email_or_linkedin'], ['What', 'signal_type (one of the types below, or one you add in Setup)'], ['When', 'event_date'], ['Detail', 'detail, source, product']]]];
+  tmpl.forEach(([ic, h, sub, rows], i) => {
+    const x = X0 + i * 6.15;
+    box(s, x, 1.9, 5.9, 3.6, i ? INK : MIST);
+    s.addImage({ data: i ? I.boltA : I.file, x: x + 0.25, y: 2.08, w: 0.4, h: 0.4 });
+    T(s, h, { x: x + 0.8, y: 2.05, w: 4.9, h: 0.45, fontSize: 19, bold: true, color: i ? WHITE : INK, valign: 'middle' });
+    T(s, sub, { x: x + 0.25, y: 2.55, w: 5.4, h: 0.3, fontSize: 12.5, italic: true, color: i ? LINE : SLATE });
+    rows.forEach(([k, v], j) => T(s, [{ text: k + '  ', options: { bold: true, color: i ? AMBER : RUST } }, { text: v }], { x: x + 0.25, y: 2.95 + j * 0.36, w: 5.45, h: 0.34, fontSize: 12.5, color: i ? WHITE : INK, valign: 'middle' }));
   });
-  T(s, 'HOW DEMANDAI USES THESE SOURCES', { x: X0, y: 5.1, w: 6, h: 0.3, fontSize: 12, bold: true, color: RUST, charSpacing: 1.5 });
-  [['Collect', 'Upload a file or connect a feed, on a schedule'], ['Match', 'To the account by domain and to the person by email'], ['Score', 'Signal weight × freshness × account fit'], ['Tier', 'A, B or C for each person, with why now']].forEach(([h, d], i) => {
+  T(s, 'Signal types: Inquiry or RFQ · Installed system near end of support · Service contract renewal · Capital project · Leadership change · Webinar attended · Webinar registered · Content download · Email clicked',
+    { x: X0 + 6.4, y: 4.4, w: 5.45, h: 1.0, fontSize: 11.5, color: LINE });
+  T(s, 'HOW DEMANDAI USES THE FILES', { x: X0, y: 5.68, w: 6, h: 0.3, fontSize: 12, bold: true, color: RUST, charSpacing: 1.5 });
+  [['Check', 'Columns, values, duplicates, consent'], ['Match', 'Signal to account by domain, to person by email'], ['Score', 'Fit × signal weight × freshness'], ['Tier', 'A, B or C per person, with why now']].forEach(([h, d], i) => {
     const x = X0 + i * 3.06;
-    s.addShape(i ? pres.shapes.CHEVRON : pres.shapes.PENTAGON, { x, y: 5.5, w: 2.98, h: 1.05, fill: { color: PALE }, line: { color: PALE, width: 0 } });
-    disc(s, x + (i ? 0.35 : 0.15), 5.8, 0.42, AMBER, String(i + 1), INK, 12);
-    T(s, [{ text: h, options: { bold: true, breakLine: true, fontSize: 14 } }, { text: d, options: { fontSize: 11.5, color: SLATE } }], { x: x + (i ? 0.88 : 0.68), y: 5.5, w: 1.75, h: 1.05, valign: 'middle' });
+    s.addShape(i ? pres.shapes.CHEVRON : pres.shapes.PENTAGON, { x, y: 6.02, w: 2.98, h: 0.82, fill: { color: PALE }, line: { color: PALE, width: 0 } });
+    disc(s, x + (i ? 0.35 : 0.15), 6.22, 0.42, AMBER, String(i + 1), INK, 12);
+    T(s, [{ text: h, options: { bold: true, breakLine: true, fontSize: 13.5 } }, { text: d, options: { fontSize: 11, color: SLATE } }], { x: x + (i ? 0.88 : 0.68), y: 6.02, w: 1.8, h: 0.82, valign: 'middle' });
   });
+  s.addNotes('In the pilot the data comes from the Client: two uploads in fixed templates. Connectors to CRM, web forms or news feeds are a later phase. Signal types can be extended in Setup; each new type feeds one of the segments.');
 
   /* 10 Our understanding: six micro-segments */
   s = content('Account scoring · Segments', 'Our understanding: six reasons a site buys now', 'Understanding');
-  const segRows = [['Inquiry', 'Inquiry or RFQ', 'Answer the question they asked while it is live', 'Call to follow up · route to the sales owner'],
-    ['Modernisation', 'Control system near end of support', 'Plan the migration before end of support forces the timing', 'Migration-path discussion · site assessment · lifecycle review'],
-    ['Service renewal', 'Service contract renewal', 'Check the cover still fits how the site runs today', 'Renewal review · route to the service owner'],
-    ['Project', 'Capital project announced', 'Settle the control scope while the design is still open', 'Case study and technical session · reference visit · design workshop'],
-    ['Leadership', 'New leader at the site', 'Be useful to a new leader setting priorities', 'Introduce Client · peer case study · short briefing'],
-    ['Engagement', 'Webinar, download or email click', 'Follow up on the topic they chose to engage with', 'Follow up on the topic · invite to a related session']];
-  const hd = t => ({ text: t, options: { bold: true, color: WHITE, fill: { color: INK }, fontSize: 13 } });
-  s.addTable([[hd('Micro-segment'), hd('Signal that triggers it'), hd('Angle (the play)'), hd('Next best actions')],
-    ...segRows.map((r, i) => r.map((t, j) => ({ text: t, options: { fontSize: 13, bold: j === 0, fill: { color: i % 2 ? WHITE : MIST } } })))],
-  { x: X0, y: 1.55, w: CW, colW: [2.1, 2.9, 3.6, 3.53], rowH: 0.6, border: { type: 'solid', pt: 0.5, color: HEX.line }, valign: 'middle', margin: 0.08, color: INK });
-  T(s, 'The starting set. In the pilot the AI may suggest new segments from the signals it sees; a manager approves each one, and a segment needs at least three accounts.', { x: X0, y: 6.05, w: CW, h: 0.6, fontSize: 13, italic: true, color: SLATE });
+  const segRows = [['Inquiry', 'Inquiry or RFQ', 'Answer the question they asked while it is live', 'Call to follow up on the inquiry · Route the inquiry to the sales owner'],
+    ['Modernisation', 'Installed system near end of support', 'Plan the migration before end of support forces the timing', 'Propose a migration-path discussion · Offer a site assessment · Offer a lifecycle service review'],
+    ['Service renewal', 'Service contract renewal', 'Check the cover still fits how the site runs today', 'Offer a renewal review · Route to the service owner'],
+    ['Project', 'Capital project', 'Settle the control scope while the design is still open', 'Share a case study and offer a technical session · Offer a reference-site visit · Offer an early design workshop'],
+    ['Leadership', 'Leadership change', 'Be useful to a new leader setting priorities', 'Introduce Client to the new leader · Share a peer case study · Invite to a short briefing'],
+    ['Engagement', 'Webinar, download or email click', 'Follow up on the topic they chose to engage with', 'Follow up on the topic they engaged with · Invite to a related session']];
+  const hd = t => ({ text: t, options: { bold: true, color: WHITE, fill: { color: INK }, fontSize: 12.5 } });
+  s.addTable([[hd('Micro-segment'), hd('Signal that triggers it'), hd('Angle (the play)'), hd('Actions your team sets in Setup')],
+    ...segRows.map((r, i) => r.map((t, j) => ({ text: t, options: { fontSize: 12, bold: j === 0, fill: { color: i % 2 ? WHITE : MIST } } })))],
+  { x: X0, y: 1.45, w: CW, colW: [1.75, 2.45, 3.1, 4.83], rowH: 0.5, border: { type: 'solid', pt: 0.5, color: HEX.line }, valign: 'middle', margin: 0.07, color: INK });
+  T(s, 'HOW THE NEXT BEST ACTION IS CHOSEN', { x: X0, y: 5.42, w: 6, h: 0.3, fontSize: 12, bold: true, color: RUST, charSpacing: 1.5 });
+  [['Your inputs', 'Your team sets the segments and actions in Setup; they guide the AI.'], ['AI decides', 'The AI picks the action that fits the signal, the person and the account.'],
+   ['Outside the list', 'A new action or segment the AI suggests goes to For Review, tagged, for a person to approve.']].forEach(([h, d], i) => {
+    const x = X0 + i * 4.08;
+    box(s, x, 5.78, 3.9, 1.0, i === 1 ? INK : PALE);
+    disc(s, x + 0.2, 6.05, 0.45, AMBER, String(i + 1), INK, 13);
+    T(s, [{ text: h, options: { bold: true, breakLine: true, fontSize: 14.5 } }, { text: d, options: { fontSize: 12 } }], { x: x + 0.8, y: 5.78, w: 2.95, h: 1.0, valign: 'middle', color: i === 1 ? WHITE : INK });
+  });
 
   /* 11-13 Key questions: NBA */
   questions('Understanding · Micro-segments & NBA · 1 of 3', 'Micro-segments & NBA: key questions (1/3)', 'NEXT BEST ACTION', [
@@ -284,7 +339,7 @@ function content(kicker, title, section) {
     ['I. Consent & data', ['Which consent bases apply in each country?', 'How are opt-outs captured and shared?', 'Any data residency requirements?', 'What happens to pilot data at the end?']],
   ]);
   questions('Understanding · Micro-segments & NBA · 3 of 3', 'Micro-segments & NBA: key questions (3/3)', 'NEXT BEST ACTION', [
-    ['J. Learning & measurement', ['Are outcomes (reply, meeting, opportunity) recorded today, and where?', 'Is there a report of outbound metrics?', 'Is win or loss linked back to the first touch?', 'How should the system learn from rejected suggestions?']],
+    ['J. Learning & measurement', ['Are outcomes (reply, meeting, opportunity) recorded today, and where?', 'Is there a report of outbound metrics?', 'Is win or loss linked back to the first touch?', 'Which outcomes matter most to sales leadership?']],
     ['K. Baseline numbers', ['Research time per account', 'Time from signal to first touch', 'Reply and meeting rates by channel', 'Pipeline sourced from outbound', 'Accounts a rep works per week']],
   ]);
 
@@ -324,11 +379,28 @@ function content(kicker, title, section) {
     T(s, bullets(items, { paraSpaceAfter: 4 }), { x: x + 0.25, y: y + 1.05, w: 3.45, h: 1.2, fontSize: 13.5, color: SLATE });
   });
 
-  /* 17-18 Success criteria */
+  /* 17-19 Success criteria */
   pres.addSection({ title: 'Success criteria' });
+  s = pres.addSlide({ masterName: 'CONTENT', sectionTitle: 'Success criteria' });
+  s.addText('SUCCESS CRITERIA · THE TWO MAIN MEASURES', { placeholder: 'kicker' }); s.addText('The pilot is judged on two measures: G1 and G2', { placeholder: 'title' });
+  [['G1', 'Human review effort', 'How much time does a person spend making each first action usable?', [['Measured as', 'Review minutes per usable first action, from For Review timings'], ['Compared with', 'Your timed baseline (placeholder: 38 minutes today)'], ['Passes when', 'Effort drops by at least 50%']], '38 min → 19 min or less'],
+   ['G2', 'Acceptance rate', 'How often does a person accept the recommended action on the first pass?', [['Measured as', 'Accepted ÷ decided, first-pass and exception items'], ['Counts as accepted', 'Accepted as is, or within one alternative'], ['Passes when', 'At least 70% are accepted']], '7 of every 10 or more']].forEach(([g, h, q, rows, ex], i) => {
+    const x = X0 + i * 6.15, dark = i === 0;
+    box(s, x, 1.5, 5.9, 4.85, dark ? INK : PALE);
+    T(s, g, { x: x + 0.3, y: 1.65, w: 1.6, h: 1.0, fontSize: 54, bold: true, color: AMBER });
+    T(s, [{ text: h, options: { bold: true, fontSize: 22, breakLine: true } }, { text: q, options: { fontSize: 13, italic: true } }], { x: x + 1.9, y: 1.7, w: 3.8, h: 1.1, color: dark ? WHITE : INK, valign: 'middle' });
+    rows.forEach(([k, v], j) => {
+      box(s, x + 0.3, 3.0 + j * 0.72, 5.3, 0.62, dark ? SLATE : WHITE);
+      T(s, [{ text: k + '   ', options: { bold: true, color: dark ? AMBER : RUST } }, { text: v }], { x: x + 0.5, y: 3.0 + j * 0.72, w: 5.0, h: 0.62, fontSize: 13, color: dark ? WHITE : INK, valign: 'middle' });
+    });
+    T(s, [{ text: 'Example  ', options: { bold: true, color: dark ? AMBER : RUST } }, { text: ex, options: { bold: true } }], { x: x + 0.3, y: 5.3, w: 5.3, h: 0.5, fontSize: 15, color: dark ? WHITE : INK, valign: 'middle' });
+  });
+  T(s, 'Both read "too early to call" until 10 decisions are counted. Baseline, thresholds and the minimum are agreed with you at baselining and can be changed by a manager.', { x: X0, y: 6.45, w: CW, h: 0.5, fontSize: 12, color: GREY });
+  s.addNotes('G1 asks whether the system saves people time; G2 asks whether people trust what it recommends. Spot-checked items count towards both, so the measures are not only drawn from the items people chose to look at.');
+
   const criteria = (title, rows, foot) => {
     const q = pres.addSlide({ masterName: 'CONTENT', sectionTitle: 'Success criteria' });
-    q.addText('SUCCESS CRITERIA', { placeholder: 'kicker' }); q.addText(title, { placeholder: 'title' });
+    q.addText('SUCCESS CRITERIA · OTHER MEASURES', { placeholder: 'kicker' }); q.addText(title, { placeholder: 'title' });
     const h = t => ({ text: t, options: { bold: true, fill: { color: AMBER }, fontSize: 12 } });
     q.addTable([[h('#'), h('Baseline metric'), h('Metric definition'), h('How we measure it'), h('Metric illustration (examples)'), h('Rating scale')],
       ...rows.map((r, i) => [String(i + 1), ...r, '☆☆☆☆☆'].map((t, j) => ({ text: t, options: { fontSize: 12, bold: j === 1, color: j === 5 ? GREY : INK, fill: { color: i % 2 ? WHITE : MIST } } })))],
@@ -336,7 +408,7 @@ function content(kicker, title, section) {
     T(q, foot, { x: X0, y: 6.45, w: CW, h: 0.5, fontSize: 11, color: GREY });
     return q;
   };
-  criteria('How we will measure success: Prospect & Account Scoring', [
+  criteria('Other measures: Prospect & Account Scoring', [
     ['Accounts covered*', 'How many target accounts are reviewed for buying signals today?', 'Accounts with a current score each month', 'Today 200 by hand | 2,000+ scored weekly'],
     ['Research effort*', 'How long does a rep spend finding out why to call an account?', 'Minutes per account', '30 minutes today vs 5 minutes to review | 80% less'],
     ['Signal-to-touch time*', 'How long after a signal does the first touch happen?', 'Average days from signal date to first touch', 'Not measured today vs within 3 working days'],
@@ -344,14 +416,14 @@ function content(kicker, title, section) {
     ['List quality*', 'How many rows are unusable: duplicates, no contact, opted out?', 'Issues found per 1,000 rows', 'Flagged before scoring, with a fix suggested'],
     ['Missed signals', 'How many live signals were not acted on?', 'Signals older than 30 days with no touch', 'Not measured today vs tracked weekly']],
   '* can be measured during the pilot phase. Figures in the illustration column are examples to agree at baselining, not commitments.');
-  criteria('How we will measure success: Micro-segments & NBA', [
-    ['Review effort (G1)*', 'How much time does a person spend checking each action before it goes out?', 'Review minutes per released action', '10 minutes today | 50% less'],
-    ['First-pass acceptance (G2)*', 'How often is the recommended action accepted without change?', 'Accepted ÷ decided, first pass and exceptions', '60% accepted first time, or within one alternative'],
+  criteria('Other measures: Micro-segments, NBA & For Review', [
+    ['Go ahead on their own*', 'How many actions pass every check without a person?', 'Released automatically ÷ all actions', '6 in 10 go ahead; the rest are reviewed'],
     ['Messages on brand*', 'How many drafts pass the brand, claim and consent checks?', 'Share of drafts with no flag', '95% pass; the rest are corrected once automatically'],
-    ['Reply and meeting rate*', 'Do recommended actions get more responses?', 'Replies and meetings per 100 touches', 'Pilot reps vs the same reps last year'],
+    ['Spot-check rating*', 'Are released actions good when a person checks a sample?', 'Average rating of the weekly 20% sample', '4 out of 5 or better'],
     ['Rep adoption*', 'Do reps use the list each week?', 'Weekly active reps; actions worked', '4 of 5 reps active every week'],
+    ['Reply and meeting rate', 'Do recommended actions get more responses?', 'Replies and meetings per 100 touches', 'Pilot reps vs the same reps last year'],
     ['Pipeline sourced', 'What pipeline starts from a DemandAI action?', 'Opportunities and value linked to a first touch', 'Tracked from pilot week 4']],
-  '* can be measured during the pilot phase. Revenue attribution needs CRM linkage and a longer window; open to discussion.');
+  '* can be measured during the pilot phase. Reply rates and pipeline need outcomes from your CRM; revenue attribution needs a longer window. Open to discussion.');
 
   /* 19 Timeline */
   pres.addSection({ title: 'Timeline' });
@@ -452,7 +524,7 @@ function content(kicker, title, section) {
       { text: y, options: { fontSize: 14, color: TEAL, bold: true, fill: { color: i % 2 ? WHITE : MIST } } }])],
     { x: X0, y: 1.6, w: CW, colW: [2.8, 6.2, 3.13], rowH: 0.82, border: { type: 'solid', pt: 0.5, color: HEX.line }, valign: 'middle', margin: 0.12, color: INK });
   };
-  const all = [...STAGES, ['Platform', PLATFORM]];
+  const all = STAGES;
   all.forEach(([h, ags], i) => detail(i + 1, all.length, h, ags));
 
   /* Validation dimensions */
