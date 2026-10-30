@@ -38,6 +38,8 @@ export const envSchema = z
     LOG_LEVEL: z.enum(LOG_LEVELS).default('info'),
     LOG_SLOW_QUERY_MS: int(500),
     TRUSTED_PROXY_HOPS: int(1, 1, 5),
+    // A client's look: the folder under public/themes/ (local only, never committed); unset keeps the app's own.
+    APP_THEME: z.string().regex(/^[a-z0-9-]{1,40}$/, 'must be a theme folder name (a-z, 0-9 and -)').optional(),
 
     // Database (D-28). Required once the app stores data (Phase 2).
     DATABASE_URL: postgresUrl.optional(),
@@ -82,6 +84,10 @@ export const envSchema = z
     AI_FEATURE_CLASSIFY: flag(false),
     AI_FEATURE_COPILOT: flag(false),
     AI_FEATURE_CONTENT_STUDIO: flag(false),
+    // 30 Oct 2026: the micro-segment and next best action the AI chooses, and a brand guideline read by the AI.
+    AI_FEATURE_SEGMENTS: flag(false),
+    AI_FEATURE_NEXT_ACTION: flag(false),
+    AI_FEATURE_GUIDELINE: flag(false),
     AZURE_OPENAI_ENDPOINT: modelUrl.optional(),
     AZURE_OPENAI_API_KEY: z.string().optional(),
     AZURE_OPENAI_DEPLOYMENT: z.string().optional(),
@@ -155,7 +161,8 @@ export function parseEnv(source: Record<string, string | undefined>): EnvResult 
     warnings.push('APP_BASE_URL is not https: session cookies will not be marked Secure');
   }
   if (env.AI_PROVIDER === 'none') {
-    const on = (['AI_FEATURE_DRAFTING', 'AI_FEATURE_WHY_NOW', 'AI_FEATURE_CLASSIFY', 'AI_FEATURE_COPILOT', 'AI_FEATURE_CONTENT_STUDIO'] as const).filter(k => env[k]);
+    const on = (['AI_FEATURE_DRAFTING', 'AI_FEATURE_WHY_NOW', 'AI_FEATURE_CLASSIFY', 'AI_FEATURE_COPILOT', 'AI_FEATURE_CONTENT_STUDIO', 'AI_FEATURE_SEGMENTS',
+      'AI_FEATURE_NEXT_ACTION', 'AI_FEATURE_GUIDELINE'] as const).filter(k => env[k]);
     if (on.length) warnings.push(`${on.join(', ')} set but AI_PROVIDER=none: those capabilities use their rule fallback`);
   }
   return { ok: true, env, warnings };
@@ -187,11 +194,12 @@ export function describeConfig(e: Env) {
     nodeEnv: e.NODE_ENV,
     version: e.APP_BUILD_VERSION,
     logLevel: e.LOG_LEVEL,
+    theme: e.APP_THEME ?? 'default',
     database: e.DATABASE_URL ? `configured (ssl ${e.DATABASE_SSL_MODE ?? 'default'})` : 'not configured',
     sessions: e.SESSION_SECRET ? 'configured' : 'not configured',
     mail: e.NOTIFICATION_DISABLED ? 'disabled' : e.NOTIFICATION_SMTP_HOST ? 'smtp' : 'not configured',
     aiProvider: e.AI_PROVIDER,
-    aiFeatures: (['DRAFTING', 'WHY_NOW', 'CLASSIFY', 'COPILOT', 'CONTENT_STUDIO'] as const).filter(f => e[`AI_FEATURE_${f}`]),
+    aiFeatures: (['DRAFTING', 'WHY_NOW', 'CLASSIFY', 'COPILOT', 'CONTENT_STUDIO', 'SEGMENTS', 'NEXT_ACTION', 'GUIDELINE'] as const).filter(f => e[`AI_FEATURE_${f}`]),
     uploads: { maxBytes: e.UPLOAD_MAX_BYTES, maxRows: e.UPLOAD_MAX_ROWS },
   };
 }

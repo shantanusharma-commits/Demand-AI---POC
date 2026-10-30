@@ -27,7 +27,10 @@ The data is generated from a fixed seed, so running the script again gives the s
 
 ```
 python3 test-data/generate_lead_dataset.py <Lead_Research_Template.xlsx> test-data/Lead_Research_Sample_Dataset.xlsx
+python3 test-data/compact_xlsx.py test-data/Lead_Research_Sample_Dataset.xlsx test-data/Lead_Research_Sample_Dataset.xlsx
 ```
+
+Don't skip the second step. openpyxl writes every text cell inline, so the generated file is 1.6 MB, and Azure Repos refuses files over 1 MB. `compact_xlsx.py` moves the text into a shared-strings table and drops the cell references a reader can infer. That brings the file to about 0.5 MB without changing a cell.
 
 It needs `openpyxl`. The first argument is the empty template workbook, which isn't stored in the repo. The template's guidance sheets carry the client's real name; pass that name as a third argument (or in `ANONYMISE_PATTERN`) so it is replaced with "Client". The name itself is never stored in the repo.
 

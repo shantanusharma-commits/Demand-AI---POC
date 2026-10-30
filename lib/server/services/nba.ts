@@ -7,12 +7,16 @@
 import 'server-only';
 import { randomUUID } from 'node:crypto';
 import { and, asc, count, desc, eq, inArray, sql } from 'drizzle-orm';
+import { toCSV, type CsvText } from '../../demandai-engine.ts';
 import { ENGINE_VERSION } from '../../engine/config.ts';
-import { buildSegments, checkDraft, confidenceFor, type Draft, type NbaAccount, type NbaContact, type NbaPerson, type NbaResult, type Rec } from '../../engine/nba.ts';
+import { actionsOf, DEFAULT_ACTIONS, libraryBySegment, type LibraryAction } from '../../engine/actions.ts';
+import { applyAiPlan, type AiPlan } from '../../ai/nba.ts';
+import { CONFIG } from '../../demandai-engine.ts';
+import { buildSegments, checkDraft, confidenceFor, type CheckResult, type Draft, type NbaAccount, type NbaContact, type NbaPerson, type NbaResult, type Rec } from '../../engine/nba.ts';
 import * as R from '../../engine/review.ts';
 import type { Account, Contact, Signal, Tier } from '../../../types/demandai';
 import {
-  accounts, accountScores, contacts, customSegments, decisionLog, drafts, handoffItems, handoffs, leadLists, nbaRuns, prospectScores, recommendations,
+  accounts, accountScores, configVersions, contacts, decisionLog, microSegments, drafts, handoffItems, handoffs, leadLists, nbaRuns, prospectScores, recommendations,
   scoringRuns, segmentPauses, SYSTEM_USER_ID, users,
 } from '../db/schema.ts';
 import type { TenantScope } from '../db/tenant.ts';
@@ -22,7 +26,8 @@ import { currentLogContext, logger } from '../logger.ts';
 import { liveBrand } from './brand.ts';
 import { createHandoff } from './handoffs.ts';
 import { activeConfigVersionId, chunks, isManager, ownerOnly, type Actor } from './lists.ts';
-import { checkDateOf, pausedSegments, segKey } from './recommendations.ts';
+import { recOf, checkDateOf, pausedSegments, reasonContext, segKey, stateOf } from './recommendations.ts';
+import { currentNames } from './segments.ts';
 import { ownerNames } from './users.ts';
 
 /* ─── Reading a hand-off back as the engine's scored accounts ─── */
@@ -92,18 +97,26 @@ export async function planNbaBuild(scope: TenantScope, actor: Actor, input: { ha
     .innerJoin(leadLists, eq(leadLists.id, scoringRuns.listId)).where(eq(scoringRuns.id, scoringRunId));
   const brand = await liveBrand(scope), pack = brand.pack;
   const asOf = run.asOf, checkDate = checkDateOf(asOf);
+  // The action library in Setup (30 Oct 2026): what the rules recommend from, and what guides the AI.
+  const [cv] = await scope.tx.select({ body: configVersions.body }).from(configVersions)
+    .where(and(eq(configVersions.businessUnitId, scope.ctx.businessUnitId), eq(configVersions.status, 'active')));
+  let actions: LibraryAction[];
+  try { actions = actionsOf(cv?.body); } catch { actions = DEFAULT_ACTIONS; }
+  const library = libraryBySegment(actions);
   // 5.9 Engage-once, across the whole unit: accounts released or rejected as already engaged in an earlier build.
   const names = [...new Set(results.map(r => r.account.name.toLowerCase()))];
   const { rows: hits } = await scope.tx.execute<{ name: string; run_name: string; engaged_at: string | Date }>(
     sql`select name, run_name, engaged_at from nba_engaged_accounts(${'{' + names.map(n => '"' + n.replace(/["\\]/g, m => '\\' + m) + '"').join(',') + '}'}::text[], ${now.toISOString()}::timestamptz)`);
   const engaged = new Map(hits.map(e => [e.name, engagedLabel(`${e.run_name}, ${new Date(e.engaged_at).toISOString().slice(0, 10)}`)]));
-  const seg = buildSegments(results, { keys: [...keys.keys()], engaged });
+  const seg = buildSegments(results, { keys: [...keys.keys()], engaged, library });
   if (!seg.recs.length && !seg.engagedOnce.length) throw badRequest('No prospects with a live signal to group.');
-  return { handoffId, scoringRunId, keys, run, brand, pack, asOf, checkDate, seg };
+  return { handoffId, scoringRunId, keys, run, brand, pack, asOf, checkDate, seg, actions, library };
 }
 
 /** AI drafts written for a build before it is stored, keyed by aiDraftKey(); and why the rest stayed with the rules. */
-export type AiDrafts = { drafts: ReadonlyMap<string, Draft>; missed: ReadonlyMap<string, string>; stats?: { asked: number; written: number; fallbacks: Record<string, number> } };
+export type AiDrafts = { drafts: ReadonlyMap<string, Draft>; missed: ReadonlyMap<string, string>; stats?: { asked: number; written: number; fallbacks: Record<string, number> };
+  /** The micro-segments and actions the AI chose (30 Oct 2026), applied to the rules' grouping when the build is stored. */
+  plan?: AiPlan };
 /** The same recommendation, action, channel and person: an AI draft is used only for exactly what it was written for. */
 export const aiDraftKey = (rec: Rec, rules: Pick<Draft, 'channel'>) => `${rec.key}|${rec.action}|${rules.channel}|${rec.contact.row ?? ''}`;
 
@@ -112,7 +125,20 @@ export const aiDraftKey = (rec: Rec, rules: Pick<Draft, 'channel'>) => `${rec.ke
 export async function buildNbaRun(scope: TenantScope, actor: Actor, input: { handoffId?: string; scoringRunId?: string }, ai?: AiDrafts): Promise<{ runId: string; name: string; stats: Record<string, unknown>; checks: BuildStep[] }> {
   const started = performance.now();
   const now = new Date();
-  const { handoffId, scoringRunId, keys, run, brand, pack, asOf, checkDate, seg } = await planNbaBuild(scope, actor, input, now);
+  const planned = await planNbaBuild(scope, actor, input, now);
+  const { handoffId, scoringRunId, keys, run, brand, pack, asOf, checkDate } = planned;
+  // The AI's micro-segments and actions, where it chose them; the rules' everywhere else (section A, B, G).
+  const seg = ai?.plan ? applyAiPlan(planned.seg, ai.plan, { min: CONFIG.minSegmentAccounts, library: planned.library }) : planned.seg;
+  // A new micro-segment that formed waits for the sales manager's approval; until then its items wait in For Review.
+  const created: string[] = [];
+  for (const sg of seg.segments) {
+    const r = sg.recs?.find(x => x.ai?.segment?.isNew);
+    if (!r) continue;
+    const [row] = await scope.tx.insert(microSegments).values({ businessUnitId: scope.ctx.businessUnitId, name: sg.name, theme: r.ai!.segment!.theme, why: r.ai!.segment!.why,
+      origin: 'ai', status: 'waiting', createdBy: actor.userId, updatedBy: actor.userId }).onConflictDoNothing().returning({ id: microSegments.id });
+    if (row) created.push(sg.name);
+  }
+  const rctx = await reasonContext(scope);
   const configVersionId = await activeConfigVersionId(scope);
   const runId = randomUUID();
   const name = `${run.name || run.listName} · ${now.toISOString().slice(0, 10)}`;
@@ -126,6 +152,9 @@ export async function buildNbaRun(scope: TenantScope, actor: Actor, input: { han
     const first = R.generatedDraft(rec, st, pack, checkDate);
     const versions = [{ d: first, reason: 'Generated from the action' }];
     const logs: Built['logs'] = [];
+    if (rec.ai?.segment) logs.push({ decision: 'Micro-segment chosen by AI', note: `${rec.segment ? rec.segment : `${rec.prominent} (not formed: too few accounts)`}${rec.ai.segment.isNew ? ', a new micro-segment' : ''} · ${rec.ai.segment.confidence} confidence · ${rec.ai.segment.why}` });
+    else if (ai?.plan?.stats.segments && ai.plan.stats.segments.asked) logs.push({ decision: 'Micro-segment chosen by the rules', note: 'The AI did not answer for this account; the rules grouped it on its strongest signal' });
+    if (rec.ai?.action) logs.push({ decision: 'Action chosen by AI', note: `${rec.action}${rec.ai.action.inLibrary ? '' : ' (not in the action library)'} · ${rec.ai.action.confidence} confidence · ${rec.ai.action.why}${rec.runnerUp ? ` · runner-up: ${rec.runnerUp.action}` : ''}` });
     const written = ai?.drafts.get(aiDraftKey(rec, first)), missed = ai?.missed.get(aiDraftKey(rec, first));
     const flags = written ? [] : checkDraft(first, pack, checkDate).flags.filter(f => f.rule !== 'Sensitive term');
     if (written) {
@@ -142,7 +171,7 @@ export async function buildNbaRun(scope: TenantScope, actor: Actor, input: { han
       logs.push({ decision: 'Regenerated once after a brand or rule check', note: `${flags.map(f => `${f.rule}: ${f.detail}`).join(' · ')}${still.length ? ' · still failing' : ' · now passes'}` });
     }
     const current = versions[versions.length - 1].d;
-    const rs = R.exceptionReasons(rec, current, checkDraft(current, pack, checkDate));
+    const rs = R.exceptionReasons(rec, current, checkDraft(current, pack, checkDate), rctx);
     st.reasons = rs;
     // Sensitive content goes straight to the sales manager's approvals, never through a rep's queue.
     if (rs.some(t => /^Sensitive/.test(t))) { Object.assign(st, { status: 'Awaiting approval', why: 'sensitive' }); logs.push({ decision: 'To approvals', note: 'Sensitive content: the sales manager approves it before anything goes out' }); }
@@ -167,13 +196,15 @@ export async function buildNbaRun(scope: TenantScope, actor: Actor, input: { han
   const fallbacks = byAcc.filter(r => r.fallback).length;
   const flagged = built.filter(b => chk.get(b.id)!.flags.length).length, unsupported = built.filter(b => chk.get(b.id)!.unsupported.length).length;
   const noProof = built.filter(b => cur(b).noProof).length;
+  const byAi = { segments: byAcc.filter(r => r.ai?.segment).length, actions: recs.filter(r => r.ai?.action).length, offLibrary: recs.filter(r => r.ai?.action && !r.ai.action.inLibrary).length };
   const steps: BuildStep[] = [
     { key: 'read', sev: '', label: `${pl(seg.accountsConsidered, 'account')} · one recommendation each` },
     { key: 'engage', ...(seg.engagedOnce.length ? { sev: 'info', label: `${pl(seg.engagedOnce.length, 'account')} set aside` } : { sev: '', label: 'None engaged before' }) },
-    { key: 'group', ...(seg.segments.length ? { sev: '', label: `${pl(seg.segments.length, 'micro-segment')} formed` } : { sev: 'warn', label: 'None formed' }) },
+    { key: 'group', ...(seg.segments.length ? { sev: '', label: `${pl(seg.segments.length, 'micro-segment')} formed${byAi.segments ? ` · ${byAi.segments} of ${byAcc.length} accounts grouped by AI` : ''}${created.length ? ` · ${created.length} new, waiting for approval` : ''}` }
+      : { sev: 'warn', label: 'None formed' }) },
     { key: 'fallback', ...(fallbacks ? { sev: 'info', label: `${pl(fallbacks, 'account')} on the next signal` } : { sev: '', label: 'Not needed' }) },
     { key: 'except', ...(exceptionAccounts ? { sev: 'warn', label: `${pl(exceptionAccounts, 'account')} to a person` } : { sev: '', label: 'All segments proceed' }) },
-    { key: 'action', sev: '', label: `${pl(recs.length, 'action')}${fromStrongest ? ` · ${fromStrongest} from strongest` : ''}` },
+    { key: 'action', sev: byAi.offLibrary ? 'info' : '', label: `${pl(recs.length, 'action')}${byAi.actions ? ` · ${byAi.actions} chosen by AI${byAi.offLibrary ? `, ${byAi.offLibrary} outside the library` : ''}` : ''}${fromStrongest ? ` · ${fromStrongest} from strongest` : ''}` },
     { key: 'channel', sev: '', label: Object.entries(channels).map(([k, v]) => `${v} ${k}`).join(' · ') || 'None' },
     { key: 'proof', ...(noProof ? { sev: 'warn', label: `${noProof} without proof: tasks` } : { sev: '', label: 'Found for every draft' }) },
     { key: 'draft', sev: '', label: `${recs.length - tasks} drafts · ${tasks} tasks` },
@@ -188,11 +219,15 @@ export async function buildNbaRun(scope: TenantScope, actor: Actor, input: { han
     engagedOnce: seg.engagedOnce.length, tasks, channels, confidence: conf,
     // How many first messages the AI wrote (only those used: the same recommendation, action, channel and person).
     ...(ai?.stats ? { aiDrafts: { ...ai.stats, written: built.filter(b => b.versions.some(v => v.d.ai)).length } } : {}),
+    // How many accounts the AI grouped and how many actions it chose, and why the rest used the rules (section G).
+    ...(ai?.plan?.stats.segments ? { aiSegments: { ...ai.plan.stats.segments, answered: byAi.segments, newSegments: created } } : {}),
+    ...(ai?.plan?.stats.actions ? { aiActions: { ...ai.plan.stats.actions, answered: byAi.actions, offLibrary: byAi.offLibrary } } : {}),
   };
 
   await scope.tx.insert(nbaRuns).values({
     id: runId, businessUnitId: scope.ctx.businessUnitId, handoffId, scoringRunId, name, asOf, configVersionId, brandVersionId: brand.id, engineVersion: ENGINE_VERSION,
-    seed: runId, segments: seg.segments.map(s => ({ name: s.name, accounts: s.accountIds.length })),
+    seed: runId, segments: seg.segments.map(s => ({ name: s.name, accounts: s.accountIds.length, ...(s.recs?.some(r => r.ai?.segment) ? { origin: 'ai' } : {}),
+      ...(created.includes(s.name) ? { isNew: true } : {}) })),
     engaged: seg.engagedOnce.map(e => ({ name: e.account.name, label: e.label, ownerEmail: e.result.people?.[0]?.contact.owner?.toLowerCase() || null })),
     checks: steps, stats, createdBy: actor.userId, updatedBy: actor.userId,
   });
@@ -264,6 +299,10 @@ export type RecRowView = {
   status: string; released: string | null; passed: boolean; spot: string | null; outcome: string | null; meeting: { seen: boolean } | null; ownerEmail: string | null; ownerName: string | null; paused: boolean;
 };
 
+/** A micro-segment as a build stored it: `origin` 'ai' when the AI grouped accounts into it, `isNew` when the build
+ *  created it and it waited for approval. */
+type RunSegment = { name: string; accounts: number; origin?: 'ai'; isNew?: boolean };
+
 /** One build: its micro-segments, what engage-once set aside, the pauses, the build steps, and every recommendation the
  *  caller can see, in queue order. */
 export async function getNbaRun(scope: TenantScope, id: string) {
@@ -287,7 +326,7 @@ export async function getNbaRun(scope: TenantScope, id: string) {
   const paused = await pausedSegments(scope, id);
   const names = await ownerNames(scope, rows.map(x => x.ownerEmail ?? ''));
   const recs: RecRowView[] = rows.map(x => {
-    const rec = x.rec as Rec, st = { manualAction: x.manualAction, useRunnerUp: x.useRunnerUp, contactRow: x.contactRow, assignedSegment: x.assignedSegment };
+    const rec = recOf(x), st = { manualAction: x.manualAction, useRunnerUp: x.useRunnerUp, contactRow: x.contactRow, assignedSegment: x.assignedSegment };
     const c = R.liveRec(rec, st).contact, seg = R.segOf(rec, st);
     return {
       id: x.id, key: x.key, position: x.position, account: { name: rec.account.name, vertical: rec.account.vertical || '', existingCustomer: !!rec.account.existingCustomer },
@@ -298,24 +337,63 @@ export async function getNbaRun(scope: TenantScope, id: string) {
       ownerEmail: x.ownerEmail, ownerName: x.ownerEmail ? names.get(x.ownerEmail) ?? null : null, paused: paused.has(segKey(rec)),
     };
   });
+  // The segments it formed, under the names they have now: a renamed segment moved its items, and a merged one joins the
+  // segment it went into (former_names).
+  const now = await currentNames(scope), formedNow = new Map<string, RunSegment>();
+  for (const sg of r.segments as RunSegment[]) {
+    const name = now.get(sg.name.toLowerCase()) ?? sg.name, cur = formedNow.get(name);
+    formedNow.set(name, cur ? { ...cur, accounts: cur.accounts + sg.accounts, ...(sg.origin ? { origin: sg.origin } : {}), ...(sg.isNew ? { isNew: true } : {}) } : { ...sg, name });
+  }
   // Micro-segments its items joined in For Review that this build did not form: the system's, formed in other lists, or
   // ones a person created (which may hold fewer than CONFIG.minSegmentAccounts accounts).
-  const formed = new Set((r.segments as { name: string }[]).map(s => s.name));
+  const formed = new Set(formedNow.keys());
   const joined = [...new Set(recs.filter(x => !x.segment && x.assignedSegment && !formed.has(x.assignedSegment)).map(x => x.assignedSegment!))];
-  const made = joined.length ? await scope.tx.select({ name: customSegments.name, theme: customSegments.theme, by: byName }).from(customSegments)
-    .leftJoin(users, eq(users.id, customSegments.createdBy)).where(and(eq(customSegments.businessUnitId, scope.ctx.businessUnitId), inArray(customSegments.name, joined))) : [];
+  const wanted = [...formed, ...joined];
+  const made = wanted.length ? await scope.tx.select({ name: microSegments.name, theme: microSegments.theme, origin: microSegments.origin, status: microSegments.status, by: byName }).from(microSegments)
+    .leftJoin(users, eq(users.id, microSegments.createdBy)).where(and(eq(microSegments.businessUnitId, scope.ctx.businessUnitId), inArray(microSegments.name, wanted))) : [];
+  // F3 · Who made each segment it formed: the AI (and whether it still waits for approval), a person, or the rules.
+  const segments = [...formedNow.values()].map(sg => {
+    const m = made.find(z => z.name.toLowerCase() === sg.name.toLowerCase());
+    return { ...sg, theme: m?.theme ?? sg.name, madeBy: m ? (m.origin === 'ai' ? 'ai' as const : 'person' as const) : 'rules' as const, waiting: m?.status === 'waiting' };
+  });
   const assigned = joined.map(name => {
     const m = made.find(z => z.name.toLowerCase() === name.toLowerCase());
-    return m ? { name, theme: m.theme, origin: 'person' as const, by: m.by } : { name, theme: name, origin: 'system' as const, by: null };
+    return m ? { name, theme: m.theme, origin: m.origin === 'ai' ? 'ai' as const : 'person' as const, by: m.origin === 'ai' ? null : m.by } : { name, theme: name, origin: 'system' as const, by: null };
   });
   const visibleEngaged = (r.engaged as { name: string; label: string; ownerEmail: string | null }[])
     .filter(e => scope.ctx.scope === 'all' || (!!e.ownerEmail && scope.ctx.ownerEmails.includes(e.ownerEmail))).map(({ name, label }) => ({ name, label: engagedLabel(label) }));
   return {
     id: r.id, name: r.name, asOf: r.asOf, createdAt: r.createdAt, by: r.by, createdBy: r.createdBy, source: r.scoringName || r.listName, sourceFile: r.sourceFile,
     configVersionNo: r.configVersionNo, brandVersionNo: r.brandVersionNo, engineVersion: r.engineVersion,
-    segments: r.segments as { name: string; accounts: number }[], assigned, engaged: visibleEngaged, checks: r.checks as BuildStep[], stats: r.stats,
+    segments, assigned, engaged: visibleEngaged, checks: r.checks as BuildStep[], stats: r.stats,
     paused: Object.fromEntries([...paused].map(([k, v]) => [k, { by: v.by, at: v.at, reason: v.reason }])), recs,
   };
+}
+
+/** A build as a file (product owner, 30 Oct 2026): every recommendation the caller can see, with the person, the
+ *  micro-segment, the signal it rests on, the action, where it is now and its message. Formulas neutralised (G-052). */
+export async function nbaRunCsv(scope: TenantScope, actor: Actor, id: string): Promise<{ fileName: string; csv: CsvText; rows: number }> {
+  const [r] = await scope.tx.select({ name: nbaRuns.name }).from(nbaRuns).where(and(eq(nbaRuns.id, id), eq(nbaRuns.businessUnitId, scope.ctx.businessUnitId)));
+  if (!r) throw notFound('Those micro-segments are not there any more.');
+  const rows = await scope.tx.select({ row: recommendations, draft: drafts.draft, confidence: drafts.confidence, checks: drafts.checks }).from(recommendations)
+    .innerJoin(drafts, and(eq(drafts.recommendationId, recommendations.id), eq(drafts.version, recommendations.draftVersion)))
+    .where(and(eq(recommendations.nbaRunId, id), eq(recommendations.businessUnitId, scope.ctx.businessUnitId), ownerOnly(scope, recommendations.ownerEmail)))
+    .orderBy(asc(recommendations.position));
+  const names = await ownerNames(scope, rows.map(x => x.row.ownerEmail ?? ''));
+  const rctx = await reasonContext(scope);
+  const out: unknown[][] = [['owner', 'prospect', 'job_title', 'persona', 'company', 'vertical', 'customer', 'email', 'linkedin_url', 'tier', 'score', 'micro_segment',
+    'signal', 'signal_date', 'signal_detail', 'action', 'runner_up', 'channel', 'confidence', 'where_it_is', 'why_it_needs_a_person', 'subject', 'message', 'linkedin_note', 'task', 'outcome']];
+  for (const { row, draft, confidence, checks } of rows) {
+    const rec = recOf(row), st = stateOf(row), lr = R.liveRec(rec, st), c = lr.contact, d = draft as Draft;
+    const reasons = R.exceptionReasons(lr, d, checks as CheckResult, rctx);
+    const cats = row.status === 'Released' || row.status === 'Closed' ? [] : R.reasonCats(st, { reasons, unreachable: d.unreachable });
+    out.push([row.ownerEmail ? names.get(row.ownerEmail) ?? row.ownerEmail : 'Unassigned', c.name, c.jobTitle || '', c.persona || '', rec.account.name, rec.account.vertical || '',
+      rec.account.existingCustomer ? 'Existing customer' : 'Net-new', c.email || '', c.linkedin || '', lr.person.tier || '', lr.person.final ?? '',
+      R.segOf(rec, st) || 'No micro-segment', rec.signal.type, rec.signal.date || '', rec.signal.detail || '', R.chosenAction(rec, st), rec.runnerUp?.action ?? '', d.channel,
+      (confidence as { level?: string }).level ?? '', R.whereItIs(row), cats.map(k => R.REASON_CATS[k] ?? k).join('; '), d.subject || '', d.body || '', d.note || '', d.task || '', row.outcome || '']);
+  }
+  await recordAudit(scope, { action: 'nba.exported', actorRole: actor.role, targetType: 'nba_run', targetId: id, details: { rows: rows.length } });
+  return { fileName: `${r.name.replace(/[^\w\- ·]+/g, '').trim() || 'micro-segments'}.csv`, csv: toCSV(out), rows: rows.length };
 }
 
 export async function renameNbaRun(scope: TenantScope, actor: Actor, id: string, name: string): Promise<void> {

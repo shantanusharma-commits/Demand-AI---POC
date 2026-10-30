@@ -30,7 +30,7 @@ The checklist from the codebase audit (§13, 16 Oct 2026), line by line, with wh
 
 | Line | Status | Evidence |
 |---|---|---|
-| `npm ci` from the lockfile; `npm audit` shows no high or critical (SheetJS upgraded) | Done | CI; `npm run audit:gate` (production 0, allowlist empty); SheetJS 0.20.3 vendored with its checksum |
+| `npm ci` from the lockfile; `npm audit` shows no high or critical (SheetJS upgraded) | Done | CI; `npm run audit:gate` (production 0, allowlist empty); SheetJS 0.20.3 pinned by its checksum |
 | No runtime CDN scripts, or SRI on each; fonts self-hosted | Done | Nonce CSP with `strict-dynamic`, `next/font` (Phase 7); tests/csp.test.ts |
 
 ## Data and storage

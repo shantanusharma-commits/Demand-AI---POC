@@ -7,11 +7,18 @@ import { z } from 'zod';
 import { createDb, withTenant, type Db, type TenantContext } from '../../lib/server/db/tenant.ts';
 import { aiCalls } from '../../lib/server/db/schema.ts';
 import { readFileSync } from 'node:fs';
-import { setAiGatewayForTests } from '../../lib/server/ai.ts';
+import { aiGateway, setAiGatewayForTests } from '../../lib/server/ai.ts';
 import { createAppWorker } from '../../lib/server/jobs/handlers.ts';
 import { enqueueJob, getJob } from '../../lib/server/jobs/queue.ts';
 import { createHandoff } from '../../lib/server/services/handoffs.ts';
-import { NBA_STAGES } from '../../lib/server/services/nba-ai.ts';
+import { nbaStages } from '../../lib/server/services/nba-ai.ts';
+import { getNbaRun } from '../../lib/server/services/nba.ts';
+import { itemDetail } from '../../lib/server/services/recommendations.ts';
+import { releaseForSegment } from '../../lib/server/services/review.ts';
+import { decideSegment } from '../../lib/server/services/segments.ts';
+import { NBA_BATCH, planProperties } from '../../lib/ai/nba.ts';
+import { approvedClaims, defaultBrand, type Rec } from '../../lib/engine/nba.ts';
+import { NEW_ACTION, NEW_SEGMENT } from '../../lib/engine/review.ts';
 import { changeItemWithAi, createItemWithAi, saveBlocks } from '../../lib/server/services/studio.ts';
 import { HttpError } from '../../lib/server/http/errors.ts';
 import { aiStatus, healthCheck } from '../../lib/server/services/ai-admin.ts';
@@ -23,8 +30,8 @@ import { saveList } from '../../lib/server/services/lists.ts';
 import { getRun, startScoringRun } from '../../lib/server/services/scoring.ts';
 import { AS_OF } from '../helpers/answer-key.ts';
 import { DATASET } from '../helpers/answer-key.ts';
-import { briefReader, draftWriter, pieceWriter, rewriteIds, rewriteParts, sensibleClassifier, whyNowWriter } from '../helpers/ai-fakes.ts';
-import { FakeModel, fail, json, reply } from '../helpers/fake-model.ts';
+import { actionChooser, briefReader, draftWriter, pieceWriter, rewriteIds, rewriteParts, segmenter, sensibleClassifier, whyNowWriter } from '../helpers/ai-fakes.ts';
+import { FakeModel, fail, json, reply, type StepFn } from '../helpers/fake-model.ts';
 import { limits } from './pilot.ts';
 import { freshDatabase, type TestDatabase } from './harness.ts';
 import { seedBasics, type Basics } from './fixtures.ts';
@@ -184,7 +191,7 @@ async function scoredSample(): Promise<string> {
   return scoredRun;
 }
 async function buildJob(ctx: TenantContext, payload: Record<string, string>) {
-  const jobId = await withTenant(app, ctx, s => enqueueJob(s, 'nba.build', payload, NBA_STAGES));
+  const jobId = await withTenant(app, ctx, s => enqueueJob(s, 'nba.build', payload, nbaStages(aiGateway())));
   await createAppWorker(app, limits).drain();
   return (await withTenant(app, ctx, s => getJob(s, jobId)))!;
 }
@@ -198,6 +205,7 @@ test('with AI drafting on, the build job writes each eligible first message with
     const job = await buildJob(unitA(), { handoffId });
     assert.equal(job.status, 'succeeded', JSON.stringify(job.error));
     const nbaRunId = job.progress.result!.runId;
+    assert.deepEqual(job.progress.stages, ['prepare', 'draft', 'save'], 'no "choosing" stage when the AI chooses nothing');
     const stats = (await owner.query(`SELECT stats FROM nba_runs WHERE id = $1`, [nbaRunId])).rows[0].stats;
     assert.ok(stats.aiDrafts.written > 50, JSON.stringify(stats.aiDrafts));
     assert.equal(stats.aiDrafts.written, stats.aiDrafts.asked, 'every eligible draft was written');
@@ -209,12 +217,79 @@ test('with AI drafting on, the build job writes each eligible first message with
       assert.deepEqual([d.version, d.draft_version, d.outcome, d.capability], [2, 2, 'ok', 'draft_message']);
       // A draft that names a signal about security carries the sensitive flag the rules' draft has too (a person approves it).
       assert.deepEqual([d.checks.flags.filter((f: { rule: string }) => f.rule !== 'Sensitive term'), d.checks.unsupported], [[], []], 'an AI draft is stored only once it passes');
-      assert.equal(d.draft.ai.template, 'draft.message@3');
+      assert.equal(d.draft.ai.template, 'draft.message@4');
     }
     const logged = (await owner.query(`SELECT count(*)::int n FROM decision_log WHERE nba_run_id = $1 AND decision = 'Written with AI'`, [nbaRunId])).rows[0].n;
     assert.equal(logged, ai.length);
     const tasks = (await owner.query(`SELECT count(*)::int n FROM drafts d JOIN recommendations r ON r.id = d.recommendation_id WHERE r.nba_run_id = $1 AND d.channel = 'Task' AND d.ai_assisted`, [nbaRunId])).rows[0].n;
     assert.equal(tasks, 0, 'no task is ever written with AI (D-10)');
+  } finally { setAiGatewayForTests(undefined); }
+});
+
+test('with AI segments and actions on, the build job groups and chooses with AI: new segments wait for approval, new actions for a person', async () => {
+  const actor = { userId: ids.adminA, role: 'Admin' as const };
+  // Every third account goes to a new "Plant expansion", the rest to the rules' Engagement; the very first account alone
+  // in "Lonely one" (too few to form). The first account of each action batch gets an action outside the library.
+  let firstBatch = true;
+  const group = segmenter(it => (firstBatch && it.ref === 1 ? { segment: 'Lonely one', isNew: true, theme: 'One of a kind' }
+    : it.ref % 3 === 0 ? { segment: 'Plant expansion', isNew: true } : { segment: 'Engagement', isNew: false }));
+  const segmentAnswer: StepFn = (req, n) => { const out = group(req, n); firstBatch = false; return out; };
+  const choose = actionChooser(it => (it.ref === 1 ? { action: 'Invite them to the plant tour', inLibrary: false, runnerUp: { action: 'Offer a site assessment', inLibrary: true } }
+    : { action: 'Offer a site assessment', inLibrary: true, runnerUp: { action: 'Offer a lifecycle service review', inLibrary: true } }));
+  const fake = new FakeModel([], { otherwise: (req, n) => (/^You group a sales team/.test(req.system) ? segmentAnswer(req, n) : choose(req, n)) });
+  setAiGatewayForTests(fakeGateway(app, fake, { ...ALL_ON, classify: false, why_now: false, draft_message: false, segment: true, next_action: true }));
+  try {
+    const runId = await scoredSample();
+    const handoffId = (await withTenant(app, unitA(), s => createHandoff(s, actor, { runId }))).handoffId;
+    const job = await buildJob(unitA(), { handoffId });
+    assert.equal(job.status, 'succeeded', JSON.stringify(job.error));
+    const nbaRunId = job.progress.result!.runId;
+    assert.deepEqual(job.progress.stages, ['prepare', 'choose', 'draft', 'save']);
+    const { stats } = (await owner.query(`SELECT stats FROM nba_runs WHERE id = $1`, [nbaRunId])).rows[0];
+    const n = stats.prospects, batches = Math.ceil(n / NBA_BATCH);
+    assert.deepEqual([stats.aiSegments.asked, stats.aiSegments.answered, stats.aiSegments.fallbacks, stats.aiSegments.newSegments], [n, n, {}, ['Plant expansion']]);
+    assert.deepEqual([stats.aiActions.asked, stats.aiActions.answered, stats.aiActions.offLibrary], [n, n, batches]);
+    const calls = (await owner.query(`SELECT capability, outcome, count(*)::int n FROM ai_calls WHERE business_unit_id = $1 AND capability IN ('segment', 'next_action') GROUP BY 1, 2 ORDER BY 1`, [ids.buA])).rows;
+    assert.deepEqual(calls.map(c => [c.capability, c.outcome, c.n]), [['next_action', 'ok', batches], ['segment', 'ok', batches]], 'ten accounts a call');
+    // The new segment that formed waits for the sales manager; the one too small to form was never saved.
+    assert.deepEqual((await owner.query(`SELECT name, origin, status, theme FROM micro_segments WHERE business_unit_id = $1`, [ids.buA])).rows,
+      [{ name: 'Plant expansion', origin: 'ai', status: 'waiting', theme: 'Plants adding capacity' }]);
+    const items = (await owner.query(`SELECT id, segment, status, action, rec FROM recommendations WHERE nba_run_id = $1`, [nbaRunId])).rows;
+    const plant = items.filter(r => r.segment === 'Plant expansion'), off = items.filter(r => r.action === 'Invite them to the plant tour');
+    assert.ok(plant.length >= 3 && plant.every(r => r.status === 'Waiting'), 'its items wait in For Review until it is approved');
+    assert.ok(items.some(r => r.rec.prominent === 'Lonely one' && r.segment === null));
+    assert.equal(off.length, batches);
+    const detail = (id: string) => withTenant(app, unitA(), s => itemDetail(s, actor, id));
+    const p0 = await detail(plant[0].id);
+    assert.ok(p0.reasons.includes(NEW_SEGMENT));
+    assert.deepEqual([p0.ai?.segment?.name, p0.ai?.segment?.isNew, p0.ai?.action?.signals.length], ['Plant expansion', true, 1]);
+    for (const r of off) {
+      const d = await detail(r.id);
+      assert.ok(['Waiting', 'Awaiting approval'].includes(r.status) && d.reasons.includes(NEW_ACTION), 'an action outside the library waits for a person');
+      assert.deepEqual([d.ai?.action?.inLibrary, d.ai?.action?.runnerUp?.action], [false, 'Offer a site assessment']);
+    }
+    const logged = (await owner.query(`SELECT decision, count(*)::int n FROM decision_log WHERE nba_run_id = $1 AND decision LIKE '% chosen by AI' GROUP BY 1 ORDER BY 1`, [nbaRunId])).rows;
+    assert.deepEqual(logged.map(l => [l.decision, l.n]), [['Action chosen by AI', n], ['Micro-segment chosen by AI', n]]);
+    // What every build must hold, AI or not; and nothing goes out to someone who can't be contacted.
+    const recs = items.map(r => r.rec as Rec);
+    assert.deepEqual(planProperties({ segments: [], recs, exceptions: [], engagedOnce: [], accountsConsidered: 0 },
+      { min: 3, approved: new Set(approvedClaims(defaultBrand()).map(c => c.id)), contactable: () => true }), []);
+    assert.equal((await owner.query(`SELECT count(*)::int n FROM recommendations r JOIN drafts d ON d.recommendation_id = r.id AND d.version = r.draft_version
+      WHERE r.nba_run_id = $1 AND r.status = 'Released' AND (d.draft->>'unreachable')::boolean`, [nbaRunId])).rows[0].n, 0);
+    // The build's tiles say who made each segment; approving releases what waited only for it; a rename keeps its tile.
+    const before = (await withTenant(app, unitA(), s => getNbaRun(s, nbaRunId))).segments.find(g => g.name === 'Plant expansion')!;
+    assert.deepEqual([before.madeBy, before.waiting, before.isNew, before.origin, before.accounts], ['ai', true, true, 'ai', new Set(plant.map(r => r.rec.account.id)).size]);
+    const waitedOnly: string[] = [];
+    for (const r of plant) { const d = await detail(r.id); if (d.reasons.length === 1 && d.reasons[0] === NEW_SEGMENT && d.state.spot !== 'pending') waitedOnly.push(r.id); }
+    const segId = (await owner.query(`SELECT id FROM micro_segments WHERE name = 'Plant expansion'`)).rows[0].id;
+    await withTenant(app, unitA(), s => decideSegment(s, actor, segId, { action: 'approve' }, releaseForSegment));
+    const released = (await owner.query(`SELECT id FROM recommendations WHERE nba_run_id = $1 AND segment = 'Plant expansion' AND released = 'approved'`, [nbaRunId])).rows.map(r => r.id);
+    assert.deepEqual(released.sort(), waitedOnly.sort(), 'exactly the items that waited only for the approval go ahead');
+    await withTenant(app, unitA(), s => decideSegment(s, actor, segId, { action: 'rename', name: 'Capacity growth' }));
+    const after = await withTenant(app, unitA(), s => getNbaRun(s, nbaRunId));
+    assert.ok(!after.segments.some(g => g.name === 'Plant expansion'));
+    assert.deepEqual(after.segments.filter(g => g.name === 'Capacity growth').map(g => [g.madeBy, g.waiting, g.accounts]), [['ai', false, before.accounts]]);
+    assert.equal(after.recs.filter(r => r.segment === 'Capacity growth').length, plant.length);
   } finally { setAiGatewayForTests(undefined); }
 });
 

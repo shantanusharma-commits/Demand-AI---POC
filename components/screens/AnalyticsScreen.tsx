@@ -3,9 +3,11 @@
 /* Analytics (was legacy/13-analytics.html), on the server (G-011). The pilot measured from the shared decision log and
    the stored lists, runs and builds, organised by the six success areas (D-38): the areas with their evidence, the
    success gates G1 and G2 (D-21), the work-done funnel, the supporting evidence, the weekly summary, the pilot
-   readout, the decision log, the learning loop and the validation settings. Reps see their own results, managers can
+   readout, the decision log, the learning loop and the measurement criteria. Reps see their own results, managers can
    pick a rep, a Viewer reads the aggregates. The weekly summary and the readout download as the Markdown the server
-   built; there is no PDF export. */
+   built; there is no PDF export. Since 30 Oct 2026: the criteria are set in Setup and shown here read-only, first; the
+   gates come next and the areas last; every measure has an (i) with its working on the reader's own numbers, and a
+   gate below the agreed number of decisions shows only how many so far. */
 import { useEffect, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import * as R from '@/lib/engine/review';
@@ -14,6 +16,9 @@ import { sx } from '@/lib/sx';
 import { api, errorText, type WireDeep } from '@/lib/client/api';
 import { showToast } from '@/lib/ui';
 import { useSessionUser } from '@/components/SessionContext';
+import { Info } from '@/components/Info';
+import { CHECKED, FIRST_PASS, earlyText, explainAlternative, explainDeal, explainEarly, explainException, explainFlagged, explainG1, explainG2, explainPaused, explainPreferred,
+  explainProceeded, explainSpotShare, explainWeight, type Explain } from '@/lib/analytics/explain';
 import type { areasView, evidenceView, funnelView, gatesView, learningLoopView, readoutView, validationView, weeklyView } from '@/lib/server/services/analytics';
 import type { LogRow } from '@/lib/server/services/review';
 import { Tab, Tabs } from '@/components/Tabs';
@@ -30,8 +35,9 @@ type Validation = WireDeep<Awaited<ReturnType<typeof validationView>>>;
 type Log = WireDeep<LogRow>;
 type Lens = { rep: { email: string; name: string } | null; own: boolean; manager: boolean; viewer: boolean; reps?: { email: string; name: string }[]; builds?: number };
 
-const TABS: [Tab, string][] = [['areas', 'Success areas'], ['gates', 'Success gates'], ['funnel', 'Work-done funnel'], ['evidence', 'Supporting evidence'], ['weekly', 'Weekly summary'],
-  ['readout', 'Pilot readout'], ['log', 'Decision log'], ['loop', 'Learning loop'], ['validation', 'Validation']];
+// The criteria first (set in Setup), the gates next, the areas last (product owner, 30 Oct 2026).
+const TABS: [Tab, string][] = [['validation', 'Criteria'], ['gates', 'Success gates'], ['funnel', 'Work-done funnel'], ['evidence', 'Supporting evidence'], ['weekly', 'Weekly summary'],
+  ['loop', 'Learning loop'], ['log', 'Decision log'], ['readout', 'Pilot readout'], ['areas', 'Success areas']];
 const ENDPOINT: Record<Tab, string> = { areas: 'areas', gates: 'gates', funnel: 'funnel', evidence: 'evidence', weekly: 'weekly', readout: 'readout', log: '', loop: 'learning-loop', validation: 'validation' };
 const pct0 = (v: number | null | undefined) => (v === null || v === undefined || Number.isNaN(v) ? '—' : Math.round(v) + '%');
 const fmtDate = (t: string) => new Date(t).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
@@ -50,8 +56,8 @@ function stateBadge(state: GateState | null, label: string | null): ReactNode {
   const [bg, fg] = state === 'met' ? ['var(--pos-lt)', 'var(--pos)'] : state === 'below' ? ['var(--neg-lt)', 'var(--neg)'] : ['var(--s100)', 'var(--i2)'];
   return <span style={pill(bg, fg)}>{label}</span>;
 }
-const arow = (key: string, label: ReactNode, val: ReactNode, sub?: ReactNode) => <div key={key} style={sx('display:flex;align-items:baseline;gap:12px;padding:7px 0;border-bottom:1px solid var(--s75);font-size:12px')}>
-  <span style={sx('flex:1;color:var(--i2)')}>{label}{sub ? <span style={sx('display:block;font-size:10.5px;color:var(--i3)')}>{sub}</span> : null}</span><span style={sx('color:var(--i1);font-weight:600;text-align:right')}>{val}</span></div>;
+const arow = (key: string, label: ReactNode, val: ReactNode, sub?: ReactNode, info?: Explain) => <div key={key} style={sx('display:flex;align-items:baseline;gap:12px;padding:7px 0;border-bottom:1px solid var(--s75);font-size:12px')}>
+  <span style={sx('flex:1;color:var(--i2)')}>{label}{info ? <Info x={info} /> : null}{sub ? <span style={sx('display:block;font-size:10.5px;color:var(--i3)')}>{sub}</span> : null}</span><span style={sx('color:var(--i1);font-weight:600;text-align:right')}>{val}</span></div>;
 const apanel = (title: ReactNode, right: ReactNode, body: ReactNode, key?: string) => <div key={key} className="panel" style={sx('margin-bottom:16px')}><div className="panel-hdr"><span className="panel-ttl">{title}</span>{right}</div><div className="panel-body">{body}</div></div>;
 const two = (a: ReactNode, b: ReactNode) => <div style={sx('display:grid;grid-template-columns:1fr 1fr;gap:16px')}>{a}{b}</div>;
 const bar = (key: string, label: string, n: number, total: number, color: string) => <div key={key} className="dim-row"><span className="dim-lbl" style={sx('width:150px;flex-shrink:0')}>{label}</span>
@@ -64,16 +70,22 @@ const mini = (head: string[], rows: ReactNode[][]) => <table style={sx('width:10
     : <tr><td colSpan={head.length} style={sx('padding:10px 0;color:var(--i3)')}>Nothing yet.</td></tr>}</tbody></table>;
 const flag = (t: string, tone: 'g' | 'w' | '') => <span style={pill(tone === 'g' ? 'var(--pos-lt)' : tone === 'w' ? 'var(--warn-lt)' : 'var(--s100)', tone === 'g' ? 'var(--pos)' : tone === 'w' ? 'var(--warn)' : 'var(--i3)')}>{t}</span>;
 
-/** The Markdown the server built, shown as the original page rendered it (headings, bullets, sub-bullets, text). */
+/** The Markdown the server built, shown as the original page rendered it (headings, bullets, sub-bullets, tables, text). */
 function markdown(text: string): ReactNode {
-  return text.split('\n').map((l, i) => l.startsWith('# ') ? <div key={i} style={sx('font-family:var(--fd);font-size:18px;font-weight:700;color:var(--i1);margin-bottom:4px')}>{l.slice(2)}</div>
+  const cells = (l: string) => l.replace(/^\|\s*|\s*\|$/g, '').split(/\s*\|\s*/);
+  return text.split('\n').map((l, i, all) => l.startsWith('|') ? (/^\|[\s-|]+\|$/.test(l) ? null : <div key={i} style={sx(`display:grid;grid-template-columns:1.3fr 1fr 1.6fr;gap:12px;padding:6px 12px;font-size:12.5px;border-bottom:1px solid var(--s75);${all[i - 1]?.startsWith('|') ? 'color:var(--i1)' : 'font-weight:700;color:var(--i3);font-size:10.5px;text-transform:uppercase;letter-spacing:.06em'}`)}>
+      {cells(l).map((c, j) => <span key={j}>{c}</span>)}</div>)
+    : l.startsWith('# ') ? <div key={i} style={sx('font-family:var(--fd);font-size:18px;font-weight:700;color:var(--i1);margin-bottom:4px')}>{l.slice(2)}</div>
     : l.startsWith('## ') ? <div key={i} style={sx('font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--brand);margin:16px 0 6px')}>{l.slice(3)}</div>
       : l.startsWith('  - ') ? <div key={i} style={sx('font-size:12.5px;color:var(--i2);padding:2px 0 2px 28px')}>· {l.slice(4)}</div>
         : l.startsWith('- ') ? <div key={i} style={sx('font-size:12.5px;color:var(--i1);padding:3px 0 3px 12px')}>· {l.slice(2)}</div>
           : l ? <div key={i} style={sx('font-size:12px;color:var(--i3)')}>{l}</div> : null);
 }
 
-const tabOf = (t: string | undefined): Tab => (TABS.some(([k]) => k === t) ? t as Tab : 'areas');
+// The criteria tab explains the gates without live numbers: an empty measure.
+const x0 = { autoN: 0, excN: 0, weighted: null, minutes: null, base: 0, handled: 0, saved: null, auto: { n: 0, a: 0, pct: null }, exc: { n: 0, a: 0, pct: null },
+  pooled: { n: 0, a: 0, pct: null }, alternatives: { n: 0, a: 0, pct: null }, flagged: 0 };
+const tabOf = (t: string | undefined): Tab => (TABS.some(([k]) => k === t) ? t as Tab : 'gates');
 
 export function AnalyticsScreen({ initialTab }: { initialTab?: string }) {
   const me = useSessionUser();
@@ -85,8 +97,6 @@ export function AnalyticsScreen({ initialTab }: { initialTab?: string }) {
   const [log, setLog] = useState<{ rows: Log[]; next: number | null } | null>(null);
   const [logKind, setLogKind] = useState('all');
   const [logQ, setLogQ] = useState('');
-  const [form, setForm] = useState<Record<string, string | boolean> | null>(null);
-  const [saving, setSaving] = useState(false);
   const [tick, setTick] = useState(0);
   const [verdicts, setVerdicts] = useState<Record<string, { verdict: string; note: string }>>({});
   const [signing, setSigning] = useState<string | null>(null);
@@ -105,7 +115,6 @@ export function AnalyticsScreen({ initialTab }: { initialTab?: string }) {
     api(`/api/analytics/${ENDPOINT[tab]}${qs.toString() ? '?' + qs : ''}`).then(body => {
       if (gone) return;
       setData({ key, body }); setLoadError('');
-      if (tab === 'validation') setForm(null);
     }, err => { if (!gone) setLoadError(errorText(err)); });
     return () => { gone = true; };
   }, [tab, rep, week, tick, logQ, key]);
@@ -162,8 +171,8 @@ export function AnalyticsScreen({ initialTab }: { initialTab?: string }) {
         <div key={a.key} className="panel"><div className="panel-hdr"><span className="panel-ttl">{i + 1} · {a.title}</span>{stateBadge(a.state, a.stateLabel)}</div><div className="panel-body">
           <div style={sx('font-size:12px;color:var(--i3);margin-bottom:6px')}>{a.question}</div>
           {a.evidence.map(e => e.value.length > 28 ? <div key={e.label} style={sx('padding:7px 0;border-bottom:1px solid var(--s75);font-size:12px')}>
-            <div style={sx('color:var(--i2)')}>{e.label}</div><div style={sx('color:var(--i1);font-weight:600;margin-top:2px')}>{e.value}</div>{e.sub ? <div style={sx('font-size:10.5px;color:var(--i3)')}>{e.sub}</div> : null}</div>
-            : arow(e.label, e.label, e.value, e.sub))}
+            <div style={sx('color:var(--i2)')}>{e.label}{e.info ? <Info x={e.info} /> : null}</div><div style={sx('color:var(--i1);font-weight:600;margin-top:2px')}>{e.value}</div>{e.sub ? <div style={sx('font-size:10.5px;color:var(--i3)')}>{e.sub}</div> : null}</div>
+            : arow(e.label, e.label, e.value, e.sub, e.info))}
           <div style={sx('margin-top:10px')}><a href={`?tab=${a.tab}`} onClick={ev => { ev.preventDefault(); pick(a.tab as Tab); }} style={sx('font-size:11.5px;color:var(--brand);font-weight:600;text-decoration:none')}>See the detail →</a></div>
           {(() => {
             const v = d.verdicts[a.key], earlier = (d.history[a.key] || []).length - 1;
@@ -186,23 +195,23 @@ export function AnalyticsScreen({ initialTab }: { initialTab?: string }) {
     return <>
       {repFilter(d, <span style={sx('font-size:11px;color:var(--i3)')}>{m.items} recommendation{m.items === 1 ? '' : 's'} · {m.autoN} proceeded · {m.excN} exceptions</span>)}
       <div style={sx('display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px')}>
-        <div className="panel"><div className="panel-hdr"><span className="panel-ttl">G1 · Reduced human effort</span>{badge(g1)}</div><div className="panel-body">
-          <div style={sx('font-family:var(--fd);font-size:30px;font-weight:700;color:var(--i1);margin-bottom:4px')}>{g1.value === null ? '—' : Math.round(g1.value) + '% less'}</div>
-          <div style={sx('font-size:11.5px;color:var(--i3)')}>{m.minutes === null ? 'No usable first actions yet' : g1.value === null ? `No decisions yet; the baseline is ${m.base} min` : `${Math.round(m.minutes * 10) / 10} min of review per usable first action, against a baseline of ${m.base} min`} · threshold {d.settings.g1Threshold}% less</div></div></div>
-        <div className="panel"><div className="panel-hdr"><span className="panel-ttl">G2 · Recommendation acceptance</span>{badge(g2)}</div><div className="panel-body">
-          <div style={sx('font-family:var(--fd);font-size:30px;font-weight:700;color:var(--i1);margin-bottom:4px')}>{pct0(m.weighted)}</div>
-          <div style={sx('font-size:11.5px;color:var(--i3)')}>accepted on first pass, weighted across both paths{m.partial && m.weighted !== null ? ' (only one path has decisions so far)' : ''} · threshold {d.settings.g2Threshold}%</div></div></div>
+        <div className="panel"><div className="panel-hdr"><span className="panel-ttl">G1 · Reduced human effort<Info x={explainG1(m, d.settings)} /></span>{badge(g1)}</div><div className="panel-body">
+          <div style={sx(`font-family:var(--fd);font-size:${g1.state === 'early' ? 20 : 30}px;font-weight:700;color:var(--i1);margin-bottom:4px`)}>{g1.value === null ? '—' : g1.state === 'early' ? earlyText(g1.n, g1.min) : Math.round(g1.value) + '% less'}</div>
+          <div style={sx('font-size:11.5px;color:var(--i3)')}>{m.minutes === null ? 'No first actions handled yet' : g1.value === null ? `No decisions yet; the baseline is ${m.base} min` : `${Math.round(m.minutes * 10) / 10} min of review per first action a person handled (${m.handled}), against a baseline of ${m.base} min`} · threshold {d.settings.g1Threshold}% less</div></div></div>
+        <div className="panel"><div className="panel-hdr"><span className="panel-ttl">G2 · Recommendation acceptance<Info x={explainG2(m, d.settings)} /></span>{badge(g2)}</div><div className="panel-body">
+          <div style={sx(`font-family:var(--fd);font-size:${g2.state === 'early' ? 20 : 30}px;font-weight:700;color:var(--i1);margin-bottom:4px`)}>{g2.state === 'early' ? earlyText(g2.n, g2.min) : pct0(m.weighted)}</div>
+          <div style={sx('font-size:11.5px;color:var(--i3)')}>{g2.state === 'early' ? 'No percentage until enough decisions are counted' : 'accepted on first pass, weighted across both paths'}{m.partial && m.weighted !== null && g2.state !== 'early' ? ' (only one path has decisions so far)' : ''} · threshold {d.settings.g2Threshold}%{g2.state === 'early' ? <Info x={explainEarly(g2.n, g2.min)} /> : null}</div></div></div>
       </div>
       {two(apanel('G2 · the working', null, <>
-        {arow('a', 'Proceeded path (weekly spot-check)', `${pct0(m.auto.pct)} · ${m.auto.a} of ${m.auto.n} rated · ${m.autoN} items`)}
-        {arow('e', 'Exception path (decided in the queue)', `${pct0(m.exc.pct)} · ${m.exc.a} of ${m.exc.n} decided · ${m.excN} items`)}
-        {arow('w', 'Weighted', m.auto.pct !== null && m.exc.pct !== null ? <>{pct0(m.auto.pct)} × {m.autoN}/{total} + {pct0(m.exc.pct)} × {m.excN}/{total} = <b>{pct0(m.weighted)}</b></> : pct0(m.weighted))}
-        {arow('p', 'Pooled, for comparison', `${pct0(m.pooled.pct)} · ${m.pooled.a} of ${m.pooled.n}`)}
-        {arow('l', 'Within one alternative', `${pct0(m.alternatives.pct)} · ${m.alternatives.a} of ${m.alternatives.n}`)}
+        {arow('a', 'Proceeded path (weekly spot-check)', `${pct0(m.auto.pct)} · ${m.auto.a} of ${m.auto.n} rated · ${m.autoN} items`, undefined, explainProceeded(m))}
+        {arow('e', 'Exception path (decided in the queue)', `${pct0(m.exc.pct)} · ${m.exc.a} of ${m.exc.n} decided · ${m.excN} items`, undefined, explainException(m))}
+        {arow('w', 'Weighted', g2.state === 'early' ? earlyText(g2.n, g2.min) : m.auto.pct !== null && m.exc.pct !== null ? <>{pct0(m.auto.pct)} × {m.autoN}/{total} + {pct0(m.exc.pct)} × {m.excN}/{total} = <b>{pct0(m.weighted)}</b></> : pct0(m.weighted), undefined, explainG2(m, d.settings))}
+        {arow('p', 'Pooled, for comparison', `${pct0(m.pooled.pct)} · ${m.pooled.a} of ${m.pooled.n}`, undefined, FIRST_PASS)}
+        {arow('l', 'Within one alternative', `${pct0(m.alternatives.pct)} · ${m.alternatives.a} of ${m.alternatives.n}`, undefined, explainAlternative(m))}
         {note(`First-pass decisions only: an alternative accepted after a rejection is shown separately. Pooling lets the few hard exceptions weigh as much as the many items that proceeded, so the headline is weighted by how many items took each path. Below ${d.settings.minDecisions} counted decisions a gate is too early to call.`)}</>),
       apanel('How it was decided', null, <>
         {bar('n', 'Accepted as it is', m.edits.none, decided, 'var(--pos)')}{bar('m', 'Minor edit', m.edits.minor, decided, 'var(--sec)')}{bar('j', 'Major edit', m.edits.major, decided, 'var(--warn)')}{bar('r', 'Rejected', rejTotal, decided, 'var(--neg)')}
-        {arow('f', 'Flagged, waiting for a check', m.flagged)}{arow('i', 'Interventions on items that proceeded', m.interventions)}
+        {arow('f', 'Flagged, waiting for a check', m.flagged, undefined, explainFlagged(m.flagged))}{arow('i', 'Interventions on items that proceeded', m.interventions)}
         {note('Decisions under 5 seconds or in a long run of identical ones count only once a manager has checked them. Interventions are an early warning on the automatic path.')}</>))}
       {two(apanel('Rejection reasons', null, <>
         {rej.length ? rej.map(([k, n]) => bar(k, k, n, rejTotal, 'var(--s300)')) : none('No rejections yet.')}
@@ -210,6 +219,8 @@ export function AnalyticsScreen({ initialTab }: { initialTab?: string }) {
         {arow('d', "Gaps in the Client's data", m.causes.data)}{arow('s', "The system's own judgement", m.causes.system)}{arow('o', 'Other', m.causes.other)}{arow('c', 'Compliance: sent back by the sales manager', m.compliance)}</>),
       apanel('What happened next', null, <>{arow('rel', 'Released, ready to use', m.released)}{R.OUTCOMES.map(o => arow(o, o, m.outcomes[o] || 0))}
         {note('Reps mark the outcome on Today or Micro-segments & NBA; there is no CRM link in the pilot to tell us.')}</>))}
+      {apanel('By configuration version', <span style={sx('font-size:10.5px;color:var(--i3)')}>a changed rubric or action library starts a new row</span>,
+        mini(['Config version', 'First-pass decisions', 'Accepted', 'Rate'], d.byVersion.map(v => [v.versionNo === null ? 'Not recorded' : `v${v.versionNo}`, v.n, v.a, v.n < d.settings.minDecisions ? earlyText(v.n, d.settings.minDecisions) : pct0(v.rate)])))}
     </>;
   }
 
@@ -312,15 +323,15 @@ export function AnalyticsScreen({ initialTab }: { initialTab?: string }) {
     const all = d.allRate;
     return <>{repFilter(d, d.records ? <a className="btn btn-primary btn-sm" style={sx('margin-left:auto;text-decoration:none')} href={`/api/exports/outcome-log.csv${rep ? `?rep=${encodeURIComponent(rep)}` : ''}`} download>Download the outcome log (.csv)</a> : null)}
       <div style={sx('display:flex;gap:14px;align-items:flex-start;padding:14px 16px;background:var(--brand-lt);border-radius:var(--rmd);margin-bottom:16px')}>
-        <div style={sx('flex:1;font-size:12.5px;color:var(--i1);line-height:1.6')}><b>In the pilot the loop records; in production it learns.</b> Every recommendation keeps a full record. Nothing here changes the scoring or the actions during the pilot: the only immediate change is the one alternative after a rejection, for that account alone. The tables show the evidence production starts from, as proposals only.</div>
+        <div style={sx('flex:1;font-size:12.5px;color:var(--i1);line-height:1.6')}><b>Every recommendation and what happened to it. During the pilot this only records and suggests; nothing changes on its own.</b> Every recommendation keeps a full record. Nothing here changes the scoring or the actions during the pilot: the only immediate change is the one alternative after a rejection, for that account alone. The tables show the evidence production starts from, as proposals only.</div>
         <div style={sx('text-align:right;flex-shrink:0;font-size:11px;color:var(--i2)')}>Config v{d.configVersion ?? '—'}<div style={sx('color:var(--i3)')}>{d.complete} of {d.total} records complete</div></div></div>
       {d.records ? apanel('8.1 Outcome log · one record per recommendation', <span style={sx('font-size:10.5px;color:var(--i3)')}>{d.total} records{d.total > d.records.length ? ` · the first ${d.records.length} shown, the download has them all` : ''}</span>,
         <div style={sx('overflow-x:auto')}><table style={sx('width:100%;border-collapse:collapse;font-size:11.5px;min-width:980px')}><tbody>
-          <tr style={sx('color:var(--i3);font-size:10px;text-transform:uppercase;letter-spacing:.06em')}>{['Account · micro-segment', 'Signals behind it', 'Action · contact · channel', 'Decision', 'Alternative', 'Outcome', 'Config'].map(h => <td key={h} style={sx('padding:6px 8px 6px 0')}>{h}</td>)}</tr>
+          <tr style={sx('color:var(--i3);font-size:10px;text-transform:uppercase;letter-spacing:.06em')}>{['Person · company · micro-segment · tier', 'Signals behind it', 'Action · channel', 'Decision', 'Alternative', 'Outcome', 'Config'].map(h => <td key={h} style={sx('padding:6px 8px 6px 0')}>{h}</td>)}</tr>
           {d.records.map((o, i) => <tr key={i} style={sx('border-top:1px solid var(--s75);vertical-align:top')}>
-            <td style={sx('padding:8px 8px 8px 0')}><b style={sx('color:var(--i1)')}>{o.account}</b><div style={sx('color:var(--i3)')}>{o.segment} · tier {o.tier}</div></td>
+            <td style={sx('padding:8px 8px 8px 0')}><b style={sx('color:var(--i1)')}>{o.contact}</b>{o.contactTitle ? <span style={sx('color:var(--i3)')}>{` · ${o.contactTitle}`}</span> : null}<div style={sx('color:var(--i2)')}>{o.account}</div><div style={sx('color:var(--i3)')}>{o.segment} · tier {o.tier || '—'}</div></td>
             <td style={sx('padding:8px 8px 8px 0;color:var(--i2)')}>{o.signals.join(', ')}</td>
-            <td style={sx('padding:8px 8px 8px 0;color:var(--i1)')}>{o.action}<div style={sx('color:var(--i3)')}>{o.contact} · {o.channel}</div></td>
+            <td style={sx('padding:8px 8px 8px 0;color:var(--i1)')}>{o.action}<div style={sx('color:var(--i3)')}>{o.channel}{o.actionBy !== 'Rules' ? ` · chosen by the ${o.actionBy.replace(/^AI/, 'AI')}` : ''}</div></td>
             <td style={sx('padding:8px 8px 8px 0;color:var(--i1)')}>{o.decision}{o.reasonCode ? <div style={sx('color:var(--i3)')}>{o.reasonCode} {o.reason}</div> : null}{o.tags ? <div style={sx('color:var(--i3)')}>{o.tags}</div> : null}</td>
             <td style={sx('padding:8px 8px 8px 0;color:var(--i2)')}>{o.alternativeNeeded ? (o.alternativeAccepted === null ? 'Needed, not decided' : o.alternativeAccepted ? 'Needed, accepted' : 'Needed, rejected') : '—'}</td>
             <td style={sx('padding:8px 8px 8px 0;color:var(--i2)')}>{o.outcome || '—'}</td>
@@ -328,17 +339,20 @@ export function AnalyticsScreen({ initialTab }: { initialTab?: string }) {
         : <div style={sx('font-size:12px;color:var(--i3);margin-bottom:16px')}>The record per recommendation names accounts and contacts, so it isn&apos;t shown to viewers; the tables below are the aggregates.</div>}
       {apanel('Which actions worked in which segments', <span style={sx('font-size:10.5px;color:var(--i3)')}>production: preferred actions (8.2)</span>, <>
         {mini(['Micro-segment · action', 'Recommended', 'Judged', 'Accepted', 'Replies or meetings', ''], d.actions.map(x => [x.k, x.n, x.j, x.rate === null ? '—' : pct0(x.rate), x.w,
-          x.j >= MIN && (x.rate ?? 0) >= 70 && x.w ? flag('Preferred-action candidate', 'g') : x.j < MIN ? flag(`Needs ${MIN}+ judged`, '') : '']))}
+          x.j >= MIN && (x.rate ?? 0) >= 70 && x.w ? <>{flag('Preferred-action candidate', 'g')}<Info x={explainPreferred(MIN)} align="left" /></> : x.j < MIN ? flag(`Needs ${MIN}+ judged`, '') : '']))}
         <div style={sx('font-size:11px;color:var(--i3);margin-top:8px')}>In production, an action that keeps being accepted in a segment and keeps leading to replies or meetings becomes the preferred action there.</div></>)}
       {apanel('Segments that keep getting rejected', <span style={sx('font-size:10.5px;color:var(--i3)')}>production: self-correction (8.3)</span>, <>
         {mini(['Micro-segment', 'Judged', 'Accepted', 'Most common rejection', ''], d.segments.map(x => [x.k, x.j, x.rate === null ? '—' : pct0(x.rate), x.top ? `${x.top.reason} (${x.top.n})` : '—',
-          x.j >= MIN && x.rate !== null && x.rate < 50 ? flag('Would be paused for review', 'w') : '']))}
+          x.j >= MIN && x.rate !== null && x.rate < 50 ? <>{flag('Would be paused for review', 'w')}<Info x={explainPaused(MIN)} align="left" /></> : '']))}
         <div style={sx('font-size:11px;color:var(--i3);margin-top:8px')}>In production, a segment that keeps being rejected is paused and sent for review with its reasons: &ldquo;wrong contact&rdquo; points at the persona order, &ldquo;wrong action&rdquo; at the action set.</div></>)}
       {two(apanel('Which signals sat behind accepted recommendations', <span style={sx('font-size:10.5px;color:var(--i3)')}>production: weights (8.4)</span>, <>
-        {mini(['Signal', 'Judged', 'Accepted'], d.signals.map(x => [<>{x.k}{x.j >= MIN && all !== null && x.rate !== null && Math.abs(x.rate - all) >= 20 ? <> {flag(x.rate > all ? 'Review: weight up?' : 'Review: weight down?', x.rate > all ? 'g' : 'w')}</> : null}</>, x.j, x.rate === null ? '—' : pct0(x.rate)]))}
+        {mini(['Signal', 'Judged', 'Accepted'], d.signals.map(x => [<>{x.k}{x.j >= MIN && all !== null && x.rate !== null && Math.abs(x.rate - all) >= 20 ? <> {flag(x.rate > all ? 'Review: weight up?' : 'Review: weight down?', x.rate > all ? 'g' : 'w')}<Info x={explainWeight(all)} /></> : null}</>, x.j, x.rate === null ? '—' : pct0(x.rate)]))}
         <div style={sx('font-size:11px;color:var(--i3);margin-top:8px')}>Compared with {pct0(all)} overall.</div></>),
       apanel('Which fit criteria sat behind them', null, <>{mini(['Group', 'Judged', 'Accepted'], d.fit.map(x => [x.k, x.j, x.rate === null ? '—' : pct0(x.rate)]))}
         <div style={sx('font-size:11px;color:var(--i3);margin-top:8px')}>&ldquo;Wrong fit&rdquo; and &ldquo;signal too weak&rdquo; rejections point straight at the scoring.</div></>))}
+      {apanel('Chosen by the AI or by the rules', <span style={sx('font-size:10.5px;color:var(--i3)')}>acceptance and replies</span>, <>
+        {mini(['Who chose', 'Recommended', 'Judged', 'Accepted', 'Replies or meetings'], d.chooser.map(x => [x.k, x.n, x.j, x.rate === null ? '—' : pct0(x.rate), x.w]))}
+        <div style={sx('font-size:11px;color:var(--i3);margin-top:8px')}>The rules choose when the AI is switched off, slow, failing or fails its checks.</div></>)}
       {apanel('Pilot versus production', null, mini(['Step', 'In the pilot', 'In production'], [
         ['Outcome log', 'Every decision, reason, tag and outcome recorded, with the configuration version', 'The same, plus outcomes read automatically from the Client’s tools'],
         ['Rejection handling', 'One alternative per account, immediately', 'The same'], ['Preferred actions', 'Evidence only (above)', 'Accepted actions weighed first in each segment'],
@@ -347,50 +361,33 @@ export function AnalyticsScreen({ initialTab }: { initialTab?: string }) {
       ]))}</>;
   }
 
-  /* ─── Validation ─── */
+  /* ─── Criteria: how the pilot is judged, set in Setup (30 Oct 2026; was edited here as "Validation") ─── */
   function validationTab(d: Validation): ReactNode {
-    const s = d.settings, edit = d.canEdit;
-    const f = form ?? { g1BaselineMinutes: String(s.g1BaselineMinutes), g1BaselineTimed: s.g1BaselineTimed, g1Threshold: String(s.g1Threshold), g2Threshold: String(s.g2Threshold),
-      minDecisions: String(s.minDecisions), spotCheckShare: String(Math.round(s.spotCheckShare * 100)) };
-    const set = (k: string, v: string | boolean) => setForm({ ...f, [k]: v });
-    const inp = (k: string, unit: string, label: string) => edit ? <><input id={`v_${k}`} aria-label={label} type="number" value={String(f[k])} onChange={e => set(k, e.target.value)}
-      style={sx('width:84px;padding:5px 8px;border:1px solid var(--bdk);border-radius:6px;font-size:12px;text-align:right')} /> <span style={sx('color:var(--i3);font-size:11px')}>{unit}</span></> : <>{String(f[k])} {unit}</>;
-    const gate = (title: string, rows: [string, ReactNode][]) => apanel(title, null, rows.map(([k, v]) => <div key={k} style={sx('display:grid;grid-template-columns:110px 1fr;gap:12px;padding:8px 0;border-bottom:1px solid var(--s75);font-size:12px;align-items:baseline')}>
+    const s = d.settings;
+    const gate = (title: ReactNode, rows: [string, ReactNode][]) => apanel(title, null, rows.map(([k, v]) => <div key={k} style={sx('display:grid;grid-template-columns:110px 1fr;gap:12px;padding:8px 0;border-bottom:1px solid var(--s75);font-size:12px;align-items:baseline')}>
       <span style={sx('color:var(--i3)')}>{k}</span><span style={sx('color:var(--i1);line-height:1.5')}>{v}</span></div>));
-    async function save() {
-      const n = (k: string) => Number(f[k]);
-      setSaving(true);
-      try {
-        const r = await api<{ versionNo: number; changes: string[] }>('/api/analytics/validation', { method: 'PATCH', body: { g1BaselineMinutes: n('g1BaselineMinutes'), g1BaselineTimed: !!f.g1BaselineTimed,
-          g1Threshold: n('g1Threshold'), g2Threshold: n('g2Threshold'), minDecisions: n('minDecisions'), spotCheckShare: n('spotCheckShare') / 100 } });
-        showToast(`Saved as Config v${r.versionNo}: ${r.changes.join('; ')}`);
-        setForm(null); setTick(t => t + 1);
-      } catch (err) { showToast(errorText(err)); }
-      finally { setSaving(false); }
-    }
     const pillFor = (v: string) => (v === 'Sufficient' ? pill('var(--pos-lt)', 'var(--pos)') : v === 'Sufficient with gaps' ? pill('var(--warn-lt)', 'var(--warn)') : pill('var(--neg-lt)', 'var(--neg)'));
+    const setupLink = <Link href="/setup#sec-measurement" style={sx('color:var(--brand);font-weight:600;text-decoration:none')}>Setup › Measurement and proceed criteria →</Link>;
     return <>
-      {two(gate('G1 · Reduced human effort', [
-        ['Method', 'Minutes people spend per usable first action: review time in the exception queue plus spot-check time, divided by the recommendations released ready to use.'],
-        ['Baseline', <>{inp('g1BaselineMinutes', 'min per first action', 'G1 baseline in minutes')}
-          <label style={sx('display:flex;align-items:center;gap:6px;font-size:11px;color:var(--i2);margin-top:6px')}><input type="checkbox" checked={!!f.g1BaselineTimed} disabled={!edit} onChange={e => set('g1BaselineTimed', e.target.checked)} />Timed by the Client on the same data</label></>],
-        ['Sample', d.builds ? `${d.sample.released} usable first actions; ${d.sample.minutes} min of review` : 'No data yet'],
-        ['Threshold', inp('g1Threshold', '% less than the baseline', 'G1 threshold')],
-      ]), gate('G2 · Recommendation acceptance', [
+      <div style={sx('display:flex;gap:14px;align-items:center;padding:12px 16px;background:var(--brand-lt);border-radius:var(--rmd);margin-bottom:16px;font-size:12.5px;color:var(--i1)')}>
+        <div style={sx('flex:1;line-height:1.55')}><b>How the pilot is judged.</b> These are set in Setup, signed off and versioned like the rest of the configuration; every reading on these tabs names the version it was judged by.</div>{setupLink}</div>
+      {two(gate(<>G1 · Reduced human effort<Info x={explainG1({ ...x0, base: s.g1BaselineMinutes }, s)} /></>, [
+        ['Method', 'Minutes people spend reviewing, divided by the first actions they handled (exceptions decided, spot-checks rated). Preparation and sending time are not recorded in the pilot.'],
+        ['Baseline', `${s.g1BaselineMinutes} min per first action${s.g1BaselineTimed ? ', timed by the Client on the same data' : ' (a placeholder until the Client times it)'}`],
+        ['Sample', d.builds ? `${d.sample.minutes} min of review so far` : 'No data yet'],
+        ['Threshold', `${s.g1Threshold}% less than the baseline`],
+      ]), gate(<>G2 · Recommendation acceptance<Info x={explainG2(x0, s)} /></>, [
         ['Method', 'Share accepted on first pass (as it is or edited) among recommendations a person judged: every exception decided in the queue plus the weekly spot-check of items that proceeded. The two paths are weighted by how many items took each.'],
         ['Baseline', 'None: acceptance is measured directly.'],
-        ['Sample', <>{d.builds ? `${d.sample.exceptions} exception decisions and ${d.sample.spotChecks} spot-checks; ` : ''}spot-check share {inp('spotCheckShare', '% of proceeded items, weekly', 'Spot-check share')}</>],
-        ['Threshold', inp('g2Threshold', '% accepted', 'G2 threshold')],
+        ['Sample', <>{d.builds ? `${d.sample.exceptions} exception decisions and ${d.sample.spotChecks} spot-checks; ` : ''}spot-check share {Math.round(s.spotCheckShare * 100)}% of proceeded items, weekly<Info x={explainSpotShare(s.spotCheckShare)} /></>],
+        ['Threshold', `${s.g2Threshold}% accepted`],
       ]))}
       {apanel('Counting rules', null, <>
-        {arow('min', 'A gate is too early to call below', inp('minDecisions', 'decisions', 'Too early to call below'))}
-        {arow('first', 'First pass only', 'An alternative accepted after a rejection is reported as "within one alternative"')}
-        {arow('check', 'Checked before counting', 'Decisions under 5 seconds or in a run of identical decisions')}
-        {arow('deal', 'Proceed criteria: deal-size threshold', `${Math.round(d.dealThreshold / 1000)}k USD`, 'Fixed for the pilot: every build reads it')}
-        {edit ? <><div style={sx('margin-top:12px;padding:9px 12px;background:var(--warn-lt);color:var(--warn);border-radius:var(--rsm);font-size:11.5px')}>Agree these at kickoff. Changing them during measurement moves the goalposts, so each change makes a new configuration version and is dated. The scoring weights can&apos;t be changed in the pilot.</div>
-          <div style={sx('display:flex;justify-content:flex-end;gap:8px;margin-top:12px')}><button className="btn btn-sec btn-sm" disabled={!form || saving} onClick={() => setForm(null)}>Undo changes</button>
-            <button className="btn btn-primary btn-sm" disabled={!form || saving} onClick={() => void save()}>{saving ? 'Saving…' : 'Save as a new configuration version'}</button></div></>
-          : <div style={sx('font-size:11px;color:var(--i3);margin-top:10px')}>Set by the sales manager or an Admin.</div>}</>)}
+        {arow('min', 'A gate is too early to call below', `${s.minDecisions} decisions`, undefined, explainEarly(0, s.minDecisions))}
+        {arow('first', 'First pass only', 'An alternative accepted after a rejection is reported as "within one alternative"', undefined, FIRST_PASS)}
+        {arow('check', 'Checked before counting', 'Decisions under 5 seconds or in a run of identical decisions', undefined, CHECKED)}
+        {arow('deal', 'Proceed criteria: deal-size threshold', `${Math.round(d.dealThreshold / 1000)}k USD`, 'An Admin changes it in Setup', explainDeal(d.dealThreshold))}
+        <div style={sx('font-size:11px;color:var(--i3);margin-top:10px')}>Changed in {setupLink}</div></>)}
       {apanel('Configuration versions', <span style={sx('font-size:11px;color:var(--i2)')}>Now: Config v{d.configVersion ?? '—'}</span>,
         d.versions.map(v => arow(String(v.versionNo), `v${v.versionNo} · ${v.changes.length ? v.changes.join('; ') : v.versionNo === 1 ? 'Starting values' : 'No recorded change'}`, v.activatedAt ? `${fmtDate(v.activatedAt)}${v.by ? ' · ' + v.by : ''}` : 'Kickoff')))}
       {d.readiness.length && d.verdict ? apanel('Data sufficiency · the readiness checks before measurement', <span style={pillFor(d.verdict)}>{d.verdict}</span>, <>

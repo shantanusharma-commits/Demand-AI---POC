@@ -1,0 +1,1 @@
+ALTER TABLE "micro_segments" ADD COLUMN "former_names" text[] DEFAULT '{}'::text[] NOT NULL;

@@ -114,7 +114,7 @@ test('a failing draft gets one regeneration that quotes the failure; failing aga
   assert.equal(r1.ok, true);
   assert.equal(fixed.requests.length, 2);
   assert.match(fixed.requests[1].messages.at(-1)!.content, /reads like a product claim/);
-  if (r1.ok) assert.equal(r1.draft.ai?.template, 'draft.message@3');
+  if (r1.ok) assert.equal(r1.draft.ai?.template, 'draft.message@4');
   const never = new FakeModel([], { otherwise: draftWriter(() => ({ subject: 'best in class', opening: 'Hope you are well.', bridge: 'Best-in-class results!', ask: 'Call?', claimId: 'CS-01' })) });
   const r2 = await writeDraft(gateway(never), CTX, a);
   assert.deepEqual([r2.ok, r2.ok === false && r2.reason, never.requests.length], [false, 'checks_failed', 2]);
@@ -160,4 +160,44 @@ test('a connection note is written without a claim and kept within its length; t
   assert.deepEqual(await writeDraft(gateway(idle), CTX, task), { ok: false, reason: 'not_eligible' });
   assert.deepEqual(await writeDraft(gateway(idle, false), CTX, emailAsk()), { ok: false, reason: 'disabled' });
   assert.equal(idle.requests.length, 0);
+});
+
+/* ─── draft.message v4 (30 Oct 2026): the whole brand pack that bears on a message ─── */
+
+test('v4: the prompt carries the frameworks with their asks, the full play, competitors and the writing notes', () => {
+  const a = emailAsk();
+  const rich: N.BrandPack = JSON.parse(JSON.stringify(pack));
+  rich.competitors = ['Northwind Controls'];
+  rich.voice.guidance = ['Use British spelling', 'Name the site'];
+  rich.frameworks[0] = { ...rich.frameworks[0], ask: 'A 20-minute call this week' };
+  const p = draftPrompt({ ...a, pack: rich }), sent = p.system + p.messages[0].content;
+  assert.match(sent, /Frameworks \(choose the one whose objective fits the action/);
+  assert.match(sent, /ask "A 20-minute call this week"/);
+  assert.match(p.system, /follow its steps in order; your ask is that framework's ask/);
+  const own = rich.framework[a.rec.segment || N.segmentOfAction(a.action, a.rec)];
+  assert.ok(own && sent.includes(`likely objection ${JSON.stringify(own.objection)}`) && sent.includes(`answer to it ${JSON.stringify(own.response)}`), 'the angle, the objection and the answer');
+  assert.match(p.system, /Never name a competitor \("Northwind Controls", or any other\)/);
+  assert.match(p.system, /writing notes, which you follow: "Use British spelling"; "Name the site"/);
+  // A segment with no play of its own (a new one): every play, to follow the one that fits.
+  const p2 = draftPrompt({ ...a, rec: { ...a.rec, segment: 'Plant upgrades' }, action: 'Offer a plant tour' });
+  assert.match(p2.messages[0].content, /Plays \(follow the one whose situation fits the signal/);
+});
+
+test('v4: claims are matched by topic, not by micro-segment tag; a task made only for want of a tagged claim is written', () => {
+  const a = emailAsk();
+  const tagless: N.BrandPack = JSON.parse(JSON.stringify(pack));
+  tagless.claims = tagless.claims.map(c => ({ ...c, segments: ['Leadership'] }));
+  assert.ok(claimsFor(a.rec, a.action, tagless, checkDate).length > 0, 'offered whatever the tag');
+  const topic = topicWords(a);
+  const first = claimsFor(a.rec, a.action, tagless, checkDate)[0];
+  const words = `${first.title} ${first.claim}`.toLowerCase();
+  if (topic.some(w => words.includes(w.slice(0, 6)))) assert.ok(true, 'the closest to the topic first');
+  // A new micro-segment's action: no claim tagged to it, so the rules made a task; the AI may still write the message.
+  const rec = { ...a.rec, segment: 'Plant upgrades', prominent: 'Plant upgrades' };
+  const rules = R.generatedDraft(rec, { ...R.initialState(), manualAction: 'Offer a plant tour' }, pack, checkDate);
+  assert.equal(rules.channel, 'Task');
+  assert.equal(eligible(rules), false, 'without the recommendation, as before');
+  assert.equal(eligible(rules, rec, 'Offer a plant tour'), true);
+  const d = assemble({ rec, action: 'Offer a plant tour', pack, checkDate, rules }, { subject: 'about your question', opening: 'Thanks.', bridge: 'A short call helps.', ask: 'Would a call help?', claimId: NO_CLAIM, framework: NO_CLAIM }, [], 'c');
+  assert.deepEqual([d.channel, d.noProof, d.task], ['Email', true, undefined]);
 });

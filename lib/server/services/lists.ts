@@ -6,7 +6,8 @@ import 'server-only';
 import { randomUUID } from 'node:crypto';
 import { and, asc, desc, eq, gt, inArray, isNotNull, isNull, like, notExists, or, sql, type SQL } from 'drizzle-orm';
 import type { AnyPgColumn } from 'drizzle-orm/pg-core';
-import { CODES, LEAD_COLUMNS, LEAD_REQUIRED, missingColumns, processLeads, readTable, toCSV, type AiVerticals, type CsvText } from '../../demandai-engine.ts';
+import { CODES, LEAD_COLUMNS, LEAD_REQUIRED, missingColumns, processLeads, readTable, toCSV, type AiVerticals, type CsvText, type ScoringSettings } from '../../demandai-engine.ts';
+import { scoringSettingsOf } from '../../engine/settings.ts';
 import { ENGINE_VERSION } from '../../engine/config.ts';
 import { LEAD_SHEET } from '../../engine/sheets.ts';
 import { CHECKS, STEPS, checkOf, groupIssues, rowsIn, stepResult, type CheckKey, type Finding, type StepResult } from '../../prospecting/checks.ts';
@@ -62,6 +63,15 @@ export async function activeConfigVersionId(scope: TenantScope): Promise<string 
   return c?.id ?? null;
 }
 
+/** The scoring settings (Setup › ICP and rubric, personas, knock-outs) of a configuration version, or of the active one.
+ *  A JobError says why when they can't be used, so nothing is processed with settings other than the ones shown. */
+export async function scoringSettingsFor(scope: TenantScope, versionId?: string | null): Promise<ScoringSettings> {
+  const [c] = await scope.tx.select({ body: configVersions.body }).from(configVersions)
+    .where(and(eq(configVersions.businessUnitId, scope.ctx.businessUnitId), versionId ? eq(configVersions.id, versionId) : eq(configVersions.status, 'active')));
+  try { return scoringSettingsOf(c?.body); }
+  catch (err) { throw new JobError('config_invalid', `The scoring settings in Setup can't be used: ${(err as Error).message}. Fix them in Setup, then try again.`); }
+}
+
 export const isManager = (role: BuRole) => can(role, 'users.manage');
 
 function groupOf(status: string): ContactGroup {
@@ -85,7 +95,8 @@ export function createLeadJob(limits: UploadLimits) {
     const { db, job } = run;
     const ctx = jobContext(job.businessUnitId);
     await run.stage('parse');
-    const { upload, mapping, fixes, transfer } = await withTenant(db, ctx, async s => ({
+    const { upload, mapping, fixes, transfer, settings } = await withTenant(db, ctx, async s => ({
+      settings: await scoringSettingsFor(s),
       upload: await loadUpload(s, job.payload.uploadId),
       mapping: job.payload.mappingId ? await getMapping(s, job.payload.mappingId) : null,
       fixes: await correctionsOf(s, job.payload.uploadId),
@@ -105,7 +116,7 @@ export function createLeadJob(limits: UploadLimits) {
     const opts = { file: upload.fileName, sheet: read.sheet, mapping: mapping ?? undefined };
     const fixed = applyCorrections(read.grid, fixes, opts);
     const build = (aiVerticals?: AiVerticals) =>
-      withNotes(processLeads(fixed.grid, { ...opts, removed: fixed.removed, verticals: fixed.verticals, aiVerticals }), read.notes, upload.fileName, read.sheet);
+      withNotes(processLeads(fixed.grid, { ...opts, removed: fixed.removed, verticals: fixed.verticals, aiVerticals, settings }), read.notes, upload.fileName, read.sheet);
     let whole = build();
     // Industries the mapping table can't match go to the AI classifier when it is on (spec 3.4), leaving time to save.
     const classified = await classifyStep(db, ctx, aiGateway(), whole, run.deadline - Date.now() - 15_000);

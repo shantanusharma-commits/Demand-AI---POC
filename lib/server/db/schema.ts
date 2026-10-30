@@ -179,7 +179,7 @@ export const configVersions = pgTable('config_versions', {
 /* ─── Setup (G-002, D-13): sign-offs per section and signal-type changes, both append-only ─── */
 
 /** The Setup sections, as the original page numbered them. */
-export const CONFIG_SECTIONS = ['scope', 'rubric', 'personas', 'signals', 'actions', 'brand', 'users'] as const;
+export const CONFIG_SECTIONS = ['scope', 'rubric', 'personas', 'signals', 'actions', 'segments', 'measurement', 'brand', 'users'] as const;
 export type ConfigSection = (typeof CONFIG_SECTIONS)[number];
 
 /** Who signed a Setup section off, or reopened it, and on which configuration version. A section's state is its
@@ -223,6 +223,10 @@ export const signalTypeChanges = pgTable('signal_type_changes', {
   index('signal_type_changes_version_idx').on(t.configVersionId),
 ]);
 
+/** What a Setup change was about: the measurement settings (was Analytics › Validation), the scoring settings (rubric,
+ *  personas, knock-outs, signal weights), the lock on them, the action library. */
+export const CONFIG_CHANGE_KINDS = ['validation', 'scoring', 'lock', 'actions'] as const;
+
 /** A change to the success-gate settings (D-21: G1 baseline and threshold, G2 threshold, the "too early to call"
  *  number, the spot-check share) and the configuration version it made: the change in words, and the settings before
  *  and after. Append-only; Setup's version history and Analytics' validation tab show it. */
@@ -238,7 +242,7 @@ export const configChanges = pgTable('config_changes', {
   createdAt: createdAt(),
   createdBy: createdBy(),
 }, t => [
-  check('config_changes_kind_check', sql`${t.kind} in ('validation')`),
+  check('config_changes_kind_check', sql`${t.kind} in (${inList(CONFIG_CHANGE_KINDS)})`),
   index('config_changes_bu_seq_idx').on(t.businessUnitId, t.seq),
   index('config_changes_version_idx').on(t.configVersionId),
 ]);
@@ -905,6 +909,38 @@ export const customSegments = pgTable('custom_segments', {
   createdBy: createdBy(),
 }, t => [uniqueIndex('custom_segments_bu_name_key').on(t.businessUnitId, t.name)]);
 
+/** Every micro-segment the AI or a person created in a business unit (product owner, 30 Oct 2026; the rules' six are
+ *  the system's and are not listed here): its theme, why the group exists, who made it, and where it stands. A new one
+ *  waits for a sales manager's approval before any of its items is released; once approved it stays for later lists.
+ *  A manager can rename, merge (its items move to the other) or retire one; who decided and when is kept, and every
+ *  change is in the audit log. Person-made segments from before (custom_segments) were copied in as approved. */
+export const MICRO_SEGMENT_ORIGINS = ['ai', 'person'] as const;
+export const MICRO_SEGMENT_STATUSES = ['waiting', 'approved', 'retired'] as const;
+export const microSegments = pgTable('micro_segments', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  businessUnitId: uuid('business_unit_id').notNull().references(() => businessUnits.id),
+  name: citext('name').notNull(),
+  theme: text('theme').notNull(),
+  why: text('why').notNull().default(''),
+  origin: text('origin').notNull(),
+  status: text('status').notNull().default('waiting'),
+  mergedInto: uuid('merged_into').references((): AnyPgColumn => microSegments.id),
+  /** Names it had before a rename, and the names of segments merged into it (lower case): builds made before still show
+   *  their items under the name it has now. */
+  formerNames: text('former_names').array().notNull().default(sql`'{}'::text[]`),
+  decidedAt: tsz('decided_at'),
+  decidedBy: uuid('decided_by').references(() => users.id),
+  createdAt: createdAt(),
+  createdBy: createdBy(),
+  updatedAt: tsz('updated_at').notNull().defaultNow(),
+  updatedBy: uuid('updated_by').notNull().references(() => users.id),
+}, t => [
+  check('micro_segments_origin_check', sql`${t.origin} in (${inList(MICRO_SEGMENT_ORIGINS)})`),
+  check('micro_segments_status_check', sql`${t.status} in (${inList(MICRO_SEGMENT_STATUSES)})`),
+  uniqueIndex('micro_segments_bu_name_key').on(t.businessUnitId, t.name),
+  index('micro_segments_bu_status_idx').on(t.businessUnitId, t.status),
+]);
+
 /** Step 2 · The weekly spot-check: once per ISO week and owner ('' = unassigned), a random share of what went ahead on
  *  its own since the last draw goes back to its rep to rate. Append-only: the draw is part of the evidence. */
 export const spotChecks = pgTable('spot_checks', {
@@ -1090,7 +1126,7 @@ export const columnMappings = pgTable('column_mappings', {
 
 /* ─── AI (Phase 6; D-5, D-6, D-35): what each model call was, never what it said ─── */
 
-export const AI_CAPABILITIES = ['classify', 'why_now', 'draft_message', 'draft_content', 'copilot', 'healthcheck'] as const;
+export const AI_CAPABILITIES = ['classify', 'why_now', 'draft_message', 'draft_content', 'copilot', 'healthcheck', 'segment', 'next_action', 'read_guideline'] as const;
 export const AI_OUTCOMES = ['ok', 'fallback', 'filtered', 'error'] as const;
 export const AI_CALL_PROVIDERS = ['azure-openai', 'bedrock'] as const;
 

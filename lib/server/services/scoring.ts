@@ -19,7 +19,7 @@ import { logger } from '../logger.ts';
 import { aiGateway } from '../ai.ts';
 import { whyNowStep, type WhyNowStats } from './why-now-ai.ts';
 import { loadUpload, type UploadLimits } from './uploads.ts';
-import { chunks, containsPattern, deleteUnusedUploads, isManager, loadLeadList, NBA_KEEPS, ownerOnly, PAGE_DEFAULT, PAGE_MAX, type Actor, type Page, type PageQuery } from './lists.ts';
+import { chunks, containsPattern, deleteUnusedUploads, isManager, loadLeadList, NBA_KEEPS, ownerOnly, PAGE_DEFAULT, PAGE_MAX, scoringSettingsFor, type Actor, type Page, type PageQuery } from './lists.ts';
 
 export const SCORING_STAGES = ['parse', 'check', 'score', 'save'];
 
@@ -59,7 +59,7 @@ export function signalSettingsOf(body: unknown): SignalSettings {
   for (const c of customIn as Partial<CustomSignalType>[]) {
     if (!c || typeof c !== 'object') throw new Error('an added signal type has no definition');
     const def: CustomSignalType = {
-      name: String(c.name ?? '').trim(), segment: String(c.segment ?? ''), level: c.level as CustomSignalType['level'], full: Number(c.full), zero: Number(c.zero),
+      name: String(c.name ?? '').trim(), ...(c.segment ? { segment: String(c.segment) } : {}), level: c.level as CustomSignalType['level'], full: Number(c.full), zero: Number(c.zero),
       ...(c.about ? { about: String(c.about) } : {}), ...(c.data ? { data: String(c.data) } : {}), ...(c.source ? { source: String(c.source) } : {}),
     };
     const problem = customSignalProblem(def, custom) ?? (LEVELS.includes(def.level) ? null : `Pick how strong "${def.name}" is (${LEVELS.join(', ')})`);
@@ -105,6 +105,7 @@ export async function startScoringRun(scope: TenantScope, actor: Actor, input: {
   // The run keeps the signal settings it started with: a type switched off later still counts here (G-023).
   const settings = await activeSignalSettings(scope);
   if (settings.problem) throw conflict(settings.problem);
+  try { await scoringSettingsFor(scope, settings.configVersionId); } catch (err) { throw conflict((err as Error).message); }
   const [run] = await scope.tx.insert(scoringRuns).values({
     businessUnitId: scope.ctx.businessUnitId, listId: list.id, signalUploadId: upload.id, asOf: input.asOf, status: 'draft', sandbox: list.sandbox,
     sourceFile: upload.fileName, configVersionId: settings.configVersionId, engineVersion: ENGINE_VERSION, signalsOff: settings.off, signalsCustom: settings.custom,
@@ -141,10 +142,11 @@ export function createScoringJob(limits: UploadLimits) {
       if (!r) return null;
       const upload = await loadUpload(s, r.signalUploadId);
       const list = await loadLeadList(s, r.listId);
-      return upload && list ? { r, upload, list } : null;
+      // The scoring settings of the version the run is stamped with (Setup › ICP and rubric).
+      return upload && list ? { r, upload, list, settings: await scoringSettingsFor(s, r.configVersionId) } : null;
     }, { label: 'scoring.load', slowMs: 10_000 });
     if (!loaded) throw new JobError('gone', 'The list or the signal file was deleted before scoring finished.');
-    const { r, upload, list } = loaded;
+    const { r, upload, list, settings } = loaded;
     let read;
     try {
       read = readUpload(upload.bytes, upload.format, { ...SIGNAL_SHEET, maxRows: limits.maxRows });
@@ -153,10 +155,10 @@ export function createScoringJob(limits: UploadLimits) {
       throw err;
     }
     await run.stage('check', { sheetRows: read.grid.length, accounts: list.accounts.length, contacts: list.contacts.length });
-    const sig = processSignals(read.grid, list, { file: upload.fileName, sheet: read.sheet, asOf: r.asOf, off: r.signalsOff, custom: r.signalsCustom as CustomSignalType[] });
+    const sig = processSignals(read.grid, list, { file: upload.fileName, sheet: read.sheet, asOf: r.asOf, off: r.signalsOff, custom: r.signalsCustom as CustomSignalType[], settings });
     sig.issues.unshift(...noteIssues(read.notes, upload.fileName, read.sheet));
     await run.stage('score', { signals: sig.signals.length });
-    const scored = scoreList(list, sig);
+    const scored = scoreList(list, sig, settings);
     const prospects = buildProspects(scored);
     // The tier A and B prospects' why-now lines, worded by AI from their own signal rows when it is on (spec 4.14).
     const aiWhyNow = await whyNowStep(aiGateway(), ctx, prospects, run.deadline - Date.now() - 15_000);
@@ -179,7 +181,7 @@ export function createScoringJob(limits: UploadLimits) {
         return {
           businessUnitId: bu, runId, seq, rowNo: x.row, accountId: accountId(x.accountId), contactId: x.contactRow !== null ? list.contactIds.get(x.contactRow) ?? null : null,
           ownerEmail: lower(contact?.owner ?? account?.owner), status: x.status,
-          search: `${x.company} ${x.personName} ${x.personRef} ${x.type}`.toLowerCase(), data: x, createdBy: by,
+          search: `${x.company} ${x.personName} ${x.leadName ?? ''} ${x.personRef} ${x.type}`.toLowerCase(), data: x, createdBy: by,
         };
       }))) await s.tx.insert(signals).values(part);
       for (const part of chunks(scored.map(res => {
@@ -244,7 +246,8 @@ export async function savedRuns(scope: TenantScope): Promise<RunSummary[]> {
 }
 
 async function runRow(scope: TenantScope, id: string) {
-  const [r] = await scope.tx.select({ ...runColumns, checks: scoringRuns.checks, signalUploadId: scoringRuns.signalUploadId, signalsOff: scoringRuns.signalsOff, signalsCustom: scoringRuns.signalsCustom })
+  const [r] = await scope.tx.select({ ...runColumns, checks: scoringRuns.checks, signalUploadId: scoringRuns.signalUploadId, signalsOff: scoringRuns.signalsOff, signalsCustom: scoringRuns.signalsCustom,
+    configVersionId: scoringRuns.configVersionId })
     .from(scoringRuns).innerJoin(leadLists, eq(leadLists.id, scoringRuns.listId))
     .where(and(eq(scoringRuns.id, id), eq(scoringRuns.businessUnitId, scope.ctx.businessUnitId)));
   return r ?? null;
@@ -254,6 +257,8 @@ export type RunDetail = RunSummary & {
   checks: SignalStepResult[]; scope: 'all' | 'own';
   /** The signal settings the run was scored with (G-023). */
   signalSettings: SignalSettings;
+  /** The fit floor and tier cut-offs the run was scored with (Setup › ICP and rubric). */
+  cutoffs: { fitFloor: number; tiers: { A: number; B: number } };
   /** Counts of what the caller can see (reps: their own prospects, D-33). `unused`: signal rows that didn't count. */
   visible: { tiers: Record<Tier, number>; prospects: number; signals: number; unused: number };
   canEdit: boolean;
@@ -268,9 +273,12 @@ export async function getRun(scope: TenantScope, actor: Actor, id: string): Prom
   for (const c of counts) tiers[c.tier as Tier] = c.n;
   const [sg] = await scope.tx.select({ n: sql<number>`count(*)::int`, unused: sql<number>`(count(*) filter (where ${signals.status} <> 'Qualified'))::int` })
     .from(signals).where(and(eq(signals.runId, id), ownerOnly(scope, signals.ownerEmail)));
-  const { createdBy, signalUploadId: _s, signalsOff, signalsCustom, ...rest } = r;
+  const { createdBy, signalUploadId: _s, signalsOff, signalsCustom, configVersionId, ...rest } = r;
   void _s;
+  let cutoffs: RunDetail['cutoffs'] = { fitFloor: CONFIG.fitFloor, tiers: CONFIG.tierThresholds };
+  try { const st = await scoringSettingsFor(scope, configVersionId); cutoffs = { fitFloor: st.fitFloor, tiers: st.tiers }; } catch { /* shown with the starting values */ }
   return {
+    cutoffs,
     ...rest, stats: r.stats as RunStats, checks: r.checks as SignalStepResult[], scope: scope.ctx.scope, signalSettings: { off: signalsOff, custom: signalsCustom as CustomSignalType[] },
     visible: { tiers, prospects: counts.reduce((n, c) => n + c.n, 0), signals: sg.n, unused: sg.unused }, canEdit: isManager(actor.role) || createdBy === actor.userId,
   };

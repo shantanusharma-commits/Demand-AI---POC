@@ -1,20 +1,25 @@
 'use client';
 
-/* Setup (was legacy/09-setup.html), on the server (G-002, D-13). One screen, two modes: View shows what the scoring
-   runs on; Edit (Admin) signs sections off and switches signal types, each change kept with who, when and why.
-   The rubric, fit floor and personas are fixed for the pilot (D-13) and shown read-only. A signal switch, or a type
-   added or removed, makes the next configuration version: new runs name it, runs already made keep theirs (G-023).
-   The export is a real JSON file of the active version (it was a toast). */
+/* Setup (was legacy/09-setup.html), on the server (G-002). One screen, two modes: View shows what the scoring runs on;
+   Edit (Admin) changes it and signs sections off, each change kept with who, when and why. Since 30 Oct 2026 (replacing
+   the D-13 lock) an Admin edits the ICP rubric and its parts, the fit floor and tiers, size bands, verticals, knock-outs
+   and region, personas, how much each signal counts, the action library and the measurement and proceed criteria; a
+   sales manager decides on the micro-segments the AI or a person created. Every change makes the next configuration
+   version: new lists and runs name it, those already made keep theirs. The scoring settings can be locked for the
+   measurement weeks. The export is a real JSON file of the active version. */
 import Link from 'next/link';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { DemandAI } from '@/lib/demandai-engine';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { DemandAI, PART_COLUMNS, type ScoringSettings } from '@/lib/demandai-engine';
 import { DemandAISample } from '@/lib/demandai-sample-data';
+import { editableCopy, PERSONA_TERMS } from '@/lib/engine/settings';
 import { showToast } from '@/lib/ui';
 import { sx } from '@/lib/sx';
 import { ApiError, api, errorText, type WireDeep } from '@/lib/client/api';
 import { RoutingRules } from '@/components/RoutingRules';
 import { AiPanel } from '@/components/AiPanel';
 import { useCan, useSessionUser } from '@/components/SessionContext';
+import { CutoffsEdit, LockControl, PersonasEdit, RubricEdit, ScoringSaveBar, SERIES, partLevels, type SetScoring } from '@/components/setup/ScoringEditors';
+import { ActionsSection, MeasurementSection, SegmentsSection } from '@/components/setup/LibraryEditors';
 import type { SetupState } from '@/lib/server/services/setup';
 import type { SignalTypeConfig } from '@/types/demandai';
 
@@ -25,19 +30,9 @@ type Modal = { kind: 'switch'; name: string; isOff: boolean } | { kind: 'add'; n
 
 const STEPS: { id: SectionId; num: number; title: string }[] = [
   { id: 'scope', num: 1, title: 'Scope' }, { id: 'rubric', num: 2, title: 'ICP and rubric' }, { id: 'personas', num: 3, title: 'Personas' },
-  { id: 'signals', num: 4, title: 'Signals' }, { id: 'actions', num: 5, title: 'Actions' }, { id: 'brand', num: 6, title: 'Brand' }, { id: 'users', num: 7, title: 'Users' },
+  { id: 'signals', num: 4, title: 'Signals' }, { id: 'actions', num: 5, title: 'Actions' }, { id: 'segments', num: 6, title: 'Micro-segments' },
+  { id: 'measurement', num: 7, title: 'Measurement and proceed criteria' }, { id: 'brand', num: 8, title: 'Brand' }, { id: 'users', num: 9, title: 'Users' },
 ];
-
-// What each rubric level means (the rubric itself is DemandAI.CONFIG.rubric, fixed for the pilot, D-13).
-const LEVELS: Record<string, string> = {
-  vertical: 'Core (100) · Adjacent (50) · Other (0)', size: 'Above target (100) · In target (70) · Below (20)', site: 'Suits the product (100) · Partly (50) · Unknown (30)',
-  relationship: 'Customer on another line (100) · Past (70) · None (40)', accountType: 'Owner-operator (100) · EPC or integrator (60) · Distributor (20)', contacts: 'Buying role present (100) · Other roles (40) · None (0)',
-};
-const RUBRIC = DemandAI.CONFIG.rubric.map(r => ({ key: r.key, name: r.label, weight: r.weight, levels: LEVELS[r.key] || '' }));
-// Fixed order, validated for colour-blind separation; every slice also carries a visible label and value.
-const SERIES = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300'];
-const KNOCKOUTS = ['Out of the pilot region', 'Pilot product already installed', 'Managed separately (strategic account)', 'No contact left after opt-outs'];
-const PERSONAS = ['Head of Instrumentation / I&C', 'Automation or DCS manager', 'Control systems lead', 'Plant manager', 'Operations or maintenance lead', 'Procurement lead'];
 
 /* Signals: exactly the types the client's signal file carries (DemandAI.CONFIG.signalTypes), plus those added here. */
 const SIG_INFO: Record<string, { about: string; data: string }> = {
@@ -68,42 +63,39 @@ const REASONS = ['Legal hold', 'Data quality issue', 'Source not available', 'Cl
 const strength = (c: Pick<SignalTypeConfig, 'tier' | 'strength'>): [string, number] => { const w = (c.tier || 0) * (c.strength || 0); return w >= 80 ? ['Strong', 3] : w >= 45 ? ['Medium', 2] : ['Light', 1]; };
 const fmtWhen = (t: string) => new Date(t).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
 const fmtDate = (t: string) => new Date(t).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+const money = (n: number) => (n >= 1e9 ? `${+(n / 1e9).toFixed(2)}bn` : n >= 1e6 ? `${Math.round(n / 1e6)}m` : n.toLocaleString('en-US'));
 const OVERLAY = sx('position:fixed;inset:0;background:rgba(20,26,33,.45);z-index:600;display:flex;align-items:center;justify-content:center;padding:16px');
+const KO_WORDS: Record<keyof ScoringSettings['knockouts'], string> = { region: 'Out of the pilot region', installed: 'Pilot product already installed', managed: 'Managed separately (strategic account)', nobodyLeft: 'No contact left after opt-outs' };
 
 function statusBadge(status: 'done' | 'review'): ReactNode {
   return status === 'done' ? <span className="sc sc-h">Signed off</span> : <span className="sc sc-m">Draft · needs sign-off</span>;
 }
 
 /* ─── The donut: weights add up to 100%, so the parts of a whole read at a glance ─── */
-const RUBRIC_TOTAL = RUBRIC.reduce((a, r) => a + r.weight, 0) || 1;
-// Each slice's start and end angle, clockwise from the top, with a small gap between slices.
-const SLICES: [number, number][] = (() => {
-  const gap = 0.012;
-  let a0 = -Math.PI / 2;
-  return RUBRIC.map(r => { const a = r.weight / RUBRIC_TOTAL * Math.PI * 2, span: [number, number] = [a0 + gap, a0 + a - gap]; a0 += a; return span; });
-})();
-function Donut({ size, hover, onHover }: { size: number; hover: number; onHover: (i: number) => void }) {
-  const total = RUBRIC_TOTAL, R = size / 2, r0 = R * 0.62;
+function Donut({ parts, size, hover, onHover }: { parts: { name: string; weight: number }[]; size: number; hover: number; onHover: (i: number) => void }) {
+  const total = parts.reduce((a, r) => a + r.weight, 0) || 1, R = size / 2, r0 = R * 0.62;
   const arc = (a1: number, a2: number) => {
     const p = (a: number, rad: number) => [R + rad * Math.cos(a), R + rad * Math.sin(a)], large = a2 - a1 > Math.PI ? 1 : 0;
     const [x1, y1] = p(a1, R - 1), [x2, y2] = p(a2, R - 1), [x3, y3] = p(a2, r0), [x4, y4] = p(a1, r0);
     return `M${x1} ${y1} A${R - 1} ${R - 1} 0 ${large} 1 ${x2} ${y2} L${x3} ${y3} A${r0} ${r0} 0 ${large} 0 ${x4} ${y4}Z`;
   };
-  const slices = RUBRIC.map((r, i) => {
-    const [s, e] = SLICES[i];
-    return r.weight ? <path key={r.key} d={arc(s, Math.max(s + 0.001, e))} fill={SERIES[i]} className="dn-s" style={{ opacity: hover < 0 || hover === i ? 1 : 0.35 }}
+  // Each slice's start and end angle, clockwise from the top, with a small gap between slices.
+  const starts = parts.map((_, i) => -Math.PI / 2 + parts.slice(0, i).reduce((t, x) => t + x.weight, 0) / total * Math.PI * 2);
+  const slices = parts.map((r, i) => {
+    const a = r.weight / total * Math.PI * 2, s = starts[i] + 0.012, e = starts[i] + a - 0.012;
+    return r.weight ? <path key={i} d={arc(s, Math.max(s + 0.001, e))} fill={SERIES[i % SERIES.length]} className="dn-s" style={{ opacity: hover < 0 || hover === i ? 1 : 0.35 }}
       onMouseEnter={() => onHover(i)} onMouseLeave={() => onHover(-1)}><title>{`${r.name}: ${r.weight}%`}</title></path> : null;
   });
   return <div className="dn" style={{ width: size, height: size }}>
-    <svg viewBox={`0 0 ${size} ${size}`} width={size} height={size} role="img" aria-label={`Rubric weights: ${RUBRIC.map(r => `${r.name} ${r.weight}%`).join(', ')}`}>{slices}</svg>
-    <div className="dn-c">{hover < 0 ? <><b>{`${total}%`}</b><span>of the fit score</span></> : <><b>{`${RUBRIC[hover].weight}%`}</b><span>{RUBRIC[hover].name}</span></>}</div>
+    <svg viewBox={`0 0 ${size} ${size}`} width={size} height={size} role="img" aria-label={`Rubric weights: ${parts.map(r => `${r.name} ${r.weight}%`).join(', ')}`}>{slices}</svg>
+    <div className="dn-c">{hover < 0 || !parts[hover] ? <><b>{`${parts.reduce((a, r) => a + r.weight, 0)}%`}</b><span>of the fit score</span></> : <><b>{`${parts[hover].weight}%`}</b><span>{parts[hover].name}</span></>}</div>
   </div>;
 }
 
 export function SetupScreen() {
   const user = useSessionUser();
-  const canSignOff = useCan('setup.signOff'), canSwitch = useCan('setup.signals');
-  const canEdit = canSignOff || canSwitch;
+  const canSignOff = useCan('setup.signOff'), canSwitch = useCan('setup.signals'), canDecide = useCan('review.approve'), canMeasure = useCan('validation.edit');
+  const canEdit = canSignOff || canSwitch || canDecide || canMeasure;
   const [setup, setSetup] = useState<Setup | null>(null);
   const [loadError, setLoadError] = useState('');
   const [mode, setMode] = useState<Mode>('view');
@@ -113,6 +105,9 @@ export function SetupScreen() {
   const [modal, setModal] = useState<Modal | null>(null);
   const [modalError, setModalError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [draft, setDraft] = useState<ScoringSettings | null>(null);
+  const [segNames, setSegNames] = useState<string[]>([]);
+  const [segReload, setSegReload] = useState(0);
   const formRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -121,13 +116,17 @@ export function SetupScreen() {
     return () => { live = false; };
   }, []);
   const reload = async () => { setSetup((await api<{ setup: Setup }>('/api/config')).setup); };
+  const saved = setup ? setup.scoring.settings as ScoringSettings : null;
+  const working = draft ?? saved;
+  const set: SetScoring = f => setDraft(d => { const next = editableCopy(d ?? saved!); f(next); return next; });
+  const signalTypes = useMemo(() => setup ? [...Object.keys(DemandAI.CONFIG.signalTypes), ...setup.signals.custom.map(c => c.name)] : [], [setup]);
 
   /* ─── Sign-offs ─── */
   async function signOff(id: SectionId, action: 'sign-off' | 'reopen') {
     try {
       await api(`/api/config/sections/${id}/${action}`, { body: {} });
       await reload();
-      showToast(`${STEPS.find(s => s.id === id)!.title} ${action === 'sign-off' ? 'signed off' : 'reopened'}`);
+      showToast(`${STEPS.find(x => x.id === id)!.title} ${action === 'sign-off' ? 'signed off' : 'reopened'}`);
     } catch (e) { showToast(errorText(e)); }
   }
 
@@ -159,14 +158,14 @@ export function SetupScreen() {
   };
   const removeCustom = (name: string) => { void submit('/api/config/signals/remove', { name, reason: field('rmWhy') }, v => `${name} removed · Config v${v}`); };
 
-  if (!setup) return <main className="main" id="mainArea"><div className="topbar"><div className="topbar-l"><span className="tb-title">Setup</span></div></div>
+  if (!setup || !working || !saved) return <main className="main" id="mainArea"><div className="topbar"><div className="topbar-l"><span className="tb-title">Setup</span></div></div>
     <div className="canvas"><div style={sx('font-size:12.5px;color:var(--i3)')} role={loadError ? 'alert' : 'status'}>{loadError || 'Loading…'}</div></div></main>;
 
-  const S = setup, edit = mode === 'edit';
-  const done = STEPS.filter(s => S.sections[s.id].status === 'done').length, N = STEPS.length, rem = N - done;
+  const S = setup, s: ScoringSettings = working, edit = mode === 'edit', editScoring = edit && canSwitch;
+  const done = STEPS.filter(x => S.sections[x.id].status === 'done').length, N = STEPS.length, rem = N - done;
   const off = new Set(S.signals.off);
   const allTypes = [
-    ...Object.entries(DemandAI.CONFIG.signalTypes).map(([name, c]) => ({ name, c, cu: null as Setup['signals']['custom'][number] | null })),
+    ...Object.entries(DemandAI.CONFIG.signalTypes).map(([name, c]) => ({ name, c: { ...c, ...(s.signals[name] ?? {}) } as SignalTypeConfig, cu: null as Setup['signals']['custom'][number] | null })),
     ...S.signals.custom.map(cu => ({ name: cu.name, c: { segment: cu.segment, full: cu.full, zero: cu.zero, ...(DemandAI.CONFIG.customStrength[cu.level] ?? DemandAI.CONFIG.customStrength.Medium) } as SignalTypeConfig, cu })),
   ].map(x => ({ ...x, info: SIG_INFO[x.name] || { about: x.cu?.about ?? '', data: x.cu?.data ?? '' }, ex: SIG_EX[x.name] || { source: x.cu?.source } }))
     .sort((a, b) => (a.c.knockout ? 1 : a.c.reject ? 2 : 0) - (b.c.knockout ? 1 : b.c.reject ? 2 : 0));
@@ -175,46 +174,65 @@ export function SetupScreen() {
   const shown = allTypes.filter(x => !q || `${x.name} ${x.info.about} ${x.ex.source ?? ''} ${x.c.segment ?? ''}`.toLowerCase().includes(q));
   const lastChange = (name: string) => S.changes.find(c => c.type === name);
   const word = { off: 'Switched off', on: 'Switched on', added: 'Added', removed: 'Removed' } as const;
+  const parts = s.parts.map(p => ({ key: p.key, name: p.label, weight: p.weight, levels: partLevels(p), column: p.column }));
+  const ruleSegments = Object.keys(DemandAI.CONFIG.segmentLibrary);
+  const setSignal = (name: string, patch: Partial<{ tier: number; strength: number; full: number; zero: number }>) => set(x => {
+    const base = DemandAI.CONFIG.signalTypes[name];
+    x.signals[name] = Object.assign({ tier: base.tier!, strength: base.strength!, full: base.full!, zero: base.zero! }, x.signals[name], patch);
+  });
 
   function stepBody(id: SectionId): ReactNode {
     if (id === 'scope') return <div className="kvs">
       <div><span>Pilot product</span><b>Process control DCS platform</b></div>
       <div><span>Business unit</span><b>{user.activeBusinessUnit?.name ?? '—'}</b></div>
-      <div><span>Region</span><b>{DemandAI.CONFIG.pilotCountries.join(', ')}</b></div></div>;
+      <div><span>Region</span><b>{s.knockouts.region ? s.countries.join(', ') : 'Any country (the region knock-out is off)'}</b></div></div>;
     if (id === 'rubric') {
-      const total = RUBRIC.reduce((a, r) => a + r.weight, 0);
+      if (editScoring) return <>{S.scoring.problem ? <div role="alert" className="ed-err">{S.scoring.problem}</div> : null}
+        <LockControl lock={S.scoring.lock} canLock={canSignOff} onChanged={() => void reload()} />
+        <RubricEdit s={s} set={set} /><CutoffsEdit s={s} set={set} /></>;
+      const total = parts.reduce((a, r) => a + r.weight, 0);
       return <div className="ru">
-        <div className="ru-chart"><Donut size={184} hover={hover} onHover={setHover} />
-          <div className="ru-floor">Fit floor <b>{DemandAI.CONFIG.fitFloor}</b><span>Accounts scoring below it drop out before timing is scored.</span></div></div>
+        <div className="ru-chart"><Donut parts={parts} size={184} hover={hover} onHover={setHover} />
+          <div className="ru-floor">Fit floor <b>{s.fitFloor}</b><span>Accounts scoring below it drop out before timing is scored.</span></div>
+          <div className="ru-floor">Tiers <b>{`A ${s.tiers.A}+ · B ${s.tiers.B}+`}</b><span>On the 0–100 score (fit × timing). A and B go to NBA.</span></div></div>
         <div className="ru-list">
-          <div className="ru-lead">{"The "}<b>fit score</b>{" says how well an account matches the client's ideal customer. It is built from six parts; the bigger the slice, the more that part counts."}</div>
-          {RUBRIC.map((r, i) => <div key={r.key} className={`rl ${hover === i ? 'on' : ''}`} onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(-1)}>
-            <span className="rl-dot" style={{ background: SERIES[i] }}></span>
-            <div className="rl-b"><div className="rl-h"><b>{r.name}</b><span className="rl-w">{`${r.weight}%`}</span></div>
-              <div className="rl-bar"><i style={{ width: `${r.weight}%`, background: SERIES[i] }}></i></div><div className="rl-l">{r.levels}</div></div></div>)}
+          <div className="ru-lead">{"The "}<b>fit score</b>{` says how well an account matches the client's ideal customer. It is built from ${parts.length} part${parts.length === 1 ? '' : 's'}; the bigger the slice, the more that part counts.`}</div>
+          {parts.map((r, i) => <div key={r.key} className={`rl ${hover === i ? 'on' : ''}`} onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(-1)}>
+            <span className="rl-dot" style={{ background: SERIES[i % SERIES.length] }}></span>
+            <div className="rl-b"><div className="rl-h"><b>{r.name}</b>{r.column ? <span className="pill nr" style={sx('margin-left:6px')}>{`Added · reads ${PART_COLUMNS[r.column]?.label ?? r.column}`}</span> : null}<span className="rl-w">{`${r.weight}%`}</span></div>
+              <div className="rl-bar"><i style={{ width: `${r.weight}%`, background: SERIES[i % SERIES.length] }}></i></div><div className="rl-l">{r.levels}</div></div></div>)}
           <div className={`ru-tot ${total === 100 ? 'ok' : 'bad'}`}>{total === 100 ? '✓ Adds up to 100%' : `Adds up to ${total}%: it must be 100% to sign off`}</div>
-          <div className="ru-ko"><span>Knock-outs, before any scoring:</span>{KNOCKOUTS.map(k => <em key={k}>{k}</em>)}</div>
-          {edit ? <div className="su-note">The weights, the fit floor and the personas are fixed for the pilot, so every score in it can be compared. A change would make a new configuration version.</div> : null}
+          <div className="ru-ko"><span>Size bands:</span><em>{`Revenue above USD ${money(s.sizeBands.revenueAbove)}, in target from ${money(s.sizeBands.revenueIn)}`}</em><em>{`Staff above ${s.sizeBands.employeesAbove.toLocaleString('en-US')}, in target from ${s.sizeBands.employeesIn.toLocaleString('en-US')}`}</em></div>
+          <div className="ru-ko"><span>Verticals:</span>{s.verticals.map(v => <em key={v.name}>{`${v.name}: ${v.level}${v.words.length ? ` (also ${v.words.join(', ')})` : ''}`}</em>)}</div>
+          <div className="ru-ko"><span>Knock-outs, before any scoring:</span>{(Object.keys(KO_WORDS) as (keyof typeof KO_WORDS)[]).map(k => <em key={k} style={s.knockouts[k] ? undefined : sx('text-decoration:line-through')} title={s.knockouts[k] ? 'On' : 'Switched off'}>{KO_WORDS[k]}</em>)}</div>
+          <div className="su-note">{`${S.scoring.lock.mode === 'locked' ? 'Locked for the measurement weeks. ' : S.scoring.lock.mode === 'sponsor' ? "Changes need the sponsor's sign-off during the measurement weeks. " : ''}An Admin can change the parts, weights, levels and cut-offs in Edit mode. Each change is a new configuration version: lists already scored keep theirs, and Analytics splits results by version.`}</div>
         </div></div>;
     }
-    if (id === 'personas') return <>
-      <div className="chips">{PERSONAS.map(p => <span key={p} className="chip">{p}</span>)}</div>
-      <div className="su-sub">The first contact approached is someone in these roles; anyone else is a fallback and lowers confidence.</div></>;
+    if (id === 'personas') return editScoring ? <PersonasEdit s={s} set={set} /> : <>
+      {(['primary', 'secondary'] as const).map(kind => <div key={kind} style={sx('margin-bottom:8px')}><div className="su-sub">{kind === 'primary' ? 'Primary: the buying role, approached first' : 'Secondary: a fallback contact (lowers confidence)'}</div>
+        <div className="chips">{PERSONA_TERMS.filter(t => t.kind === kind && !s.personas.off.includes(t.source)).map(t => <span key={t.source} className="chip">{t.label}</span>)}
+          {s.personas[kind].map(w => <span key={w} className="chip add">{w}</span>)}</div></div>)}
+      <div className="su-sub">A job title that matches gets that persona; anyone else is a fallback and lowers confidence.</div></>;
     if (id === 'signals') return <>
       <div className="sg-top"><div className="sg-sum"><b>{`${scored.filter(x => !off.has(x.name)).length} of ${scored.length}`}</b> signal types are on. These are the types the client&apos;s signal file carries; each row in the file is one event.</div>
         <div className="sg-tools"><input className="sg-q" placeholder="Search signals" aria-label="Search signals" value={sigQ} onChange={e => setSigQ(e.currentTarget.value)} /><Link className="btn btn-sec btn-sm" href="/scoring?tab=monitor" style={sx('text-decoration:none')}>Signal monitoring →</Link></div></div>
       {S.signals.problem ? <div role="alert" style={sx('font-size:12px;color:var(--neg);margin-bottom:10px')}>{S.signals.problem}</div> : null}
-      <table className="sg"><thead><tr><th style={sx('width:24%')}>Signal</th><th style={sx('width:30%')}>What comes through</th><th style={sx('width:15%')}>From</th><th style={sx('width:15%')}>How long it counts</th><th style={sx('width:16%')}>Status</th></tr></thead><tbody>
+      <table className="sg"><thead><tr><th style={sx('width:24%')}>Signal</th><th style={sx('width:30%')}>What comes through</th><th style={sx('width:15%')}>From</th><th style={sx('width:15%')}>How much and how long it counts</th><th style={sx('width:16%')}>Status</th></tr></thead><tbody>
         {shown.length ? shown.map(x => {
           const c = x.c, isOff = off.has(x.name), l = lastChange(x.name), [st, n] = c.knockout || c.reject ? ['', 0] : strength(c);
+          const tunable = editScoring && !x.cu && !c.knockout && !c.reject;
           return <tr key={x.name} className={isOff ? 'is-off' : ''}>
             <td><b>{x.name}</b>{x.cu ? <><span className="pill nr" style={sx('margin-left:6px')}>Added</span><div className="sg-m">{`By ${x.cu.by ?? '—'}${x.cu.at ? ' · ' + fmtWhen(x.cu.at) : ''}`}{edit && canSwitch ? <>{' · '}<button className="link" onClick={() => openModal({ kind: 'remove', name: x.name })}>Remove</button></> : null}</div></> : null}
-              {c.segment ? <div className="sg-m">Feeds <span className="seg">{c.segment}</span></div> : null}
+              {c.segment && c.segment !== x.name ? <div className="sg-m">Usually <span className="seg">{c.segment}</span></div> : x.cu ? <div className="sg-m">The AI groups it by what it means</div> : null}
               {n ? <div className="sg-st" title="How much it counts">{[0, 1, 2].map(k => <i key={k} className={k < n ? 'on' : ''}></i>)}<span>{st}</span></div> : null}</td>
             <td>{x.info.about}<div className="sg-m"><b>Data:</b> {x.info.data}</div>{x.ex.detail ? <div className="sg-ex">{`e.g. “${x.ex.detail}”`}</div> : null}</td>
             <td>{x.ex.source || '—'}</td>
-            <td>{c.full ? <>{`Full weight for ${c.full} days`}<div className="sg-m">{`Gone after ${c.zero} days`}</div></> : <span className="sg-m">—</span>}</td>
-            <td>{c.knockout ? <><span className="pill ko">Knock-out</span><div className="sg-m">Removes the account before scoring</div></>
+            <td>{tunable ? <div className="ed-sig"><label>Weight <input type="number" className="ed-n" aria-label={`${x.name} weight`} min={1} max={100} value={Math.round((c.tier ?? 0) * (c.strength ?? 0))}
+                onChange={e => setSignal(x.name, { tier: Number(e.currentTarget.value), strength: 1 })} /></label>
+              <label>Full for <input type="number" className="ed-n" aria-label={`${x.name} full weight days`} min={1} value={c.full} onChange={e => setSignal(x.name, { full: Number(e.currentTarget.value) })} /> days</label>
+              <label>Gone after <input type="number" className="ed-n" aria-label={`${x.name} gone after days`} min={2} value={c.zero} onChange={e => setSignal(x.name, { zero: Number(e.currentTarget.value) })} /> days</label></div>
+              : c.full ? <>{`Weight ${Math.round((c.tier ?? 0) * (c.strength ?? 0))} · full for ${c.full} days`}<div className="sg-m">{`Gone after ${c.zero} days`}</div></> : <span className="sg-m">—</span>}</td>
+            <td>{c.knockout ? <><span className="pill ko">Knock-out</span><div className="sg-m">{s.knockouts.installed ? 'Removes the account before scoring' : 'Knock-out switched off in ICP and rubric'}</div></>
               : c.reject ? <><span className="pill nr">Not scored</span><div className="sg-m">Too weak to act on</div></>
               : <>{edit && canSwitch ? <button className={`sw ${isOff ? '' : 'on'}`} role="switch" aria-checked={!isOff} aria-label={x.name} onClick={() => openModal({ kind: 'switch', name: x.name, isOff })}><i></i></button> : null}
                 <span className={`pill ${isOff ? 'off' : 'on'}`}>{isOff ? 'Off' : 'On'}</span>
@@ -230,10 +248,10 @@ export function SetupScreen() {
           {S.changes.map((a, i) => <tr key={i}><td>{fmtWhen(a.at)}</td><td>{a.type}</td><td><span className={`pill ${a.change === 'added' ? 'nr' : a.change === 'on' ? 'on' : 'off'}`}>{word[a.change]}</span></td><td>{a.by}</td><td>{a.reason || '—'}</td><td>{`v${a.versionNo}`}</td></tr>)}
         </tbody></table> : <div className="su-sub" style={sx('padding:8px 2px')}>No signal has been switched on or off yet.</div> : null}</div>
     </>;
-    if (id === 'actions') return <>
-      <div className="su-sub" style={sx('margin-bottom:10px')}>The actions the system may recommend, per micro-segment. It only chooses from this list; the first is the usual recommendation.</div>
-      <div className="ac-grid">{Object.entries(DemandAI.CONFIG.segmentLibrary).map(([seg, acts]) => <div key={seg} className="ac"><div className="ac-h">{seg}<span>{acts.length}</span></div>{acts.map((a, i) => <div key={i} className="ac-i">{i === 0 ? <em>Usual</em> : null}{a}</div>)}</div>)}</div>
-      {edit ? <div className="su-note">The client approves this list. Changes go to them as a proposal.</div> : null}</>;
+    if (id === 'actions') return <ActionsSection rows={S.actions.list} edit={edit} canEdit={canSwitch} segments={[...ruleSegments, ...segNames.filter(n => !ruleSegments.includes(n))]} signalTypes={signalTypes}
+      problem={S.actions.problem} onSaved={() => void reload()} />;
+    if (id === 'segments') return <SegmentsSection canDecide={canDecide} reloadKey={segReload} onChanged={setSegNames} />;
+    if (id === 'measurement') return <MeasurementSection saved={S.measurement} edit={edit} canEdit={canMeasure} onSaved={() => void reload()} />;
     if (id === 'brand') return <><div className="su-sub" style={sx('margin-bottom:10px')}>Brand guidelines, approved claims and messaging frameworks live in the Content library.</div><Link href="/content" className="btn btn-sec btn-sm" style={sx('text-decoration:none;display:inline-flex')}>Open Content library →</Link></>;
     return <><div className="su-sub" style={sx('margin-bottom:10px')}>Who uses DemandAI and what each role can see.</div><Link href="/users" className="btn btn-sec btn-sm" style={sx('text-decoration:none;display:inline-flex')}>Open Users and roles →</Link></>;
   }
@@ -258,12 +276,12 @@ export function SetupScreen() {
     const fld = (id: string, label: string, ph: string, v = '') => <label className="af"><span>{label}</span><input id={id} placeholder={ph} defaultValue={v} maxLength={300} /></label>;
     return <>
       <div style={title}>Add a signal</div>
-      <div style={sx('font-size:12px;color:var(--i3);line-height:1.5;margin-bottom:12px')}>New scoring runs recognise it in the signal file from now on. Lists already scored are not changed.</div>
+      <div style={sx('font-size:12px;color:var(--i3);line-height:1.5;margin-bottom:12px')}>New scoring runs recognise it in the signal file from now on. Lists already scored are not changed. No micro-segment or action needs setting up: the AI groups accounts and suggests what to do from what the signal means.</div>
       {fld('nsName', 'Name, exactly as in the signal_type column', 'e.g. Trade show visit', m.name)}
-      {fld('nsAbout', 'What it means', "e.g. Visited the client's stand at a trade show")}
+      {fld('nsAbout', 'What it means (required: the AI reads it)', "e.g. Visited the client's stand at a trade show")}
       {fld('nsData', 'What data comes through', 'e.g. The event, the date, who visited')}
       {fld('nsSource', 'Where it comes from', 'e.g. Events team')}
-      <div className="af-row"><label className="af"><span>Feeds micro-segment</span><select id="nsSeg" defaultValue=""><option value="">Pick one…</option>{Object.keys(DemandAI.CONFIG.segmentLibrary).map(x => <option key={x}>{x}</option>)}</select></label>
+      <div className="af-row"><label className="af"><span>Usual micro-segment (optional)</span><select id="nsSeg" defaultValue=""><option value="">None: the AI decides</option>{[...ruleSegments, ...segNames.filter(n => !ruleSegments.includes(n))].map(x => <option key={x}>{x}</option>)}</select></label>
         <label className="af"><span>How much it counts</span><select id="nsLevel" defaultValue="Medium"><option>Strong</option><option>Medium</option><option>Light</option></select></label></div>
       <div className="af-row"><label className="af"><span>Full weight for (days)</span><input id="nsFull" type="number" min="1" defaultValue="30" /></label>
         <label className="af"><span>Gone after (days)</span><input id="nsZero" type="number" min="2" defaultValue="120" /></label></div>
@@ -286,30 +304,31 @@ export function SetupScreen() {
       </div>
       <div className="canvas">
         <div className={`su-intro ${edit ? 'edit' : ''}`}>{edit
-          ? <><b>Edit mode.</b> Sign off each section once it is right, and switch signals as the pilot needs. Prospecting, Scoring and Micro-segments read this configuration; every list and run names the version it used.</>
-          : <><b>How DemandAI is set up for this pilot.</b>{` What it scores on, which signals it listens to and who it targets.${canEdit ? ' Switch to Edit to change it.' : ' Only an admin can change it.'}`}</>}</div>
-        {STEPS.map(s => {
-          const st = S.sections[s.id];
+          ? <><b>Edit mode.</b> Change what you need, then save it as the next configuration version and sign each section off once it is right. Prospecting, Scoring and Micro-segments read this configuration; every list and run names the version it used.</>
+          : <><b>How DemandAI is set up for this pilot.</b>{` What it scores on, which signals it listens to, what it recommends and how the pilot is judged.${canEdit ? ' Switch to Edit to change it.' : ' Only an admin can change it.'}`}</>}</div>
+        {STEPS.map(x => {
+          const st = S.sections[x.id];
           const action = !edit || !canSignOff ? null : st.status === 'done'
-            ? <button className="btn btn-ghost btn-sm" onClick={() => void signOff(s.id, 'reopen')}>Reopen to edit</button>
-            : <button className="btn btn-primary btn-sm" onClick={() => void signOff(s.id, 'sign-off')}>Sign off this section</button>;
-          return <div key={s.id} className="panel su-p" id={`sec-${s.id}`}>
-            <div className="panel-hdr"><span className="panel-ttl">{`${s.num} · ${s.title}`}</span>
-              <div style={sx('display:flex;align-items:center;gap:8px')}>{st.by && st.at ? <span className="sg-m" style={sx('margin:0')}>{`${st.status === 'done' ? 'Signed off' : 'Reopened'} by ${st.by} · ${fmtWhen(st.at)}${st.note ? ` · ${st.note}` : ''}`}</span> : null}{statusBadge(st.status)}{action}</div></div>
-            <div className="panel-body">{stepBody(s.id)}</div></div>;
+            ? <button className="btn btn-ghost btn-sm" onClick={() => void signOff(x.id, 'reopen')}>Reopen to edit</button>
+            : <button className="btn btn-primary btn-sm" onClick={() => void signOff(x.id, 'sign-off')}>Sign off this section</button>;
+          return <div key={x.id} className="panel su-p" id={`sec-${x.id}`}>
+            <div className="panel-hdr"><span className="panel-ttl">{`${x.num} · ${x.title}`}</span>
+              <div style={sx('display:flex;align-items:center;gap:8px')}>{st.by && st.at ? <span className="sg-m" style={sx('margin:0')}>{`${st.status === 'done' ? 'Signed off' : 'Reopened'} by ${st.by} · ${fmtWhen(st.at)}${st.note ? ` · ${st.note.slice(0, 80)}${st.note.length > 80 ? '…' : ''}` : ''}`}</span> : null}{statusBadge(st.status)}{action}</div></div>
+            <div className="panel-body">{stepBody(x.id)}</div></div>;
         })}
+        {draft ? <ScoringSaveBar saved={saved} draft={draft} lock={S.scoring.lock} onDiscard={() => setDraft(null)} onSaved={() => { setDraft(null); void reload(); setSegReload(n => n + 1); }} /> : null}
         <div className="panel" style={sx(`border:2px solid ${done === N ? 'var(--pos)' : 'var(--border)'}`)}>
-          <div className="panel-hdr"><span className="panel-ttl">{`8 · Config v${v.versionNo}`}</span>{done === N ? <span className="sc sc-h">Signed off</span> : <span className="sc sc-m">{`${rem} section${rem > 1 ? 's' : ''} remaining`}</span>}</div>
+          <div className="panel-hdr"><span className="panel-ttl">{`10 · Config v${v.versionNo}`}</span>{done === N ? <span className="sc sc-h">Signed off</span> : <span className="sc sc-m">{`${rem} section${rem > 1 ? 's' : ''} remaining`}</span>}</div>
           <div className="panel-body" style={sx('font-size:12px;color:var(--i2);line-height:1.6')}>
-            {done === N ? `All seven sections signed off. Every score, segment and draft from here names this version. A later change makes v${v.versionNo + 1}, and v${v.versionNo} is kept for the audit trail.`
+            {done === N ? `All ${N} sections signed off. Every score, segment and draft from here names this version. A later change makes v${v.versionNo + 1}, and v${v.versionNo} is kept for the audit trail.`
               : `Config v${v.versionNo} is in use: every list and run names it. Sign off the remaining ${rem} section${rem > 1 ? 's' : ''} to confirm it.`}
             <table className="au" style={sx('margin-top:10px')}><thead><tr><th>Version</th><th>In use from</th><th>By</th><th>What changed</th></tr></thead><tbody>
               {S.versions.map(r => <tr key={r.versionNo}><td>{`v${r.versionNo}${r.status === 'active' ? ' · in use' : ''}`}</td><td>{r.activatedAt ? fmtDate(r.activatedAt) : '—'}</td><td>{r.activatedBy ?? '—'}</td><td>{r.changes.length ? r.changes.join('; ') : r.versionNo === 1 ? 'Starting values' : '—'}</td></tr>)}
             </tbody></table>
           </div>
         </div>
-        <RoutingRules num={9} />
-        <AiPanel num={10} />
+        <RoutingRules num={11} />
+        <AiPanel num={12} />
       </div>
     </main>
     {modal ? <div id="setupModalOverlay" style={OVERLAY} onClick={e => { if (e.target === e.currentTarget) setModal(null); }}>

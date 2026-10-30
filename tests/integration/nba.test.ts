@@ -92,7 +92,8 @@ test('G-006: a build is what the engine makes of the hand-off: micro-segments, o
   const built = await as(admin(), s => buildNbaRun(s, adminActor(), { handoffId }));
   runId = built.runId;
   const run = await as(admin(), s => getNbaRun(s, runId));
-  assert.deepEqual(run.segments, want.seg.segments.map(s => ({ name: s.name, accounts: s.accountIds.length })));
+  // With the AI off every segment is the rules' own (F3: who made it shows on its tile).
+  assert.deepEqual(run.segments, want.seg.segments.map(s => ({ name: s.name, accounts: s.accountIds.length, theme: s.name, madeBy: 'rules', waiting: false })));
   assert.equal(run.recs.length, want.seg.recs.length);
   assert.equal(run.recs.length, 107, 'the sample: 135 prospects handed off, one recommendation per account');
   for (const r of run.recs) {
@@ -165,7 +166,9 @@ test('the system output is immutable and drafts, the decision log and pauses are
     } finally { await c.query('ROLLBACK'); c.release(); }
   };
   await tenant(`UPDATE recommendations SET hold_why = 'x' WHERE id = '${one}'`);
-  for (const col of [`rec = '{}'`, `action = 'x'`, `passed = false`, `reasons = '{}'`, `segment = 'x'`, `account_id = account_id`]) {
+  // The micro-segment's name can change (30 Oct 2026): a manager's rename or merge moves its items with it.
+  await tenant(`UPDATE recommendations SET segment = 'x' WHERE id = '${one}'`);
+  for (const col of [`rec = '{}'`, `action = 'x'`, `passed = false`, `reasons = '{}'`, `account_id = account_id`]) {
     await assert.rejects(tenant(`UPDATE recommendations SET ${col} WHERE id = '${one}'`), pgCode('42501'), col);
   }
   await assert.rejects(tenant(`DELETE FROM recommendations WHERE id = '${one}'`), pgCode('42501'));

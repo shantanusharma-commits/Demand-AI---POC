@@ -205,7 +205,7 @@ test('one rebuild at a time: a second correction while the first is being checke
 
 test('a scored list keeps its old version for the runs made on it; a saved selection keeps its people; delete removes every version', async () => {
   const sig = await as(admin(), s => receiveUpload(s, { kind: 'signal', fileName: 's.csv', mediaType: 'text/csv',
-    bytes: Buffer.from(E.toCSV([E.SIGNAL_COLUMNS, ['Acme Refining', 'bo.tan@acme-refining.com', 'Inquiry or RFQ', '2026-09-20', 'Asked for a quote', 'CRM', '', '']])) }, limits));
+    bytes: Buffer.from(E.toCSV([E.SIGNAL_COLUMNS, ['Acme Refining', 'bo.tan@acme-refining.com', '', 'Inquiry or RFQ', '2026-09-20', 'Asked for a quote', 'CRM', '', '']])) }, limits));
   const { runId } = await as(admin(), s => startScoringRun(s, adminActor(), { listId, signalUploadId: sig.uploadId, asOf: '2026-09-30' }));
   await runJobs();
   const scored = listId;

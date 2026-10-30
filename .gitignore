@@ -7,6 +7,10 @@ next-env.d.ts
 # Local-only reference material: confidential, never commit or ship
 /reference_content/
 
+# Client themes (APP_THEME): local only, never committed (the repository is public and never names a client). Other
+# local client folders belong in .git/info/exclude, so no tracked file names them.
+/public/themes/
+
 # Local working documents for the remediation
 /DEMANDAI_*
 

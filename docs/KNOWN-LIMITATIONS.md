@@ -17,12 +17,15 @@ What the pilot build does not do, where it is provisional, and what is still to 
 | Item | Now | Needs |
 |---|---|---|
 | Persona dictionary, industry table and exclusions, synonyms | Versioned v1 from the audit ([ADR 0005](adr/0005-provisional-dictionaries.md)) | The Client's lists |
-| Score scale and tiers | 0–100, tiers at 35 and 20, people ranked with the account tier beside ([ADR 0006](adr/0006-score-scale-and-tiers.md)) | Validators' acceptance (success area 2) |
+| Score scale and tiers | 0–100, tiers at 35 and 20 to start, people ranked with the account tier beside; editable in Setup with a lock for the measurement weeks (D-48, [ADR 0006](adr/0006-score-scale-and-tiers.md)) | Validators' acceptance (success area 2) |
 | G1 baseline (38 minutes) and the G2 threshold (70%) | The guide's values | The sponsor's sign-off; the Client timing the baseline |
 | Retention: 30 days after the sponsor's closing decision | Built and tested; the daily purge is a dry run | The period in the Client contract ([ADR 0004](adr/0004-retention-purge-export.md)) |
 | Configuration per business unit | Each unit has its own configuration, brand pack, claims and routing rules (D-41) | Confirm, or say "shared across units" |
 | Named validators per success area, and the sponsor | Verdicts are recorded by a signed-in Admin or Sales manager | The names |
 | Autopilot for low-risk items | Built as the developer guide describes; the spec (6.4) says no bulk accept | The Client's choice between the two |
+| Success-area names (D-54) and the due time of "New segment" and "New action" items (one working day, D-55) | Our defaults | The product owner's terms and times |
+| Approving a new segment releases its items without counting toward G2 (D-56) | Not counted: nobody decided on each item | The product owner's call |
+| A task made because no approved claim fits (D-10) passes every check, so it goes ahead on its own | As before | The product owner's call: go ahead, or wait in For Review |
 
 ## AI
 
@@ -33,6 +36,8 @@ What the pilot build does not do, where it is provisional, and what is still to 
 - Prices in the cost estimate are list prices from published price lists; set the Client's agreed prices.
 - To record before switching on: the Azure resource's region, its abuse-monitoring setting, and confirmation that data isn't used for training.
 - The Bedrock adapter is built and tested against a stand-in, never against a live Bedrock model.
+- **Micro-segments, the next best action and reading a guideline (30 Oct 2026)** are tested with stand-in models only: no live run and no evaluation yet ([AI.md](AI.md) §4). Change request H's golden set and content-library test pack aren't in the repository. With segments on, a build makes one more call per 10 accounts, one batch after another, so a large build takes longer.
+- When a reviewer moves an item to another micro-segment, the message is redrafted by the rules (an AI draft is not written again) and the action stays as it was.
 - Copilot chats are kept for the person who had them until they delete them or the end-of-pilot purge removes them; they are not part of the data export. Free-text answers go to the model only when no rule answers.
 
 ## Product

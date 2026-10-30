@@ -325,6 +325,29 @@ test('G-044: initials that fit more than one account match none', () => {
   assert.equal(sig.signals[0].code, 'D4');
 });
 
+/* ─── lead_name (30 Oct 2026): who a signal is about, by name ─── */
+
+test('lead_name: a name alone finds the person at the account; with an email it is shown and a different name is noted', () => {
+  const r = leads({}, OTHER);
+  const list = { accounts: r.accounts, contacts: r.contacts };
+  const HEAD = ['company_name', 'contact_email_or_linkedin', 'lead_name', 'signal_type', 'event_date', 'detail', 'source'];
+  const one = (ref: string, name: string) => E.processSignals([HEAD, ['Acme Refining', ref, name, 'Capital project', '2026-09-01', 'New train', 'Plan']], list, { asOf: '2026-09-30' });
+  const byName = one('', 'bo lee');
+  assert.equal(byName.signals[0].status, 'Qualified');
+  assert.equal(byName.signals[0].personName, 'Bo Lee', 'found by name, whatever the capitals');
+  assert.equal(byName.signals[0].assigned, 'Named in the file', 'not auto-assigned to the primary persona');
+  const unknown = one('', 'Cy Wong');
+  assert.equal(unknown.signals[0].code, 'D4');
+  assert.match(unknown.signals[0].reason, /Cy Wong is not in the lead file/);
+  assert.equal(unknown.suggested[0].person, 'Cy Wong');
+  const both = one('ann.lee@acme-refining.com', 'Annie Lee');
+  assert.equal(both.signals[0].personName, 'Ann Lee', 'the email decides');
+  assert.equal(both.signals[0].leadName, 'Annie Lee');
+  assert.ok(both.issues.some(i => i.field === 'lead_name' && i.severity === 'info' && /Annie Lee/.test(i.issue)));
+  assert.match(one('cy@acme-refining.com', 'Cy Wong').signals[0].reason, /Cy Wong \(cy@acme-refining.com\) is not in the lead file/);
+  assert.ok(E.SIGNAL_COLUMNS.includes('lead_name') && !E.SIGNAL_REQUIRED.includes('lead_name'), 'an optional template column');
+});
+
 /* ─── G-041 possible duplicates: listed for review, never merged ─── */
 
 test('G-041: the same person under another address (same company, last name, first name or initial) is listed as a possible duplicate', () => {

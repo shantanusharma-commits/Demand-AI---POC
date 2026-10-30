@@ -24,8 +24,12 @@ test('a signal switched off in Setup is not scored in new runs (OFF code)', () =
 // legacy engine.test.js:443
 test('a signal type added in Setup is scored in runs that include it, and only those', () => {
   const grid = S.SIGNALS.concat([['Northwind Refining', 'aditi.rao@northwindrefining.com', 'Trade show visit', '2026-09-20', 'Visited the stand', 'Events team', '']]);
-  const added: E.CustomSignalType = { name: 'Trade show visit', segment: 'Engagement', level: 'Light', full: 30, zero: 120 };
-  assert.match(E.customSignalProblem({ ...added, segment: 'Nope' }) ?? '', /micro-segment/);
+  const added: E.CustomSignalType = { name: 'Trade show visit', about: 'Visited the stand at a trade show', segment: 'Engagement', level: 'Light', full: 30, zero: 120 };
+  // A description is what the AI needs; a micro-segment is only a suggestion (30 Oct 2026: none needed).
+  assert.match(E.customSignalProblem({ ...added, about: '' }) ?? '', /what the signal means/);
+  assert.equal(E.customSignalProblem({ ...added, segment: undefined }), null, 'no micro-segment needed');
+  const plain = E.processSignals(grid, list(), { asOf: S.SAMPLE_AS_OF, custom: [{ ...added, segment: undefined }] }).signals.find(s => s.type === 'Trade show visit')!;
+  assert.equal(plain.segment, 'Trade show visit', "without one, the rules' fallback groups it under its own name");
   assert.match(E.customSignalProblem({ ...added, name: 'webinar ATTENDED' }) ?? '', /already a signal type/);
   assert.match(E.customSignalProblem({ ...added, full: 30, zero: 10 }) ?? '', /longer/);
   assert.equal(E.customSignalProblem(added), null);
@@ -219,6 +223,9 @@ test('no approved proof for the case: the action becomes a task for the owner, n
   assert.equal(d.note, undefined);
   assert.match(d.task!, /no approved, unexpired proof point for Leadership \(PS-06 expired 2026-06-30\)/);
   assert.doesNotMatch(N.draftText(d), /\[[^\]]+, \d{4}\]/);
+  // Why it is a task, for the screens (30 Oct 2026): nothing when the action has proof.
+  assert.equal(N.taskWhy(rec, 'Share a peer case study from their sector', S.SAMPLE_AS_OF), 'No approved claim for Leadership (PS-06 expired 30 Jun 2026)');
+  assert.equal(N.taskWhy(rec, 'Propose a migration-path discussion', S.SAMPLE_AS_OF), null);
 });
 
 // legacy engine.test.js:272

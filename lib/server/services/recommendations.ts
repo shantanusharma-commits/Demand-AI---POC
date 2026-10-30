@@ -7,25 +7,41 @@ import 'server-only';
 import { and, desc, eq, inArray, or, sql } from 'drizzle-orm';
 import { CONFIG } from '../../demandai-engine.ts';
 import {
-  approvedClaims, briefFor, checkDraft, confidenceFor, draftFor, estimateDealSize, type BrandPack, type CheckResult, type Claim, type Draft, type NbaContact, type Rec,
+  approvedClaims, briefFor, checkDraft, confidenceFor, draftFor, estimateDealSize, taskWhy, type BrandPack, type CheckResult, type Claim, type Draft, type NbaContact, type NbaSignal, type Rec,
 } from '../../engine/nba.ts';
 import * as R from '../../engine/review.ts';
-import { brandVersions, customSegments, decisionLog, drafts, nbaRuns, recommendations, segmentPauses, studioItems, SYSTEM_USER_ID, users } from '../db/schema.ts';
+import { validationOf } from '../../engine/gates.ts';
+import { configVersions, brandVersions, microSegments, decisionLog, drafts, nbaRuns, recommendations, segmentPauses, studioItems, SYSTEM_USER_ID, users } from '../db/schema.ts';
 import type { TenantScope } from '../db/tenant.ts';
 import { conflict, notFound } from '../http/errors.ts';
 import { currentLogContext, logger } from '../logger.ts';
 import { isManager, ownerOnly, type Actor } from './lists.ts';
 import { activeValidation } from './measures.ts';
+import { listSegments } from './segments.ts';
 import { todayUtc } from './scoring.ts';
 import { ownerNames, unitReps } from './users.ts';
 
 export type RecRow = typeof recommendations.$inferSelect;
 export type StoredDraft = { version: number; draft: Draft; checks: CheckResult; confidence: { level: string; reason: string }; reason: string; at: Date; by: string };
 export type RunInfo = { id: string; name: string; asOf: string; brandVersionId: string; configVersionId: string | null; createdAt: Date; segments: { name: string; accounts: number }[] };
-export type Item = { row: RecRow; rec: Rec; state: R.RecState; run: RunInfo; pack: BrandPack; draft: StoredDraft; checkDate: string };
+export type Item = { row: RecRow; rec: Rec; state: R.RecState; run: RunInfo; pack: BrandPack; draft: StoredDraft; checkDate: string; ctx: R.ReasonContext };
+
+/** What the exception check reads from the unit, once per request: new micro-segments waiting for approval and the
+ *  deal-size threshold in Setup (measurement and proceed criteria). */
+export async function reasonContext(scope: TenantScope): Promise<R.ReasonContext> {
+  const waiting = await scope.tx.select({ name: microSegments.name }).from(microSegments)
+    .where(and(eq(microSegments.businessUnitId, scope.ctx.businessUnitId), eq(microSegments.status, 'waiting')));
+  const [v] = await scope.tx.select({ body: configVersions.body }).from(configVersions)
+    .where(and(eq(configVersions.businessUnitId, scope.ctx.businessUnitId), eq(configVersions.status, 'active')));
+  return { waitingSegments: new Set(waiting.map(w => w.name.toLowerCase())), dealThreshold: validationOf(v?.body).dealSizeThreshold };
+}
 
 /** Drafts and checks are as of the build's date, or today when that is later (an expired claim fails, G-009). */
 export const checkDateOf = (asOf: string): string => (todayUtc() > asOf ? todayUtc() : asOf);
+
+/** The recommendation as built, with the micro-segment it is in now: a manager's rename or merge moves the column, and
+ *  the stored build (rec) is never changed (30 Oct 2026). Every reader takes the segment from here. */
+export const recOf = (row: { rec: unknown; segment: string | null }): Rec => ({ ...(row.rec as Rec), segment: row.segment });
 
 export function stateOf(row: RecRow): R.RecState {
   return {
@@ -72,7 +88,7 @@ export async function loadItem(scope: TenantScope, id: string, opts: { lock?: bo
   const [d] = await scope.tx.select({ version: drafts.version, draft: drafts.draft, checks: drafts.checks, confidence: drafts.confidence, reason: drafts.reason, at: drafts.createdAt, by: byName })
     .from(drafts).leftJoin(users, eq(users.id, drafts.createdBy)).where(and(eq(drafts.recommendationId, id), eq(drafts.version, row.draftVersion)));
   if (!d) throw new Error(`recommendation ${id} has no draft version ${row.draftVersion}`);
-  return { row, rec: row.rec as Rec, state: stateOf(row), run, pack,
+  return { row, rec: recOf(row), state: stateOf(row), run, pack, ctx: await reasonContext(scope),
     draft: { ...d, draft: d.draft as Draft, checks: d.checks as CheckResult, confidence: d.confidence as StoredDraft['confidence'] }, checkDate: checkDateOf(run.asOf) };
 }
 
@@ -132,19 +148,21 @@ export async function pausedSegments(scope: TenantScope, runId: string): Promise
 export const segKey = (rec: Pick<Rec, 'segment'>): string => rec.segment || '';
 
 /** A micro-segment an item with none can join: one the system formed (at least CONFIG.minSegmentAccounts accounts),
- *  or one a person created, which may hold fewer. `theme` is the system segment whose actions it follows. */
-export type SegmentChoice = { name: string; theme: string; origin: 'system' | 'person'; approved: number; by: string | null };
+ *  one a person created, which may hold fewer, or one the AI created that a sales manager approved. `theme` is the
+ *  system segment whose actions it follows, or the one-line theme the AI or the person gave it. */
+export type SegmentChoice = { name: string; theme: string; origin: 'system' | 'person' | 'ai'; approved: number; by: string | null };
 
 /** Where an item with no micro-segment can go, from any list in the unit: the system's micro-segments with at least one
  *  approved message, and every one a person created. Those with the theme of the item's message come first. */
 export async function segmentChoices(scope: TenantScope, theme: string): Promise<SegmentChoice[]> {
   const { rows } = await scope.tx.execute<{ segment: string; formed: number; approved: number }>(sql`select segment, formed, approved from nba_segment_approvals()`);
   const approvedIn = new Map(rows.map(r => [r.segment.toLowerCase(), Number(r.approved)]));
-  const made = await scope.tx.select({ name: customSegments.name, theme: customSegments.theme, by: byName }).from(customSegments)
-    .leftJoin(users, eq(users.id, customSegments.createdBy)).where(eq(customSegments.businessUnitId, scope.ctx.businessUnitId)).orderBy(customSegments.name);
+  const made = await scope.tx.select({ name: microSegments.name, theme: microSegments.theme, origin: microSegments.origin, by: byName }).from(microSegments)
+    .leftJoin(users, eq(users.id, microSegments.createdBy))
+    .where(and(eq(microSegments.businessUnitId, scope.ctx.businessUnitId), eq(microSegments.status, 'approved'))).orderBy(microSegments.name);
   const system = rows.filter(r => Number(r.formed) > 0).sort((a, b) => a.segment.localeCompare(b.segment))
     .map((r): SegmentChoice => ({ name: r.segment, theme: r.segment, origin: 'system', approved: Number(r.approved), by: null }));
-  const people = made.map((m): SegmentChoice => ({ name: m.name, theme: m.theme, origin: 'person', approved: approvedIn.get(m.name.toLowerCase()) ?? 0, by: m.by }));
+  const people = made.map((m): SegmentChoice => ({ name: m.name, theme: m.theme, origin: m.origin === 'ai' ? 'ai' : 'person', approved: approvedIn.get(m.name.toLowerCase()) ?? 0, by: m.origin === 'ai' ? null : m.by }));
   const rank = (c: SegmentChoice) => (c.theme === theme ? 0 : 1);
   return [...system, ...people].sort((a, b) => rank(a) - rank(b));
 }
@@ -156,7 +174,7 @@ export async function logFacts(scope: TenantScope, opts: { ownerEmails?: string[
   const rows = await scope.tx.select({
     decisive: decisionLog.decisive, firstPass: decisionLog.firstPass, accepted: decisionLog.accepted, kind: decisionLog.kind, flag: decisionLog.flag,
     segment: decisionLog.segment, reason: decisionLog.reason, cause: decisionLog.cause, compliance: decisionLog.compliance, intervention: decisionLog.intervention,
-    editRating: decisionLog.editRating, seconds: decisionLog.seconds,
+    editRating: decisionLog.editRating, seconds: decisionLog.seconds, recommendationId: decisionLog.recommendationId,
     checked: checkedSql,
   }).from(decisionLog).where(and(eq(decisionLog.businessUnitId, scope.ctx.businessUnitId),
     or(eq(decisionLog.decisive, true), eq(decisionLog.intervention, true), eq(decisionLog.compliance, true)),
@@ -166,7 +184,7 @@ export async function logFacts(scope: TenantScope, opts: { ownerEmails?: string[
 
 /* ─── The item as the drawer and the workspace show it ─── */
 
-export type OptionFacts = { action: string; reason: string; channel: string; proof: string; ok: boolean; flags: string[]; conf: string };
+export type OptionFacts = { action: string; reason: string; channel: string; proof: string; ok: boolean; flags: string[]; conf: string; taskWhy: string | null };
 
 /** The recommended or runner-up action as it would go out: channel, proof, confidence and checks. */
 export function optionFacts(item: Item, action: string, reason: string): OptionFacts {
@@ -175,12 +193,13 @@ export function optionFacts(item: Item, action: string, reason: string): OptionF
   const chk = checkDraft(x, item.pack, item.checkDate), conf = confidenceFor(lr, x, chk, action);
   const brief = briefFor(lr, action, { asOf: item.checkDate, brand: item.pack });
   return { action, reason, channel: x.channel, proof: brief.proof ? brief.proof.title : '', ok: !chk.flags.length && !chk.unsupported.length,
-    flags: chk.flags.map(f => f.rule).concat(chk.unsupported.length ? ['Unverified claim'] : []), conf: conf.level };
+    flags: chk.flags.map(f => f.rule).concat(chk.unsupported.length ? ['Unverified claim'] : []), conf: conf.level,
+    taskWhy: x.channel === 'Task' ? taskWhy(lr, action, item.checkDate, item.pack) : null };
 }
 
 /** The item's reasons now: the exception check over its current draft. */
 export function liveReasons(item: Item): string[] {
-  return R.exceptionReasons(R.liveRec(item.rec, item.state), item.draft.draft, item.draft.checks);
+  return R.exceptionReasons(R.liveRec(item.rec, item.state), item.draft.draft, item.draft.checks, item.ctx);
 }
 export function catsOf(item: Item): string[] {
   return R.reasonCats(item.state, { reasons: liveReasons(item), unreachable: item.draft.draft.unreachable });
@@ -189,6 +208,24 @@ export function catsOf(item: Item): string[] {
 const mineOf = (scope: TenantScope, ownerEmail: string | null) => scope.ctx.scope === 'all' || (!!ownerEmail && scope.ctx.ownerEmails.includes(ownerEmail));
 
 export type ItemDetail = Awaited<ReturnType<typeof itemDetail>>;
+
+/** Why the AI chose the micro-segment and the action (F2): its reasons, the signal rows it cited as type, date and
+ *  detail, the approved claims it would use, its confidence and its runner-up. Null when the rules chose both. The
+ *  segment it chose is read from the stored recommendation, so a later rename or a reviewer's change shows beside it. */
+function aiWhyOf(rec: Rec, stored: Rec, pack: BrandPack) {
+  const ai = rec.ai;
+  if (!ai?.segment && !ai?.action) return null;
+  const byRow = new Map((rec.result.people ?? []).flatMap(p => p.signals).map(s => [s.row, s]));
+  const titles = new Map(approvedClaims(pack).map(c => [c.id, c.title]));
+  return {
+    segment: ai.segment ? { name: stored.segment || stored.prominent, isNew: ai.segment.isNew, theme: ai.segment.theme, why: ai.segment.why, confidence: ai.segment.confidence } : null,
+    action: ai.action ? {
+      action: rec.action, inLibrary: ai.action.inLibrary, why: ai.action.why, confidence: ai.action.confidence, runnerUp: ai.action.runnerUp,
+      signals: ai.action.signals.map(r => byRow.get(r)).filter((s): s is NbaSignal => !!s).map(s => ({ row: s.row ?? null, type: s.type, date: s.date ?? '', detail: s.detail ?? '' })),
+      claims: ai.action.claims.map(id => ({ id, title: titles.get(id) ?? '' })),
+    } : null,
+  };
+}
 
 export async function itemDetail(scope: TenantScope, actor: Actor, id: string) {
   const item = await loadItem(scope, id);
@@ -221,7 +258,7 @@ export async function itemDetail(scope: TenantScope, actor: Actor, id: string) {
   const peers = seg ? await scope.tx.select({ id: recommendations.id, rec: recommendations.rec, segment: recommendations.segment, assignedSegment: recommendations.assignedSegment,
     useRunnerUp: recommendations.useRunnerUp, manualAction: recommendations.manualAction }).from(recommendations)
     .where(and(eq(recommendations.nbaRunId, row.nbaRunId), eq(recommendations.businessUnitId, scope.ctx.businessUnitId), ownerOnly(scope, recommendations.ownerEmail), sql`${recommendations.id} <> ${row.id}`)) : [];
-  const sameAction = peers.filter(p => { const st2 = { assignedSegment: p.assignedSegment, useRunnerUp: p.useRunnerUp, manualAction: p.manualAction }, r2 = p.rec as Rec;
+  const sameAction = peers.filter(p => { const st2 = { assignedSegment: p.assignedSegment, useRunnerUp: p.useRunnerUp, manualAction: p.manualAction }, r2 = recOf(p);
     return R.segOf(r2, st2) === seg && R.chosenAction(r2, st2) === action; }).length;
   // No micro-segment of its own: where it can go, and the caller's other waiting items in this list with the same theme,
   // which can join a micro-segment created for this one.
@@ -247,18 +284,24 @@ export async function itemDetail(scope: TenantScope, actor: Actor, id: string) {
     owner: { email: row.ownerEmail, name: row.ownerEmail ? names.get(row.ownerEmail) ?? null : null },
     chosenAction: action, segOf: seg, segSince: state.status === 'Released' && seg ? (row.segmentAt ?? (state.released === 'auto' ? run.createdAt : row.decidedAt)) : null,
     draft: { ...item.draft.draft, version: item.draft.version, reason: item.draft.reason, at: item.draft.at, by: item.draft.by },
+    taskWhy: item.draft.draft.channel === 'Task' ? taskWhy(lr, action, item.checkDate, item.pack) : null,
+    ai: aiWhyOf(rec, row.rec as Rec, item.pack),
     checks: item.draft.checks, confidence: item.draft.confidence, sensitive: R.isSensitive(item.draft.checks),
     reasons, cats, fourChecks: R.fourChecks(reasons).map(([name, ok]) => ({ name, ok })), stuck: R.stuck(rec, state, item.draft.draft, item.draft.checks, cats),
     brief: { who: brief.who, whyNow: brief.whyNow, angle: brief.angle, proof: brief.proof, objection: brief.objection, ask: brief.ask, constraints: brief.constraints },
     options: { recommended: optionFacts(item, rec.action, rec.reason), runnerUp: rec.runnerUp ? optionFacts(item, rec.runnerUp.action, rec.runnerUp.reason) : null },
     versions, history,
     trackRecord: { segment: rec.segment ? R.trackRecord(facts, rec.segment, min) : null, all: R.trackRecord(facts, undefined, min) },
-    deal: estimateDealSize(rec.account), dealThreshold: CONFIG.dealSize.threshold,
+    deal: estimateDealSize(rec.account, item.ctx.dealThreshold), dealThreshold: item.ctx.dealThreshold ?? CONFIG.dealSize.threshold,
     paused: paused ? { by: paused.by, at: paused.at } : null,
     people, claims: approvedClaims(item.pack).filter(c => (c.segments || []).includes(claimSeg)).map((c: Claim) => ({ id: c.id, title: c.title, type: c.type, year: c.year, claim: c.claim, expiry: c.expiry })),
     reps: manager ? await unitReps(scope) : [],
     content: row.content.map(cid => attached.find(a => a.id === cid)).filter((a): a is (typeof attached)[number] => !!a), sameAction,
     segmentChoices: choices, sameTheme,
+    // The micro-segments a reviewer can move it to (F2): any not retired, the rules' included; a new one waits for approval.
+    moveTo: state.status === 'Waiting' && rec.segment && mine && !paused
+      ? (await listSegments(scope)).filter(s => s.status !== 'retired' && s.name.toLowerCase() !== rec.segment!.toLowerCase()).map(s => ({ name: s.name, theme: s.theme, status: s.status, origin: s.origin }))
+      : [],
     can: {
       content: (item.draft.draft.channel === 'Email' || item.draft.draft.channel === 'LinkedIn') && mine && !paused,
       decide: R.inQueue(state) && mine && !paused,

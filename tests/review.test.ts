@@ -117,7 +117,7 @@ test('G2 weighted by path and the track record count a flagged decision only onc
   assert.deepEqual([m.exc.n, m.exc.a, m.auto.n, m.flagged], [3, 2, 1, 1]);
   assert.equal(Math.round(m.weighted!), Math.round(100 * 1 / 4 + (2 / 3 * 100) * 3 / 4));
   assert.deepEqual(m.causes, { data: 1, system: 0, other: 0 });
-  assert.equal(m.minutes, (120 * 5) / 60 / 2);
+  assert.equal(m.minutes, (120 * 5) / 60 / 5, 'over the five decisions on items a person handled, not the two released');
   assert.deepEqual(R.trackRecord(logs, 'Inquiry'), { n: 4, a: 3, pct: 75, early: true });
 });
 

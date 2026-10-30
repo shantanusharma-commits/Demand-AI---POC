@@ -8,7 +8,7 @@ import 'server-only';
 import { and, desc, eq, isNotNull, ne, sql } from 'drizzle-orm';
 import { Aliases, answerCopilot, budget, MAX_TURNS, type CopilotContext } from '../../ai/copilot.ts';
 import { CONFIG } from '../../demandai-engine.ts';
-import { draftText, type Draft, type Rec } from '../../engine/nba.ts';
+import { draftText, type Draft } from '../../engine/nba.ts';
 import * as R from '../../engine/review.ts';
 import { bucketIn, dueIn, labelIn } from '../../copilot/due.ts';
 import * as C from '../../copilot/rules.ts';
@@ -26,7 +26,7 @@ import { getList, isManager, ownerOnly, visibleIssues, type Actor } from './list
 import { chatTurns, saveExchange } from './copilot-chats.ts';
 import { activeValidation } from './measures.ts';
 import { getNbaRun } from './nba.ts';
-import { itemDetail, logFacts, pausedSegments } from './recommendations.ts';
+import { recOf, itemDetail, logFacts, pausedSegments, reasonContext } from './recommendations.ts';
 import { needsPersonSql } from './review.ts';
 import { getProspect, getRun, listProspects } from './scoring.ts';
 import { ownerNames, unitReps } from './users.ts';
@@ -53,12 +53,13 @@ async function queueFacts(scope: TenantScope, actor: Actor, offset: number, wher
   const paused = new Map<string, Set<string>>();
   for (const id of new Set(rows.map(r => r.row.nbaRunId))) paused.set(id, new Set((await pausedSegments(scope, id)).keys()));
   const names = await ownerNames(scope, rows.map(r => r.row.ownerEmail ?? ''));
+  const rctx = await reasonContext(scope);
   const now = Date.now();
   const items = rows.filter(r => !paused.get(r.row.nbaRunId)!.has(r.row.segment || '')).map(({ row, draft, checks, runName }): C.QItem => {
-    const rec = row.rec as Rec, st = { status: row.status as R.RecStatus, spot: row.spot as R.RecState['spot'], why: row.why as R.RecState['why'], reasons: row.reasons, fixed: row.fixed,
+    const rec = recOf(row), st = { status: row.status as R.RecStatus, spot: row.spot as R.RecState['spot'], why: row.why as R.RecState['why'], reasons: row.reasons, fixed: row.fixed,
       contactRow: row.contactRow, useRunnerUp: row.useRunnerUp, manualAction: row.manualAction, assignedSegment: row.assignedSegment };
     const d = draft as Draft, chk = checks as Parameters<typeof R.isSensitive>[0];
-    const reasons = R.exceptionReasons(R.liveRec(rec, st), d, chk), cats = R.reasonCats(st, { reasons, unreachable: d.unreachable });
+    const reasons = R.exceptionReasons(R.liveRec(rec, st), d, chk, rctx), cats = R.reasonCats(st, { reasons, unreachable: d.unreachable });
     const c = R.liveRec(rec, st).contact, segment = R.segOf(rec, st);
     const due = dueIn({ cats, segment: segment || null, spot: row.spot, routedAt: +row.routedAt }, offset);
     return { id: row.id, who: c.name, title: c.jobTitle || '', account: rec.account.name, segment, cats, status: row.status, spot: row.spot, why: row.why,

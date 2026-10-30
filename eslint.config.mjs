@@ -16,6 +16,5 @@ export default defineConfig([
     'legacy/**',
     'reference_content/**',
     'test-data/**',
-    'vendor/**',
   ]),
 ]);

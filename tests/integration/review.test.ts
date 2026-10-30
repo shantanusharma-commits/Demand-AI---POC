@@ -21,7 +21,7 @@ import { createHandoff } from '../../lib/server/services/handoffs.ts';
 import { buildNbaRun, getNbaRun, setSegmentPaused } from '../../lib/server/services/nba.ts';
 import { itemDetail, openItem, segmentChoices } from '../../lib/server/services/recommendations.ts';
 import {
-  acceptItem, approveItem, checkFlagged, chooseAction, decisionLogRows, drawSpotChecks, fixItem, holdItem, isoWeek, reassign, rejectItem, reviewExport, reviewQueue, sendBack, stepIn, teach,
+  acceptItem, approveItem, changeSegment, checkFlagged, chooseAction, decisionLogRows, drawSpotChecks, fixItem, holdItem, isoWeek, reassign, rejectItem, reviewExport, reviewQueue, sendBack, stepIn, teach,
 } from '../../lib/server/services/review.ts';
 import { claimUsage } from '../../lib/server/services/brand.ts';
 import { HttpError } from '../../lib/server/http/errors.ts';
@@ -123,6 +123,10 @@ test('two users: the rep accepts with a minor edit; a sensitive edit goes to the
   const row = await one(`SELECT status, released, approved_by, edit_rating FROM recommendations WHERE id = $1`, [b.id]);
   assert.deepEqual([row.status, row.released, row.approved_by, row.edit_rating], ['Released', 'approved', ids.adminA, 'minor']);
   assert.match((await draftOf(b.id)).reason, /^Edited by the sales manager before approving \(minor/);
+  // The rep's accept was the first pass: the approval is decisive and timed, but the item counts once toward G2.
+  const lb = await lastLog(b.id);
+  assert.deepEqual([lb.decision, lb.decisive, lb.accepted, lb.kind, lb.first_pass, lb.edit_rating, lb.created_by], ['Approved and released', true, true, 'exception', false, 'minor', ids.adminA]);
+  assert.equal((await one(`SELECT count(*)::int n FROM decision_log WHERE recommendation_id = $1 AND first_pass`, [b.id])).n, 1);
   // 3 · Sent back with a note: back in the rep's queue, saying what the manager asked.
   const d3 = await draftOf(c.id);
   const f3 = d3.draft.channel === 'Email' ? 'body' : 'note';
@@ -133,6 +137,54 @@ test('two users: the rep accepts with a minor edit; a sensitive edit goes to the
   assert.deepEqual([back.status, back.cats, back.stuck.line], ['Waiting', ['sentback'], 'Sent back by the sales manager: “Leave out the regulation point”.']);
   const l3 = await lastLog(c.id);
   assert.deepEqual([l3.decision, l3.cause, l3.compliance], ['Sent back to the rep', 'compliance', true]);
+});
+
+test('G2 counts both (30 Oct 2026): the manager approves or rejects in Approvals, the first pass when the item came straight from the build', async () => {
+  const [x, y] = (await owner.query(`SELECT id FROM recommendations WHERE nba_run_id = $1 AND status = 'Awaiting approval' AND why = 'sensitive' ORDER BY position LIMIT 2`, [runId])).rows;
+  assert.ok(x && y, 'the build sent sensitive items to approvals');
+  await assert.rejects(as(admin(), s => rejectItem(s, repActor(), y.id, { code: 'R10' })), status(403), 'only a manager rejects in Approvals');
+  await as(admin(), s => approveItem(s, mgr(), x.id, {}));
+  const lx = await lastLog(x.id);
+  assert.deepEqual([lx.decision, lx.decisive, lx.accepted, lx.kind, lx.first_pass, lx.edit_rating], ['Approved and released', true, true, 'exception', true, 'none']);
+  const r = await as(admin(), s => rejectItem(s, mgr(), y.id, { code: 'R1' }));
+  assert.deepEqual([r.status, r.outcome], ['Set aside', 'The account is set aside for the pilot']);
+  const ly = await lastLog(y.id);
+  assert.deepEqual([ly.decision, ly.decisive, ly.accepted, ly.kind, ly.first_pass, ly.reason_code, ly.note], ['Rejected: Wrong fit', true, false, 'exception', true, 'R1', 'The account is set aside for the pilot · Rejected in Approvals']);
+  await assert.rejects(as(admin(), s => rejectItem(s, mgr(), y.id, { code: 'R1' })), status(409), 'decided once');
+});
+
+test('D-10: a task says why it is not a message: the micro-segment with no approved claim and the claims that lapsed (30 Oct 2026)', async () => {
+  const [w] = await repItems('Waiting');
+  assert.equal((await as(rep(), s => itemDetail(s, repActor(), w.id))).taskWhy, null, 'a message has nothing to explain');
+  // Leadership's only claim, PS-06, expired on 30 Jun 2026: an action from its library becomes a task for the team.
+  await as(rep(), s => chooseAction(s, repActor(), w.id, { use: 'own', text: 'Introduce Client to the new leader' }));
+  const d = await as(rep(), s => itemDetail(s, repActor(), w.id));
+  assert.deepEqual([d.draft.channel, d.taskWhy], ['Task', 'No approved claim for Leadership (PS-06 expired 30 Jun 2026)']);
+  await as(rep(), s => chooseAction(s, repActor(), w.id, { use: 'recommended' }));
+});
+
+test('F2: the reviewer moves an item to another micro-segment with a reason; a new one waiting for approval holds it', async () => {
+  const [w] = (await repItems('Waiting')).filter(x => x.segment);
+  const d0 = await as(rep(), s => itemDetail(s, repActor(), w.id));
+  assert.ok(d0.moveTo.length && !d0.moveTo.some(o => o.name === w.segment), 'any segment not retired, but not its own');
+  const to = d0.moveTo.find(o => o.status === 'approved')!.name;
+  await assert.rejects(as(rep(), s => changeSegment(s, repActor(), w.id, { segment: to, reason: '  ' })), status(400), 'a reason is needed');
+  await assert.rejects(as(rep(), s => changeSegment(s, repActor(), w.id, { segment: 'Nowhere', reason: 'x' })), status(400));
+  await assert.rejects(as(rep(), s => changeSegment(s, repActor(), w.id, { segment: w.segment!, reason: 'x' })), status(409));
+  const ok = await as(rep(), s => changeSegment(s, repActor(), w.id, { segment: to.toUpperCase(), reason: 'They are expanding the plant, not changing leaders' }));
+  assert.equal(ok.message, `Moved to ${to}. The message is redrafted for it`);
+  const d1 = await as(rep(), s => itemDetail(s, repActor(), w.id));
+  assert.deepEqual([d1.segment, d1.draft.version, d1.draft.reason], [to, d0.draft.version + 1, `Moved to the ${to} micro-segment`]);
+  const l = await lastLog(w.id);
+  assert.deepEqual([l.decision, l.reason, l.note, l.segment], [`Changed the micro-segment from ${w.segment} to ${to}`, 'They are expanding the plant, not changing leaders', 'Why: They are expanding the plant, not changing leaders', to]);
+  // Into a segment the AI created that waits for approval: the item waits for it too.
+  await owner.query(`INSERT INTO micro_segments (business_unit_id, name, theme, why, origin, status, created_by, updated_by) VALUES ($1, 'Plant expansion', 'Modernisation', 'New capacity', 'ai', 'waiting', $2, $2)`, [ids.buA, ids.adminA]);
+  const moved = await as(rep(), s => changeSegment(s, repActor(), w.id, { segment: 'plant expansion', reason: 'A closer fit' }));
+  assert.match(moved.message, /^Moved to Plant expansion: it is new, so it waits for the sales manager’s approval/);
+  assert.ok((await as(rep(), s => itemDetail(s, repActor(), w.id))).reasons.includes('New segment: needs approval'));
+  await assert.rejects(as(rep(), s => acceptItem(s, repActor(), w.id, {})), status(409, /waits for the sales manager's approval/));
+  await owner.query(`UPDATE micro_segments SET status = 'retired' WHERE name = 'Plant expansion'`);
+  await as(rep(), s => changeSegment(s, repActor(), w.id, { segment: w.segment!, reason: 'Back where it was' }));
 });
 
 test('step 6–7: R6 brings back the runner-up once, redrafted; rejecting the alternative closes the account; R12 needs a comment', async () => {
@@ -364,14 +416,15 @@ test('no micro-segment of its own: it joins one of the system’s with an approv
   await assert.rejects(as(admin(), s => fixItem(s, mgr(), it0.id, { kind: 'small', create: { name: ' ab ' } })), status(400, /3 to 60/));
   const formedOne = (await one(`SELECT id FROM recommendations WHERE nba_run_id = $1 AND segment IS NOT NULL AND status = 'Waiting' LIMIT 1`, [runId]))?.id;
   if (formedOne) await assert.rejects(as(admin(), s => fixItem(s, mgr(), it0.id, { kind: 'small', create: { name: 'Never made', also: [formedOne] } })), status(400, /can't join it/));
-  assert.equal((await one(`SELECT count(*)::int n FROM custom_segments`)).n, 0, 'a refusal creates nothing');
+  assert.equal((await one(`SELECT count(*)::int n FROM micro_segments WHERE origin = 'person'`)).n, 0, 'a refusal creates nothing');
 
   // A person's own: the theme of the message, any number of accounts, and the other waiting items they pick.
   const name = 'DCS quote follow-ups';
   const also = small.filter(x => x.id !== it0.id && x.theme === it0.theme).slice(0, 1).map(x => x.id);
   await as(admin(), s => fixItem(s, mgr(), it0.id, { kind: 'small', create: { name, also } }));
-  const made = await one(`SELECT name, theme, created_by FROM custom_segments WHERE business_unit_id = $1`, [ids.buA]);
-  assert.deepEqual([made.name, made.theme, made.created_by], [name, it0.theme, ids.adminA]);
+  // Person-made segments are in the micro-segments list (30 Oct 2026), approved at once.
+  const made = await one(`SELECT name, theme, created_by, origin, status FROM micro_segments WHERE business_unit_id = $1 AND origin = 'person'`, [ids.buA]);
+  assert.deepEqual([made.name, made.theme, made.created_by, made.origin, made.status], [name, it0.theme, ids.adminA, 'person', 'approved']);
   for (const id of [it0.id, ...also]) {
     const r = await one(`SELECT assigned_segment, fixed FROM recommendations WHERE id = $1`, [id]);
     assert.deepEqual([r.assigned_segment, r.fixed.includes('small')], [name, true]);
@@ -395,8 +448,8 @@ test('no micro-segment of its own: it joins one of the system’s with an approv
   assert.deepEqual([group?.theme, group?.origin, !!group?.by], [it0.theme, 'person', true]);
   assert.ok(!run.segments.some(g => g.name === name), 'the system did not form it');
   // Append-only, and another business unit sees none of them.
-  await assert.rejects(owner.query(`UPDATE custom_segments SET theme = 'Project'`), /append-only/);
-  await assert.rejects(owner.query(`DELETE FROM custom_segments`), /append-only/);
+  // A manager may rename, merge or retire a micro-segment (30 Oct 2026), so it can change; it is never deleted.
+  await assert.rejects(owner.query(`DELETE FROM micro_segments`), /append-only/);
   const other = await withTenant(app, { userId: ids.repB, businessUnitId: ids.buB, scope: 'all', ownerEmails: [] }, s => s.tx.select().from(customSegments));
   assert.equal(other.length, 0);
 

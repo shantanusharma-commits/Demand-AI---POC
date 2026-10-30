@@ -14,6 +14,7 @@ import { sx } from '@/lib/sx';
 import { MessageBar } from '@/components/ContentPicker';
 import { api, errorText, waitForJob, type WireDeep } from '@/lib/client/api';
 import { AiTag, aiShare } from '@/components/AiTag';
+import { AiWhy } from '@/components/AiWhy';
 import { showToast, initials, avColor } from '@/lib/ui';
 import { useCan } from '@/components/SessionContext';
 import { RenameField } from '@/components/RenameField';
@@ -28,12 +29,14 @@ type Run = WireDeep<Awaited<ReturnType<typeof getNbaRun>>>;
 type Rec = WireDeep<RecRowView>;
 type Item = WireDeep<ItemDetail>;
 type AiDraftStats = { asked: number; written: number; fallbacks: Record<string, number> };
-type Built = { runId: string; name: string; stats: Record<string, number> & { aiDrafts?: AiDraftStats }; checks: BuildStep[] };
+type AiPlanStats = { asked: number; answered: number; fallbacks: Record<string, number> };
+type Built = { runId: string; name: string; checks: BuildStep[];
+  stats: Record<string, number> & { aiDrafts?: AiDraftStats; aiSegments?: AiPlanStats & { newSegments: string[] }; aiActions?: AiPlanStats & { offLibrary: number } } };
 /** `ai`: the first messages are being written with AI (the build runs as a job); `status`: the job's current stage. */
 type Checks = { phase: 'running' | 'done' | 'failed'; label: string; built?: Built; error?: string; ai?: boolean; status?: string };
 export const AI_DRAFT = 'Written with AI from the action, the brief and an approved claim (put in word for word), then passed the same brand, claim and grounding checks as the rules\' drafts.';
 const JOB_STAGE: Record<string, string> = {
-  queued: 'Waiting for its turn…', prepare: 'Grouping the prospects into micro-segments…',
+  queued: 'Waiting for its turn…', prepare: 'Grouping the prospects into micro-segments…', choose: 'The AI is choosing each account\'s micro-segment and next best action…',
   draft: 'Writing each first message with AI, then checking it against the brand pack and the approved claims…', save: 'Checking and routing each recommendation…',
 };
 
@@ -256,6 +259,8 @@ export function NbaScreen() {
         })}</div>
         <div style={sx('padding:14px 22px 18px;display:flex;align-items:center;gap:8px;border-top:1px solid var(--border);margin-top:4px')}>{done && ck.built ? <>
           <span style={sx('flex:1;font-size:12px;color:var(--i2)')}><b>{st.segments}</b> micro-segment{st.segments === 1 ? '' : 's'} · <b>{st.auto}</b> went ahead · <b>{(st.prospects ?? 0) - (st.auto ?? 0)}</b> to For Review
+            {st.aiSegments ? <span style={sx('display:block;margin-top:4px;color:var(--i3)')}>{aiShare('Micro-segments of the accounts', st.aiSegments)}{st.aiSegments.newSegments.length ? ` ${pl(st.aiSegments.newSegments.length, 'new micro-segment')} wait${st.aiSegments.newSegments.length === 1 ? 's' : ''} for the sales manager's approval: ${st.aiSegments.newSegments.join(', ')}.` : ''}</span> : null}
+            {st.aiActions ? <span style={sx('display:block;margin-top:4px;color:var(--i3)')}>{aiShare('Next best actions', st.aiActions)}{st.aiActions.offLibrary ? ` ${st.aiActions.offLibrary} outside the action library go to For Review.` : ''}</span> : null}
             {st.aiDrafts ? <span style={sx('display:block;margin-top:4px;color:var(--i3)')}>{aiShare('First messages', st.aiDrafts)}</span> : null}</span>
           <button className="btn btn-ghost btn-sm" onClick={() => { setChecks(null); setTab('new'); }}>Back</button>
           <button className="btn btn-primary btn-sm" autoFocus onClick={() => { const id = ck.built!.runId; setChecks(null); void openRun(id); }}>View the micro-segments →</button>
@@ -291,7 +296,9 @@ export function NbaScreen() {
         <div className="topbar-r"><CopilotButton screen="nba" ctxRef={{ nbaRunId: r.id }} title={r.name}
           focus={drawer?.item ? { ref: { itemId: drawer.id }, label: `${drawer.item.contact.name} · ${drawer.item.account.name}` } : null}
           onChanged={() => { void loadRun(r.id); if (drawer) void loadItem(drawer.id); }} /><button className="btn btn-sec btn-sm" onClick={() => { setScreen('start'); setRun(null); setDrawer(null); setTab('new'); void reloadRuns(); }}>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="15 18 9 12 15 6" /></svg>Group another list</button></div>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="15 18 9 12 15 6" /></svg>Group another list</button>
+          <a className="btn btn-sec btn-sm" href={`/api/nba-runs/${r.id}/export.csv`} download title="Every recommendation in this build: the person, the micro-segment, the action, where it is now and its message" style={sx('text-decoration:none')}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>Download (.csv)</a></div>
       </div>
       <Tabs label="Build views">{ft('grid', 'Micro-segments', r.segments.length + r.assigned.length)}{ft('list', 'Recommendations', recs.length)}</Tabs>
       <div className="canvas">
@@ -325,9 +332,11 @@ export function NbaScreen() {
             const rs = r.recs.filter(x => (x.segment || x.assignedSegment) === g.name), byAcc = accOf(rs), fb = byAcc.filter(x => x.fallback).length;
             const paused = r.paused[g.name], assigned = byAcc.filter(x => !x.segment);
             return <tr key={g.name} style={sx('cursor:pointer')} onClick={() => go(g.name)}>
-              <td style={sx(td)}><div style={sx('display:flex;align-items:center;gap:8px;margin-bottom:4px')}><SegTag seg={g.name} />{paused ? <span className="tag tag-grey">Paused by {paused.by}</span> : null}</div>
-                <div style={sx('font-size:12px;color:var(--i2)')}>{R.SEG_MEANS[g.name] || ''}</div>
-                <div style={sx('font-size:12px;color:var(--i1);font-weight:600;margin-top:4px')}>→ {(CONFIG.segmentLibrary[g.name] || [''])[0]}</div>
+              <td style={sx(td)}><div style={sx('display:flex;align-items:center;gap:8px;margin-bottom:4px')}><SegTag seg={g.name} theme={g.theme} />
+                {g.madeBy === 'ai' ? <span className="tag tag-violet">Created by AI</span> : g.origin === 'ai' ? <span className="tag tag-grey">Grouped by AI</span> : g.madeBy === 'person' ? <span className="tag tag-grey">Created by a person</span> : null}
+                {g.waiting ? <span className="tag tag-amber">Waits for approval</span> : null}{paused ? <span className="tag tag-grey">Paused by {paused.by}</span> : null}</div>
+                <div style={sx('font-size:12px;color:var(--i2)')}>{R.SEG_MEANS[g.name] || (g.theme !== g.name ? g.theme : '')}</div>
+                <div style={sx('font-size:12px;color:var(--i1);font-weight:600;margin-top:4px')}>→ {(CONFIG.segmentLibrary[g.name] || [])[0] || rs[0]?.action || ''}</div>
                 {fb ? <div style={sx('font-size:10.5px;color:var(--i3);margin-top:3px')}>{fb} of {byAcc.length} accounts joined on their second signal</div> : null}
                 {assigned.length ? <div style={sx('font-size:10.5px;color:var(--brand-dk);margin-top:3px')}>{assigned.length} assigned by a person in For Review: {assigned.map(x => x.account.name).join(', ')}</div> : null}
                 {canPause ? <button className="btn btn-ghost btn-sm" style={sx('margin-top:6px;padding:0 6px')} onClick={e => { e.stopPropagation(); void pause(g.name, !paused); }}>{paused ? 'Resume' : 'Pause this micro-segment'}</button> : null}</td>
@@ -431,10 +440,11 @@ export function NbaScreen() {
         {ru && !st.manualAction ? <div className="ar-ru"><span className="ar-k">{st.useRunnerUp ? 'Recommended' : 'Runner-up'}</span><b>{st.useRunnerUp ? it.recommended : ru.action}</b>
           {it.can.swap ? <button className="btn btn-sec btn-sm" onClick={() => void act(it.id, 'action', { use: st.useRunnerUp ? 'recommended' : 'runner-up' }, r => String(r.message))}>Use this instead</button> : null}</div> : null}
         {ru && !st.manualAction && opts.runnerUp ? <details className="ar-more"><summary>Compare them side by side</summary><div style={sx('margin-top:8px')}>{compare(it)}</div></details> : null}
+        {it.ai ? <details className="ar-more"><summary>Why the AI chose this</summary><div style={sx('margin-top:4px')}><AiWhy ai={it.ai} segment={it.segment} action={it.chosenAction} /></div></details> : null}
       </>)}
       {panel(x.channel === 'Task' ? 'Task for the team' : x.channel === 'LinkedIn' ? 'LinkedIn note' : 'Email', <span style={sx('display:flex;gap:6px')}>{st.edited ? <span className="tag tag-violet">Edited</span> : null}{x.version > 1 ? <span className="tag tag-grey">v{x.version}</span> : null}</span>, <>
         <div className="ar-to">{x.channel === 'Email' ? (c.email ? <>To <b>{c.email}</b> {c.emailVerified ? <span className="tag tag-green">Verified</span> : <span className="tag tag-amber">Not verified</span>}</> : <span className="tag tag-red">No email on file</span>)
-          : x.channel === 'LinkedIn' ? <>To <b>{c.name}</b> on LinkedIn</> : 'Owned by a person'}</div>
+          : x.channel === 'LinkedIn' ? <>To <b>{c.name}</b> on LinkedIn</> : <>No message: a task for the account team{it.taskWhy ? <div className="ws-sub">{it.taskWhy}, so nothing is written or sent. An approved claim in the Content library turns it into a message.</div> : null}</>}</div>
         {x.channel !== 'Task' ? <MessageBar recId={it.id} channel={x.channel} content={it.content} canEdit={it.can.content} seg={it.segOf} action={it.chosenAction} sameAction={it.sameAction}
           who={`${c.name} · ${it.account.name}`} onChanged={() => void loadItem(it.id)} /> : null}
         {x.channel === 'Email' ? <>{field(x.subject || '')}{field(x.body || '', 8)}</> : x.channel === 'LinkedIn' ? field(x.note || '', 3) : field(x.task || '', 3)}
@@ -445,7 +455,7 @@ export function NbaScreen() {
         ? <><div className="ar-txt">The {it.segment || 'no-micro-segment'} group was paused by {it.paused.by} on {fmtDate(it.paused.at)}. Don&apos;t use it until it&apos;s resumed.</div>{canPause ? <button className="btn btn-sec btn-sm" onClick={() => void pause(it.segment ?? '', false)}>Resume it</button> : null}</>
         : R.needsPerson(st) ? <><div className="ar-txt">{st.status === 'Awaiting approval' ? 'Sensitive content: waiting for the sales manager\'s approval.' : st.spot === 'pending' ? 'Ready to use. It was also picked for this week\'s spot-check.' : 'Not ready yet: it waits for a decision in For Review.'}</div>
           <Link className="btn btn-sec btn-sm" style={sx('text-decoration:none')} href={`/review?item=${encodeURIComponent(it.id)}`}>Open in For Review →</Link></>
-        : st.status === 'Released' ? <><div className="ar-txt">{st.released === 'auto' ? 'Went ahead on its own' : st.released === 'approved' ? `Approved by ${st.approvedBy ?? 'the sales manager'}` : `Accepted by ${st.decidedBy ?? 'the rep'}`}. Send it from your own mailbox or LinkedIn, then mark what happened.</div>
+        : st.status === 'Released' ? <><div className="ar-txt">{st.released === 'auto' ? 'Went ahead on its own' : st.released === 'approved' ? `Approved by ${st.approvedBy ?? 'the sales manager'}` : `Accepted by ${st.decidedBy ?? 'the rep'}`}. {x.channel === 'Task' ? 'There is no message: contact them directly, then mark what happened.' : 'Send it from your own mailbox or LinkedIn, then mark what happened.'}</div>
           <div className="tags">{R.OUTCOMES.map(o => <button key={o} className={`tag ${st.outcome === o ? 'tag-violet' : 'tag-grey'}`} style={sx('cursor:pointer')} disabled={!it.can.outcome}
             onClick={() => void act(it.id, 'outcome', { outcome: o }, () => o === 'Meeting booked' && st.outcome !== o ? 'Meeting booked: a call script is ready' : `Outcome logged: ${o}`)}>{o}</button>)}</div>
           {it.can.stepIn ? <button className="btn btn-ghost btn-sm" style={sx('margin-top:8px')} onClick={() => void act(it.id, 'step-in', {}, () => 'Moved to your exception queue as an intervention')}>Step in: edit or reject it</button> : null}</>
@@ -491,6 +501,7 @@ export function NbaScreen() {
         {rowv('Confidence', cellv(A.conf, B.conf), cellv(B.conf, A.conf))}
         {rowv('Brand and claims', checks(A), checks(B))}
       </tbody></table>
+      {A.channel === 'Task' && B.channel === 'Task' ? <div className="ws-sub" style={sx('margin-top:8px')}>Both are tasks, not messages: {[...new Set([A.taskWhy, B.taskWhy])].filter(Boolean).map(z => z!.replace(/^./, y => y.toLowerCase())).join('; ') || 'no approved claim for either'}. Switching changes what the account team is asked to do, not a message.</div> : null}
       <div style={sx('font-size:10.5px;color:var(--i3);margin-top:6px')}>Bold marks what differs. Decisions are made in For Review; after release the rep may switch to one that passes every check.</div></>;
   }
 

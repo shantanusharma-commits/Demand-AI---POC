@@ -41,9 +41,11 @@ test('a seeded log gives the expected G2: first pass, weighted by how many items
   const g = G.gates(m, settings);
   assert.deepEqual([g.g2.state, Math.round(g.g2.value!), g.g2.threshold, g.g2.n, g.g2.min], ['met', 76, 70, 10, 10]);
   assert.equal(G.gateLabel(g.g2), 'On track');
-  // G1: 11 decisive decisions × 60 s + 2 s = 662 s over 45 released items, against the 38-minute baseline.
-  assert.equal(m.minutes, 662 / 60 / 45);
-  assert.equal(Math.round(g.g1.value! * 100) / 100, Math.round((1 - 662 / 60 / 45 / 38) * 100 * 100) / 100);
+  // G1 (30 Oct 2026): 11 decisive decisions × 60 s + 2 s = 662 s over the 12 items a person handled (no longer over the
+  // 45 released items, most of which nobody touched), against the 38-minute baseline.
+  assert.equal(m.handled, 12);
+  assert.equal(m.minutes, 662 / 60 / 12);
+  assert.equal(Math.round(g.g1.value! * 100) / 100, Math.round((1 - 662 / 60 / 12 / 38) * 100 * 100) / 100);
   assert.equal(g.g1.state, 'met');
 });
 
@@ -65,7 +67,7 @@ test('below the agreed number of counted decisions a gate is "too early to call"
 
 test('no decisions: neither gate has a value; G1 is not read off items that went ahead on their own', () => {
   const m = R.measure(items, []);
-  assert.equal(m.saved, 100, 'no review minutes at all');
+  assert.equal(m.saved, null, 'nobody handled anything: no G1 reading at all, whatever went ahead on its own');
   const g = G.gates(m, settings);
   assert.deepEqual([g.g1.value, g.g1.state, g.g2.value, g.g2.state], [null, 'none', null, 'none']);
   assert.equal(G.gateLabel(g.g1), 'No data yet');
@@ -76,7 +78,7 @@ test('the baseline and thresholds come from the configuration: a slower baseline
   const at38 = G.gates(R.measure(items, logs, 38), settings);
   const at2 = G.gates(R.measure(items, logs, 2), { ...settings, g1BaselineMinutes: 2 });
   assert.equal(at38.g1.state, 'met');
-  assert.equal(at2.g1.state, 'below');                                   // 100 min / 45 items = 2.2 min against 2
+  assert.equal(at2.g1.state, 'below');                                   // 100 min / 10 items handled = 10 min against 2
   assert.equal(G.gates(R.measure(items, logs), { ...settings, g2Threshold: 100 }).g2.state, 'met');
   assert.equal(G.gates(R.measure(items, [...logs.slice(1), log({ kind: 'spot', accepted: false })]), { ...settings, g2Threshold: 100 }).g2.state, 'below');
   assert.deepEqual(R.trackRecord(logs, undefined, 20), { n: 10, a: 10, pct: 100, early: true });
@@ -85,9 +87,10 @@ test('the baseline and thresholds come from the configuration: a slower baseline
 test('settings: read from the configuration body, out-of-range values fall back, problems named per field, changes in words', () => {
   assert.deepEqual(G.validationOf({}), {
     g1BaselineMinutes: CONFIG.g1BaselineMinutes, g1BaselineTimed: false, g1Threshold: CONFIG.g1Threshold, g2Threshold: CONFIG.g2Threshold,
-    minDecisions: CONFIG.minDecisions, spotCheckShare: CONFIG.spotCheckShare,
+    minDecisions: CONFIG.minDecisions, spotCheckShare: CONFIG.spotCheckShare, dealSizeThreshold: CONFIG.dealSize.threshold,
   });
-  const body = { g1BaselineMinutes: 42, g1BaselineTimed: true, g1Threshold: 55, g2Threshold: 75, minDecisions: 12, spotCheckShare: 0.25 };
+  // The deal-size threshold is a setting too (30 Oct 2026; was fixed for the pilot).
+  const body = { g1BaselineMinutes: 42, g1BaselineTimed: true, g1Threshold: 55, g2Threshold: 75, minDecisions: 12, spotCheckShare: 0.25, dealSizeThreshold: 200_000 };
   assert.deepEqual(G.validationOf(body), body);
   assert.deepEqual(G.validationOf({ g1BaselineMinutes: 0, g2Threshold: 140, minDecisions: 2.5, spotCheckShare: 3, g1BaselineTimed: 'yes' }), G.validationOf({}));
   assert.equal(G.validationProblem({ g2Threshold: 75, minDecisions: 12 }), null);
@@ -95,6 +98,7 @@ test('settings: read from the configuration body, out-of-range values fall back,
   assert.deepEqual(G.validationChanges(G.validationOf({}), G.validationOf(body)), [
     'G1 baseline 38 → 42 min per usable first action', 'Baseline marked as timed by the Client', 'G1 threshold 50% → 55% less',
     'G2 threshold 70% → 75% accepted', 'Too early to call below 10 → 12 decisions', 'Weekly spot-check 20% → 25% of items that proceeded',
+    'Deal-size threshold USD 250k → 200k',
   ]);
   assert.deepEqual(G.validationChanges(settings, settings), []);
 });

@@ -99,6 +99,10 @@ function readWorkbook(bytes: Buffer, opts: ReadOptions): ReadResult {
     }
     throw new UploadReadError('unreadable', "The workbook couldn't be read. Open it in Excel, save it again as .xlsx, and upload that.");
   }
+  // A damaged zip header (outside the CRC-checked data) can leave a listed sheet unloaded: refuse it, don't crash.
+  if (wb.SheetNames.some(name => !wb.Sheets[name])) {
+    throw new UploadReadError('unreadable', "The workbook couldn't be read. Open it in Excel, save it again as .xlsx, and upload that.");
+  }
   const date1904 = !!wb.Workbook?.WBProps?.date1904;
   const sheets: (SheetGrid & { fullRows: number })[] = wb.SheetNames.map(name => ({ sheet: name, ...sheetGrid(wb.Sheets[name], date1904) }));
   if (!sheets.length) throw new UploadReadError('unreadable', 'The workbook has no sheets.');

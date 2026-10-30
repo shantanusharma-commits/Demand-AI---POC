@@ -127,9 +127,11 @@ export function TodayScreen() {
       : <a href="#" onClick={e => { e.preventDefault(); setPanel('blockers'); }} style={sx('display:flex;align-items:center;gap:8px;padding:8px 14px;margin-bottom:14px;background:var(--pos-lt);border-radius:var(--rmd);text-decoration:none;font-size:12px;color:var(--pos);font-weight:600')}>
         <span style={sx('width:8px;height:8px;border-radius:50%;background:var(--pos)')} />No blockers. Your work is running.</a>;
 
-    // Tiles: each opens the items behind its number.
+    // Tiles: each opens the items behind its number. The (i) explanations are in Analytics only (30 Oct 2026).
     const stat = (lbl: string, val: ReactNode, sub: string, href: string, tone?: string) => <Link className="stat stat-link" href={href} title={`Open the items behind ${lbl.toLowerCase()}`}>
       <div className="stat-lbl">{lbl}</div><div className="stat-val" style={sx(tone ? `color:${tone}` : 'color:var(--i1)')}>{val}</div><div className="stat-sub">{sub}</div></Link>;
+    // Below the agreed number of decisions a gate shows how many so far, never a percentage.
+    const gateVal = (g: Gate) => (g.value === null ? '—' : g.state === 'early' ? `${g.n} of ${g.min}` : Math.round(g.value) + '%');
     const outRate = d.outcomes.marked ? Math.round(d.outcomes.positive / d.outcomes.marked * 100) : null;
     const { g1, g2 } = d.gates;
     const tiles = <div className="stats" style={sx('margin-bottom:18px;grid-template-columns:repeat(6,1fr)')}>
@@ -138,8 +140,8 @@ export function TodayScreen() {
         : stat('With the sales manager', d.withManager.total, 'sensitive content you accepted', nbaLink(d.withManager.runId, 'waiting'))}
       {stat('Awaiting outcome', d.ready.total, 'mark what happened', '#outcomes')}
       {stat('Outcome rate', outRate === null ? '—' : outRate + '%', d.outcomes.marked ? `${d.outcomes.positive} replied or booked a meeting, of ${d.outcomes.marked} with a result` : 'No results marked yet', '/analytics?tab=loop', outRate === null ? '' : 'var(--pos)')}
-      {stat('G2 acceptance', g2.value === null ? '—' : Math.round(g2.value) + '%', gateWord(g2), '/analytics?tab=gates', gateTone(g2))}
-      {stat('G1 effort saved', g1.value === null ? '—' : Math.round(g1.value) + '%', gateWord(g1), '/analytics?tab=gates', gateTone(g1))}
+      {stat('G2 acceptance', gateVal(g2), gateWord(g2), '/analytics?tab=gates', gateTone(g2))}
+      {stat('G1 effort saved', gateVal(g1), gateWord(g1), '/analytics?tab=gates', gateTone(g1))}
     </div>;
 
     // Waiting in For Review: one list, earliest due first; an overdue item carries an Overdue tag.
@@ -197,7 +199,7 @@ export function TodayScreen() {
         ['G1 · less review effort', g1, m.minutes !== null && g1.value !== null ? `${Math.round(m.minutes * 10) / 10} min per usable first action against ${m.base} min before` : 'Needs decisions to measure']] as [string, Gate, string][])
         .map(([t, g, detail]) => <Link key={t} href="/analytics?tab=gates" style={sx('display:block;text-decoration:none;padding:8px 0;border-bottom:1px solid var(--s75)')}>
           <div style={sx('display:flex;align-items:baseline;gap:10px')}><span style={sx('flex:1;font-size:12.5px;font-weight:600;color:var(--i1)')}>{t}</span>
-            <span style={sx(`font-family:var(--fd);font-size:18px;font-weight:700;color:${gateTone(g)}`)}>{g.value === null ? '—' : Math.round(g.value) + '%'}</span></div>
+            <span style={sx(`font-family:var(--fd);font-size:18px;font-weight:700;color:${gateTone(g)}`)}>{g.value === null || g.state === 'early' ? '—' : Math.round(g.value) + '%'}</span></div>
           <div style={sx(`font-size:11px;color:${gateTone(g)};margin-top:2px`)}>{gateWord(g)}</div><div style={sx('font-size:11px;color:var(--i3);margin-top:2px')}>{detail}</div></Link>)}
     </div>);
     const su = d.setup;

@@ -31,7 +31,7 @@ The audit's gaps (16 Oct 2026) and where each stands at the end of the remediati
 | G-025 | H | Scoring AI steps are rules | Fixed within D-5 (why-now; 4.4 and 4.7 stay rules) | ai-why-now.test.ts; live runs 144/144 | lib/ai/why-now.ts, services/why-now-ai.ts |
 | G-026 | H | NBA AI steps are rules | Fixed within D-5 (drafting; 5.5 and 5.17 stay rules) | ai-draft.test.ts; live runs 40/40 | lib/ai/draft.ts, services/nba-ai.ts |
 | G-027 | H | Content studio only in legacy | Fixed (in scope by D-36) | studio.test.ts; integration/studio.test.ts; ai-studio.test.ts | lib/content/studio.ts, services/studio.ts, StudioScreen.tsx |
-| G-028 | H | SheetJS advisories; CDN scripts without integrity | Fixed | `npm run audit:gate` (production 0); vendor/xlsx-0.20.3.tgz with checksum; nonce CSP | vendor/, package.json |
+| G-028 | H | SheetJS advisories; CDN scripts without integrity | Fixed | `npm run audit:gate` (production 0); SheetJS 0.20.3 tarball pinned by checksum; nonce CSP | package.json, package-lock.json |
 | G-029 | H | Personal data in browser storage | Fixed | screens.test.ts (storage holds three UI preferences); e2e/01-two-users.spec.ts; purge and export (ADR 0004) | every screen; migration 0037 |
 | G-030 | H | reference_content/ not ignored; no .dockerignore | Fixed | repo-hygiene.test.ts | .gitignore, .dockerignore |
 | G-031 | H | Hosting and platform not recorded | Fixed | docs/adr/0001-platform-and-hosting.md; deploy/ validated (deploy/check.sh) | docs/devops/, deploy/ |

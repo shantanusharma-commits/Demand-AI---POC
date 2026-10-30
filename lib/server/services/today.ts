@@ -6,7 +6,7 @@
 import 'server-only';
 import { and, asc, desc, eq, gt, isNull, ne, notInArray, or, sql } from 'drizzle-orm';
 import { CONFIG } from '../../demandai-engine.ts';
-import { approvedClaims, type Draft, type Rec } from '../../engine/nba.ts';
+import { approvedClaims, type Draft } from '../../engine/nba.ts';
 import * as G from '../../engine/gates.ts';
 import * as R from '../../engine/review.ts';
 import { brandDrafts, decisionLog, drafts, leadLists, nbaRuns, recommendations, scoringRuns, spotChecks } from '../db/schema.ts';
@@ -14,7 +14,7 @@ import type { TenantScope } from '../db/tenant.ts';
 import { liveBrand } from './brand.ts';
 import { isManager, ownerOnly, type Actor } from './lists.ts';
 import { activeValidation, pilotFacts } from './measures.ts';
-import { logFacts, stateOf } from './recommendations.ts';
+import { recOf, logFacts, stateOf } from './recommendations.ts';
 import { drawSpotChecks, isoWeek, needsPersonSql, queueRows, type QueueRow } from './review.ts';
 import { todayUtc } from './scoring.ts';
 
@@ -62,7 +62,7 @@ export async function today(scope: TenantScope, actor: Actor) {
     .innerJoin(drafts, and(eq(drafts.recommendationId, recommendations.id), eq(drafts.version, recommendations.draftVersion)))
     .where(readyWhere).orderBy(asc(recommendations.decidedAt), asc(recommendations.position)).limit(4);
   const ready: ReadyRow[] = readyRows.map(({ row, draft }) => {
-    const rec = row.rec as Rec, st = stateOf(row);
+    const rec = recOf(row), st = stateOf(row);
     return { id: row.id, runId: row.nbaRunId, who: R.liveRec(rec, st).contact.name, account: rec.account.name, action: R.chosenAction(rec, st),
       channel: (draft as Draft).channel, releasedAt: row.decidedAt, outcome: row.outcome };
   });

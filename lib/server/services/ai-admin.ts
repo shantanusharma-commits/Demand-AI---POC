@@ -22,6 +22,9 @@ export const AI_CAPABILITY_LABELS: { key: Capability; label: string; flag: strin
   { key: 'draft_message', label: 'First messages', flag: 'AI_FEATURE_DRAFTING', what: 'Emails and connection notes with an approved claim (Micro-segments & NBA)' },
   { key: 'draft_content', label: 'Content studio writing', flag: 'AI_FEATURE_CONTENT_STUDIO', what: 'New pieces and changes the rules do not understand (Content studio)' },
   { key: 'copilot', label: 'Copilot free-text answers', flag: 'AI_FEATURE_COPILOT', what: 'Questions the rule answers do not cover (every working screen)' },
+  { key: 'segment', label: 'Micro-segments', flag: 'AI_FEATURE_SEGMENTS', what: 'Which micro-segment each account joins, or a new one (Micro-segments & NBA), 10 accounts a call' },
+  { key: 'next_action', label: 'Next best action', flag: 'AI_FEATURE_NEXT_ACTION', what: 'The action and runner-up for each account, guided by the action library (Micro-segments & NBA), 10 accounts a call' },
+  { key: 'read_guideline', label: 'Reading a brand guideline', flag: 'AI_FEATURE_GUIDELINE', what: 'Rules, writing guidance, plays and frameworks suggested from an uploaded guideline (Content library)' },
 ];
 
 export async function aiStatus(scope: TenantScope, gw: AiGateway) {

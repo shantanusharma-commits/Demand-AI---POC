@@ -5,6 +5,7 @@
 import Link from 'next/link';
 import { useEffect, useState, useSyncExternalStore, type FormEvent, type ReactNode } from 'react';
 import { api, ApiError, errorText } from '@/lib/client/api';
+import { BrandMark, useTheme } from '@/components/ThemeContext';
 
 const card: React.CSSProperties = { width: 380, maxWidth: '92vw', background: 'var(--surf)', borderRadius: 'var(--rlg)', boxShadow: 'var(--sh-lg)', padding: 28 };
 const label: React.CSSProperties = { display: 'block', fontSize: 11.5, fontWeight: 600, color: 'var(--i2)', marginBottom: 5 };
@@ -13,11 +14,13 @@ const errorBox: React.CSSProperties = { background: 'var(--neg-lt)', color: 'var
 const noteBox: React.CSSProperties = { background: 'var(--pos-lt)', color: 'var(--pos)', borderRadius: 8, padding: '9px 11px', fontSize: 12, lineHeight: 1.5, marginBottom: 14 };
 
 export function AuthFrame({ title, subtitle, children }: { title: string; subtitle?: string; children: ReactNode }) {
+  const theme = useTheme();
   return (
     <main style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)', padding: 16 }}>
       <div style={card}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
-          <svg width="28" height="28" viewBox="0 0 200 200" aria-hidden="true"><image href="/demandai-logo.png" width="200" height="200" /></svg>
+          <BrandMark on="light" height={theme ? 20 : 28} />
+          {theme ? <span aria-hidden="true" style={{ width: 1, height: 20, background: 'var(--bdk)' }}></span> : null}
           <span style={{ fontFamily: 'var(--fd)', fontWeight: 700, fontSize: 16, color: 'var(--i1)' }}>DemandAI</span>
         </div>
         <h1 style={{ fontFamily: 'var(--fd)', fontSize: 18, fontWeight: 700, color: 'var(--i1)', margin: '0 0 6px' }}>{title}</h1>

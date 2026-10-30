@@ -20,6 +20,7 @@ import type { LogRow, QueueRow } from '@/lib/server/services/review';
 import type { ItemDetail } from '@/lib/server/services/recommendations';
 import { AI_DRAFT, SegTag } from './NbaScreen';
 import { AiTag } from '@/components/AiTag';
+import { AiWhy } from '@/components/AiWhy';
 import { MessageBar } from '@/components/ContentPicker';
 import { CopilotButton } from '@/components/Copilot';
 import { Tab, Tabs } from '@/components/Tabs';
@@ -27,13 +28,13 @@ import { Tab, Tabs } from '@/components/Tabs';
 type Row = WireDeep<QueueRow>;
 type Item = WireDeep<ItemDetail>;
 type Log = WireDeep<LogRow>;
-type Queue = { items: Row[]; shownAt: string; total: number; released: number; auto: number; measure: ReturnType<typeof R.measure>; reps: { email: string; name: string }[] };
+type Queue = { items: Row[]; shownAt: string; total: number; released: number; auto: number; measure: ReturnType<typeof R.measure>; gate: { g2Threshold: number; minDecisions: number }; reps: { email: string; name: string }[] };
 type View = 'queue' | 'approvals' | 'log';
 type Filt = { due: string | null; reason: string | null; kind: string | null; seg: string | null; rep: string | null; ch: string | null; preset?: boolean };
 type Fields = { subject: string; body: string; note: string; task: string };
 /** `make`: a micro-segment being created for the item (its name, and the other waiting items that join it). */
-type Ws = { id: string; list: string[]; from: View; item: Item | null; fields: Fields | null; own: boolean; ownText: string; seg: string; make: { name: string; also: string[] } | null;
-  modal: null | 'hold' | 'reject' | 'send' };
+type Ws = { id: string; list: string[]; from: View; item: Item | null; fields: Fields | null; own: boolean; ownText: string; why: string; seg: string; make: { name: string; also: string[] } | null;
+  modal: null | 'hold' | 'reject' | 'send' | 'segment' };
 type Teach = { id: string; decision: string; rejected: boolean; tags: string[]; note: string; held: boolean };
 
 const NO_FILT: Filt = { due: null, reason: null, kind: null, seg: null, rep: null, ch: null };
@@ -99,6 +100,7 @@ export function ReviewScreen() {
   const [rj, setRj] = useState<{ code: string | null; note: string }>({ code: null, note: '' });
   const [hold, setHold] = useState({ why: R.HOLD_WHY[0], note: '' });
   const [sendNote, setSendNote] = useState('');
+  const [move, setMove] = useState({ to: '', why: '' });
   const [teach, setTeach] = useState<Teach | null>(null);
   const [busy, setBusy] = useState(false);
   const booted = useRef(false);
@@ -143,7 +145,7 @@ export function ReviewScreen() {
   async function openItem(id: string, list?: string[], from: View = view) {
     setMenu(null);
     const ids = list ?? (() => { const qs = myQueue().filter(r => !r.hold).map(r => r.id); return qs.includes(id) ? qs : [id]; })();
-    setWs({ id, list: ids, from, item: null, fields: null, own: false, ownText: '', seg: '', make: null, modal: null });
+    setWs({ id, list: ids, from, item: null, fields: null, own: false, ownText: '', why: '', seg: '', make: null, modal: null });
     try {
       await api(`/api/recommendations/${encodeURIComponent(id)}/open`, { body: {} });
       const { item } = await api<{ item: Item }>(`/api/recommendations/${encodeURIComponent(id)}`);
@@ -152,7 +154,7 @@ export function ReviewScreen() {
   }
   async function reloadItem(id: string) {
     const { item } = await api<{ item: Item }>(`/api/recommendations/${encodeURIComponent(id)}`);
-    setWs(w => w && w.id === id ? { ...w, item, fields: fieldsOf(item.draft), own: false, ownText: '', make: null, modal: null } : w);
+    setWs(w => w && w.id === id ? { ...w, item, fields: fieldsOf(item.draft), own: false, ownText: '', why: '', make: null, modal: null } : w);
     return item;
   }
   function leave() { setWs(null); void loadQueue(); }
@@ -237,8 +239,17 @@ export function ReviewScreen() {
   }
   async function pick(use: 'recommended' | 'runner-up' | 'own') {
     if (!ws?.item) return;
-    const r = await call(ws.item.id, 'action', use === 'own' ? { use, text: ws.ownText } : { use });
+    const reason = ws.why.trim() || undefined;
+    const r = await call(ws.item.id, 'action', use === 'own' ? { use, text: ws.ownText, reason } : { use, reason });
     if (r) { showToast(String(r.message)); await reloadItem(ws.item.id); }
+  }
+  /** F2 · Move it to another micro-segment, with the reason; the message is redrafted for it. */
+  async function changeSegment() {
+    if (!ws?.item || busy) return;
+    if (!move.to) { showToast('Pick a micro-segment'); return; }
+    if (!move.why.trim()) { showToast('Say why it belongs there'); return; }
+    const id = ws.item.id, r = await call(id, 'segment', { segment: move.to, reason: move.why });
+    if (r) { showToast(String(r.message)); await reloadItem(id); void loadQueue(); freshLog(); }
   }
   async function fix(body: { kind: 'low' | 'deal' | 'small'; contactRow?: number; segment?: string }) {
     if (!ws?.item) return;
@@ -433,6 +444,8 @@ export function ReviewScreen() {
   }
   function listScreen(): ReactNode {
     const queueRows = myQueue(), appr = approvals(), m = queue?.measure;
+    // Below the agreed number of decisions G2 shows how many so far, never a percentage (30 Oct 2026).
+    const early = !!m && !!queue && m.pooled.n < queue.gate.minDecisions;
     const ft = (id: View, label: string, n: number) => <Tab active={view === id} onSelect={() => { setView(id); setQ(''); setMenu(null); }}>{label} <span className="ftab-cnt">{n}</span></Tab>;
     const tile = (lbl: string, val: string, sub: string, onClick: () => void, tip: string, tone?: string) => <a className="stat stat-link" href="#" title={tip} onClick={e => { e.preventDefault(); onClick(); }}>
       <div className="stat-lbl">{lbl}</div><div className="stat-val" style={sx(tone ? `color:${tone}` : 'color:var(--i1)')}>{val}</div><div className="stat-sub">{sub}</div></a>;
@@ -443,7 +456,7 @@ export function ReviewScreen() {
         <div className="topbar-r"><CopilotButton screen="review" ctxRef={{}} title={mgr ? "Everyone's queue" : 'Your queue'} onChanged={() => void loadQueue()} /><div style={sx('position:relative')}>
           <button className="btn btn-sec btn-sm" aria-expanded={exportOpen} onClick={e => { e.stopPropagation(); setExportOpen(o => !o); }}>Export <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="6 9 12 15 18 9" /></svg></button>
           {exportOpen ? <div style={sx('position:absolute;right:0;top:34px;width:270px;background:var(--surf);border:1px solid var(--border);border-radius:var(--rmd);box-shadow:var(--sh-lg);padding:6px;z-index:250')}>
-            {[['released-messages', 'Released messages', 'Emails and LinkedIn messages ready to use'], ['tasks', 'Tasks for the team', 'Calls and follow-ups owned by a person'], ['decision-log', 'Decision log', 'Who decided what, when and why']].map(([k, t, d]) =>
+            {[['for-review', 'Everything in For Review', 'What waits for a person, why, and its message'], ['released-messages', 'Released messages', 'Emails and LinkedIn messages ready to use'], ['tasks', 'Tasks for the team', 'Calls and follow-ups owned by a person'], ['decision-log', 'Decision log', 'Who decided what, when and why']].map(([k, t, d]) =>
               <a key={k} href={`/api/exports/${k}.csv`} download onClick={() => setExportOpen(false)} style={sx('display:block;width:100%;text-align:left;padding:9px 10px;border-radius:var(--rsm);text-decoration:none')}>
                 <span style={sx('display:block;font-size:12.5px;font-weight:600;color:var(--i1)')}>{t}</span><span style={sx('display:block;font-size:11px;color:var(--i3)')}>{d}</span></a>)}
           </div> : null}
@@ -457,8 +470,9 @@ export function ReviewScreen() {
             <div className="pp-d">{view === 'approvals' ? 'These messages mention a plant incident, security or regulation, so nothing goes out until the sales manager approves it. They come here straight from the system, or from a rep who accepted one.'
               : <>The system sends most outreach on its own (<b>{queue.auto}</b> went ahead without anyone). These {queueRows.length} need a person because something is missing or risky. Each row says why; open one to approve, reject or write your own.</>}</div></div>
         </div>) : <div style={sx('font-size:12.5px;color:var(--i2);margin-bottom:12px')}>Nothing yet. Items arrive here when you build micro-segments. <Link href="/nba" style={sx('color:var(--brand);font-weight:600;text-decoration:none')}>Go to Micro-segments &amp; NBA →</Link></div>}
-        {m && total ? <div className="stats" style={sx('grid-template-columns:repeat(5,1fr);margin-bottom:14px')}>
-          {tile('G2 · first pass', m.weighted === null ? '—' : Math.round(m.weighted) + '%', `weighted by path${m.partial && m.weighted !== null ? ' · one path so far' : ''}`, () => router.push('/analytics?tab=gates'), 'Open the success gates in Analytics')}
+        {m && total && queue ? <div className="stats" style={sx('grid-template-columns:repeat(5,1fr);margin-bottom:14px')}>
+          {tile('G2 · first pass', m.weighted === null ? '—' : early ? `${m.pooled.n} of ${queue.gate.minDecisions}` : Math.round(m.weighted) + '%',
+            early ? 'Too early to call: decisions so far' : `weighted by path${m.partial && m.weighted !== null ? ' · one path so far' : ''}`, () => router.push('/analytics?tab=gates'), 'Open the success gates in Analytics')}
           {tile('Proceeded path', pc(m.auto), `${m.auto.a} of ${m.auto.n} spot-checks · ${m.autoN} items`, () => setFilter({ kind: 'spot', reason: null, due: null }), 'Show the spot-checks to rate')}
           {tile('Exception path', pc(m.exc), `${m.exc.a} of ${m.exc.n} decided · ${m.excN} items`, () => setFilter({ kind: 'exception', due: null }), 'Show the exceptions')}
           {tile('Within one alternative', pc(m.alternatives), `${m.alternatives.a} of ${m.alternatives.n} accepted`, () => setFilter({ reason: 'alternative', kind: null, due: null }), 'Show the alternatives waiting')}
@@ -614,6 +628,8 @@ export function ReviewScreen() {
       : w.own ? <div className="own own-edit"><div className="own-k">Your own action</div>
         <textarea id="manualAct" className="ws-in" rows={2} autoFocus value={w.ownText} onChange={e => { const v = e.target.value; setWs(ww => ww && { ...ww, ownText: v }); }} placeholder="What should happen instead? e.g. Invite them to the site visit in May"
           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void pick('own'); } }} />
+        <input className="ws-in" style={sx('margin-top:6px;font-size:12px')} value={w.why} onChange={e => { const v = e.target.value; setWs(ww => ww && { ...ww, why: v }); }}
+          placeholder="Why your own? (optional: it is kept with the change, so the system learns)" aria-label="Why your own action" maxLength={300} />
         <div className="own-f"><span className="ws-sub">The message is redrafted for your action, then you approve it as usual.</span><button className="btn btn-ghost btn-sm" onClick={() => setWs(ww => ww && { ...ww, own: false })}>Cancel</button><button className="btn btn-primary btn-sm" onClick={() => void pick('own')}>Use my action</button></div></div>
       : live ? <button className="own own-add" onClick={() => setWs(ww => ww && { ...ww, own: true })}><span className="own-i">✎</span><span><b>Neither fits?</b> Write your own action</span><kbd>W</kbd></button> : null;
     const ro = !canEdit;
@@ -623,6 +639,7 @@ export function ReviewScreen() {
         <div className="wm-who"><b>{c.name}</b><span>{c.jobTitle}{c.persona ? ` · ${c.persona} persona` : ''}</span></div>
         <div className="wm-reach">{x.channel === 'Email' ? (c.email ? <>{c.email} {c.emailVerified ? <span className="tag tag-green">Verified</span> : <span className="tag tag-amber">Not verified</span>}</> : <span className="tag tag-red">No email on file</span>)
           : x.channel === 'LinkedIn' ? (c.linkedin ? <><span className="ws-sub">LinkedIn ·</span> {c.linkedin.replace(/^https?:\/\/(www\.)?/, '')}</> : 'LinkedIn connection note') : 'A task for the team'}</div></div>
+      {x.channel === 'Task' && it.taskWhy ? <div className="ws-sub" style={sx('padding:6px 0 0')}>{it.taskWhy}, so there is no message: the account team contacts them directly. An approved claim in the Content library turns it into a message.</div> : null}
       {x.channel !== 'Task' ? <div style={sx('padding:8px 0 0')}><MessageBar recId={it.id} channel={x.channel} content={it.content} canEdit={it.can.content} seg={it.segOf} action={it.chosenAction} sameAction={it.sameAction}
         who={`${c.name} · ${it.account.name}`} onChanged={() => { void api<{ item: Item }>(`/api/recommendations/${encodeURIComponent(it.id)}`).then(({ item }) => setWs(w => w && w.id === it.id && w.item ? { ...w, item: { ...w.item, content: item.content, sameAction: item.sameAction } } : w), err => showToast(errorText(err))); }} /></div> : null}
       {x.channel === 'Email' ? <><input id="dSubj" className="ws-in ws-subj" value={f.subject} readOnly={ro} aria-label="Subject" onChange={e => setField('subject', e.target.value)} />
@@ -641,6 +658,7 @@ export function ReviewScreen() {
       {fact('Confidence', <><span className={`tag ${it.confidence.level === 'High' ? 'tag-green' : it.confidence.level === 'Medium' ? 'tag-amber' : 'tag-red'}`}>{it.confidence.level}</span>{it.draft.ai ? <> <AiTag confidence={it.confidence.level} title={AI_DRAFT} /></> : null}</>)}
       {fact('Track record', tr.n ? <>Reps agreed <b>{tr.a} of {tr.n}</b> times{it.trackRecord.segment ? ` in ${it.segment}` : ''}{tr.early ? <span className="ws-sub"> · early days</span> : null}</> : <span className="ws-sub">No decisions yet</span>)}
       {fact('Owner', it.owner.name || it.owner.email || 'Unassigned')}
+      {it.segment ? fact('Micro-segment', <>{it.segment}{live && it.moveTo.length ? <> <button className="btn btn-ghost btn-sm" onClick={() => { setMove({ to: '', why: '' }); setWs(ww => ww && { ...ww, modal: 'segment' }); }}>Change</button></> : null}</>) : null}
       <details className="kf-more"><summary style={sx('cursor:pointer;color:var(--brand);font-weight:600')}>Show the working</summary>
         <div style={sx('margin-top:8px;font-size:12px;color:var(--i1);line-height:1.5')}>
           <div className="ws-sub" style={sx('margin:6px 0 2px')}>Signals on {c.name}</div>{it.person.signals.map((sg, k) => <div key={k} style={sx('padding:4px 0;border-top:1px solid var(--s75)')}><b>{sg.type}</b> <span className="ws-sub">{sg.age !== undefined ? `${sg.age} days ago` : ''}{sg.source ? ' · ' + sg.source : ''}</span><div className="ws-sub">{sg.detail}</div></div>)}
@@ -664,8 +682,12 @@ export function ReviewScreen() {
         <div className="ws-scroll">
           {hero}
           <div className="ws-grid">
-            <div className="ws-col">{mode === 'view' ? null : <><div className={`opts${B ? '' : ' one'}`}>{opt('Recommended', A, !st.manualAction && !st.useRunnerUp, 'recommended')}{B ? opt('Runner-up', B, !st.manualAction && st.useRunnerUp, 'runner-up') : null}</div>{ownBar}</>}{msg}</div>
-            <div className="ws-col">{facts}</div>
+            <div className="ws-col">{mode === 'view' ? null : <><div className={`opts${B ? '' : ' one'}`}>{opt('Recommended', A, !st.manualAction && !st.useRunnerUp, 'recommended')}{B ? opt('Runner-up', B, !st.manualAction && st.useRunnerUp, 'runner-up') : null}</div>
+              {live && !w.own && (B || st.manualAction) ? <input className="ws-in" style={sx('margin:-2px 0 8px;font-size:12px')} value={w.why} onChange={e => { const v = e.target.value; setWs(ww => ww && { ...ww, why: v }); }}
+                placeholder="Why change the action? (optional: it is kept with the change, so the system learns)" aria-label="Why change the action" maxLength={300} /> : null}
+              {B && A.channel === 'Task' && B.channel === 'Task' ? <div className="ws-sub" style={sx('margin:-4px 0 8px')}>Both are tasks, not messages: {[...new Set([A.taskWhy, B.taskWhy])].filter(Boolean).map(z => z!.replace(/^./, y => y.toLowerCase())).join('; ') || 'no approved claim for either'}. Switching changes what the account team is asked to do.</div> : null}{ownBar}</>}{msg}</div>
+            <div className="ws-col">{facts}{it.ai ? <div className="ws-card" style={sx('margin-top:12px')}><div className="ws-card-h"><span>Why the AI chose this</span></div>
+              <AiWhy ai={it.ai} segment={it.segment} action={it.chosenAction} /></div> : null}</div>
           </div>
         </div>
         <div className="ws-dock"><div className="ws-dock-row"><span style={sx('flex:1;font-size:11.5px;color:var(--i3)')}>{it.run.name} · checked as of {it.checkDate}</span><div className="ws-dec">{buttons}</div></div></div>
@@ -680,6 +702,14 @@ export function ReviewScreen() {
         <div className="ws-rj">{R.REJECT.map(([code, l, wh]) => <button key={code} className={'ws-rjb' + (rj.code === code ? ' on' : '')} onClick={() => setRj(r => ({ ...r, code }))}><b>{l}</b><span>{wh}</span></button>)}</div>
         <input className="ws-in" value={rj.note} onChange={e => setRj(r => ({ ...r, note: e.target.value }))} placeholder="Comment (needed for Other)" style={sx('margin-top:10px')} />
         <div className="ws-modal-f"><button className="btn btn-ghost" onClick={() => setWs(ww => ww && { ...ww, modal: null })}>Cancel</button><button className="btn btn-primary" disabled={busy} onClick={() => void reject()}>Reject</button></div></div></div> : null}
+      {w.modal === 'segment' ? <div style={OVERLAY} onClick={e => { if (e.target === e.currentTarget) setWs(ww => ww && { ...ww, modal: null }); }}><div className="ws-modal" role="dialog" aria-modal="true" aria-label="Change the micro-segment">
+        <div className="ws-modal-h">Change the micro-segment</div><div className="ws-sub" style={sx('margin-bottom:10px')}>From {it.segment}. The message is redrafted for the new one; the action stays, and you can change it too. A new micro-segment holds it until the sales manager approves it.</div>
+        <select className="ws-in" aria-label="Micro-segment" value={move.to} onChange={e => setMove(m2 => ({ ...m2, to: e.target.value }))}>
+          <option value="">Pick a micro-segment…</option>
+          {it.moveTo.map(o => <option key={o.name} value={o.name}>{o.name}{o.theme && o.theme !== o.name ? ` · ${o.theme}` : ''}{o.status === 'waiting' ? ' · waits for approval' : ''}</option>)}
+        </select>
+        <textarea className="ws-in" value={move.why} onChange={e => setMove(m2 => ({ ...m2, why: e.target.value }))} style={sx('min-height:60px;margin-top:8px')} maxLength={300} placeholder="Why does it belong there? (needed: it teaches the system)" />
+        <div className="ws-modal-f"><button className="btn btn-ghost" onClick={() => setWs(ww => ww && { ...ww, modal: null })}>Cancel</button><button className="btn btn-primary" disabled={busy} onClick={() => void changeSegment()}>Move it</button></div></div></div> : null}
       {w.modal === 'send' ? <div style={OVERLAY} onClick={e => { if (e.target === e.currentTarget) setWs(ww => ww && { ...ww, modal: null }); }}><div className="ws-modal" role="dialog" aria-modal="true" aria-label="Send it back">
         <div className="ws-modal-h">Send it back</div><div className="ws-sub" style={sx('margin-bottom:8px')}>It goes back to {it.owner.name || 'the rep'}&apos;s queue with your note.</div>
         <textarea className="ws-in" autoFocus value={sendNote} onChange={e => setSendNote(e.target.value)} style={sx('min-height:70px')} placeholder="What should change?" />

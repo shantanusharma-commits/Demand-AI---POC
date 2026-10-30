@@ -85,7 +85,10 @@ test('the rep decides in For Review; an edit that adds a sensitive term goes to 
   await rep.page.locator('.ws-dec button', { hasText: /^Approve/ }).click();
   const response = await answer;
   const sent = await response.json();
-  expect([sent.status, sent.message]).toEqual(['Awaiting approval', 'Accepted: sensitive content goes to the sales manager for approval']);
+  // The item may be this week's spot-check ("Spot-check rated. Your edit adds sensitive content, so it goes to …") or an
+  // exception ("Accepted: sensitive content goes to …"): either way it waits for the manager.
+  expect(sent.status).toBe('Awaiting approval');
+  expect(sent.message).toMatch(/goes to the sales manager for approval$/);
   const itemId = response.url().match(/recommendations\/([^/]+)\/accept$/)![1];
 
   const mgr = await as(browser, 'manager');

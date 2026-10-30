@@ -1,13 +1,14 @@
-// Plain, brand-neutral emails. Every value is escaped for the HTML part.
+// Plain emails, in the client theme's colour when one is on (APP_THEME). Every value is escaped for the HTML part.
 import 'server-only';
 import type { MailMessage } from './mailer.ts';
+import { activeTheme } from '../theme.ts';
 
 const esc = (s: string) => s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 
 function html(paragraphs: string[], link?: { href: string; label: string }): string {
   const body = paragraphs.map(p => `<p style="margin:0 0 14px;font:14px/1.5 system-ui,sans-serif;color:#141A21">${esc(p)}</p>`).join('');
   const button = link
-    ? `<p style="margin:18px 0"><a href="${esc(link.href)}" style="display:inline-block;padding:10px 16px;border-radius:8px;background:#7D52A2;color:#fff;font:600 14px system-ui,sans-serif;text-decoration:none">${esc(link.label)}</a></p>
+    ? `<p style="margin:18px 0"><a href="${esc(link.href)}" style="display:inline-block;padding:10px 16px;border-radius:8px;background:${activeTheme()?.accent ?? '#7D52A2'};color:#fff;font:600 14px system-ui,sans-serif;text-decoration:none">${esc(link.label)}</a></p>
        <p style="margin:0 0 14px;font:12px/1.5 system-ui,sans-serif;color:#5b6573">Or paste this address into your browser: ${esc(link.href)}</p>`
     : '';
   return `<!doctype html><html><body style="margin:0;padding:24px;background:#F5F6F9"><div style="max-width:520px;margin:auto;background:#fff;border-radius:12px;padding:24px">${body}${button}</div></body></html>`;

@@ -16,7 +16,7 @@ const holder = globalThis as typeof globalThis & { __demandaiAi?: AiGateway };
 export function aiFlags(e: Env): Record<Capability, boolean> {
   return {
     classify: e.AI_FEATURE_CLASSIFY, why_now: e.AI_FEATURE_WHY_NOW, draft_message: e.AI_FEATURE_DRAFTING, draft_content: e.AI_FEATURE_CONTENT_STUDIO,
-    copilot: e.AI_FEATURE_COPILOT, healthcheck: true,
+    copilot: e.AI_FEATURE_COPILOT, segment: e.AI_FEATURE_SEGMENTS, next_action: e.AI_FEATURE_NEXT_ACTION, read_guideline: e.AI_FEATURE_GUIDELINE, healthcheck: true,
   };
 }
 

@@ -7,20 +7,21 @@ import 'server-only';
 import { randomInt } from 'node:crypto';
 import { and, desc, eq, inArray, isNull, lt, or, sql, type SQL } from 'drizzle-orm';
 import { CONFIG, toCSV, type CsvText } from '../../demandai-engine.ts';
-import { briefFor, callScript, type Draft, type Rec } from '../../engine/nba.ts';
+import { briefFor, callScript, taskWhy, type Draft, type Rec } from '../../engine/nba.ts';
 import * as R from '../../engine/review.ts';
-import { customSegments, decisionLog, drafts, nbaRuns, recommendations, reviewViews, SYSTEM_USER_ID, spotChecks, users } from '../db/schema.ts';
+import { microSegments, decisionLog, drafts, nbaRuns, recommendations, reviewViews, SYSTEM_USER_ID, spotChecks, users } from '../db/schema.ts';
 import type { TenantScope } from '../db/tenant.ts';
 import { recordAudit } from '../db/audit.ts';
 import { badRequest, conflict, forbidden } from '../http/errors.ts';
 import { logger } from '../logger.ts';
 import { chunks, containsPattern, isManager, ownerOnly, type Actor } from './lists.ts';
-import {
-  addDraftVersion, checkDateOf, checkedSql, loadItem, logFacts, logItem, optionFacts, pausedSegments, redraft, segKey, segmentChoices, stateOf, statePatch,
+import { recOf,
+  addDraftVersion, checkDateOf, checkedSql, reasonContext, loadItem, logFacts, logItem, optionFacts, pausedSegments, redraft, segKey, segmentChoices, stateOf, statePatch,
   type Item, type LogInput, type RecRow, type SegmentChoice,
 } from './recommendations.ts';
 import { ownerNames, unitReps } from './users.ts';
 import { activeValidation } from './measures.ts';
+import { listSegments } from './segments.ts';
 
 const byName = sql<string>`coalesce(${users.displayName}, 'A former member')`;
 
@@ -83,7 +84,7 @@ export type QueueRow = {
 };
 
 function rowItem(row: RecRow, d: { draft: unknown; checks: unknown }, runName: string) {
-  return { rec: row.rec as Rec, state: stateOf(row), draft: d.draft as Draft, checks: d.checks as Item['draft']['checks'], runName };
+  return { rec: recOf(row), state: stateOf(row), draft: d.draft as Draft, checks: d.checks as Item['draft']['checks'], runName };
 }
 
 /** What needs a person: in a queue (waiting, or a spot-check to rate) or waiting for a manager's approval. */
@@ -100,9 +101,10 @@ export async function queueRows(scope: TenantScope, where: SQL | undefined): Pro
   const pausedBy = new Map<string, Set<string>>();
   for (const runId of new Set(rows.map(r => r.row.nbaRunId))) pausedBy.set(runId, new Set((await pausedSegments(scope, runId)).keys()));
   const names = await ownerNames(scope, rows.map(r => r.row.ownerEmail ?? ''));
+  const rctx = await reasonContext(scope);
   return rows.map(({ row, draft, checks, runName }): QueueRow => {
     const x = rowItem(row, { draft, checks }, runName);
-    const reasons = R.exceptionReasons(R.liveRec(x.rec, x.state), x.draft, x.checks);
+    const reasons = R.exceptionReasons(R.liveRec(x.rec, x.state), x.draft, x.checks, rctx);
     const cats = R.reasonCats(x.state, { reasons, unreachable: x.draft.unreachable });
     const c = R.liveRec(x.rec, x.state).contact;
     return {
@@ -126,19 +128,43 @@ export async function reviewQueue(scope: TenantScope, actor: Actor) {
   const visible = and(eq(recommendations.businessUnitId, scope.ctx.businessUnitId), ownerOnly(scope, recommendations.ownerEmail));
   const all = await scope.tx.select({ passed: recommendations.passed, status: recommendations.status, outcome: recommendations.outcome }).from(recommendations).where(visible);
   const logs = await logFacts(scope, { ownerEmails: scope.ctx.scope === 'own' ? scope.ctx.ownerEmails : undefined });
-  const measure = R.measure(all, logs, (await activeValidation(scope)).settings.g1BaselineMinutes);
+  const settings = (await activeValidation(scope)).settings;
+  const measure = R.measure(all, logs, settings.g1BaselineMinutes);
   return {
     items, shownAt: shown.shownAt, total: all.length, released: all.filter(x => x.status === 'Released').length, auto: all.filter(x => x.passed).length,
-    measure, reps: isManager(actor.role) ? await unitReps(scope) : [],
+    measure, gate: { g2Threshold: settings.g2Threshold, minDecisions: settings.minDecisions }, reps: isManager(actor.role) ? await unitReps(scope) : [],
   };
 }
 
+/* ─── A new micro-segment approved (30 Oct 2026) ─── */
+
+/** When a sales manager approves a micro-segment the AI created, its items that waited only for that approval go
+ *  ahead, released by the manager; items with another reason stay in the queue for it. Logged, not counted toward G2:
+ *  approving the segment is not a decision on each item (G2 counts approve and reject in Approvals; whether a segment
+ *  approval counts too is open with the product owner). Returns how many. */
+export async function releaseForSegment(scope: TenantScope, actor: Actor, name: string): Promise<number> {
+  const rows = await scope.tx.select({ id: recommendations.id }).from(recommendations)
+    .where(and(eq(recommendations.businessUnitId, scope.ctx.businessUnitId), eq(recommendations.status, 'Waiting'), sql`lower(${recommendations.segment}) = ${name.toLowerCase()}`,
+      or(isNull(recommendations.spot), sql`${recommendations.spot} <> 'pending'`)));
+  let n = 0;
+  for (const { id } of rows) {
+    const item = await loadItem(scope, id, { lock: true });
+    if ((await pausedSegments(scope, item.run.id)).has(segKey(item.rec)) || item.draft.draft.unreachable) continue;
+    if (item.state.why !== 'exception' || liveCats(item).some(c => c !== 'fixed')) continue;
+    await setState(scope, item, actor, { status: 'Released', released: 'approved', holdWhy: null }, { decidedAt: new Date(), decidedBy: actor.userId, approvedBy: actor.userId });
+    await logItem(scope, item, actor, { decision: 'Released: its new micro-segment was approved', kind: 'system', note: `${name} approved by the sales manager` });
+    n++;
+  }
+  return n;
+}
+const liveCats = (item: Item) => R.reasonCats(item.state, { reasons: R.exceptionReasons(R.liveRec(item.rec, item.state), item.draft.draft, item.draft.checks, item.ctx), unreachable: item.draft.draft.unreachable });
+
 /* ─── Deciding one item ─── */
 
-async function itemForChange(scope: TenantScope, id: string, opts: { need: 'decide' | 'approve' | 'released' | 'any' }): Promise<Item> {
+async function itemForChange(scope: TenantScope, id: string, opts: { need: 'decide' | 'approve' | 'reject' | 'released' | 'any' }): Promise<Item> {
   const item = await loadItem(scope, id, { lock: true });
   if ((await pausedSegments(scope, item.run.id)).has(segKey(item.rec))) throw conflict('Its micro-segment is paused: nothing can be used or decided until it is resumed.');
-  if (opts.need === 'decide' && !R.inQueue(item.state)) throw conflict('It is not waiting for a decision any more. Reload to see where it is now.');
+  if ((opts.need === 'decide' || (opts.need === 'reject' && item.state.status !== 'Awaiting approval')) && !R.inQueue(item.state)) throw conflict('It is not waiting for a decision any more. Reload to see where it is now.');
   if (opts.need === 'approve' && item.state.status !== 'Awaiting approval') throw conflict('It is not waiting for approval any more. Reload to see where it is now.');
   if (opts.need === 'released' && item.state.status !== 'Released') throw conflict('It has not been released.');
   return item;
@@ -174,6 +200,15 @@ async function logDecisive(scope: TenantScope, item: Item, actor: Actor, entry: 
   return { id, flag };
 }
 
+/** Whether a person already made the item's first-pass decision: a rep who accepted sensitive content that then waits
+ *  for approval. The sales manager's approve or reject is the first pass only when nobody decided before (G2 counts both,
+ *  30 Oct 2026), so an item counts once. */
+async function decidedBefore(scope: TenantScope, item: Item): Promise<boolean> {
+  const [r] = await scope.tx.select({ id: decisionLog.id }).from(decisionLog)
+    .where(and(eq(decisionLog.recommendationId, item.row.id), eq(decisionLog.decisive, true), eq(decisionLog.firstPass, true))).limit(1);
+  return !!r;
+}
+
 /** The rejection an alternative came back from, so the alternative's decision links to it. */
 async function lastRejection(scope: TenantScope, item: Item): Promise<string | null> {
   const [r] = await scope.tx.select({ id: decisionLog.id }).from(decisionLog)
@@ -207,6 +242,10 @@ export async function acceptItem(scope: TenantScope, actor: Actor, id: string, i
   const item = await itemForChange(scope, id, { need: 'decide' });
   const manager = isManager(actor.role);
   const kind = R.kindOfItem(item.state), firstPass = kind === 'exception' || kind === 'spot';
+  // A micro-segment the AI created holds its items until the sales manager approves it (30 Oct 2026).
+  if (kind !== 'spot' && item.rec.segment && item.ctx.waitingSegments?.has(item.rec.segment.toLowerCase())) {
+    throw conflict(`Its micro-segment, ${item.rec.segment}, is new and waits for the sales manager's approval: ${manager ? 'approve it first' : 'it goes ahead once they approve it'}, or reject this item.`);
+  }
   if (!item.rec.segment && item.state.spot !== 'pending') {
     const asked = input.assignedSegment || item.state.assignedSegment;
     if (!asked) throw badRequest('Assign a micro-segment first: it is released into that micro-segment.', { assignedSegment: ['Pick a micro-segment.'] });
@@ -246,23 +285,28 @@ export async function acceptItem(scope: TenantScope, actor: Actor, id: string, i
 
 export type RejectInput = { code: string; note?: string; tags?: string[]; queuePosition?: number; fromRow?: boolean };
 
-/** Step 6 · Reject with a reason; the reason decides what comes back (one alternative) or where the account goes. */
+/** Step 6 · Reject with a reason; the reason decides what comes back (one alternative) or where the account goes. The
+ *  sales manager can reject an item waiting for approval the same way. */
 export async function rejectItem(scope: TenantScope, actor: Actor, id: string, input: RejectInput): Promise<{ status: string; outcome: string; message: string; flag: string }> {
   const entry = R.REJECT.find(x => x[0] === input.code);
   if (!entry) throw badRequest('Pick a reason.', { code: ['Pick one of the reasons.'] });
   const note = R.cleanNote(input.note, 500);
   if (input.code === 'R12' && !note) throw badRequest('"Other" needs a comment.', { note: ['Say why.'] });
-  const item = await itemForChange(scope, id, { need: 'decide' });
+  const item = await itemForChange(scope, id, { need: 'reject' });
+  const approval = item.state.status === 'Awaiting approval';
+  if (approval) requireManager(actor);
   const [, label] = entry;
-  const kind = R.kindOfItem(item.state), linkedTo = kind === 'alternative' ? await lastRejection(scope, item) : null;
+  const kind = approval ? 'exception' : R.kindOfItem(item.state), linkedTo = kind === 'alternative' ? await lastRejection(scope, item) : null;
+  const firstPass = approval ? !(await decidedBefore(scope, item)) : kind === 'exception' || kind === 'spot';
   const before = { action: R.chosenAction(item.rec, item.state), channel: item.draft.draft.channel, draftVersion: item.row.draftVersion };
   const follow = R.rejectFollowUp(input.code, item.rec, item.state, item.draft.draft);
   await setState(scope, item, actor, { ...follow.patch, holdWhy: null }, { decidedAt: new Date(), decidedBy: actor.userId, holdNote: null, holdAt: null, holdBy: null,
     ...(follow.patch.status === 'Waiting' ? { routedAt: new Date() } : {}) });
   if (follow.redraft) await redraft(scope, item, follow.redraft, actor.userId);
   const { flag } = await logDecisive(scope, item, actor, {
-    decision: `Rejected: ${label}`, reasonCode: input.code, reason: label, cause: R.causeOf(input.code), kind, firstPass: kind === 'exception' || kind === 'spot', accepted: false,
-    tags: (input.tags ?? []).filter(t => R.WRONG_TAGS.includes(t)), linkedTo, note: [follow.outcome, note, input.fromRow ? 'From the queue row' : ''].filter(Boolean).join(' · '), ...before,
+    decision: `Rejected: ${label}`, reasonCode: input.code, reason: label, cause: R.causeOf(input.code), kind, firstPass, accepted: false,
+    tags: (input.tags ?? []).filter(t => R.WRONG_TAGS.includes(t)), linkedTo, ...before,
+    note: [follow.outcome, note, approval ? 'Rejected in Approvals' : '', input.fromRow ? 'From the queue row' : ''].filter(Boolean).join(' · '),
   }, input);
   if (input.code === 'R3') {
     await recordAudit(scope, { action: 'recommendation.data_flagged', actorRole: actor.role, targetType: 'account', targetId: item.row.accountId,
@@ -290,7 +334,9 @@ export async function holdItem(scope: TenantScope, actor: Actor, id: string, inp
 
 /** The recommended action, the runner-up, or the reviewer's own. After release, only the rep may switch between the
  *  first two, and only to one that passes every check; that counts as stepping in. */
-export async function chooseAction(scope: TenantScope, actor: Actor, id: string, input: { use: 'recommended' | 'runner-up' | 'own'; text?: string }): Promise<{ message: string }> {
+export async function chooseAction(scope: TenantScope, actor: Actor, id: string, input: { use: 'recommended' | 'runner-up' | 'own'; text?: string; reason?: string }): Promise<{ message: string }> {
+  // Why the reviewer changed it, kept for the learning loop (30 Oct 2026).
+  const why = R.cleanNote(input.reason, 300);
   const item = await itemForChange(scope, id, { need: 'any' });
   const decide = R.inQueue(item.state), afterRelease = item.state.status === 'Released' && item.state.spot !== 'pending';
   if (!decide && !(afterRelease && !item.state.outcome)) throw conflict('Its action can no longer be changed.');
@@ -300,7 +346,7 @@ export async function chooseAction(scope: TenantScope, actor: Actor, id: string,
     if (!text) throw badRequest('Write the action first.', { text: ['Write the action.'] });
     await setState(scope, item, actor, { manualAction: text }, { edited: false });
     await redraft(scope, item, 'Manual action added', actor.userId);
-    await logItem(scope, item, actor, { decision: 'Added a manual action', note: text });
+    await logItem(scope, item, actor, { decision: 'Added a manual action', note: why ? `${text} · Why: ${why}` : text, reason: why });
     return { message: 'Your action is used: the message is redrafted for it' };
   }
   const runner = input.use === 'runner-up';
@@ -314,8 +360,35 @@ export async function chooseAction(scope: TenantScope, actor: Actor, id: string,
   const wasManual = !!item.state.manualAction;
   await setState(scope, item, actor, { manualAction: null, useRunnerUp: runner }, { edited: false });
   await redraft(scope, item, wasManual ? (runner ? 'Switched to the runner-up' : 'Back to the recommended action') : `Swapped to the ${to}`, actor.userId);
-  await logItem(scope, item, actor, { decision: `Swapped to the ${to} action`, ...(afterRelease ? { intervention: true, note: 'After release: the rep switched the action before using it' } : {}) });
+  await logItem(scope, item, actor, { decision: `Swapped to the ${to} action`, reason: why, ...(afterRelease ? { intervention: true, note: `After release: the rep switched the action before using it${why ? ` · Why: ${why}` : ''}` } : why ? { note: `Why: ${why}` } : {}) });
+  // Still a task (D-10): say why, or the switch looks as if nothing changed (Shantanu, 30 Oct 2026).
+  if (item.draft.draft.channel === 'Task') {
+    const gap = taskWhy(R.liveRec(item.rec, item.state), R.chosenAction(item.rec, item.state), item.checkDate, item.pack);
+    return { message: `The ${to} is chosen. It is still a task, not a message${gap ? `: ${gap[0].toLowerCase()}${gap.slice(1)}` : ''}` };
+  }
   return { message: afterRelease ? `Switched to the ${to}; the message is redrafted and the change is logged` : `The ${to} is chosen: the message is redrafted for it` };
+}
+
+/** F2 · The reviewer moves an item waiting in For Review to another micro-segment, saying why (kept for the learning
+ *  loop). The message is redrafted for it; its reasons are read again from the segment it is in now, so a segment that
+ *  waits for the sales manager's approval holds it. The action stays: the reviewer can change it too. */
+export async function changeSegment(scope: TenantScope, actor: Actor, id: string, input: { segment: string; reason: string }): Promise<{ message: string }> {
+  const why = R.cleanNote(input.reason, 300);
+  if (!why) throw badRequest('Say why it belongs there.', { reason: ['Say why.'] });
+  const item = await itemForChange(scope, id, { need: 'decide' });
+  if (item.state.status !== 'Waiting') throw conflict('Only an item waiting in For Review can move to another micro-segment.');
+  const from = item.rec.segment;
+  if (!from) throw badRequest('It has no micro-segment of its own: assign one instead.');
+  const want = input.segment.trim().toLowerCase();
+  const to = (await listSegments(scope)).find(x => x.status !== 'retired' && x.name.toLowerCase() === want);
+  if (!to) throw badRequest('Pick one of the micro-segments in the list.', { segment: ['Pick a micro-segment.'] });
+  if (to.name.toLowerCase() === from.toLowerCase()) throw conflict(`It is already in ${from}.`);
+  await scope.tx.update(recommendations).set({ segment: to.name, segmentAt: new Date(), updatedAt: sql`now()`, updatedBy: actor.userId }).where(eq(recommendations.id, item.row.id));
+  item.rec = { ...item.rec, segment: to.name };
+  item.row = { ...item.row, segment: to.name, segmentAt: new Date() };
+  await redraft(scope, item, `Moved to the ${to.name} micro-segment`, actor.userId);
+  await logItem(scope, item, actor, { decision: `Changed the micro-segment from ${from} to ${to.name}`, reason: why, note: `Why: ${why}` });
+  return { message: `Moved to ${to.name}${to.status === 'waiting' ? ': it is new, so it waits for the sales manager’s approval' : ''}. The message is redrafted for it` };
 }
 
 export type FixInput = { kind: 'low' | 'deal' | 'small'; contactRow?: number; segment?: string; create?: { name: string; also?: string[] } };
@@ -338,10 +411,11 @@ async function createSegment(scope: TenantScope, actor: Actor, item: Item, raw: 
     throw badRequest(`"${name}" is the name of one of the system's micro-segments: pick it from the list, or choose another name.`, { name: ['Choose another name.'] });
   }
   const theme = item.rec.prominent;
-  const [row] = await scope.tx.insert(customSegments).values({ businessUnitId: scope.ctx.businessUnitId, name, theme, createdBy: actor.userId })
-    .onConflictDoNothing().returning({ id: customSegments.id });
+  const [row] = await scope.tx.insert(microSegments).values({ businessUnitId: scope.ctx.businessUnitId, name, theme, why: 'Created by a person in For Review', origin: 'person',
+    status: 'approved', decidedAt: sql`now()`, decidedBy: actor.userId, createdBy: actor.userId, updatedBy: actor.userId })
+    .onConflictDoNothing().returning({ id: microSegments.id });
   if (!row) throw conflict(`There is already a micro-segment called "${name}": pick it from the list.`);
-  await recordAudit(scope, { action: 'nba.segment_created', actorRole: actor.role, targetType: 'custom_segment', targetId: row.id, details: { name, theme } });
+  await recordAudit(scope, { action: 'nba.segment_created', actorRole: actor.role, targetType: 'micro_segment', targetId: row.id, details: { name, theme } });
   logger.info({ event: 'nba.segment_created', customSegmentId: row.id, theme }, 'Micro-segment created by a person');
   return { name, theme, origin: 'person', approved: 0, by: null };
 }
@@ -411,16 +485,21 @@ export async function teach(scope: TenantScope, actor: Actor, id: string, input:
   await logItem(scope, item, actor, { decision: 'Taught the system', note, tags });
 }
 
-/** Step 5 · The sales manager approves a sensitive item (any edit saved, rated and versioned first) and it is released. */
-export async function approveItem(scope: TenantScope, actor: Actor, id: string, input: { draft?: DraftEdit; tags?: string[] }): Promise<{ message: string }> {
+/** Step 5 · The sales manager approves a sensitive item (any edit saved, rated and versioned first) and it is released.
+ *  A decisive decision, timed and checked like an accept; it counts toward G2 when it is the item's first decision. */
+export async function approveItem(scope: TenantScope, actor: Actor, id: string, input: { draft?: DraftEdit; tags?: string[] }): Promise<{ message: string; flag: string }> {
   requireManager(actor);
   const item = await itemForChange(scope, id, { need: 'approve' });
-  await applyEdit(scope, item, actor, input.draft, 'Edited by the sales manager before approving');
+  const { rating } = await applyEdit(scope, item, actor, input.draft, 'Edited by the sales manager before approving');
   mustReach(item);
+  const firstPass = !(await decidedBefore(scope, item));
   await setState(scope, item, actor, { status: 'Released', released: 'approved' }, { decidedAt: new Date(), decidedBy: actor.userId, approvedBy: actor.userId });
-  await logItem(scope, item, actor, { decision: 'Approved and released', note: 'Sensitive content approved', tags: (input.tags ?? []).filter(t => R.ACCEPT_TAGS.includes(t)) });
-  logger.info({ event: 'review.approved', recommendationId: id }, 'Sensitive item approved');
-  return { message: 'Approved and released' };
+  const { flag } = await logDecisive(scope, item, actor, {
+    decision: 'Approved and released', kind: 'exception', firstPass, accepted: true, editRating: rating ? rating.rating : 'none',
+    tags: (input.tags ?? []).filter(t => R.ACCEPT_TAGS.includes(t)), note: [rating ? `${rating.rating} edit: ${rating.why}` : '', 'Sensitive content approved'].filter(Boolean).join(' · '),
+  }, {});
+  logger.info({ event: 'review.approved', recommendationId: id, firstPass, flagged: !!flag }, 'Sensitive item approved');
+  return { message: 'Approved and released', flag };
 }
 
 /** The sales manager sends a sensitive item back to the rep with what should change. */
@@ -506,7 +585,27 @@ const iso = (d: Date | null | undefined) => (d ? new Date(d).toISOString() : '')
 
 /** Step 8 · What was released, as files: messages ready to use, tasks for the team, and the decision log. Each goes
  *  through the CSV writer that neutralises formulas (G-052). */
-export async function reviewExport(scope: TenantScope, actor: Actor, kind: 'released-messages' | 'tasks' | 'decision-log'): Promise<{ fileName: string; csv: CsvText; rows: number }> {
+export async function reviewExport(scope: TenantScope, actor: Actor, kind: 'released-messages' | 'tasks' | 'decision-log' | 'for-review'): Promise<{ fileName: string; csv: CsvText; rows: number }> {
+  if (kind === 'for-review') {
+    // Everything waiting for a person (the queue, spot-checks to rate, approvals), oldest first, with why and its message.
+    const items = (await queueRows(scope, needsPersonSql)).sort((a, b) => +a.routedAt - +b.routedAt);
+    const msgs = new Map<string, { contact: Rec['contact']; draft: Draft }>();
+    for (const part of chunks(items.map(i => i.id), 500)) {
+      const rows = await scope.tx.select({ id: recommendations.id, row: recommendations, draft: drafts.draft }).from(recommendations)
+        .innerJoin(drafts, and(eq(drafts.recommendationId, recommendations.id), eq(drafts.version, recommendations.draftVersion))).where(inArray(recommendations.id, part));
+      for (const r of rows) msgs.set(r.id, { contact: R.liveRec(recOf(r.row), stateOf(r.row)).contact, draft: r.draft as Draft });
+    }
+    const out: unknown[][] = [['owner', 'prospect', 'job_title', 'company', 'email', 'linkedin_url', 'list', 'micro_segment', 'action', 'channel', 'where_it_is', 'why_it_needs_a_person',
+      'on_hold', 'reached_for_review', 'subject', 'message', 'linkedin_note', 'task']];
+    for (const i of items) {
+      const m = msgs.get(i.id);
+      out.push([i.ownerName ?? i.ownerEmail ?? 'Unassigned', i.contact.name, i.contact.jobTitle, i.account.name, m?.contact.email || '', m?.contact.linkedin || '', i.runName,
+        i.segment || 'No micro-segment', i.chosenAction, i.channel, R.whereItIs(i), i.cats.map(k => R.REASON_CATS[k] ?? k).join('; '), i.hold ? i.hold.why : '', iso(i.routedAt),
+        m?.draft.subject || '', m?.draft.body || '', m?.draft.note || '', m?.draft.task || '']);
+    }
+    await recordAudit(scope, { action: 'review.exported', actorRole: actor.role, details: { kind, rows: items.length } });
+    return { fileName: 'for_review.csv', csv: toCSV(out), rows: items.length };
+  }
   if (kind === 'decision-log') {
     const out: unknown[][] = [['when', 'who', 'role', 'prospect', 'company', 'micro_segment', 'decision', 'item', 'first_pass', 'reason', 'tags', 'action', 'channel', 'version', 'opened_at', 'seconds', 'queue_position', 'flag', 'checked', 'linked_to', 'note', 'list_joined', 'micro_segment_joined']];
     let before: number | undefined, total = 0;
@@ -535,7 +634,7 @@ export async function reviewExport(scope: TenantScope, actor: Actor, kind: 'rele
   if (kind === 'released-messages') {
     out = [['owner', 'prospect', 'job_title', 'company', 'email', 'linkedin_url', 'micro_segment', 'action', 'channel', 'subject', 'message', 'linkedin_note', 'released', 'released_by', 'released_at', 'outcome']];
     for (const { row, draft, decidedBy } of rows) {
-      const rec = row.rec as Rec, st = stateOf(row), c = R.liveRec(rec, st).contact, x = draft as Draft;
+      const rec = recOf(row), st = stateOf(row), c = R.liveRec(rec, st).contact, x = draft as Draft;
       out.push([owner(row.ownerEmail), c.name, c.jobTitle || '', rec.account.name, c.email || '', c.linkedin || '', R.segOf(rec, st) || 'No micro-segment', R.chosenAction(rec, st),
         x.channel, x.subject || '', x.body || '', x.note || '', row.released === 'auto' ? 'On its own' : row.released === 'approved' ? 'Approved by the sales manager' : 'Accepted by the rep',
         row.released === 'auto' ? 'System' : decidedBy, iso(row.decidedAt), row.outcome || '']);
@@ -543,7 +642,7 @@ export async function reviewExport(scope: TenantScope, actor: Actor, kind: 'rele
   } else {
     out = [['owner', 'prospect', 'company', 'micro_segment', 'task', 'why', 'call_opener', 'questions', 'objection', 'response', 'ask', 'outcome']];
     for (const { row, draft, runAsOf, pack } of rows) {
-      const rec = row.rec as Rec, st = stateOf(row), lr = R.liveRec(rec, st), x = draft as Draft, action = R.chosenAction(rec, st);
+      const rec = recOf(row), st = stateOf(row), lr = R.liveRec(rec, st), x = draft as Draft, action = R.chosenAction(rec, st);
       const brand = pack as Parameters<typeof callScript>[3], when = checkDateOf(runAsOf);
       const s = callScript(lr, action, briefFor(lr, action, { asOf: when, brand }).whyNow, brand);
       out.push([owner(row.ownerEmail), lr.contact.name, rec.account.name, R.segOf(rec, st) || 'No micro-segment', x.task || '', x.why || '', s.opener, s.questions.join(' | '), s.objection, s.response, s.ask, row.outcome || '']);

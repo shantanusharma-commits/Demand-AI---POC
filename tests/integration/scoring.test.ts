@@ -31,7 +31,7 @@ const adminActor = (): Actor => ({ userId: ids.adminA, role: 'Admin' });
 const repCtx = (emails: string[]): TenantContext => ({ userId: ids.repA, businessUnitId: ids.buA, scope: 'own', ownerEmails: emails });
 const as = <T>(ctx: TenantContext, fn: Parameters<typeof withTenant<T>>[2]) => withTenant(app, ctx, fn);
 
-const DEMO: E.CustomSignalType = { name: 'Demo request', segment: 'Inquiry', level: 'Strong', full: 30, zero: 90 };
+const DEMO: E.CustomSignalType = { name: 'Demo request', about: 'Asked for a product demo', segment: 'Inquiry', level: 'Strong', full: 30, zero: 90 };
 const SETTINGS = { off: ['Webinar attended'], custom: [DEMO] };
 const leads = E.processLeads(dataset.leadGrid, { file: 'Lead_Research_Sample_Dataset.xlsx', sheet: 'Lead template' });
 const someOwner = [...new Set(leads.contacts.map(c => c.owner).filter(Boolean))].sort()[0];
@@ -120,7 +120,7 @@ test('G-023: settings that can’t be used stop a new run with the reason, never
     [{ signalsOff: 'Webinar attended' }, /not a list of names/],
     [{ signalsCustom: [{ ...DEMO, name: 'Email clicked' }] }, /already a signal type/],
     [{ signalsCustom: [DEMO, { ...DEMO, name: 'demo REQUEST' }] }, /already a signal type/],
-    [{ signalsCustom: [{ ...DEMO, segment: 'Nowhere' }] }, /micro-segment/],
+    [{ signalsCustom: [{ ...DEMO, about: '' }] }, /what the signal means/],
     [{ signalsCustom: [{ ...DEMO, full: 90, zero: 30 }] }, /gone after/],
     [{ signalsCustom: [{ ...DEMO, level: 'Huge' }] }, /how strong/],
   ];

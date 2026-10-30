@@ -4,7 +4,8 @@
    capabilities that use it), which capabilities are on (each with its rules as the fallback), whether a circuit
    breaker has taken over, the last 30 days of calls from the metadata record with the models that answered, and a
    health check that makes one tiny call to each model. Flags are set in the server's configuration, not here: each stays off in
-   production until its evaluation passes (docs/AI.md). No key is ever shown. */
+   production until its evaluation passes (docs/AI.md). No key is ever shown. Collapsed by default (product owner,
+   30 Oct 2026): its header says in one line what is connected and what it cost. */
 import { useEffect, useState } from 'react';
 import { sx } from '@/lib/sx';
 import { api, errorText, type WireDeep } from '@/lib/client/api';
@@ -23,6 +24,7 @@ export function AiPanel({ num }: { num: number }) {
   const [error, setError] = useState('');
   const [check, setCheck] = useState<Check | null>(null);
   const [checking, setChecking] = useState(false);
+  const [open, setOpen] = useState(false);
   useEffect(() => { if (allowed) api<Status>('/api/admin/ai').then(setS, err => setError(errorText(err))); }, [allowed]);
   if (!allowed) return null;
 
@@ -33,9 +35,15 @@ export function AiPanel({ num }: { num: number }) {
     finally { setChecking(false); }
   }
 
+  const on = s ? s.capabilities.filter(c => c.flag && c.on).length : 0, switchable = s ? s.capabilities.filter(c => c.flag).length : 0;
+  const summary = s ? [s.provider === 'none' ? 'No model connected' : `${on} of ${switchable} capabilities on`,
+    `${s.capabilities.reduce((n, c) => n + c.calls, 0).toLocaleString('en-US')} calls in ${s.days} days`, `USD ${s.capabilities.reduce((n, c) => n + c.costUsd, 0).toFixed(2)}`].join(' · ') : '';
   return <div className="panel" id="sec-ai">
-    <div className="panel-hdr"><span className="panel-ttl">{`${num} · AI service`}</span>{s ? <span className={`sc ${s.provider === 'none' ? 'sc-m' : 'sc-h'}`}>{s.provider === 'none' ? 'Rules only' : PROVIDER[s.provider]}</span> : null}</div>
-    <div className="panel-body" style={sx('font-size:12px;color:var(--i2);line-height:1.6')}>
+    <div className="panel-hdr"><button className="panel-ttl" aria-expanded={open} aria-controls="aiPanelBody" onClick={() => setOpen(o => !o)} style={sx('display:flex;align-items:center;gap:6px')}>
+      <span aria-hidden="true">{open ? '▾' : '▸'}</span>{`${num} · AI service`}</button>
+      <div style={sx('display:flex;align-items:center;gap:8px')}>{!open && summary ? <span className="sg-m" style={sx('margin:0')}>{summary}</span> : null}
+        {s ? <span className={`sc ${s.provider === 'none' ? 'sc-m' : 'sc-h'}`}>{s.provider === 'none' ? 'Rules only' : PROVIDER[s.provider]}</span> : null}</div></div>
+    {open ? <div id="aiPanelBody" className="panel-body" style={sx('font-size:12px;color:var(--i2);line-height:1.6')}>
       {error ? <p role="alert" style={sx('color:var(--neg)')}>{error}</p> : null}
       {!s && !error ? <p>Loading…</p> : null}
       {s ? <>
@@ -64,6 +72,6 @@ export function AiPanel({ num }: { num: number }) {
           </tr>)}
         </tbody></table>
       </> : null}
-    </div>
+    </div> : null}
   </div>;
 }

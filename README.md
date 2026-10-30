@@ -14,7 +14,7 @@ Needs Node 24.22.1 (`.nvmrc`; Node 22.18 or later works), Docker with Compose, a
 
 ```bash
 nvm use                 # Node 24.22.1
-npm ci                  # exactly what package-lock.json records (SheetJS comes from vendor/)
+npm ci                  # exactly what package-lock.json records (SheetJS from its official CDN, checksum pinned)
 npm run setup:env       # writes .env.local with random local secrets (never committed)
 npm run db:up           # PostgreSQL 16 for development on 127.0.0.1:55432
 npm run db:migrate      # the schema, row-level security and grants
@@ -49,7 +49,7 @@ The built-in sample (**Prospecting › Use sample data**) and `test-data/Lead_Re
 
 ## Configuration
 
-Every setting is an environment variable, validated at start-up (`lib/server/env.ts`); a problem stops the server and names the variable, never its value. `.env.example` lists and explains every one. In development they come from `.env.local`; in a deployment from the platform (Compose env file, Kubernetes ConfigMap and Secrets from AWS Secrets Manager). The ones that matter first:
+Every setting is an environment variable, validated at start-up (`lib/server/env.ts`); a problem stops the server and names the variable, never its value. `.env.example` lists and explains every one; [docs/CONFIGURATION.md](docs/CONFIGURATION.md) gives defaults, what is required and secret, and where each is set per environment. In development they come from `.env.local`; in a deployment from the platform (Compose env file, Kubernetes ConfigMap and Secrets from AWS Secrets Manager). The ones that matter first:
 
 | Group | Variables |
 |---|---|
@@ -119,8 +119,16 @@ Every gap fix has a named test, and safety guards were checked by mutation (the 
 
 ## Documentation
 
+The developer wiki, [docs/README.md](docs/README.md), indexes everything below and says where to start for each reader.
+
 | Document | Contents |
 |---|---|
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | High-level and module design, end-to-end flows, technical debt and failure points |
+| [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | Set-up, the local database, testing, debugging, troubleshooting, repository rules |
+| [docs/CONFIGURATION.md](docs/CONFIGURATION.md) | Every environment variable, per environment |
+| [docs/API.md](docs/API.md) | Every HTTP route with its permission and rate limit |
+| [docs/DECISIONS.md](docs/DECISIONS.md) | The decisions (D-1 to D-44) the code and documents cite |
+| [docs/handover/](docs/handover/NEXT-STEPS.md) | Repository audit, Azure DevOps migration, next steps (dated) |
 | [docs/RUNBOOK.md](docs/RUNBOOK.md) | Operating the pilot: incidents, failed uploads, reprocessing, users, AI, data |
 | [docs/devops/](docs/devops/README.md) | Deploying on EC2 or EKS, RDS, releases and rollback, secrets, observability, Azure |
 | [docs/DATA_MODEL.md](docs/DATA_MODEL.md) | The tables, who can read and write them, and how isolation works |

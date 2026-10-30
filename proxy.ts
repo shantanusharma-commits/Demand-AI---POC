@@ -33,5 +33,5 @@ export const config = {
   // Not for static files, the health probes, or uploads (large bodies go straight to their handler, which checks
   // the session itself; the proxy would otherwise buffer them, N-06). next.config.ts sends the other security headers
   // on every response, these included.
-  matcher: ['/((?!_next/static|_next/image|favicon\\.ico|demandai-logo\\.png|api/health|api/ready|api/uploads).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon\\.ico|demandai-logo\\.png|themes/|api/health|api/ready|api/uploads).*)'],
 };

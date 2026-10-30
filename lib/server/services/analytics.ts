@@ -7,13 +7,14 @@
 import 'server-only';
 import { and, asc, desc, eq, inArray, sql, type SQL } from 'drizzle-orm';
 import type { AnyPgColumn } from 'drizzle-orm/pg-core';
-import { CODES, CONFIG, toCSV, type CsvText } from '../../demandai-engine.ts';
-import { estimateDealSize, type Draft, type NbaAccount, type Rec } from '../../engine/nba.ts';
+import { CODES, toCSV, type CsvText } from '../../demandai-engine.ts';
+import { estimateDealSize, type Draft, type NbaAccount } from '../../engine/nba.ts';
 import * as G from '../../engine/gates.ts';
+import { earlyText, explainAlternative, explainG1, explainG2, type Explain } from '../../analytics/explain.ts';
 import * as R from '../../engine/review.ts';
 import type { DqCode } from '../../../types/demandai';
 import {
-  accountTransfers, AREA_VERDICTS, brandVersions, businessUnitMembers, configChanges, configVersions, customSegments, decisionLog, drafts, leadLists, nbaRuns, READOUT_KINDS,
+  accountTransfers, AREA_VERDICTS, brandVersions, businessUnitMembers, configChanges, configVersions, microSegments, decisionLog, drafts, leadLists, nbaRuns, READOUT_KINDS,
   readouts, readoutSignoffs, recommendations, routingRules, scoringRuns, signalTypeChanges, SPONSOR_DECISIONS, users,
 } from '../db/schema.ts';
 import type { TenantScope } from '../db/tenant.ts';
@@ -22,7 +23,7 @@ import { badRequest, conflict, forbidden } from '../http/errors.ts';
 import { logger } from '../logger.ts';
 import { isManager, ownerOnly, type Actor } from './lists.ts';
 import { activeValidation, pilotFacts, type ActiveValidation } from './measures.ts';
-import { checkedSql, stateOf } from './recommendations.ts';
+import { recOf, checkedSql, stateOf } from './recommendations.ts';
 import { isoWeek } from './review.ts';
 import { nextVersion } from './setup.ts';
 import { ownerEmailsOf, ownerNames, unitReps } from './users.ts';
@@ -51,18 +52,19 @@ const uuids = (ids: string[]) => sql`string_to_array(${ids.join(',')}, ',')::uui
 /* ─── What the measures read: the items and the log in view, and the lists, runs and builds behind them ─── */
 
 type ItemFact = {
-  id: string; runId: string; accountId: string; passed: boolean; status: string; released: string | null; outcome: string | null; spot: string | null; segment: string | null;
+  id: string; runId: string; accountId: string; contactId: string; passed: boolean; status: string; released: string | null; outcome: string | null; spot: string | null; segment: string | null;
   assigned: string | null; ownerEmail: string | null; alternativeUsed: boolean; tier: string | null; account: NbaAccount; confidence: string | null; signals: string[];
   channel: string; noProof: boolean;
 };
 type LogFact = R.LogFacts & {
   id: string; seq: number; recommendationId: string; at: Date; createdBy: string; decision: string; reasonCode: string | null; tags: string[]; note: string; ownerEmail: string | null;
+  configVersionId: string | null;
 };
 
 async function load(scope: TenantScope, lens: Lens): Promise<{ items: ItemFact[]; logs: LogFact[] }> {
   const bu = scope.ctx.businessUnitId;
   const items = await scope.tx.select({
-    id: recommendations.id, runId: recommendations.nbaRunId, accountId: recommendations.accountId, passed: recommendations.passed, status: recommendations.status, released: recommendations.released,
+    id: recommendations.id, runId: recommendations.nbaRunId, accountId: recommendations.accountId, contactId: recommendations.contactId, passed: recommendations.passed, status: recommendations.status, released: recommendations.released,
     outcome: recommendations.outcome, spot: recommendations.spot, segment: recommendations.segment, assigned: recommendations.assignedSegment,
     ownerEmail: recommendations.ownerEmail, alternativeUsed: recommendations.alternativeUsed,
     tier: sql<string | null>`"recommendations"."rec"->'person'->>'tier'`,
@@ -78,7 +80,7 @@ async function load(scope: TenantScope, lens: Lens): Promise<{ items: ItemFact[]
     decision: decisionLog.decision, kind: decisionLog.kind, decisive: decisionLog.decisive, firstPass: decisionLog.firstPass, accepted: decisionLog.accepted,
     flag: decisionLog.flag, checked: checkedSql, segment: decisionLog.segment, reason: decisionLog.reason, reasonCode: decisionLog.reasonCode, cause: decisionLog.cause,
     compliance: decisionLog.compliance, intervention: decisionLog.intervention, editRating: decisionLog.editRating, seconds: decisionLog.seconds, tags: decisionLog.tags,
-    note: decisionLog.note, ownerEmail: decisionLog.ownerEmail,
+    note: decisionLog.note, ownerEmail: decisionLog.ownerEmail, configVersionId: decisionLog.configVersionId,
   }).from(decisionLog).where(and(eq(decisionLog.businessUnitId, bu), ownerIn(decisionLog.ownerEmail, lens))).orderBy(asc(decisionLog.seq));
   return { items, logs };
 }
@@ -207,9 +209,21 @@ type Pilot = Awaited<ReturnType<typeof pilot>>;
 const lensInfo = (x: Pilot) => ({ rep: x.lens.rep, own: x.lens.own, manager: x.lens.manager, viewer: x.lens.viewer });
 async function repsFor(scope: TenantScope, lens: Lens) { return lens.manager ? unitReps(scope) : []; }
 
+/** First-pass acceptance per configuration version the decisions were made under (30 Oct 2026): a changed rubric or
+ *  action library starts a new row, so results before and after it are compared, never pooled unseen. */
+async function byVersion(scope: TenantScope, logs: LogFact[]) {
+  const ids = [...new Set(logs.map(l => l.configVersionId).filter((v): v is string => !!v))];
+  const nos = new Map(ids.length ? (await scope.tx.select({ id: configVersions.id, n: configVersions.versionNo }).from(configVersions).where(inArray(configVersions.id, ids))).map(r => [r.id, r.n]) : []);
+  const groups = new Map<string, LogFact[]>();
+  for (const l of logs) if (l.decisive && l.firstPass && counts(l)) { const k = l.configVersionId ?? ''; groups.set(k, [...(groups.get(k) ?? []), l]); }
+  return [...groups].map(([id, ls]) => ({ versionNo: nos.get(id) ?? null, n: ls.length, a: ls.filter(l => l.accepted).length,
+    rate: ls.length ? ls.filter(l => l.accepted).length / ls.length * 100 : null })).sort((a, b) => (a.versionNo ?? 0) - (b.versionNo ?? 0));
+}
+
 export async function gatesView(scope: TenantScope, actor: Actor, rep?: string | null) {
   const x = await pilot(scope, actor, rep);
-  return { ...lensInfo(x), reps: await repsFor(scope, x.lens), settings: x.settings, configVersion: x.validation.versionNo, measure: x.m, gates: x.gates, builds: x.p.builds.length };
+  return { ...lensInfo(x), reps: await repsFor(scope, x.lens), settings: x.settings, configVersion: x.validation.versionNo, measure: x.m, gates: x.gates, builds: x.p.builds.length,
+    byVersion: await byVersion(scope, x.logs) };
 }
 
 export async function funnelView(scope: TenantScope, actor: Actor, rep?: string | null) {
@@ -224,16 +238,18 @@ export async function evidenceView(scope: TenantScope, actor: Actor, rep?: strin
 
 /* ─── The six success areas (D-38), each with its measured evidence ─── */
 
+// Named as the platform names its steps (product owner, 30 Oct 2026; were the proposal's "lead research", "lead
+// qualification accuracy", "intent detection", "lead routing", "content production efficiency"; to confirm with him).
 export const AREAS = [
-  { key: 'discovery', title: 'Lead research and account discovery', question: 'Does it find the right accounts, and the right people in them (persona fit)?', tab: 'funnel' },
-  { key: 'qualification', title: 'Lead qualification accuracy', question: 'Do stakeholders accept the score and the recommendations it leads to?', tab: 'evidence' },
-  { key: 'intent', title: 'Intent detection (limited for the pilot)', question: 'Do the signals pick out accounts with a reason to buy now?', tab: 'loop' },
-  { key: 'routing', title: 'Lead routing and segmentation', question: 'Does each lead reach the right owner, unit and micro-segment (priority, geography, industry)?', tab: 'funnel' },
-  { key: 'content', title: 'Content production efficiency', question: 'Is there less effort per usable message?', tab: 'gates' },
-  { key: 'value', title: 'Business value validation', question: 'Do stakeholders see enough value to recommend adoption?', tab: 'loop' },
+  { key: 'discovery', title: 'Prospecting', question: 'Does it find the right accounts, and the right people in them (persona fit)?', tab: 'funnel' },
+  { key: 'qualification', title: 'Account Scoring', question: 'Do people accept the score and the recommendations it leads to?', tab: 'evidence' },
+  { key: 'intent', title: 'Signals', question: 'Do the signals pick out accounts with a reason to buy now?', tab: 'loop' },
+  { key: 'routing', title: 'Micro-segments, NBA and routing', question: 'Does each lead reach the right owner, unit, micro-segment and action?', tab: 'funnel' },
+  { key: 'content', title: 'Messages and content', question: 'Is there less effort per usable message?', tab: 'gates' },
+  { key: 'value', title: 'Business value', question: 'Do people see enough value to recommend adoption?', tab: 'loop' },
 ] as const;
 export type AreaKey = (typeof AREAS)[number]['key'];
-export type Evidence = { label: string; value: string; sub?: string };
+export type Evidence = { label: string; value: string; sub?: string; info?: Explain };
 export type Area = { key: AreaKey; title: string; question: string; tab: string; state: G.GateState | null; stateLabel: string | null; evidence: Evidence[] };
 
 const checkState = (cs: G.PilotCheck[]): G.GateState | null => (!cs.length ? null : cs.every(c => c.ok) ? 'met' : 'below');
@@ -262,7 +278,8 @@ async function areasOf(scope: TenantScope, x: Pilot, rs: ReadoutState): Promise<
   const ev = evidenceOf(items, logs, []);
   const sig = signalRows(items, first).filter(s => s.j >= 3).slice(0, 3);
   const stages = funnelStages(p, items, logs);
-  const g = (gate: G.Gate) => (gate.value === null ? '—' : Math.round(gate.value) + '%');
+  // Below the minimum a gate shows how many decisions so far, never a percentage (30 Oct 2026).
+  const g = (gate: G.Gate) => (gate.value === null ? '—' : gate.state === 'early' ? earlyText(gate.n, gate.min) : Math.round(gate.value) + '%');
   const area = (key: AreaKey, state: G.GateState | null, evidence: Evidence[]): Area => {
     const a = AREAS.find(z => z.key === key)!;
     return { key, title: a.title, question: a.question, tab: a.tab, state, stateLabel: state ? (state === 'early' ? G.gateLabel(gates.g2) : stateWord[state]) : null, evidence };
@@ -278,11 +295,11 @@ async function areasOf(scope: TenantScope, x: Pilot, rs: ReadoutState): Promise<
       { label: 'Corrections made by people', value: String(fixes) },
     ]),
     area('qualification', gates.g2.state, [
-      { label: 'G2 first-pass acceptance', value: g(gates.g2), sub: `${G.gateLabel(gates.g2)} · ${m.pooled.a} of ${m.pooled.n} counted decisions, weighted across both paths · threshold ${gates.g2.threshold}%` },
+      { label: 'G2 first-pass acceptance', info: explainG2({ ...m, handled: m.handled }, x.settings), value: g(gates.g2), sub: `${G.gateLabel(gates.g2)} · ${m.pooled.a} of ${m.pooled.n} counted decisions, weighted across both paths · threshold ${gates.g2.threshold}%` },
       { label: 'Acceptance by tier', value: ev.byTier.map(t => `${t.tier} ${t.judged ? pct0(t.accepted / t.judged * 100) : '—'}`).join(' · '),
         sub: ev.ordered === null ? 'Not judged yet' : ev.ordered ? 'Higher tiers are accepted at least as often as lower ones: the ranking holds' : 'A lower tier is accepted more often than a higher one: the rubric or the weights need a look' },
       { label: 'Rejected as the wrong fit or a weak signal', value: String(ev.reasons.filter(r => r.code === 'R1' || r.code === 'R2').reduce((t, r) => t + r.n, 0)), sub: 'rejections that point at the score' },
-      { label: 'Accepted within one alternative', value: pct0(m.alternatives.pct), sub: `${m.alternatives.a} of ${m.alternatives.n}` },
+      { label: 'Accepted within one alternative', info: explainAlternative(m), value: pct0(m.alternatives.pct), sub: `${m.alternatives.a} of ${m.alternatives.n}` },
     ]),
     area('intent', checkState([coverage, recency].filter((c): c is G.PilotCheck => !!c)), [
       { label: 'Signals found', value: String(stages[2].n), sub: stages[2].sub },
@@ -299,7 +316,7 @@ async function areasOf(scope: TenantScope, x: Pilot, rs: ReadoutState): Promise<
       { label: 'Recommendations without an owner', value: String(items.filter(i => !i.ownerEmail).length) },
     ]),
     area('content', gates.g1.state, [
-      { label: 'G1 review effort saved', value: g(gates.g1), sub: `${G.gateLabel(gates.g1)} · ${m.minutes === null ? 'no usable first actions yet' : `${Math.round(m.minutes * 10) / 10} min per usable first action`} against a ${m.base} min baseline · threshold ${gates.g1.threshold}% less` },
+      { label: 'G1 review effort saved', info: explainG1(m, x.settings), value: g(gates.g1), sub: `${G.gateLabel(gates.g1)} · ${m.minutes === null ? 'no first actions handled yet' : `${Math.round(m.minutes * 10) / 10} min per first action a person handled`} against a ${m.base} min baseline · threshold ${gates.g1.threshold}% less` },
       { label: 'Drafts and tasks generated', value: String(items.length), sub: stages[5].sub },
       { label: 'Released, ready to use', value: String(m.released) },
       { label: 'Edits before use', value: `${m.edits.none} as they were · ${m.edits.minor} minor · ${m.edits.major} major` },
@@ -374,23 +391,43 @@ export async function recordSignoff(scope: TenantScope, actor: Actor, input: { k
 
 /* ─── Weekly summary (7.4), for the business-unit lead ─── */
 
-function weekData(logs: LogFact[], week: string, s: G.ValidationSettings) {
+/** When each item's build was made, by ISO week, and the first week each account and prospect was recommended. */
+function weekIndex(items: ItemFact[], builds: Pipeline['builds']) {
+  const weekOf = new Map(builds.map(b => [b.id, isoWeek(b.createdAt)]));
+  const first = (key: (i: ItemFact) => string) => {
+    const m = new Map<string, string>();
+    for (const i of items) { const w = weekOf.get(i.runId) ?? '', k = key(i); if (w && (!m.has(k) || w < m.get(k)!)) m.set(k, w); }
+    return m;
+  };
+  return { weekOf, account: first(i => i.accountId), prospect: first(i => i.contactId) };
+}
+
+function weekData(logs: LogFact[], week: string, s: G.ValidationSettings, items: ItemFact[], ix: ReturnType<typeof weekIndex>) {
   const ls = logs.filter(l => isoWeek(l.at) === week), dec = ls.filter(l => l.decisive);
+  // New this week (30 Oct 2026): accounts and prospects recommended for the first time, and the week's new actions by
+  // where they are now.
+  const built = items.filter(i => ix.weekOf.get(i.runId) === week);
+  const count = (m: Map<string, string>) => [...m.values()].filter(w => w === week).length;
+  const went = built.filter(i => i.passed).length, inReview = built.filter(i => i.status === 'Waiting' || i.status === 'Awaiting approval' || i.spot === 'pending').length;
+  const afterReview = built.filter(i => i.status === 'Released' && i.released !== 'auto').length;
   const first = dec.filter(l => l.firstPass && counts(l));
   const rate = (xs: LogFact[]) => (xs.length ? Math.round(xs.filter(l => l.accepted).length / xs.length * 100) : null);
   const reasons: Record<string, number> = {}; dec.filter(l => !l.accepted).forEach(l => { reasons[l.reason] = (reasons[l.reason] || 0) + 1; });
   const exceptions: Record<string, number> = {};
   ls.filter(l => l.decision === 'To the exception queue' || l.decision === 'To approvals').forEach(l => l.note.split(' · ').forEach(n => { const k = n.replace(/:.*$/, ''); if (k) exceptions[k] = (exceptions[k] || 0) + 1; }));
   const secs = dec.reduce((t, l) => t + (l.seconds || 0), 0);
-  const released = ls.filter(l => /^Proceeded on its own|^Accepted|^Approved and released/.test(l.decision) && l.kind !== 'spot').length;
+  const handled = new Set(dec.map(l => l.recommendationId)).size;
   const rows: [string, string][] = [
+    ['New accounts', String(count(ix.account))],
+    ['New prospects', String(count(ix.prospect))],
+    ['New actions', `${built.length}: ${went} went ahead · ${inReview} in For Review · ${afterReview} released after review`],
     ['Recommendations built', String(ls.filter(l => l.kind === 'system' && /^Proceeded on its own|^To the exception queue|^To approvals/.test(l.decision)).length)],
     ['Proceeded on their own', String(ls.filter(l => l.decision === 'Proceeded on its own').length)],
     ['Sent to the exception queue', String(ls.filter(l => l.decision === 'To the exception queue').length)],
     ["Sent to the sales manager's approvals", String(ls.filter(l => l.decision === 'To approvals').length)],
     ['Decisions made', `${dec.length} (${dec.filter(l => l.kind === 'spot').length} spot-check ratings)`],
     ['G2 first-pass acceptance', first.length ? `${rate(first)}% of ${first.length} (exceptions ${rate(first.filter(l => l.kind === 'exception')) ?? '—'}%, spot-checks ${rate(first.filter(l => l.kind === 'spot')) ?? '—'}%)` : '—'],
-    ['G1 review time', `${Math.round(secs / 60 * 10) / 10} min${released ? ` · ${Math.round(secs / 60 / released * 10) / 10} min per usable first action (baseline ${s.g1BaselineMinutes})` : ''}`],
+    ['G1 review time', `${Math.round(secs / 60 * 10) / 10} min${handled ? ` · ${Math.round(secs / 60 / handled * 10) / 10} min per first action handled (baseline ${s.g1BaselineMinutes})` : ''}`],
     ['Outcomes marked', String(ls.filter(l => /^Outcome/.test(l.decision)).length)],
     ['Interventions on items that proceeded', String(ls.filter(l => l.intervention).length)],
     ['Flagged decisions waiting for a check', String(dec.filter(l => l.flag && !l.checked).length)],
@@ -404,7 +441,8 @@ export async function weeklyView(scope: TenantScope, actor: Actor, query: { rep?
   const weeks = [...new Set([...x.logs.map(l => isoWeek(l.at)), isoWeek(new Date())])].sort().reverse();
   if (query.week && !weeks.includes(query.week)) throw badRequest('There is nothing logged in that week.', { week: ['Pick one of the weeks listed.'] });
   const week = query.week || weeks[0], prev = weeks[weeks.indexOf(week) + 1] ?? null;
-  const cur = weekData(x.logs, week, x.settings), before = prev ? weekData(x.logs, prev, x.settings) : null;
+  const ix = weekIndex(x.items, x.p.builds);
+  const cur = weekData(x.logs, week, x.settings, x.items, ix), before = prev ? weekData(x.logs, prev, x.settings, x.items, ix) : null;
   return { ...lensInfo(x), reps: await repsFor(scope, x.lens), builds: x.p.builds.length, weeks, week, previous: prev, ...cur, previousRows: before?.rows ?? null };
 }
 
@@ -421,6 +459,8 @@ export type OutcomeRecord = {
   runnerUp: string; contact: string; contactTitle: string; channel: string; draft: string; path: string; exceptions: string; decision: string; reasonCode: string;
   reason: string; cause: string; tags: string; alternativeNeeded: boolean; alternativeAccepted: boolean | null; outcome: string; finalStatus: string; owner: string;
   config: string; brand: string;
+  /** Who chose the micro-segment and the action: the AI or the rules (30 Oct 2026). */
+  segmentBy: string; actionBy: string;
 };
 
 async function outcomeRecords(scope: TenantScope, x: Pilot): Promise<OutcomeRecord[]> {
@@ -431,17 +471,18 @@ async function outcomeRecords(scope: TenantScope, x: Pilot): Promise<OutcomeReco
     .where(and(eq(recommendations.businessUnitId, scope.ctx.businessUnitId), ownerOnly(scope, recommendations.ownerEmail), ownerIn(recommendations.ownerEmail, x.lens)))
     .orderBy(desc(nbaRuns.createdAt), asc(recommendations.position));
   const names = await ownerNames(scope, rows.map(r => r.row.ownerEmail ?? ''));
-  // A micro-segment a person created is marked as theirs, apart from the system's.
-  const made = new Set((await scope.tx.select({ name: customSegments.name }).from(customSegments).where(eq(customSegments.businessUnitId, scope.ctx.businessUnitId)))
-    .map(m => m.name.toLowerCase()));
-  const segLabel = (seg: string) => (!seg ? 'No micro-segment' : made.has(seg.toLowerCase()) ? `${seg} (created by a person)` : seg);
+  // A micro-segment a person or the AI created is marked as such, apart from the rules' own.
+  const made = new Map((await scope.tx.select({ name: microSegments.name, origin: microSegments.origin }).from(microSegments).where(eq(microSegments.businessUnitId, scope.ctx.businessUnitId)))
+    .map(m => [m.name.toLowerCase(), m.origin]));
+  const segLabel = (seg: string) => (!seg ? 'No micro-segment' : made.has(seg.toLowerCase()) ? `${seg} (created by ${made.get(seg.toLowerCase()) === 'ai' ? 'the AI' : 'a person'})` : seg);
   const byRec = new Map<string, LogFact[]>();
   for (const l of x.logs) { if (l.decisive) { const a = byRec.get(l.recommendationId) ?? []; a.push(l); byRec.set(l.recommendationId, a); } }
   return rows.map(({ row, draft, runName, configNo, brandNo }) => {
-    const rec = row.rec as Rec, st = stateOf(row), d = draft as Draft, lr = R.liveRec(rec, st), dec = byRec.get(row.id) ?? [];
+    const rec = recOf(row), st = stateOf(row), d = draft as Draft, lr = R.liveRec(rec, st), dec = byRec.get(row.id) ?? [];
     const first = dec.find(l => l.firstPass) ?? dec[0], alt = dec.find(l => l.kind === 'alternative');
+    // No decision yet: where the item is (30 Oct 2026; was "Not decided yet", which read as a decision lost).
     const decision = first ? (first.accepted ? (first.editRating === 'minor' ? 'Edited (minor)' : first.editRating === 'major' ? 'Edited (major)' : 'Accepted') : 'Rejected')
-      : row.passed ? 'Not judged (proceeded)' : 'Not decided yet';
+      : row.passed && row.status === 'Released' ? 'Went ahead, not rated' : R.whereItIs(row);
     return {
       list: runName, account: rec.account.name, vertical: rec.account.vertical || '', status: rec.account.existingCustomer ? 'Existing customer' : 'Net-new', tier: rec.person.tier || '',
       segment: segLabel(R.segOf(rec, st)), groupedOn: (rec as { groupedOn?: { type?: string } }).groupedOn?.type || '',
@@ -451,6 +492,7 @@ async function outcomeRecords(scope: TenantScope, x: Pilot): Promise<OutcomeReco
       reasonCode: first && !first.accepted ? first.reasonCode || '' : '', reason: first && !first.accepted ? first.reason : '', cause: first?.cause || '', tags: first ? first.tags.join('; ') : '',
       alternativeNeeded: row.alternativeUsed, alternativeAccepted: alt ? !!alt.accepted : null, outcome: row.outcome || '', finalStatus: row.status,
       owner: row.ownerEmail ? names.get(row.ownerEmail) ?? row.ownerEmail : 'Unassigned', config: configNo ? `Config v${configNo}` : 'Config not recorded', brand: `Brand v${brandNo}`,
+      segmentBy: rec.ai?.segment ? (rec.ai.segment.isNew ? 'AI (new segment)' : 'AI') : 'Rules', actionBy: rec.ai?.action ? (rec.ai.action.inLibrary ? 'AI' : 'AI (outside the library)') : 'Rules',
     };
   });
 }
@@ -470,6 +512,8 @@ function loopTables(rs: OutcomeRecord[]) {
     }),
     signals: [...new Set(rs.flatMap(o => o.signals))].map(k => ({ k, ...stat(rs.filter(o => o.signals.includes(k))) })).sort((a, b) => (b.rate ?? -1) - (a.rate ?? -1)),
     fit: [...group(o => o.status), ...group(o => 'Tier ' + o.tier), ...group(o => o.vertical || 'No vertical')].map(([k, l]) => ({ k, ...stat(l) })),
+    // AI-chosen against rule-chosen, for the action and the micro-segment (30 Oct 2026).
+    chooser: [...group(o => `Action: ${o.actionBy}`), ...group(o => `Micro-segment: ${o.segmentBy}`)].map(([k, l]) => ({ k, ...stat(l) })).sort((a, b) => a.k.localeCompare(b.k)),
     allRate: all.length ? all.filter(ok).length / all.length * 100 : null,
     complete: rs.filter(o => o.signals.length && o.action && o.contact && o.channel && o.draft && o.config).length,
   };
@@ -487,7 +531,7 @@ const OUTCOME_COLUMNS: [string, keyof OutcomeRecord][] = [['list', 'list'], ['ac
   ['micro_segment', 'segment'], ['grouped_on', 'groupedOn'], ['signals', 'signals'], ['action', 'action'], ['recommended', 'recommended'], ['runner_up', 'runnerUp'],
   ['contact', 'contact'], ['contact_title', 'contactTitle'], ['channel', 'channel'], ['draft', 'draft'], ['path', 'path'], ['exceptions', 'exceptions'], ['decision', 'decision'],
   ['reason_code', 'reasonCode'], ['reason', 'reason'], ['cause', 'cause'], ['tags', 'tags'], ['alternative_needed', 'alternativeNeeded'], ['alternative_accepted', 'alternativeAccepted'],
-  ['outcome', 'outcome'], ['final_status', 'finalStatus'], ['owner', 'owner'], ['config_version', 'config'], ['brand_version', 'brand']];
+  ['outcome', 'outcome'], ['final_status', 'finalStatus'], ['owner', 'owner'], ['config_version', 'config'], ['brand_version', 'brand'], ['segment_by', 'segmentBy'], ['action_by', 'actionBy']];
 
 /** The outcome log as a file: one record per recommendation, through the CSV writer that neutralises formulas (G-052). */
 export async function outcomeLogCsv(scope: TenantScope, actor: Actor, rep?: string | null): Promise<{ fileName: string; csv: CsvText; rows: number }> {
@@ -518,29 +562,49 @@ export async function readoutView(scope: TenantScope, actor: Actor, rep?: string
   const x = await pilot(scope, actor, rep);
   const rs = await readoutState(scope);
   const areas = await areasOf(scope, x, rs);
-  const { m, gates, settings } = x;
+  const { gates, settings } = x;
   const said: Record<G.GateState, string> = { none: 'open', early: `too early to call (fewer than ${settings.minDecisions} decisions)`, met: 'met', below: 'not met' };
   const ev = evidenceOf(x.items, x.logs, []);
   const built = [...new Set(x.p.builds.map(b => b.configVersionId).filter(Boolean))] as string[];
   const builtNos = built.length ? (await scope.tx.select({ n: configVersions.versionNo }).from(configVersions).where(inArray(configVersions.id, built))).map(r => `Config v${r.n}`).sort() : [];
+  // A short report in plain words (product owner, 30 Oct 2026): one line on the result, the six areas with each verdict
+  // and key number, what worked, what didn't, and the decision needed. The detail stays in the other tabs.
+  const KEY: Record<AreaKey, string> = { discovery: 'Accounts in scope', qualification: 'G2 first-pass acceptance', intent: 'Signal coverage',
+    routing: 'Micro-segments formed', content: 'G1 review effort saved', value: 'Replied or booked a meeting' };
+  const keyOf = (a: Area) => { const e = a.evidence.find(z => z.label === KEY[a.key]) ?? a.evidence[0]; return e ? `${e.label}: ${e.value}` : '—'; };
+  const g1Words = gates.g1.state === 'early' ? earlyText(gates.g1.n, gates.g1.min) : gates.g1.value === null ? 'no first actions handled yet'
+    : `review time ${Math.round(gates.g1.value)}% less than before the pilot (target ${settings.g1Threshold}%: ${said[gates.g1.state]})`;
+  const g2Words = gates.g2.state === 'early' ? earlyText(gates.g2.n, gates.g2.min) : gates.g2.value === null ? 'no decisions yet'
+    : `people accepted ${Math.round(gates.g2.value)}% of recommendations the first time (target ${settings.g2Threshold}%: ${said[gates.g2.state]})`;
+  const judged = AREAS.filter(z => rs.current[z.key]).length;
+  const result = gates.g2.state === 'early' || gates.g2.state === 'none' ? `Too early to call: ${gates.g2.n} of ${settings.minDecisions} decisions counted so far; ${judged} of 6 areas judged.`
+    : `${g2Words[0].toUpperCase()}${g2Words.slice(1)}, and ${g1Words}; ${judged} of 6 areas judged.`;
+  const loop = loopTables(await outcomeRecords(scope, x));
+  const worked = [
+    ...(gates.g2.state === 'met' ? [`G2 met: ${g2Words}`] : []), ...(gates.g1.state === 'met' ? [`G1 met: ${g1Words}`] : []),
+    ...areas.filter(a => rs.current[a.key]?.verdict === 'Satisfied').map(a => `${a.title}: the validator is satisfied`),
+    ...loop.actions.filter(a => a.j >= 3 && (a.rate ?? 0) >= 70).slice(0, 3).map(a => `${a.k}: accepted ${pct0(a.rate)} of ${a.j}${a.w ? `, ${a.w} replies or meetings` : ''}`),
+    ...(ev.tags.length ? [`What reviewers liked: ${ev.tags.slice(0, 3).map(t => `${t.tag} (${t.n})`).join(', ')}`] : []),
+  ];
+  const didnt = [
+    ...(gates.g2.state === 'below' ? [`G2 not met: ${g2Words}`] : []), ...(gates.g1.state === 'below' ? [`G1 not met: ${g1Words}`] : []),
+    ...areas.filter(a => rs.current[a.key]?.verdict === 'Not satisfied').map(a => `${a.title}: the validator is not satisfied${rs.current[a.key]?.note ? ` (${rs.current[a.key]!.note})` : ''}`),
+    ...(ev.reasons.length ? [`Most common reasons for rejecting: ${ev.reasons.slice(0, 3).map(r => `${r.reason} (${r.n})`).join(', ')}`] : []),
+    ...loop.segments.filter(z => z.j >= 3 && z.rate !== null && z.rate < 50).slice(0, 3).map(z => `${z.k}: accepted only ${pct0(z.rate)} of ${z.j}`),
+    ...betterData(x),
+  ];
+  const decision = rs.current.sponsor ? `Decided: ${verdictLine(rs.current.sponsor)}`
+    : `The sponsor decides: go to production, extend the pilot, or stop.${judged < 6 ? ` First, the validators judge the ${6 - judged} area${6 - judged === 1 ? '' : 's'} still open (Success areas).` : ''}${gates.g2.state === 'early' ? ` More decisions are needed before G2 can be read (${gates.g2.n} of ${settings.minDecisions}).` : ''}`;
   const lines = [
     '# Pilot readout', '',
     `Generated ${now.toISOString().slice(0, 16).replace('T', ' ')} UTC from ${pl(x.p.builds.length, 'micro-segment build')}${x.lens.rep ? ` · ${x.lens.rep.name}` : x.lens.own ? ' · your own results' : ''}. Judged by Config v${x.validation.versionNo ?? '—'}${builtNos.length ? `; builds made under ${builtNos.join(', ')}` : ''}.`, '',
-    '## The two success gates',
-    `- G1 reduced human effort: ${gates.g1.value === null ? 'not enough data' : Math.round(gates.g1.value) + '% less'} (${m.minutes === null ? '—' : Math.round(m.minutes * 10) / 10 + ' min'} per usable first action against a ${m.base} min baseline; threshold ${settings.g1Threshold}% less): ${said[gates.g1.state]}`,
-    `- G2 recommendation acceptance: ${gates.g2.value === null ? 'not enough data' : Math.round(gates.g2.value) + '%'} on first pass, weighted across both paths (threshold ${settings.g2Threshold}%): ${said[gates.g2.state]}`,
-    `  - Proceeded path: ${pct0(m.auto.pct)} of ${m.auto.n} spot-checks, from ${m.autoN} items`,
-    `  - Exception path: ${pct0(m.exc.pct)} of ${m.exc.n} decisions, from ${m.excN} items`,
-    `  - Within one alternative: ${pct0(m.alternatives.pct)} of ${m.alternatives.n}`, '',
-    ...areas.flatMap((a, i) => [`## ${i + 1} · ${a.title}`, ...(a.stateLabel ? [`- Measured: ${a.stateLabel}`] : []), ...a.evidence.map(e => `- ${e.label}: ${e.value}${e.sub ? ` (${e.sub})` : ''}`),
-      `- Validator verdict: ${verdictLine(rs.current[a.key]) || 'not yet judged'}`, '']),
-    '## Work done', ...funnelStages(x.p, x.items, x.logs).map(s => `- ${s.k}: ${s.n} (${s.sub})`), '',
-    '## Decision reasons',
-    ...(ev.reasons.length ? ev.reasons.map(r => `- ${r.code ? r.code + ' ' : ''}${r.reason}: ${r.n}`) : ['- No rejections yet']),
-    `- By cause: ${m.causes.data} from gaps in the Client's data, ${m.causes.system} from the system's judgement, ${m.causes.other} other; ${m.compliance} compliance send-backs`,
-    `- What worked (acceptance tags): ${ev.tags.length ? ev.tags.map(t => `${t.tag} ${t.n}`).join(', ') : 'none yet'}`, '',
-    '## What better data would add', ...((d => (d.length ? d.map(s => `- ${s}`) : ['- No data gaps found']))(betterData(x))), '',
-    '## Sponsor decision', `- ${verdictLine(rs.current.sponsor) || 'Not yet decided'}`,
+    '## The result', result, '',
+    '## The six areas',
+    '| Area | Verdict | Key number |', '| --- | --- | --- |',
+    ...areas.map(a => `| ${a.title} | ${rs.current[a.key]?.verdict ?? 'Not yet judged'} | ${keyOf(a)} |`), '',
+    '## What worked', ...(worked.length ? worked.map(w => `- ${w}`) : ['- Nothing to report yet']), '',
+    "## What didn't", ...(didnt.length ? didnt.map(w => `- ${w}`) : ['- Nothing to report yet']), '',
+    '## The decision needed', decision,
   ];
   return { ...lensInfo(x), reps: await repsFor(scope, x.lens), builds: x.p.builds.length, areas, text: lines.join('\n'),
     sponsor: rs.current.sponsor ?? null, verdicts: rs.current, canDecide: isManager(actor.role) };
@@ -559,7 +623,7 @@ export async function validationView(scope: TenantScope, actor: Actor) {
     .where(eq(signalTypeChanges.businessUnitId, bu));
   const word: Record<string, string> = { off: 'switched off', on: 'switched on', added: 'added', removed: 'removed' };
   return {
-    ...lensInfo(x), canEdit: isManager(actor.role), settings: x.settings, configVersion: x.validation.versionNo, dealThreshold: CONFIG.dealSize.threshold, builds: x.p.builds.length,
+    ...lensInfo(x), canEdit: isManager(actor.role), settings: x.settings, configVersion: x.validation.versionNo, dealThreshold: x.settings.dealSizeThreshold, builds: x.p.builds.length,
     sample: { released: x.m.released, minutes: Math.round(x.logs.filter(l => l.decisive).reduce((t, l) => t + (l.seconds || 0), 0) / 60 * 10) / 10, exceptions: x.m.exc.n, spotChecks: x.m.auto.n },
     versions: versions.map(v => ({ versionNo: v.versionNo, status: v.status, activatedAt: v.activatedAt, by: v.versionNo === 1 && !v.activatedAt ? null : v.by,
       changes: [...signalChanges.filter(c => c.id === v.id).map(c => `${c.type} ${word[c.change]}`), ...gateChanges.filter(c => c.id === v.id).flatMap(c => c.changes)] })),

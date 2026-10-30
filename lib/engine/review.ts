@@ -75,12 +75,22 @@ export const segOf = (r: Pick<Rec, 'segment'>, st: Pick<RecState, 'assignedSegme
 
 export const isSensitive = (chk: CheckResult): boolean => chk.flags.some(f => f.rule === 'Sensitive term');
 
-/* Step 1 · Exception check. Anything that passes goes ahead on its own; anything else waits for a person. */
-export function exceptionReasons(r: Rec, draft: Pick<Draft, 'unreachable' | 'why'>, chk: CheckResult): string[] {
+/** What the exception check needs beyond the item: the unit's new micro-segments still waiting for approval (lower
+ *  case) and the deal-size threshold in Setup. */
+export type ReasonContext = { waitingSegments?: ReadonlySet<string>; dealThreshold?: number };
+export const NEW_SEGMENT = 'New segment: needs approval';
+export const NEW_ACTION = 'New action: not in the action library';
+
+/* Step 1 · Exception check. Anything that passes goes ahead on its own; anything else waits for a person. A micro-segment
+   the AI created waits for the sales manager's approval, and an action outside the library for a person (30 Oct 2026). */
+export function exceptionReasons(r: Rec, draft: Pick<Draft, 'unreachable' | 'why'>, chk: CheckResult, ctx: ReasonContext = {}): string[] {
   const out: string[] = [];
   if (!r.segment) out.push('Segment too small');
-  const deal = estimateDealSize(r.account);
-  if (deal && deal.below) out.push(`Below the deal-size threshold: about USD ${Math.round(deal.value / 1000)}k against ${Math.round(CONFIG.dealSize.threshold / 1000)}k`);
+  else if (ctx.waitingSegments?.has(r.segment.toLowerCase())) out.push(NEW_SEGMENT);
+  if (r.ai?.action && !r.ai.action.inLibrary) out.push(NEW_ACTION);
+  const threshold = ctx.dealThreshold ?? CONFIG.dealSize.threshold;
+  const deal = estimateDealSize(r.account, threshold);
+  if (deal && deal.below) out.push(`Below the deal-size threshold: about USD ${Math.round(deal.value / 1000)}k against ${Math.round(threshold / 1000)}k`);
   if (r.result.confidence === 'low') out.push('Low confidence: no contact in the primary persona');
   if (isSensitive(chk)) out.push('Sensitive content');
   if (draft.unreachable) out.push("Can't reach them: " + draft.why.replace(/\.$/, ''));
@@ -97,13 +107,15 @@ export function fourChecks(reasons: string[]): [string, boolean][] {
   if (has(/deal-size/)) out.push(['Deal size', false]);
   if (has(/^Brand/)) out.push(['Brand and rules', false]);
   if (has(/^Can't reach/)) out.push(['Reachable', false]);
+  if (has(/^New segment/)) out.push(['New micro-segment approved', false]);
+  if (has(/^New action/)) out.push(['Action in the library', false]);
   return out;
 }
 
 /* Why an item needs a person, in a few fixed categories (used by Today and For Review). */
 export const REASON_CATS: Record<string, string> = {
   sensitive: 'Sensitive content', claim: 'Unsupported claim', low: 'Low confidence', small: 'Segment too small', deal: 'Below deal size', brand: 'Brand or rule check',
-  reach: "Can't reach them", fixed: 'Reasons fixed', spot: 'Spot-check', alternative: 'Alternative offered', sentback: 'Sent back', intervention: 'Stepped in', other: 'Other',
+  reach: "Can't reach them", newseg: NEW_SEGMENT, newaction: NEW_ACTION, fixed: 'Reasons fixed', spot: 'Spot-check', alternative: 'Alternative offered', sentback: 'Sent back', intervention: 'Stepped in', other: 'Other',
 };
 export function reasonCats(st: Pick<RecState, 'spot' | 'why' | 'reasons' | 'fixed'>, live: { reasons: string[]; unreachable: boolean }): string[] {
   if (st.spot === 'pending') return ['spot'];
@@ -111,15 +123,29 @@ export function reasonCats(st: Pick<RecState, 'spot' | 'why' | 'reasons' | 'fixe
   if (st.why === 'sent back') return ['sentback'];
   if (st.why === 'stepped in') return ['intervention'];
   const out: string[] = [];
+  let approved = false;
   (st.reasons.length ? st.reasons : live.reasons).forEach(t => {
     const c = /^Sensitive/.test(t) ? 'sensitive' : /claim/.test(t) ? 'claim' : /^Low confidence/.test(t) ? 'low'
-      : /^Segment too small/.test(t) ? 'small' : /deal-size/.test(t) ? 'deal' : /^Brand/.test(t) ? 'brand' : /^Can't reach/.test(t) ? 'reach' : 'other';
+      : /^Segment too small/.test(t) ? 'small' : /deal-size/.test(t) ? 'deal' : /^Brand/.test(t) ? 'brand' : /^Can't reach/.test(t) ? 'reach'
+      : /^New segment/.test(t) ? 'newseg' : /^New action/.test(t) ? 'newaction' : 'other';
+    // A new micro-segment approved since the item was routed no longer holds it.
+    if (c === 'newseg' && !live.reasons.some(x => /^New segment/.test(x))) { approved = true; return; }
     if (!out.includes(c)) out.push(c);
   });
-  if (!out.length) return ['other'];
+  if (!out.length) return [approved ? 'fixed' : 'other'];
   // Reasons a person fixed on the account: a confirmed contact, a way to reach them, a micro-segment.
   const left = out.filter(c => !st.fixed.includes(c) && !(c === 'reach' && !live.unreachable));
   return left.length ? left : ['fixed'];
+}
+
+/** Where an item is, in words (the exports and the learning loop): went ahead, waiting for a person, released, closed. */
+export function whereItIs(x: { status: string; released: string | null; spot: string | null; passed?: boolean }): string {
+  if (x.spot === 'pending') return 'Went ahead; drawn for a spot-check';
+  if (x.status === 'Waiting') return 'Waiting in For Review';
+  if (x.status === 'Awaiting approval') return "Waiting for the sales manager's approval";
+  if (x.status === 'Released') return x.released === 'auto' ? 'Went ahead on its own' : x.released === 'approved' ? 'Released: approved by the sales manager' : 'Released after review';
+  if (x.status === 'Closed') return 'Closed: rejected';
+  return x.status;
 }
 
 /* ─── Review by when (shown in the viewer's own time zone) ─── */
@@ -325,6 +351,8 @@ export function meetingScript(r: Rec, st: RecState, x: Partial<Draft>, brand: Br
 export interface LogFacts {
   decisive: boolean; firstPass: boolean | null; accepted: boolean | null; kind: string | null; flag: string | null; checked: boolean;
   segment: string; reason: string; cause: string | null; compliance: boolean; intervention: boolean; editRating: string | null; seconds: number | null;
+  /** The item the decision was on: G1 divides review time by the items a person handled. */
+  recommendationId?: string;
 }
 const counts = (l: LogFacts) => !l.flag || l.checked;
 const rate = (ls: LogFacts[]) => { const n = ls.length, a = ls.filter(l => l.accepted).length; return { n, a, pct: n ? a / n * 100 : null }; };
@@ -350,8 +378,12 @@ export function measure(items: { passed: boolean; status: string; outcome: strin
   const rejections = decisive.filter(l => !l.accepted);
   const reasons: Record<string, number> = {}; rejections.forEach(l => { reasons[l.reason] = (reasons[l.reason] || 0) + 1; });
   const released = items.filter(x => x.status === 'Released').length;
+  // G1 (30 Oct 2026): review minutes over the first actions a person handled, not over every released item. Dividing by
+  // items that went ahead with nobody touching them read as about 100% saved early on. Preparation and sending time
+  // are not recorded in the pilot, so they are not added.
   const secs = decisive.reduce((t, l) => t + (l.seconds || 0), 0);
-  const minutes = released ? secs / 60 / released : null;
+  const handled = new Set(decisive.map((l, i) => l.recommendationId ?? `#${i}`)).size;
+  const minutes = handled ? secs / 60 / handled : null;
   return {
     items: items.length, autoN, excN, auto, exc, weighted, pooled: rate(first),
     partial: auto.pct === null || exc.pct === null,
@@ -362,7 +394,7 @@ export function measure(items: { passed: boolean; status: string; outcome: strin
     compliance: logs.filter(l => l.compliance).length,
     edits: { none: decisive.filter(l => l.accepted && l.editRating === 'none').length, minor: decisive.filter(l => l.editRating === 'minor').length, major: decisive.filter(l => l.editRating === 'major').length },
     outcomes: items.reduce((o: Record<string, number>, x) => { if (x.outcome) o[x.outcome] = (o[x.outcome] || 0) + 1; return o; }, {}),
-    released, minutes, base, saved: minutes !== null ? (1 - minutes / base) * 100 : null,
+    released, handled, minutes, base, saved: minutes !== null ? (1 - minutes / base) * 100 : null,
   };
 }
 

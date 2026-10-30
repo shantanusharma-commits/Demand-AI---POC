@@ -109,7 +109,7 @@ test('G-002: an added type has its definition, makes a version and reopens a sig
   assert.deepEqual([setup.sections.signals.status, setup.sections.signals.note], ['review', 'Demo request added'], 'the section needs signing off again');
   const def = (await owner.query(`SELECT definition FROM signal_type_changes WHERE change = 'added'`)).rows[0].definition;
   assert.equal(def.name, 'Demo request');
-  for (const [bad, re] of [[{ ...DEMO }, /already a signal type/], [{ ...DEMO, name: 'email clicked' }, /already a signal type/], [{ ...DEMO, name: 'Site visit', segment: 'Nowhere' }, /micro-segment/],
+  for (const [bad, re] of [[{ ...DEMO }, /already a signal type/], [{ ...DEMO, name: 'email clicked' }, /already a signal type/], [{ ...DEMO, name: 'Site visit', about: '' }, /what the signal means/],
     [{ ...DEMO, name: 'Site visit', full: 60, zero: 30 }, /gone after/]] as const) {
     await assert.rejects(as(admin(), s => addSignalType(s, adminActor(), bad)), status(400, re), bad.name);
   }

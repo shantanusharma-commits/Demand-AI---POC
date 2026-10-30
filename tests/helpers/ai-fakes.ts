@@ -67,14 +67,16 @@ export function signalTopic(signal: string): string {
 /** A drafter that writes plain, grounded copy about the signal's topic and picks the first approved claim, or answers
  *  with `over`. */
 export function draftWriter(over?: (ask: ReturnType<typeof draftAsk>, n: number) => Record<string, unknown> | null): StepFn {
+  // draft.message v4 replies name the framework they followed; "none" unless the script says otherwise.
+  const fw = (o: Record<string, unknown>) => ('claimId' in o && !('framework' in o) ? { ...o, framework: 'none' } : o);
   return (req, n) => {
     const a = draftAsk(req);
     const own = over?.(a, n);
-    if (own) return json(own);
+    if (own) return json(fw(own));
     const topic = signalTopic(a.signal) || 'this topic';
     return json(a.channel === 'LinkedIn' ? { note: `thanks for the interest in ${topic}; it would be good to compare notes.` }
-      : { subject: 'about your question', opening: `Thanks for getting in touch about ${topic}.`, bridge: 'A short conversation is usually the quickest way to work out what fits your site.',
-        ask: 'Would a short call next week help?', claimId: a.claimIds[0] });
+      : fw({ subject: 'about your question', opening: `Thanks for getting in touch about ${topic}.`, bridge: 'A short conversation is usually the quickest way to work out what fits your site.',
+        ask: 'Would a short call next week help?', claimId: a.claimIds[0] }));
   };
 }
 
@@ -110,3 +112,32 @@ export function briefReader(over: Record<string, unknown> = {}): StepFn {
 export const rewriteIds = (req: ModelRequest) => [...req.messages[0].content.matchAll(/^\[([\w-]+)\] \(/gm)].map(m => m[1]);
 /** A rewrite's parts as content.rewrite v2 and v3 answer: every offered part, null where it stays as it is. */
 export const rewriteParts = (req: ModelRequest, changes: Record<string, string | string[]>) => Object.fromEntries(rewriteIds(req).map(id => [id, changes[id] ?? null]));
+
+export type NbaItem = { ref: number; rows: number[] };
+/** The accounts of a micro-segment or next-action request (nba.segment, nba.action), as sent: each ref with its signal rows. */
+export function nbaAccounts(req: ModelRequest): NbaItem[] {
+  const block = req.messages.find(m => m.role === 'user')!.content.match(/<accounts>\n([\s\S]*?)\n<\/accounts>/)?.[1] ?? '';
+  const out: NbaItem[] = [];
+  for (const line of block.split('\n')) {
+    const head = line.match(/^(\d+)\. /);
+    if (head) { out.push({ ref: Number(head[1]), rows: [] }); continue; }
+    const r = line.match(/^ {3}row (-?\d+) · /);
+    if (r && out.length) out.at(-1)!.rows.push(Number(r[1]));
+  }
+  return out;
+}
+/** A segmenter that puts every account where `pick` says, citing its first signal row. */
+export function segmenter(pick: (it: NbaItem) => { segment: string; isNew: boolean; theme?: string }): StepFn {
+  return req => json({ items: nbaAccounts(req).map(it => {
+    const p = pick(it);
+    return { ref: it.ref, segment: p.segment, isNew: p.isNew, theme: p.theme ?? 'Plants adding capacity', why: 'Its signals say it is adding capacity.', rows: it.rows.slice(0, 1), confidence: 'High' };
+  }) });
+}
+/** An action chooser that answers every account with `pick`, citing its first signal row. */
+export function actionChooser(pick: (it: NbaItem) => { action: string; inLibrary: boolean; claims?: string[]; runnerUp?: { action: string; inLibrary: boolean } }): StepFn {
+  return req => json({ items: nbaAccounts(req).map(it => {
+    const p = pick(it);
+    return { ref: it.ref, action: p.action, inLibrary: p.inLibrary, why: 'Its newest signal calls for it.', rows: it.rows.slice(0, 1), claims: p.claims ?? [], confidence: 'Medium',
+      runnerUp: { ...(p.runnerUp ?? { action: 'Offer a site assessment', inLibrary: true }), why: 'The next best fit for its signals.' } };
+  }) });
+}

@@ -1,0 +1,2 @@
+ALTER TABLE "config_signoffs" DROP CONSTRAINT "config_signoffs_section_check";--> statement-breakpoint
+ALTER TABLE "config_signoffs" ADD CONSTRAINT "config_signoffs_section_check" CHECK ("config_signoffs"."section" in ('scope', 'rubric', 'personas', 'signals', 'actions', 'segments', 'measurement', 'brand', 'users'));

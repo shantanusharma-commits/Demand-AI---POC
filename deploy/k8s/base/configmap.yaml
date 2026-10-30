@@ -23,6 +23,9 @@ data:
   AI_FEATURE_DRAFTING: "0"
   AI_FEATURE_CONTENT_STUDIO: "0"
   AI_FEATURE_COPILOT: "0"
+  AI_FEATURE_SEGMENTS: "0"
+  AI_FEATURE_NEXT_ACTION: "0"
+  AI_FEATURE_GUIDELINE: "0"
   # The pilot's API Management gateway answers in 1 to 30 s; 45 s per attempt leaves room (docs/AI.md §4).
   AI_TIMEOUT_MS: "45000"
   AZURE_OPENAI_DEPLOYMENT: gpt-5.4

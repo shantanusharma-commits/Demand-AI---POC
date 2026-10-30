@@ -5,7 +5,7 @@ import { addSignalType } from '@/lib/server/services/setup';
 
 const Body = z.object({
   name: z.string().trim().min(1, 'Give the signal a name, as it appears in the signal_type column').max(80),
-  segment: z.string().max(80),
+  segment: z.string().trim().max(80).default(''),
   level: z.enum(['Strong', 'Medium', 'Light']),
   full: z.coerce.number().int().min(1).max(3650),
   zero: z.coerce.number().int().min(2).max(3650),

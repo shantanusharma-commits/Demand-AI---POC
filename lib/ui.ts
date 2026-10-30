@@ -12,9 +12,10 @@ export function showToast(msg: string): void {
 
 export function initials(n: string): string { return n.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase(); }
 
-/** An avatar's background: the brand palette's darker shades, so the white initials meet 4.5:1 (G-035). */
+/** An avatar's background: the brand palette's darker shades, so the white initials meet 4.5:1 (G-035). The first is
+ *  the brand colour itself, so a client theme recolours it. */
 export function avColor(id: unknown): string {
-  const c = ['#7D52A2', '#0077B0', '#B85800', '#2A7553', '#B23F3F'];
+  const c = ['var(--brand)', '#0077B0', '#B85800', '#2A7553', '#B23F3F'];
   let h = 0;
   for (const ch of String(id)) h += ch.charCodeAt(0);
   return c[h % c.length];

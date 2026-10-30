@@ -32,10 +32,21 @@ export interface NbaResult {
   confidence?: Confidence; confidenceWhy?: string;
 }
 export interface RunnerUp { action: string; reason: string; fromStrongest?: boolean }
+export type AiConfidence = 'High' | 'Medium' | 'Low';
+/** What the AI chose for a recommendation (30 Oct 2026), each with its reason, the signals (by row) and approved claims
+ *  (by ID) it cites, and a confidence. Absent: the rules chose (the switch is off, or the AI failed its checks). */
+export interface RecAi {
+  segment?: { isNew: boolean; theme: string; why: string; confidence: AiConfidence; callId: string };
+  action?: { inLibrary: boolean; why: string; signals: number[]; claims: string[]; confidence: AiConfidence; callId: string;
+    runnerUp: { action: string; inLibrary: boolean; why: string } | null };
+  /** Why the rules decided instead, when the AI was asked. */
+  fallback?: { segment?: string; action?: string };
+}
 export interface Rec {
   key: string; contact: NbaContact; account: NbaAccount; result: NbaResult; person: NbaPerson; segment: string | null; prominent: string;
   prominentSignal: NbaSignal; groupedOn: NbaSignal; fallback: boolean; action: string; runnerUp: RunnerUp | null; signal: NbaSignal;
   exception: string; reason: string; status: string; persona: string;
+  ai?: RecAi;
 }
 export interface Segmentation {
   segments: { name: string; accountIds: string[]; recs?: Rec[] }[]; recs: Rec[]; exceptions: Rec[];
@@ -48,7 +59,7 @@ const segmentOf = (sg: NbaSignal): string | undefined => sg.segment || CONFIG.si
 /* ─── Estimated deal size, for the proceed criteria ───
    A rough first-deal estimate: a base by how core the vertical is, scaled by company size and account type.
    Null when there's nothing to go on (no revenue and no headcount), so the rule isn't applied. */
-export function estimateDealSize(account: Partial<NbaAccount>): { value: number; below: boolean; basis: string } | null {
+export function estimateDealSize(account: Partial<NbaAccount>, threshold = CONFIG.dealSize.threshold): { value: number; below: boolean; basis: string } | null {
   const d = CONFIG.dealSize, b = CONFIG.sizeBands;
   const rev = parseNumber(account.revenue ?? '').value, emp = parseNumber(account.employees ?? '').value;
   if (rev === null && emp === null) return null;
@@ -57,7 +68,7 @@ export function estimateDealSize(account: Partial<NbaAccount>): { value: number;
     : (emp! >= b.employeesAbove ? 1 : emp! >= b.employeesIn ? 0.6 : 0.35);
   const type = (CONFIG.accountTypes[normKey(account.accountType) as keyof typeof CONFIG.accountTypes] || CONFIG.accountTypes.other).level;
   const value = Math.round(base * size * (0.4 + 0.6 * type / 100) / 1000) * 1000;
-  return { value, below: value < d.threshold, basis: `${account.verticalLevel || 'other'} vertical, ${rev !== null ? 'revenue' : 'headcount'} band, ${account.accountType || 'account type unknown'}` };
+  return { value, below: value < threshold, basis: `${account.verticalLevel || 'other'} vertical, ${rev !== null ? 'revenue' : 'headcount'} band, ${account.accountType || 'account type unknown'}` };
 }
 
 /* ─── Micro-segments straight from a file: prospects with their signals, one row per signal ───
@@ -152,8 +163,10 @@ export function segmentRanks(r: NbaResult): { segment: string; signal: NbaSignal
   return [...best.entries()].sort((a, b) => b[1].weight - a[1].weight).map(([segment, signal]) => ({ segment, signal }));
 }
 
-export function buildSegments(results: NbaResult[], opts: { min?: number; keys?: string[]; engaged?: Map<string, string> } = {}): Segmentation {
+export function buildSegments(results: NbaResult[], opts: { min?: number; keys?: string[]; engaged?: Map<string, string>; library?: Record<string, string[]> } = {}): Segmentation {
   const min = opts.min || CONFIG.minSegmentAccounts;
+  // The action library in Setup (30 Oct 2026; the starting one is CONFIG.segmentLibrary): the active actions per segment.
+  const library = opts.library ?? CONFIG.segmentLibrary;
   const keep = opts.keys ? new Set(opts.keys) : null;
   const accounts = results.filter(r => r.people && (r.signalCount ?? 0) > 0)
     .map(r => ({ r, ranks: segmentRanks(r) }))
@@ -195,13 +208,14 @@ export function buildSegments(results: NbaResult[], opts: { min?: number; keys?:
   for (const a of accounts) {
     const r = a.r, as = assigned.get(r.account.id), prominent = a.ranks[0];
     const segment = as ? as.segment : null;
-    const lib = CONFIG.segmentLibrary[segment || prominent.segment] || ['Follow up'];
+    // No library action for the segment (a new one, or a type added without one): a generic but correct action (C3).
+    const lib = library[segment || prominent.segment] || [`Follow up on the ${lowerFirst(prominent.signal.type || 'signal')}`];
     const fallback = !!as && as.rank > 0;
     const action = lib[0];
     let runnerUp: RunnerUp | null;
     if (!segment) runnerUp = lib[1] ? { action: lib[1], reason: 'Second option for its strongest signal' } : null;
     else if (fallback) {
-      runnerUp = { action: CONFIG.segmentLibrary[prominent.segment][0], fromStrongest: true,
+      runnerUp = { action: (library[prominent.segment] ?? [`Follow up on the ${lowerFirst(prominent.signal.type || 'signal')}`])[0], fromStrongest: true,
         reason: `Its strongest signal is ${prominent.signal.type} (${prominent.segment}), but fewer than ${min} accounts share it, so it is grouped under ${segment} on its next signal. This is the offering for that strongest signal.` };
     } else runnerUp = lib[1] ? { action: lib[1], reason: `Second option in the ${segment} library` } : null;
     // One recommendation per account: the person with the strongest signals (people are already in that order).
@@ -290,7 +304,8 @@ export const FRAMEWORK_ACTIONS: Record<string, { label: string; how: string; too
   event:   { label: 'Register for a session', how: 'Webinar or event sign-up link', tools: ['Zoom', 'Webex', 'Microsoft Teams'] },
   reply:   { label: 'Reply to the email', how: 'No link needed', tools: [] },
 };
-export interface Framework { objective: string; name: string; steps: string[]; use: string; actions: string[] }
+/** A messaging framework: what a message is for, its steps in order, and (30 Oct 2026) the ask it ends with. */
+export interface Framework { objective: string; name: string; steps: string[]; use: string; actions: string[]; ask?: string }
 export const FRAMEWORKS: Framework[] = [
   { objective: 'Book a first meeting', name: 'Trigger, insight, ask', steps: ['Their trigger: the signal that makes it timely', 'One insight or approved proof', 'One clear ask'], use: 'Often', actions: ['meeting', 'reply'] },
   { objective: 'Answer an inquiry', name: 'Question, answer, next step', steps: ['Restate what they asked', 'Answer it briefly', 'Offer a short call with a specialist'], use: 'Often', actions: ['ticket', 'form', 'call'] },
@@ -306,7 +321,9 @@ export const FRAMEWORKS: Framework[] = [
    Here it is just an argument; defaultBrand() is the starting pack. */
 export interface BrandPack {
   v: number;
-  voice: { preset: string; signoff: string; maxWords: number; maxSentenceWords: number; noExclamation: boolean; bannedOpeners: string[]; notes: string };
+  /** `guidance` (30 Oct 2026): the Voice and tone notes, writing guidance with no field of its own ("British spelling",
+   *  "name the site", "never promise a date or a price"), sent to the message-writing AI. */
+  voice: { preset: string; signoff: string; maxWords: number; maxSentenceWords: number; noExclamation: boolean; bannedOpeners: string[]; notes: string; guidance?: string[] };
   negative: string[]; competitors: string[]; claims: Claim[]; framework: Record<string, Play>; frameworks: Framework[];
   guideline: unknown; history: { v: number; at: string | number | null; by: string; note: string }[];
 }
@@ -379,6 +396,15 @@ export function proofFor(action: string, rec: Rec, asOf?: string, brand: BrandPa
   const live = fits.filter(c => !asOf || c.expiry >= asOf).sort((a, b) => Number(b.segments[0] === seg) - Number(a.segments[0] === seg));
   return { item: live[0] || null, expired: fits.filter(c => asOf && c.expiry < asOf) };
 }
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const dayWords = (iso: string) => { const [y, m, d] = iso.split('-').map(Number); return y && m && d ? `${d} ${MONTHS[m - 1]} ${y}` : iso; };
+/** Why the action is a task and not a message (D-10), in words for the screens: the micro-segment with no approved,
+ *  unexpired claim and the claims that lapsed. Null when it has proof. */
+export function taskWhy(rec: Rec, action: string, asOf?: string, brand: BrandPack = defaultBrand()): string | null {
+  const p = proofFor(action, rec, asOf, brand);
+  if (p.item) return null;
+  return `No approved claim for ${segmentOfAction(action, rec)}${p.expired.length ? ` (${p.expired.map(c => `${c.id} expired ${dayWords(c.expiry)}`).join(', ')})` : ''}`;
+}
 
 /* 5.10 Channel within hard limits: email only if verified, LinkedIn only with a URL, and only for someone who can be
    contacted at all (G-007: a recognised consent basis and an opt-out confirmed N; not taken out by a reviewer). */
@@ -430,6 +456,8 @@ export interface Draft {
   subject?: string; body?: string; words?: number; note?: string; task?: string; text?: string; script?: ReturnType<typeof callScript>;
   /** Written with AI (Phase 6): the call and the prompt template; absent for the rules' drafts. */
   ai?: { callId: string; template: string };
+  /** The messaging framework the AI followed, by its objective (30 Oct 2026). */
+  framework?: string;
 }
 
 /* 5.12–5.15 The draft. D-10: with no approved, unexpired proof point for the case, the action is a task for the account

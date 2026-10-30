@@ -87,3 +87,25 @@ export function inspectXlsx(b: Buffer, limits: ZipLimits = DEFAULT_ZIP_LIMITS): 
   }
   return { ok: true, entries: cd.length, unzippedBytes: total };
 }
+
+/** The entries a reader needs from an Office file (a guideline in Word or PowerPoint), each inflated with a hard cap and
+ *  the archive's total capped too; encrypted, ZIP64 and corrupt archives are refused with the problem. */
+export function readZipEntries(b: Buffer, want: (name: string) => boolean, limits: ZipLimits = DEFAULT_ZIP_LIMITS): Map<string, Buffer> | ZipProblem {
+  const cd = centralDirectory(b);
+  if (typeof cd === 'string') return cd;
+  if (cd.length > limits.maxEntries) return 'too_many_entries';
+  const out = new Map<string, Buffer>();
+  let total = 0;
+  for (const e of cd) {
+    if (!want(e.name)) continue;
+    if (e.flags & 1) return 'encrypted';
+    const budget = limits.maxUnzippedBytes - total;
+    if (e.size > budget) return 'too_large_unzipped';
+    const data = inflateEntry(b, e, Math.min(budget, e.size + 1));
+    if (typeof data === 'string') return data;
+    if (data.length !== e.size) return data.length > e.size ? 'too_large_unzipped' : 'corrupt';
+    total += data.length;
+    out.set(e.name, data);
+  }
+  return out;
+}

@@ -10,14 +10,15 @@
 import { CONFIG } from '../demandai-engine.ts';
 import type { measure } from './review.ts';
 
+/** The measurement and proceed criteria (Setup, 30 Oct 2026; was Analytics › Validation), deal-size threshold included. */
 export type ValidationSettings = {
-  g1BaselineMinutes: number; g1BaselineTimed: boolean; g1Threshold: number; g2Threshold: number; minDecisions: number; spotCheckShare: number;
+  g1BaselineMinutes: number; g1BaselineTimed: boolean; g1Threshold: number; g2Threshold: number; minDecisions: number; spotCheckShare: number; dealSizeThreshold: number;
 };
-type NumericKey = 'g1BaselineMinutes' | 'g1Threshold' | 'g2Threshold' | 'minDecisions' | 'spotCheckShare';
+type NumericKey = 'g1BaselineMinutes' | 'g1Threshold' | 'g2Threshold' | 'minDecisions' | 'spotCheckShare' | 'dealSizeThreshold';
 
 /** The range each setting may take; minDecisions is a whole number. spotCheckShare is a fraction (0.2 = 20%). */
 export const VALIDATION_LIMITS: Record<NumericKey, [number, number]> = {
-  g1BaselineMinutes: [1, 600], g1Threshold: [1, 100], g2Threshold: [1, 100], minDecisions: [1, 1000], spotCheckShare: [0.01, 1],
+  g1BaselineMinutes: [1, 600], g1Threshold: [1, 100], g2Threshold: [1, 100], minDecisions: [1, 1000], spotCheckShare: [0.01, 1], dealSizeThreshold: [0, 100_000_000],
 };
 const NUMERIC = Object.keys(VALIDATION_LIMITS) as NumericKey[];
 
@@ -27,14 +28,17 @@ const inRange = (k: NumericKey, v: unknown): v is number =>
 /** The settings a configuration body holds; anything missing or out of range reads as the starting value. */
 export function validationOf(body: unknown): ValidationSettings {
   const b = (body && typeof body === 'object' ? body : {}) as Record<string, unknown>;
-  const num = (k: NumericKey) => (inRange(k, b[k]) ? b[k] as number : CONFIG[k]);
+  const start: Record<NumericKey, number> = { g1BaselineMinutes: CONFIG.g1BaselineMinutes, g1Threshold: CONFIG.g1Threshold, g2Threshold: CONFIG.g2Threshold,
+    minDecisions: CONFIG.minDecisions, spotCheckShare: CONFIG.spotCheckShare, dealSizeThreshold: CONFIG.dealSize.threshold };
+  const num = (k: NumericKey) => (inRange(k, b[k]) ? b[k] as number : start[k]);
   return { g1BaselineMinutes: num('g1BaselineMinutes'), g1BaselineTimed: b.g1BaselineTimed === true, g1Threshold: num('g1Threshold'),
-    g2Threshold: num('g2Threshold'), minDecisions: num('minDecisions'), spotCheckShare: num('spotCheckShare') };
+    g2Threshold: num('g2Threshold'), minDecisions: num('minDecisions'), spotCheckShare: num('spotCheckShare'), dealSizeThreshold: num('dealSizeThreshold') };
 }
 
 const FIELD_HELP: Record<NumericKey, string> = {
   g1BaselineMinutes: 'Minutes per usable first action, between 1 and 600.', g1Threshold: 'A percentage between 1 and 100.',
   g2Threshold: 'A percentage between 1 and 100.', minDecisions: 'A whole number of decisions, between 1 and 1000.', spotCheckShare: 'A share between 1% and 100%.',
+  dealSizeThreshold: 'An amount in USD between 0 and 100,000,000 (0 sends no item to a person for its deal size).',
 };
 /** What is wrong with a change, per field, or null. */
 export function validationProblem(input: Partial<ValidationSettings>): Record<string, string[]> | null {
@@ -54,6 +58,7 @@ export function validationChanges(a: ValidationSettings, b: ValidationSettings):
   if (a.g2Threshold !== b.g2Threshold) out.push(`G2 threshold ${a.g2Threshold}% → ${b.g2Threshold}% accepted`);
   if (a.minDecisions !== b.minDecisions) out.push(`Too early to call below ${a.minDecisions} → ${b.minDecisions} decisions`);
   if (a.spotCheckShare !== b.spotCheckShare) out.push(`Weekly spot-check ${pc(a.spotCheckShare)} → ${pc(b.spotCheckShare)} of items that proceeded`);
+  if (a.dealSizeThreshold !== b.dealSizeThreshold) out.push(`Deal-size threshold USD ${Math.round(a.dealSizeThreshold / 1000)}k → ${Math.round(b.dealSizeThreshold / 1000)}k`);
   return out;
 }
 

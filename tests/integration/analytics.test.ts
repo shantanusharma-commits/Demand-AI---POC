@@ -78,10 +78,13 @@ test('a seeded log gives the expected G2 and G1; below ten counted decisions it 
   assert.deepEqual([g.measure.autoN, g.measure.excN, g.measure.pooled.n, g.measure.flagged], [c.auto, c.exc, 9, 1]);
   assert.equal(g.measure.weighted, 80 * c.auto / n + 75 * c.exc / n);
   assert.deepEqual([g.gates.g2.state, g.gates.g2.n, g.gates.g2.min], ['early', 9, 10]);
-  // G1: nine decisions of 120 s and one of 2 s over the released items, against the 38-minute baseline.
-  assert.equal(g.measure.minutes, (9 * 120 + 2) / 60 / c.released);
-  assert.equal(g.gates.g1.value, (1 - (9 * 120 + 2) / 60 / c.released / 38) * 100);
+  // G1 (30 Oct 2026): nine decisions of 120 s and one of 2 s over the ten items a person handled, against the 38-minute
+  // baseline; no longer over every released item (that read as about 100% saved early on).
+  assert.equal(g.measure.handled, 10);
+  assert.equal(g.measure.minutes, (9 * 120 + 2) / 60 / 10);
+  assert.equal(g.gates.g1.value, (1 - (9 * 120 + 2) / 60 / 10 / 38) * 100);
   assert.equal(g.gates.g1.state, 'early');
+  assert.ok(c.released > 10, 'the released items alone would have made it look cheaper');
   // The manager checks the flagged decision: a new row linked to it, and it counts.
   const f = await one(`SELECT nba_run_id, recommendation_id FROM decision_log WHERE id = $1`, [flaggedId]);
   await owner.query(`INSERT INTO decision_log (business_unit_id, nba_run_id, recommendation_id, actor_role, decision, kind, linked_to, created_by)
@@ -181,8 +184,11 @@ test('the six success areas and the readout: evidence per area, the gates where 
   assert.equal(ev('qualification', 'Rejected as the wrong fit or a weak signal').value, '2');
   const r = await as(admin(), s => readoutView(s, mgr()));
   assert.match(r.text, /^# Pilot readout\n\nGenerated .+ UTC from 1 micro-segment build\. Judged by Config v1; builds made under Config v1\./);
-  for (const [i, x] of a.areas.entries()) assert.ok(r.text.includes(`\n## ${i + 1} · ${x.title}\n`), x.title);
-  assert.match(r.text, /\n- G2 recommendation acceptance: \d+% on first pass, weighted across both paths \(threshold 70%\): (met|not met)\n/);
+  // The readout is a short report (30 Oct 2026): the result, the six areas in one table, what worked, what didn't, the decision.
+  assert.deepEqual(a.areas.map(x => x.title), ['Prospecting', 'Account Scoring', 'Signals', 'Micro-segments, NBA and routing', 'Messages and content', 'Business value']);
+  for (const x of a.areas) assert.ok(r.text.includes(`\n| ${x.title} | Not yet judged | `), x.title);
+  assert.match(r.text, /\n## The result\n(People accepted \d+% of recommendations the first time \(target 70%: (met|not met)\), and review time \d+% less than before the pilot \(target 50%: (met|not met)\)|Too early to call: \d+ of 10 decisions counted so far); 0 of 6 areas judged\.\n/);
+  for (const h of ['## The six areas', '## What worked', "## What didn't", '## The decision needed']) assert.ok(r.text.includes(`\n${h}\n`), h);
   assert.ok(!r.text.includes('undefined') && !r.text.includes('NaN'));
   const v = await as(viewer(), s => readoutView(s, viewerActor()));
   assert.equal(v.areas.length, 6, 'a Viewer reads the readout');
@@ -234,9 +240,10 @@ test('readout sign-offs: a verdict per area and the sponsor decision, tied to wh
   assert.deepEqual(value.evidence.slice(-2).map(e => e.value), ['1 of 6 areas', 'Extend the pilot']);
   const r = await as(admin(), s => readoutView(s, mgr()));
   const today = new Date().toISOString().slice(0, 10);
-  assert.ok(r.text.includes(`\n- Validator verdict: Satisfied · admin.a (Admin), ${today}\n`), 'the latest verdict, in the readout');
-  assert.ok(r.text.includes('\n- Validator verdict: not yet judged\n'));
-  assert.ok(r.text.endsWith(`## Sponsor decision\n- Extend the pilot · admin.a (Admin), ${today} · Two more weeks of decisions`));
+  assert.ok(r.text.includes('\n| Account Scoring | Satisfied | G2 first-pass acceptance: '), 'the latest verdict, in the readout');
+  assert.ok(r.text.includes('\n| Prospecting | Not yet judged | '));
+  assert.ok(r.text.includes('\n- Account Scoring: the validator is satisfied\n'), 'what worked');
+  assert.ok(r.text.endsWith(`## The decision needed\nDecided: Extend the pilot · admin.a (Admin), ${today} · Two more weeks of decisions`));
   assert.deepEqual([r.sponsor?.verdict, r.canDecide], ['Extend the pilot', true]);
   await assert.rejects(owner.query(`UPDATE readout_signoffs SET verdict = 'Satisfied'`), /append-only/);
   await assert.rejects(owner.query(`DELETE FROM readouts`), /append-only/);

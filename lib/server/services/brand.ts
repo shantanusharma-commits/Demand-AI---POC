@@ -8,9 +8,13 @@ import { z } from 'zod';
 import { and, desc, eq, max, sql } from 'drizzle-orm';
 import { CONFIG } from '../../demandai-engine.ts';
 import { defaultBrand, FRAMEWORK_ACTIONS, VOICE_PRESETS, type BrandPack, type CheckResult, type Rec } from '../../engine/nba.ts';
-import { diffSummary, type BrandDiff } from '../../content/brand.ts';
+import { diffSummary, readRules, type BrandDiff, type RuleSuggestion } from '../../content/brand.ts';
+import { readGuidelineAi, type GuidelineReading } from '../../ai/guideline.ts';
+import { fallbackWords } from '../../ai/words.ts';
+import { DocumentReadError, extractText } from '../documents/extract.ts';
+import { aiGateway, callContext } from '../ai.ts';
 import { brandDocuments, brandDrafts, brandVersions, drafts, nbaRuns, recommendations, SYSTEM_USER_ID, users } from '../db/schema.ts';
-import type { TenantScope } from '../db/tenant.ts';
+import { withTenant, type Db, type TenantContext, type TenantScope } from '../db/tenant.ts';
 import { recordAudit } from '../db/audit.ts';
 import { badRequest, conflict, HttpError, notFound } from '../http/errors.ts';
 import { logger } from '../logger.ts';
@@ -32,18 +36,21 @@ const ClaimInput = z.object({
   status: z.enum(['approved', 'draft', 'retired']), owner: str(120).default(''),
 });
 const FrameworkInput = z.object({
-  objective: str(200).min(1, 'Say what the message is for.'), name: str(120).min(1, 'Name the framework.'), steps: list(12, 300).min(1, 'Give its structure.'),
+  objective: str(200).min(1, 'Say what the message is for.'), name: str(120).min(1, 'Name the framework.'), steps: list(12, 300).min(1, 'Give its structure.'), ask: str(200).optional(),
   use: z.enum(['Often', 'Sometimes', 'Rarely', 'Not used']), actions: z.array(oneOf(Object.keys(FRAMEWORK_ACTIONS), 'Not a call to action.')).max(10).default([]),
 });
 export const PackInput = z.object({
   voice: z.object({
     preset: oneOf(Object.keys(VOICE_PRESETS), 'Pick a voice.'), signoff: str(80), maxWords: z.number().int().min(20).max(1000),
-    maxSentenceWords: z.number().int().min(5).max(200), noExclamation: z.boolean(), bannedOpeners: list(50, 200), notes: str(5000),
+    maxSentenceWords: z.number().int().min(5).max(200), noExclamation: z.boolean(), bannedOpeners: list(50, 200), notes: str(5000), guidance: list(100, 300).optional(),
   }),
   negative: list(500, 100), competitors: list(200, 100),
   claims: z.array(ClaimInput).max(500).refine(cs => new Set(cs.map(c => c.id)).size === cs.length, 'Two claims have the same ID.'),
   frameworks: z.array(FrameworkInput).max(60).refine(fs => new Set(fs.map(f => f.objective.toLowerCase())).size === fs.length, 'Two frameworks have the same objective.'),
   guideline: z.object({ documentId: z.uuid() }).nullable(),
+  // The plays per situation or micro-segment (30 Oct 2026; were kept by the server, out of reach).
+  plays: z.record(str(80).min(1), z.object({ angle: str(300).min(1, 'Give the angle.'), objection: str(300), response: str(400), questions: list(10, 200).default([]) }))
+    .refine(p => Object.keys(p).length <= 60, 'At most 60 plays.').optional(),
 });
 export type PackInput = z.infer<typeof PackInput>;
 
@@ -98,7 +105,7 @@ async function buildPack(scope: TenantScope, input: PackInput, base: BrandPack):
   return {
     v: base.v, voice: input.voice, negative: input.negative, competitors: input.competitors,
     claims: input.claims.map(c => ({ ...c, claim: /[.!?]$/.test(c.claim) ? c.claim : c.claim + '.' })),
-    framework: base.framework, frameworks: input.frameworks, guideline, history: [],
+    framework: input.plays ?? base.framework, frameworks: input.frameworks, guideline, history: [],
   };
 }
 
@@ -206,6 +213,54 @@ export async function getDocument(scope: TenantScope, id: string): Promise<{ fil
     .where(and(eq(brandDocuments.id, id), eq(brandDocuments.businessUnitId, scope.ctx.businessUnitId)));
   if (!doc) throw notFound('That document is not there any more.');
   return doc;
+}
+
+/* ─── Reading a guideline (30 Oct 2026): the AI suggests, a person adds each suggestion to the draft ─── */
+
+/** The AI's reading as suggestions the screen offers one by one, each with the words it comes from. */
+export function suggestionsOf(r: GuidelineReading): RuleSuggestion[] {
+  const out: RuleSuggestion[] = [];
+  r.rules.negative.forEach(x => out.push({ kind: 'Negative keyword', value: x.value, from: x.from }));
+  r.rules.competitors.forEach(x => out.push({ kind: 'Competitor', value: x.value, from: x.from }));
+  r.rules.bannedOpeners.forEach(x => out.push({ kind: 'Banned opener', value: x.value, from: x.from }));
+  if (r.rules.voice) out.push({ kind: 'Voice', value: r.rules.voice.value, from: r.rules.voice.from });
+  if (r.rules.maxSentenceWords) out.push({ kind: 'Sentence length', value: String(r.rules.maxSentenceWords.value), from: r.rules.maxSentenceWords.from });
+  if (r.rules.maxEmailWords) out.push({ kind: 'Email length', value: String(r.rules.maxEmailWords.value), from: r.rules.maxEmailWords.from });
+  if (r.rules.signoff) out.push({ kind: 'Sign-off', value: r.rules.signoff.value, from: r.rules.signoff.from });
+  if (r.rules.noExclamation?.value) out.push({ kind: 'Rule', value: 'No exclamation marks', from: r.rules.noExclamation.from });
+  r.guidance.forEach(x => out.push({ kind: 'Guidance', value: x.value, from: x.from }));
+  r.plays.forEach(x => out.push({ kind: 'Play', value: `${x.segment || x.situation}: ${x.angle}`, from: x.from,
+    play: { key: x.segment || x.situation, angle: x.angle, objection: x.objection, response: x.answer } }));
+  r.frameworks.forEach(x => out.push({ kind: 'Framework', value: `${x.objective}: ${x.name} (${x.steps.join(' → ')}; ask: ${x.ask})`, from: x.from,
+    framework: { objective: x.objective, name: x.name, steps: x.steps, ask: x.ask } }));
+  const seen = new Set<string>();
+  return out.filter(x => { const k = `${x.kind}|${x.value.toLowerCase()}`; return !seen.has(k) && !!seen.add(k); });
+}
+
+export type GuidelineSuggestions = { name: string; source: 'ai' | 'rules'; why: string; note: string; chars: number; suggestions: RuleSuggestion[] };
+
+/** What a stored guideline suggests for the brand pack: read by the AI when it is on (any format, rules in prose
+ *  too), else by the rules' reader (lines written as rules). Nothing changes until a person adds a suggestion and the
+ *  version is saved. The document is read in one transaction and the audit kept in another; the model is called with
+ *  none open (it can take a minute). */
+export async function readGuideline(db: Db, ctx: TenantContext, actor: Actor, documentId: string): Promise<GuidelineSuggestions> {
+  const { doc, segments } = await withTenant(db, ctx, async scope => {
+    const [d] = await scope.tx.select({ name: brandDocuments.fileName, type: brandDocuments.mediaType, bytes: brandDocuments.bytes }).from(brandDocuments)
+      .where(and(eq(brandDocuments.id, documentId), eq(brandDocuments.businessUnitId, scope.ctx.businessUnitId)));
+    if (!d) throw notFound('That document is not there any more.');
+    return { doc: d, segments: [...new Set([...Object.keys(CONFIG.segmentLibrary), ...Object.keys((await liveBrand(scope)).pack.framework ?? {})])] };
+  }, { label: 'brand.read.load' });
+  let text: string, note: string;
+  try { ({ text, note } = extractText(doc.type, doc.bytes)); }
+  catch (err) { if (err instanceof DocumentReadError) throw badRequest(err.message); throw err; }
+  const ai = await readGuidelineAi(aiGateway(), callContext(ctx, { deadlineMs: 120_000 }), text, segments);
+  const suggestions = ai.ok ? suggestionsOf(ai.reading) : readRules(text);
+  const why = ai.ok === true ? 'Read by the AI: every suggestion quotes the words it comes from.'
+    : ai.reason === 'disabled' ? 'Read by the rules: lines written as rules only (the AI reader is switched off).'
+      : `Read by the rules: lines written as rules only (${ai.reason === 'grounding' ? 'the AI quoted words that are not in the document' : fallbackWords(ai.reason)}).`;
+  await withTenant(db, ctx, scope => recordAudit(scope, { action: 'brand.guideline_read', actorRole: actor.role, targetType: 'brand_document', targetId: documentId,
+    details: { source: ai.ok ? 'ai' : 'rules', suggestions: suggestions.length, chars: text.length, ...(ai.ok === true ? { aiCallId: ai.callId } : { reason: ai.reason }) } }), { label: 'brand.read.audit' });
+  return { name: doc.name, source: ai.ok ? 'ai' : 'rules', why, note, chars: text.length, suggestions };
 }
 
 /* ─── Where each claim was used, and what For Review approved that isn't a claim yet ─── */

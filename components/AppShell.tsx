@@ -10,6 +10,7 @@ import { PAGE_ACCESS, PAGES, initialsOf, type PageId, type SessionUser } from '@
 import { api, errorText } from '@/lib/client/api';
 import { showToast } from '@/lib/ui';
 import { SessionProvider } from './SessionContext';
+import { BrandMark, useTheme } from './ThemeContext';
 
 interface NavLink { page: PageId; label: string; icon: ReactNode }
 
@@ -63,6 +64,7 @@ function NoAccess({ user }: { user: SessionUser }) {
 
 export default function AppShell({ page, user, allowed, children }: { page: PageId | 'platform'; user: SessionUser; allowed: boolean; children: ReactNode }) {
   const router = useRouter();
+  const theme = useTheme();
   const [busy, setBusy] = useState(false);
   const role = user.activeBusinessUnit?.role;
   const visible: readonly PageId[] = role ? PAGE_ACCESS[role] : [];
@@ -97,12 +99,9 @@ export default function AppShell({ page, user, allowed, children }: { page: Page
       <div className="shell" data-page={page === 'platform' ? 'platform' : PAGES[page].key}>
         <nav className="nav" aria-label="Main">
           <div className="nav-brand">
-            <div style={{ width: 26, height: 26, flexShrink: 0 }}>
-              <svg width="26" height="26" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                <image href="/demandai-logo.png" width="200" height="200"/>
-              </svg>
-            </div>
-            <div><div className="nav-nm">DemandAI</div></div>
+            {theme ? <div><BrandMark on="dark" height={18} /><div className="nav-nm" style={{ marginTop: 7 }}>DemandAI</div></div> : <>
+              <div style={{ width: 26, height: 26, flexShrink: 0 }}><BrandMark on="dark" height={26} /></div>
+              <div><div className="nav-nm">DemandAI</div></div></>}
           </div>
           <div className="nav-body">
             {item(TODAY)}

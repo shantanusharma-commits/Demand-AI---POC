@@ -6,7 +6,6 @@ ARG NODE_IMAGE=node:24.22.1-alpine3.23@sha256:0468540aa58203ff9e40c2aab3907c5264
 FROM ${NODE_IMAGE} AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
-COPY vendor ./vendor
 RUN npm ci --no-audit --no-fund
 
 FROM ${NODE_IMAGE} AS build

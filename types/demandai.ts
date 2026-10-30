@@ -175,6 +175,8 @@ export interface Signal {
   row: number;
   company: string;
   personRef: string;
+  /** The lead_name column: who the signal is about, by name (blank when the file doesn't say). */
+  leadName?: string;
   type: string;
   date: string;
   detail: string;
@@ -212,7 +214,8 @@ export interface SignalResult {
 }
 
 export interface RubricRow {
-  key: 'vertical' | 'size' | 'site' | 'relationship' | 'accountType' | 'contacts';
+  /** A built-in part ('vertical', 'size', 'site', 'relationship', 'accountType', 'contacts') or one added in Setup. */
+  key: string;
   label: string;
   weight: number;
 }

@@ -6,7 +6,7 @@
 import 'server-only';
 import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
 import * as W from '../../content/studio.ts';
-import { checkContent, type CheckResult, type Rec } from '../../engine/nba.ts';
+import { checkContent, type CheckResult } from '../../engine/nba.ts';
 import * as R from '../../engine/review.ts';
 import { recommendations, studioItems, studioMessages, users } from '../db/schema.ts';
 import { withTenant, type Db, type TenantContext, type TenantScope } from '../db/tenant.ts';
@@ -16,9 +16,10 @@ import { recordAudit } from '../db/audit.ts';
 import { badRequest, conflict, notFound } from '../http/errors.ts';
 import { zipFiles } from '../http/zip-writer.ts';
 import { logger } from '../logger.ts';
+import { activeTheme } from '../theme.ts';
 import { liveBrand } from './brand.ts';
 import type { Actor } from './lists.ts';
-import { loadItem, logItem, pausedSegments, segKey, stateOf } from './recommendations.ts';
+import { recOf, loadItem, logItem, pausedSegments, segKey, stateOf } from './recommendations.ts';
 import { todayUtc } from './scoring.ts';
 
 type Row = typeof studioItems.$inferSelect;
@@ -270,13 +271,19 @@ export async function setReady(scope: TenantScope, actor: Actor, id: string, rea
   return { item: await getItem(scope, id), message };
 }
 
+/** The Word file's header name and accent: the client theme's (APP_THEME), else "Client" in the app's colour. */
+function docxBrand(): { name: string; hex: string } | undefined {
+  const t = activeTheme();
+  return t ? { name: t.name, hex: t.accent.slice(1) } : undefined;
+}
+
 /** The piece as a file: Word (blogs and whitepapers) or Markdown (for the website). */
 export async function exportItem(scope: TenantScope, actor: Actor, id: string, kind: 'docx' | 'md'): Promise<{ fileName: string; body: Buffer | string }> {
   const row = await rowOf(scope, id), blocks = row.blocks as W.Block[];
   await recordAudit(scope, { action: 'studio.exported', actorRole: actor.role, targetType: 'studio_item', targetId: id, details: { kind } });
   if (kind === 'md') return { fileName: W.fileName(row.title, 'md'), body: W.toMarkdown(blocks) };
   const date = row.updatedAt.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
-  return { fileName: W.fileName(row.title, 'docx'), body: zipFiles(W.docxParts({ type: row.type as W.ContentType, title: row.title, blocks }, date)) };
+  return { fileName: W.fileName(row.title, 'docx'), body: zipFiles(W.docxParts({ type: row.type as W.ContentType, title: row.title, blocks }, date, docxBrand())) };
 }
 
 /** A rep adds pieces from the Content library to an outreach message, or to every message with the same action in its
@@ -300,7 +307,7 @@ export async function setContent(scope: TenantScope, actor: Actor, recId: string
       const rows = await scope.tx.select().from(recommendations)
         .where(and(eq(recommendations.nbaRunId, item.run.id), eq(recommendations.businessUnitId, scope.ctx.businessUnitId), sql`${recommendations.id} <> ${recId}`));
       for (const r of rows) {
-        const st = stateOf(r), rec = r.rec as Rec;
+        const st = stateOf(r), rec = recOf(r);
         if (R.segOf(rec, st) !== seg || R.chosenAction(rec, st) !== action) continue;
         await scope.tx.update(recommendations).set({ content: [...new Set([...(r.content ?? []), ...ids])], updatedAt: sql`now()`, updatedBy: actor.userId }).where(eq(recommendations.id, r.id));
         others++;

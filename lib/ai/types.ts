@@ -3,7 +3,7 @@
 // only the gateway calls them.
 
 /** Each thing DemandAI asks a model to do; each sits behind its own flag, with the rules as its fallback. */
-export const CAPABILITIES = ['classify', 'why_now', 'draft_message', 'draft_content', 'copilot', 'healthcheck'] as const;
+export const CAPABILITIES = ['classify', 'why_now', 'draft_message', 'draft_content', 'copilot', 'healthcheck', 'segment', 'next_action', 'read_guideline'] as const;
 export type Capability = (typeof CAPABILITIES)[number];
 
 /** The prompt template a call used. A new wording is a new version, recorded on every call (D-6). */

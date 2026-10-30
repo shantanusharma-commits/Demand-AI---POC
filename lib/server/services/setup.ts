@@ -1,12 +1,22 @@
-// Setup on the server (G-002, D-13, D-41): the unit's configuration versions, sign-offs per section and the signal
-// switches. The rubric, fit floor and personas are fixed for the pilot (D-13) and shown read-only; an Admin may switch
-// signal types off or on (with a reason) and add or remove types. Each signal change makes a new configuration
-// version, so new runs are stamped with it and earlier runs keep the version they used.
+// Setup on the server (G-002, D-41): the unit's configuration versions, sign-offs per section, the signal switches,
+// and (30 Oct 2026, replacing the D-13 lock) the scoring settings, the action library and the measurement criteria an
+// Admin edits. Every change makes a new configuration version with what changed in words, so new lists and runs are
+// stamped with it and earlier ones keep the version they used. The scoring settings can be locked for the measurement
+// weeks, or opened only with the sponsor's sign-off; a preview says how many accounts of the newest scored list would
+// change tier before a change is saved.
 import 'server-only';
-import { and, asc, desc, eq, max, sql } from 'drizzle-orm';
-import { CONFIG, type CustomSignalType } from '../../demandai-engine.ts';
+import { and, asc, desc, eq, inArray, max, or, sql } from 'drizzle-orm';
+import {
+  CONFIG, DEFAULT_SCORING, decayFactor, fitFor, round1, signalTypesFor, stack, tierFor, type Account, type Contact, type CustomSignalType, type ScoringSettings, type Signal, type Tier,
+} from '../../demandai-engine.ts';
 import { ENGINE_VERSION } from '../../engine/config.ts';
-import { CONFIG_SECTIONS, configChanges, configSignoffs, configVersions, signalTypeChanges, users, type ConfigSection } from '../db/schema.ts';
+import { ActionsInput, actionChanges, actionsOf, type LibraryAction } from '../../engine/actions.ts';
+import { ScoringSettingsInput, scoringChanges, scoringSettingsOf } from '../../engine/settings.ts';
+import * as G from '../../engine/gates.ts';
+import {
+  accounts, accountScores, CONFIG_SECTIONS, configChanges, configSignoffs, configVersions, contacts, decisionLog, leadLists, scoringRuns, signals, signalTypeChanges, users,
+  type ConfigSection,
+} from '../db/schema.ts';
 import type { TenantScope } from '../db/tenant.ts';
 import { recordAudit } from '../db/audit.ts';
 import { badRequest, conflict } from '../http/errors.ts';
@@ -20,6 +30,15 @@ export type SignalChange = { type: string; change: 'off' | 'on' | 'added' | 'rem
 export type ConfigVersionRow = { versionNo: number; status: string; activatedAt: Date | null; activatedBy: string | null; engineVersion: string; changes: string[] };
 export type AddedType = CustomSignalType & { by: string | null; at: Date | null };
 
+/** The scoring settings' lock (Setup): open, locked for the measurement weeks, or open only with the sponsor's sign-off. */
+export type ScoringLock = { mode: 'open' | 'locked' | 'sponsor'; note: string; by: string | null; at: string | null };
+export const lockOf = (body: unknown): ScoringLock => {
+  const l = (body && typeof body === 'object' ? (body as { scoringLock?: Partial<ScoringLock> }).scoringLock : null) ?? {};
+  return { mode: l.mode === 'locked' || l.mode === 'sponsor' ? l.mode : 'open', note: String(l.note ?? ''), by: l.by ?? null, at: l.at ?? null };
+};
+/** An action in the library with how often people accepted it (decisive decisions on items recommending it). */
+export type ActionRow = LibraryAction & { judged: number; accepted: number };
+
 export type SetupState = {
   version: { versionNo: number; activatedAt: Date | null; activatedBy: string | null; engineVersion: string };
   sections: Record<ConfigSection, SectionState>;
@@ -29,6 +48,10 @@ export type SetupState = {
   versions: ConfigVersionRow[];
   /** Tags seen in scored signal files that are not signal types yet: candidates to add. */
   unknownTags: { tag: string; rows: number }[];
+  /** The rubric, personas, knock-outs and signal weights in use; `problem` when the stored ones can't be used. */
+  scoring: { settings: ScoringSettings; lock: ScoringLock; problem: string | null; changes: { at: Date; by: string; versionNo: number; kind: string; changes: string[] }[] };
+  actions: { list: ActionRow[]; problem: string | null };
+  measurement: G.ValidationSettings;
 };
 
 const nameOf = sql<string | null>`coalesce(${users.displayName}, 'A former member')`;
@@ -64,6 +87,15 @@ export async function getSetup(scope: TenantScope): Promise<SetupState> {
   const gateChanges = await scope.tx.select({ versionNo: configVersions.versionNo, changes: configChanges.changes }).from(configChanges)
     .innerJoin(configVersions, eq(configVersions.id, configChanges.configVersionId)).where(eq(configChanges.businessUnitId, scope.ctx.businessUnitId));
   const monitoring = await signalMonitoring(scope);
+  let scoring: ScoringSettings = DEFAULT_SCORING, scoringProblem: string | null = null;
+  try { scoring = scoringSettingsOf(v.body); } catch (err) { scoringProblem = `The scoring settings can't be used: ${(err as Error).message}.`; }
+  let library: LibraryAction[] = [], actionsProblem: string | null = null;
+  try { library = actionsOf(v.body); } catch (err) { actionsProblem = `The action library can't be used: ${(err as Error).message}.`; }
+  const judged = await scope.tx.select({ action: decisionLog.action, n: sql<number>`count(*)::int`, a: sql<number>`(count(*) filter (where ${decisionLog.accepted}))::int` })
+    .from(decisionLog).where(and(eq(decisionLog.businessUnitId, scope.ctx.businessUnitId), eq(decisionLog.decisive, true))).groupBy(decisionLog.action);
+  const settingChanges = await scope.tx.select({ at: configChanges.createdAt, by: nameOf, versionNo: configVersions.versionNo, kind: configChanges.kind, changes: configChanges.changes })
+    .from(configChanges).innerJoin(configVersions, eq(configVersions.id, configChanges.configVersionId)).leftJoin(users, eq(users.id, configChanges.createdBy))
+    .where(and(eq(configChanges.businessUnitId, scope.ctx.businessUnitId), inArray(configChanges.kind, ['scoring', 'lock', 'actions', 'validation']))).orderBy(desc(configChanges.seq)).limit(100);
   return {
     version: { versionNo: v.versionNo, activatedAt: v.activatedAt, activatedBy: activator?.name ?? null, engineVersion: v.engineVersion },
     sections,
@@ -72,6 +104,9 @@ export async function getSetup(scope: TenantScope): Promise<SetupState> {
     versions: versionRows.map(r => ({ versionNo: r.versionNo, status: r.status, activatedAt: r.activatedAt, activatedBy: r.by, engineVersion: r.engineVersion,
       changes: [...changes.filter(c => c.versionNo === r.versionNo).map(c => `${c.type} ${word[c.change]}`), ...gateChanges.filter(c => c.versionNo === r.versionNo).flatMap(c => c.changes)] })),
     unknownTags: monitoring.types.filter(t => t.status === 'Not a known tag').map(t => ({ tag: t.type, rows: t.records })),
+    scoring: { settings: scoring, lock: lockOf(v.body), problem: scoringProblem, changes: settingChanges.map(c => ({ ...c, by: c.by ?? 'A former member' })) },
+    actions: { list: library.map(a => { const j = judged.find(x => x.action.toLowerCase() === a.name.toLowerCase()); return { ...a, judged: j?.n ?? 0, accepted: j?.a ?? 0 }; }), problem: actionsProblem },
+    measurement: G.validationOf(v.body),
   };
 }
 
@@ -84,7 +119,12 @@ export async function signOffSection(scope: TenantScope, actor: Actor, section: 
   const done = last?.action === 'sign_off';
   if (action === 'sign_off' && done) throw conflict('This section is already signed off.');
   if (action === 'reopen' && !done) throw conflict('This section is not signed off, so there is nothing to reopen.');
-  if (action === 'sign_off' && section === 'rubric' && CONFIG.rubric.reduce((n, r) => n + r.weight, 0) !== 100) throw conflict('The weights must add up to 100% before sign-off.');
+  if (action === 'sign_off' && (section === 'rubric' || section === 'personas')) {
+    try { scoringSettingsOf(v.body); } catch (err) { throw conflict(`The scoring settings can't be used: ${(err as Error).message}. Fix them first.`); }
+  }
+  if (action === 'sign_off' && section === 'actions') {
+    try { actionsOf(v.body); } catch (err) { throw conflict(`The action library can't be used: ${(err as Error).message}. Fix it first.`); }
+  }
   if (action === 'sign_off' && section === 'signals') {
     try { signalSettingsOf(v.body); } catch (err) { throw conflict(`The signal settings can't be used: ${(err as Error).message}. Fix them first.`); }
   }
@@ -164,9 +204,124 @@ export async function removeSignalType(scope: TenantScope, actor: Actor, input: 
 
 /** Adding or removing a type changes what the Signals section says, so a signed-off section goes back to review. */
 async function reopenSignals(scope: TenantScope, actor: Actor, versionId: string, note: string) {
+  await reopen(scope, actor, versionId, 'signals', note);
+}
+/** A change to a signed-off section sends it back to review, with what changed as the note. */
+async function reopen(scope: TenantScope, actor: Actor, versionId: string, section: ConfigSection, note: string) {
   const [last] = await scope.tx.select({ action: configSignoffs.action }).from(configSignoffs)
-    .where(and(eq(configSignoffs.businessUnitId, scope.ctx.businessUnitId), eq(configSignoffs.section, 'signals'))).orderBy(desc(configSignoffs.seq)).limit(1);
-  if (last?.action === 'sign_off') await scope.tx.insert(configSignoffs).values({ businessUnitId: scope.ctx.businessUnitId, configVersionId: versionId, section: 'signals', action: 'reopen', note, createdBy: actor.userId });
+    .where(and(eq(configSignoffs.businessUnitId, scope.ctx.businessUnitId), eq(configSignoffs.section, section))).orderBy(desc(configSignoffs.seq)).limit(1);
+  if (last?.action === 'sign_off') await scope.tx.insert(configSignoffs).values({ businessUnitId: scope.ctx.businessUnitId, configVersionId: versionId, section, action: 'reopen', note: note.slice(0, 500), createdBy: actor.userId });
+}
+
+/* ─── Scoring settings: the rubric and its parts, personas, knock-outs and region, signal weights (30 Oct 2026) ─── */
+
+export type ScoringInput = { settings: unknown; reason: string; sponsor?: { name: string; note: string } | null };
+
+export async function saveScoring(scope: TenantScope, actor: Actor, input: ScoringInput): Promise<{ versionNo: number; changes: string[] }> {
+  const cur = await activeVersion(scope, true);
+  const lock = lockOf(cur.body);
+  if (lock.mode === 'locked') throw conflict(`The scoring settings are locked for the measurement weeks${lock.note ? ` (${lock.note})` : ''}. Unlock them first.`);
+  const sponsor = input.sponsor && input.sponsor.name.trim() ? { name: input.sponsor.name.trim().slice(0, 120), note: input.sponsor.note.trim().slice(0, 500) } : null;
+  if (lock.mode === 'sponsor' && !sponsor) throw badRequest("During the measurement weeks a change needs the sponsor's sign-off: say who signed it off.", { sponsor: ['Name the sponsor who signed this change off.'] });
+  const parsed = ScoringSettingsInput.safeParse(input.settings);
+  if (!parsed.success) throw badRequest(parsed.error.issues[0]?.message ?? 'The scoring settings are not valid.', { settings: parsed.error.issues.slice(0, 5).map(i => i.message) });
+  const next = parsed.data as ScoringSettings;
+  let before: ScoringSettings;
+  try { before = scoringSettingsOf(cur.body); } catch { before = DEFAULT_SCORING; }
+  const changes = scoringChanges(before, next);
+  if (!changes.length) throw conflict('Nothing changed: these are the scoring settings in use.');
+  const reason = input.reason.trim();
+  if (!reason) throw badRequest('Say why, so the audit trail explains it.', { reason: ['Say why, so the audit trail explains it.'] });
+  const words = [...changes, ...(sponsor ? [`Signed off by the sponsor: ${sponsor.name}${sponsor.note ? ` (${sponsor.note})` : ''}`] : []), `Why: ${reason.slice(0, 300)}`];
+  const v = await nextVersion(scope, actor, body => ({ ...body, scoring: next }));
+  await scope.tx.insert(configChanges).values({ businessUnitId: scope.ctx.businessUnitId, configVersionId: v.id, kind: 'scoring', changes: words, before, after: next, createdBy: actor.userId });
+  // Each signed-off section the change touches goes back to review.
+  const same = (k: keyof ScoringSettings) => JSON.stringify(before[k]) === JSON.stringify(next[k]);
+  if (!(['parts', 'fitFloor', 'tiers', 'sizeBands', 'verticals', 'knockouts', 'countries'] as const).every(same)) await reopen(scope, actor, v.id, 'rubric', changes.join('; '));
+  if (!same('personas')) await reopen(scope, actor, v.id, 'personas', 'Personas changed');
+  if (!same('signals')) await reopen(scope, actor, v.id, 'signals', 'Signal weights changed');
+  await recordAudit(scope, { action: 'config.scoring_changed', actorRole: actor.role, targetType: 'config_version', targetId: v.id, details: { versionNo: v.versionNo, changes: changes.length, sponsor: !!sponsor } });
+  logger.info({ event: 'config.scoring_changed', versionNo: v.versionNo, changes: changes.length }, 'Scoring settings changed');
+  return { versionNo: v.versionNo, changes };
+}
+
+const LOCK_WORDS: Record<ScoringLock['mode'], string> = { open: 'Scoring settings unlocked', locked: 'Scoring settings locked for the measurement weeks', sponsor: "Scoring settings open only with the sponsor's sign-off" };
+
+export async function setScoringLock(scope: TenantScope, actor: Actor, input: { mode: ScoringLock['mode']; note: string }): Promise<{ versionNo: number }> {
+  const cur = await activeVersion(scope, true);
+  if (lockOf(cur.body).mode === input.mode) throw conflict(`${LOCK_WORDS[input.mode]} already.`);
+  const [me] = await scope.tx.select({ name: users.displayName }).from(users).where(eq(users.id, actor.userId));
+  const lock: ScoringLock = { mode: input.mode, note: input.note.trim().slice(0, 300), by: me?.name ?? null, at: new Date().toISOString() };
+  const v = await nextVersion(scope, actor, body => ({ ...body, scoringLock: lock }));
+  await scope.tx.insert(configChanges).values({ businessUnitId: scope.ctx.businessUnitId, configVersionId: v.id, kind: 'lock', changes: [LOCK_WORDS[input.mode] + (lock.note ? `: ${lock.note}` : '')],
+    before: lockOf(cur.body), after: lock, createdBy: actor.userId });
+  await recordAudit(scope, { action: 'config.scoring_lock', actorRole: actor.role, targetType: 'config_version', targetId: v.id, details: { versionNo: v.versionNo, mode: input.mode } });
+  return { versionNo: v.versionNo };
+}
+
+export type TierPreview = {
+  run: { id: string; name: string; asOf: string } | null; accounts: number; changed: number;
+  moves: { from: Tier; to: Tier; n: number }[]; examples: { account: string; from: Tier; to: Tier; fitBefore: number | null; fitAfter: number | null }[];
+};
+
+/** What a change would do to the newest scored list, before it is saved: each account's tier worked out again from the
+ *  stored accounts, contacts and qualified signals with the proposed settings (fit, signal weights, fit floor, tiers).
+ *  Knock-outs, personas and vertical words apply when a lead file is processed, so they don't move this preview. */
+export async function previewScoring(scope: TenantScope, input: unknown): Promise<TierPreview> {
+  const parsed = ScoringSettingsInput.safeParse(input);
+  if (!parsed.success) throw badRequest(parsed.error.issues[0]?.message ?? 'The scoring settings are not valid.', { settings: parsed.error.issues.slice(0, 5).map(i => i.message) });
+  const s = parsed.data as ScoringSettings;
+  const [run] = await scope.tx.select({ id: scoringRuns.id, name: sql<string>`coalesce(${scoringRuns.name}, ${leadLists.name})`, asOf: scoringRuns.asOf, custom: scoringRuns.signalsCustom })
+    .from(scoringRuns).innerJoin(leadLists, eq(leadLists.id, scoringRuns.listId))
+    .where(and(eq(scoringRuns.businessUnitId, scope.ctx.businessUnitId), sql`exists (select 1 from account_scores a where a.run_id = ${scoringRuns.id})`))
+    .orderBy(desc(scoringRuns.createdAt)).limit(1);
+  if (!run) return { run: null, accounts: 0, changed: 0, moves: [], examples: [] };
+  const scored = await scope.tx.select({ accountId: accountScores.accountId, tier: accountScores.tier, result: accountScores.data, account: accounts.data })
+    .from(accountScores).innerJoin(accounts, eq(accounts.id, accountScores.accountId)).where(eq(accountScores.runId, run.id));
+  const people = await scope.tx.select({ accountId: contacts.accountId, data: contacts.data }).from(contacts)
+    .where(inArray(contacts.accountId, sql`(select account_id from account_scores where run_id = ${run.id})`));
+  const sigs = await scope.tx.select({ accountId: signals.accountId, data: signals.data }).from(signals)
+    .where(and(eq(signals.runId, run.id), or(eq(signals.status, 'Qualified'), and(eq(signals.status, 'Not used'), sql`${signals.data}->>'reason' like 'Qualified,%'`))));
+  const types = signalTypesFor((run.custom ?? []) as CustomSignalType[], s.signals);
+  const byAccount = <T extends { accountId: string | null }>(rows: T[]) => rows.reduce((m, r) => m.set(r.accountId ?? '', [...(m.get(r.accountId ?? '') ?? []), r]), new Map<string, T[]>());
+  const cs = byAccount(people), ss = byAccount(sigs);
+  const moves = new Map<string, number>(), examples: TierPreview['examples'] = [];
+  for (const a of scored) {
+    const from = a.tier as Tier, res = a.result as { excluded?: boolean; fit?: number };
+    if (res.excluded || from === 'Excluded') continue;
+    const fit = fitFor(a.account as Account, (cs.get(a.accountId) ?? []).map(c => c.data as Contact), s);
+    const weights = (ss.get(a.accountId) ?? []).map(r => r.data as Signal).flatMap(sg => {
+      const t = types[sg.type];
+      return t && !t.knockout && !t.reject && sg.age !== undefined && sg.age < (t.zero ?? 0) ? [(t.tier ?? 0) * (t.strength ?? 0) * decayFactor(t as { full: number; zero: number }, sg.age)] : [];
+    });
+    const score = round1(fit.fit * (stack(weights) / CONFIG.timingMax * 100) / 100);
+    const to: Tier = fit.belowFloor ? 'Below fit floor' : tierFor(score, weights.length > 0, s.tiers);
+    if (to === from) continue;
+    moves.set(`${from}|${to}`, (moves.get(`${from}|${to}`) ?? 0) + 1);
+    if (examples.length < 12) examples.push({ account: (a.account as Account).name, from, to, fitBefore: res.fit ?? null, fitAfter: fit.fit });
+  }
+  const list = [...moves].map(([k, n]) => { const [from, to] = k.split('|') as [Tier, Tier]; return { from, to, n }; }).sort((x, y) => y.n - x.n);
+  return { run: { id: run.id, name: run.name, asOf: run.asOf }, accounts: scored.length, changed: list.reduce((t, m) => t + m.n, 0), moves: list, examples };
+}
+
+/* ─── The action library (30 Oct 2026; was the read-only CONFIG.segmentLibrary) ─── */
+
+export async function saveActions(scope: TenantScope, actor: Actor, input: { actions: unknown; reason: string }): Promise<{ versionNo: number; changes: string[] }> {
+  const cur = await activeVersion(scope, true);
+  const parsed = ActionsInput.safeParse(input.actions);
+  if (!parsed.success) throw badRequest(parsed.error.issues[0]?.message ?? 'The action library is not valid.', { actions: parsed.error.issues.slice(0, 5).map(i => i.message) });
+  let before: LibraryAction[];
+  try { before = actionsOf(cur.body); } catch { before = []; }
+  const changes = actionChanges(before, parsed.data);
+  if (!changes.length) throw conflict('Nothing changed: this is the action library in use.');
+  const reason = input.reason.trim();
+  const v = await nextVersion(scope, actor, body => ({ ...body, actions: parsed.data }));
+  await scope.tx.insert(configChanges).values({ businessUnitId: scope.ctx.businessUnitId, configVersionId: v.id, kind: 'actions', changes: [...changes, ...(reason ? [`Why: ${reason.slice(0, 300)}`] : [])],
+    before, after: parsed.data, createdBy: actor.userId });
+  await reopen(scope, actor, v.id, 'actions', changes.join('; '));
+  await recordAudit(scope, { action: 'config.actions_changed', actorRole: actor.role, targetType: 'config_version', targetId: v.id, details: { versionNo: v.versionNo, changes: changes.length } });
+  logger.info({ event: 'config.actions_changed', versionNo: v.versionNo, changes: changes.length }, 'Action library changed');
+  return { versionNo: v.versionNo, changes };
 }
 
 /* ─── Export: the active configuration as JSON, with what was signed off ─── */

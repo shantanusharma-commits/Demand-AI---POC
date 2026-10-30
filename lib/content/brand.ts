@@ -50,6 +50,7 @@ export function diffSummary(live: BrandPack, d: BrandPack): BrandDiff[] {
   if (lv.maxSentenceWords !== dv.maxSentenceWords) v.push(`Sentence length: ${lv.maxSentenceWords} → ${dv.maxSentenceWords} words`);
   if (!!lv.noExclamation !== !!dv.noExclamation) v.push(dv.noExclamation ? 'No exclamation marks' : 'Exclamation marks allowed');
   v.push(...list(lv.bannedOpeners, dv.bannedOpeners, 'openers to avoid'));
+  v.push(...list(lv.guidance, dv.guidance, 'writing notes'));
   if (v.length) out.push({ section: 'Voice and tone', lines: v });
   const n = [...list(live.negative, d.negative, 'keywords'), ...list(live.competitors, d.competitors, 'competitors')];
   if (n.length) out.push({ section: 'Negative keywords', lines: n });
@@ -70,20 +71,34 @@ export function diffSummary(live: BrandPack, d: BrandPack): BrandDiff[] {
     const y = lf.find(z => z.objective === x.objective);
     // Field by field: the same framework can arrive with its keys in another order.
     const sameSet = (a: string[] = [], b: string[] = []) => a.length === b.length && a.every(k => b.includes(k));
-    if (!y || (y.name === x.name && JSON.stringify(y.steps) === JSON.stringify(x.steps) && y.use === x.use && sameSet(y.actions, x.actions))) return;
+    if (!y || (y.name === x.name && JSON.stringify(y.steps) === JSON.stringify(x.steps) && y.use === x.use && sameSet(y.actions, x.actions) && (y.ask ?? '') === (x.ask ?? ''))) return;
     const ya = y.actions || [], xa = x.actions || [], what: string[] = [];
     xa.filter(k => !ya.includes(k)).forEach(k => what.push(`added ${FRAMEWORK_ACTIONS[k]?.label || k}`));
     ya.filter(k => !xa.includes(k)).forEach(k => what.push(`removed ${FRAMEWORK_ACTIONS[k]?.label || k}`));
     if (y.name !== x.name) what.push(`framework “${x.name}”`);
     if (JSON.stringify(y.steps) !== JSON.stringify(x.steps)) what.push('structure edited');
     if (y.use !== x.use) what.push(`used ${x.use.toLowerCase()}`);
+    if ((y.ask ?? '') !== (x.ask ?? '')) what.push(`ask: ${x.ask || 'none'}`);
     f.push(`“${x.objective}”: ${what.join(', ') || 'edited'}`);
   });
   if (f.length) out.push({ section: 'Messaging frameworks', lines: f });
+  // Plays per situation or micro-segment: angle, likely objection and answer (30 Oct 2026: editable, read from guidelines).
+  const lp = live.framework || {}, dp = d.framework || {}, pl: string[] = [];
+  Object.keys(dp).filter(k => !lp[k]).forEach(k => pl.push(`Added the play for ${k}`));
+  Object.keys(lp).filter(k => !dp[k]).forEach(k => pl.push(`Removed the play for ${k}`));
+  Object.keys(dp).filter(k => lp[k] && JSON.stringify(lp[k]) !== JSON.stringify(dp[k])).forEach(k => pl.push(`Edited the play for ${k}`));
+  if (pl.length) out.push({ section: 'Messaging plays', lines: pl });
   return out;
 }
 
-export type RuleSuggestion = { kind: 'Competitor' | 'Negative keyword' | 'Sign-off' | 'Email length' | 'Sentence length' | 'Voice' | 'Banned opener' | 'Rule'; value: string };
+/** A suggestion for the draft brand pack, from the rules' reader or the AI (30 Oct 2026: also writing guidance, plays
+ *  and frameworks). `from` is the document's own words it comes from; a person adds each one, or not. */
+export type RuleSuggestion = {
+  kind: 'Competitor' | 'Negative keyword' | 'Sign-off' | 'Email length' | 'Sentence length' | 'Voice' | 'Banned opener' | 'Rule' | 'Guidance' | 'Play' | 'Framework';
+  value: string; from?: string;
+  play?: { key: string; angle: string; objection: string; response: string };
+  framework?: { objective: string; name: string; steps: string[]; ask: string };
+};
 
 /** Plain statements of the rules in a text guideline (legacy readRules). Anything else stays in the document. */
 export function readRules(text: string): RuleSuggestion[] {
@@ -93,6 +108,8 @@ export function readRules(text: string): RuleSuggestion[] {
   for (const line of text.split(/\r?\n/)) {
     const l = line.replace(/^[\s*\-•#\d.)]+/, '').trim();
     let m: RegExpMatchArray | null;
+    // "Never use exclamation marks" is the punctuation rule, not a banned phrase "exclamation marks" (30 Oct 2026).
+    if (/no exclamation|exclamation marks?.*(?:never|avoid|not)|(?:never|avoid|don't|do not) use exclamation/i.test(l)) { out.push({ kind: 'Rule', value: 'No exclamation marks' }); continue; }
     if ((m = l.match(/^competitors?\s*(?:are|include)?\s*[:-]?\s*(.+)$/i)) || (m = l.match(/^(?:do not|don't|never)\s+(?:mention|name|reference)\s+(?:competitors?\s*(?:such as|like|:)?\s*)?(.+)$/i))) split(m[1]).forEach(v => out.push({ kind: 'Competitor', value: v }));
     else if ((m = l.match(/^(?:avoid|never (?:say|use|write)|do not (?:say|use|write)|don't (?:say|use|write)|banned(?: words| phrases)?|negative keywords?)\s*[:-]?\s*(.+)$/i))) split(m[1]).forEach(v => out.push({ kind: 'Negative keyword', value: v }));
     else if ((m = l.match(/^(?:always\s+)?sign[\s-]?off(?:\s+(?:as|with))?\s*[:-]?\s*(.+)$/i))) out.push({ kind: 'Sign-off', value: clean(m[1]) });
@@ -119,5 +136,12 @@ export function applySuggestion(d: BrandPack, x: RuleSuggestion): BrandPack {
   if (x.kind === 'Rule') p.voice.noExclamation = true;
   if (x.kind === 'Email length') p.voice.maxWords = +x.value;
   if (x.kind === 'Sentence length') p.voice.maxSentenceWords = +x.value;
+  if (x.kind === 'Guidance' && !(p.voice.guidance ?? []).some(g => g.toLowerCase() === x.value.toLowerCase())) p.voice.guidance = [...(p.voice.guidance ?? []), x.value];
+  if (x.kind === 'Play' && x.play) p.framework[x.play.key] = { angle: x.play.angle, objection: x.play.objection, response: x.play.response, questions: p.framework[x.play.key]?.questions ?? [] };
+  if (x.kind === 'Framework' && x.framework) {
+    const f = { objective: x.framework.objective, name: x.framework.name, steps: x.framework.steps, ask: x.framework.ask, use: 'Sometimes', actions: [] as string[] };
+    const i = p.frameworks.findIndex(y => y.objective.toLowerCase() === f.objective.toLowerCase());
+    if (i >= 0) p.frameworks[i] = { ...p.frameworks[i], ...f, use: p.frameworks[i].use, actions: p.frameworks[i].actions }; else p.frameworks.push(f);
+  }
   return p;
 }

@@ -51,7 +51,8 @@ export const CONFIG = {
   minDecisions: 10,
   // Review by when: working days from the moment an item reaches For Review (0 = by 5 pm the same day).
   // A buyer who asked (an inquiry) and sensitive content are same-day; spot-checks are due by Friday of the week drawn.
-  reviewDue: { inquiry: 0, sensitive: 0, sentback: 0, reach: 1, alternative: 1, intervention: 1, brand: 1, claim: 2, low: 2, small: 2, deal: 2, other: 2 } as Record<string, number>,
+  // A new micro-segment (the sales manager approves it) and an action outside the library: one working day, to agree.
+  reviewDue: { inquiry: 0, sensitive: 0, sentback: 0, reach: 1, alternative: 1, intervention: 1, brand: 1, newseg: 1, newaction: 1, claim: 2, low: 2, small: 2, deal: 2, other: 2 } as Record<string, number>,
   // How often each run is expected. In the pilot people start runs by hand; Today calls out a run that is overdue.
   schedule: [
     { id: 'nba', name: 'Micro-segments & NBA build', everyDays: 1, href: '/nba', owner: 'Sales manager' },
@@ -151,7 +152,71 @@ export const CONFIG = {
     'owner': 'owner_email', 'account_owner': 'owner_email', 'owner_email_address': 'owner_email', 'rep_email': 'owner_email',
     'contact': 'contact_email_or_linkedin', 'contact_email': 'contact_email_or_linkedin', 'person': 'contact_email_or_linkedin',
     'signal': 'signal_type', 'event_type': 'signal_type', 'date': 'event_date', 'description': 'detail', 'details': 'detail',
+    'contact_name': 'lead_name', 'person_name': 'lead_name', 'prospect_name': 'lead_name', 'full_name': 'lead_name', 'lead': 'lead_name',
   } as Record<string, string>,
+};
+
+/* ─── Scoring settings an Admin may change in Setup (product owner, 30 Oct 2026; replaces the D-13 lock) ───
+   The rubric's parts and weights (parts can be added, each reading a lead-file column), the points per level, the size
+   bands, the vertical levels and added verticals, the personas, the fit floor, the tier cut-offs, the knock-outs and the
+   region, and how much and how long each starting signal type counts. Each change is a new configuration version; a
+   list or run keeps the version it was made with. The defaults are the values above, so a unit that never edits them
+   scores exactly as before (the answer-key test holds them). */
+export type BuiltInPartKey = 'vertical' | 'size' | 'site' | 'relationship' | 'accountType' | 'contacts';
+export const BUILT_IN_PARTS: BuiltInPartKey[] = ['vertical', 'size', 'site', 'relationship', 'accountType', 'contacts'];
+/** Each built-in part's levels, in order, with their starting points. */
+export const PART_LEVELS: Record<BuiltInPartKey, { key: string; label: string; points: number }[]> = {
+  vertical: [{ key: 'core', label: 'Core', points: 100 }, { key: 'adjacent', label: 'Adjacent', points: 50 }, { key: 'other', label: 'Other', points: 0 }],
+  size: [{ key: 'above', label: 'Above target', points: 100 }, { key: 'in', label: 'In target', points: 70 }, { key: 'below', label: 'Below target', points: 20 }, { key: 'none', label: 'Not provided', points: 0 }],
+  site: [{ key: 'suits', label: 'Suits the product', points: 100 }, { key: 'partly', label: 'Partly', points: 50 }, { key: 'unknown', label: 'Unknown', points: 30 }],
+  relationship: [{ key: 'customer', label: 'Existing customer', points: 100 }, { key: 'none', label: 'None', points: 40 }],
+  accountType: [{ key: 'owner-operator', label: 'Owner-operator', points: 100 }, { key: 'epc contractor', label: 'EPC contractor', points: 60 },
+    { key: 'system integrator', label: 'System integrator', points: 60 }, { key: 'distributor', label: 'Distributor', points: 20 }, { key: 'other', label: 'Other', points: 0 }],
+  contacts: [{ key: 'primary', label: 'Buying role present', points: 100 }, { key: 'other', label: 'Other roles only', points: 40 }, { key: 'none', label: 'None', points: 0 }],
+};
+/** The account details an added part can read (lead-file columns, one value per account). */
+export const PART_COLUMNS: Record<string, { label: string; of: (a: Account) => string | number | boolean | null }> = {
+  country: { label: 'Country', of: a => a.country }, city: { label: 'City', of: a => a.city }, industry: { label: 'Industry', of: a => a.industry },
+  site_name: { label: 'Site name', of: a => a.siteName }, site_process_type: { label: 'Site process', of: a => a.siteProcess },
+  site_capacity: { label: 'Site capacity', of: a => a.siteCapacity }, annual_revenue_usd: { label: 'Annual revenue (USD)', of: a => a.revenue },
+  employee_count: { label: 'Employees', of: a => a.employees }, account_type: { label: 'Account type', of: a => a.accountType },
+  existing_customer: { label: 'Existing customer', of: a => a.existingCustomer }, vertical: { label: 'Vertical (as classified)', of: a => a.vertical },
+};
+export const RULE_TESTS = { is: 'is', contains: 'contains', atLeast: 'is at least', below: 'is below', yes: 'is yes', no: 'is no', blank: 'is blank' } as const;
+export type PartRule = { when: keyof typeof RULE_TESTS; value: string; points: number };
+/** A rubric part: a built-in one (points per level) or one an Admin added (rules on a lead-file column, first match wins). */
+export type RubricPart = { key: string; label: string; weight: number; levels?: Record<string, number>; column?: string; rules?: PartRule[]; otherwise?: number };
+export type ScoringSettings = {
+  parts: RubricPart[];
+  fitFloor: number;
+  tiers: { A: number; B: number };
+  sizeBands: { revenueAbove: number; revenueIn: number; employeesAbove: number; employeesIn: number };
+  /** Vertical levels by name. The starting verticals keep their mapping patterns; words add matches (and new verticals). */
+  verticals: { name: string; level: VerticalLevel; words: string[] }[];
+  /** Starting persona terms switched off (by pattern), and job-title phrases added as primary or secondary. */
+  personas: { off: string[]; primary: string[]; secondary: string[] };
+  knockouts: { region: boolean; managed: boolean; installed: boolean; nobodyLeft: boolean };
+  countries: string[];
+  /** How much (tier × strength) and how long the starting signal types count, where changed. */
+  signals: Record<string, { tier: number; strength: number; full: number; zero: number }>;
+};
+export function defaultScoringSettings(): ScoringSettings {
+  return {
+    parts: CONFIG.rubric.map(r => ({ key: r.key, label: r.label, weight: r.weight, levels: Object.fromEntries(PART_LEVELS[r.key as BuiltInPartKey].map(l => [l.key, l.points])) })),
+    fitFloor: CONFIG.fitFloor, tiers: { ...CONFIG.tierThresholds }, sizeBands: { ...CONFIG.sizeBands },
+    verticals: [...new Map(CONFIG.verticalMap.map(m => [m.vertical, { name: m.vertical, level: m.level, words: [] as string[] }])).values()],
+    personas: { off: [], primary: [], secondary: [] },
+    knockouts: { region: true, managed: true, installed: true, nobodyLeft: true },
+    countries: CONFIG.pilotCountries.slice(), signals: {},
+  };
+}
+export const DEFAULT_SCORING: ScoringSettings = defaultScoringSettings();
+/** A label for each starting persona pattern, in CONFIG.personas order (Setup shows these, not the patterns). */
+export const PERSONA_LABELS: { primary: string[]; secondary: string[] } = {
+  primary: ['Instrumentation', 'I&C', 'E&I', 'Automation', 'Control systems', 'DCS', 'Instr. / Instrument', 'Inst.', 'Control sys. / Ctrl sys.',
+    'Điều khiển (Vietnamese: control)', 'Instrumentasi (Indonesian)', 'เครื่องมือวัด (Thai: instrumentation)'],
+  secondary: ['Plant manager', 'Operations', 'Procurement', 'Project director', 'Maintenance', 'Reliability', 'Plant mgr / Plant head', 'GM plant', 'Factory manager',
+    'Maint.', 'Purchasing', 'Pengadaan / pemeliharaan / kepala pabrik (Indonesian)', 'ผู้จัดการโรงงาน / ซ่อมบำรุง (Thai)', 'Bảo trì (Vietnamese: maintenance)'],
 };
 
 /** A country as the synonym table keys it: lower case, accents and punctuation removed, leading articles and state
@@ -177,7 +242,9 @@ export const LEAD_COLUMNS = ['first_name', 'last_name', 'job_title', 'seniority'
 export const LEAD_REQUIRED = ['first_name', 'last_name', 'job_title', 'company_name', 'company_domain', 'country', 'industry',
   'existing_customer', 'managed_separately', 'consent_basis', 'opt_out', 'owner_email'];
 // company_domain is optional (D-16): when given, it matches the signal to its account before the name does (G-044).
-export const SIGNAL_COLUMNS = ['company_name', 'contact_email_or_linkedin', 'signal_type', 'event_date', 'detail', 'source', 'product', 'company_domain'];
+// lead_name is optional: who the signal is about, by name (product owner, 30 Oct 2026). With no email or LinkedIn URL it
+// finds the person at the account by name; with one, it is shown beside it and a different name is noted.
+export const SIGNAL_COLUMNS = ['company_name', 'contact_email_or_linkedin', 'lead_name', 'signal_type', 'event_date', 'detail', 'source', 'product', 'company_domain'];
 export const SIGNAL_REQUIRED = ['company_name', 'signal_type', 'event_date', 'detail'];
 
 /* ─── Small helpers ─── */
@@ -382,10 +449,11 @@ export function parseNumber(raw: unknown): { value: number | null; reformatted?:
   return { value: null, invalid: true };
 }
 
-export function personaOf(title: unknown): Contact['persona'] {
-  const t = clean(title);
-  if (CONFIG.personas.primary.some(re => re.test(t))) return 'Primary';
-  if (CONFIG.personas.secondary.some(re => re.test(t))) return 'Secondary';
+export function personaOf(title: unknown, p: ScoringSettings['personas'] = DEFAULT_SCORING.personas): Contact['persona'] {
+  const t = clean(title), low = t.toLowerCase();
+  const has = (kind: 'primary' | 'secondary') => CONFIG.personas[kind].some(re => !p.off.includes(re.source) && re.test(t)) || p[kind].some(w => !!w && low.includes(w.toLowerCase()));
+  if (has('primary')) return 'Primary';
+  if (has('secondary')) return 'Secondary';
   return 'None';
 }
 
@@ -402,7 +470,8 @@ function combineStates(states: OptState[]): OptState {
   return states.includes('Y') ? 'Y' : states.includes('bad') ? 'bad' : states.includes('N') ? 'N' : 'blank';
 }
 
-function mergeDuplicate(into: Contact, from: Contact, optState: Map<Contact, OptState>, managedState: Map<Contact, OptState>, flag: (field: string, issue: string, outcome: string) => void): void {
+function mergeDuplicate(into: Contact, from: Contact, optState: Map<Contact, OptState>, managedState: Map<Contact, OptState>, flag: (field: string, issue: string, outcome: string) => void,
+  personas: ScoringSettings['personas'] = DEFAULT_SCORING.personas): void {
   for (const [k, col] of COMPANY_FIELDS) {
     const a = into[k], b = from[k];
     if (k === 'managedSeparately' || k === 'existingCustomer') {
@@ -427,7 +496,7 @@ function mergeDuplicate(into: Contact, from: Contact, optState: Map<Contact, Opt
   into.optOutUnknown = state === 'bad' || state === 'blank';
   optState.set(into, state);
   into.name = [into.firstName, into.lastName].filter(Boolean).join(' ') || '(no name)';
-  into.persona = personaOf(into.jobTitle);
+  into.persona = personaOf(into.jobTitle, personas);
 }
 
 /** What people decided about a file's rows (G-015, G-021): rows a reviewer took out of the list, with the reason, and
@@ -438,7 +507,7 @@ export type VerticalChoice = { row: number; vertical: string; reason: string };
 export type AiVertical = { vertical: string; confidence: Confidence; reason: string };
 export type AiVerticals = ReadonlyMap<string, AiVertical>;
 
-export function processLeads(grid: Grid, { file = 'lead file', sheet = 'Sheet1', mapping, removed, verticals, aiVerticals }: { file?: string; sheet?: string; mapping?: ColumnMapping; aiVerticals?: AiVerticals } & LeadDecisions = {}): LeadResult {
+export function processLeads(grid: Grid, { file = 'lead file', sheet = 'Sheet1', mapping, removed, verticals, aiVerticals, settings = DEFAULT_SCORING }: { file?: string; sheet?: string; mapping?: ColumnMapping; aiVerticals?: AiVerticals; settings?: ScoringSettings } & LeadDecisions = {}): LeadResult {
   const table = readTable(grid, { file, sheet, columns: LEAD_COLUMNS, required: LEAD_REQUIRED, anchor: 'company_name', mapping });
   const issues = table.issues.slice();
   const at = (row: Issue['row'], field: string, issue: string, outcome: string, code: Issue['code'], fix: string, severity: Severity = 'flag') =>
@@ -492,7 +561,7 @@ export function processLeads(grid: Grid, { file = 'lead file', sheet = 'Sheet1',
     req('first_name', 'First name is missing', 'Loaded; the draft greeting will need editing', 'Add the first name');
     req('last_name', 'Last name is missing', 'Loaded', 'Add the last name');
     req('job_title', 'Job title is missing', 'Loaded; persona set to none', 'Add the job title');
-    c.persona = personaOf(c.jobTitle);
+    c.persona = personaOf(c.jobTitle, settings.personas);
 
     // Domain
     if (!req('company_domain', 'Company domain is missing', 'Loaded; signals can only be matched by company name', 'Add the website domain, e.g. company.com')
@@ -595,7 +664,7 @@ export function processLeads(grid: Grid, { file = 'lead file', sheet = 'Sheet1',
     if (dupOf) {
       at(row, dupOf === byLi && !(c.email && byEmail.get(c.email)) ? 'linkedin_url' : 'email', `Duplicate of row ${dupOf.row} (${dupOf.name})`,
         `Merged into row ${dupOf.row}`, 'D5', 'Remove the repeated row');
-      mergeDuplicate(dupOf, c, optState, managedState, (field, issue, outcome) => at(row, field, issue, outcome, '—', 'Correct the row that is wrong, then remove the repeat'));
+      mergeDuplicate(dupOf, c, optState, managedState, (field, issue, outcome) => at(row, field, issue, outcome, '—', 'Correct the row that is wrong, then remove the repeat'), settings.personas);
       mergedInto.set(row, dupOf);
       index(c, dupOf);
       merged++;
@@ -638,7 +707,7 @@ export function processLeads(grid: Grid, { file = 'lead file', sheet = 'Sheet1',
 
   const chosen = new Map<Contact, VerticalChoice>();
   for (const v of verticals ?? []) { const c = personAt(v.row); if (c) { chosen.delete(c); chosen.set(c, v); } }
-  const accounts = buildAccounts(contacts, issues, { file, sheet }, managedState, chosen, aiVerticals);
+  const accounts = buildAccounts(contacts, issues, { file, sheet }, managedState, chosen, aiVerticals, settings);
   const stats: LeadStats = {
     rowsRead: table.records.length, notLoaded, merged, contacts: contacts.length,
     accounts: accounts.length, accountsPass: accounts.filter(a => !a.excluded).length,
@@ -675,16 +744,20 @@ export function suppressed(c: Pick<Contact, 'optOut' | 'takenOut'>): boolean {
 
 /** The verticals a person can choose for an account: the mapping table's, plus Other and Out of ICP. */
 export const VERTICAL_CHOICES: string[] = [...new Set(CONFIG.verticalMap.map(m => m.vertical)), 'Other', 'Out of ICP'];
-export function verticalLevelOf(vertical: string): VerticalLevel {
-  return CONFIG.verticalMap.find(m => m.vertical === vertical)?.level ?? 'other';
+export function verticalLevelOf(vertical: string, s: ScoringSettings = DEFAULT_SCORING): VerticalLevel {
+  return s.verticals.find(v => v.name === vertical)?.level ?? CONFIG.verticalMap.find(m => m.vertical === vertical)?.level ?? 'other';
 }
 
 /* Stage 3 classification and stage 4 knock-outs, per account */
-/** The vertical a text maps to, or 'excluded' for an out-of-ICP industry (D-15 exclusions). */
-function verticalHit(s: string) {
+/** The vertical a text maps to, or 'excluded' for an out-of-ICP industry (D-15 exclusions): the starting mapping
+ *  table first, then the words an Admin added in Setup; the level is the one Setup gives the vertical. */
+function verticalHit(s: string, settings: ScoringSettings = DEFAULT_SCORING): { vertical: string; level: VerticalLevel } | 'excluded' | null {
   if (!s) return null;
   if (CONFIG.verticalExclusions.some(re => re.test(s))) return 'excluded' as const;
-  return CONFIG.verticalMap.find(m => m.pattern.test(s)) ?? null;
+  const m = CONFIG.verticalMap.find(x => x.pattern.test(s));
+  if (m) return settings === DEFAULT_SCORING ? m : { vertical: m.vertical, level: verticalLevelOf(m.vertical, settings) };
+  const low = s.toLowerCase(), added = settings.verticals.find(v => v.words.some(w => !!w && low.includes(w.toLowerCase())));
+  return added ? { vertical: added.name, level: added.level } : null;
 }
 
 /** The key the AI classifier's answers are kept under: the industry and site process texts, as the lookup reads them. */
@@ -698,8 +771,8 @@ export function lookupDecides(industry: string, siteProcess: string): boolean {
   return verticalHit(industry) !== null || verticalHit(siteProcess) !== null;
 }
 
-export function classify(industry: string, siteProcess: string, ai?: AiVerticals): Classification {
-  const raw = (s: string) => verticalHit(s);
+export function classify(industry: string, siteProcess: string, ai?: AiVerticals, settings: ScoringSettings = DEFAULT_SCORING): Classification {
+  const raw = (s: string) => verticalHit(s, settings);
   const excluded = [industry, siteProcess].find(x => raw(x) === 'excluded');
   if (excluded) {
     return { vertical: 'Out of ICP', level: 'other', confidence: 'high',
@@ -717,14 +790,14 @@ export function classify(industry: string, siteProcess: string, ai?: AiVerticals
   // an exclusion or the table, and anything below high confidence stays in "needs review" for a person.
   const suggested = ai?.get(industryKey(industry, siteProcess));
   if (suggested && VERTICAL_CHOICES.includes(suggested.vertical)) {
-    return { vertical: suggested.vertical, level: verticalLevelOf(suggested.vertical), confidence: suggested.confidence, aiAssisted: true,
+    return { vertical: suggested.vertical, level: verticalLevelOf(suggested.vertical, settings), confidence: suggested.confidence, aiAssisted: true,
       needsReview: suggested.confidence !== 'high', reason: `AI-assisted (${suggested.confidence} confidence): ${suggested.reason}` };
   }
   return { vertical: 'Other', level: 'other', confidence: 'low', needsReview: true,
     reason: `"${industry || '—'}" has no match in the mapping table, so this is held as other for review` };
 }
 
-function buildAccounts(contacts: Contact[], issues: Issue[], { file, sheet }: { file: string; sheet: string }, managedState: Map<Contact, OptState>, chosen: Map<Contact, VerticalChoice>, aiVerticals?: AiVerticals): Account[] {
+function buildAccounts(contacts: Contact[], issues: Issue[], { file, sheet }: { file: string; sheet: string }, managedState: Map<Contact, OptState>, chosen: Map<Contact, VerticalChoice>, aiVerticals?: AiVerticals, settings: ScoringSettings = DEFAULT_SCORING): Account[] {
   // Rows group into one account when their company's base name agrees and so does the domain (G-038): "X" and "X Group"
   // on x.com are one company. A row with no domain joins the base name's only domain. A different company on the same
   // domain stays separate and is flagged.
@@ -790,22 +863,26 @@ function buildAccounts(contacts: Contact[], issues: Issue[], { file, sheet }: { 
     // A vertical set by a person (G-021) replaces the lookup's, with their reason; the last choice for the account wins.
     const choice = [...chosen.entries()].filter(([c]) => cs.includes(c)).map(([, v]) => v).pop();
     const cls: Classification = choice
-      ? { vertical: choice.vertical, level: verticalLevelOf(choice.vertical), confidence: 'high', reason: `Set by a person: ${choice.reason}` }
-      : classify(derived.industry, derived.siteProcess, aiVerticals);
+      ? { vertical: choice.vertical, level: verticalLevelOf(choice.vertical, settings), confidence: 'high', reason: `Set by a person: ${choice.reason}` }
+      : classify(derived.industry, derived.siteProcess, aiVerticals, settings);
     const a = {
       id: 'acc-' + accounts.length, key, names: [...new Set(cs.map(c => c.companyKey))], name: f.company, ...derived,
       vertical: cls.vertical, verticalLevel: cls.level, confidence: cls.confidence,
       classReason: cls.reason, needsReview: !!cls.needsReview, ...(cls.aiAssisted ? { aiAssisted: true } : {}), contactIds: cs.map(c => c.row),
     } as Account;
     // Stage 4: yes-or-no rules, in order. The installed-base rule needs the signal file, so it runs in Scoring.
-    const inRegion = CONFIG.pilotCountries.some(p => p.toLowerCase() === a.country.toLowerCase());
+    const inRegion = !settings.knockouts.region || settings.countries.some(p => p.toLowerCase() === a.country.toLowerCase());
     const left = cs.filter(c => !suppressed(c)), anyTakenOut = cs.some(c => c.takenOut);
+    // A knock-out switched off in Setup passes, and says so.
+    const offWhy = (w: string) => `${w} (knock-out switched off in Setup)`;
     a.checks = [
-      { rule: 'In the pilot region', pass: inRegion, why: inRegion ? a.country : `Outside the pilot region (${a.country || 'no country'})` },
-      { rule: 'Not managed separately', pass: managed === 'N', why: managed === 'Y' ? 'Managed separately by Client' : managed === 'N' ? 'Not managed separately' : 'Managed status not confirmed: confirm before any outreach' },
+      { rule: 'In the pilot region', pass: inRegion, why: !settings.knockouts.region ? offWhy(a.country || 'no country') : inRegion ? a.country : `Outside the pilot region (${a.country || 'no country'})` },
+      { rule: 'Not managed separately', pass: managed === 'N' || !settings.knockouts.managed,
+        why: !settings.knockouts.managed && managed !== 'N' ? offWhy(managed === 'Y' ? 'Managed separately by Client' : 'Managed status not confirmed') : managed === 'Y' ? 'Managed separately by Client' : managed === 'N' ? 'Not managed separately' : 'Managed status not confirmed: confirm before any outreach' },
       { rule: 'Pilot product not installed at the site', pass: null, why: 'Checked in Scoring, from the installed-base rows of the signal file' },
-      { rule: 'At least one contact left after suppression', pass: left.length > 0,
-        why: left.length ? `${left.length} contact(s) not opted out${anyTakenOut ? ' or taken out' : ''}` : `No contactable contacts after suppression${anyTakenOut ? ' (opted out or taken out by a reviewer)' : ''}` },
+      { rule: 'At least one contact left after suppression', pass: left.length > 0 || !settings.knockouts.nobodyLeft,
+        why: left.length ? `${left.length} contact(s) not opted out${anyTakenOut ? ' or taken out' : ''}` : !settings.knockouts.nobodyLeft ? offWhy('No contactable contacts after suppression')
+          : `No contactable contacts after suppression${anyTakenOut ? ' (opted out or taken out by a reviewer)' : ''}` },
     ];
     const failed = a.checks.find(k => k.pass === false);
     a.excluded = !!failed;
@@ -830,44 +907,72 @@ function notContactableWhy(c: Contact): string {
   return 'see issues';
 }
 
-/* ─── Stage 6: weighted fit ─── */
-export function fitFor(account: Account, contacts: Contact[]): Fit {
-  const b = CONFIG.sizeBands;
-  let size: number, sizeWhy: string;
+/* ─── Stage 6: weighted fit, from the rubric in the run's settings (Setup › ICP and rubric) ─── */
+/** The points a part gives a level: the part's own, else the starting value. */
+const levelPoints = (part: RubricPart, key: string): number =>
+  part.levels?.[key] ?? PART_LEVELS[part.key as BuiltInPartKey]?.find(l => l.key === key)?.points ?? 0;
+
+/** An added part: the first of its rules that the account's value meets gives the points; none, the "otherwise" points. */
+export function partRuleLevel(part: RubricPart, account: Account): FitLevel {
+  const col = PART_COLUMNS[part.column ?? ''], v = col ? col.of(account) : null;
+  const text = v === null || v === undefined ? '' : typeof v === 'boolean' ? (v ? 'Y' : 'N') : String(v);
+  const num = typeof v === 'number' ? v : parseNumber(text).value;
+  const why = `${col?.label ?? part.column ?? 'Column'}: ${text || 'blank'}`;
+  for (const r of part.rules ?? []) {
+    const hit = r.when === 'is' ? normKey(text) === normKey(r.value) : r.when === 'contains' ? !!r.value && text.toLowerCase().includes(r.value.toLowerCase())
+      : r.when === 'atLeast' ? num !== null && num >= Number(r.value) : r.when === 'below' ? num !== null && num < Number(r.value)
+      : r.when === 'yes' ? yesNo(text) === 'Y' : r.when === 'no' ? yesNo(text) === 'N' : !text;
+    if (hit) return { level: r.points, levelLabel: `${RULE_TESTS[r.when]}${['yes', 'no', 'blank'].includes(r.when) ? '' : ` ${r.value}`}`, why };
+  }
+  return { level: part.otherwise ?? 0, levelLabel: 'No rule matched', why };
+}
+
+export function fitFor(account: Account, contacts: Contact[], s: ScoringSettings = DEFAULT_SCORING): Fit {
+  const b = s.sizeBands;
+  let sizeKey: string, sizeWhy: string;
   if (account.revenue !== null && account.revenue !== undefined) {
-    size = account.revenue >= b.revenueAbove ? 100 : account.revenue >= b.revenueIn ? 70 : 20;
+    sizeKey = account.revenue >= b.revenueAbove ? 'above' : account.revenue >= b.revenueIn ? 'in' : 'below';
     sizeWhy = `Revenue USD ${fmtMoney(account.revenue)}`;
   } else if (account.employees !== null && account.employees !== undefined) {
-    size = account.employees >= b.employeesAbove ? 100 : account.employees >= b.employeesIn ? 70 : 20;
+    sizeKey = account.employees >= b.employeesAbove ? 'above' : account.employees >= b.employeesIn ? 'in' : 'below';
     sizeWhy = `${account.employees.toLocaleString('en-US')} employees (no revenue given)`;
-  } else { size = 0; sizeWhy = 'No size given'; }
-  const sizeLbl = size === 100 ? 'Above target' : size === 70 ? 'In target' : size === 20 ? 'Below target' : 'Not provided';
+  } else { sizeKey = 'none'; sizeWhy = 'No size given'; }
+  const sizeLbl = { above: 'Above target', in: 'In target', below: 'Below target', none: 'Not provided' }[sizeKey]!;
 
-  const siteFound = verticalHit(account.siteProcess);
+  const siteFound = verticalHit(account.siteProcess, s);
   const siteHit = siteFound && siteFound !== 'excluded' ? siteFound : null;
-  const site = !account.siteProcess ? 30 : siteHit && siteHit.level === 'core' ? 100 : 50;
-  const siteLbl = site === 100 ? 'Suits the product' : site === 50 ? 'Partly' : 'Unknown';
+  const siteKey = !account.siteProcess ? 'unknown' : siteHit && siteHit.level === 'core' ? 'suits' : 'partly';
+  const siteLbl = { suits: 'Suits the product', partly: 'Partly', unknown: 'Unknown' }[siteKey]!;
   const siteWhy = account.siteProcess
     ? [account.siteName, account.siteProcess, account.siteCapacity && `${Number(account.siteCapacity).toLocaleString('en-US')} ${account.capacityUnit}`].filter(Boolean).join(' · ')
     : 'No site given';
 
   const live = contacts.filter(c => !suppressed(c));
-  const coverage = live.some(c => c.persona === 'Primary') ? 100 : live.length ? 40 : 0;
-  const at = CONFIG.accountTypes[account.accountType] || CONFIG.accountTypes.other;
-  const vLevel = ({ core: 100, adjacent: 50, other: 0 } as Record<VerticalLevel, number>)[account.verticalLevel];
+  const covKey = live.some(c => c.persona === 'Primary') ? 'primary' : live.length ? 'other' : 'none';
+  const atKey = CONFIG.accountTypes[account.accountType] ? account.accountType : 'other';
+  const at = CONFIG.accountTypes[atKey];
+  // The vertical's level as Setup gives it now; a list classified earlier keeps its vertical, not its old level.
+  const vKey = s === DEFAULT_SCORING ? account.verticalLevel : s.verticals.find(v => v.name === account.vertical)?.level ?? account.verticalLevel;
 
-  const levels: Record<RubricRow['key'], FitLevel> = {
-    vertical: { level: vLevel, levelLabel: `${account.vertical} (${account.verticalLevel})`, why: account.classReason },
-    size: { level: size, levelLabel: sizeLbl, why: sizeWhy },
-    site: { level: site, levelLabel: siteLbl, why: siteWhy },
-    relationship: { level: account.existingCustomer ? 100 : 40, levelLabel: account.existingCustomer ? 'Existing customer' : 'None', why: account.existingCustomer ? 'existing_customer = Y' : 'existing_customer = N' },
-    accountType: { level: at.level, levelLabel: at.label, why: account.accountType },
-    contacts: { level: coverage, levelLabel: coverage === 100 ? 'Buying role present' : coverage === 40 ? 'Other roles only' : 'None',
-      why: live.filter(c => c.persona === 'Primary').map(c => c.jobTitle).join(', ') || live.map(c => c.jobTitle).join(', ') || 'No contacts' },
+  const builtIn = (part: RubricPart): FitLevel | null => {
+    switch (part.key as BuiltInPartKey) {
+      case 'vertical': return { level: levelPoints(part, vKey), levelLabel: `${account.vertical} (${vKey})`, why: account.classReason };
+      case 'size': return { level: levelPoints(part, sizeKey), levelLabel: sizeLbl, why: sizeWhy };
+      case 'site': return { level: levelPoints(part, siteKey), levelLabel: siteLbl, why: siteWhy };
+      case 'relationship': return { level: levelPoints(part, account.existingCustomer ? 'customer' : 'none'), levelLabel: account.existingCustomer ? 'Existing customer' : 'None',
+        why: account.existingCustomer ? 'existing_customer = Y' : 'existing_customer = N' };
+      case 'accountType': return { level: levelPoints(part, atKey), levelLabel: at.label, why: account.accountType };
+      case 'contacts': return { level: levelPoints(part, covKey), levelLabel: covKey === 'primary' ? 'Buying role present' : covKey === 'other' ? 'Other roles only' : 'None',
+        why: live.filter(c => c.persona === 'Primary').map(c => c.jobTitle).join(', ') || live.map(c => c.jobTitle).join(', ') || 'No contacts' };
+    }
+    return null;
   };
-  const breakdown: FitBreakdownRow[] = CONFIG.rubric.map(r => ({ ...r, ...levels[r.key], points: levels[r.key].level * r.weight / 100 }));
-  const fit = round1(breakdown.reduce((s, x) => s + x.points, 0));
-  return { fit, breakdown, belowFloor: fit < CONFIG.fitFloor };
+  const breakdown: FitBreakdownRow[] = s.parts.map(part => {
+    const l = builtIn(part) ?? partRuleLevel(part, account);
+    return { key: part.key, label: part.label, weight: part.weight, ...l, points: l.level * part.weight / 100 };
+  });
+  const fit = round1(breakdown.reduce((t, x) => t + x.points, 0));
+  return { fit, breakdown, belowFloor: fit < s.fitFloor };
 }
 
 function fmtMoney(n: number): string {
@@ -878,23 +983,28 @@ function fmtMoney(n: number): string {
 
 /* ─── Signal types switched off or added in Setup (G-023). A run takes them as settings; the shared configuration is
    never changed, so lists already scored keep the types they were scored with. ─── */
-export type CustomSignalType = { name: string; segment: string; level: 'Strong' | 'Medium' | 'Light'; full: number; zero: number; about?: string; data?: string; source?: string };
+/** A signal type added in Setup. `about` says what it means, for the AI to group and act on it; a micro-segment is an
+ *  optional suggestion (the rules' fallback groups a type without one under its own name). */
+export type CustomSignalType = { name: string; segment?: string; level: 'Strong' | 'Medium' | 'Light'; full: number; zero: number; about?: string; data?: string; source?: string };
 
 /** Why a signal type can't be added, or null. */
 export function customSignalProblem(def: CustomSignalType, others: CustomSignalType[] = []): string | null {
   const name = clean(def.name);
   if (!name) return 'Give the signal a name, as it appears in the signal_type column';
   if ([...Object.keys(CONFIG.signalTypes), ...others.map(o => o.name)].some(k => k.toLowerCase() === name.toLowerCase())) return `"${name}" is already a signal type`;
-  if (!CONFIG.segmentLibrary[def.segment]) return 'Pick the micro-segment it feeds';
+  if (!clean(def.about)) return 'Say in a sentence what the signal means, so the AI can group it and suggest what to do';
   if (!(+def.full > 0) || !(+def.zero > +def.full)) return 'Full weight needs a number of days, and "gone after" must be longer';
   return null;
 }
 
-function signalTypesFor(custom: CustomSignalType[]): Record<string, SignalTypeConfig> {
+/** The signal types a run scores with: the starting ones (with how much and how long each counts, as Setup has it) and
+ *  the added ones. */
+export function signalTypesFor(custom: CustomSignalType[], changed: ScoringSettings['signals'] = {}): Record<string, SignalTypeConfig> {
   const types: Record<string, SignalTypeConfig> = { ...CONFIG.signalTypes };
+  for (const [name, c] of Object.entries(changed)) if (types[name] && !types[name].knockout && !types[name].reject) types[name] = { ...types[name], ...c };
   for (const c of custom) {
     if (types[c.name]) continue;
-    types[c.name] = { code: 'C', segment: c.segment, full: +c.full, zero: +c.zero, ...(CONFIG.customStrength[c.level] ?? CONFIG.customStrength.Medium) };
+    types[c.name] = { code: 'C', segment: c.segment || c.name, full: +c.full, zero: +c.zero, ...(CONFIG.customStrength[c.level] ?? CONFIG.customStrength.Medium) };
   }
   return types;
 }
@@ -908,9 +1018,9 @@ export function decayFactor(type: Pick<SignalTypeConfig, 'full' | 'zero'>, age: 
 }
 
 export function processSignals(grid: Grid, list: LeadList,
-  { file = 'signal file', sheet = 'Sheet1', asOf, mapping, off = [], custom = [] }: { file?: string; sheet?: string; asOf?: string; mapping?: ColumnMapping; off?: string[]; custom?: CustomSignalType[] } = {}): SignalResult {
+  { file = 'signal file', sheet = 'Sheet1', asOf, mapping, off = [], custom = [], settings = DEFAULT_SCORING }: { file?: string; sheet?: string; asOf?: string; mapping?: ColumnMapping; off?: string[]; custom?: CustomSignalType[]; settings?: ScoringSettings } = {}): SignalResult {
   const table = readTable(grid, { file, sheet, columns: SIGNAL_COLUMNS, required: SIGNAL_REQUIRED, anchor: 'signal_type', mapping });
-  const signalTypes = signalTypesFor(custom);
+  const signalTypes = signalTypesFor(custom, settings.signals);
   const issues = table.issues.slice();
   // An account answers to every company name its rows use (G-038); signals also find it by domain, base name or
   // initials (G-044), each only when exactly one account fits.
@@ -956,7 +1066,7 @@ export function processSignals(grid: Grid, list: LeadList,
     n++;
     const s: Signal = {
       id: 'SIG-' + String(n).padStart(2, '0'), row: r.__row, company: clean(r.company_name),
-      personRef: clean(r.contact_email_or_linkedin), type: clean(r.signal_type), date: clean(r.event_date),
+      personRef: clean(r.contact_email_or_linkedin), leadName: clean(r.lead_name), type: clean(r.signal_type), date: clean(r.event_date),
       detail: clean(r.detail), source: clean(r.source), product: clean(r.product),
       status: '', code: '', reason: '', assigned: '', personName: '', accountId: null, contactRow: null,
     };
@@ -983,6 +1093,10 @@ export function processSignals(grid: Grid, list: LeadList,
     if (typeCfg && off.includes(s.type)) { reject('OFF', `${s.type} is switched off in Setup`, 'signal_type', 'Switch it back on in Setup to score it'); continue; }
 
     // Installed system (current) is company-wide: it knocks the account out, whoever is named.
+    if (typeCfg && typeCfg.knockout && !settings.knockouts.installed) {
+      s.status = 'Not used'; s.reason = 'Pilot product installed, but this knock-out is switched off in Setup';
+      continue;
+    }
     if (typeCfg && typeCfg.knockout) {
       s.status = 'Used for a knock-out'; s.reason = 'Current pilot product installed: account excluded';
       knockouts.set(acc.id, `Pilot product already installed at the site${s.product ? ` (${s.product})` : ''}`);
@@ -990,14 +1104,28 @@ export function processSignals(grid: Grid, list: LeadList,
     }
 
     let person: Contact | null | undefined = null;
+    const who = s.leadName ? `${s.leadName} (${s.personRef || 'no email or LinkedIn'})` : s.personRef;
     if (s.personRef) {
       const ref = s.personRef.includes('@') ? normEmail(s.personRef) : normLinkedIn(s.personRef);
       person = cs.find(c => (c.email && c.email === ref) || (c.linkedin && c.linkedin === ref) || normEmail(c.emailRaw) === ref || !!c.altRefs?.includes(ref));
       if (!person) {
-        reject('D4', `Person ${s.personRef} is not in the lead file for this account`, 'contact_email_or_linkedin', 'Add this person to the lead file, or correct the email or LinkedIn URL');
-        suggested.push({ company: acc.name, person: s.personRef, signal: s.type, row: s.row });
+        reject('D4', `Person ${who} is not in the lead file for this account`, 'contact_email_or_linkedin', 'Add this person to the lead file, or correct the email or LinkedIn URL');
+        suggested.push({ company: acc.name, person: s.leadName ? `${s.leadName} · ${s.personRef}` : s.personRef, signal: s.type, row: s.row });
         continue;
       }
+      s.assigned = 'Named in the file';
+      if (s.leadName && normKey(s.leadName) !== normKey(person.name)) issues.push({ file, sheet, row: s.row, field: 'lead_name', issue: `Named "${s.leadName}", but ${s.personRef} is ${person.name} in the lead file`,
+        outcome: `Counted for ${person.name}, matched by the email or LinkedIn URL`, code: '—', fix: 'Check the name or the email', severity: 'info' });
+    } else if (s.leadName) {
+      // A name alone finds the person only when exactly one contact at the account has it.
+      const same = cs.filter(c => normKey(c.name) === normKey(s.leadName));
+      if (same.length !== 1) {
+        reject('D4', same.length ? `${same.length} people at ${acc.name} are called ${s.leadName}` : `Person ${s.leadName} is not in the lead file for this account`, 'lead_name',
+          same.length ? 'Add their email or LinkedIn URL so the signal reaches the right one' : 'Add this person to the lead file, or correct the name');
+        if (!same.length) suggested.push({ company: acc.name, person: s.leadName, signal: s.type, row: s.row });
+        continue;
+      }
+      person = same[0];
       s.assigned = 'Named in the file';
     } else {
       // Only someone who can be contacted is auto-assigned (D-16, G-050).
@@ -1046,14 +1174,14 @@ export function stack(weights: number[]): number {
   return weights.slice().sort((a, b) => b - a).reduce((sum, w, i) => sum + w * Math.pow(0.5, i), 0);
 }
 
-export function tierFor(rank: number, hasSignal: boolean): Tier {
+export function tierFor(rank: number, hasSignal: boolean, cut: ScoringSettings['tiers'] = CONFIG.tierThresholds): Tier {
   if (!hasSignal) return 'Watch list';
-  if (rank >= CONFIG.tierThresholds.A) return 'A';
-  if (rank >= CONFIG.tierThresholds.B) return 'B';
+  if (rank >= cut.A) return 'A';
+  if (rank >= cut.B) return 'B';
   return 'C';
 }
 
-export function scoreList(list: LeadList, signalResult: Pick<SignalResult, 'signals' | 'knockouts'>): ScoreResult[] {
+export function scoreList(list: LeadList, signalResult: Pick<SignalResult, 'signals' | 'knockouts'>, settings: ScoringSettings = DEFAULT_SCORING): ScoreResult[] {
   const results: ScoreResult[] = [];
   const contactsByAcc = new Map<string, Contact[]>();
   for (const c of list.contacts) {
@@ -1064,7 +1192,7 @@ export function scoreList(list: LeadList, signalResult: Pick<SignalResult, 'sign
     const cs = contactsByAcc.get(a.id) || [];
     const ko = signalResult.knockouts.get(a.id);
     const res: ScoreResult = { account: a, contacts: cs, excluded: a.excluded || !!ko, excludedReason: a.excludedReason || ko || '' };
-    if (!res.excluded) Object.assign(res, fitFor(a, cs));
+    if (!res.excluded) Object.assign(res, fitFor(a, cs, settings));
     const own = signalResult.signals.filter(s => s.accountId === a.id && s.status === 'Qualified');
     if (res.excluded || res.belowFloor) {
       own.forEach(s => { s.status = 'Not used'; s.reason = res.excluded ? `Qualified, but the account is excluded (${res.excludedReason})` : 'Qualified, but the account is below the fit floor'; });
@@ -1089,12 +1217,12 @@ export function scoreList(list: LeadList, signalResult: Pick<SignalResult, 'sign
     res.timing = round1(rawTiming / CONFIG.timingMax * 100);
     res.score = round1(fit * (rawTiming / CONFIG.timingMax * 100) / 100);
     res.signalCount = own.length;
-    res.tier = tierFor(res.score, own.length > 0);
+    res.tier = tierFor(res.score, own.length > 0, settings.tiers);
     // Each prospect scored on their own evidence: account fit × their timing, with their own why-now.
     people.forEach(p => {
       p.timing = p.score;
       p.final = round1(fit * p.timing / 100);
-      p.tier = tierFor(p.final, p.signals.length > 0);
+      p.tier = tierFor(p.final, p.signals.length > 0, settings.tiers);
       p.whyNow = p.signals.slice(0, 2).map((s, i) => `${i ? 'also ' : ''}${lowerFirst(s.detail || s.type)}`).join('; ');
     });
     const hasPrimary = cs.some(c => !suppressed(c) && c.persona === 'Primary');

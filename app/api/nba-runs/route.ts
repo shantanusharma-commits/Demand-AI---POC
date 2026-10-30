@@ -4,7 +4,7 @@ import { LIMITS } from '@/lib/server/auth/rate-limit';
 import { uuidField } from '@/lib/server/http/schemas';
 import { withTenant } from '@/lib/server/db/tenant';
 import { buildNbaRun, listNbaRuns } from '@/lib/server/services/nba';
-import { NBA_STAGES } from '@/lib/server/services/nba-ai';
+import { nbaStages } from '@/lib/server/services/nba-ai';
 import { enqueueJob } from '@/lib/server/jobs/queue';
 import { aiGateway } from '@/lib/server/ai';
 
@@ -18,12 +18,13 @@ const Body = z.object({ handoffId: uuidField.optional(), scoringRunId: uuidField
   .refine(b => !!b.handoffId !== !!b.scoringRunId, 'Give either a hand-off or a scoring run.');
 
 // Groups a stored hand-off (or a saved scoring run's tier A and B prospects) into micro-segments, with one checked
-// first action per account, routed to go ahead, to a rep, or to the sales manager (G-006). With AI drafting on, the
-// first messages take longer than a request, so the build is a job (202 with its ID; GET /api/jobs/:id follows it).
+// first action per account, routed to go ahead, to a rep, or to the sales manager (G-006). With AI grouping, choosing
+// or drafting on, the build takes longer than a request, so it is a job (202 with its ID; GET /api/jobs/:id follows it).
 export const POST = withApi<z.infer<typeof Body>>({ route: 'POST /api/nba-runs', auth: 'unit', permission: 'nba.run', body: Body, limit: LIMITS.nbaBuild }, async ({ deps, tenant, role, body }) => {
-  if (aiGateway().enabled('draft_message')) {
+  const gw = aiGateway();
+  if (gw.enabled('draft_message') || gw.enabled('segment') || gw.enabled('next_action')) {
     const payload: Record<string, string> = body.handoffId ? { handoffId: body.handoffId } : { scoringRunId: body.scoringRunId! };
-    const jobId = await withTenant(deps.db, tenant!, s => enqueueJob(s, 'nba.build', payload, NBA_STAGES));
+    const jobId = await withTenant(deps.db, tenant!, s => enqueueJob(s, 'nba.build', payload, nbaStages(gw)));
     return Response.json({ jobId }, { status: 202 });
   }
   const result = await withTenant(deps.db, tenant!, s => buildNbaRun(s, { userId: tenant!.userId, role: role! }, body), { label: 'nba.build', slowMs: 5_000 });

@@ -438,18 +438,19 @@ export const fileName = (title: string, ext: string) => ((title || 'content').re
 const BRAND_HEX = '7D52A2';
 const xmlEsc = (s: string) => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] as string));
 type Run = { t: string; b?: boolean; i?: boolean; u?: boolean; color?: string; sz?: number };
-const rXml = (r: Run) => `<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/>${r.b ? '<w:b/>' : ''}${r.i ? '<w:i/>' : ''}${r.u ? `<w:u w:val="single" w:color="${BRAND_HEX}"/>` : ''}<w:color w:val="${r.color || '1D242C'}"/><w:sz w:val="${r.sz || 22}"/></w:rPr><w:t xml:space="preserve">${xmlEsc(r.t)}</w:t></w:r>`;
-const pXml = (runs: Run[], ppr = '') => `<w:p><w:pPr>${ppr}</w:pPr>${runs.map(rXml).join('')}</w:p>`;
+const rXml = (r: Run, hex: string) => `<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/>${r.b ? '<w:b/>' : ''}${r.i ? '<w:i/>' : ''}${r.u ? `<w:u w:val="single" w:color="${hex}"/>` : ''}<w:color w:val="${r.color || '1D242C'}"/><w:sz w:val="${r.sz || 22}"/></w:rPr><w:t xml:space="preserve">${xmlEsc(r.t)}</w:t></w:r>`;
 const W = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"';
 
-/** The parts of a Word file: a rule under the title, underlined headings, "Client" in the header, page numbers. */
-export function docxParts(p: { type: ContentType; title: string; blocks: Block[] }, dateLabel: string): Record<string, string> {
+/** The parts of a Word file: a rule under the title, underlined headings, the client's name in the header ("Client"
+ *  unless a client theme names it), page numbers. `brand.hex` is the accent colour as RRGGBB. */
+export function docxParts(p: { type: ContentType; title: string; blocks: Block[] }, dateLabel: string, brand: { name: string; hex: string } = { name: 'Client', hex: BRAND_HEX }): Record<string, string> {
+  const BRAND_HEX = brand.hex, pXml = (runs: Run[], ppr = '') => `<w:p><w:pPr>${ppr}</w:pPr>${runs.map(r => rXml(r, brand.hex)).join('')}</w:p>`;
   const sp = (b: number, a: number) => `<w:spacing w:before="${b}" w:after="${a}" w:line="300" w:lineRule="auto"/>`;
   const body: string[] = [];
   for (const b of p.blocks) {
     if (b.tag === 'h1') {
       body.push(pXml([{ t: plain(b), b: true, sz: 44, color: '141A21' }], sp(0, 80) + `<w:pBdr><w:bottom w:val="single" w:sz="12" w:space="6" w:color="${BRAND_HEX}"/></w:pBdr>`));
-      body.push(pXml([{ t: `${TYPES[p.type].label} · Client · ${dateLabel}`, sz: 18, color: '7A8592' }], sp(60, 240)));
+      body.push(pXml([{ t: `${TYPES[p.type].label} · ${brand.name} · ${dateLabel}`, sz: 18, color: '7A8592' }], sp(60, 240)));
     } else if (b.tag === 'h2') body.push(pXml([{ t: plain(b), b: true, sz: 28, color: '141A21', u: true }], sp(280, 100) + '<w:keepNext/>'));
     else if (Array.isArray(b.text)) b.text.forEach((li, i) => body.push(pXml([{ t: b.tag === 'ol' ? `${i + 1}.  ` : '•  ', color: BRAND_HEX, b: true }, { t: li }], sp(0, 80) + '<w:ind w:left="567" w:hanging="340"/>')));
     else if (b.tag === 'blockquote') body.push(pXml([{ t: b.text, i: true, color: '4A5664' }], sp(60, 160) + `<w:ind w:left="400"/><w:pBdr><w:left w:val="single" w:sz="18" w:space="10" w:color="${BRAND_HEX}"/></w:pBdr>`));
@@ -459,10 +460,10 @@ export function docxParts(p: { type: ContentType; title: string; blocks: Block[]
   return {
     '[Content_Types].xml': '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/><Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/><Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/></Types>',
     '_rels/.rels': '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/></Relationships>',
-    'docProps/core.xml': `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:title>${xmlEsc(p.title)}</dc:title><dc:creator>Client</dc:creator></cp:coreProperties>`,
+    'docProps/core.xml': `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:title>${xmlEsc(p.title)}</dc:title><dc:creator>${xmlEsc(brand.name)}</dc:creator></cp:coreProperties>`,
     'word/_rels/document.xml.rels': '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rIdH" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/><Relationship Id="rIdF" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/></Relationships>',
     'word/document.xml': `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document ${W}><w:body>${body.join('')}<w:sectPr><w:headerReference w:type="default" r:id="rIdH"/><w:footerReference w:type="default" r:id="rIdF"/><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1440" w:right="1300" w:bottom="1300" w:left="1300" w:header="600" w:footer="600" w:gutter="0"/></w:sectPr></w:body></w:document>`,
-    'word/header1.xml': `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:hdr ${W}>${pXml([{ t: 'Client', b: true, sz: 18, color: BRAND_HEX }], '<w:jc w:val="right"/>')}</w:hdr>`,
+    'word/header1.xml': `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:hdr ${W}>${pXml([{ t: brand.name, b: true, sz: 18, color: BRAND_HEX }], '<w:jc w:val="right"/>')}</w:hdr>`,
     'word/footer1.xml': `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:ftr ${W}><w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r>${grey}<w:t xml:space="preserve">${xmlEsc(p.title)} · Page </w:t></w:r><w:r>${grey}<w:fldChar w:fldCharType="begin"/></w:r><w:r>${grey}<w:instrText xml:space="preserve"> PAGE </w:instrText></w:r><w:r>${grey}<w:fldChar w:fldCharType="separate"/></w:r><w:r>${grey}<w:t>1</w:t></w:r><w:r>${grey}<w:fldChar w:fldCharType="end"/></w:r></w:p></w:ftr>`,
   };
 }

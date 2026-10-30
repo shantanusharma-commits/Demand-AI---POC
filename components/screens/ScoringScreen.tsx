@@ -24,6 +24,7 @@ import { RenameField } from '@/components/RenameField';
 import { RoutingTab } from '@/components/RoutingTab';
 import { AiTag, aiShare } from '@/components/AiTag';
 import { CopilotButton } from '@/components/Copilot';
+import { SignalsGuideButton } from '@/components/SignalsGuide';
 import { useCan } from '@/components/SessionContext';
 import type { ListDetail as ServerListDetail, ListSummary as ServerListSummary } from '@/lib/server/services/lists';
 import type { ActiveSignalSettings, ProspectDetail, ProspectRow, RunDetail as ServerRunDetail, RunSummary as ServerRunSummary } from '@/lib/server/services/scoring';
@@ -365,7 +366,7 @@ export function ScoringScreen({ aiWhyNow = false }: { aiWhyNow?: boolean }) {
     const types = [...Object.keys(DemandAI.CONFIG.signalTypes).filter(k => !DemandAI.CONFIG.signalTypes[k].knockout && !DemandAI.CONFIG.signalTypes[k].reject), ...added.map(c => c.name)];
     const settingsNote = [off.size ? `Switched off in Setup, so not scored: ${[...off].join(', ')}.` : '', added.length ? `Added in Setup: ${added.map(c => c.name).join(', ')}.` : ''].filter(Boolean).join(' ');
     return <>
-      <div className="topbar"><div className="topbar-l"><span className="tb-title">Account Scoring</span><span className="tb-badge badge-neutral">{aiWhyNow ? 'Fit × Timing · rules · why-now worded with AI' : 'Fit × Timing · rules only'}</span></div></div>
+      <div className="topbar"><div className="topbar-l"><span className="tb-title">Account Scoring</span><span className="tb-badge badge-neutral">{aiWhyNow ? 'Fit × Timing · rules · why-now worded with AI' : 'Fit × Timing · rules only'}</span></div><div className="topbar-r"><SignalsGuideButton from="scoring" /></div></div>
       <Tabs label="Account Scoring">{ft('new', 'New scoring')}{ft('saved', 'Scored lists', runs.length)}{ft('monitor', 'Signal monitoring')}</Tabs>
       <div className="canvas">{tab === 'monitor' ? monitorView() : tab === 'new' ? (
         <div style={sx('max-width:640px;margin:24px auto 0')}>
@@ -526,7 +527,8 @@ export function ScoringScreen({ aiWhyNow = false }: { aiWhyNow?: boolean }) {
           ss.map(s => <tr key={s.seq}>
             <td>{cell(s.id, escSub('Row ' + s.row))}</td>
             <td>{cell(s.company)}</td>
-            <td>{cell(s.personName || s.personRef, s.assigned && s.assigned !== 'Named in the file' ? { node: <span style={sx('color:var(--warn)')}>Auto-assigned</span>, title: 'Auto-assigned' } : null)}</td>
+            <td>{cell(s.personName || s.leadName || s.personRef, s.assigned && s.assigned !== 'Named in the file' ? { node: <span style={sx('color:var(--warn)')}>Auto-assigned</span>, title: 'Auto-assigned' }
+              : (s.personName || s.leadName) && s.personRef ? escSub(s.personRef) : null)}</td>
             <td>{tagChip(s.type, undefined, s.segment)}</td>
             <td style={sx('font-family:var(--fm);font-variant-numeric:tabular-nums')}>{s.date ? s.date : <span className="muted">—</span>}</td>
             <td className="num">{s.age !== undefined ? s.age + 'd' : <span className="muted">—</span>}</td>
@@ -564,6 +566,7 @@ export function ScoringScreen({ aiWhyNow = false }: { aiWhyNow?: boolean }) {
         <div className="topbar-r">
           <CopilotButton screen="scoring" ctxRef={{ runId: r.id }} title={r.name || r.listName}
             focus={drawerOpen && drawerMode === 'prospect' && drawer ? { ref: { contactId: drawer.contactId }, label: `${drawer.contact.name} (row ${drawer.contact.row}) · ${drawer.account.name}` } : null} />
+          <SignalsGuideButton from="scoring" />
           <button className="btn btn-sec btn-sm" onClick={() => renderStart('new')}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="15 18 9 12 15 6" /></svg>Score a different list</button>
           <button className="btn btn-sec btn-sm" onClick={openSave}>{r.status === 'saved' ? 'Saved ✓' : 'Save'}</button>
           <button className="btn btn-primary btn-sm" onClick={() => void sendToNBA()}>{`Send ${n ? n + ' selected' : 'tier A and B'} to NBA →`}</button>
@@ -645,7 +648,7 @@ export function ScoringScreen({ aiWhyNow = false }: { aiWhyNow?: boolean }) {
     return <>
       <div style={sx('font-size:12px;color:var(--i2);margin-bottom:10px;line-height:1.5')}>{"Every row of the signal file is checked. These didn't count towards any score, and why."}</div>
       {ss ? ss.map(s => <div key={s.seq} className="un"><div className="un-h">{tagChip(s.type)}<span>{'Row ' + s.row}</span></div>
-        <div className="un-t">{s.company}{s.personName || s.personRef ? ` · ${s.personName || s.personRef}` : ''}</div>
+        <div className="un-t">{s.company}{[s.personName || s.leadName, s.personRef].filter(Boolean).map(x => ` · ${x}`).join('')}</div>
         <div className="un-r"><b>{s.status === 'Rejected' ? `${s.code} ${DemandAI.CODES[s.code as DqCode]}` : s.status}</b>{' · ' + s.reason}</div></div>)
         : <div role="status" style={sx('font-size:12px;color:var(--i3)')}>Loading…</div>}
       {ss ? moreButton(unused, ss.length, r.visible.unused) : null}

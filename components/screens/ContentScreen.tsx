@@ -9,7 +9,7 @@
    sign-off column) are not shown (dead controls, G-063). */
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { VOICE_PRESETS, type BrandPack, type Claim, type Framework } from '@/lib/engine/nba';
-import { CLAIM_TYPES, applySuggestion, claimFits, claimStatus, nextClaimId, readRules, type ClaimStatus, type RuleSuggestion } from '@/lib/content/brand';
+import { CLAIM_TYPES, applySuggestion, claimFits, claimStatus, nextClaimId, type ClaimStatus, type RuleSuggestion } from '@/lib/content/brand';
 import { showToast } from '@/lib/ui';
 import { sx } from '@/lib/sx';
 import { ApiError, api, errorText, uploadFile, type WireDeep } from '@/lib/client/api';
@@ -21,12 +21,12 @@ import { Tab, Tabs } from '@/components/Tabs';
 type Brand = WireDeep<BrandState>;
 type Tab = 'guidelines' | 'framework' | 'voice' | 'negative' | 'claims' | 'content' | 'versions';
 type Guideline = { documentId: string; name: string; size: number; at: string; by: string };
-type Modal = { kind: 'changes' } | { kind: 'discard' } | { kind: 'restore'; versionNo: number } | { kind: 'claim'; pre?: string } | { kind: 'fromReview' } | { kind: 'framework'; index: number } | { kind: 'sample'; id: string };
+type Modal = { kind: 'changes' } | { kind: 'discard' } | { kind: 'restore'; versionNo: number } | { kind: 'claim'; pre?: string } | { kind: 'fromReview' } | { kind: 'framework'; index: number } | { kind: 'sample'; id: string } | { kind: 'play'; key: string | null };
 type Usage = WireDeep<{ use: Record<string, ClaimUse[]>; fromReview: FromReview[] }>;
 type Piece = WireDeep<ItemSummary>;
 
 const TABS: [Tab, string][] = [['guidelines', 'Brand guidelines'], ['framework', 'Messaging frameworks'], ['voice', 'Voice and tone'], ['negative', 'Negative keywords'], ['claims', 'Approved claims'], ['content', 'Content'], ['versions', 'Versions']];
-const SECTION_OF: Record<string, Tab> = { 'Brand guidelines': 'guidelines', 'Messaging frameworks': 'framework', 'Voice and tone': 'voice', 'Negative keywords': 'negative', 'Approved claims': 'claims' };
+const SECTION_OF: Record<string, Tab> = { 'Brand guidelines': 'guidelines', 'Messaging frameworks': 'framework', 'Messaging plays': 'framework', 'Voice and tone': 'voice', 'Negative keywords': 'negative', 'Approved claims': 'claims' };
 const USE = ['Often', 'Sometimes', 'Rarely', 'Not used'];
 const USE_TONE: Record<string, string> = { Often: 'tag-green', Sometimes: 'tag-blue', Rarely: 'tag-amber', 'Not used': 'tag-grey' };
 const STATUS_TONE: Record<ClaimStatus, string> = { Approved: 'tag-green', Expired: 'tag-red', Draft: 'tag-amber', Retired: 'tag-grey' };
@@ -161,7 +161,7 @@ const todayIso = () => { const d = new Date(); return d.getFullYear() + '-' + St
 const fmtDate = (t: string) => new Date(t).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 const clone = <T,>(x: T): T => JSON.parse(JSON.stringify(x));
 /** What the server takes for a pack: the parts people edit. */
-const toInput = (p: BrandPack) => ({ voice: p.voice, negative: p.negative, competitors: p.competitors, claims: p.claims, frameworks: p.frameworks,
+const toInput = (p: BrandPack) => ({ voice: p.voice, negative: p.negative, competitors: p.competitors, claims: p.claims, frameworks: p.frameworks, plays: p.framework,
   guideline: p.guideline ? { documentId: (p.guideline as Guideline).documentId } : null });
 
 function card(title: string, right: ReactNode, body: ReactNode, key?: string): ReactNode {
@@ -177,7 +177,8 @@ export function ContentScreen() {
   const [tab, setTab] = useState<Tab>('guidelines');
   const [modal, setModal] = useState<Modal | null>(null);
   const [modalError, setModalError] = useState('');
-  const [suggest, setSuggest] = useState<{ name: string; items: (RuleSuggestion & { added?: boolean })[] } | null>(null);
+  const [suggest, setSuggest] = useState<{ name: string; why: string; note: string; items: (RuleSuggestion & { added?: boolean; dismissed?: boolean })[] } | null>(null);
+  const [reading, setReading] = useState(false);
   const [openVersion, setOpenVersion] = useState<number | null>(null);
   const [clq, setClq] = useState(''), [clt, setClt] = useState(''), [cls, setCls] = useState(''), [clsel, setClsel] = useState<string | null>(null);
   const [fwf, setFwf] = useState<string | null>(null);
@@ -254,14 +255,24 @@ export function ContentScreen() {
   }
 
   /* ─── Brand guidelines: the reference document, rules read from it, and samples ─── */
+  /** Any guideline is read (30 Oct 2026): by the AI when it is on, else by the rules' reader; each suggestion waits for a person. */
+  async function readDocument(id: string, name: string) {
+    setReading(true);
+    try {
+      const r = await api<{ name: string; why: string; note: string; suggestions: RuleSuggestion[] }>(`/api/brand/documents/${id}/read`, { body: {} });
+      setSuggest({ name: r.name || name, why: r.why, note: r.note, items: r.suggestions });
+      return r.suggestions.length;
+    } catch (e) { showToast(errorText(e)); setSuggest(null); return null; }
+    finally { setReading(false); }
+  }
   async function onGuideline(file: File | undefined) {
     if (!file) return;
     try {
-      const items = /\.(txt|md)$/i.test(file.name) ? readRules(await file.text()) : null;
       const { document } = await uploadFile<{ document: { id: string; name: string } }>('/api/brand/documents', {}, file);
       const d = clone(draft); d.guideline = { documentId: document.id };
-      await commit(d, `${file.name} added to the draft${items ? `; ${items.length} rule${items.length === 1 ? '' : 's'} found` : ''}`);
-      setSuggest(items ? { name: file.name, items } : null);
+      await commit(d, `${file.name} added to the draft. Reading it…`);
+      const n = await readDocument(document.id, file.name);
+      if (n !== null) showToast(`${file.name}: ${n} suggestion${n === 1 ? '' : 's'} to review`);
     } catch (e) { showToast(errorText(e)); }
   }
   function guidelinesTab(): ReactNode {
@@ -271,21 +282,29 @@ export function ContentScreen() {
         {g ? <div style={sx('display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--rsm);margin-bottom:12px')}>
           <div style={sx('flex:1')}><div style={sx('font-size:12.5px;font-weight:600;color:var(--i1)')}>{g.name}</div><div style={sx('font-size:11px;color:var(--i3)')}>{`${Math.max(1, Math.round(g.size / 1024))} KB · uploaded by ${g.by} on ${fmtDate(g.at)}`}</div></div>
           <a className="btn btn-sec btn-sm" href={`/api/brand/documents/${g.documentId}`} style={sx('text-decoration:none')}>Download</a>
+          {canEdit ? <button className="btn btn-sec btn-sm" disabled={reading} onClick={() => void readDocument(g.documentId, g.name)}>{reading ? 'Reading…' : 'Read it for suggestions'}</button> : null}
           {canEdit ? <button className="btn btn-ghost btn-sm" onClick={() => { setSuggest(null); change(d => { d.guideline = null; }, 'Removed. Save to make it a new version'); }}>Remove</button> : null}</div> : null}
         {canEdit ? <label htmlFor="gFile" style={sx('display:block;border:1.5px dashed var(--bdk);border-radius:var(--rmd);padding:20px;cursor:pointer;background:var(--s50);text-align:center')}>
           <input type="file" id="gFile" accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.md" className="file-input" onChange={e => { void onGuideline(e.currentTarget.files?.[0]); e.currentTarget.value = ''; }} />
           <div style={sx('font-size:13px;font-weight:600;color:var(--i1)')}>{g ? 'Replace the guideline document' : 'Upload the brand guideline document'}</div>
-          <div style={sx('font-size:11px;color:var(--i3);margin-top:3px')}>PDF, Word or PowerPoint up to 5 MB is kept as the reference. A .txt or .md file is also read for rules you can add in one click.</div></label> : null}
+          <div style={sx('font-size:11px;color:var(--i3);margin-top:3px')}>PDF, Word, PowerPoint, .txt or .md up to 5 MB. It is kept as the reference and read for rules, writing guidance, plays and frameworks, which you add one by one.</div></label> : null}
         {label('Key rules from the guidelines, in your words')}
         <textarea key={`notes-${pend?.updatedAt ?? liveV}`} readOnly={!canEdit} aria-label="Key rules from the guidelines" rows={5} defaultValue={draft.voice.notes || ''} style={sx(`width:100%;${FIELD};line-height:1.6`)}
           onBlur={e => { const v = e.currentTarget.value; if (v !== draft.voice.notes) change(d => { d.voice.notes = v; }); }} />
         <div style={sx('font-size:11px;color:var(--i3);margin-top:6px')}>{"For the reviewer's reference. What the drafts follow strictly is set on the other tabs: voice and tone, negative keywords, approved claims and the messaging frameworks."}</div>
       </>)}
-      {suggest ? card('Rules found in the document', <span style={sx('font-size:11px;color:var(--i3)')}>{suggest.name}</span>, suggest.items.length
-        ? suggest.items.map((x, i) => <div key={i} style={sx('display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--s75);font-size:12px')}>
-          <span className="tag tag-grey">{x.kind}</span><span style={sx('flex:1;color:var(--i1)')}>{x.value}</span>
-          {x.added ? <span style={sx('color:var(--pos);font-weight:600')}>Added</span> : canEdit ? <button className="btn btn-sec btn-sm" onClick={() => { void commit(applySuggestion(draft, x), 'Added. Save to make it a new version'); setSuggest(s => s && { ...s, items: s.items.map((y, k) => k === i ? { ...y, added: true } : y) }); }}>Add to the draft</button> : null}</div>)
-        : <div style={sx('font-size:12px;color:var(--i3)')}>{'No rules in a form the system can read. Lines like "Never use the word synergy", "Do not mention Acme", "Always sign off as …", "Keep emails under 120 words" or "Tone: formal" are picked up.'}</div>) : null}
+      {reading && !suggest ? card('Reading the document…', null, <div style={sx('font-size:12px;color:var(--i3)')}>The AI reads the whole document; a long one can take up to a minute.</div>) : null}
+      {suggest ? card('Suggestions from the document', <span style={sx('font-size:11px;color:var(--i3)')}>{suggest.name}</span>, <>
+        <div style={sx('font-size:12px;color:var(--i2);margin-bottom:8px;line-height:1.5')}>{suggest.why} Add each one you agree with to the draft; nothing reaches a message until the version is saved.{suggest.note ? <span style={sx('display:block;color:var(--warn);margin-top:4px')}>{suggest.note}</span> : null}</div>
+        {suggest.items.filter(x => !x.dismissed).length ? suggest.items.map((x, i) => x.dismissed ? null : <div key={i} style={sx('display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--s75);font-size:12px')}>
+          <span className={`tag ${x.kind === 'Guidance' ? 'tag-blue' : x.kind === 'Play' || x.kind === 'Framework' ? 'tag-violet' : 'tag-grey'}`}>{x.kind === 'Guidance' ? 'Writing note' : x.kind}</span>
+          <div style={sx('flex:1;min-width:0')}><div style={sx('color:var(--i1)')}>{x.value}</div>
+            {x.play ? <div style={sx('color:var(--i2);margin-top:2px')}>{`Objection: “${x.play.objection}” · Answer: “${x.play.response}”`}</div> : null}
+            {x.from ? <div style={sx('color:var(--i3);margin-top:3px;font-style:italic')}>{`From the document: “${x.from}”`}</div> : null}</div>
+          {x.added ? <span style={sx('color:var(--pos);font-weight:600')}>Added</span> : canEdit ? <span style={sx('display:flex;gap:6px')}>
+            <button className="btn btn-sec btn-sm" onClick={() => { void commit(applySuggestion(draft, x), 'Added. Save to make it a new version'); setSuggest(s => s && { ...s, items: s.items.map((y, k) => k === i ? { ...y, added: true } : y) }); }}>Add to the draft</button>
+            <button className="btn btn-ghost btn-sm" onClick={() => setSuggest(s => s && { ...s, items: s.items.map((y, k) => k === i ? { ...y, dismissed: true } : y) })}>Dismiss</button></span> : null}</div>)
+          : <div style={sx('font-size:12px;color:var(--i3)')}>{'Nothing to suggest. Without the AI reader, only lines written as rules are picked up, like "Never use the word synergy", "Do not mention Acme", "Always sign off as …", "Keep emails under 120 words" or "Tone: formal".'}</div>}</>) : null}
       {card('Samples', <span style={sx('font-size:11px;color:var(--i3)')}>what a good guideline looks like</span>, <>
         <div className="smp">{SAMPLES.map(s => <div key={s.id} className="smp-c"><div className="smp-doc md">{md(s.text.split('\n').slice(0, 9).join('\n'))}</div>
           <div className="smp-b"><b>{s.title}</b><div>{s.about}</div>
@@ -315,6 +334,7 @@ export function ContentScreen() {
           <div>{label('Punctuation')}<label style={sx('display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--i1);padding:8px 0')}><input type="checkbox" disabled={!canEdit} checked={!!v.noExclamation} onChange={e => { const c = e.currentTarget.checked; change(d => { d.voice.noExclamation = c; }); }} style={sx('accent-color:var(--brand)')} />No exclamation marks</label></div>
         </div>
         {label('Openers to avoid')}{chips(d => d.voice.bannedOpeners, 'e.g. Just checking in', false, 'addOpener')}
+        {label('Voice and tone notes: writing guidance the message-writing AI follows')}{chips(d => (d.voice.guidance ??= []), 'e.g. Use British spelling; name the site; never promise a date or a price', false, 'addGuidance')}
         <div style={sx('font-size:11px;color:var(--i3);margin-top:8px')}>A draft that breaks one of these is rewritten once automatically; if it still breaks it, it goes to a person in For Review.</div></>)}
       {card('Preview', <span style={sx('font-size:11px;color:var(--i3)')}>{`changes with the voice you pick: ${v.preset}`}</span>, <pre style={sx('white-space:pre-wrap;font-family:var(--fb);font-size:12.5px;color:var(--i1);line-height:1.6;margin:0;padding:12px;background:var(--s50);border-radius:var(--rsm)')}>{sample}</pre>)}
     </>;
@@ -404,15 +424,30 @@ export function ContentScreen() {
         <div className="fw-t"><div className="fw-r fw-hd"><div>Objective</div><div>Framework and structure</div><div>How often used</div><div></div></div>
           {order.map(({ f, i }) => <div key={f.objective} className="fw-r">
             <div className="fw-o">{f.objective}</div>
-            <div><b className="fw-n">{f.name}</b><ol className="fw-s">{f.steps.map((s, k) => <li key={k}>{s}</li>)}</ol></div>
+            <div><b className="fw-n">{f.name}</b><ol className="fw-s">{f.steps.map((s, k) => <li key={k}>{s}</li>)}</ol>{f.ask ? <div style={sx('font-size:11.5px;color:var(--i2);margin-top:4px')}><b>Ends with the ask:</b> {f.ask}</div> : null}</div>
             <div><span className={`tag ${USE_TONE[f.use] || 'tag-grey'}`}>{f.use}</span></div>
             <div className="fw-e">{canEdit ? <button className="btn btn-ghost btn-sm" onClick={() => openModal({ kind: 'framework', index: i })}>Edit</button> : null}</div></div>)}</div>)}
+      {card('Plays by situation', <div style={sx('display:flex;gap:10px;align-items:center')}><span style={sx('font-size:11px;color:var(--i3)')}>{`${Object.keys(draft.framework || {}).length} plays`}</span>{canEdit ? <button className="btn btn-sec btn-sm" onClick={() => openModal({ kind: 'play', key: null })}>+ Add a play</button> : null}</div>, <>
+        <div style={sx('font-size:12px;color:var(--i2);margin-bottom:10px;line-height:1.5')}>For each micro-segment or situation: the angle to lead with, the objection to expect and the answer to it. The message-writing AI gets the whole play, so the message and the call script can handle the objection.</div>
+        <div className="fw-t"><div className="fw-r fw-hd"><div>Micro-segment or situation</div><div>Angle</div><div>Objection and answer</div><div></div></div>
+          {Object.entries(draft.framework || {}).map(([k, pl]) => <div key={k} className="fw-r"><div className="fw-o">{k}</div><div style={sx('font-size:12px;color:var(--i1)')}>{pl.angle}</div>
+            <div style={sx('font-size:12px;color:var(--i2)')}>{`“${pl.objection}”`}<div style={sx('margin-top:3px;color:var(--i1)')}>{pl.response}</div></div>
+            <div className="fw-e">{canEdit ? <button className="btn btn-ghost btn-sm" onClick={() => openModal({ kind: 'play', key: k })}>Edit</button> : null}</div></div>)}</div></>)}
     </>;
+  }
+  function savePlay(key: string | null) {
+    const k = field('plKey'), angle = field('plAngle');
+    if (!k || !angle) { setModalError('Name the micro-segment or situation, and give the angle'); return; }
+    const d = clone(draft), prev = key ? d.framework[key] : undefined;
+    if (key && key !== k) delete d.framework[key];
+    d.framework[k] = { angle, objection: field('plObj'), response: field('plAns'), questions: prev?.questions ?? [] };
+    setModal(null);
+    void commit(d, key ? 'Changed. Save to make it a new version' : 'Play added. Save to make it a new version');
   }
   function saveFramework(i: number) {
     const steps = field('fwSteps').split('\n').map(x => x.trim()).filter(Boolean);
     if (!field('fwObj') || !field('fwName') || !steps.length) { setModalError('Add the objective, the framework and its structure'); return; }
-    const d = clone(draft), f: Framework = { objective: field('fwObj'), name: field('fwName'), steps, use: field('fwUse'), actions: i >= 0 ? d.frameworks[i].actions || [] : [] };
+    const d = clone(draft), f: Framework = { objective: field('fwObj'), name: field('fwName'), steps, use: field('fwUse'), actions: i >= 0 ? d.frameworks[i].actions || [] : [], ...(field('fwAsk') ? { ask: field('fwAsk') } : {}) };
     if (i >= 0) d.frameworks[i] = f; else d.frameworks.push(f);
     setModal(null);
     void commit(d, i >= 0 ? 'Changed. Save to make it a new version' : 'Framework added. Save to make it a new version');
@@ -487,12 +522,24 @@ export function ContentScreen() {
       <div className="af-row"><label className="af"><span>Year</span><input id="cYear" type="number" defaultValue={new Date().getFullYear()} /></label><label className="af"><span>Expires</span><input id="cExp" type="date" /></label>
         <label className="af"><span>Owner</span><input id="cOwner" maxLength={120} defaultValue={me.displayName} /></label></div>
       {err}<div style={sx('display:flex;gap:8px;justify-content:flex-end')}>{close}<button className="btn btn-primary btn-sm" onClick={addClaim}>Add as approved</button></div></>;
-    const f = m.index >= 0 ? draft.frameworks[m.index] : { objective: '', name: '', steps: [] as string[], use: 'Sometimes', actions: [] as string[] };
+    if (m.kind === 'play') {
+      const pl = m.key ? draft.framework[m.key] : { angle: '', objection: '', response: '', questions: [] };
+      return <>{title(m.key ? 'Edit the play' : 'Add a play')}
+        <label className="af"><span>Micro-segment or situation</span><input id="plKey" maxLength={80} defaultValue={m.key ?? ''} placeholder="e.g. Modernisation, or Ageing control system" /></label>
+        <label className="af"><span>Angle: what to lead with</span><input id="plAngle" maxLength={300} defaultValue={pl.angle} placeholder="e.g. Plan the migration before end of support forces the timing" /></label>
+        <label className="af"><span>The objection to expect</span><input id="plObj" maxLength={300} defaultValue={pl.objection} placeholder="e.g. The current system still runs fine." /></label>
+        <label className="af"><span>The answer to it</span><textarea id="plAns" rows={2} maxLength={400} defaultValue={pl.response} /></label>
+        {err}
+        <div style={sx('display:flex;gap:8px;justify-content:space-between;margin-top:6px')}>{m.key ? <button className="btn btn-ghost btn-sm" style={sx('color:var(--neg)')} onClick={() => { const d = clone(draft); delete d.framework[m.key!]; setModal(null); void commit(d, 'Removed from the draft'); }}>Remove</button> : <span></span>}
+          <span style={sx('display:flex;gap:8px')}>{close}<button className="btn btn-primary btn-sm" onClick={() => savePlay(m.key)}>Done</button></span></div></>;
+    }
+    const f = m.index >= 0 ? draft.frameworks[m.index] : { objective: '', name: '', steps: [] as string[], use: 'Sometimes', actions: [] as string[], ask: '' };
     return <>{title(m.index >= 0 ? 'Edit the framework' : 'Add a framework')}
       <div className="af-row"><label className="af"><span>Objective: what the message is for</span><input id="fwObj" maxLength={200} defaultValue={f.objective} placeholder="e.g. Win back a lost account" /></label>
         <label className="af"><span>Framework</span><input id="fwName" maxLength={120} defaultValue={f.name} placeholder="e.g. Problem, agitate, solve" /></label></div>
       <label className="af"><span>Structure, one step per line</span><textarea id="fwSteps" rows={4} defaultValue={f.steps.join('\n')} placeholder={'The problem they face\nWhat waiting costs them\nThe approach that solves it'} /></label>
-      <label className="af" style={sx('max-width:220px')}><span>How often used</span><select id="fwUse" defaultValue={f.use}>{USE.map(u => <option key={u}>{u}</option>)}</select></label>
+      <div className="af-row"><label className="af"><span>The ask it ends with</span><input id="fwAsk" maxLength={200} defaultValue={f.ask ?? ''} placeholder="e.g. A 20-minute call this week" /></label>
+        <label className="af" style={sx('max-width:220px')}><span>How often used</span><select id="fwUse" defaultValue={f.use}>{USE.map(u => <option key={u}>{u}</option>)}</select></label></div>
       {err}
       <div style={sx('display:flex;gap:8px;justify-content:space-between;margin-top:6px')}>{m.index >= 0 ? <button className="btn btn-ghost btn-sm" style={sx('color:var(--neg)')} onClick={() => { const d = clone(draft); d.frameworks.splice(m.index, 1); setModal(null); void commit(d, 'Removed from the draft'); }}>Remove</button> : <span></span>}
         <span style={sx('display:flex;gap:8px')}>{close}<button className="btn btn-primary btn-sm" onClick={() => saveFramework(m.index)}>Done</button></span></div></>;
@@ -510,7 +557,7 @@ export function ContentScreen() {
       </div>
     </main>
     {modal ? <div style={OVERLAY} onClick={e => { if (e.target === e.currentTarget) setModal(null); }}>
-      <div ref={formRef} role="dialog" aria-modal="true" aria-label={modal.kind === 'claim' ? 'Add a claim' : modal.kind === 'fromReview' ? 'Approved in For Review' : modal.kind === 'framework' ? 'Framework' : 'Content library'}
+      <div ref={formRef} role="dialog" aria-modal="true" aria-label={modal.kind === 'claim' ? 'Add a claim' : modal.kind === 'fromReview' ? 'Approved in For Review' : modal.kind === 'framework' ? 'Framework' : modal.kind === 'play' ? 'Play' : 'Content library'}
         style={sx(`background:var(--surf);border-radius:var(--rlg);box-shadow:var(--sh-lg);width:${modal.kind === 'sample' || modal.kind === 'framework' ? 680 : modal.kind === 'claim' ? 620 : 560}px;max-width:100%;max-height:88vh;overflow:auto;padding:22px`)}>{modalBody(modal)}</div>
     </div> : null}
   </>;

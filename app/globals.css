@@ -149,6 +149,67 @@ button.ftab{background:none;border-top:0;border-left:0;border-right:0;font-famil
 .drawer-close{width:26px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:6px;color:var(--i3);cursor:pointer;flex-shrink:0;transition:all var(--fast);}
 .drawer-close:hover{background:var(--s75);color:var(--i1);}
 .drawer-body{padding:14px 16px 24px;flex:1;}
+/* The (i) beside a measure (30 Oct 2026): what it means, how it is worked out with live numbers, the target, an example. */
+.info{position:relative;display:inline-flex;vertical-align:middle;margin-left:5px;}
+.info-btn{width:16px;height:16px;border-radius:50%;border:1px solid var(--bdk);background:var(--surf);color:var(--i3);font-family:Georgia,serif;font-style:italic;font-weight:700;font-size:10.5px;line-height:14px;text-align:center;cursor:pointer;padding:0;}
+.info-btn:hover,.info-btn[aria-expanded="true"]{border-color:var(--brand);color:var(--brand);}
+.info-pop{position:fixed;z-index:700;overflow-y:auto;background:var(--surf);border:1px solid var(--border);border-radius:var(--rmd);box-shadow:var(--sh-lg);padding:12px 14px;display:flex;flex-direction:column;gap:7px;text-align:left;font-size:12px;font-weight:400;line-height:1.5;color:var(--i1);text-transform:none;letter-spacing:normal;white-space:normal;cursor:default;}
+.info-t{font-family:var(--fd);font-size:13px;}
+.info-r em{display:block;font-style:normal;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--i3);margin-bottom:1px;}
+
+/* Setup editors (30 Oct 2026): the rubric, cut-offs, personas, signal weights, actions, segments and criteria. */
+.ed{display:flex;flex-direction:column;gap:8px;margin-bottom:14px;}
+.ed-h{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-top:6px;font-size:12.5px;color:var(--i1);}
+.ed-tot{font-size:11.5px;font-weight:700;} .ed-tot.ok{color:var(--pos);} .ed-tot.bad{color:var(--neg);}
+.ed-part{border:1px solid var(--border);border-radius:var(--rmd);padding:8px 10px;display:flex;flex-direction:column;gap:6px;}
+.ed-row{display:flex;align-items:center;gap:10px;}
+.ed-t{flex:1;min-width:0;padding:6px 9px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:12.5px;font-weight:600;}
+.ed-ta{width:100%;padding:6px 9px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:12px;resize:vertical;font-family:var(--fb);}
+.ed-n{padding:5px 7px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:12.5px;font-family:var(--fm);}
+.ed-w{display:flex;align-items:center;gap:4px;font-size:12px;color:var(--i2);}
+.ed-levels{display:flex;flex-wrap:wrap;gap:10px;padding-left:20px;}
+.ed-levels label{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--i2);}
+.ed-rules{display:flex;flex-direction:column;gap:6px;padding-left:20px;}
+.ed-rule,.ed-col{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:11.5px;color:var(--i2);}
+.ed-rule input:not(.ed-n),.ed-rule select,.ed-col select,.ed-tab select,.ed-inline input,.ed-inline select,.ed-lock input{padding:5px 7px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:12px;}
+.ed-add{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.ed-add input{flex:1;min-width:220px;padding:6px 9px;border:1px solid var(--bdk);border-radius:var(--rsm);font-size:12.5px;}
+.ed-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;}
+.ed-grid label{display:flex;flex-direction:column;gap:4px;font-size:11.5px;color:var(--i2);}
+.ed-grid label>span:first-child{font-weight:700;color:var(--i1);}
+.ed-grid em{font-style:normal;font-size:11px;color:var(--i3);line-height:1.45;}
+.ed-tab td{vertical-align:top;}
+.ed-word{border:1px dashed var(--bdk);border-radius:999px;padding:3px 10px;font-size:12px;min-width:120px;background:var(--surf);}
+.ed-ko{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--i1);} .ed-ko label{display:flex;align-items:center;}
+.ed-sig{display:flex;flex-direction:column;gap:4px;font-size:11.5px;color:var(--i2);} .ed-sig .ed-n{width:62px;margin:0 4px;}
+.ed-bar{position:sticky;bottom:12px;z-index:20;background:var(--surf);border:2px solid var(--brand);border-radius:var(--rlg);box-shadow:var(--sh-lg);padding:14px 16px;margin:14px 0;display:flex;flex-direction:column;gap:10px;}
+.ed-bar-h{display:flex;flex-direction:column;gap:2px;font-size:13px;color:var(--i1);} .ed-bar-h span{font-size:11.5px;color:var(--i3);}
+.ed-ch{margin:0;padding-left:18px;font-size:12px;color:var(--i2);line-height:1.6;max-height:160px;overflow-y:auto;}
+.ed-pv{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:12px;color:var(--i1);background:var(--s50);border-radius:var(--rmd);padding:8px 10px;}
+.ed-err{font-size:12px;color:var(--neg);background:var(--neg-lt);border-radius:var(--rsm);padding:7px 10px;}
+.ed-lock{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:var(--brand-lt);border-radius:var(--rmd);padding:10px 12px;margin-bottom:10px;font-size:12.5px;color:var(--i1);}
+.ed-lock-a,.ed-inline{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.chip.off{background:var(--surf);border-color:var(--border);color:var(--i3);}
+button.chip.off,button.chip{cursor:pointer;}
+
+/* The signals guide (Prospecting, Account Scoring): a panel over the screen, from the right. */
+.guide-ov{position:fixed;inset:0;background:rgba(20,26,33,.35);z-index:650;display:flex;justify-content:flex-end;}
+.guide{width:480px;max-width:100%;height:100vh;overflow-y:auto;background:var(--surf);box-shadow:var(--sh-lg);animation:slideLeft var(--base) var(--ease);}
+.guide-lead{font-size:12.5px;color:var(--i2);line-height:1.6;margin:0 0 14px;}
+.guide-steps{list-style:none;margin:0 0 14px;padding:0;display:flex;flex-direction:column;gap:6px;}
+.guide-step{display:flex;gap:10px;padding:10px;border:1px solid var(--border);border-radius:var(--rmd);}
+.guide-step.here{border-color:var(--brand);background:var(--brand-lt);}
+.guide-num{width:22px;height:22px;border-radius:50%;background:var(--s100);color:var(--i2);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.guide-step.here .guide-num{background:var(--brand);color:#fff;}
+.guide-t{font-size:12.5px;font-weight:700;color:var(--i1);display:flex;align-items:center;gap:8px;}
+.guide-here{font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--brand-dk);background:var(--surf);border:1px solid var(--brand-mid);border-radius:999px;padding:1px 7px;}
+.guide-b{font-size:12px;color:var(--i2);line-height:1.55;margin:3px 0 5px;}
+.guide-b code,.guide-box code{font-family:var(--fm);font-size:11px;background:var(--s75);padding:0 4px;border-radius:4px;}
+.guide-where{font-size:11.5px;font-weight:600;color:var(--brand);text-decoration:none;}
+button.guide-where{text-decoration:underline;}
+.guide-box{font-size:12px;color:var(--i2);line-height:1.55;background:var(--s50);border-radius:var(--rmd);padding:10px 12px;margin-bottom:10px;}
+.guide-box b{color:var(--i1);}
+.guide-box ul{margin:4px 0 0;padding-left:18px;}
 
 /* Score list */
 .score-list{background:var(--surf);border:1px solid var(--border);border-radius:var(--rmd);overflow:hidden;}

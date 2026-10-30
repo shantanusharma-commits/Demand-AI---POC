@@ -18,6 +18,9 @@ const nextConfig: NextConfig = {
   output: 'standalone',
   // No floating Next.js badge in development: the screens should look exactly as they do in production.
   devIndicators: false,
+  // The dev server refuses its own assets to any other hostname than localhost; this lets a tunnel set as
+  // APP_BASE_URL (a Cloudflare quick tunnel or ngrok, for trying the local setup with others) load the pages. Ignored in production.
+  allowedDevOrigins: process.env.APP_BASE_URL ? [new URL(process.env.APP_BASE_URL).hostname] : [],
   poweredByHeader: false,
   async headers() {
     return [{ source: '/:path*', headers: SECURITY_HEADERS }];
