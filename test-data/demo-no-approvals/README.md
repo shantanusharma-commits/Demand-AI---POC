@@ -9,3 +9,7 @@
 | `No_Approvals_2_Signals.xlsx` | Account Scoring (score date **9 Nov 2026**): 22 signal rows, all qualified |
 
 Expected: scores from 59.2 (Bluefin: quote request and webinar) down to 20.5; 10 tier A, 9 tier B; 19 handed off; all six segments form (Project 4, Inquiry 3, Modernisation 3, Service renewal 3, Engagement 3, Leadership 3); the For Review queue and Approvals are empty. 16 emails cite an approved claim; the 3 Leadership items are tasks for the owner. Results come from the latest POC engine (`scripts/run_no_approvals.mts`). All names are invented.
+
+## Round B (`round-b/`)
+
+The same design with different company and people names. Run `python3 scripts/make_no_approvals.py round-b <spec.json> B`. Top account: Alderbay Refining 59.2. 38 engine checks, all PASS.

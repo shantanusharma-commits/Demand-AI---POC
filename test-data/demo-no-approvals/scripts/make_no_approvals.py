@@ -8,6 +8,22 @@ from openpyxl import Workbook
 from openpyxl.styles import Font
 
 OUT, SPEC = sys.argv[1], sys.argv[2]
+ROUND = sys.argv[3] if len(sys.argv) > 3 else ''   # 'B': the same design with different company and people names (all invented)
+CO_B = ['Alderbay Refining', 'Beacon Hill Refining', 'Crestmoor Refining', 'Dunmore Refining', 'Eastholm Refining', 'Fallowfield Refining',
+        'Garnet Bay Refining', 'Hazelton Refining', 'Islemere Refining', 'Jarrow Point Refining', 'Kinross Refining', 'Lyndale Refining',
+        'Mossgate Refining', 'Norcliff Refining', 'Ospreyfield Refining', 'Parkhurst Refining', 'Quinton Refining', 'Ridgeway Refining', 'Sablewood Refining']
+PEOPLE_B = [('Yusri', 'Hamzah'), ('Grace', 'Ho'), ('Anjali', 'Menon'), ('Fadli', 'Rosli'), ('Chee', 'Keong'), ('Liza', 'Bautista'), ('Thu', 'Nguyen'),
+            ('Ratna', 'Sari'), ('Prasit', 'Wong'), ('Wei', 'Jie'), ('Miguel', 'Torres'), ('Mei', 'Fong'), ('Long', 'Tran'), ('Intan', 'Permata'),
+            ('Desmond', 'Lim'), ('Neha', 'Kapoor'), ('Joanna', 'Sim'), ('Lee', 'Hwa'), ('Aiman', 'Rashid'), ('Carmen', 'Reyes')]
+_co, _pp = {}, {}
+def rn(name):
+    if ROUND != 'B': return name
+    if name not in _co: _co[name] = CO_B[len(_co)]
+    return _co[name]
+def rp(first, last):
+    if ROUND != 'B': return first, last
+    if (first, last) not in _pp: _pp[(first, last)] = PEOPLE_B[len(_pp)]
+    return _pp[(first, last)]
 AS_OF = '2026-11-09'   # set this as the score date
 LEAD_COLS = ['first_name', 'last_name', 'job_title', 'seniority', 'email', 'email_verified', 'linkedin_url',
              'company_name', 'company_domain', 'country', 'city', 'industry', 'annual_revenue_usd', 'employee_count',
@@ -21,9 +37,10 @@ leads, sigs, accounts = [], [], []
 IM, OD = ('Instrumentation Manager', 'Manager'), ('Operations Director', 'Director')
 
 def acct(aid, name, story, segment, people, owner, country, customer=False, size='large'):
-    dom = slug(name) + '.example'; refs = []
+    name = rn(name); dom = slug(name) + '.example'; refs = []
     rev, emp, cap = {'large': (2100000000, 2800, 150000), 'mid': (900000000, 1400, 80000)}[size]
     for first, last, (title, sen) in people:
+        first, last = rp(first, last)
         r = dict(first_name=first, last_name=last, job_title=title, seniority=sen, email=f'{slug(first)}.{slug(last)}@{dom}', email_verified='Y',
                  linkedin_url=f'https://www.linkedin.com/in/{slug(first)}-{slug(last)}-{aid.lower()}', company_name=name, company_domain=dom,
                  country=country, city='', industry='Refining', annual_revenue_usd=rev, employee_count=emp, account_type='Owner-operator',
@@ -34,7 +51,7 @@ def acct(aid, name, story, segment, people, owner, country, customer=False, size
     accounts.append(dict(id=aid, name=name, story=story, expect=dict(segment=segment, route='Released')))
     return refs
 def sig(name, ref, typ, days, detail, source):
-    sigs.append([name, ref[0], ref[1], typ, ago(days), detail, source, '', ''])
+    sigs.append([rn(name), ref[0], ref[1], typ, ago(days), detail, source, '', ''])
 
 INQ, EOS, SVC, CAP, LC, WB, CD = ('Inquiry or RFQ', 'Installed system near end of support', 'Service contract renewal', 'Capital project',
                                   'Leadership change', 'Webinar attended', 'Content download')
@@ -92,8 +109,9 @@ def book(path, sheet, cols, rows):
     for col in ws.columns: ws.column_dimensions[col[0].column_letter].width = min(48, max(10, *(len(str(c.value or '')) + 2 for c in col)))
     ws.freeze_panes = 'A2'; wb.save(path)
 os.makedirs(OUT, exist_ok=True)
-book(os.path.join(OUT, 'No_Approvals_1_Prospects.xlsx'), 'Lead template', LEAD_COLS, leads)
-book(os.path.join(OUT, 'No_Approvals_2_Signals.xlsx'), 'Signal template', SIG_COLS, sigs)
-json.dump(dict(prefix='No_Approvals_', asOf=AS_OF, leadCols=LEAD_COLS, sigCols=SIG_COLS, newTypes=[], segments=[],
+PRE = 'No_Approvals_' + (ROUND + '_' if ROUND else '')
+book(os.path.join(OUT, PRE + '1_Prospects.xlsx'), 'Lead template', LEAD_COLS, leads)
+book(os.path.join(OUT, PRE + '2_Signals.xlsx'), 'Signal template', SIG_COLS, sigs)
+json.dump(dict(prefix=PRE, asOf=AS_OF, leadCols=LEAD_COLS, sigCols=SIG_COLS, newTypes=[], segments=[],
                leads=[[r.get(c, '') for c in LEAD_COLS] for r in leads], signals=sigs, accounts=accounts), open(SPEC, 'w'), indent=1)
 print(len(accounts), 'accounts', len(leads), 'contacts', len(sigs), 'signals')

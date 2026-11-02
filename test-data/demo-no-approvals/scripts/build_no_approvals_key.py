@@ -24,8 +24,8 @@ top = max(res['accounts'], key=lambda a: a.get('score') or 0)
 tiers = {t: sum(a['tier'] == t for a in res['accounts']) for t in ('A', 'B')}
 sheet('1 How to run', ['Where', 'Do', 'Expect'], [
     ('Setup', 'Nothing to add. Every signal type, segment and action in this list is built in.', 'No new signal type, segment or action, so nothing waits for approval.'),
-    ('Prospecting', 'Upload No_Approvals_1_Prospects.xlsx.', f'{len(spec["leads"])} contacts in {n} accounts. No issues.'),
-    ('Account Scoring', f"Set the score date to {int(spec['asOf'][8:])} Nov 2026. Upload No_Approvals_2_Signals.xlsx and score.",
+    ('Prospecting', f"Upload {spec['prefix']}1_Prospects.xlsx.", f'{len(spec["leads"])} contacts in {n} accounts. No issues.'),
+    ('Account Scoring', f"Set the score date to {int(spec['asOf'][8:])} Nov 2026. Upload {spec['prefix']}2_Signals.xlsx and score.",
      f'{len(spec["signals"])} signal rows, all qualified. Tier A {tiers["A"]}, tier B {tiers["B"]}. Top: {top["name"]} {top["score"]}.'),
     ('Hand-off', 'Hand off the default selection.', f'{len(res["handoff"])} prospects handed off, 0 held back.'),
     ('Micro-segments & NBA', 'Build.', f'All six built-in segments form: {segs}. All {len(res["recs"])} go ahead on their own.'),
