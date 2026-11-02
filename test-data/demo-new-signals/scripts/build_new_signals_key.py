@@ -34,7 +34,7 @@ steps = [
     ('Setup → Actions (Admin)', 'Add the six actions on sheet 3, each linked to its segment, order 1 first.', 'Six actions, Active.'),
     ('Prospecting', 'Upload New_Signals_1_Prospects.xlsx.', '27 contacts in 24 net-new accounts. One note: Ivan Ho (Westmere Refining) opted out, so he is never contacted.'),
     ('Account Scoring', f"Set the score date to {int(spec['asOf'][8:])} Nov 2026. Upload New_Signals_2_Signals.xlsx and score.",
-     '31 signal rows: 27 qualified; 2 rejected (Fairhaven 120 days old, Rosewood not in the list); 2 not used (Sunleaf below the fit floor, Westmere opted out).'),
+     '30 signal rows: 26 qualified; 2 rejected (Fairhaven 120 days old, Rosewood not in the list); 2 not used (Sunleaf below the fit floor, Westmere opted out).'),
     ('Account Scoring', 'Look at the ranking.', 'Top: Blackwater 59.2 (new plant + hiring stack). Tier A: 8 accounts (45.5 down to 35.6). Tier B: 11 (27.3 down to 20.5). Tier C: Fernhill and Quarry Bay (old signals). Fairhaven on the Watch list. Fresher signals and bigger sites rank higher; see sheet 5.'),
     ('Hand-off', 'Hand off the default selection.', '20 prospects handed off, 0 held back. Tier C is not handed off.'),
     ('Micro-segments & NBA', 'Build.', 'Five segments: Talking about ageing systems 6, New plants 4, Expanding teams 3 (each with its new first action), Engagement 3 and Leadership 3 (built-in actions). All 19 accounts go ahead on their own.'),

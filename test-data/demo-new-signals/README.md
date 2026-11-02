@@ -6,7 +6,7 @@
 |---|---|
 | `New_Signals_3_Answer_key.xlsx` | Sheets 1 to 3: the segments, signal types and actions the Admin adds in Setup first. Then the steps, the expected result per account, the task text, the signal rows and an engine check (60 checks, all PASS) |
 | `New_Signals_1_Prospects.xlsx` | Prospecting: 24 accounts, 27 contacts |
-| `New_Signals_2_Signals.xlsx` | Account Scoring (score date **9 Nov 2026**): 31 signal rows |
+| `New_Signals_2_Signals.xlsx` | Account Scoring (score date **9 Nov 2026**): 30 signal rows |
 
 | Signal | Accounts | Segment |
 |---|---|---|
