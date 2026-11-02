@@ -110,8 +110,9 @@ def book(path, sheet, cols, rows):
     ws.freeze_panes = 'A2'; wb.save(path)
 os.makedirs(OUT, exist_ok=True)
 PRE = 'No_Approvals_' + (ROUND + '_' if ROUND else '')
-book(os.path.join(OUT, PRE + '1_Prospects.xlsx'), 'Lead template', LEAD_COLS, leads)
-book(os.path.join(OUT, PRE + '2_Signals.xlsx'), 'Signal template', SIG_COLS, sigs)
-json.dump(dict(prefix=PRE, asOf=AS_OF, leadCols=LEAD_COLS, sigCols=SIG_COLS, newTypes=[], segments=[],
+PF, SF = ('Prospect_Data.xlsx', 'Signal_Data.xlsx') if ROUND else (PRE + '1_Prospects.xlsx', PRE + '2_Signals.xlsx')
+book(os.path.join(OUT, PF), 'Lead template', LEAD_COLS, leads)
+book(os.path.join(OUT, SF), 'Signal template', SIG_COLS, sigs)
+json.dump(dict(prefix=PRE, prospectFile=PF, signalFile=SF, asOf=AS_OF, leadCols=LEAD_COLS, sigCols=SIG_COLS, newTypes=[], segments=[],
                leads=[[r.get(c, '') for c in LEAD_COLS] for r in leads], signals=sigs, accounts=accounts), open(SPEC, 'w'), indent=1)
 print(len(accounts), 'accounts', len(leads), 'contacts', len(sigs), 'signals')

@@ -12,4 +12,4 @@ Expected: scores from 59.2 (Bluefin: quote request and webinar) down to 20.5; 10
 
 ## Round B (`round-b/`)
 
-The same design with different company and people names. Run `python3 scripts/make_no_approvals.py round-b <spec.json> B`. Top account: Alderbay Refining 59.2. 38 engine checks, all PASS.
+The same design with different company and people names. Run `python3 scripts/make_no_approvals.py round-b <spec.json> B`. Files: `Prospect_Data.xlsx`, `Signal_Data.xlsx`, `Answer_Key.xlsx`. Top account: Alderbay Refining 59.2. 38 engine checks, all PASS.
