@@ -147,11 +147,12 @@ function content(kicker, title, section) {
   const STAGES = [
     ['Find and score', [['List Checker', 'Checks and cleans the lead file: duplicates, missing fields, opt-outs and consent.', 'Uploads the list, fixes flagged rows'],
       ['Fit Scorer', 'Scores each account against your ICP rubric and fit floor.', 'Agrees the rubric'],
-      ['Signal Reader', 'Reads intent, installed-base, CRM and news signals and matches them to accounts and people.', 'Sets signal sources'],
+      ['Signal Reader', 'Reads every signal file attached to the list and matches each signal to its account and person.', 'Admin loads files; managers and reps add fresh ones'],
+      ['Signal Classifier', 'Sorts a signal type it has never seen: another name for a known one, a new buying signal, or not a signal.', 'Manager approves it once'],
       ['Timing Scorer', 'Weights each signal by type and how fresh it is.', 'Agrees the weights'],
       ['Tier Ranker', 'Ranks people into tiers A, B and C and explains why now.', 'Chooses who is handed off']]],
-    ['Segment and plan', [['Segmenter', 'Groups accounts that share a reason to buy into micro-segments of three or more.', 'Manager approves new segments'],
-      ['Action Recommender', 'Picks the next best action from the actions your team set in Setup; the AI chooses the one that fits the signal and person.', 'Rep accepts or picks another'],
+    ['Segment and plan', [['Segmenter', 'Groups accounts by reason to buy; proposes a new segment when 3 or more share a new reason, and keeps smaller groups as candidates.', 'Manager approves new segments'],
+      ['Action Recommender', 'Picks the next best action from your action library; proposes a new action when none fits.', 'Manager approves new actions into the library'],
       ['Channel Picker', 'Chooses email, LinkedIn or a call, within consent and verification limits.', 'Rep can change the channel'],
       ['Deal Sizer', 'Estimates the first deal and how confident the recommendation is.', 'Manager sets the thresholds']]],
     ['Draft', [['Brief Builder', 'Sets out who, why now, the angle, the proof point and the ask.', 'Marketing owns the plays'],
@@ -161,7 +162,8 @@ function content(kicker, title, section) {
     ['Review and compliance', [['Brand Checker', 'Checks banned words and openers, length, pricing and competitor mentions.', 'Marketing sets the rules'],
       ['Consent Guard', 'Stops anyone who opted out or has no recognised consent before hand-off.', 'Admin confirms the bases'],
       ['Sensitive-topic Router', 'Sends incidents, security and regulation topics to the sales manager.', 'Manager approves or rejects'],
-      ['Spot-checker', 'Draws about 20% of released actions each week, at least one per rep, for rating.', 'Manager rates the sample']]],
+      ['Spot-checker', 'Draws about 20% of released actions each week, at least one per rep, for rating.', 'Manager rates the sample'],
+      ['Claim Checker', 'Checks a new claim for spelling, grammar and a figure with no source before it is approved.', 'Marketing fixes or confirms']]],
     ['Release and measure', [['Rep Hand-off', "Releases ready actions to each rep's list for today.", 'Rep works the list'],
       ['Decision Log', 'Records every accept, reject, edit and alternative, with the reason and the review time.', 'Reviewer gives the reason'],
       ['Metrics Reporter', 'Reports G1 (human review effort) and G2 (acceptance rate) against the agreed thresholds.', 'Leaders review the readout']]]];
@@ -172,19 +174,19 @@ function content(kicker, title, section) {
     box(s, x, 1.55, 2.3, 0.75, INK);
     T(s, [{ text: h, options: { bold: true, breakLine: true } }, { text: `${ags.length} agents`, options: { color: AMBER, fontSize: 12 } }], { x: x + 0.15, y: 1.6, w: 2.0, h: 0.65, fontSize: 14, color: WHITE, valign: 'middle' });
     ags.forEach(([n], j) => {
-      box(s, x, 2.45 + j * 0.62, 2.3, 0.52, MIST);
-      s.addShape(pres.shapes.OVAL, { x: x + 0.12, y: 2.58 + j * 0.62, w: 0.26, h: 0.26, fill: { color: AMBER }, line: { color: AMBER, width: 0 } });
-      T(s, n, { x: x + 0.5, y: 2.45 + j * 0.62, w: 1.75, h: 0.52, fontSize: 13, valign: 'middle' });
+      box(s, x, 2.42 + j * 0.54, 2.3, 0.46, MIST);
+      s.addShape(pres.shapes.OVAL, { x: x + 0.12, y: 2.53 + j * 0.54, w: 0.24, h: 0.24, fill: { color: AMBER }, line: { color: AMBER, width: 0 } });
+      T(s, n, { x: x + 0.5, y: 2.42 + j * 0.54, w: 1.75, h: 0.46, fontSize: 13, valign: 'middle' });
     });
   });
   box(s, X0, 5.75, CW, 0.75, PALE);
   T(s, [{ text: 'Behind every stage: For Review', options: { bold: true, breakLine: true } }, { text: 'People decide what the system could not', options: { fontSize: 12, color: SLATE } }], { x: X0 + 0.25, y: 5.8, w: 3.4, h: 0.65, fontSize: 14, valign: 'middle' });
-  [['Exception queue', "rep's own checks"], ['Approvals', 'sensitive items, sales manager'], ['Weekly spot-check', 'about 20% of released items']].forEach(([n, d], i) => {
+  [['Exception queue', "rep's own checks"], ['Approvals', 'sensitive messages, new segments, actions, signal types'], ['Weekly spot-check', 'about 20% of released items']].forEach(([n, d], i) => {
     s.addShape(pres.shapes.OVAL, { x: 4.0 + i * 2.95, y: 5.98, w: 0.3, h: 0.3, fill: { color: TEAL }, line: { color: TEAL, width: 0 } });
-    T(s, [{ text: n, options: { bold: true, breakLine: true } }, { text: d, options: { fontSize: 11, color: SLATE } }], { x: 4.42 + i * 2.95, y: 5.8, w: 2.5, h: 0.65, fontSize: 14, valign: 'middle' });
+    T(s, [{ text: n, options: { bold: true, breakLine: true } }, { text: d, options: { fontSize: 11, color: SLATE } }], { x: 4.42 + i * 2.95, y: 5.78, w: 2.55, h: 0.7, fontSize: 14, valign: 'middle' });
   });
   T(s, 'Agents prepare the work. Your team makes every decision.', { x: X0, y: 6.62, w: 7, h: 0.3, fontSize: 13, italic: true, color: SLATE });
-  s.addNotes('Each agent has one job. Scoring, segmentation, routing and the checks are tested rules, so every result can be traced; AI words the drafts and suggests segments and actions, behind the gateway and switched off until you approve its results. Agents never send, approve or commit on the company\'s behalf.');
+  s.addNotes('Each agent has one job. Scoring, segmentation, routing and the checks are tested rules, so every result can be traced; AI words the drafts, proposes new segments, actions and signal types (each waits for the sales manager\'s approval), behind the gateway and switched off until you approve its results. Agents never send, approve or commit on the company\'s behalf.');
 
   /* 7 Understanding the flow */
   s = content('Understanding · The flow', 'Understanding the demand process', 'Understanding');
@@ -197,9 +199,9 @@ function content(kicker, title, section) {
       T(s, t, { x: x + (i ? 0.85 : 0.65), y, w: wEach - (i ? 1.25 : 0.95), h: 1.0, fontSize: 13, bold: true, color: txt, valign: 'middle' });
     });
   };
-  chevrons(1.95, 'PROSPECT & ACCOUNT SCORING', ['Prospect list upload', 'Account fit scoring', 'Signal upload & tiering'], PALE, INK, 4.0);
-  T(s, 'MICRO-SEGMENTS, NEXT BEST ACTION & FOR REVIEW', { x: X0, y: 3.45, w: 7, h: 0.3, fontSize: 12, bold: true, color: RUST, charSpacing: 1.5 });
-  ['Hand-off of tier A and B', 'Micro-segmentation', 'Next best action', 'Draft & checks', 'For Review', 'Release to reps', 'Analytics: G1 and G2'].forEach((t, i) => {
+  chevrons(1.95, 'PROSPECT & ACCOUNT SCORING', ['Prospect list upload', 'Account fit scoring', 'Signals & tiering'], PALE, INK, 4.0);
+  T(s, 'MICRO-SEGMENTS, NEXT BEST ACTION, REVIEW & APPROVALS', { x: X0, y: 3.45, w: 7, h: 0.3, fontSize: 12, bold: true, color: RUST, charSpacing: 1.5 });
+  ['Hand-off of tier A and B', 'Micro-segmentation', 'Next best action', 'Draft & checks', 'Review & approvals', 'Release to reps', 'Analytics: G1 and G2'].forEach((t, i) => {
     const x = X0 + i * 1.74;
     s.addShape(i ? pres.shapes.CHEVRON : pres.shapes.PENTAGON, { x, y: 3.85, w: 1.66, h: 0.75, fill: { color: i === 4 ? TEAL : INK }, line: { color: i === 4 ? TEAL : INK, width: 0 } });
     disc(s, x + (i ? 0.62 : 0.5), 4.03, 0.4, AMBER, String(i + 4), INK, 12);
@@ -234,27 +236,27 @@ function content(kicker, title, section) {
       ['Checks every required column', 'Fixes or flags bad rows: duplicates, missing fields', 'Holds back opt-outs and unknown consent', 'Groups people into accounts by domain'], 'Accounts and contacts loaded, with each issue and its fix.'],
     [2, 'Account fit scoring', 'Your ICP rubric: vertical, size, site profile, relationship, account type, contact coverage.',
       ['Scores each account out of 100 on the rubric', 'Applies the fit floor', 'Marks key accounts managed separately'], 'A fit score for every account, with the reason behind it.'],
-    [3, 'Signal upload & tiering', 'Your signals in the signal template: company, contact, signal type, date, detail.',
-      ['Matches each signal to the account and person', 'Weights it by type and age', 'Combines it with fit into a score', 'Ranks people into tiers A, B and C'], 'A ranked prospect list with why now for each person.'],
+    [3, 'Signals & tiering', 'Signal files attached to the list: loaded by your admin; managers and reps add fresh ones.',
+      ['Uses every signal file attached to the list', 'Holds a signal type it doesn\u2019t know for one approval', 'Weights each signal by type and age, with fit', 'Ranks people into tiers A, B and C'], 'A ranked prospect list with why now for each person.'],
   ]);
   steps('Understanding · Each step · 2 of 3', 'Micro-segments & Next Best Action, step by step', [
     [4, 'Hand-off', 'The tier A and B prospects with a live signal (or the ones you pick).',
       ['Keeps only people who can be contacted', 'Counts the rest as held back, with why'], 'Prospects handed to NBA, and who was held back.'],
-    [5, 'Micro-segmentation', 'The segments in your Setup (six to start with).',
-      ['Groups accounts that share a reason to buy', 'Needs at least 3 accounts per segment', 'AI may suggest a new segment for a manager to approve'], 'Segments, each with its accounts and reason.'],
-    [6, 'Next best action', 'The actions you set per segment in Setup.',
-      ['AI picks the action that fits the signal and person', 'Chooses email, LinkedIn or call within consent', 'Estimates the first deal and confidence'], 'One action per prospect, with why.'],
+    [5, 'Micro-segmentation', 'Your segments, and the signal types that feed each one (set in Setup).',
+      ['Groups accounts that share a reason to buy', 'At least 3 accounts; smaller groups wait as candidates', 'Proposes a new segment for the manager to approve'], 'Segments, each with its accounts and reason.'],
+    [6, 'Next best action', 'Your action library in Setup.',
+      ['Picks the action that fits the signal and person', 'Proposes a new action when none fits, for approval', 'Chooses email, LinkedIn or call within consent'], 'One action per prospect, with why.'],
     [7, 'Draft & checks', 'Your Content library: brand voice, approved claims, plays, banned words.',
       ['Writes the first message from approved content', 'Checks brand, claims, length, pricing, consent', 'Regenerates once if a check fails'], 'A ready draft, or the check that stopped it.'],
   ]);
-  steps('Understanding · Each step · 3 of 3', 'For Review, release and Analytics, step by step', [
-    [8, 'For Review', 'Reviewers: each rep for their own items; the sales manager for approvals.',
-      ['Exception queue: items a check could not clear go to the rep', 'Approvals: sensitive topics (incidents, security, regulation) go to the sales manager', 'Weekly spot-check: about 20% of released items, at least one per rep, rated by a person'],
+  steps('Understanding · Each step · 3 of 3', 'Review & approvals, release and Analytics, step by step', [
+    [8, 'Review & approvals', 'Reps decide their own queue; the sales manager decides Approvals.',
+      ['Queue: what a check could not clear goes to the rep', 'Approvals: sensitive messages, new segments, actions, signal types', 'One approval releases all items waiting on it', 'Weekly spot-check of about 20%'],
       'Accept, edit, choose an alternative or reject, with a reason.', true],
     [9, 'Release to reps', 'Nothing: items that pass every check go ahead on their own.',
       ["Puts ready actions on each rep's Today list", 'Reps send from their own email or LinkedIn', 'Nothing is sent automatically'], "Each rep's actions for today, ready to use."],
     [10, 'Analytics', 'The baseline and thresholds you agree (e.g. 38 minutes per action today).',
-      ['G1: human review minutes per usable first action', 'G2: share accepted on the first pass', 'Too early to call until 10 decisions are counted', 'Pilot readout and weekly summary'], 'Whether the pilot meets G1 and G2, and why.'],
+      ['G1: review minutes per action a person handled', 'G2: share accepted on the first look', 'AI proposals approved, next to G2', 'A team panel per rep on the manager\u2019s Today'], 'Whether the pilot meets G1 and G2, and why.'],
   ]);
 
   /* 8 Key questions: scoring */
@@ -280,12 +282,12 @@ function content(kicker, title, section) {
   ], 'Any additional pain points in finding and prioritising prospects?');
 
   /* 9 What DemandAI receives */
-  s = content('Account scoring · Inputs', 'What DemandAI receives: two files in our templates', 'Understanding');
-  T(s, 'DemandAI does not search the web in the pilot. Your team exports prospects and signals from your own systems into two templates and uploads them.', { x: X0, y: 1.3, w: CW, h: 0.4, fontSize: 14, color: SLATE });
+  s = content('Account scoring · Inputs', 'What DemandAI receives: prospect lists and their signals', 'Understanding');
+  T(s, 'In production, signals flow in from your systems. In the pilot, our admin loads the signal files you send and attaches them to each list; picking a list in Account Scoring uses its signals automatically.', { x: X0, y: 1.28, w: CW, h: 0.55, fontSize: 13.5, color: SLATE });
   const tmpl = [['file', 'Prospect template', 'One row per person. Uploaded in Prospecting.',
       [['Person', 'first_name, last_name, job_title, seniority'], ['Contact', 'email, email_verified, linkedin_url'], ['Company', 'company_name, company_domain, country, industry, revenue, employees'],
        ['Site', 'site_name, process type, capacity'], ['Relationship', 'existing_customer, account_type, managed_separately'], ['Consent', 'consent_basis, opt_out'], ['Owner', 'owner_email (the rep)']]],
-    ['bolt', 'Signal template', 'One row per signal. Uploaded in Scoring.',
+    ['bolt', 'Signal template', 'One row per signal. Attached to a prospect list.',
       [['Who', 'company_name, company_domain, contact_email_or_linkedin'], ['What', 'signal_type (one of the types below, or one you add in Setup)'], ['When', 'event_date'], ['Detail', 'detail, source, product']]]];
   tmpl.forEach(([ic, h, sub, rows], i) => {
     const x = X0 + i * 6.15;
@@ -295,8 +297,9 @@ function content(kicker, title, section) {
     T(s, sub, { x: x + 0.25, y: 2.55, w: 5.4, h: 0.3, fontSize: 12.5, italic: true, color: i ? LINE : SLATE });
     rows.forEach(([k, v], j) => T(s, [{ text: k + '  ', options: { bold: true, color: i ? AMBER : RUST } }, { text: v }], { x: x + 0.25, y: 2.95 + j * 0.36, w: 5.45, h: 0.34, fontSize: 12.5, color: i ? WHITE : INK, valign: 'middle' }));
   });
-  T(s, 'Signal types: Inquiry or RFQ · Installed system near end of support · Service contract renewal · Capital project · Leadership change · Webinar attended · Webinar registered · Content download · Email clicked',
-    { x: X0 + 6.4, y: 4.4, w: 5.45, h: 1.0, fontSize: 11.5, color: LINE });
+  T(s, [{ text: 'Built in: ', options: { bold: true, color: AMBER } }, { text: 'Inquiry or RFQ · End of support · Service renewal · Capital project · Leadership change · Webinar · Content download · Email clicked', options: { breakLine: true } },
+    { text: 'Yours to add: ', options: { bold: true, color: AMBER } }, { text: 'e.g. Team expanding · New plant announced · Commented on LinkedIn. A type the system doesn\u2019t know is held for one approval.' }],
+    { x: X0 + 6.4, y: 4.4, w: 5.45, h: 1.05, fontSize: 11, color: LINE });
   T(s, 'HOW DEMANDAI USES THE FILES', { x: X0, y: 5.68, w: 6, h: 0.3, fontSize: 12, bold: true, color: RUST, charSpacing: 1.5 });
   [['Check', 'Columns, values, duplicates, consent'], ['Match', 'Signal to account by domain, to person by email'], ['Score', 'Fit × signal weight × freshness'], ['Tier', 'A, B or C per person, with why now']].forEach(([h, d], i) => {
     const x = X0 + i * 3.06;
@@ -304,7 +307,7 @@ function content(kicker, title, section) {
     disc(s, x + (i ? 0.35 : 0.15), 6.22, 0.42, AMBER, String(i + 1), INK, 12);
     T(s, [{ text: h, options: { bold: true, breakLine: true, fontSize: 13.5 } }, { text: d, options: { fontSize: 11, color: SLATE } }], { x: x + (i ? 0.88 : 0.68), y: 6.02, w: 1.8, h: 0.82, valign: 'middle' });
   });
-  s.addNotes('In the pilot the data comes from the Client: two uploads in fixed templates. Connectors to CRM, web forms or news feeds are a later phase. Signal types can be extended in Setup; each new type feeds one of the segments.');
+  s.addNotes('Pilot: our admin loads the signal files the Client sends and attaches each to its list; the sales manager can add fresh signals to any list, a rep to the lists they uploaded. Each attachment is a new signal version; the list rescores with all of them. Connectors to CRM, web forms or news feeds are a later phase. An unknown signal type is held, classified by the AI, and approved once by the sales manager.');
 
   /* 10 Our understanding: six micro-segments */
   s = content('Account scoring · Segments', 'Our understanding: six reasons a site buys now', 'Understanding');
@@ -324,9 +327,37 @@ function content(kicker, title, section) {
   s.addTable([[hd('Micro-segment'), hd('Signal that triggers it'), hd('Angle (the play)'), hd('Actions your team sets in Setup'), hd('For a new buyer (net-new account)', true)],
     ...segRows.map((r, i) => r.map((t, j) => ({ text: t, options: { fontSize: 11, bold: j === 0, fill: { color: j === 4 ? PALE : i % 2 ? WHITE : MIST } } })))],
   { x: X0, y: 1.45, w: CW, colW: [1.45, 1.85, 2.4, 3.25, 3.18], rowH: 0.62, border: { type: 'solid', pt: 0.5, color: HEX.line }, valign: 'middle', margin: 0.06, color: INK });
-  T(s, [{ text: 'How the action is chosen: ', options: { bold: true } }, { text: 'your team sets the actions in Setup, the AI picks the one that fits the signal and person, and anything outside the list goes to For Review, tagged.' }],
-    { x: X0, y: 6.4, w: CW, h: 0.45, fontSize: 12.5, color: SLATE, valign: 'middle' });
+  T(s, [{ text: 'How it is chosen: ', options: { bold: true } }, { text: 'your team sets the segments, the signals that feed each one and the actions in Setup; the AI picks the action that fits; a new segment, action or signal type goes to the sales manager\u2019s Approvals and, once approved, joins Setup.' }],
+    { x: X0, y: 6.3, w: CW, h: 0.6, fontSize: 12.5, color: SLATE, valign: 'middle' });
   s.addNotes('The right-hand column is how the play changes for a fresh buyer, an account that is not yet a customer. The content named is the approved content in the Content library: the migration case study, the site assessment one-pager, the plant-expansion case study, the peer story and the webinar recording.');
+
+  /* 10b Beyond the six: behaviour signals become new segments */
+  s = content('Account scoring · New signals', 'Beyond the six: new signals become new segments', 'Understanding');
+  T(s, 'For net-new accounts, the strongest signals are often behaviour, not engagement with your content. Add the signal; the system forms the segment and proposes its action.', { x: X0, y: 1.28, w: CW, h: 0.5, fontSize: 13.5, color: SLATE });
+  [['SIGNAL YOU ADD', 1.0], ['NEW SEGMENT', 4.55], ['NEW ACTION', 7.75], ['EXAMPLE ACCOUNT', 11.0]].forEach(([t, x]) => T(s, t, { x: X0 + x - 1.0, y: 1.9, w: 3.2, h: 0.25, fontSize: 10.5, bold: true, color: RUST, charSpacing: 1 }));
+  const newSegs = [['Team expanding', 'Hiring control or automation engineers', 'Expanding teams', 'Offer a technical onboarding session for the new engineers', 'Highgate Refining: hiring four instrumentation engineers'],
+    ['New plant announced', 'A new plant, unit or major expansion', 'New plants', 'Propose a front-end design session for the new plant', 'Meridian Refining: a new hydrotreater unit'],
+    ['Commented on LinkedIn', 'Said publicly they live with ageing systems', 'Talking about ageing systems', 'Send a short point of view on the problem they raised', 'Oakhurst Refining: “we are living this right now”']];
+  newSegs.forEach(([sig, what, seg, act, ex], i) => {
+    const y = 2.25 + i * 1.02;
+    box(s, X0, y, 3.2, 0.86, MIST);
+    T(s, [{ text: sig, options: { bold: true, breakLine: true, fontSize: 14 } }, { text: what, options: { fontSize: 11.5, color: SLATE } }], { x: X0 + 0.18, y, w: 2.9, h: 0.86, valign: 'middle' });
+    s.addImage({ data: I.arrow, x: X0 + 3.27, y: y + 0.31, w: 0.24, h: 0.24 });
+    box(s, X0 + 3.58, y, 2.6, 0.86, INK);
+    T(s, seg, { x: X0 + 3.76, y, w: 2.3, h: 0.86, fontSize: 14, bold: true, color: WHITE, valign: 'middle' });
+    s.addImage({ data: I.arrow, x: X0 + 6.25, y: y + 0.31, w: 0.24, h: 0.24 });
+    box(s, X0 + 6.56, y, 3.1, 0.86, PALE);
+    T(s, act, { x: X0 + 6.74, y, w: 2.8, h: 0.86, fontSize: 12.5, valign: 'middle' });
+    T(s, ex, { x: X0 + 9.85, y, w: 2.28, h: 0.86, fontSize: 11.5, italic: true, color: SLATE, valign: 'middle' });
+  });
+  T(s, 'HOW A NEW SEGMENT JOINS', { x: X0, y: 5.4, w: 6, h: 0.3, fontSize: 12, bold: true, color: RUST, charSpacing: 1.5 });
+  [['Signal arrives', 'Added in Setup, or a type the AI classifies'], ['AI proposes', 'A segment once 3 accounts share it, and its action'], ['Manager approves', 'Once, in For Review → Approvals'], ['Joins Setup', 'Used automatically from then on']].forEach(([h, d], i) => {
+    const x = X0 + i * 3.06;
+    s.addShape(i ? pres.shapes.CHEVRON : pres.shapes.PENTAGON, { x, y: 5.75, w: 2.98, h: 0.95, fill: { color: i === 2 ? TEAL : PALE }, line: { color: i === 2 ? TEAL : PALE, width: 0 } });
+    disc(s, x + (i ? 0.35 : 0.15), 6.01, 0.42, AMBER, String(i + 1), INK, 12);
+    T(s, [{ text: h, options: { bold: true, breakLine: true, fontSize: 13.5 } }, { text: d, options: { fontSize: 11, color: i === 2 ? WHITE : SLATE } }], { x: x + (i ? 0.88 : 0.68), y: 5.75, w: 1.85, h: 0.95, valign: 'middle', color: i === 2 ? WHITE : INK });
+  });
+  s.addNotes('These three come from the cold-outbound demo set. A segment needs at least 3 accounts; smaller groups wait as candidates across lists until a third account appears. The AI proposes the segment and action (switched on for the pilot once you agree), and the sales manager approves once. A message for a new segment cites an approved claim about its topic; with no such claim the action goes to the owner as a task.');
 
   /* 11-13 Key questions: NBA */
   questions('Understanding · Micro-segments & NBA · 1 of 3', 'Micro-segments & NBA: key questions (1/3)', 'NEXT BEST ACTION', [
@@ -397,19 +428,19 @@ function content(kicker, title, section) {
     T(s, [{ text: 'Passes when  ', options: { bold: true, color: ac } }, { text: pass, options: { bold: true } }], { x: x + 0.3, y: 5.45, w: 5.3, h: 0.45, fontSize: 15, color: fg, valign: 'middle' });
   };
   gcard(0, 'G1', 'Human review effort', 'Does DemandAI save people time?',
-    [{ text: 'Minutes per action = ', options: { bold: true } }, { text: 'minutes people spent deciding in For Review ÷ actions released', options: { breakLine: true } },
+    [{ text: 'Minutes per action = ', options: { bold: true } }, { text: 'minutes people spent deciding, in For Review and Approvals ÷ first actions a person handled', options: { breakLine: true } },
      { text: 'Effort saved = ', options: { bold: true } }, { text: '1 − (minutes per action ÷ baseline)' }],
-    '20 actions released; people spent 150 minutes reviewing in total. 150 ÷ 20 = 7.5 minutes per action. Today it takes 38 minutes, so 1 − 7.5 ÷ 38 = 80% less effort.',
+    'People handled 12 first actions and spent 90 minutes deciding, approvals included. 90 ÷ 12 = 7.5 minutes per action. Today it takes 38 minutes, so 1 − 7.5 ÷ 38 = 80% less effort.',
     'effort is at least 50% lower than the baseline');
   gcard(1, 'G2', 'Acceptance rate', 'Do people trust what it recommends?',
     [{ text: 'Acceptance = ', options: { bold: true } }, { text: 'recommendations accepted on the first look ÷ recommendations decided', options: { breakLine: true } },
-     { text: 'Counted from: ', options: { bold: true } }, { text: 'the exception queue and the weekly spot-check, weighted by how many items took each path' }],
+     { text: 'Counted from: ', options: { bold: true } }, { text: 'the exception queue, the weekly spot-check and the manager\u2019s approve or reject in Approvals, weighted by path' }],
     'Spot-check: 8 of 10 accepted (80%), on the 60% of items that went ahead. Queue: 5 of 10 accepted (50%), on the other 40%. 80% × 0.6 + 50% × 0.4 = 68%.',
     'at least 70% are accepted (68% falls just short)');
   box(s, X0, 6.2, CW, 0.7, MIST);
-  T(s, [{ text: 'Too early to call: ', options: { bold: true } }, { text: 'neither measure is judged until 10 decisions have been counted (spot-checks plus queue decisions). With 3 decisions, one rejection would swing G2 by 33 points. Baseline (38 min), thresholds and the 10 are agreed with you at baselining.' }],
+  T(s, [{ text: 'Too early to call: ', options: { bold: true } }, { text: 'neither is judged until 10 decisions are counted. “AI proposals approved” (new segments, actions, signal types) sits next to G2, not inside it. Baseline (38 min), thresholds and the 10 are agreed with you at baselining.' }],
     { x: X0 + 0.25, y: 6.2, w: CW - 0.5, h: 0.7, fontSize: 12.5, valign: 'middle' });
-  s.addNotes('G1: the minutes come from how long each For Review decision took, logged automatically. Actions that went ahead on their own take no review minutes, which is where the saving comes from. G2: only first-pass decisions count. Choosing an alternative after a rejection is tracked separately, not as an acceptance.');
+  s.addNotes('G1: the minutes come from how long each decision took, in For Review and in Approvals, logged automatically, divided by the first actions a person handled. Actions that went ahead on their own take no review minutes, which is where the saving comes from. G2: first-look decisions count, including the sales manager approving or rejecting in Approvals; items an approval released reach G2 through the weekly spot-check. Choosing an alternative after a rejection is tracked separately.');
 
   const criteria = (title, rows, foot) => {
     const q = pres.addSlide({ masterName: 'CONTENT', sectionTitle: 'Success criteria' });
@@ -435,8 +466,8 @@ function content(kicker, title, section) {
     ['Spot-check rating*', 'Are released actions good when a person checks a sample?', 'Average rating of the weekly 20% sample', '4 out of 5 or better'],
     ['Rep adoption*', 'Do reps use the list each week?', 'Weekly active reps; actions worked', '4 of 5 reps active every week'],
     ['Reply and meeting rate', 'Do recommended actions get more responses?', 'Replies and meetings per 100 touches', 'Pilot reps vs the same reps last year'],
-    ['Pipeline sourced', 'What pipeline starts from a DemandAI action?', 'Opportunities and value linked to a first touch', 'Tracked from pilot week 4']],
-  '* can be measured during the pilot phase. Reply rates and pipeline need outcomes from your CRM; revenue attribution needs a longer window. Open to discussion.');
+    ['AI proposals approved*', 'How often does the manager agree with what the AI proposes to add?', 'New segments, actions and signal types approved ÷ decided', '7 in 10 approved as proposed or after an edit']],
+  '* can be measured during the pilot phase. Reply rates and pipeline sourced need outcomes from your CRM; revenue attribution needs a longer window. Open to discussion.');
 
   /* 19 Timeline */
   pres.addSection({ title: 'Timeline' });
@@ -535,7 +566,7 @@ function content(kicker, title, section) {
       { text: a, options: { bold: true, fontSize: 15, fill: { color: i % 2 ? WHITE : MIST } } },
       { text: d, options: { fontSize: 14, fill: { color: i % 2 ? WHITE : MIST } } },
       { text: y, options: { fontSize: 14, color: TEAL, bold: true, fill: { color: i % 2 ? WHITE : MIST } } }])],
-    { x: X0, y: 1.6, w: CW, colW: [2.8, 6.2, 3.13], rowH: 0.82, border: { type: 'solid', pt: 0.5, color: HEX.line }, valign: 'middle', margin: 0.12, color: INK });
+    { x: X0, y: 1.6, w: CW, colW: [2.8, 6.2, 3.13], rowH: ags.length > 5 ? 0.72 : 0.82, border: { type: 'solid', pt: 0.5, color: HEX.line }, valign: 'middle', margin: 0.12, color: INK });
   };
   const all = STAGES;
   all.forEach(([h, ags], i) => detail(i + 1, all.length, h, ags));
