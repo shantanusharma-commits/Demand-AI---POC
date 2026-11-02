@@ -24,22 +24,21 @@ sheet('1 Segments (set up first)', ['Segment name (exactly)', 'Theme', 'Where'],
       [[g['name'], g['theme'], 'Setup → Segments → + Add a segment (Admin)'] for g in spec['segments']], [28, 70, 40])
 STRENGTH = {'Strong': 'Strong (weight 100)', 'Medium': 'Medium (weight 60)', 'Light': 'Light (weight 30)'}
 sheet('2 Signal types (set up first)', ['Signal name (exactly)', 'What it means (the "about" field)', 'Strength', 'Full weight for', 'Gone after', 'Usual micro-segment', 'Where the data comes from', 'Source'],
-      [[t['name'], t['about'], STRENGTH[t['level']], f"{t['full']} days", f"{t['zero']} days", t['segment'] or 'None (leave blank on purpose)', t['data'], t['source']] for t in spec['newTypes']],
+      [[t['name'], t['about'], STRENGTH[t['level']], f"{t['full']} days", f"{t['zero']} days", t['segment'], t['data'], t['source']] for t in spec['newTypes']],
       [22, 60, 18, 13, 11, 28, 34, 12])
 sheet('3 Actions (set up first)', ['Action (exactly)', 'Micro-segment', 'Order', 'When to use it'],
       [[a, g['name'], i + 1, w] for g in spec['segments'] for i, (a, w) in enumerate(g['actions'])], [58, 28, 7, 60])
 steps = [
     ('Setup → Segments (Admin)', 'Add the three segments on sheet 1.', 'Three segments listed. No approval needed: the Admin set them up.'),
-    ('Setup → Signals (Admin)', 'Add the four signal types on sheet 2, each with its micro-segment. Leave "Contractor awarded" with no segment.', 'Four signal types listed as Added.'),
+    ('Setup → Signals (Admin)', 'Add the three signal types on sheet 2, each with its micro-segment. Leadership change, Webinar attended and Content download are built in: nothing to add.', 'Three signal types listed as Added.'),
     ('Setup → Actions (Admin)', 'Add the six actions on sheet 3, each linked to its segment, order 1 first.', 'Six actions, Active.'),
-    ('Prospecting', 'Upload New_Signals_1_Prospects.xlsx.', '15 contacts in 14 net-new accounts. One note: Ivan Ho (Westmere Refining) opted out, so he is never contacted.'),
-    ('Account Scoring', f"Set the score date to {spec['asOf'][8:]} Nov 2026. Upload New_Signals_2_Signals.xlsx and score.",
-     '15 signal rows: 11 qualified; 2 rejected (Fairhaven 150 days old, Rosewood not in the list); 2 not used (Sunleaf below the fit floor, Westmere opted out).'),
-    ('Account Scoring', 'Look at the tiers.', 'Tier A 45.5: Blackwater, Coralbay, Silverton, Harbourline, Kingfisher. Tier B 27.3: Redcliff, Ironbark, Tamarind, Greystone, Moorland, Pebblebrook. Fairhaven on the Watch list.'),
-    ('Hand-off', 'Hand off the default selection.', '11 prospects handed off, 0 held back.'),
-    ('Micro-segments & NBA', 'Build.', 'Three segments form, each with its own first action: New plants 3, Expanding teams 3, Talking about ageing systems 3. These 9 go ahead on their own.'),
-    ('For Review (rep)', 'Open Harbourline and Kingfisher.', '"Segment too small": Contractor awarded has no segment set up and only 2 accounts. This is the path the AI and the sales manager handle: nobody set it up in advance.'),
-    ('Check', 'Open any released item.', 'It is a task for the owner, not an email: no approved claim can be tagged to a new segment yet (the Content library only offers the six built-in segments).'),
+    ('Prospecting', 'Upload New_Signals_1_Prospects.xlsx.', '27 contacts in 24 net-new accounts. One note: Ivan Ho (Westmere Refining) opted out, so he is never contacted.'),
+    ('Account Scoring', f"Set the score date to {int(spec['asOf'][8:])} Nov 2026. Upload New_Signals_2_Signals.xlsx and score.",
+     '31 signal rows: 27 qualified; 2 rejected (Fairhaven 120 days old, Rosewood not in the list); 2 not used (Sunleaf below the fit floor, Westmere opted out).'),
+    ('Account Scoring', 'Look at the ranking.', 'Top: Blackwater 59.2 (new plant + hiring stack). Tier A: 8 accounts (45.5 down to 35.6). Tier B: 11 (27.3 down to 20.5). Tier C: Fernhill and Quarry Bay (old signals). Fairhaven on the Watch list. Fresher signals and bigger sites rank higher; see sheet 5.'),
+    ('Hand-off', 'Hand off the default selection.', '20 prospects handed off, 0 held back. Tier C is not handed off.'),
+    ('Micro-segments & NBA', 'Build.', 'Five segments: Talking about ageing systems 6, New plants 4, Expanding teams 3 (each with its new first action), Engagement 3 and Leadership 3 (built-in actions). All 19 accounts go ahead on their own.'),
+    ('Check', 'Open an Engagement item, then a new-segment item.', 'Engagement: an email citing an approved claim. New segments and Leadership: a task for the owner, because no approved claim fits them (and a claim cannot yet be tagged to a new segment).'),
 ]
 sheet('4 How to run', ['Where', 'Do', 'Expect'], steps, [24, 70, 80])
 
@@ -54,9 +53,11 @@ for a in spec['accounts']:
     if 'tier' in e: tests.append(('Tier', e['tier'], s and s['tier']))
     if 'segment' in e: tests.append(('Segment', str(e['segment']), str(r and r['segment'])))
     if e.get('segment'):
-        tests.append(('First action', next(g['actions'][0][0] for g in spec['segments'] if g['name'] == e['segment']), r and r['action']))
+        first = next((g['actions'][0][0] for g in spec['segments'] if g['name'] == e['segment']), None)
+        if first: tests.append(('First action', first, r and r['action']))
         tests.append(('Route', 'Released', r and r['route']))
     if 'route' in e: tests.append(('Route', e['route'], r and r['route']))
+    if e.get('handoff') is False: tests.append(('Handed off', 'no', 'yes' if r else 'no'))
     if e.get('optOut'): tests.append(('Never contacted', 'not handed off', 'not handed off' if not r else 'handed off'))
     for what, want, got in tests:
         ok = want == got; fails += not ok
