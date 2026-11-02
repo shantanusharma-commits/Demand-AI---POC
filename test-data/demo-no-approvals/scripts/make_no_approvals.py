@@ -27,6 +27,21 @@ PEOPLE_C = [('Hakim', 'Yunus'), ('Stella', 'Ng'), ('Rohit', 'Verma'), ('Aziz', '
             ('Tina', 'Goh'), ('Chai', 'Wattana'), ('Huy', 'Dang'), ('Sofia', 'Ramirez'), ('Nizam', 'Omar'), ('Lena', 'Yap'), ('Arvind', 'Das'),
             ('Mona', 'Tan'), ('Eric', 'Sia')]
 if ROUND == 'C': CO_B, PEOPLE_B = CO_C, PEOPLE_C
+# Sets D, E, F...: the round C design with names drawn from these pools (invented, never repeating an earlier set)
+if ROUND not in ('', 'B', 'C'):
+    import random
+    rnd = random.Random('sets'); k = ord(ROUND) - ord('D')   # one shared shuffle; each set takes its own slice
+    HEADS = ['Aspen', 'Birch', 'Cobble', 'Dawn', 'Elm', 'Flint', 'Glade', 'Heath', 'Iron', 'Juno', 'Kite', 'Lark', 'Maple', 'Nova', 'Opal', 'Pebble',
+             'Quail', 'Reed', 'Sage', 'Teal', 'Umbra', 'Vale', 'Wren', 'Yarrow', 'Zenith', 'Brook', 'Cliff', 'Dune', 'Ember', 'Fable', 'Garnet', 'Harbor']
+    TAILS = ['field', 'stone', 'mere', 'ford', 'wick', 'haven', 'ridge', 'crest', 'gate', 'moor', 'dale', 'well', 'brook', 'point', 'cove', 'holm']
+    FIRST = ['Adam', 'Bella', 'Cyrus', 'Dina', 'Ethan', 'Fiona', 'Gopal', 'Hana', 'Imran', 'Jia', 'Kumar', 'Lina', 'Marco', 'Nisha', 'Omar', 'Priya',
+             'Rui', 'Suri', 'Tariq', 'Uma', 'Vince', 'Wati', 'Xin', 'Yuna', 'Zara', 'Ari', 'Bao', 'Chloe', 'Darsh', 'Elif']
+    LAST = ['Abdullah', 'Bakar', 'Chong', 'Dutta', 'Esteban', 'Fong', 'Gupta', 'Halim', 'Iskandar', 'Jaya', 'Kwan', 'Lopez', 'Mahmud', 'Nair', 'Ortega',
+            'Pang', 'Quek', 'Rahim', 'Soh', 'Tham', 'Utomo', 'Vo', 'Wijaya', 'Xu', 'Yeo', 'Zaman']
+    used = set(CO_B) | set(CO_C)
+    pool = [f'{h}{t} Refining' for h in HEADS for t in TAILS if h.lower() not in t and t not in h.lower()]; rnd.shuffle(pool)
+    pool = [c for c in pool if c not in used]; CO_B = pool[k * 30:(k + 1) * 30]
+    pp = [(f, l) for f in FIRST for l in LAST]; rnd.shuffle(pp); PEOPLE_B = pp[k * 32:(k + 1) * 32]
 _co, _pp = {}, {}
 def rn(name):
     if not ROUND: return name
@@ -113,7 +128,7 @@ r = acct('Q19', 'Umber Refining', 'Attended a webinar on reliability planning, m
 sig('Umber Refining', r[0], WB, 28, 'reliability planning', 'Webinar platform')
 
 NEW_TYPES, SEGMENTS = [], []
-if ROUND == 'C':
+if ROUND not in ('', 'B'):
     LI, NP, TA = 'Commented on LinkedIn', 'New plant announced', 'Talking about ageing systems'
     NEW_TYPES = [dict(name=NP, segment='New plants', level='Strong', full=90, zero=365, about='The company announced a new plant, unit or major site expansion.'),
                  dict(name=LI, segment=TA, level='Medium', full=30, zero=90, about='A person at the account commented publicly on an industry post about ageing control systems.')]
@@ -152,9 +167,10 @@ def book(path, sheet, cols, rows):
     ws.freeze_panes = 'A2'; wb.save(path)
 os.makedirs(OUT, exist_ok=True)
 PRE = 'No_Approvals_' + (ROUND + '_' if ROUND else '')
-PF, SF = ('Prospect_Data.xlsx', 'Signal_Data.xlsx') if ROUND else (PRE + '1_Prospects.xlsx', PRE + '2_Signals.xlsx')
+SUF = '' if ROUND in ('B', 'C') else f'_Set_{ROUND}'
+PF, SF = (f'Prospect_Data{SUF}.xlsx', f'Signal_Data{SUF}.xlsx') if ROUND else (PRE + '1_Prospects.xlsx', PRE + '2_Signals.xlsx')
 book(os.path.join(OUT, PF), 'Lead template', LEAD_COLS, leads)
 book(os.path.join(OUT, SF), 'Signal template', SIG_COLS, sigs)
-json.dump(dict(prefix=PRE, prospectFile=PF, signalFile=SF, asOf=AS_OF, leadCols=LEAD_COLS, sigCols=SIG_COLS, newTypes=NEW_TYPES, segments=SEGMENTS,
+json.dump(dict(prefix=PRE, suffix=SUF if ROUND else '', prospectFile=PF, signalFile=SF, asOf=AS_OF, leadCols=LEAD_COLS, sigCols=SIG_COLS, newTypes=NEW_TYPES, segments=SEGMENTS,
                leads=[[r.get(c, '') for c in LEAD_COLS] for r in leads], signals=sigs, accounts=accounts), open(SPEC, 'w'), indent=1)
 print(len(accounts), 'accounts', len(leads), 'contacts', len(sigs), 'signals')

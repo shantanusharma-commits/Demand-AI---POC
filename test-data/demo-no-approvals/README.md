@@ -17,3 +17,7 @@ The same design with different company and people names. Run `python3 scripts/ma
 ## Round C (`round-c/`)
 
 Different names again, plus LinkedIn comments (5 accounts, Talking about ageing systems) and new plants (4 accounts, New plants). These two signal types, segments and actions must already be in Setup (added by the Admin), so nothing needs approval. 28 accounts, all go ahead on their own, eight segments. Run `python3 scripts/make_no_approvals.py round-c <spec.json> C`. 56 engine checks, all PASS.
+
+## Sets D, E, F (`set-D/`, `set-E/`, `set-F/`)
+
+The round C design (LinkedIn comments, new plants and built-in signals; nothing to approve) with fresh names in each set: no company or person repeats across sets. Files: `Prospect_Data_Set_X.xlsx`, `Signal_Data_Set_X.xlsx`, `Answer_Key_Set_X.xlsx`. Run `python3 scripts/make_no_approvals.py set-D <spec.json> D` (any letter after C works). 56 engine checks each, all PASS.
