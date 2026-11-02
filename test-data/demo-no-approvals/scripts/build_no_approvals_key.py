@@ -23,7 +23,10 @@ emails = sum(r['channel'] == 'Email' for r in res['recs']); tasks = len(res['rec
 top = max(res['accounts'], key=lambda a: a.get('score') or 0)
 tiers = {t: sum(a['tier'] == t for a in res['accounts']) for t in ('A', 'B')}
 sheet('1 How to run', ['Where', 'Do', 'Expect'], [
-    ('Setup', 'Nothing to add. Every signal type, segment and action in this list is built in.', 'No new signal type, segment or action, so nothing waits for approval.'),
+    ('Setup', 'Nothing to add. Every signal type, segment and action in this list is built in.', 'No new signal type, segment or action, so nothing waits for approval.')
+    if not spec['newTypes'] else
+    ('Setup (Admin, already done)', 'Check that Setup has the signal types ' + ' and '.join(f"{t['name']} (→ {t['segment']})" for t in spec['newTypes']) + ', the segments ' + ' and '.join(g['name'] for g in spec['segments']) + ', and their actions: ' + '; '.join(a[0] for g in spec['segments'] for a in g['actions']) + '. Add any that are missing.',
+     'Set up in advance by the Admin, so nothing waits for approval.'),
     ('Prospecting', f"Upload {spec['prospectFile']}.", f'{len(spec["leads"])} contacts in {n} accounts. No issues.'),
     ('Account Scoring', f"Set the score date to {int(spec['asOf'][8:])} Nov 2026. Upload {spec['signalFile']} and score.",
      f'{len(spec["signals"])} signal rows, all qualified. Tier A {tiers["A"]}, tier B {tiers["B"]}. Top: {top["name"]} {top["score"]}.'),

@@ -13,3 +13,7 @@ Expected: scores from 59.2 (Bluefin: quote request and webinar) down to 20.5; 10
 ## Round B (`round-b/`)
 
 The same design with different company and people names. Run `python3 scripts/make_no_approvals.py round-b <spec.json> B`. Files: `Prospect_Data.xlsx`, `Signal_Data.xlsx`, `Answer_Key.xlsx`. Top account: Alderbay Refining 59.2. 38 engine checks, all PASS.
+
+## Round C (`round-c/`)
+
+Different names again, plus LinkedIn comments (5 accounts, Talking about ageing systems) and new plants (4 accounts, New plants). These two signal types, segments and actions must already be in Setup (added by the Admin), so nothing needs approval. 28 accounts, all go ahead on their own, eight segments. Run `python3 scripts/make_no_approvals.py round-c <spec.json> C`. 56 engine checks, all PASS.

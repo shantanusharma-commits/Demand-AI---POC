@@ -15,13 +15,25 @@ CO_B = ['Alderbay Refining', 'Beacon Hill Refining', 'Crestmoor Refining', 'Dunm
 PEOPLE_B = [('Yusri', 'Hamzah'), ('Grace', 'Ho'), ('Anjali', 'Menon'), ('Fadli', 'Rosli'), ('Chee', 'Keong'), ('Liza', 'Bautista'), ('Thu', 'Nguyen'),
             ('Ratna', 'Sari'), ('Prasit', 'Wong'), ('Wei', 'Jie'), ('Miguel', 'Torres'), ('Mei', 'Fong'), ('Long', 'Tran'), ('Intan', 'Permata'),
             ('Desmond', 'Lim'), ('Neha', 'Kapoor'), ('Joanna', 'Sim'), ('Lee', 'Hwa'), ('Aiman', 'Rashid'), ('Carmen', 'Reyes')]
+# Round C: different names again, plus LinkedIn comments and new plants (the Admin has already set these up in Setup)
+CO_C = ['Amberwick Refining', 'Bellhaven Refining', 'Cloverdale Refining', 'Driftmoor Refining', 'Eastbrook Refining', 'Fernvale Refining',
+        'Graniteview Refining', 'Hillcrest Bay Refining', 'Ivywood Refining', 'Jadebridge Refining', 'Kelso Refining', 'Lakemont Refining',
+        'Merrow Refining', 'Newhaven Point Refining', 'Oldfield Refining', 'Pinehurst Refining', 'Quarrymoor Refining', 'Ryeford Refining', 'Shorecliff Refining',
+        'Tallis Refining', 'Upton Bay Refining', 'Vantage Refining', 'Willowmere Refining', 'Yewbank Refining', 'Zephyr Point Refining', 'Ashgrove Refining',
+        'Bridgewater Bay Refining', 'Cresthaven Refining']
+PEOPLE_C = [('Hakim', 'Yunus'), ('Stella', 'Ng'), ('Rohit', 'Verma'), ('Aziz', 'Malik'), ('Kenneth', 'Chew'), ('Bea', 'Santiago'), ('Lan', 'Phuong'),
+            ('Wulan', 'Dewi'), ('Narong', 'Sri'), ('Zhi', 'Hao'), ('Paulo', 'Garcia'), ('Yan', 'Ling'), ('Khanh', 'Le'), ('Sinta', 'Maharani'),
+            ('Gavin', 'Loh'), ('Meera', 'Pillai'), ('Rachel', 'Toh'), ('Kim', 'Seng'), ('Faiz', 'Ismail'), ('Lorna', 'Cruz'), ('Iqbal', 'Hussain'),
+            ('Tina', 'Goh'), ('Chai', 'Wattana'), ('Huy', 'Dang'), ('Sofia', 'Ramirez'), ('Nizam', 'Omar'), ('Lena', 'Yap'), ('Arvind', 'Das'),
+            ('Mona', 'Tan'), ('Eric', 'Sia')]
+if ROUND == 'C': CO_B, PEOPLE_B = CO_C, PEOPLE_C
 _co, _pp = {}, {}
 def rn(name):
-    if ROUND != 'B': return name
+    if not ROUND: return name
     if name not in _co: _co[name] = CO_B[len(_co)]
     return _co[name]
 def rp(first, last):
-    if ROUND != 'B': return first, last
+    if not ROUND: return first, last
     if (first, last) not in _pp: _pp[(first, last)] = PEOPLE_B[len(_pp)]
     return _pp[(first, last)]
 AS_OF = '2026-11-09'   # set this as the score date
@@ -100,6 +112,36 @@ sig('Tidewater Refining', r[0], CD, 14, 'migration planning guide', 'Website')
 r = acct('Q19', 'Umber Refining', 'Attended a webinar on reliability planning, mid-size site', 'Engagement', [('Jose', 'Ramos', IM)], RA, 'Philippines', size='mid')
 sig('Umber Refining', r[0], WB, 28, 'reliability planning', 'Webinar platform')
 
+NEW_TYPES, SEGMENTS = [], []
+if ROUND == 'C':
+    LI, NP, TA = 'Commented on LinkedIn', 'New plant announced', 'Talking about ageing systems'
+    NEW_TYPES = [dict(name=NP, segment='New plants', level='Strong', full=90, zero=365, about='The company announced a new plant, unit or major site expansion.'),
+                 dict(name=LI, segment=TA, level='Medium', full=30, zero=90, about='A person at the account commented publicly on an industry post about ageing control systems.')]
+    SEGMENTS = [dict(name='New plants', actions=[['Propose a front-end design session for the new plant', ''], ['Share a reference plant of a similar size', '']]),
+                dict(name=TA, actions=[['Share a short point of view on that topic, with a peer example', ''], ['Invite them to a peer roundtable on the same problem', '']])]
+    # ── Talking about ageing systems (5) ──
+    r = acct('Q20', 'Rosehill Refining', 'Hero: commented on a post about ageing DCS 2 days ago AND downloaded the migration guide', TA, [('Aaron', 'Lee', IM), ('Bina', 'Rao', OD)], RA, 'Malaysia')
+    sig('Rosehill Refining', r[0], LI, 2, 'your comment on an industry post about running a DCS past its end of support', 'LinkedIn')
+    sig('Rosehill Refining', r[0], CD, 9, 'migration planning guide', 'Website')
+    r = acct('Q21', 'Seaholme Refining', 'Commented on a post about alarm floods', TA, [('Chen', 'Yi', IM)], RB, 'Singapore')
+    sig('Seaholme Refining', r[0], LI, 5, 'your comment on a post about alarm floods on older control systems', 'LinkedIn')
+    r = acct('Q22', 'Thornfield Refining', 'Commented on a post about spare parts for old controllers', TA, [('Dara', 'Sok', IM)], RA, 'Thailand')
+    sig('Thornfield Refining', r[0], LI, 9, 'your comment on a post about sourcing spare parts for old controllers', 'LinkedIn')
+    r = acct('Q23', 'Underwood Refining', 'Commented on a post about obsolete operator stations, mid-size site', TA, [('Elena', 'Cruz', IM)], RB, 'Philippines', size='mid')
+    sig('Underwood Refining', r[0], LI, 14, 'your comment on a post about keeping obsolete operator stations running', 'LinkedIn')
+    r = acct('Q24', 'Verdant Refining', 'Commented 40 days ago: past full weight, ranks lower', TA, [('Faisal', 'Noor', IM)], RA, 'Indonesia')
+    sig('Verdant Refining', r[0], LI, 40, 'your comment on a post about migrating a DCS without a shutdown', 'LinkedIn')
+    # ── New plants (4) ──
+    r = acct('Q25', 'Westgate Refining', 'Hero: a new hydrocracker announced AND a new plant director: top of the ranking', 'New plants', [('Gina', 'Lau', IM)], RB, 'Malaysia')
+    sig('Westgate Refining', r[0], NP, 6, 'the new hydrocracker you announced, with start-up planned for 2029', 'News')
+    sig('Westgate Refining', r[0], LC, 10, 'New plant director appointed', 'News')
+    r = acct('Q26', 'Yellowstone Refining', 'A new aromatics unit announced', 'New plants', [('Harun', 'Said', IM)], RA, 'Singapore')
+    sig('Yellowstone Refining', r[0], NP, 20, 'the new aromatics unit you announced', 'News')
+    r = acct('Q27', 'Zinnia Refining', 'A refinery expansion announced', 'New plants', [('Isabel', 'Tan', IM)], RB, 'Indonesia')
+    sig('Zinnia Refining', r[0], NP, 45, 'the expansion of your refinery you announced', 'News')
+    r = acct('Q28', 'Arden Bay Refining', 'A new tank farm announced 4 months ago, mid-size site', 'New plants', [('Jonas', 'Wee', IM)], RA, 'Vietnam', size='mid')
+    sig('Arden Bay Refining', r[0], NP, 120, 'the new tank farm you announced', 'News')
+
 def book(path, sheet, cols, rows):
     wb = Workbook(); ws = wb.active; ws.title = sheet; ws.append(cols)
     for row in rows:
@@ -113,6 +155,6 @@ PRE = 'No_Approvals_' + (ROUND + '_' if ROUND else '')
 PF, SF = ('Prospect_Data.xlsx', 'Signal_Data.xlsx') if ROUND else (PRE + '1_Prospects.xlsx', PRE + '2_Signals.xlsx')
 book(os.path.join(OUT, PF), 'Lead template', LEAD_COLS, leads)
 book(os.path.join(OUT, SF), 'Signal template', SIG_COLS, sigs)
-json.dump(dict(prefix=PRE, prospectFile=PF, signalFile=SF, asOf=AS_OF, leadCols=LEAD_COLS, sigCols=SIG_COLS, newTypes=[], segments=[],
+json.dump(dict(prefix=PRE, prospectFile=PF, signalFile=SF, asOf=AS_OF, leadCols=LEAD_COLS, sigCols=SIG_COLS, newTypes=NEW_TYPES, segments=SEGMENTS,
                leads=[[r.get(c, '') for c in LEAD_COLS] for r in leads], signals=sigs, accounts=accounts), open(SPEC, 'w'), indent=1)
 print(len(accounts), 'accounts', len(leads), 'contacts', len(sigs), 'signals')
