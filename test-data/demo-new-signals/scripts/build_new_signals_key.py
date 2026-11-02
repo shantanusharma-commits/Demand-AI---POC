@@ -32,7 +32,7 @@ steps = [
     ('Setup → Segments (Admin)', 'Add the three segments on sheet 1.', 'Three segments listed. No approval needed: the Admin set them up.'),
     ('Setup → Signals (Admin)', 'Add the three signal types on sheet 2, each with its micro-segment. Leadership change, Webinar attended and Content download are built in: nothing to add.', 'Three signal types listed as Added.'),
     ('Setup → Actions (Admin)', 'Add the six actions on sheet 3, each linked to its segment, order 1 first.', 'Six actions, Active.'),
-    ('Prospecting', 'Upload New_Signals_1_Prospects.xlsx.', '27 contacts in 24 net-new accounts. One note: Ivan Ho (Westmere Refining) opted out, so he is never contacted.'),
+    ('Prospecting', 'Upload New_Signals_1_Prospects.xlsx.', '27 contacts in 24 net-new accounts. One note: Ivan Ho (Westmere Refining) opted out, so this contact is never reached.'),
     ('Account Scoring', f"Set the score date to {int(spec['asOf'][8:])} Nov 2026. Upload New_Signals_2_Signals.xlsx and score.",
      '30 signal rows: 26 qualified; 2 rejected (Fairhaven 120 days old, Rosewood not in the list); 2 not used (Sunleaf below the fit floor, Westmere opted out).'),
     ('Account Scoring', 'Look at the ranking.', 'Top: Blackwater 59.2 (new plant + hiring stack). Tier A: 8 accounts (45.5 down to 35.6). Tier B: 11 (27.3 down to 20.5). Tier C: Fernhill and Quarry Bay (old signals). Fairhaven on the Watch list. Fresher signals and bigger sites rank higher; see sheet 5.'),
@@ -40,6 +40,12 @@ steps = [
     ('Micro-segments & NBA', 'Build.', 'Five segments: Talking about ageing systems 6, New plants 4, Expanding teams 3 (each with its new first action), Engagement 3 and Leadership 3 (built-in actions). All 19 accounts go ahead on their own.'),
     ('Check', 'Open an Engagement item, then a new-segment item.', 'Engagement: an email citing an approved claim. New segments and Leadership: a task for the owner, because no approved claim fits them (and a claim cannot yet be tagged to a new segment).'),
 ]
+PRE = spec.get('prefix', 'New_Signals_')
+def tr(t):
+    t = t.replace('New_Signals_', PRE)
+    for k, v in spec.get('rename', {}).items(): t = t.replace(k, v)
+    return t
+steps = [tuple(tr(x) for x in st) for st in steps]
 sheet('4 How to run', ['Where', 'Do', 'Expect'], steps, [24, 70, 80])
 
 find = lambda n: next((a for a in res['accounts'] if a['name'] == n), None)

@@ -9,6 +9,25 @@ from openpyxl import Workbook
 from openpyxl.styles import Font
 
 OUT, SPEC = sys.argv[1], sys.argv[2]
+ROUND = sys.argv[3] if len(sys.argv) > 3 else ''   # 'B': the same design with different company and people names
+# Round B names, in the order the accounts and people appear below (all invented)
+CO_B = ['Ravenhill Refining', 'Saltcote Refining', 'Brackenridge Refining', 'Marshgate Refining', 'Copperleaf Refining', 'Hollowell Refining',
+        'Stonemere Refining', 'Kittiwake Refining', 'Ambergate Refining', 'Linden Bay Refining', 'Foxglove Refining', 'Northcape Refining',
+        'Juniper Point Refining', 'Rushford Refining', 'Clearwater Bay Refining', 'Heronsgate Refining', 'Oakvale Refining', 'Bramblewood Refining',
+        'Seabright Refining', 'Wolfcrag Refining', 'Elderbank Refining', 'Mistral Refining', 'Goldleaf Foods', 'Pennant Refining', 'Starling Refining']
+PEOPLE_B = [('Farah', 'Aziz'), ('Leon', 'Tan'), ('Nok', 'Chaiyo'), ('Preecha', 'Boon'), ('Wen', 'Lau'), ('Zul', 'Rahim'), ('Deepa', 'Nair'),
+            ('Carlo', 'Mendoza'), ('Huong', 'Do'), ('Sara', 'Ismail'), ('Ramon', 'Cruz'), ('Bao', 'Vu'), ('Vikram', 'Pillai'), ('Nadia', 'Yusof'),
+            ('Peter', 'Goh'), ('Lin', 'Feng'), ('Agus', 'Wibowo'), ('Shanti', 'Rao'), ('Teresa', 'Lim'), ('Kamal', 'Hassan'), ('Hui', 'Min'),
+            ('Ahmad', 'Faiz'), ('Minh', 'Ho'), ('Clara', 'Seah'), ('Azman', 'Ali'), ('Duc', 'Phan'), ('Ben', 'Koh'), ('Rina', 'Lee'), ('Tom', 'Wee')]
+_co, _pp = {}, {}
+def rn(name):
+    if ROUND != 'B': return name
+    if name not in _co: _co[name] = CO_B[len(_co)]
+    return _co[name]
+def rp(first, last):
+    if ROUND != 'B': return first, last
+    if (first, last) not in _pp: _pp[(first, last)] = PEOPLE_B[len(_pp)]
+    return _pp[(first, last)]
 AS_OF = '2026-11-09'   # set this as the score date
 LEAD_COLS = ['first_name', 'last_name', 'job_title', 'seniority', 'email', 'email_verified', 'linkedin_url',
              'company_name', 'company_domain', 'country', 'city', 'industry', 'annual_revenue_usd', 'employee_count',
@@ -46,8 +65,9 @@ NEW_TYPES = [
 leads, sigs, accounts = [], [], []
 def acct(aid, name, story, expect, people, owner=RA, industry='Refining', process='Crude refining', revenue=1900000000, employees=2600,
          account_type='Owner-operator', country='Malaysia', capacity=140000):
-    dom = slug(name) + '.example'; refs = []
+    name = rn(name); dom = slug(name) + '.example'; refs = []
     for first, last, title, seniority, more in people:
+        first, last = rp(first, last)
         r = dict(first_name=first, last_name=last, job_title=title, seniority=seniority, email=f'{slug(first)}.{slug(last)}@{dom}', email_verified='Y',
                  linkedin_url=f'https://www.linkedin.com/in/{slug(first)}-{slug(last)}-{aid.lower()}', company_name=name, company_domain=dom, country=country,
                  city='', industry=industry, annual_revenue_usd=revenue, employee_count=employees, account_type=account_type, existing_customer='N',
@@ -57,7 +77,7 @@ def acct(aid, name, story, expect, people, owner=RA, industry='Refining', proces
     accounts.append(dict(id=aid, name=name, story=story, expect=expect))
     return refs
 def sig(name, ref, typ, days, detail, source):
-    sigs.append([name, ref[0], ref[1], typ, ago(days), detail, source, '', ''])
+    sigs.append([rn(name), ref[0], ref[1], typ, ago(days), detail, source, '', ''])
 IM, OD = ('Instrumentation Manager', 'Manager'), ('Operations Director', 'Director')
 P = lambda f, l, t, more=None: (f, l, t[0], t[1], more)
 
@@ -137,7 +157,8 @@ r = acct('N24', 'Westmere Refining', 'Commented on LinkedIn, but the only contac
          [P('Ivan', 'Ho', IM, dict(opt_out='Y'))], country='Singapore')
 sig('Westmere Refining', r[0], LI, 4, 'your comment on a post about migrating old safety systems', 'LinkedIn')
 # A signal for a company that is not on the prospect list: rejected
-sigs.append(['Rosewood Refining', 'li.wei@rosewoodrefining.example', 'Li Wei', 'New plant announced', ago(9), 'the new unit you announced', 'News', '', ''])
+_rw = rn('Rosewood Refining')
+sigs.append([_rw, f'li.wei@{slug(_rw)}.example', 'Li Wei', 'New plant announced', ago(9), 'the new unit you announced', 'News', '', ''])
 
 def book(path, sheet, cols, rows):
     wb = Workbook(); ws = wb.active; ws.title = sheet; ws.append(cols)
@@ -148,8 +169,9 @@ def book(path, sheet, cols, rows):
     for col in ws.columns: ws.column_dimensions[col[0].column_letter].width = min(48, max(10, *(len(str(c.value or '')) + 2 for c in col)))
     ws.freeze_panes = 'A2'; wb.save(path)
 os.makedirs(OUT, exist_ok=True)
-book(os.path.join(OUT, 'New_Signals_1_Prospects.xlsx'), 'Lead template', LEAD_COLS, leads)
-book(os.path.join(OUT, 'New_Signals_2_Signals.xlsx'), 'Signal template', SIG_COLS, sigs)
-json.dump(dict(asOf=AS_OF, leadCols=LEAD_COLS, sigCols=SIG_COLS, newTypes=NEW_TYPES, segments=SEGMENTS, leads=[[r.get(c, '') for c in LEAD_COLS] for r in leads],
+PRE = 'New_Signals_' + (ROUND + '_' if ROUND else '')
+book(os.path.join(OUT, PRE + '1_Prospects.xlsx'), 'Lead template', LEAD_COLS, leads)
+book(os.path.join(OUT, PRE + '2_Signals.xlsx'), 'Signal template', SIG_COLS, sigs)
+json.dump(dict(prefix=PRE, rename={**{k.rsplit(' ', 1)[0]: v.rsplit(' ', 1)[0] for k, v in _co.items()}, **{f'{k[0]} {k[1]}': f'{v[0]} {v[1]}' for k, v in _pp.items()}}, asOf=AS_OF, leadCols=LEAD_COLS, sigCols=SIG_COLS, newTypes=NEW_TYPES, segments=SEGMENTS, leads=[[r.get(c, '') for c in LEAD_COLS] for r in leads],
                signals=sigs, accounts=accounts), open(SPEC, 'w'), indent=1)
 print(len(accounts), 'accounts', len(leads), 'contacts', len(sigs), 'signals')

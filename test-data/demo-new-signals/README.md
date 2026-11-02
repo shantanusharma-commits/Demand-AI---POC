@@ -19,3 +19,7 @@
 Expected: scores from 59.2 (Blackwater: new plant and hiring) down to 8.5; 8 tier A, 11 tier B, 2 tier C; 20 handed off; five segments, all 19 accounts go ahead on their own. Noise set aside: a 120-day-old comment, a food company below the fit floor, an opted-out contact, a signal for a company not in the list.
 
 Engagement items are emails. New-segment and Leadership items are tasks for the owner, because no approved claim fits them (see the "For Shrihari" sheet). Results come from the latest POC engine (`scripts/run_new_signals.mts`). All names are invented.
+
+## Round B (`round-b/`)
+
+The same design with different company and people names, for a second run after round A (round A's accounts would be set aside as already engaged). Run `python3 scripts/make_new_signals.py round-b <spec.json> B`. Top account: Northcape Refining 59.2. Same five segments: Talking about ageing systems 6, New plants 4, Expanding teams 3, Engagement 3, Leadership 3. 60 engine checks, all PASS.
