@@ -242,7 +242,7 @@ function content(kicker, title, section) {
   steps('Understanding · Each step · 2 of 3', 'Micro-segments & Next Best Action, step by step', [
     [4, 'Hand-off', 'The tier A and B prospects with a live signal (or the ones you pick).',
       ['Keeps only people who can be contacted', 'Counts the rest as held back, with why'], 'Prospects handed to NBA, and who was held back.'],
-    [5, 'Micro-segmentation', 'Your segments, and the signal types that feed each one (set in Setup).',
+    [5, 'Micro-segmentation', 'Your segments, set up in advance by your Admin, and the signals that feed each.',
       ['Groups accounts that share a reason to buy', 'At least 3 accounts; smaller groups wait as candidates', 'Proposes a new segment for the manager to approve'], 'Segments, each with its accounts and reason.'],
     [6, 'Next best action', 'Your action library in Setup.',
       ['Picks the action that fits the signal and person', 'Proposes a new action when none fits, for approval', 'Chooses email, LinkedIn or call within consent'], 'One action per prospect, with why.'],
@@ -309,35 +309,13 @@ function content(kicker, title, section) {
   });
   s.addNotes('Pilot: our admin loads the signal files the Client sends and attaches each to its list; the sales manager can add fresh signals to any list, a rep to the lists they uploaded. Each attachment is a new signal version; the list rescores with all of them. Connectors to CRM, web forms or news feeds are a later phase. An unknown signal type is held, classified by the AI, and approved once by the sales manager.');
 
-  /* 10 Our understanding: six micro-segments */
-  s = content('Account scoring · Segments', 'Our understanding: six reasons a site buys now', 'Understanding');
-  const segRows = [['Inquiry', 'Inquiry or RFQ', 'Answer the question they asked while it is live', 'Call to follow up on the inquiry · Route the inquiry to the sales owner',
-      'Same play: answer fast. Share the one-shutdown migration case study; route to the sales owner for their region.'],
-    ['Modernisation', 'Installed system near end of support', 'Plan the migration before end of support forces the timing', 'Propose a migration-path discussion · Offer a site assessment · Offer a lifecycle service review',
-      "Their system may be another vendor's: lead with a site assessment and the migration case study, not a lifecycle review."],
-    ['Service renewal', 'Service contract renewal', 'Check the cover still fits how the site runs today', 'Offer a renewal review · Route to the service owner',
-      'Rarely applies: renewals are with existing customers. A new buyer with a renewal elsewhere is treated as Modernisation.'],
-    ['Project', 'Capital project', 'Settle the control scope while the design is still open', 'Share a case study and offer a technical session · Offer a reference-site visit · Offer an early design workshop',
-      'The best way in: the plant-expansion case study, then a reference-site visit so they see a similar site running.'],
-    ['Leadership', 'Leadership change', 'Be useful to a new leader setting priorities', 'Introduce Client to the new leader · Share a peer case study · Invite to a short briefing',
-      'Introduce Client and what comparable sites run; share the peer story on first-100-day priorities.'],
-    ['Engagement', 'Webinar, download or email click', 'Follow up on the topic they chose to engage with', 'Follow up on the topic they engaged with · Invite to a related session',
-      'Send the session recording and invite them to a related session; no sales ask yet.']];
-  const hd = (t, f) => ({ text: t, options: { bold: true, color: f ? INK : WHITE, fill: { color: f ? AMBER : INK }, fontSize: 12 } });
-  s.addTable([[hd('Micro-segment'), hd('Signal that triggers it'), hd('Angle (the play)'), hd('Actions your team sets in Setup'), hd('For a new buyer (net-new account)', true)],
-    ...segRows.map((r, i) => r.map((t, j) => ({ text: t, options: { fontSize: 11, bold: j === 0, fill: { color: j === 4 ? PALE : i % 2 ? WHITE : MIST } } })))],
-  { x: X0, y: 1.45, w: CW, colW: [1.45, 1.85, 2.4, 3.25, 3.18], rowH: 0.62, border: { type: 'solid', pt: 0.5, color: HEX.line }, valign: 'middle', margin: 0.06, color: INK });
-  T(s, [{ text: 'How it is chosen: ', options: { bold: true } }, { text: 'your team sets the segments, the signals that feed each one and the actions in Setup; the AI picks the action that fits; a new segment, action or signal type goes to the sales manager\u2019s Approvals and, once approved, joins Setup.' }],
-    { x: X0, y: 6.3, w: CW, h: 0.6, fontSize: 12.5, color: SLATE, valign: 'middle' });
-  s.addNotes('The right-hand column is how the play changes for a fresh buyer, an account that is not yet a customer. The content named is the approved content in the Content library: the migration case study, the site assessment one-pager, the plant-expansion case study, the peer story and the webinar recording.');
-
   /* 10b Beyond the six: behaviour signals become new segments */
-  s = content('Account scoring · New signals', 'Beyond the six: new signals become new segments', 'Understanding');
-  T(s, 'For net-new accounts, the strongest signals are often behaviour, not engagement with your content. Add the signal; the system forms the segment and proposes its action.', { x: X0, y: 1.28, w: CW, h: 0.5, fontSize: 13.5, color: SLATE });
+  s = content('Account scoring · New signals', 'New signals become new segments, each with its own action', 'Understanding');
+  T(s, 'For net-new accounts, the strongest signals are often behaviour, not engagement with your content. Each kind of signal forms its own segment, with an action that fits it.', { x: X0, y: 1.28, w: CW, h: 0.5, fontSize: 13.5, color: SLATE });
   [['SIGNAL YOU ADD', 1.0], ['NEW SEGMENT', 4.55], ['NEW ACTION', 7.75], ['EXAMPLE ACCOUNT', 11.0]].forEach(([t, x]) => T(s, t, { x: X0 + x - 1.0, y: 1.9, w: 3.2, h: 0.25, fontSize: 10.5, bold: true, color: RUST, charSpacing: 1 }));
   const newSegs = [['Team expanding', 'Hiring control or automation engineers', 'Expanding teams', 'Offer a technical onboarding session for the new engineers', 'Highgate Refining: hiring four instrumentation engineers'],
     ['New plant announced', 'A new plant, unit or major expansion', 'New plants', 'Propose a front-end design session for the new plant', 'Meridian Refining: a new hydrotreater unit'],
-    ['Commented on LinkedIn', 'Said publicly they live with ageing systems', 'Talking about ageing systems', 'Send a short point of view on the problem they raised', 'Oakhurst Refining: “we are living this right now”']];
+    ['Commented on LinkedIn', 'Joined a public discussion about ageing control systems', 'Talking about ageing systems', 'Share a short point of view on that topic, with a peer example', 'Oakhurst Refining: commented on a post about ageing DCS']];
   newSegs.forEach(([sig, what, seg, act, ex], i) => {
     const y = 2.25 + i * 1.02;
     box(s, X0, y, 3.2, 0.86, MIST);
@@ -350,14 +328,17 @@ function content(kicker, title, section) {
     T(s, act, { x: X0 + 6.74, y, w: 2.8, h: 0.86, fontSize: 12.5, valign: 'middle' });
     T(s, ex, { x: X0 + 9.85, y, w: 2.28, h: 0.86, fontSize: 11.5, italic: true, color: SLATE, valign: 'middle' });
   });
-  T(s, 'HOW A NEW SEGMENT JOINS', { x: X0, y: 5.4, w: 6, h: 0.3, fontSize: 12, bold: true, color: RUST, charSpacing: 1.5 });
-  [['Signal arrives', 'Added in Setup, or a type the AI classifies'], ['AI proposes', 'A segment once 3 accounts share it, and its action'], ['Manager approves', 'Once, in For Review → Approvals'], ['Joins Setup', 'Used automatically from then on']].forEach(([h, d], i) => {
-    const x = X0 + i * 3.06;
-    s.addShape(i ? pres.shapes.CHEVRON : pres.shapes.PENTAGON, { x, y: 5.75, w: 2.98, h: 0.95, fill: { color: i === 2 ? TEAL : PALE }, line: { color: i === 2 ? TEAL : PALE, width: 0 } });
-    disc(s, x + (i ? 0.35 : 0.15), 6.01, 0.42, AMBER, String(i + 1), INK, 12);
-    T(s, [{ text: h, options: { bold: true, breakLine: true, fontSize: 13.5 } }, { text: d, options: { fontSize: 11, color: i === 2 ? WHITE : SLATE } }], { x: x + (i ? 0.88 : 0.68), y: 5.75, w: 1.85, h: 0.95, valign: 'middle', color: i === 2 ? WHITE : INK });
-  });
-  s.addNotes('These three come from the cold-outbound demo set. A segment needs at least 3 accounts; smaller groups wait as candidates across lists until a third account appears. The AI proposes the segment and action (switched on for the pilot once you agree), and the sales manager approves once. A message for a new segment cites an approved claim about its topic; with no such claim the action goes to the owner as a task.');
+  const path = (y, label, sub, steps, dark) => {
+    T(s, [{ text: label, options: { bold: true, color: RUST, charSpacing: 1, breakLine: true } }, { text: sub, options: { fontSize: 11, color: SLATE } }], { x: X0, y, w: 2.55, h: 0.62, fontSize: 11.5, valign: 'middle' });
+    steps.forEach((t, i) => {
+      const x = X0 + 2.65 + i * 3.18, fill = i === 2 ? (dark ? TEAL : INK) : PALE;
+      s.addShape(i ? pres.shapes.CHEVRON : pres.shapes.PENTAGON, { x, y, w: 3.1, h: 0.62, fill: { color: fill }, line: { color: fill, width: 0 } });
+      T(s, t, { x: x + (i ? 0.38 : 0.18), y, w: 2.55, h: 0.62, fontSize: 12.5, bold: true, color: i === 2 ? WHITE : INK, valign: 'middle' });
+    });
+  };
+  path(5.5, 'SET UP IN ADVANCE', 'Admin, before the pilot', ['Add the segment in Setup', 'Map its signals, add its actions', 'Used straight away: no approval'], false);
+  path(6.25, 'SPOTTED BY THE AI', 'Only what nobody set up', ['AI proposes a segment and action', 'Sales manager approves once', 'Joins Setup for every later list'], true);
+  s.addNotes('These three come from the cold-outbound demo set. The Admin can set segments up before the pilot: add the segment in Setup, map the signal types that feed it and add its actions, and it is used straight away with no approval. The sales manager approves only what nobody set up: a segment or action the AI proposes (switched on for the pilot once you agree), once, after which it is reused. A segment needs at least 3 accounts; smaller groups wait as candidates across lists. A message for a new segment cites an approved claim about its topic; with no such claim the action goes to the owner as a task.');
 
   /* 11-13 Key questions: NBA */
   questions('Understanding · Micro-segments & NBA · 1 of 3', 'Micro-segments & NBA: key questions (1/3)', 'NEXT BEST ACTION', [
