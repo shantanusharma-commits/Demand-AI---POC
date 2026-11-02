@@ -1,6 +1,6 @@
 // Runs the POC engine over the no-approvals data (built-in signal types,
 // segments and actions only) and the starting brand pack: Prospecting -> Scoring -> hand-off -> build -> routing.
-// Usage: node --experimental-strip-types run_new_signals.mts <branch checkout> <spec.json> > results.json
+// Usage: node --experimental-strip-types run_no_approvals.mts <branch checkout> <spec.json> > results.json
 import fs from 'node:fs';
 const H = process.argv[2];
 const { processLeads, processSignals, scoreList, CONFIG } = await import(H + '/lib/demandai-engine.ts');
