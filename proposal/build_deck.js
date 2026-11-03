@@ -1,4 +1,5 @@
 // Pilot proposal deck for the platform: a sales story first (who to target, why now, what to say), then what makes it work.
+// After building, run scripts/apply_cover.py on the output to put the designed cover (photo, logo) on slide 1.
 const NAME = 'Marketing Intelligence AI';   // product name: change it here only
 const pptxgen = require('pptxgenjs');
 const React = require('react');
@@ -131,7 +132,7 @@ function content(kicker, title, section) {
     ['Who is ready to buy, and why?', 'Every account ranked against our ideal customer and its buying signals, with why now and what would lift it a tier.', 'Account Scoring'],
     ['What do I say?', 'Accounts grouped by their reason to buy, each with a next best action, a first message on brand and a call script.', 'Micro-segments & NBA'],
     ['What only I can decide', 'Five minutes a day: sensitive messages, segments too small, anything new. Every decision is logged.', 'For Review'],
-    ['Is it working?', 'Minutes of human effort per action against today\'s 38, and how often we accept what it recommends.', 'Analytics']];
+    ['Is it working?', 'How many prioritised accounts each rep reaches in a week, and how often they go ahead with what it recommends.', 'Analytics']];
   beats.forEach(([job, does, screen], i) => {
     const x = X0 + (i % 3) * 4.08, y = 1.85 + Math.floor(i / 3) * 2.3;
     box(s, x, y, 3.9, 2.1, i === 0 ? INK : MIST);
@@ -142,7 +143,7 @@ function content(kicker, title, section) {
   });
   box(s, X0, 6.5, CW, 0.45, PALE);
   T(s, 'Who to target  ·  Why now  ·  What to say: the platform does the sorting, your team does the selling.', { x: X0, y: 6.5, w: CW, h: 0.45, fontSize: 14, bold: true, align: 'center', valign: 'middle' });
-  s.addNotes('Talk track for the demo, always leading with the job, then how the platform helps. 1 Today: "It is Monday. Before I logged in, the platform read every list and signal: 23 actions, 21 already went ahead. I only look at what needs me." 2 Prospecting: "I run my new leads through it; instead of an afternoon cleaning a spreadsheet, the checks take seconds." 3 Scoring: "Which of these is ready to buy? I get a ranked list, and for each one why now; a tier B tells me what would move it to A." 4 NBA: "What do I say? Accounts with the same reason to buy get the same play, and a first message on brand, citing approved proof." 5 For Review: "Five minutes a day on what only I can decide, and every decision is logged." 6 Analytics: "Is it working? Effort per action against 38 minutes today, and how often we accept what it recommends." Close: "You have seen it work. Let me show you what makes it work, and what we set up with you."');
+  s.addNotes('Talk track for the demo, always leading with the job, then how the platform helps. 1 Today: "It is Monday. Before I logged in, the platform read every list and signal: 23 actions, 21 already went ahead. I only look at what needs me." 2 Prospecting: "I run my new leads through it; instead of an afternoon cleaning a spreadsheet, the checks take seconds." 3 Scoring: "Which of these is ready to buy? I get a ranked list, and for each one why now; a tier B tells me what would move it to A." 4 NBA: "What do I say? Accounts with the same reason to buy get the same play, and a first message on brand, citing approved proof." 5 For Review: "Five minutes a day on what only I can decide, and every decision is logged." 6 Analytics: "Is it working? How many prioritised accounts each rep reaches in a week against 30 today, and how often they go ahead with what it recommends." Close: "You have seen it work. Let me show you what makes it work, and what we set up with you."');
 
   /* 4 Divider 01 */
   const divider = (n, title, sub, section) => {
@@ -180,7 +181,7 @@ function content(kicker, title, section) {
       ['Claim Checker', 'Checks a new claim for spelling, grammar and a figure with no source before it is approved.', 'Marketing fixes or confirms']]],
     ['Release and measure', [['Rep Hand-off', "Releases ready actions to each rep's list for today.", 'Rep works the list'],
       ['Decision Log', 'Records every accept, reject, edit and alternative, with the reason and the review time.', 'Reviewer gives the reason'],
-      ['Metrics Reporter', 'Reports G1 (human review effort) and G2 (acceptance rate) against the agreed thresholds.', 'Leaders review the readout']]]];
+      ['Metrics Reporter', 'Reports G1 (accounts each rep reaches a week) and G2 (recommendations they go ahead with) against the agreed baseline.', 'Leaders review the readout']]]];
   const nAgents = STAGES.reduce((n, st) => n + st[1].length, 0);
   s = content('AI agents · Overview', `${nAgents} agents across the demand journey`, 'How it works');
   STAGES.forEach(([h, ags], i) => {
@@ -298,8 +299,8 @@ function content(kicker, title, section) {
       'Accept, edit, choose an alternative or reject, with a reason.', true],
     [9, 'Release to reps', 'Nothing: items that pass every check go ahead on their own.',
       ["Puts ready actions on each rep's Today list", 'Reps send from their own email or LinkedIn', 'Nothing is sent automatically'], "Each rep's actions for today, ready to use."],
-    [10, 'Analytics', 'The baseline and thresholds you agree (e.g. 38 minutes per action today).',
-      ['G1: review minutes per action a person handled', 'G2: share accepted on the first look', 'AI proposals approved, next to G2', 'A team panel per rep on the manager\u2019s Today'], 'Whether the pilot meets G1 and G2, and why.'],
+    [10, 'Analytics', 'The baseline you agree (e.g. 30 prioritised accounts per rep in a 40-hour week).',
+      ['G1: prioritised accounts each rep reaches a week', 'G2: recommendations the rep goes ahead with', 'Also: signal-to-touch time, prioritisation accuracy', 'A team panel per rep on the manager\u2019s Today'], 'Whether the pilot meets G1 and G2, and why.'],
   ]);
 
   /* 9 What the platform receives */
@@ -365,25 +366,23 @@ function content(kicker, title, section) {
   divider('02', 'Setting it up together', 'A few questions today. The rest in a short questionnaire, shared ahead.', 'Setting it up');
 
   /* 14b Questions for today */
-  s = content('Setting it up · Questions for today', 'Six questions for today', 'Setting it up');
-  const today = [['Who to target', [['Which accounts and roles are your best customers, and which do you never pursue?', 'Sets the ideal-customer score'], ['Which buying signals matter most, and where do they come from?', 'Sets the signals and their weights']]],
-    ['Why now, and what to do', [['How do reps decide what to do next today, and which channels can they use?', 'Sets the actions and channels'], ['Who approves a new segment or a sensitive message?', 'Sets who reviews what']]],
-    ['What to say', [['Do you have brand guidelines and approved claims or case studies?', 'Sets the content library'], ['How long does a first touch take today, and what response do you get?', 'Sets the baseline for G1 and G2']]]];
-  today.forEach(([h, qs], i) => {
-    const x = X0 + i * 4.08;
-    box(s, x, 1.6, 3.9, 0.7, INK);
-    T(s, h, { x: x + 0.25, y: 1.6, w: 3.5, h: 0.7, fontSize: 18, bold: true, color: AMBER, valign: 'middle' });
-    qs.forEach(([q, why], j) => {
-      const y = 2.45 + j * 1.85;
-      box(s, x, y, 3.9, 1.7, MIST);
-      disc(s, x + 0.2, y + 0.2, 0.42, AMBER, String(i * 2 + j + 1), INK, 13);
-      T(s, q, { x: x + 0.8, y: y + 0.12, w: 2.95, h: 1.05, fontSize: 14.5, bold: true, valign: 'middle' });
-      T(s, why, { x: x + 0.8, y: y + 1.17, w: 2.95, h: 0.4, fontSize: 12, italic: true, color: TEAL });
-    });
+  s = content('Setting it up · Questions for today', 'Five questions for today', 'Setting it up');
+  const today = [['Who to target', 'Which accounts and roles are your best customers, and which do you never pursue?', 'Sets the ideal-customer score'],
+    ['Who to target', 'Which buying signals matter most, and where do they come from?', 'Sets the signals and their weights'],
+    ['Why now, and what to do', 'Who approves a new segment or a sensitive message?', 'Sets who reviews what'],
+    ['What to say', 'Do you have brand guidelines and approved claims or case studies?', 'Sets the content library'],
+    ['Measuring success', 'How many prioritised accounts does each rep reach in a week, and in how many hours?', 'Sets the baseline for G1']];
+  today.forEach(([area, q, why], i) => {
+    const y = 1.5 + i * 0.92;
+    box(s, X0, y, CW, 0.8, i % 2 ? MIST : PALE);
+    disc(s, X0 + 0.2, y + 0.17, 0.46, AMBER, String(i + 1), INK, 14);
+    T(s, area.toUpperCase(), { x: X0 + 0.85, y, w: 2.4, h: 0.8, fontSize: 10.5, bold: true, color: RUST, charSpacing: 1, valign: 'middle' });
+    T(s, q, { x: X0 + 3.3, y, w: 6.0, h: 0.8, fontSize: 15, bold: true, valign: 'middle' });
+    T(s, why, { x: X0 + 9.45, y, w: 2.55, h: 0.8, fontSize: 12.5, italic: true, color: TEAL, valign: 'middle' });
   });
-  box(s, X0, 6.25, CW, 0.6, PALE);
-  T(s, [{ text: 'Everything else is in the setup questionnaire ', options: { bold: true } }, { text: 'we share before the workshop: answer what you can, and we fill the gaps together.' }], { x: X0 + 0.3, y: 6.25, w: CW - 0.6, h: 0.6, fontSize: 14, valign: 'middle' });
-  s.addNotes('Ask only these six live, two per question the platform answers. The full list sits in the setup questionnaire (Excel), shared ahead so the team can answer at their own pace.');
+  box(s, X0, 6.2, CW, 0.6, INK);
+  T(s, [{ text: 'Everything else is in the setup questionnaire ', options: { bold: true, color: AMBER } }, { text: 'we share before the workshop: answer what you can, and we fill the gaps together.', options: { color: WHITE } }], { x: X0 + 0.3, y: 6.2, w: CW - 0.6, h: 0.6, fontSize: 14, valign: 'middle' });
+  s.addNotes('Ask only these five live. The full list sits in the setup questionnaire (Excel), shared ahead so the team can answer at their own pace.');
 
   /* 15 What we need: data and content */
   s = content('Setting it up · What we need · 1 of 2', 'What we need: data and content', 'Setting it up');
@@ -434,47 +433,40 @@ function content(kicker, title, section) {
     T(s, example, { x: x + 0.3, y: 4.32, w: 5.3, h: 1.05, fontSize: 12.5, color: fg });
     T(s, [{ text: 'Passes when  ', options: { bold: true, color: ac } }, { text: pass, options: { bold: true } }], { x: x + 0.3, y: 5.45, w: 5.3, h: 0.45, fontSize: 15, color: fg, valign: 'middle' });
   };
-  gcard(0, 'G1', 'Human review effort', 'Does it save people time?',
-    [{ text: 'Minutes per action = ', options: { bold: true } }, { text: 'minutes people spent deciding, in For Review and Approvals ÷ first actions a person handled', options: { breakLine: true } },
-     { text: 'Effort saved = ', options: { bold: true } }, { text: '1 − (minutes per action ÷ baseline)' }],
-    'People handled 12 first actions and spent 90 minutes deciding, approvals included. 90 ÷ 12 = 7.5 minutes per action. Today it takes 38 minutes, so 1 − 7.5 ÷ 38 = 80% less effort.',
-    'effort is at least 50% lower than the baseline');
-  gcard(1, 'G2', 'Acceptance rate', 'Do people trust what it recommends?',
-    [{ text: 'Acceptance = ', options: { bold: true } }, { text: 'recommendations accepted on the first look ÷ recommendations decided', options: { breakLine: true } },
-     { text: 'Counted from: ', options: { bold: true } }, { text: 'the exception queue, the weekly spot-check and the manager\u2019s approve or reject in Approvals, weighted by path' }],
-    'Spot-check: 8 of 10 accepted (80%), on the 60% of items that went ahead. Queue: 5 of 10 accepted (50%), on the other 40%. 80% × 0.6 + 50% × 0.4 = 68%.',
-    'at least 70% are accepted (68% falls just short)');
+  gcard(0, 'G1', 'Human effort', 'How many prioritised accounts can a rep reach in a week?',
+    [{ text: 'Effort per account = ', options: { bold: true } }, { text: 'a rep\u2019s working hours in a week ÷ prioritised accounts they reached', options: { breakLine: true } },
+     { text: 'Counted from: ', options: { bold: true } }, { text: 'each rep\u2019s Today list: actions worked and marked done' }],
+    'Today a rep reaches 30 prioritised accounts in a 40-hour week: 80 minutes each. With the research, ranking and first draft done, the same week reaches 60: 40 minutes each, 50% less.',
+    'effort per account is at least 50% lower');
+  gcard(1, 'G2', 'Recommendation acceptance', 'Do reps go ahead with what it recommends?',
+    [{ text: 'Acceptance = ', options: { bold: true } }, { text: 'recommendations the rep went ahead with ÷ recommendations they decided on', options: { breakLine: true } },
+     { text: 'Counted from: ', options: { bold: true } }, { text: 'the decision log: sent as is or after an edit counts; rejected or swapped for another action does not' }],
+    'Out of 10 recommendations, the rep sent 7 as they were and 1 after a small edit, rejected 1 and picked a different action for 1. That is 8 of 10: 80%.',
+    'at least 7 in 10 are accepted');
   box(s, X0, 6.2, CW, 0.7, MIST);
-  T(s, [{ text: 'Too early to call: ', options: { bold: true } }, { text: 'neither is judged until 10 decisions are counted. “AI proposals approved” (new segments, actions, signal types) sits next to G2, not inside it. Baseline (38 min), thresholds and the 10 are agreed with you at baselining.' }],
-    { x: X0 + 0.25, y: 6.2, w: CW - 0.5, h: 0.7, fontSize: 12.5, valign: 'middle' });
-  s.addNotes('G1: the minutes come from how long each decision took, in For Review and in Approvals, logged automatically, divided by the first actions a person handled. Actions that went ahead on their own take no review minutes, which is where the saving comes from. G2: first-look decisions count, including the sales manager approving or rejecting in Approvals; items an approval released reach G2 through the weekly spot-check. Choosing an alternative after a rejection is tracked separately.');
+  T(s, [{ text: 'Agreed with you in week one: ', options: { bold: true } }, { text: 'the baseline (e.g. 30 prioritised accounts per rep in a 40-hour week) and the pass marks. Neither measure is judged until 10 decisions are counted.' }],
+    { x: X0 + 0.25, y: 6.2, w: CW - 0.5, h: 0.7, fontSize: 13, valign: 'middle' });
+  s.addNotes('Keep it simple. G1: today a rep reaches about 30 prioritised accounts in a 40-hour week, about 80 minutes each. The platform does the research, the ranking and the first draft, so the rep only reviews and sends: the same week reaches more accounts, and the effort per account falls. The system counts the accounts each rep worked and marked on their Today list; the hours are the rep\'s working week, agreed with you. G2: out of the recommendations a rep decided on, how many did they go ahead with, as they were or after an edit. Every accept, edit, alternative and reject is in the decision log, with the reason.');
 
-  const criteria = (title, rows, foot) => {
-    const q = pres.addSlide({ masterName: 'CONTENT', sectionTitle: 'Success criteria' });
-    q.addText('SUCCESS CRITERIA · OTHER MEASURES', { placeholder: 'kicker' }); q.addText(title, { placeholder: 'title' });
-    const h = t => ({ text: t, options: { bold: true, fill: { color: AMBER }, fontSize: 12 } });
-    q.addTable([[h('#'), h('Baseline metric'), h('Metric definition'), h('How we measure it'), h('Metric illustration (examples)'), h('Rating scale')],
-      ...rows.map((r, i) => [String(i + 1), ...r, '☆☆☆☆☆'].map((t, j) => ({ text: t, options: { fontSize: 12, bold: j === 1, color: j === 5 ? GREY : INK, fill: { color: i % 2 ? WHITE : MIST } } })))],
-    { x: X0, y: 1.5, w: CW, colW: [0.45, 2.1, 3.2, 2.45, 2.75, 1.18], rowH: 0.68, border: { type: 'solid', pt: 0.5, color: HEX.line }, valign: 'middle', margin: 0.07, color: INK });
-    T(q, foot, { x: X0, y: 6.45, w: CW, h: 0.5, fontSize: 11, color: GREY });
-    return q;
-  };
-  criteria('Other measures: Prospect & Account Scoring', [
-    ['Accounts covered*', 'How many target accounts are reviewed for buying signals today?', 'Accounts with a current score each month', 'Today 200 by hand | 2,000+ scored weekly'],
-    ['Research effort*', 'How long does a rep spend finding out why to call an account?', 'Minutes per account', '30 minutes today vs 5 minutes to review | 80% less'],
-    ['Signal-to-touch time*', 'How long after a signal does the first touch happen?', 'Average days from signal date to first touch', 'Not measured today vs within 3 working days'],
-    ['Prioritisation accuracy*', 'Do the top-tier prospects produce most of the meetings?', 'Share of meetings from tier A and B', '70% of meetings from tier A and B'],
-    ['List quality*', 'How many rows are unusable: duplicates, no contact, opted out?', 'Issues found per 1,000 rows', 'Flagged before scoring, with a fix suggested'],
-    ['Missed signals', 'How many live signals were not acted on?', 'Signals older than 30 days with no touch', 'Not measured today vs tracked weekly']],
-  '* can be measured during the pilot phase. Figures in the illustration column are examples to agree at baselining, not commitments.');
-  criteria('Other measures: Micro-segments, NBA & For Review', [
-    ['Go ahead on their own*', 'How many actions pass every check without a person?', 'Released automatically ÷ all actions', '6 in 10 go ahead; the rest are reviewed'],
-    ['Messages on brand*', 'How many drafts pass the brand, claim and consent checks?', 'Share of drafts with no flag', '95% pass; the rest are corrected once automatically'],
-    ['Spot-check rating*', 'Are released actions good when a person checks a sample?', 'Average rating of the weekly 20% sample', '4 out of 5 or better'],
-    ['Rep adoption*', 'Do reps use the list each week?', 'Weekly active reps; actions worked', '4 of 5 reps active every week'],
-    ['Reply and meeting rate', 'Do recommended actions get more responses?', 'Replies and meetings per 100 touches', 'Pilot reps vs the same reps last year'],
-    ['AI proposals approved*', 'How often does the manager agree with what the AI proposes to add?', 'New segments, actions and signal types approved ÷ decided', '7 in 10 approved as proposed or after an edit']],
-  '* can be measured during the pilot phase. Reply rates and pipeline sourced need outcomes from your CRM; revenue attribution needs a longer window. Open to discussion.');
+  /* 18 Also observed */
+  s = pres.addSlide({ masterName: 'CONTENT', sectionTitle: 'Success criteria' });
+  s.addText('SUCCESS CRITERIA · ALSO OBSERVED', { placeholder: 'kicker' }); s.addText('Two more measures we watch alongside', { placeholder: 'title' });
+  const obs = [['Signal-to-touch time', 'How fast do reps act on a buying signal?', 'Days from the signal\u2019s date to the first touch', 'The signal date in the signal file, and the day the rep marked the action done', 'Today: not measured, often weeks', 'Pilot: within 3 working days'],
+    ['Prioritisation accuracy', 'Do the top accounts turn into conversations?', 'Share of replies and meetings that came from tier A and B accounts', 'The tier at hand-off, and the outcome the rep marks: replied, meeting, no response', 'Today: not measured', 'Pilot: 7 in 10 meetings from tier A and B']];
+  obs.forEach(([h, q, what, from, today, pilot], i) => {
+    const x = X0 + i * 6.15, dark = i === 0, fg = dark ? WHITE : INK, ac = dark ? AMBER : RUST;
+    box(s, x, 1.5, 5.9, 4.5, dark ? INK : PALE);
+    T(s, [{ text: h, options: { bold: true, fontSize: 22, breakLine: true } }, { text: q, options: { fontSize: 13, italic: true } }], { x: x + 0.35, y: 1.65, w: 5.2, h: 0.95, color: fg, valign: 'middle' });
+    T(s, 'WHAT WE MEASURE', { x: x + 0.35, y: 2.8, w: 4, h: 0.25, fontSize: 10.5, bold: true, color: ac, charSpacing: 1 });
+    T(s, what, { x: x + 0.35, y: 3.08, w: 5.2, h: 0.6, fontSize: 14, color: fg });
+    T(s, 'COUNTED FROM', { x: x + 0.35, y: 3.75, w: 4, h: 0.25, fontSize: 10.5, bold: true, color: ac, charSpacing: 1 });
+    T(s, from, { x: x + 0.35, y: 4.03, w: 5.2, h: 0.6, fontSize: 13, color: fg });
+    box(s, x + 0.35, 4.9, 2.5, 0.8, dark ? SLATE : WHITE); box(s, x + 3.05, 4.9, 2.5, 0.8, AMBER);
+    T(s, today, { x: x + 0.5, y: 4.9, w: 2.2, h: 0.8, fontSize: 12.5, color: fg, valign: 'middle' });
+    T(s, pilot, { x: x + 3.2, y: 4.9, w: 2.2, h: 0.8, fontSize: 12.5, bold: true, valign: 'middle' });
+  });
+  T(s, 'Examples to agree with you in week one, not commitments.', { x: X0, y: 6.2, w: CW, h: 0.4, fontSize: 12, color: GREY });
+  s.addNotes('These two are observed, not pass or fail. Signal-to-touch time shows the platform gets reps onto a signal while it is fresh. Prioritisation accuracy shows the ranking is right: most conversations come from the accounts it put at the top. Both come from data the platform already holds: the signal date, the tier, and what the rep marks.');
 
   /* 19 Timeline */
   pres.addSection({ title: 'Timeline' });
