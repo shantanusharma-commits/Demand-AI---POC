@@ -1,4 +1,4 @@
-# Golden datasets v2 (remediation branch)
+# Golden datasets v2
 
 Three sets, each uploaded the normal way: `_1_Prospects.xlsx` in Prospecting, `_2_Signals.xlsx` in Scoring (score date **30 Oct 2026**), then the steps in the answer key.
 
@@ -8,7 +8,9 @@ Three sets, each uploaded the normal way: `_1_Prospects.xlsx` in Prospecting, `_
 | `Golden_B_Segments_NBA` | All segments, the 3-account minimum (Leadership does not form), action, channel (LinkedIn-only), claim per segment, strongest signal and person win, tier C not handed off | 19 |
 | `Golden_C_For_Review` | Exception queue (low confidence, deal size, unverifiable claim, segment too small), Approvals (sensitive, and sensitive with a second reason), rewritten once then released, unreachable held back at hand-off | 16 |
 
-Each `_3_Answer_key.xlsx` has the steps, the expected result per account, the draft text, the file issues and an **Engine check** sheet: every design expectation compared with what the branch's engine did (all PASS).
+Each `_3_Answer_key.xlsx` has the steps, the expected result per account, the draft text, the file issues and an **Engine check** sheet: every design expectation compared with what the engine did (all 72 PASS).
+
+**Re-checked 16 Nov 2026 against the latest app code (commit 65d6489).** One expected result changed: A12 Lowmoor Refining is now **Watch list, score 0** (was tier A, 48.5). Its opted-out contact's signals no longer count toward the account (CR 31 Oct §12). The data files are unchanged.
 
 Claims are for the starting brand pack. With extra claims in the live Content library (for example a claim that fits every segment), the claim on Inquiry and Leadership items can differ; Leadership items that are tasks here would become emails.
 
