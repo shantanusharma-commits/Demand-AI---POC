@@ -1568,3 +1568,7 @@ h1 .r2tag{font-size:11px;padding:3px 7px}
 .hub-key span{display:inline-flex;align-items:center;gap:5px}.hub-key span::before{content:"";width:9px;height:9px;border-radius:50%;display:inline-block}
 
 .dif-i{background:var(--pos-lt);color:var(--pos);text-decoration:none;border-radius:3px;padding:0 2px}.dif-d{background:var(--neg-lt,#fde8e8);color:var(--neg,#b91c1c);border-radius:3px;padding:0 2px}
+
+.hub-n{cursor:pointer}.hub-n:hover circle,.hub-n.on circle{stroke:var(--brand);stroke-width:4}
+.hub-det{margin:4px 8px 8px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center}.hub-det .sm{flex-basis:100%}
+.out-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 22px;border-bottom:1px solid var(--border);background:var(--surf);font-size:12.5px}.out-ok{display:inline-flex;gap:6px;align-items:center}

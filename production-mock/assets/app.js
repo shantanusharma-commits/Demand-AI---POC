@@ -876,6 +876,7 @@
   function addList(name, kind, note, ids) { const id = 'U' + (S.lists.length + 1); S.lists.unshift({ id, name, kind, by: 'Chat', when: 'Today', note, ids }); return id; }
   function respond(text) {
     const t = text.toLowerCase(), lk = lastKind(), v = view();
+    if (/datasheet|knowledge hub|what does (the|our) .*(say|claim)|case study say/.test(t)) return /support|sla|response time|downtime|trip/.test(t) ? { kind: 'text', html: `From the Knowledge Hub: <i>"Sites that planned the cut-over around a shutdown cut unplanned trips by 18% in the first year."</i> <span class="badge b-sec nodot">CL-07 case study, page 3</span> Approved claim, reviewed Sep 2026.` } : { kind: 'text', html: 'Not found in the Knowledge Hub, so I won\'t answer from memory. I added the question to the content backlog.' };
     const soon = t.match(/\b(ppt|powerpoint|slides?|deck|pdf|brochure|infographic|carousel|podcast|video|single image|image post|linkedin (text )?post)\b/);
     if (soon && /write|make|create|generate|draft|build|turn|design|produce/.test(t)) return { kind: 'text', html: `<b>${esc(soon[0].charAt(0).toUpperCase() + soon[0].slice(1))}</b> is coming soon in Content studio. Today I can write a <b>blog</b> or a <b>whitepaper</b> in the brand voice: say "Write a blog on …".` };
     if (v === 'studio') return studioRespond(t, text);
@@ -1596,26 +1597,27 @@
       <div class="sec-t">Links · ${E.length}</div>
       <div class="tbl-wrap"><table class="tbl"><thead><tr><th>From</th><th>Link</th><th>To</th><th>Source and date</th></tr></thead><tbody>${E.map(e => `<tr><td class="nm">${esc(e[0])}</td><td class="sm">${esc(e[1])}</td><td>${esc(e[2])}</td><td class="sm muted">${esc(e[3])}</td></tr>`).join('')}</tbody></table></div>`;
   }
+  let hubSel = null;
   function hubSvg(a) {
     const nodes = [];
-    nodes.push(['p', 'Contact', a.contact.name, 'I' + a.contact.idTier]);
-    (a.contacts || []).filter(c => c.name !== a.contact.name).slice(0, 2).forEach(c => nodes.push(['p', 'Contact', c.name, c.title || '']));
-    a.signals.slice(0, 4).forEach(x => nodes.push([x.weight > 0 ? 's' : 'd', x.weight > 0 ? 'Signal · tier ' + x.tier : 'Expired', x.type, ago(x.age)]));
-    if (a.seg) nodes.push(['g', 'Micro-segment', a.segment, '']);
-    if (a.nba) nodes.push(['n', 'Next best action', a.nba.action, stepTxt(a)]);
-    if (a.campaign) nodes.push(['n', 'Campaign', campOf(a.campaign).name, '']);
-    if (a.crm && (a.crm.customer || a.crm.openDeal)) nodes.push(['x', 'CRM', a.crm.customer ? 'Customer' : 'Open deal', '']);
-    if (a.lastTouch) nodes.push(['t', 'Touch', a.lastTouch.channel, a.lastTouch.days + ' days ago']);
-    if (a.outcome) nodes.push(['o', 'Outcome', a.outcome, '']);
-    nodes.push(['w', 'Owner', USERS[a.owner].name, '']);
+    nodes.push(['p', 'Contact', a.contact.name, 'I' + a.contact.idTier, `App.setRecTab('overview')`, a.contact.title + ' · ' + ID_FOUND[a.contact.idTier]]);
+    (a.contacts || []).filter(c => c.name !== a.contact.name).slice(0, 2).forEach(c => nodes.push(['p', 'Contact', c.name, c.title || '', null, c.title || 'Contact at ' + a.name]));
+    a.signals.slice(0, 4).forEach(x => nodes.push([x.weight > 0 ? 's' : 'd', x.weight > 0 ? 'Signal · tier ' + x.tier : 'Expired', x.type, ago(x.age), `App.modTab('signals')`, x.text + ' · ' + x.source + ' · ' + (x.weight > 0 ? 'counts ' + x.weight + ' points' : 'no longer counts')]));
+    if (a.seg) nodes.push(['g', 'Micro-segment', a.segment, '', `App.openSegment('${a.seg}')`, 'Niche × strongest trigger; open the segment']);
+    if (a.nba) nodes.push(['n', 'Next best action', a.nba.action, stepTxt(a), `App.setRecTab('engage')`, a.nba.action + ' · ' + stepTxt(a)]);
+    if (a.campaign) nodes.push(['n', 'Campaign', campOf(a.campaign).name, '', `App.goCampaign('${a.campaign}')`, 'Open the campaign']);
+    if (a.crm && (a.crm.customer || a.crm.openDeal)) nodes.push(['x', 'CRM', a.crm.customer ? 'Customer' : 'Open deal', '', `App.setRecTab('overview')`, a.crm.customer ? 'Excluded: ' + a.crm.field : 'Held: ' + a.crm.openDeal.name]);
+    if (a.lastTouch) nodes.push(['t', 'Touch', a.lastTouch.channel, a.lastTouch.days + ' days ago', `App.setRecTab('activity')`, 'Recent touch holds new actions for 14 days']);
+    if (a.outcome) nodes.push(['o', 'Outcome', a.outcome, '', `App.setRecTab('activity')`, 'See the timeline']);
+    nodes.push(['w', 'Owner', USERS[a.owner].name, '', null, 'Record owner in the CRM']);
     const W = 640, H = 560, cx = W / 2, cy = H / 2, rx = 225, ry = 205, n = nodes.length;
     const cut = (s, k) => (s = String(s || '')).length > k ? s.slice(0, k - 1) + '…' : s;
     const pos = nodes.map((_, i) => { const ang = -Math.PI / 2 + i * 2 * Math.PI / n; return [cx + rx * Math.cos(ang), cy + ry * Math.sin(ang)]; });
     return `<div class="hub-wrap"><svg class="hub" viewBox="0 0 ${W} ${H}" role="img" aria-label="Context graph for ${esc(a.name)}">
       ${pos.map(([x, y], i) => `<line class="hub-l k-${nodes[i][0]}" x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}"/>`).join('')}
       <circle class="hub-c" cx="${cx}" cy="${cy}" r="64"/><text class="hub-ct" x="${cx}" y="${cy - 6}" text-anchor="middle">${esc(cut(a.name, 13))}</text><text class="hub-cs" x="${cx}" y="${cy + 14}" text-anchor="middle">${a.score} · tier ${esc(a.tier)}</text>
-      ${pos.map(([x, y], i) => { const d = nodes[i]; return `<g class="hub-n k-${d[0]}"><title>${esc(d[1] + ': ' + d[2] + (d[3] ? ' · ' + d[3] : ''))}</title><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="9"/><text class="hub-k" x="${x.toFixed(1)}" y="${(y - 18).toFixed(1)}" text-anchor="middle">${esc(d[1])}</text><text class="hub-t" x="${x.toFixed(1)}" y="${(y + 28).toFixed(1)}" text-anchor="middle">${esc(cut(d[2], 18))}</text>${d[3] ? `<text class="hub-s" x="${x.toFixed(1)}" y="${(y + 45).toFixed(1)}" text-anchor="middle">${esc(cut(d[3], 20))}</text>` : ''}</g>`; }).join('')}
-    </svg><div class="hub-key"><span class="k-p">People</span><span class="k-s">Live signals</span><span class="k-d">Expired</span><span class="k-g">Segment</span><span class="k-n">Actions and campaigns</span><span class="k-t">Touches and outcomes</span><span class="k-x">CRM</span></div></div>`;
+      ${pos.map(([x, y], i) => { const d = nodes[i]; return `<g class="hub-n k-${d[0]} ${hubSel === i ? 'on' : ''}" role="button" tabindex="0" onclick="App.hubPick(${i})" onkeydown="if(event.key==='Enter')App.hubPick(${i})"><title>${esc(d[1] + ': ' + d[2] + (d[3] ? ' · ' + d[3] : ''))}</title><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="9"/><text class="hub-k" x="${x.toFixed(1)}" y="${(y - 18).toFixed(1)}" text-anchor="middle">${esc(d[1])}</text><text class="hub-t" x="${x.toFixed(1)}" y="${(y + 28).toFixed(1)}" text-anchor="middle">${esc(cut(d[2], 18))}</text>${d[3] ? `<text class="hub-s" x="${x.toFixed(1)}" y="${(y + 45).toFixed(1)}" text-anchor="middle">${esc(cut(d[3], 20))}</text>` : ''}</g>`; }).join('')}
+    </svg>${hubSel != null && nodes[hubSel] ? `<div class="hub-det"><span class="badge b-grey nodot">${esc(nodes[hubSel][1])}</span> <b>${esc(nodes[hubSel][2])}</b><div class="sm">${esc(nodes[hubSel][5] || '')}</div>${nodes[hubSel][4] ? `<button class="btn sm" onclick="${nodes[hubSel][4]}">Open</button>` : ''}</div>` : '<div class="hub-det muted sm">Click any circle to see what links it to the account.</div>'}<div class="hub-key"><span class="k-p">People</span><span class="k-s">Live signals</span><span class="k-d">Expired</span><span class="k-g">Segment</span><span class="k-n">Actions and campaigns</span><span class="k-t">Touches and outcomes</span><span class="k-x">CRM</span></div></div>`;
   }
   const stepTxt = a => ({ auto: 'Ready to send', review: 'Approval card', held: 'Held', nurture: 'Nurture', expired: 'Expired', excluded: 'Excluded', sent: 'Sent' })[a.nba.status] || a.nba.status;
   function renderRecord() {
@@ -1867,7 +1869,7 @@
     if (!d) {
       const all = S.content.concat(CONTENT);
       $('main').className = 'canvas studio-home';
-      $('main').innerHTML = `<div class="cv-h"><div class="cv-ht" style="display:flex;flex-direction:row;align-items:baseline;gap:14px"><div class="cv-t">Content studio</div><div class="cv-s">Blogs and whitepapers in the Client's brand voice · more formats coming soon</div></div></div>${modTabs()}
+      $('main').innerHTML = `<div class="cv-h"><div class="cv-ht" style="display:flex;flex-direction:row;align-items:baseline;gap:14px"><div class="cv-t">Content studio</div><div class="cv-s">Blogs and whitepapers in Vantera's brand voice · more formats coming soon</div></div></div>${modTabs()}
         <div class="dtabs" style="margin:0;padding:0 22px;background:var(--surf)">${[['write', 'Write'], ['saved', `Saved content <i>${all.length}</i>`]].map(([k, l]) => `<button class="${studioTab === k ? 'on' : ''}" onclick="App.setStudioTab('${k}')">${l}</button>`).join('')}</div>
         <div class="cv-b" id="cv">${studioTab === 'write' ? `<div class="st-hero"><h1>What should we write?</h1><p>Describe it in your own words. It's written in a canvas beside the chat, and you change it by talking to it.</p>
           <div class="st-box"><label class="sr" for="stBrief">Brief</label><textarea id="stBrief" rows="2" placeholder="e.g. A whitepaper on legacy control system modernisation for plant managers" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();App.studioGo()}"></textarea>
@@ -2034,6 +2036,7 @@
     saveThread(id) { const el = $('thrBody'); if (el) { S.drafts['thr-' + id] = el.value; save(); } },
     setCampTab(k) { campTab = k; renderAll(); },
     setSegTab(k) { segTab = k; renderAll(); },
+    hubPick(i) { hubSel = hubSel === i ? null : i; renderAll(); },
     setRecTab(k) { recTab = k; actOpen = null; renderAll(); },
     toggleAct(i) { actOpen = actOpen === i ? null : i; renderAll(); },
     star(id) { S.starred[id] = !S.starred[id]; save(); renderAll(); },

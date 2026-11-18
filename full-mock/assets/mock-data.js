@@ -44,7 +44,7 @@
         s('Hiring surge', 2, 9, 0.7, '6 open roles for control-systems engineers in Jurong.', 'Hiring data'),
       ],
       nba: {
-        action: 'Introduce Client to the new leader', runnerUp: 'Share a peer case study from their sector', channel: 'Email', confidence: 'High', proven: true,
+        action: 'Introduce Vantera to the new leader', runnerUp: 'Share a peer case study from their sector', channel: 'Email', confidence: 'High', proven: true,
         reason: null, status: 'ready', due: 'Today 12:00',
         subject: 'Congratulations on the new role, Budi',
         body: 'Hi Budi,\n\nCongratulations on joining Juniper Petrochem as VP Reliability & Maintenance. The first 90 days in a reliability role usually start with one question: where is unplanned downtime really coming from?\n\nWe help petrochemical sites in Singapore answer that with an asset-performance baseline in under six weeks. A site of similar size cut unplanned trips by 18% in the first year.\n\nWould a 20-minute call next week be useful, before your first turnaround plan is locked?\n\nBest,\nSofia',
@@ -81,7 +81,7 @@
         s('Content download', 2, 6, 0.6, 'Downloaded "Digital twin for refinery turnarounds".', 'Marketing automation'),
       ],
       nba: {
-        action: 'Introduce Client to the new leader', runnerUp: 'Share a peer case study from their sector', channel: 'LinkedIn', confidence: 'Medium', proven: false,
+        action: 'Introduce Vantera to the new leader', runnerUp: 'Share a peer case study from their sector', channel: 'LinkedIn', confidence: 'Medium', proven: false,
         reason: 'Unproven message', reasonNote: 'No validated message structure yet for "exec hire + content download" on LinkedIn. The AI wrote a provisional one.', status: 'review', due: 'Thu 29 Oct',
         subject: 'LinkedIn connection note',
         body: 'Hi Linh, congratulations on the Plant Manager role at Kingfisher. I saw your team was reading up on digital twins for turnarounds. We\'ve helped two Singapore refineries shorten turnaround planning with one. Happy to share what worked if useful.',
@@ -154,8 +154,8 @@
         s('New exec hire', 1, 5, 0.9, 'Somchai Rattana appointed COO.', 'Job-change alerts'),
         s('Expansion / capex approved', 1, 9, 0.7, 'New cracker debottlenecking project announced.', 'Funding & news'),
       ],
-      nba: { action: 'Introduce Client to the new leader', runnerUp: 'Executive briefing invitation', channel: 'Email', confidence: 'Medium', proven: true, reason: 'Medium confidence', reasonNote: 'C-level contact: the recommended route is through the manager\'s warm path.', status: 'review', due: 'Today 15:00', sensitive: true,
-        subject: 'A note from Client on your new role',
+      nba: { action: 'Introduce Vantera to the new leader', runnerUp: 'Executive briefing invitation', channel: 'Email', confidence: 'Medium', proven: true, reason: 'Medium confidence', reasonNote: 'C-level contact: the recommended route is through the manager\'s warm path.', status: 'review', due: 'Today 15:00', sensitive: true,
+        subject: 'A note from Vantera on your new role',
         body: 'Dear Somchai,\n\nCongratulations on your appointment as COO of Meridian Olefins. Daniel Brooks mentioned meeting you at last year\'s forum.\n\nWith the debottlenecking project starting, we\'d welcome the chance to share how other olefins producers kept the cracker online during similar projects.\n\nWould a short executive briefing be useful?\n\nWarm regards,\nMarco' },
       history: [{ d: '18 Aug 2025', t: 'Forum meeting (Daniel)', o: 'Note: interested in APM' }],
     },
@@ -165,7 +165,7 @@
       contact: { name: 'Tran Minh', title: 'Head of Operations', email: 'tran.minh@saltmarsh.example', phone: '', linkedin: true, idTier: 2 },
       warm: { score: 15, note: 'No connection.' },
       signals: [s('New exec hire', 1, 3, 0.8, 'Tran Minh promoted to Head of Operations.', 'Job-change alerts')],
-      nba: { action: 'Introduce Client to the new leader', runnerUp: 'Share a peer case study from their sector', channel: 'Email', confidence: 'High', proven: true, reason: null, status: 'auto', subject: '', body: '' },
+      nba: { action: 'Introduce Vantera to the new leader', runnerUp: 'Share a peer case study from their sector', channel: 'Email', confidence: 'High', proven: true, reason: null, status: 'auto', subject: '', body: '' },
       history: [],
     },
     {
@@ -174,7 +174,7 @@
       contact: { name: 'Rizky Pratama', title: 'VP Engineering', email: 'rizky.p@tidewater.example', phone: '+62 254 601 300', linkedin: true, idTier: 1 },
       warm: { score: 40, note: 'Aisha is a 2nd-degree connection.' },
       signals: [s('New exec hire', 1, 6, 0.85, 'Rizky Pratama joined as VP Engineering.', 'Job-change alerts'), s('Visited website', 2, 4, 0.5, 'Three visits to the safety-systems pages.', 'Website visitor ID')],
-      nba: { action: 'Introduce Client to the new leader', runnerUp: 'Share a peer case study from their sector', channel: 'Email', confidence: 'High', proven: true, reason: 'Spot-check', reasonNote: 'Went ahead on its own; drawn at random for a quality check.', status: 'review', due: 'Fri 30 Oct', subject: 'Welcome to Tidewater, Rizky', body: 'Hi Rizky,\n\nCongratulations on the VP Engineering role…' },
+      nba: { action: 'Introduce Vantera to the new leader', runnerUp: 'Share a peer case study from their sector', channel: 'Email', confidence: 'High', proven: true, reason: 'Spot-check', reasonNote: 'Went ahead on its own; drawn at random for a quality check.', status: 'review', due: 'Fri 30 Oct', subject: 'Welcome to Tidewater, Rizky', body: 'Hi Rizky,\n\nCongratulations on the VP Engineering role…' },
       history: [],
     },
     {
@@ -322,22 +322,22 @@
   ACCOUNTS.forEach(a => { a.seg = HAND_SEG[a.id] || null; const sg = SEGMENTS.find(x => x.id === a.seg); a.segment = sg ? sg.name : '–'; });
 
   /* Next best actions for generated accounts in NBA segments: most went ahead on their own, a few wait for a person. */
-  const ACTION = { s1: ['Introduce Client to the new leader', 'Share a peer case study from their sector'], s3: ['Share the regulation summary', 'Offer an emissions-monitoring assessment'],
+  const ACTION = { s1: ['Introduce Vantera to the new leader', 'Share a peer case study from their sector'], s3: ['Share the regulation summary', 'Offer an emissions-monitoring assessment'],
     s7: ['Send the vendor-evaluation guide', 'Offer a reference call'], s5: ['Send the historian migration checklist', 'Offer an architecture review'], s6: ['Offer a reliability assessment', 'Share a peer case study from their sector'] };
   ACCOUNTS.filter(a => a.generated && a.seg && SEGMENTS.find(x => x.id === a.seg).mode !== 'NBC').forEach((a, i) => {
     const st = a.seg === 's6' ? 'review' : ['auto', 'sent', 'auto', 'sent', 'ready', 'auto'][i % 6];
     const [action, runnerUp] = ACTION[a.seg];
     a.nba = { action, runnerUp, channel: 'Email', confidence: st === 'review' ? 'Medium' : 'High', proven: SEGMENTS.find(x => x.id === a.seg).proven === 'Proven',
       reason: a.seg === 's6' ? 'Sensitive' : null, reasonNote: a.seg === 's6' ? 'Incident-related: needs the sales manager\'s approval.' : '', sensitive: a.seg === 's6', status: st, due: st === 'ready' ? 'Today 17:00' : st === 'review' ? 'Wed 28 Oct' : '',
-      subject: action, body: `Hi ${a.contact.name.split(' ')[0]},\n\n${a.whyNowText || ''}A short note from Client: ${action.toLowerCase()}.\n\nWould a 20-minute call next week be useful?\n\nBest regards` };
+      subject: action, body: `Hi ${a.contact.name.split(' ')[0]},\n\n${a.whyNowText || ''}A short note from Vantera: ${action.toLowerCase()}.\n\nWould a 20-minute call next week be useful?\n\nBest regards` };
     if (st === 'sent') a.outcome = pick(['Sent · awaiting reply', 'Opened · no reply yet', 'Sent · awaiting reply']);
   });
 
   /* Scenario cases placed in this story. */
   const SC = id => ACCOUNTS.find(a => a.id === id);
   const sc5 = SC('wildfernaromatics'); if (sc5) sc5.crm = { customer: true, since: '2024-05-12', field: 'Opportunity.Stage = Closed won' };
-  const sc8 = SC('halcyon'); if (sc8) sc8.signals.unshift(Object.assign(s('LinkedIn comment', 2, 1, 1, '"How did you keep the units running during the cut-over? We face the same with our 2009 system." (a question on the Client\'s migration post)', 'LinkedIn engagement (seeded)'), { relevance: 'Relevant: a question about our category from the head of automation, naming the age of their own system. Strong.', persona: 'technical lead' }));
-  const v2 = SC('oakmeregasprocessing'); if (v2 && v2.nba) v2.nba.body = v2.nba.body.replace('A short note from Client', 'As the best-in-class partner, Client cuts downtime by 40%. A short note from Client');
+  const sc8 = SC('halcyon'); if (sc8) sc8.signals.unshift(Object.assign(s('LinkedIn comment', 2, 1, 1, '"How did you keep the units running during the cut-over? We face the same with our 2009 system." (a question on the Vantera\'s migration post)', 'LinkedIn engagement (seeded)'), { relevance: 'Relevant: a question about our category from the head of automation, naming the age of their own system. Strong.', persona: 'technical lead' }));
+  const v2 = SC('oakmeregasprocessing'); if (v2 && v2.nba) v2.nba.body = v2.nba.body.replace('A short note from Vantera', 'As the best-in-class partner, Vantera cuts downtime by 40%. A short note from Vantera');
   const nd = SC('dunmoregasprocessing'); if (nd && nd.nba) nd.nba.llmFailed = true;
   const nc = SC('kingsbayrefining'); if (nc) Object.assign(nc.contact, { email: '', linkedin: false, phone: '' });
   const i4 = SC('foxglovepetrochem'); if (i4) Object.assign(i4.contact, { idTier: 4, heldCycles: 3 });
@@ -531,5 +531,25 @@
     kenji: { todo: 4, overdue: 3, approved: 4, sent: 7, replies: 1, meetings: 0, target: 3, accept: 57 },
   };
 
+  /* Each next best action names the signal it answers. */
+  const ACT_BY = [[/exec hire|new plant head|leader/i, a => `Congratulate ${a.contact.name.split(' ')[0]} on the new role and offer a 6-week downtime baseline`],
+    [/rival contract|contract renewal/i, () => 'Compare switching now with switching at the end of the rival contract'],
+    [/researching a competitor|researching a rival/i, () => 'Send a side-by-side comparison while they evaluate vendors'],
+    [/compliance|regulat|emission/i, () => 'Share the 2027 emissions-reporting checklist before the deadline'],
+    [/expansion|capex|tender/i, () => 'Offer automation scoping for the approved expansion'],
+    [/tech-stack|historian/i, () => 'Send the historian migration checklist for the stack change'],
+    [/hiring/i, () => 'Share how peers staffed a control-system upgrade'],
+    [/incident|shutdown/i, () => 'Offer a reliability review after the unplanned shutdown'],
+    [/linkedin comment/i, a => `Answer ${a.contact.name.split(' ')[0]}'s cut-over question from the LinkedIn comment`],
+    [/pricing/i, () => 'Send pricing context with a peer example'],
+    [/turnaround/i, () => 'Share the pre-turnaround checklist']];
+  ACCOUNTS.forEach(a => {
+    if (!a.nba || !a.whyNow) return;
+    const m = ACT_BY.find(x => x[0].test(a.whyNow.type)); if (!m) return;
+    const old = a.nba.action, nw = m[1](a);
+    a.nba.action = nw;
+    if (a.nba.subject === old) a.nba.subject = nw;
+    if (a.nba.body) a.nba.body = a.nba.body.replace('A short note from Vantera: ' + old.toLowerCase(), 'A short note from Vantera: ' + nw.charAt(0).toLowerCase() + nw.slice(1));
+  });
   window.MOCK = { SIM, TIER_CUTS, TODAY, USERS, REPS, ACCOUNTS, SEGMENTS, LISTS, CONTENT, PROSPECTS_FOUND, CAMPAIGNS, REPLIES, BLOCKERS, LEARNED, SCHEDULED, TEAM_STATS, decayed };
 })();

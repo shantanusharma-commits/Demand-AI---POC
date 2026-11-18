@@ -51,6 +51,16 @@ const M = process.argv[2], full = M === 'full-mock', dir = '/home/user/Demand-AI
     t = await run(() => App.setRecTab('activity')); chk('RSP-03 lineage', /Lineage/i.test(t), 'Account › Activity');
     t = await run(() => App.nav('inbox')); chk('RSP-02 six statuses', /Further action/i.test(t) && /Wrong person/i.test(t), 'Inbox');
   }
+  // round 3
+  t = await run(() => { App.openRecord('juniper', 'graph'); }); await p.click('g.hub-n'); await p.waitForTimeout(300); t = await body(); chk('Context graph nodes clickable with detail', /Open/i.test(t) && (await p.$('g.hub-n.on')) !== null, 'Account › Context graph');
+  chk('Actions name their signal (no placeholder)', await p.evaluate(() => !MOCK.ACCOUNTS.some(a => a.nba && /Introduce Client/.test(a.nba.action)) && /Congratulate Budi/.test(MOCK.ACCOUNTS.find(a => a.id === 'juniper').nba.action)), 'Next best actions');
+  t = await run(() => App.ask('What does the datasheet say about unplanned trips?'), 2500); chk('FND-09 knowledge answer with page', /page 3/i.test(t), 'Chat');
+  t = await run(() => App.ask('What does the datasheet say about pricing tiers?'), 2500); chk('FND-09 not found, not invented', /Not found in the Knowledge Hub/i.test(t), 'Chat');
+  t = await adm('quality'); await as('sofia'); chk('FND-02 merge, same-name pair, bounce; SCR-01 unranked; PRO-08 contradiction; FND-04 dated fact', /Merged into one/i.test(t) && /Kept as two people/i.test(t) && /Marked stale/i.test(t) && /unranked/i.test(t) && /Flagged, not accepted/i.test(t) && /expires 30 Apr/i.test(t), 'Admin › ICP › Data quality');
+  if (full) {
+    chk('NBA-08 autopilot sends only high; medium waits', await p.evaluate(() => MOCK.ACCOUNTS.filter(a => a.nba && a.nba.autopilot).every(a => a.nba.confidence !== 'Medium')), 'Routing');
+    t = await run(() => App.ask('Make a deck on control system migration'), 3000); chk('Content: attach to outreach, assign, permission', /Use in outreach/i.test(t) && /Assign to a teammate/i.test(t) && /Let the AI attach/i.test(t), 'Content canvas');
+  }
   // manager
   await as('pavan'); t = await body(); chk('Manager Today: confirm campaign and meeting, coach', /Confirm the Eastgate meeting/i.test(t) && /Coach Marco/i.test(t), 'Manager › Today');
   chk('Manager menu has Team, no Inbox', /Team/i.test(await p.innerText('.side-nav')) && !/Inbox/i.test(await p.innerText('.side-nav')), 'Manager menu');
