@@ -1,0 +1,368 @@
+{
+ "replies": [
+  {
+   "id": "dr0",
+   "status": "Hot",
+   "account": "Westmere Gas Terminal",
+   "text": "Can you do Tuesday? We want to see the hot cut-over approach.",
+   "next": "Book the meeting",
+   "at": "2026-11-18T07:00:00",
+   "draft": "Thanks, Tuesday works. I will bring our migration lead and a one-page plan for your site."
+  },
+  {
+   "id": "dr1",
+   "status": "Hot",
+   "account": "Brackley LNG",
+   "text": "Send times for next week, our automation lead will join.",
+   "next": "Book the meeting",
+   "at": "2026-11-17T08:00:00",
+   "draft": "Thanks, Tuesday works. I will bring our migration lead and a one-page plan for your site."
+  },
+  {
+   "id": "dr2",
+   "status": "Hot",
+   "account": "Larchmont LNG",
+   "text": "Interesting timing. Let us talk before the tender closes.",
+   "next": "Book the meeting",
+   "at": "2026-11-16T09:00:00",
+   "draft": "Thanks, Tuesday works. I will bring our migration lead and a one-page plan for your site."
+  },
+  {
+   "id": "dr3",
+   "status": "Further action",
+   "account": "Morrow Gas Terminal",
+   "text": "Do you have a reference at a refinery our size?",
+   "next": "Send the asset within a day",
+   "at": "2026-11-18T10:00:00",
+   "draft": "Thanks for the question. Attached is a one-pager on a refinery migration of a similar size [K2]."
+  },
+  {
+   "id": "dr4",
+   "status": "Further action",
+   "account": "Penhallow Gas Terminal",
+   "text": "Please share the migration assessment offer.",
+   "next": "Send the asset within a day",
+   "at": "2026-11-17T11:00:00",
+   "draft": "Thanks for the question. Attached is a one-pager on a refinery migration of a similar size [K2]."
+  },
+  {
+   "id": "dr5",
+   "status": "Further action",
+   "account": "Quarrybank LNG",
+   "text": "What does a pilot on one unit cost?",
+   "next": "Send the asset within a day",
+   "at": "2026-11-16T07:00:00",
+   "draft": "Thanks for the question. Attached is a one-pager on a refinery migration of a similar size [K2]."
+  },
+  {
+   "id": "dr6",
+   "status": "Not now",
+   "account": "Ullswater LNG",
+   "text": "Budget is set until April. Come back then.",
+   "next": "Recontact in April; nurture",
+   "at": "2026-11-18T08:00:00",
+   "draft": ""
+  },
+  {
+   "id": "dr7",
+   "status": "Not now",
+   "account": "Vexford Gas Terminal",
+   "text": "We are mid-turnaround. Q2 next year.",
+   "next": "Recontact in Q2; nurture",
+   "at": "2026-11-17T09:00:00",
+   "draft": ""
+  },
+  {
+   "id": "dr8",
+   "status": "Wrong person",
+   "account": "Yarrow Refinery",
+   "text": "I left the automation team. Try our new head of automation.",
+   "next": "Add the new contact and re-route",
+   "at": "2026-11-16T10:00:00",
+   "draft": ""
+  },
+  {
+   "id": "dr9",
+   "status": "Disqualified",
+   "account": "Aldermoor Refinery",
+   "text": "We signed a ten-year support deal last month.",
+   "next": "Close out, watch for renewal, save the reason",
+   "at": "2026-11-18T11:00:00",
+   "draft": ""
+  },
+  {
+   "id": "dr10",
+   "status": "Disqualified",
+   "account": "Birchfield Refining",
+   "text": "The site is being sold.",
+   "next": "Close out, save the reason",
+   "at": "2026-11-17T07:00:00",
+   "draft": ""
+  },
+  {
+   "id": "dr11",
+   "status": "Opted out",
+   "account": "Farrowdale Refining",
+   "text": "Please remove me from your list.",
+   "next": "Stop all; add to exclusions",
+   "at": "2026-11-16T08:00:00",
+   "draft": ""
+  }
+ ],
+ "funnel": {
+  "per100": [
+   [
+    "Qualified",
+    100,
+    100
+   ],
+   [
+    "Contacted",
+    82,
+    41
+   ],
+   [
+    "Replied",
+    21,
+    6
+   ],
+   [
+    "Meetings",
+    9,
+    2
+   ],
+   [
+    "Won",
+    2.4,
+    0.5
+   ]
+  ],
+  "note": "Prioritised accounts against the rest, per 100 accounts worked, last quarter."
+ },
+ "scorecards": {
+  "rep": [
+   [
+    "Actions sent",
+    "46"
+   ],
+   [
+    "Replies",
+    "11"
+   ],
+   [
+    "Meetings",
+    "5"
+   ],
+   [
+    "Time to approve",
+    "3.4 h"
+   ]
+  ],
+  "manager": [
+   [
+    "Reply rate",
+    "24%"
+   ],
+   [
+    "Acceptance first time",
+    "78%"
+   ],
+   [
+    "Edit rate",
+    "19%"
+   ],
+   [
+    "Campaigns confirmed",
+    "3"
+   ]
+  ],
+  "leader": [
+   [
+    "Pipeline from Demand AI",
+    "GBP 3.1M"
+   ],
+   [
+    "Qualified meetings",
+    "17"
+   ],
+   [
+    "Cost per meeting",
+    "GBP 214"
+   ],
+   [
+    "Won",
+    "GBP 0.6M"
+   ]
+  ]
+ },
+ "assets": [
+  {
+   "title": "One-pager: hot cut-over for refineries",
+   "format": "One-pager (PDF)",
+   "lines": [
+    [
+     "Units stay online during the switch",
+     "C3"
+    ],
+    [
+     "14 of 15 cut-overs inside the planned turnaround",
+     "C1"
+    ],
+    [
+     "A coastal refinery moved 1,400 loops over nine weekends",
+     "K2"
+    ]
+   ]
+  },
+  {
+   "title": "Deck: methane monitoring for LNG terminals",
+   "format": "Deck (8 slides)",
+   "lines": [
+    [
+     "Monitoring integrates without new cabling",
+     "C9"
+    ],
+    [
+     "A northern terminal migrated two units in one outage",
+     "K1"
+    ],
+    [
+     "Certified to IEC 62443-3-3",
+     "C12"
+    ]
+   ]
+  }
+ ],
+ "firstParty": [
+  [
+   "Visited the pricing page",
+   "Harcastle Refinery",
+   "Signal tier 1",
+   "2 hours ago",
+   true
+  ],
+  [
+   "Downloaded the migration guide",
+   "Juniper Point Refining",
+   "Signal tier 2",
+   "Yesterday",
+   false
+  ],
+  [
+   "Clicked the case study link",
+   "Kingsmere Refinery",
+   "Signal tier 2",
+   "Yesterday",
+   false
+  ],
+  [
+   "Attended the live webinar",
+   "Lowther Refining",
+   "Signal tier 1",
+   "40 minutes ago",
+   true
+  ],
+  [
+   "Arrived from an AI assistant",
+   "Westmere Gas Terminal",
+   "Signal tier 2",
+   "Today",
+   false
+  ]
+ ],
+ "learning": [
+  [
+   "Signal-led first touch converts best after a funding signal",
+   "11 of 31 replied (35%)",
+   "Promoted to validated after 31 outcomes"
+  ],
+  [
+   "Tender signals older than 10 days rarely convert",
+   "2 of 24 replied",
+   "Window shortened from 45 to 30 days (backtest passed)"
+  ],
+  [
+   "LinkedIn first touches to technical leads beat email",
+   "9 of 22 against 5 of 30",
+   "Channel rule updated for technical leads"
+  ],
+  [
+   "Reps edited the opening line in 40% of drafts",
+   "Edits cluster on the greeting",
+   "Template opening changed; edit rate now 19%"
+  ]
+ ],
+ "patterns": [
+  [
+   "Refinery × Funding",
+   "Signal → proof → ask",
+   31,
+   11,
+   "Validated"
+  ],
+  [
+   "LNG terminal × Compliance deadline",
+   "Trigger → statistic → ask",
+   14,
+   4,
+   "Provisional"
+  ],
+  [
+   "Gas processing × Exec hire",
+   "Congratulate → peer story → ask",
+   9,
+   2,
+   "Explore"
+  ]
+ ],
+ "quota": {
+  "target": "GBP 2.4M",
+  "closed": "GBP 1.1M",
+  "gap": "GBP 1.3M",
+  "weeks": [
+   [
+    "Week 47",
+    "Push Westmere Gas Terminal to proposal",
+    "Open Brackley LNG"
+   ],
+   [
+    "Week 48",
+    "Close Larchmont LNG",
+    "Open Morrow Gas Terminal and Penhallow Gas Terminal"
+   ],
+   [
+    "Week 49",
+    "Proposal to Quarrybank LNG",
+    "Open Ullswater LNG"
+   ],
+   [
+    "Week 50",
+    "Close Vexford Gas Terminal",
+    "Nurture Yarrow Refinery"
+   ]
+  ]
+ },
+ "research": [
+  {
+   "rival": "Orrin Automation",
+   "theme": "Slow support response after go-live",
+   "reviews": 23,
+   "proof": "C10",
+   "account": "Aldermoor Refinery"
+  },
+  {
+   "rival": "Calder Process Systems",
+   "theme": "Expensive extended support for old controllers",
+   "reviews": 17,
+   "proof": "C8",
+   "account": "Birchfield Refining"
+  },
+  {
+   "rival": "Brennick Controls",
+   "theme": "Difficult logic conversion during migration",
+   "reviews": 12,
+   "proof": "C16",
+   "account": "Farrowdale Refining"
+  }
+ ]
+}

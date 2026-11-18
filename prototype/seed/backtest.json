@@ -1,0 +1,918 @@
+[
+ {
+  "id": "won-1",
+  "set": "won",
+  "name": "Wyvern Olefins",
+  "fit": 77,
+  "outcome": "Won",
+  "asOf": "2026-05-02T09:00:00",
+  "signals": [
+   {
+    "id": "won0s0",
+    "code": "Co1",
+    "tier": 1,
+    "strength": 5,
+    "eventDate": "2026-05-02",
+    "observable": true,
+    "predictive": true,
+    "timeBound": true
+   },
+   {
+    "id": "won0s1",
+    "code": "Co2",
+    "tier": 2,
+    "strength": 4,
+    "eventDate": "2026-04-26",
+    "observable": true,
+    "predictive": true,
+    "timeBound": true
+   }
+  ]
+ },
+ {
+  "id": "won-2",
+  "set": "won",
+  "name": "Calloway Gas Terminal",
+  "fit": 73,
+  "outcome": "Won",
+  "asOf": "2026-04-29T09:00:00",
+  "signals": [
+   {
+    "id": "won1s0",
+    "code": "Co1",
+    "tier": 1,
+    "strength": 5,
+    "eventDate": "2026-04-28",
+    "observable": true,
+    "predictive": true,
+    "timeBound": true
+   },
+   {
+    "id": "won1s1",
+    "code": "Co2",
+    "tier": 2,
+    "strength": 4,
+    "eventDate": "2026-04-20",
+    "observable": true,
+    "predictive": true,
+    "timeBound": true
+   }
+  ]
+ },
+ {
+  "id": "won-3",
+  "set": "won",
+  "name": "Fairhaven Gas Processing",
+  "fit": 75,
+  "outcome": "Won",
+  "asOf": "2026-04-26T09:00:00",
+  "signals": [
+   {
+    "id": "won2s0",
+    "code": "Co1",
+    "tier": 1,
+    "strength": 5,
+    "eventDate": "2026-04-24",
+    "observable": true,
+    "predictive": true,
+    "timeBound": true
+   },
+   {
+    "id": "won2s1",
+    "code": "Co2",
+    "tier": 2,
+    "strength": 4,
+    "eventDate": "2026-04-18",
+    "observable": true,
+    "predictive": true,
+    "timeBound": true
+   }
+  ]
+ },
+ {
+  "id": "won-4",
+  "set": "won",
+  "name": "Glaston Petrochemicals",
+  "fit": 73,
+  "outcome": "Won",
+  "asOf": "2026-04-23T09:00:00",
+  "signals": [
+   {
+    "id": "won3s0",
+    "code": "Co1",
+    "tier": 1,
+    "strength": 5,
+    "eventDate": "2026-04-23",
+    "observable": true,
+    "predictive": true,
+    "timeBound": true
+   },
+   {
+    "id": "won3s1",
+    "code": "Co2",
+    "tier": 2,
+    "strength": 4,
+    "eventDate": "2026-04-18",
+    "observable": true,
+    "predictive": true,
+    "timeBound": true
+   }
+  ]
+ },
+ {
+  "id": "won-5",
+  "set": "won",
+  "name": "Hollins Olefins",
+  "fit": 83,
+  "outcome": "Won",
+  "asOf": "2026-04-20T09:00:00",
+  "signals": [
+   {
+    "id": "won4s0",
+    "code": "Co1",
+    "tier": 1,
+    "strength": 5,
+    "eventDate": "2026-04-19",
+    "observable": true,
+    "predictive": true,
+    "timeBound": true
+   },
+   {
+    "id": "won4s1",
+    "code": "Co2",
+    "tier": 2,
+    "strength": 4,
+    "eventDate": "2026-04-10",
+    "observable": true,
+    "predictive": true,
+    "timeBound": true
+   }
+  ]
+ },
+ {
+  "id": "won-6",
+  "set": "won",
+  "name": "Lindale Refinery",
+  "fit": 84,
+  "outcome": "Won",
+  "asOf": "2026-04-17T09:00:00",
+  "signals": [
+   {
+    "id": "won5s0",
+    "code": "Co1",
+    "tier": 1,
+    "strength": 5,
+    "eventDate": "2026-04-15",
+    "observable": true,
+    "predictive": true,
+    "timeBound": true
+   },
+   {
+    "id": "won5s1",
+    "code": "Co2",
+    "tier": 2,
+    "strength": 4,
+    "eventDate": "2026-04-08",
+    "observable": true,
+    "predictive": true,
+    "timeBound": true
+   }
+  ]
+ },
+ {
+  "id": "won-7",
+  "set": "won",
+  "name": "Mereford Refinery",
+  "fit": 78,
+  "outcome": "Won",
+  "asOf": "2026-04-14T09:00:00",
+  "signals": [
+   {
+    "id": "won6s0",
+    "code": "Co1",
+    "tier": 1,
+    "strength": 5,
+    "eventDate": "2026-04-13",
+    "observable": true,
+    "predictive": true,
+    "timeBound": true
+   },
+   {
+    "id": "won6s1",
+    "code": "Co2",
+    "tier": 2,
+    "strength": 4,
+    "eventDate": "2026-04-12",
+    "observable": true,
+    "predictive": true,
+    "timeBound": true
+   }
+  ]
+ },
+ {
+  "id": "won-8",
+  "set": "won",
+  "name": "Norcross Gas Terminal",
+  "fit": 74,
+  "outcome": "Won",
+  "asOf": "2026-04-11T09:00:00",
+  "signals": [
+   {
+    "id": "won7s0",
+    "code": "Co1",
+    "tier": 1,
+    "strength": 5,
+    "eventDate": "2026-04-11",
+    "observable": true,
+    "predictive": true,
+    "timeBound": true
+   },
+   {
+    "id": "won7s1",
+    "code": "Co2",
+    "tier": 2,
+    "strength": 4,
+    "eventDate": "2026-04-07",
+    "observable": true,
+    "predictive": true,
+    "timeBound": true
+   }
+  ]
+ },
+ {
+  "id": "won-9",
+  "set": "won",
+  "name": "Pinewood LNG",
+  "fit": 76,
+  "outcome": "Won",
+  "asOf": "2026-04-08T09:00:00",
+  "signals": [
+   {
+    "id": "won8s0",
+    "code": "Co1",
+    "tier": 1,
+    "strength": 5,
+    "eventDate": "2026-04-07",
+    "observable": true,
+    "predictive": true,
+    "timeBound": true
+   },
+   {
+    "id": "won8s1",
+    "code": "Co2",
+    "tier": 2,
+    "strength": 4,
+    "eventDate": "2026-04-03",
+    "observable": true,
+    "predictive": true,
+    "timeBound": true
+   }
+  ]
+ },
+ {
+  "id": "won-10",
+  "set": "won",
+  "name": "Quillon Refining",
+  "fit": 83,
+  "outcome": "Won",
+  "asOf": "2026-04-05T09:00:00",
+  "signals": [
+   {
+    "id": "won9s0",
+    "code": "Co1",
+    "tier": 1,
+    "strength": 5,
+    "eventDate": "2026-04-05",
+    "observable": true,
+    "predictive": true,
+    "timeBound": true
+   },
+   {
+    "id": "won9s1",
+    "code": "Co2",
+    "tier": 2,
+    "strength": 4,
+    "eventDate": "2026-03-30",
+    "observable": true,
+    "predictive": true,
+    "timeBound": true
+   }
+  ]
+ },
+ {
+  "id": "won-11",
+  "set": "won",
+  "name": "Ribston Gas Processing",
+  "fit": 79,
+  "outcome": "Won",
+  "asOf": "2026-04-02T09:00:00",
+  "signals": [
+   {
+    "id": "won10s0",
+    "code": "Co1",
+    "tier": 1,
+    "strength": 5,
+    "eventDate": "2026-03-31",
+    "observable": true,
+    "predictive": true,
+    "timeBound": true
+   },
+   {
+    "id": "won10s1",
+    "code": "Co2",
+    "tier": 2,
+    "strength": 4,
+    "eventDate": "2026-03-28",
+    "observable": true,
+    "predictive": true,
+    "timeBound": true
+   }
+  ]
+ },
+ {
+  "id": "won-12",
+  "set": "won",
+  "name": "Ashby Petrochemicals",
+  "fit": 82,
+  "outcome": "Won",
+  "asOf": "2026-03-30T09:00:00",
+  "signals": [
+   {
+    "id": "won11s0",
+    "code": "Co1",
+    "tier": 1,
+    "strength": 5,
+    "eventDate": "2026-03-28",
+    "observable": true,
+    "predictive": true,
+    "timeBound": true
+   },
+   {
+    "id": "won11s1",
+    "code": "Co2",
+    "tier": 2,
+    "strength": 4,
+    "eventDate": "2026-03-27",
+    "observable": true,
+    "predictive": true,
+    "timeBound": true
+   }
+  ]
+ },
+ {
+  "id": "won-13",
+  "set": "won",
+  "name": "Corrin Midstream",
+  "fit": 73,
+  "outcome": "Won",
+  "asOf": "2026-03-27T09:00:00",
+  "signals": [
+   {
+    "id": "won12s0",
+    "code": "Co8",
+    "tier": 3,
+    "strength": 2,
+    "eventDate": "2026-01-01",
+    "observable": true,
+    "predictive": true,
+    "timeBound": true
+   }
+  ]
+ },
+ {
+  "id": "won-14",
+  "set": "won",
+  "name": "Westmere Refinery",
+  "fit": 72,
+  "outcome": "Won",
+  "asOf": "2026-03-24T09:00:00",
+  "signals": [
+   {
+    "id": "won13s0",
+    "code": "Co8",
+    "tier": 3,
+    "strength": 2,
+    "eventDate": "2025-12-29",
+    "observable": true,
+    "predictive": true,
+    "timeBound": true
+   }
+  ]
+ },
+ {
+  "id": "won-15",
+  "set": "won",
+  "name": "Brackley Gas Processing",
+  "fit": 86,
+  "outcome": "Won",
+  "asOf": "2026-03-21T09:00:00",
+  "signals": [
+   {
+    "id": "won14s0",
+    "code": "Co8",
+    "tier": 3,
+    "strength": 2,
+    "eventDate": "2025-12-26",
+    "observable": true,
+    "predictive": true,
+    "timeBound": true
+   }
+  ]
+ },
+ {
+  "id": "lost-1",
+  "set": "lost",
+  "name": "Larchmont Gas Terminal",
+  "fit": 85,
+  "outcome": "Lost",
+  "asOf": "2026-05-02T09:00:00",
+  "signals": [
+   {
+    "id": "lost0s0",
+    "code": "Co6",
+    "tier": 1,
+    "strength": 5,
+    "eventDate": "2026-05-01",
+    "observable": true,
+    "predictive": true,
+    "timeBound": true
+   },
+   {
+    "id": "lost0s1",
+    "code": "P3",
+    "tier": 2,
+    "strength": 3,
+    "eventDate": "2026-04-24",
+    "observable": true,
+    "predictive": true,
+    "timeBound": true
+   }
+  ]
+ },
+ {
+  "id": "lost-2",
+  "set": "lost",
+  "name": "Morrow Midstream",
+  "fit": 85,
+  "outcome": "Lost",
+  "asOf": "2026-04-29T09:00:00",
+  "signals": [
+   {
+    "id": "lost1s0",
+    "code": "Co6",
+    "tier": 1,
+    "strength": 5,
+    "eventDate": "2026-04-28",
+    "observable": true,
+    "predictive": true,
+    "timeBound": true
+   },
+   {
+    "id": "lost1s1",
+    "code": "P3",
+    "tier": 2,
+    "strength": 3,
+    "eventDate": "2026-04-21",
+    "observable": true,
+    "predictive": true,
+    "timeBound": true
+   }
+  ]
+ },
+ {
+  "id": "lost-3",
+  "set": "lost",
+  "name": "Penhallow Gas Processing",
+  "fit": 85,
+  "outcome": "Lost",
+  "asOf": "2026-04-26T09:00:00",
+  "signals": [
+   {
+    "id": "lost2s0",
+    "code": "Co7",
+    "tier": 3,
+    "strength": 2,
+    "eventDate": "2026-02-05",
+    "observable": true,
+    "predictive": true,
+    "timeBound": true
+   }
+  ]
+ },
+ {
+  "id": "lost-4",
+  "set": "lost",
+  "name": "Quarrybank Gas Terminal",
+  "fit": 88,
+  "outcome": "Lost",
+  "asOf": "2026-04-23T09:00:00",
+  "signals": [
+   {
+    "id": "lost3s0",
+    "code": "Co7",
+    "tier": 3,
+    "strength": 2,
+    "eventDate": "2026-02-02",
+    "observable": true,
+    "predictive": true,
+    "timeBound": true
+   }
+  ]
+ },
+ {
+  "id": "lost-5",
+  "set": "lost",
+  "name": "Ullswater Olefins",
+  "fit": 73,
+  "outcome": "Lost",
+  "asOf": "2026-04-20T09:00:00",
+  "signals": [
+   {
+    "id": "lost4s0",
+    "code": "Co7",
+    "tier": 3,
+    "strength": 2,
+    "eventDate": "2026-01-30",
+    "observable": true,
+    "predictive": true,
+    "timeBound": true
+   }
+  ]
+ },
+ {
+  "id": "lost-6",
+  "set": "lost",
+  "name": "Vexford Gas Processing",
+  "fit": 80,
+  "outcome": "Lost",
+  "asOf": "2026-04-17T09:00:00",
+  "signals": [
+   {
+    "id": "lost5s0",
+    "code": "Co7",
+    "tier": 3,
+    "strength": 2,
+    "eventDate": "2026-01-27",
+    "observable": true,
+    "predictive": true,
+    "timeBound": true
+   }
+  ]
+ },
+ {
+  "id": "lost-7",
+  "set": "lost",
+  "name": "Yarrow Refining",
+  "fit": 77,
+  "outcome": "Lost",
+  "asOf": "2026-04-14T09:00:00",
+  "signals": []
+ },
+ {
+  "id": "lost-8",
+  "set": "lost",
+  "name": "Aldermoor Midstream",
+  "fit": 84,
+  "outcome": "Lost",
+  "asOf": "2026-04-11T09:00:00",
+  "signals": []
+ },
+ {
+  "id": "lost-9",
+  "set": "lost",
+  "name": "Birchfield Gas Terminal",
+  "fit": 81,
+  "outcome": "Lost",
+  "asOf": "2026-04-08T09:00:00",
+  "signals": []
+ },
+ {
+  "id": "lost-10",
+  "set": "lost",
+  "name": "Farrowdale Gas Terminal",
+  "fit": 72,
+  "outcome": "Lost",
+  "asOf": "2026-04-05T09:00:00",
+  "signals": []
+ },
+ {
+  "id": "lost-11",
+  "set": "lost",
+  "name": "Harcastle Midstream",
+  "fit": 76,
+  "outcome": "Lost",
+  "asOf": "2026-04-02T09:00:00",
+  "signals": []
+ },
+ {
+  "id": "lost-12",
+  "set": "lost",
+  "name": "Juniper Point Midstream",
+  "fit": 90,
+  "outcome": "Lost",
+  "asOf": "2026-03-30T09:00:00",
+  "signals": []
+ },
+ {
+  "id": "lost-13",
+  "set": "lost",
+  "name": "Kingsmere Refining Group",
+  "fit": 75,
+  "outcome": "Lost",
+  "asOf": "2026-03-27T09:00:00",
+  "signals": []
+ },
+ {
+  "id": "lost-14",
+  "set": "lost",
+  "name": "Lowther Refining Group",
+  "fit": 86,
+  "outcome": "Lost",
+  "asOf": "2026-03-24T09:00:00",
+  "signals": []
+ },
+ {
+  "id": "lost-15",
+  "set": "lost",
+  "name": "Marlow Bay Midstream",
+  "fit": 80,
+  "outcome": "Lost",
+  "asOf": "2026-03-21T09:00:00",
+  "signals": []
+ },
+ {
+  "id": "random-1",
+  "set": "random",
+  "name": "Norland Petrochemicals",
+  "fit": 80,
+  "outcome": "Won",
+  "asOf": "2026-05-02T09:00:00",
+  "signals": [
+   {
+    "id": "random0s0",
+    "code": "Co1",
+    "tier": 1,
+    "strength": 4,
+    "eventDate": "2026-05-01",
+    "observable": true,
+    "predictive": true,
+    "timeBound": true
+   },
+   {
+    "id": "random0s1",
+    "code": "Co5",
+    "tier": 2,
+    "strength": 3,
+    "eventDate": "2026-04-26",
+    "observable": true,
+    "predictive": true,
+    "timeBound": true
+   }
+  ]
+ },
+ {
+  "id": "random-2",
+  "set": "random",
+  "name": "Redcliffe Gas Terminal",
+  "fit": 66,
+  "outcome": "Won",
+  "asOf": "2026-04-29T09:00:00",
+  "signals": [
+   {
+    "id": "random1s0",
+    "code": "Co1",
+    "tier": 1,
+    "strength": 4,
+    "eventDate": "2026-04-28",
+    "observable": true,
+    "predictive": true,
+    "timeBound": true
+   },
+   {
+    "id": "random1s1",
+    "code": "Co5",
+    "tier": 2,
+    "strength": 3,
+    "eventDate": "2026-04-23",
+    "observable": true,
+    "predictive": true,
+    "timeBound": true
+   }
+  ]
+ },
+ {
+  "id": "random-3",
+  "set": "random",
+  "name": "Silverdale Refinery",
+  "fit": 70,
+  "outcome": "Lost",
+  "asOf": "2026-04-26T09:00:00",
+  "signals": [
+   {
+    "id": "random2s0",
+    "code": "Co1",
+    "tier": 1,
+    "strength": 4,
+    "eventDate": "2026-04-25",
+    "observable": true,
+    "predictive": true,
+    "timeBound": true
+   },
+   {
+    "id": "random2s1",
+    "code": "Co5",
+    "tier": 2,
+    "strength": 3,
+    "eventDate": "2026-04-20",
+    "observable": true,
+    "predictive": true,
+    "timeBound": true
+   }
+  ]
+ },
+ {
+  "id": "random-4",
+  "set": "random",
+  "name": "Tarnbrook Olefins",
+  "fit": 56,
+  "outcome": "Lost",
+  "asOf": "2026-04-23T09:00:00",
+  "signals": [
+   {
+    "id": "random3s0",
+    "code": "Co2",
+    "tier": 2,
+    "strength": 3,
+    "eventDate": "2026-04-18",
+    "observable": true,
+    "predictive": true,
+    "timeBound": true
+   }
+  ]
+ },
+ {
+  "id": "random-5",
+  "set": "random",
+  "name": "Wexcombe Gas Processing",
+  "fit": 46,
+  "outcome": "Lost",
+  "asOf": "2026-04-20T09:00:00",
+  "signals": [
+   {
+    "id": "random4s0",
+    "code": "Co2",
+    "tier": 2,
+    "strength": 3,
+    "eventDate": "2026-03-31",
+    "observable": true,
+    "predictive": true,
+    "timeBound": true
+   }
+  ]
+ },
+ {
+  "id": "random-6",
+  "set": "random",
+  "name": "Arden Midstream",
+  "fit": 60,
+  "outcome": "Lost",
+  "asOf": "2026-04-17T09:00:00",
+  "signals": [
+   {
+    "id": "random5s0",
+    "code": "Co2",
+    "tier": 2,
+    "strength": 3,
+    "eventDate": "2026-03-29",
+    "observable": true,
+    "predictive": true,
+    "timeBound": true
+   }
+  ]
+ },
+ {
+  "id": "random-7",
+  "set": "random",
+  "name": "Bramwell Olefins",
+  "fit": 55,
+  "outcome": "Lost",
+  "asOf": "2026-04-14T09:00:00",
+  "signals": [
+   {
+    "id": "random6s0",
+    "code": "Co2",
+    "tier": 2,
+    "strength": 3,
+    "eventDate": "2026-04-07",
+    "observable": true,
+    "predictive": true,
+    "timeBound": true
+   }
+  ]
+ },
+ {
+  "id": "random-8",
+  "set": "random",
+  "name": "Coldharbour Refinery",
+  "fit": 71,
+  "outcome": "Lost",
+  "asOf": "2026-04-11T09:00:00",
+  "signals": [
+   {
+    "id": "random7s0",
+    "code": "M1",
+    "tier": 3,
+    "strength": 2,
+    "eventDate": "2026-03-20",
+    "observable": true,
+    "predictive": true,
+    "timeBound": true
+   }
+  ]
+ },
+ {
+  "id": "random-9",
+  "set": "random",
+  "name": "Deverell Refinery",
+  "fit": 74,
+  "outcome": "Lost",
+  "asOf": "2026-04-08T09:00:00",
+  "signals": [
+   {
+    "id": "random8s0",
+    "code": "M1",
+    "tier": 3,
+    "strength": 2,
+    "eventDate": "2026-02-16",
+    "observable": true,
+    "predictive": true,
+    "timeBound": true
+   }
+  ]
+ },
+ {
+  "id": "random-10",
+  "set": "random",
+  "name": "Eastwick Petrochemicals Group",
+  "fit": 50,
+  "outcome": "Lost",
+  "asOf": "2026-04-05T09:00:00",
+  "signals": [
+   {
+    "id": "random9s0",
+    "code": "M1",
+    "tier": 3,
+    "strength": 2,
+    "eventDate": "2026-01-29",
+    "observable": true,
+    "predictive": true,
+    "timeBound": true
+   }
+  ]
+ },
+ {
+  "id": "random-11",
+  "set": "random",
+  "name": "Fallowfield Petrochemicals Group",
+  "fit": 79,
+  "outcome": "Lost",
+  "asOf": "2026-04-02T09:00:00",
+  "signals": []
+ },
+ {
+  "id": "random-12",
+  "set": "random",
+  "name": "Greyhaven Gas Processing",
+  "fit": 65,
+  "outcome": "Lost",
+  "asOf": "2026-03-30T09:00:00",
+  "signals": []
+ },
+ {
+  "id": "random-13",
+  "set": "random",
+  "name": "Holloway LNG",
+  "fit": 51,
+  "outcome": "Lost",
+  "asOf": "2026-03-27T09:00:00",
+  "signals": []
+ },
+ {
+  "id": "random-14",
+  "set": "random",
+  "name": "Ironbridge LNG",
+  "fit": 66,
+  "outcome": "Lost",
+  "asOf": "2026-03-24T09:00:00",
+  "signals": []
+ },
+ {
+  "id": "random-15",
+  "set": "random",
+  "name": "Jarrow Refinery",
+  "fit": 32,
+  "outcome": "Lost",
+  "asOf": "2026-03-21T09:00:00",
+  "signals": []
+ }
+]

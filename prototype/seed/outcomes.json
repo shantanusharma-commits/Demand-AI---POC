@@ -1,0 +1,12 @@
+[
+ {
+  "id": "out-001",
+  "accountId": "elsworth",
+  "type": "Meeting booked",
+  "at": "2026-08-30T14:00:00",
+  "sendId": "snd-002",
+  "segment": "Refinery × Announcement",
+  "structure": "Signal-led first touch",
+  "channel": "Email"
+ }
+]

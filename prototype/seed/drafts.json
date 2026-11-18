@@ -1,0 +1,803 @@
+{
+ "harrowgate": {
+  "subject": "your site raises new funding",
+  "body": "Hi Anna,\n\nHarrowgate Refining closed a GBP 100M financing round to modernise operations at its main site [S1]. When plants change at this scale, the control system is often the part that sets the timetable.\n\nCut-overs completed inside the planned turnaround on 14 of 15 migration projects since 2021 [C1]. Units stayed online while 1,400 loops moved to the new system over nine weekends [K2].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nSofia",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "halden": {
+  "subject": "your site raises new funding",
+  "body": "Hi Claire,\n\nHalden Process Systems closed a GBP 118M financing round to modernise operations at its main site [S6]. When plants change at this scale, the control system is often the part that sets the timetable.\n\nCertified to IEC 61511 for safety instrumented systems [C4]. The safety instrumented system was replaced and certified without extending the turnaround [K4].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nSofia",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "brightwell": {
+  "subject": "your site publishes a control system tender",
+  "body": "Hi Omar,\n\nBrightwell Chemicals published a tender for distributed control system migration, closing in 7 weeks [S10]. When plants change at this scale, the control system is often the part that sets the timetable.\n\nHistorian migration keeps 20 years of process data [C14]. Twenty years of process history moved to the new historian with no data loss [K5].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nSofia",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "kestrel": {
+  "subject": "Comment asking a question on our migration post",
+  "body": "Hi Henrik,\n\nHow did you keep the units running during the cut-over? We face the same with our 2009 system [S12]. When plants change at this scale, the control system is often the part that sets the timetable.\n\nAlarm floods reduced by 40% after rationalisation at a gas plant [C13]. Alarm floods fell sharply after rationalisation, and operators handled upsets with fewer manual overrides [K3].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nSofia",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "fenwick": {
+  "subject": "New plant head at your site",
+  "body": "Hi Ingrid,\n\nFenwick Refining appointed a new plant director, previously responsible for a control system migration elsewhere [S15]. When plants change at this scale, the control system is often the part that sets the timetable.\n\nCut-overs completed inside the planned turnaround on 14 of 15 migration projects since 2021 [C1]. Units stayed online while 1,400 loops moved to the new system over nine weekends [K2].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nSofia",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "caldbeck": {
+  "subject": "Rival contract renewal window at your site",
+  "body": "Hi David,\n\nCaldbeck Petrochemicals's support contract with Orrin Automation ends within 90 days, according to contract data [S17]. When plants change at this scale, the control system is often the part that sets the timetable.\n\nHistorian migration keeps 20 years of process data [C14]. Twenty years of process history moved to the new historian with no data loss [K5].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nSofia",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "whitlock": {
+  "subject": "your site publishes a control system tender",
+  "body": "Hi Niall,\n\nWhitlock Refining published a tender for distributed control system migration, closing in 7 weeks [S18]. When plants change at this scale, the control system is often the part that sets the timetable.\n\nCut-overs completed inside the planned turnaround on 14 of 15 migration projects since 2021 [C1]. Units stayed online while 1,400 loops moved to the new system over nine weekends [K2].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nSofia",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "ravensworth": {
+  "subject": "New plant head at your site",
+  "body": "Hi Erik,\n\nRavensworth Chemicals appointed a new plant director, previously responsible for a control system migration elsewhere [S21]. As the best-in-class partner, we know that when plants change at this scale, the control system is often the part that sets the timetable.\n\nCertified to IEC 61511 for safety instrumented systems [C4]. The safety instrumented system was replaced and certified without extending the turnaround [K4].\n\nOur platform cuts integration time by 50%. Would a 20-minute call next week help you plan the next step?\n\nBest regards,\nSofia",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "saltire": {
+  "subject": "your site raises new funding",
+  "body": "Hi Fiona,\n\nSaltire Hydrogen closed a GBP 81M financing round to modernise operations at its main site [S22]. When plants change at this scale, the control system is often the part that sets the timetable.\n\nCyber security certified to IEC 62443-3-3 [C12]. The safety instrumented system was replaced and certified without extending the turnaround [K4].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nSofia",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "thornbury": {
+  "subject": "",
+  "body": "",
+  "structure": "Not produced",
+  "structureStatus": "Not produced",
+  "format": "Plain text",
+  "llmFailed": true,
+  "error": "The language model call timed out twice (prompts 2026.11.1). No draft; the signals are attached."
+ },
+ "ingleby": {
+  "subject": "your site publishes a control system tender",
+  "body": "Hi Annika,\n\nIngleby Terminals published a tender for distributed control system migration, closing in 7 weeks [S26]. When plants change at this scale, the control system is often the part that sets the timetable.\n\nHot cut-over method keeps units running during the switch [C3]. Units stayed online while 1,400 loops moved to the new system over nine weekends [K2].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nSofia",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "glenmoor": {
+  "subject": "New executive at your site",
+  "body": "Hi Oliver,\n\nGlenmoor Gas Processing hired a new chief operating officer who led a digital plant programme at a peer [S28]. When plants change at this scale, the control system is often the part that sets the timetable.\n\nAlarm floods reduced by 40% after rationalisation at a gas plant [C13]. Alarm floods fell sharply after rationalisation, and operators handled upsets with fewer manual overrides [K3].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nSofia",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "oakhurst": {
+  "subject": "your site raises new funding",
+  "body": "Hi Yusuf,\n\nOakhurst Industrial closed a GBP 171M financing round to modernise operations at its main site [S30]. When plants change at this scale, the control system is often the part that sets the timetable.\n\nCut-overs completed inside the planned turnaround on 14 of 15 migration projects since 2021 [C1]. Units stayed online while 1,400 loops moved to the new system over nine weekends [K2].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nSofia",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "pellworth": {
+  "subject": "your site publishes a control system tender",
+  "body": "Hi Jonas,\n\nPellworth Energy published a tender for distributed control system migration, closing in 7 weeks [S31]. When plants change at this scale, the control system is often the part that sets the timetable.\n\nAlarm floods reduced by 40% after rationalisation at a gas plant [C13]. Alarm floods fell sharply after rationalisation, and operators handled upsets with fewer manual overrides [K3].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nSofia",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "upwood": {
+  "subject": "your site publishes a control system tender",
+  "body": "Hi Ruben,\n\nUpwood Refining published a tender for distributed control system migration, closing in 5 weeks [S32]. When plants change at this scale, the control system is often the part that sets the timetable.\n\nCut-overs completed inside the planned turnaround on 14 of 15 migration projects since 2021 [C1]. Units stayed online while 1,400 loops moved to the new system over nine weekends [K2].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nMarco",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "varney": {
+  "subject": "Your control system plans",
+  "body": "Hi Felix,\n\nYour site is planning changes []. When plants change at this scale, the control system is often the part that sets the timetable.\n\nCertified to IEC 61511 for safety instrumented systems [C4]. The safety instrumented system was replaced and certified without extending the turnaround [K4].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nMarco",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "elsworth": {
+  "subject": "Champion joins your site",
+  "body": "Hi Katrin,\n\nKatrin Peeters, who led a control review at Varney Chemicals, joined Elsworth Refining as VP Engineering [S36]. When plants change at this scale, the control system is often the part that sets the timetable.\n\nCut-overs completed inside the planned turnaround on 14 of 15 migration projects since 2021 [C1]. Units stayed online while 1,400 loops moved to the new system over nine weekends [K2].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nMarco",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "dunmore": {
+  "subject": "New plant head at your site",
+  "body": "Hi Matthias,\n\nDunmore Chemicals appointed a new plant director, previously responsible for a control system migration elsewhere [S34]. When plants change at this scale, the control system is often the part that sets the timetable.\n\nCertified to IEC 61511 for safety instrumented systems [C4]. The safety instrumented system was replaced and certified without extending the turnaround [K4].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nKenji",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "northgate": {
+  "subject": "Methane monitoring and reporting deadline",
+  "body": "Hi Joanna,\n\nLNG terminals must report continuous methane monitoring data from 2027-03-18, under the new emissions rules [S38]. When plants change at this scale, the control system is often the part that sets the timetable.\n\nContinuous methane monitoring integrates with the control system without new cabling [C9]. The terminal migrated two process units during a planned outage and restarted on schedule; methane data now flows to the control room [K1].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nSofia",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a020": {
+  "subject": "Methane monitoring and reporting deadline",
+  "body": "Hi Ingrid,\n\nLNG terminals must report continuous methane monitoring data from 2027-03-18, under the new emissions rules [S39]. When plants change at this scale, the control system is often the part that sets the timetable.\n\nContinuous methane monitoring integrates with the control system without new cabling [C9]. The terminal migrated two process units during a planned outage and restarted on schedule; methane data now flows to the control room [K1].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nSofia",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a021": {
+  "subject": "Methane monitoring and reporting deadline",
+  "body": "Hi Pieter,\n\nLNG terminals must report continuous methane monitoring data from 2027-03-18, under the new emissions rules [S40]. When plants change at this scale, the control system is often the part that sets the timetable.\n\nContinuous methane monitoring integrates with the control system without new cabling [C9]. The terminal migrated two process units during a planned outage and restarted on schedule; methane data now flows to the control room [K1].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nSofia",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a022": {
+  "subject": "Methane monitoring and reporting deadline",
+  "body": "Hi Tariq,\n\nLNG terminals must report continuous methane monitoring data from 2027-03-18, under the new emissions rules [S41]. When plants change at this scale, the control system is often the part that sets the timetable.\n\nContinuous methane monitoring integrates with the control system without new cabling [C9]. The terminal migrated two process units during a planned outage and restarted on schedule; methane data now flows to the control room [K1].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nMarco",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a023": {
+  "subject": "Methane monitoring and reporting deadline",
+  "body": "Hi Maja,\n\nLNG terminals must report continuous methane monitoring data from 2027-03-18, under the new emissions rules [S42]. When plants change at this scale, the control system is often the part that sets the timetable.\n\nContinuous methane monitoring integrates with the control system without new cabling [C9]. The terminal migrated two process units during a planned outage and restarted on schedule; methane data now flows to the control room [K1].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nMarco",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a024": {
+  "subject": "Methane monitoring and reporting deadline",
+  "body": "Hi Wei,\n\nLNG terminals must report continuous methane monitoring data from 2027-03-18, under the new emissions rules [S43]. When plants change at this scale, the control system is often the part that sets the timetable.\n\nContinuous methane monitoring integrates with the control system without new cabling [C9]. The terminal migrated two process units during a planned outage and restarted on schedule; methane data now flows to the control room [K1].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nMarco",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a025": {
+  "subject": "Methane monitoring and reporting deadline",
+  "body": "Hi Karim,\n\nLNG terminals must report continuous methane monitoring data from 2027-03-18, under the new emissions rules [S44]. When plants change at this scale, the control system is often the part that sets the timetable.\n\nContinuous methane monitoring integrates with the control system without new cabling [C9]. The terminal migrated two process units during a planned outage and restarted on schedule; methane data now flows to the control room [K1].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nAisha",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a026": {
+  "subject": "Methane monitoring and reporting deadline",
+  "body": "Hi Niall,\n\nLNG terminals must report continuous methane monitoring data from 2027-03-18, under the new emissions rules [S45]. When plants change at this scale, the control system is often the part that sets the timetable.\n\nContinuous methane monitoring integrates with the control system without new cabling [C9]. The terminal migrated two process units during a planned outage and restarted on schedule; methane data now flows to the control room [K1].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nAisha",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a027": {
+  "subject": "Methane monitoring and reporting deadline",
+  "body": "Hi Joanna,\n\nLNG terminals must report continuous methane monitoring data from 2027-03-18, under the new emissions rules [S46]. When plants change at this scale, the control system is often the part that sets the timetable.\n\nContinuous methane monitoring integrates with the control system without new cabling [C9]. The terminal migrated two process units during a planned outage and restarted on schedule; methane data now flows to the control room [K1].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nAisha",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a028": {
+  "subject": "Methane monitoring and reporting deadline",
+  "body": "Hi Niall,\n\nLNG terminals must report continuous methane monitoring data from 2027-03-18, under the new emissions rules [S47]. When plants change at this scale, the control system is often the part that sets the timetable.\n\nContinuous methane monitoring integrates with the control system without new cabling [C9]. The terminal migrated two process units during a planned outage and restarted on schedule; methane data now flows to the control room [K1].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nKenji",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a029": {
+  "subject": "Methane monitoring and reporting deadline",
+  "body": "Hi Hannah,\n\nLNG terminals must report continuous methane monitoring data from 2027-03-18, under the new emissions rules [S48]. When plants change at this scale, the control system is often the part that sets the timetable.\n\nContinuous methane monitoring integrates with the control system without new cabling [C9]. The terminal migrated two process units during a planned outage and restarted on schedule; methane data now flows to the control room [K1].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nKenji",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a030": {
+  "subject": "your site posts 9 automation roles",
+  "body": "Hi Hannah,\n\nYarrow Refinery is hiring 7 control and instrument engineers ahead of a site upgrade programme [S49]. When plants change at this scale, the control system is often the part that sets the timetable.\n\nCut-overs completed inside the planned turnaround on 14 of 15 migration projects since 2021 [C1]. Units stayed online while 1,400 loops moved to the new system over nine weekends [K2].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nMarco",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a031": {
+  "subject": "your site posts 7 automation roles",
+  "body": "Hi Ruben,\n\nAldermoor Refinery is hiring 6 control and instrument engineers ahead of a site upgrade programme [S50]. When plants change at this scale, the control system is often the part that sets the timetable.\n\nCut-overs completed inside the planned turnaround on 14 of 15 migration projects since 2021 [C1]. Units stayed online while 1,400 loops moved to the new system over nine weekends [K2].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nKenji",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a032": {
+  "subject": "your site posts 7 automation roles",
+  "body": "Hi Omar,\n\nBirchfield Refining is hiring 14 control and instrument engineers ahead of a site upgrade programme [S51]. When plants change at this scale, the control system is often the part that sets the timetable.\n\nCut-overs completed inside the planned turnaround on 14 of 15 migration projects since 2021 [C1]. Units stayed online while 1,400 loops moved to the new system over nine weekends [K2].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nAisha",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a033": {
+  "subject": "your site posts 8 automation roles",
+  "body": "Hi Ingrid,\n\nFarrowdale Refining is hiring 6 control and instrument engineers ahead of a site upgrade programme [S52]. When plants change at this scale, the control system is often the part that sets the timetable.\n\nCut-overs completed inside the planned turnaround on 14 of 15 migration projects since 2021 [C1]. Units stayed online while 1,400 loops moved to the new system over nine weekends [K2].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nAisha",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a034": {
+  "subject": "your site posts 11 automation roles",
+  "body": "Hi Joanna,\n\nHarcastle Refinery is hiring 12 control and instrument engineers ahead of a site upgrade programme [S53]. When plants change at this scale, the control system is often the part that sets the timetable.\n\nCut-overs completed inside the planned turnaround on 14 of 15 migration projects since 2021 [C1]. Units stayed online while 1,400 loops moved to the new system over nine weekends [K2].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nKenji",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a035": {
+  "subject": "your site posts 11 automation roles",
+  "body": "Hi Claire,\n\nJuniper Point Refining is hiring 10 control and instrument engineers ahead of a site upgrade programme [S54]. When plants change at this scale, the control system is often the part that sets the timetable.\n\nCut-overs completed inside the planned turnaround on 14 of 15 migration projects since 2021 [C1]. Units stayed online while 1,400 loops moved to the new system over nine weekends [K2].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nMarco",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a036": {
+  "subject": "your site posts 8 automation roles",
+  "body": "Hi Joanna,\n\nKingsmere Refinery is hiring 9 control and instrument engineers ahead of a site upgrade programme [S55]. When plants change at this scale, the control system is often the part that sets the timetable.\n\nCut-overs completed inside the planned turnaround on 14 of 15 migration projects since 2021 [C1]. Units stayed online while 1,400 loops moved to the new system over nine weekends [K2].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nAisha",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a037": {
+  "subject": "your site posts 12 automation roles",
+  "body": "Hi Tom,\n\nLowther Refining is hiring 8 control and instrument engineers ahead of a site upgrade programme [S56]. When plants change at this scale, the control system is often the part that sets the timetable.\n\nCut-overs completed inside the planned turnaround on 14 of 15 migration projects since 2021 [C1]. Units stayed online while 1,400 loops moved to the new system over nine weekends [K2].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nKenji",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a038": {
+  "subject": "your site posts 9 automation roles",
+  "body": "Hi Jonas,\n\nMarlow Bay Refining is hiring 13 control and instrument engineers ahead of a site upgrade programme [S57]. When plants change at this scale, the control system is often the part that sets the timetable.\n\nCut-overs completed inside the planned turnaround on 14 of 15 migration projects since 2021 [C1]. Units stayed online while 1,400 loops moved to the new system over nine weekends [K2].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nAisha",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a039": {
+  "subject": "Your control system plans",
+  "body": "Hi Jonas,\n\nYour site is planning changes []. When plants change at this scale, the control system is often the part that sets the timetable.\n\nCyber security certified to IEC 62443-3-3 [C12]. The safety instrumented system was replaced and certified without extending the turnaround [K4].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nAisha",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a040": {
+  "subject": "Your control system plans",
+  "body": "Hi Oliver,\n\nYour site is planning changes []. When plants change at this scale, the control system is often the part that sets the timetable.\n\nHot cut-over method keeps units running during the switch [C3]. Units stayed online while 1,400 loops moved to the new system over nine weekends [K2].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nKenji",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a041": {
+  "subject": "Rival named in your site job posts",
+  "body": "Hi Anna,\n\nSilverdale Chemicals job posts ask for experience with Brennick Controls migration projects [S60]. When plants change at this scale, the control system is often the part that sets the timetable.\n\nCertified to IEC 61511 for safety instrumented systems [C4]. The safety instrumented system was replaced and certified without extending the turnaround [K4].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nAisha",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a042": {
+  "subject": "your site freezes capital budget to April",
+  "body": "Hi Felix,\n\nTarnbrook Energy said its automation budget is frozen to April 2027, then reopens for the 2027 turnaround [S152]. When plants change at this scale, the control system is often the part that sets the timetable.\n\nHot cut-over method keeps units running during the switch [C3]. Units stayed online while 1,400 loops moved to the new system over nine weekends [K2].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nMarco",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a043": {
+  "subject": "Rival named in your site job posts",
+  "body": "Hi Rahul,\n\nWexcombe Hydrogen job posts ask for experience with Orrin Automation migration projects [S64]. When plants change at this scale, the control system is often the part that sets the timetable.\n\nCyber security certified to IEC 62443-3-3 [C12]. The safety instrumented system was replaced and certified without extending the turnaround [K4].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nMarco",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a044": {
+  "subject": "Your control system plans",
+  "body": "Hi Yusuf,\n\nYour site is planning changes []. When plants change at this scale, the control system is often the part that sets the timetable.\n\nCyber security certified to IEC 62443-3-3 [C12]. The safety instrumented system was replaced and certified without extending the turnaround [K4].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nMarco",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a045": {
+  "subject": "Your control system plans",
+  "body": "Hi Paul,\n\nYour site is planning changes []. When plants change at this scale, the control system is often the part that sets the timetable.\n\nAlarm floods reduced by 40% after rationalisation at a gas plant [C13]. Alarm floods fell sharply after rationalisation, and operators handled upsets with fewer manual overrides [K3].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nMarco",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a046": {
+  "subject": "Declining rival use at your site",
+  "body": "Hi Hannah,\n\nUsage of Brennick Controls modules at Coldharbour Gas Processing fell for three quarters in a row [S68]. When plants change at this scale, the control system is often the part that sets the timetable.\n\nAlarm floods reduced by 40% after rationalisation at a gas plant [C13]. Alarm floods fell sharply after rationalisation, and operators handled upsets with fewer manual overrides [K3].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nAisha",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a047": {
+  "subject": "Your control system plans",
+  "body": "Hi Oliver,\n\nYour site is planning changes []. When plants change at this scale, the control system is often the part that sets the timetable.\n\nHot cut-over method keeps units running during the switch [C3]. Units stayed online while 1,400 loops moved to the new system over nine weekends [K2].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nAisha",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a048": {
+  "subject": "Your control system plans",
+  "body": "Hi Erik,\n\nYour site is planning changes []. When plants change at this scale, the control system is often the part that sets the timetable.\n\nHistorian migration keeps 20 years of process data [C14]. Twenty years of process history moved to the new historian with no data loss [K5].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nMarco",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a049": {
+  "subject": "Rival named in your site job posts",
+  "body": "Hi Fiona,\n\nFallowfield Petrochemicals job posts ask for experience with Brennick Controls migration projects [S72]. When plants change at this scale, the control system is often the part that sets the timetable.\n\nHistorian migration keeps 20 years of process data [C14]. Twenty years of process history moved to the new historian with no data loss [K5].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nSofia",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a050": {
+  "subject": "your site publishes a control system tender",
+  "body": "Hi Mei,\n\nGreyhaven Hydrogen published a tender for distributed control system migration, closing in 7 weeks [S73]. When plants change at this scale, the control system is often the part that sets the timetable.\n\nCyber security certified to IEC 62443-3-3 [C12]. The safety instrumented system was replaced and certified without extending the turnaround [K4].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nMarco",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a051": {
+  "subject": "Your control system plans",
+  "body": "Hi Mei,\n\nYour site is planning changes []. When plants change at this scale, the control system is often the part that sets the timetable.\n\nCyber security certified to IEC 62443-3-3 [C12]. The safety instrumented system was replaced and certified without extending the turnaround [K4].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nSofia",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a052": {
+  "subject": "New process safety guidance for Power station",
+  "body": "Hi Emma,\n\nThe regulator published new guidance on safety instrumented systems for power stations [S76]. When plants change at this scale, the control system is often the part that sets the timetable.\n\nHot cut-over method keeps units running during the switch [C3]. Units stayed online while 1,400 loops moved to the new system over nine weekends [K2].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nKenji",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a053": {
+  "subject": "Your control system plans",
+  "body": "Hi Laura,\n\nYour site is planning changes []. When plants change at this scale, the control system is often the part that sets the timetable.\n\nAlarm floods reduced by 40% after rationalisation at a gas plant [C13]. Alarm floods fell sharply after rationalisation, and operators handled upsets with fewer manual overrides [K3].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nKenji",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a054": {
+  "subject": "Your control system plans",
+  "body": "Hi Rahul,\n\nYour site is planning changes []. When plants change at this scale, the control system is often the part that sets the timetable.\n\nCut-overs completed inside the planned turnaround on 14 of 15 migration projects since 2021 [C1]. Units stayed online while 1,400 loops moved to the new system over nine weekends [K2].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nKenji",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a055": {
+  "subject": "Your control system plans",
+  "body": "Hi Ingrid,\n\nYour site is planning changes []. When plants change at this scale, the control system is often the part that sets the timetable.\n\nHistorian migration keeps 20 years of process data [C14]. Twenty years of process history moved to the new historian with no data loss [K5].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nAisha",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a056": {
+  "subject": "your site raises new funding",
+  "body": "Hi Henrik,\n\nNethercott Power closed a GBP 197M financing round to modernise operations at its main site [S81]. When plants change at this scale, the control system is often the part that sets the timetable.\n\nHot cut-over method keeps units running during the switch [C3]. Units stayed online while 1,400 loops moved to the new system over nine weekends [K2].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nAisha",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a057": {
+  "subject": "Your control system plans",
+  "body": "Hi Ingrid,\n\nYour site is planning changes []. When plants change at this scale, the control system is often the part that sets the timetable.\n\nHot cut-over method keeps units running during the switch [C3]. Units stayed online while 1,400 loops moved to the new system over nine weekends [K2].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nKenji",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a058": {
+  "subject": "your site announces a turnaround plan",
+  "body": "Hi Rahul,\n\nPembury Chemicals announced a major turnaround next year, with automation upgrades in scope [S84]. When plants change at this scale, the control system is often the part that sets the timetable.\n\nCertified to IEC 61511 for safety instrumented systems [C4]. The safety instrumented system was replaced and certified without extending the turnaround [K4].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nSofia",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a059": {
+  "subject": "New plant head at your site",
+  "body": "Hi Grace,\n\nRushmere Subsea appointed a new plant director, previously responsible for a control system migration elsewhere [S87]. When plants change at this scale, the control system is often the part that sets the timetable.\n\nHot cut-over method keeps units running during the switch [C3]. Units stayed online while 1,400 loops moved to the new system over nine weekends [K2].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nMarco",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a060": {
+  "subject": "Your control system plans",
+  "body": "Hi Erik,\n\nYour site is planning changes []. When plants change at this scale, the control system is often the part that sets the timetable.\n\nAlarm floods reduced by 40% after rationalisation at a gas plant [C13]. Alarm floods fell sharply after rationalisation, and operators handled upsets with fewer manual overrides [K3].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nAisha",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a061": {
+  "subject": "Your control system plans",
+  "body": "Hi Karim,\n\nYour site is planning changes []. When plants change at this scale, the control system is often the part that sets the timetable.\n\nTypical migration of one process unit takes 10 to 14 weeks from design freeze [C6]. Units stayed online while 1,400 loops moved to the new system over nine weekends [K2].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nKenji",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a062": {
+  "subject": "Declining rival use at your site",
+  "body": "Hi Wei,\n\nUsage of Calder Process Systems modules at Ulverston Green Hydrogen fell for three quarters in a row [S90]. When plants change at this scale, the control system is often the part that sets the timetable.\n\nCyber security certified to IEC 62443-3-3 [C12]. The safety instrumented system was replaced and certified without extending the turnaround [K4].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nSofia",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a063": {
+  "subject": "Your control system plans",
+  "body": "Hi Leila,\n\nYour site is planning changes []. When plants change at this scale, the control system is often the part that sets the timetable.\n\nCut-overs completed inside the planned turnaround on 14 of 15 migration projects since 2021 [C1]. Units stayed online while 1,400 loops moved to the new system over nine weekends [K2].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nMarco",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a064": {
+  "subject": "Rival changes affect your site",
+  "body": "Hi James,\n\nBrennick Controls raised support prices for the platform Ainsley Chemicals runs [S92]. When plants change at this scale, the control system is often the part that sets the timetable.\n\nCertified to IEC 61511 for safety instrumented systems [C4]. The safety instrumented system was replaced and certified without extending the turnaround [K4].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nKenji",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a065": {
+  "subject": "your site researching a rival",
+  "body": "Hi Nadia,\n\nPeople at Bexmoor Gas Processing compared Calder Process Systems with alternatives on a review site this week [S97]. When plants change at this scale, the control system is often the part that sets the timetable.\n\nAlarm floods reduced by 40% after rationalisation at a gas plant [C13]. Alarm floods fell sharply after rationalisation, and operators handled upsets with fewer manual overrides [K3].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nAisha",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a066": {
+  "subject": "Your control system plans",
+  "body": "Hi Sara,\n\nYour site is planning changes []. When plants change at this scale, the control system is often the part that sets the timetable.\n\nCut-overs completed inside the planned turnaround on 14 of 15 migration projects since 2021 [C1]. Units stayed online while 1,400 loops moved to the new system over nine weekends [K2].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nSofia",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a067": {
+  "subject": "your site announces a turnaround plan",
+  "body": "Hi Oliver,\n\nDriftwood Midstream announced a major turnaround next year, with automation upgrades in scope [S99]. When plants change at this scale, the control system is often the part that sets the timetable.\n\nAlarm floods reduced by 40% after rationalisation at a gas plant [C13]. Alarm floods fell sharply after rationalisation, and operators handled upsets with fewer manual overrides [K3].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nSofia",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a068": {
+  "subject": "Your control system plans",
+  "body": "Hi Omar,\n\nYour site is planning changes []. When plants change at this scale, the control system is often the part that sets the timetable.\n\nAlarm floods reduced by 40% after rationalisation at a gas plant [C13]. Alarm floods fell sharply after rationalisation, and operators handled upsets with fewer manual overrides [K3].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nSofia",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a069": {
+  "subject": "Your control system plans",
+  "body": "Hi Fiona,\n\nYour site is planning changes []. When plants change at this scale, the control system is often the part that sets the timetable.\n\nHot cut-over method keeps units running during the switch [C3]. Units stayed online while 1,400 loops moved to the new system over nine weekends [K2].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nSofia",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a070": {
+  "subject": "New process safety guidance for Hydrogen project",
+  "body": "Hi Sara,\n\nThe regulator published new guidance on safety instrumented systems for hydrogen projects [S105]. When plants change at this scale, the control system is often the part that sets the timetable.\n\nCyber security certified to IEC 62443-3-3 [C12]. The safety instrumented system was replaced and certified without extending the turnaround [K4].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nSofia",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a071": {
+  "subject": "Process safety incident reported at your site",
+  "body": "Hi Elena,\n\nA trip on the main unit at Ivydale Terminals caused an unplanned shutdown of 5 days, according to a regulatory filing [S107]. When plants change at this scale, the control system is often the part that sets the timetable.\n\nHot cut-over method keeps units running during the switch [C3]. Units stayed online while 1,400 loops moved to the new system over nine weekends [K2].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nMarco",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a072": {
+  "subject": "Your control system plans",
+  "body": "Hi Emma,\n\nYour site is planning changes []. When plants change at this scale, the control system is often the part that sets the timetable.\n\nHot cut-over method keeps units running during the switch [C3]. Units stayed online while 1,400 loops moved to the new system over nine weekends [K2].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nKenji",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a073": {
+  "subject": "Declining rival use at your site",
+  "body": "Hi Sara,\n\nUsage of Orrin Automation modules at Linton Green Hydrogen fell for three quarters in a row [S110]. When plants change at this scale, the control system is often the part that sets the timetable.\n\nCyber security certified to IEC 62443-3-3 [C12]. The safety instrumented system was replaced and certified without extending the turnaround [K4].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nMarco",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a074": {
+  "subject": "Declining rival use at your site",
+  "body": "Hi Elena,\n\nUsage of Calder Process Systems modules at Maddox Terminals fell for three quarters in a row [S114]. When plants change at this scale, the control system is often the part that sets the timetable.\n\nHot cut-over method keeps units running during the switch [C3]. Units stayed online while 1,400 loops moved to the new system over nine weekends [K2].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nSofia",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a075": {
+  "subject": "Your control system plans",
+  "body": "Hi Claire,\n\nYour site is planning changes []. When plants change at this scale, the control system is often the part that sets the timetable.\n\nHistorian migration keeps 20 years of process data [C14]. Twenty years of process history moved to the new historian with no data loss [K5].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nKenji",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a076": {
+  "subject": "Rival contract renewal window at your site",
+  "body": "Hi James,\n\nOrmsby Speciality Chemicals's support contract with Brennick Controls ends within 90 days, according to contract data [S116]. When plants change at this scale, the control system is often the part that sets the timetable.\n\nCertified to IEC 61511 for safety instrumented systems [C4]. The safety instrumented system was replaced and certified without extending the turnaround [K4].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nMarco",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a077": {
+  "subject": "Your control system plans",
+  "body": "Hi Ingrid,\n\nYour site is planning changes []. When plants change at this scale, the control system is often the part that sets the timetable.\n\nCut-overs completed inside the planned turnaround on 14 of 15 migration projects since 2021 [C1]. Units stayed online while 1,400 loops moved to the new system over nine weekends [K2].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nMarco",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a078": {
+  "subject": "Your control system plans",
+  "body": "Hi Siti,\n\nYour site is planning changes []. When plants change at this scale, the control system is often the part that sets the timetable.\n\nTypical migration of one process unit takes 10 to 14 weeks from design freeze [C6]. Units stayed online while 1,400 loops moved to the new system over nine weekends [K2].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nSofia",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a079": {
+  "subject": "Energy price shift",
+  "body": "Hi Matthias,\n\nGas prices rose 18 per cent this month, raising pressure on plant efficiency [S120]. When plants change at this scale, the control system is often the part that sets the timetable.\n\nCertified to IEC 61511 for safety instrumented systems [C4]. The safety instrumented system was replaced and certified without extending the turnaround [K4].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nSofia",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a080": {
+  "subject": "Your control system plans",
+  "body": "Hi Henrik,\n\nYour site is planning changes []. When plants change at this scale, the control system is often the part that sets the timetable.\n\nAlarm floods reduced by 40% after rationalisation at a gas plant [C13]. Alarm floods fell sharply after rationalisation, and operators handled upsets with fewer manual overrides [K3].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nSofia",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a081": {
+  "subject": "Your control system plans",
+  "body": "Hi Matthias,\n\nYour site is planning changes []. When plants change at this scale, the control system is often the part that sets the timetable.\n\nCut-overs completed inside the planned turnaround on 14 of 15 migration projects since 2021 [C1]. Units stayed online while 1,400 loops moved to the new system over nine weekends [K2].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nAisha",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a082": {
+  "subject": "Your control system plans",
+  "body": "Hi Rahul,\n\nYour site is planning changes []. When plants change at this scale, the control system is often the part that sets the timetable.\n\nHot cut-over method keeps units running during the switch [C3]. Units stayed online while 1,400 loops moved to the new system over nine weekends [K2].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nAisha",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a083": {
+  "subject": "New process safety guidance for Tank storage terminal",
+  "body": "Hi Nadia,\n\nThe regulator published new guidance on safety instrumented systems for tank storage terminals [S127]. When plants change at this scale, the control system is often the part that sets the timetable.\n\nHot cut-over method keeps units running during the switch [C3]. Units stayed online while 1,400 loops moved to the new system over nine weekends [K2].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nAisha",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a084": {
+  "subject": "Your control system plans",
+  "body": "Hi Niall,\n\nYour site is planning changes []. When plants change at this scale, the control system is often the part that sets the timetable.\n\nHot cut-over method keeps units running during the switch [C3]. Units stayed online while 1,400 loops moved to the new system over nine weekends [K2].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nAisha",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a085": {
+  "subject": "Rival named in your site job posts",
+  "body": "Hi Oliver,\n\nCarrick Water Services job posts ask for experience with Calder Process Systems migration projects [S128]. When plants change at this scale, the control system is often the part that sets the timetable.\n\nTypical migration of one process unit takes 10 to 14 weeks from design freeze [C6]. Units stayed online while 1,400 loops moved to the new system over nine weekends [K2].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nSofia",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a086": {
+  "subject": "Buyer role change at your site",
+  "body": "Hi Paul,\n\nThe head of automation at Dalton Hydrogen now also owns capital projects [S132]. When plants change at this scale, the control system is often the part that sets the timetable.\n\nCyber security certified to IEC 62443-3-3 [C12]. The safety instrumented system was replaced and certified without extending the turnaround [K4].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nSofia",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a087": {
+  "subject": "Your control system plans",
+  "body": "Hi Laura,\n\nYour site is planning changes []. When plants change at this scale, the control system is often the part that sets the timetable.\n\nHot cut-over method keeps units running during the switch [C3]. Units stayed online while 1,400 loops moved to the new system over nine weekends [K2].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nAisha",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a088": {
+  "subject": "Your control system plans",
+  "body": "Hi Ingrid,\n\nYour site is planning changes []. When plants change at this scale, the control system is often the part that sets the timetable.\n\nCertified to IEC 61511 for safety instrumented systems [C4]. The safety instrumented system was replaced and certified without extending the turnaround [K4].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nSofia",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a089": {
+  "subject": "Your control system plans",
+  "body": "Hi Emma,\n\nYour site is planning changes []. When plants change at this scale, the control system is often the part that sets the timetable.\n\nCyber security certified to IEC 62443-3-3 [C12]. The safety instrumented system was replaced and certified without extending the turnaround [K4].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nAisha",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a090": {
+  "subject": "Your control system plans",
+  "body": "Hi Laura,\n\nYour site is planning changes []. When plants change at this scale, the control system is often the part that sets the timetable.\n\nHot cut-over method keeps units running during the switch [C3]. Units stayed online while 1,400 loops moved to the new system over nine weekends [K2].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nAisha",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a091": {
+  "subject": "your site raises new funding",
+  "body": "Hi Jonas,\n\nIngram Midstream closed a GBP 198M financing round to modernise operations at its main site [S136]. When plants change at this scale, the control system is often the part that sets the timetable.\n\nAlarm floods reduced by 40% after rationalisation at a gas plant [C13]. Alarm floods fell sharply after rationalisation, and operators handled upsets with fewer manual overrides [K3].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nMarco",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a092": {
+  "subject": "Buyer role change at your site",
+  "body": "Hi Henrik,\n\nThe head of automation at Knowle Energy now also owns capital projects [S139]. When plants change at this scale, the control system is often the part that sets the timetable.\n\nHot cut-over method keeps units running during the switch [C3]. Units stayed online while 1,400 loops moved to the new system over nine weekends [K2].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nAisha",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a093": {
+  "subject": "Your control system plans",
+  "body": "Hi Paul,\n\nYour site is planning changes []. When plants change at this scale, the control system is often the part that sets the timetable.\n\nCertified to IEC 61511 for safety instrumented systems [C4]. The safety instrumented system was replaced and certified without extending the turnaround [K4].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nSofia",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a094": {
+  "subject": "New process safety guidance for Hydrogen project",
+  "body": "Hi Katrin,\n\nThe regulator published new guidance on safety instrumented systems for hydrogen projects [S141]. When plants change at this scale, the control system is often the part that sets the timetable.\n\nCyber security certified to IEC 62443-3-3 [C12]. The safety instrumented system was replaced and certified without extending the turnaround [K4].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nAisha",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a095": {
+  "subject": "Rival changes affect your site",
+  "body": "Hi Niall,\n\nOrrin Automation raised support prices for the platform Netherby Offshore runs [S143]. When plants change at this scale, the control system is often the part that sets the timetable.\n\nHot cut-over method keeps units running during the switch [C3]. Units stayed online while 1,400 loops moved to the new system over nine weekends [K2].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nSofia",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a096": {
+  "subject": "Your control system plans",
+  "body": "Hi Nadia,\n\nYour site is planning changes []. When plants change at this scale, the control system is often the part that sets the timetable.\n\nHot cut-over method keeps units running during the switch [C3]. Units stayed online while 1,400 loops moved to the new system over nine weekends [K2].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nKenji",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a097": {
+  "subject": "Rival changes affect your site",
+  "body": "Hi Niall,\n\nBrennick Controls raised support prices for the platform Penrose Refinery runs [S146]. When plants change at this scale, the control system is often the part that sets the timetable.\n\nCut-overs completed inside the planned turnaround on 14 of 15 migration projects since 2021 [C1]. Units stayed online while 1,400 loops moved to the new system over nine weekends [K2].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nKenji",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a098": {
+  "subject": "Ravenscar Refining publishes a control system tender",
+  "body": "Hi Anna,\n\nRavenscar Refining published a tender for distributed control system migration, closing in 8 weeks [S149]. When plants change at this scale, the control system is often the part that sets the timetable.\n\nCertified to IEC 61511 for safety instrumented systems [C4]. The safety instrumented system was replaced and certified without extending the turnaround [K4].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nAisha",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a099": {
+  "subject": "Your control system plans",
+  "body": "Hi Fiona,\n\nYour site is planning changes []. When plants change at this scale, the control system is often the part that sets the timetable.\n\nCertified to IEC 61511 for safety instrumented systems [C4]. The safety instrumented system was replaced and certified without extending the turnaround [K4].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nAisha",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ },
+ "a100": {
+  "subject": "Your control system plans",
+  "body": "Hi Chloe,\n\nYour site is planning changes []. When plants change at this scale, the control system is often the part that sets the timetable.\n\nCertified to IEC 61511 for safety instrumented systems [C4]. The safety instrumented system was replaced and certified without extending the turnaround [K4].\n\nWould a 20-minute call next week help you plan the next step?\n\nBest regards,\nKenji",
+  "structure": "What changed at their site → one proof point → one easy ask",
+  "structureStatus": "Unproven (no validated structure yet)",
+  "format": "Plain text",
+  "llmFailed": false
+ }
+}

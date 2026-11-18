@@ -1,0 +1,1424 @@
+[
+ {
+  "name": "Harrowgate Refining",
+  "niche": "Refinery",
+  "region": "UK & Ireland",
+  "employees": 2400,
+  "controlAge": 18,
+  "sites": 3,
+  "inList": true
+ },
+ {
+  "name": "Halden Process Systems",
+  "niche": "Specialty chemicals plant",
+  "region": "UK & Ireland",
+  "employees": 1800,
+  "controlAge": 16,
+  "sites": 2,
+  "inList": true
+ },
+ {
+  "name": "Brightwell Chemicals",
+  "niche": "Petrochemical complex",
+  "region": "UK & Ireland",
+  "employees": 4800,
+  "controlAge": 15,
+  "sites": 4,
+  "inList": true
+ },
+ {
+  "name": "Kestrel Gas Processing",
+  "niche": "Gas processing plant",
+  "region": "Nordics",
+  "employees": 1200,
+  "controlAge": 17,
+  "sites": 2,
+  "inList": true
+ },
+ {
+  "name": "Fenwick Refining",
+  "niche": "Refinery",
+  "region": "Nordics",
+  "employees": 3500,
+  "controlAge": 19,
+  "sites": 2,
+  "inList": true
+ },
+ {
+  "name": "Caldbeck Petrochemicals",
+  "niche": "Petrochemical complex",
+  "region": "UK & Ireland",
+  "employees": 6200,
+  "controlAge": 14,
+  "sites": 3,
+  "inList": true
+ },
+ {
+  "name": "Whitlock Refining",
+  "niche": "Refinery",
+  "region": "UK & Ireland",
+  "employees": 1800,
+  "controlAge": 20,
+  "sites": 2,
+  "inList": true
+ },
+ {
+  "name": "Ravensworth Chemicals",
+  "niche": "Specialty chemicals plant",
+  "region": "Nordics",
+  "employees": 2400,
+  "controlAge": 13,
+  "sites": 3,
+  "inList": true
+ },
+ {
+  "name": "Saltire Hydrogen",
+  "niche": "Hydrogen project",
+  "region": "UK & Ireland",
+  "employees": 900,
+  "controlAge": 14,
+  "sites": 2,
+  "inList": true
+ },
+ {
+  "name": "Thornbury Power",
+  "niche": "Power station",
+  "region": "UK & Ireland",
+  "employees": 1200,
+  "controlAge": 21,
+  "sites": 2,
+  "inList": true
+ },
+ {
+  "name": "Ingleby Terminals",
+  "niche": "Tank storage terminal",
+  "region": "Nordics",
+  "employees": 800,
+  "controlAge": 16,
+  "sites": 3,
+  "inList": true
+ },
+ {
+  "name": "Glenmoor Gas Processing",
+  "niche": "Gas processing plant",
+  "region": "UK & Ireland",
+  "employees": 1200,
+  "controlAge": 15,
+  "sites": 2,
+  "inList": true
+ },
+ {
+  "name": "Oakhurst Industrial",
+  "niche": "Refinery",
+  "region": "UK & Ireland",
+  "employees": 1800,
+  "controlAge": 17,
+  "sites": 2,
+  "inList": true
+ },
+ {
+  "name": "Pellworth Energy",
+  "niche": "Gas processing plant",
+  "region": "Nordics",
+  "employees": 2400,
+  "controlAge": null,
+  "sites": 2,
+  "inList": true
+ },
+ {
+  "name": "Upwood Refining",
+  "niche": "Refinery",
+  "region": "Benelux",
+  "employees": 3500,
+  "controlAge": 18,
+  "sites": 2,
+  "inList": true
+ },
+ {
+  "name": "Varney Chemicals",
+  "niche": "Specialty chemicals plant",
+  "region": "Benelux",
+  "employees": 1800,
+  "controlAge": 14,
+  "sites": 2,
+  "inList": true
+ },
+ {
+  "name": "Elsworth Refining",
+  "niche": "Refinery",
+  "region": "Benelux",
+  "employees": 2400,
+  "controlAge": 17,
+  "sites": 3,
+  "inList": true
+ },
+ {
+  "name": "Dunmore Chemicals",
+  "niche": "Specialty chemicals plant",
+  "region": "DACH",
+  "employees": 1200,
+  "controlAge": 15,
+  "sites": 2,
+  "inList": true
+ },
+ {
+  "name": "Northgate Terminals",
+  "niche": "LNG terminal",
+  "region": "UK & Ireland",
+  "employees": 2800,
+  "controlAge": 15,
+  "sites": 2,
+  "inList": true
+ },
+ {
+  "name": "Ashby LNG",
+  "niche": "LNG terminal",
+  "region": "UK & Ireland",
+  "employees": 1400,
+  "controlAge": 18,
+  "sites": 2,
+  "inList": true
+ },
+ {
+  "name": "Corrin Gas Terminal",
+  "niche": "LNG terminal",
+  "region": "UK & Ireland",
+  "employees": 2800,
+  "controlAge": 18,
+  "sites": 3,
+  "inList": true
+ },
+ {
+  "name": "Westmere Gas Terminal",
+  "niche": "LNG terminal",
+  "region": "Benelux",
+  "employees": 2800,
+  "controlAge": 17,
+  "sites": 3,
+  "inList": true
+ },
+ {
+  "name": "Brackley LNG",
+  "niche": "LNG terminal",
+  "region": "Benelux",
+  "employees": 1400,
+  "controlAge": 19,
+  "sites": 3,
+  "inList": true
+ },
+ {
+  "name": "Larchmont LNG",
+  "niche": "LNG terminal",
+  "region": "Benelux",
+  "employees": 2800,
+  "controlAge": 16,
+  "sites": 2,
+  "inList": true
+ },
+ {
+  "name": "Morrow Gas Terminal",
+  "niche": "LNG terminal",
+  "region": "Middle East",
+  "employees": 900,
+  "controlAge": 14,
+  "sites": 2,
+  "inList": true
+ },
+ {
+  "name": "Penhallow Gas Terminal",
+  "niche": "LNG terminal",
+  "region": "Middle East",
+  "employees": 900,
+  "controlAge": 18,
+  "sites": 2,
+  "inList": true
+ },
+ {
+  "name": "Quarrybank LNG",
+  "niche": "LNG terminal",
+  "region": "Middle East",
+  "employees": 1400,
+  "controlAge": 13,
+  "sites": 3,
+  "inList": true
+ },
+ {
+  "name": "Ullswater LNG",
+  "niche": "LNG terminal",
+  "region": "DACH",
+  "employees": 1400,
+  "controlAge": 13,
+  "sites": 2,
+  "inList": true
+ },
+ {
+  "name": "Vexford Gas Terminal",
+  "niche": "LNG terminal",
+  "region": "DACH",
+  "employees": 900,
+  "controlAge": 13,
+  "sites": 3,
+  "inList": true
+ },
+ {
+  "name": "Yarrow Refinery",
+  "niche": "Refinery",
+  "region": "Benelux",
+  "employees": 1200,
+  "controlAge": 13,
+  "sites": 2,
+  "inList": true
+ },
+ {
+  "name": "Aldermoor Refinery",
+  "niche": "Refinery",
+  "region": "DACH",
+  "employees": 2400,
+  "controlAge": 19,
+  "sites": 1,
+  "inList": true
+ },
+ {
+  "name": "Birchfield Refining",
+  "niche": "Refinery",
+  "region": "Middle East",
+  "employees": 3500,
+  "controlAge": 18,
+  "sites": 2,
+  "inList": true
+ },
+ {
+  "name": "Farrowdale Refining",
+  "niche": "Refinery",
+  "region": "South East Asia",
+  "employees": 2400,
+  "controlAge": 15,
+  "sites": 3,
+  "inList": true
+ },
+ {
+  "name": "Harcastle Refinery",
+  "niche": "Refinery",
+  "region": "DACH",
+  "employees": 3500,
+  "controlAge": 18,
+  "sites": 3,
+  "inList": true
+ },
+ {
+  "name": "Juniper Point Refining",
+  "niche": "Refinery",
+  "region": "Benelux",
+  "employees": 2400,
+  "controlAge": 17,
+  "sites": 2,
+  "inList": true
+ },
+ {
+  "name": "Kingsmere Refinery",
+  "niche": "Refinery",
+  "region": "Middle East",
+  "employees": 1200,
+  "controlAge": 14,
+  "sites": 3,
+  "inList": true
+ },
+ {
+  "name": "Lowther Refining",
+  "niche": "Refinery",
+  "region": "DACH",
+  "employees": 3500,
+  "controlAge": 17,
+  "sites": 3,
+  "inList": true
+ },
+ {
+  "name": "Marlow Bay Refining",
+  "niche": "Refinery",
+  "region": "South East Asia",
+  "employees": 2400,
+  "controlAge": 12,
+  "sites": 3,
+  "inList": true
+ },
+ {
+  "name": "Norland Hydrogen",
+  "niche": "Hydrogen project",
+  "region": "Middle East",
+  "employees": 4800,
+  "controlAge": 10,
+  "sites": 3,
+  "inList": true
+ },
+ {
+  "name": "Redcliffe Terminals",
+  "niche": "Tank storage terminal",
+  "region": "DACH",
+  "employees": 8500,
+  "controlAge": 20,
+  "sites": 1,
+  "inList": true
+ },
+ {
+  "name": "Silverdale Chemicals",
+  "niche": "Specialty chemicals plant",
+  "region": "South East Asia",
+  "employees": 4800,
+  "controlAge": 8,
+  "sites": 5,
+  "inList": true
+ },
+ {
+  "name": "Tarnbrook Energy",
+  "niche": "Power station",
+  "region": "Benelux",
+  "employees": 320,
+  "controlAge": 15,
+  "sites": 4,
+  "inList": true
+ },
+ {
+  "name": "Wexcombe Hydrogen",
+  "niche": "Hydrogen project",
+  "region": "Benelux",
+  "employees": 2400,
+  "controlAge": 16,
+  "sites": 1,
+  "inList": true
+ },
+ {
+  "name": "Arden Green Hydrogen",
+  "niche": "Hydrogen project",
+  "region": "Benelux",
+  "employees": 3500,
+  "controlAge": 19,
+  "sites": 1,
+  "inList": true
+ },
+ {
+  "name": "Bramwell Midstream",
+  "niche": "Gas processing plant",
+  "region": "Benelux",
+  "employees": 1800,
+  "controlAge": 14,
+  "sites": 5,
+  "inList": true
+ },
+ {
+  "name": "Coldharbour Gas Processing",
+  "niche": "Gas processing plant",
+  "region": "Middle East",
+  "employees": 3500,
+  "controlAge": 9,
+  "sites": 3,
+  "inList": true
+ },
+ {
+  "name": "Deverell Storage",
+  "niche": "Tank storage terminal",
+  "region": "South East Asia",
+  "employees": 6200,
+  "controlAge": 6,
+  "sites": 5,
+  "inList": true
+ },
+ {
+  "name": "Eastwick Olefins",
+  "niche": "Petrochemical complex",
+  "region": "Benelux",
+  "employees": 320,
+  "controlAge": 13,
+  "sites": 3,
+  "inList": true
+ },
+ {
+  "name": "Fallowfield Petrochemicals",
+  "niche": "Petrochemical complex",
+  "region": "Nordics",
+  "employees": 320,
+  "controlAge": 6,
+  "sites": 4,
+  "inList": true
+ },
+ {
+  "name": "Greyhaven Hydrogen",
+  "niche": "Hydrogen project",
+  "region": "Benelux",
+  "employees": 12500,
+  "controlAge": 21,
+  "sites": 1,
+  "inList": true
+ },
+ {
+  "name": "Holloway Hydrogen",
+  "niche": "Hydrogen project",
+  "region": "UK & Ireland",
+  "employees": 1800,
+  "controlAge": 10,
+  "sites": 3,
+  "inList": true
+ },
+ {
+  "name": "Ironbridge Energy",
+  "niche": "Power station",
+  "region": "DACH",
+  "employees": 320,
+  "controlAge": 6,
+  "sites": 1,
+  "inList": true
+ },
+ {
+  "name": "Jarrow Midstream",
+  "niche": "Gas processing plant",
+  "region": "DACH",
+  "employees": 1200,
+  "controlAge": 14,
+  "sites": 2,
+  "inList": true
+ },
+ {
+  "name": "Langholm Refining",
+  "niche": "Refinery",
+  "region": "DACH",
+  "employees": 4800,
+  "controlAge": 21,
+  "sites": 5,
+  "inList": true
+ },
+ {
+  "name": "Merrow Olefins",
+  "niche": "Petrochemical complex",
+  "region": "Middle East",
+  "employees": 12500,
+  "controlAge": 22,
+  "sites": 5,
+  "inList": true
+ },
+ {
+  "name": "Nethercott Power",
+  "niche": "Power station",
+  "region": "Middle East",
+  "employees": 6200,
+  "controlAge": 21,
+  "sites": 1,
+  "inList": true
+ },
+ {
+  "name": "Orwell Power",
+  "niche": "Power station",
+  "region": "DACH",
+  "employees": 4800,
+  "controlAge": 17,
+  "sites": 3,
+  "inList": true
+ },
+ {
+  "name": "Pembury Chemicals",
+  "niche": "Specialty chemicals plant",
+  "region": "UK & Ireland",
+  "employees": 2400,
+  "controlAge": 17,
+  "sites": 3,
+  "inList": true
+ },
+ {
+  "name": "Rushmere Subsea",
+  "niche": "Offshore platform",
+  "region": "Benelux",
+  "employees": 12500,
+  "controlAge": 15,
+  "sites": 2,
+  "inList": true
+ },
+ {
+  "name": "Stoneleigh Gas Processing",
+  "niche": "Gas processing plant",
+  "region": "Middle East",
+  "employees": 2400,
+  "controlAge": 7,
+  "sites": 4,
+  "inList": true
+ },
+ {
+  "name": "Thorne Water",
+  "niche": "Water treatment works",
+  "region": "DACH",
+  "employees": 6200,
+  "controlAge": 17,
+  "sites": 2,
+  "inList": true
+ },
+ {
+  "name": "Ulverston Green Hydrogen",
+  "niche": "Hydrogen project",
+  "region": "UK & Ireland",
+  "employees": 1800,
+  "controlAge": 10,
+  "sites": 3,
+  "inList": true
+ },
+ {
+  "name": "Vale Refinery",
+  "niche": "Refinery",
+  "region": "Benelux",
+  "employees": 1200,
+  "controlAge": 11,
+  "sites": 1,
+  "inList": true
+ },
+ {
+  "name": "Ainsley Chemicals",
+  "niche": "Specialty chemicals plant",
+  "region": "DACH",
+  "employees": 1200,
+  "controlAge": 21,
+  "sites": 5,
+  "inList": true
+ },
+ {
+  "name": "Bexmoor Gas Processing",
+  "niche": "Gas processing plant",
+  "region": "Middle East",
+  "employees": 2400,
+  "controlAge": 17,
+  "sites": 4,
+  "inList": true
+ },
+ {
+  "name": "Castleford Refining",
+  "niche": "Refinery",
+  "region": "Nordics",
+  "employees": 6200,
+  "controlAge": 20,
+  "sites": 5,
+  "inList": true
+ },
+ {
+  "name": "Driftwood Midstream",
+  "niche": "Gas processing plant",
+  "region": "UK & Ireland",
+  "employees": 6200,
+  "controlAge": 6,
+  "sites": 5,
+  "inList": true
+ },
+ {
+  "name": "Edgecombe Gas Processing",
+  "niche": "Gas processing plant",
+  "region": "UK & Ireland",
+  "employees": 3500,
+  "controlAge": 8,
+  "sites": 4,
+  "inList": true
+ },
+ {
+  "name": "Fernhill Offshore",
+  "niche": "Offshore platform",
+  "region": "UK & Ireland",
+  "employees": 2400,
+  "controlAge": 20,
+  "sites": 3,
+  "inList": true
+ },
+ {
+  "name": "Hartwell Green Hydrogen",
+  "niche": "Hydrogen project",
+  "region": "Nordics",
+  "employees": 320,
+  "controlAge": 19,
+  "sites": 5,
+  "inList": true
+ },
+ {
+  "name": "Ivydale Terminals",
+  "niche": "Tank storage terminal",
+  "region": "Benelux",
+  "employees": 3500,
+  "controlAge": 15,
+  "sites": 3,
+  "inList": true
+ },
+ {
+  "name": "Kirkby Subsea",
+  "niche": "Offshore platform",
+  "region": "DACH",
+  "employees": 3500,
+  "controlAge": 15,
+  "sites": 5,
+  "inList": true
+ },
+ {
+  "name": "Linton Green Hydrogen",
+  "niche": "Hydrogen project",
+  "region": "Benelux",
+  "employees": 12500,
+  "controlAge": 11,
+  "sites": 1,
+  "inList": true
+ },
+ {
+  "name": "Maddox Terminals",
+  "niche": "Tank storage terminal",
+  "region": "UK & Ireland",
+  "employees": 3500,
+  "controlAge": 19,
+  "sites": 5,
+  "inList": true
+ },
+ {
+  "name": "Newhaven Olefins",
+  "niche": "Petrochemical complex",
+  "region": "DACH",
+  "employees": 12500,
+  "controlAge": 13,
+  "sites": 3,
+  "inList": true
+ },
+ {
+  "name": "Ormsby Speciality Chemicals",
+  "niche": "Specialty chemicals plant",
+  "region": "Benelux",
+  "employees": 700,
+  "controlAge": 18,
+  "sites": 5,
+  "inList": true
+ },
+ {
+  "name": "Prestwick Refinery",
+  "niche": "Refinery",
+  "region": "Benelux",
+  "employees": 2400,
+  "controlAge": 13,
+  "sites": 2,
+  "inList": true
+ },
+ {
+  "name": "Rookwood Water Services",
+  "niche": "Water treatment works",
+  "region": "Nordics",
+  "employees": 1200,
+  "controlAge": 13,
+  "sites": 5,
+  "inList": true
+ },
+ {
+  "name": "Sedgemoor Speciality Chemicals",
+  "niche": "Specialty chemicals plant",
+  "region": "Nordics",
+  "employees": 6200,
+  "controlAge": 15,
+  "sites": 3,
+  "inList": true
+ },
+ {
+  "name": "Trent Vale Gas Processing",
+  "niche": "Gas processing plant",
+  "region": "UK & Ireland",
+  "employees": 1800,
+  "controlAge": 21,
+  "sites": 2,
+  "inList": true
+ },
+ {
+  "name": "Underhill Refinery",
+  "niche": "Refinery",
+  "region": "South East Asia",
+  "employees": 12500,
+  "controlAge": 9,
+  "sites": 2,
+  "inList": true
+ },
+ {
+  "name": "Wardle Offshore",
+  "niche": "Offshore platform",
+  "region": "South East Asia",
+  "employees": 12500,
+  "controlAge": 11,
+  "sites": 3,
+  "inList": true
+ },
+ {
+  "name": "Amberley Storage",
+  "niche": "Tank storage terminal",
+  "region": "Middle East",
+  "employees": 4800,
+  "controlAge": 12,
+  "sites": 1,
+  "inList": true
+ },
+ {
+  "name": "Blackwater Power",
+  "niche": "Power station",
+  "region": "South East Asia",
+  "employees": 8500,
+  "controlAge": 13,
+  "sites": 1,
+  "inList": true
+ },
+ {
+  "name": "Carrick Water Services",
+  "niche": "Water treatment works",
+  "region": "UK & Ireland",
+  "employees": 4800,
+  "controlAge": 12,
+  "sites": 3,
+  "inList": true
+ },
+ {
+  "name": "Dalton Hydrogen",
+  "niche": "Hydrogen project",
+  "region": "UK & Ireland",
+  "employees": 1800,
+  "controlAge": 16,
+  "sites": 3,
+  "inList": true
+ },
+ {
+  "name": "Eskdale Power",
+  "niche": "Power station",
+  "region": "Middle East",
+  "employees": 6200,
+  "controlAge": 10,
+  "sites": 3,
+  "inList": true
+ },
+ {
+  "name": "Foxley Speciality Chemicals",
+  "niche": "Specialty chemicals plant",
+  "region": "UK & Ireland",
+  "employees": 2400,
+  "controlAge": 19,
+  "sites": 4,
+  "inList": true
+ },
+ {
+  "name": "Gilling Green Hydrogen",
+  "niche": "Hydrogen project",
+  "region": "South East Asia",
+  "employees": 2400,
+  "controlAge": 8,
+  "sites": 1,
+  "inList": true
+ },
+ {
+  "name": "Hexley Subsea",
+  "niche": "Offshore platform",
+  "region": "Middle East",
+  "employees": 3500,
+  "controlAge": 18,
+  "sites": 2,
+  "inList": true
+ },
+ {
+  "name": "Ingram Midstream",
+  "niche": "Gas processing plant",
+  "region": "Benelux",
+  "employees": 1200,
+  "controlAge": 15,
+  "sites": 3,
+  "inList": true
+ },
+ {
+  "name": "Knowle Energy",
+  "niche": "Power station",
+  "region": "South East Asia",
+  "employees": 320,
+  "controlAge": 17,
+  "sites": 2,
+  "inList": true
+ },
+ {
+  "name": "Leyburn Speciality Chemicals",
+  "niche": "Specialty chemicals plant",
+  "region": "UK & Ireland",
+  "employees": 4800,
+  "controlAge": 13,
+  "sites": 2,
+  "inList": true
+ },
+ {
+  "name": "Mallory Green Hydrogen",
+  "niche": "Hydrogen project",
+  "region": "South East Asia",
+  "employees": 12500,
+  "controlAge": 16,
+  "sites": 5,
+  "inList": true
+ },
+ {
+  "name": "Netherby Offshore",
+  "niche": "Offshore platform",
+  "region": "Nordics",
+  "employees": 320,
+  "controlAge": 16,
+  "sites": 3,
+  "inList": true
+ },
+ {
+  "name": "Otterburn Subsea",
+  "niche": "Offshore platform",
+  "region": "DACH",
+  "employees": 2400,
+  "controlAge": 13,
+  "sites": 4,
+  "inList": true
+ },
+ {
+  "name": "Penrose Refinery",
+  "niche": "Refinery",
+  "region": "DACH",
+  "employees": 3500,
+  "controlAge": 9,
+  "sites": 4,
+  "inList": true
+ },
+ {
+  "name": "Orrin Automation",
+  "niche": "Specialty chemicals plant",
+  "region": "South East Asia",
+  "employees": 8500,
+  "controlAge": 9,
+  "sites": 1,
+  "inList": true
+ },
+ {
+  "name": "Calder Process Systems",
+  "niche": "Specialty chemicals plant",
+  "region": "Middle East",
+  "employees": 4800,
+  "controlAge": 13,
+  "sites": 3,
+  "inList": true
+ },
+ {
+  "name": "Brennick Controls",
+  "niche": "Specialty chemicals plant",
+  "region": "DACH",
+  "employees": 3500,
+  "controlAge": 15,
+  "sites": 1,
+  "inList": true
+ },
+ {
+  "name": "Langholm Subsea",
+  "niche": "Offshore platform",
+  "region": "UK & Ireland",
+  "employees": 260,
+  "controlAge": 3,
+  "sites": 1,
+  "inList": false
+ },
+ {
+  "name": "Merrow Refining",
+  "niche": "Refinery",
+  "region": "Middle East",
+  "employees": 180,
+  "controlAge": 4,
+  "sites": 1,
+  "inList": false
+ },
+ {
+  "name": "Nethercott Refinery",
+  "niche": "Refinery",
+  "region": "UK & Ireland",
+  "employees": 180,
+  "controlAge": 5,
+  "sites": 1,
+  "inList": false
+ },
+ {
+  "name": "Orwell Power Group",
+  "niche": "Power station",
+  "region": "South East Asia",
+  "employees": 180,
+  "controlAge": 6,
+  "sites": 1,
+  "inList": false
+ },
+ {
+  "name": "Pembury Offshore",
+  "niche": "Offshore platform",
+  "region": "UK & Ireland",
+  "employees": 260,
+  "controlAge": 2,
+  "sites": 1,
+  "inList": false
+ },
+ {
+  "name": "Rushmere Water Services",
+  "niche": "Water treatment works",
+  "region": "UK & Ireland",
+  "employees": 15000,
+  "controlAge": 6,
+  "sites": 1,
+  "inList": false
+ },
+ {
+  "name": "Stoneleigh Water",
+  "niche": "Water treatment works",
+  "region": "UK & Ireland",
+  "employees": 260,
+  "controlAge": 5,
+  "sites": 1,
+  "inList": false
+ },
+ {
+  "name": "Thorne Water Services",
+  "niche": "Water treatment works",
+  "region": "South East Asia",
+  "employees": 180,
+  "controlAge": 4,
+  "sites": 1,
+  "inList": false
+ },
+ {
+  "name": "Ulverston Offshore",
+  "niche": "Offshore platform",
+  "region": "UK & Ireland",
+  "employees": 120,
+  "controlAge": 6,
+  "sites": 1,
+  "inList": false
+ },
+ {
+  "name": "Vale Water",
+  "niche": "Water treatment works",
+  "region": "South East Asia",
+  "employees": 15000,
+  "controlAge": 7,
+  "sites": 1,
+  "inList": false
+ },
+ {
+  "name": "Ainsley Refinery",
+  "niche": "Refinery",
+  "region": "UK & Ireland",
+  "employees": 15000,
+  "controlAge": 3,
+  "sites": 1,
+  "inList": false
+ },
+ {
+  "name": "Bexmoor Offshore",
+  "niche": "Offshore platform",
+  "region": "South East Asia",
+  "employees": 120,
+  "controlAge": 2,
+  "sites": 1,
+  "inList": false
+ },
+ {
+  "name": "Castleford Power",
+  "niche": "Power station",
+  "region": "UK & Ireland",
+  "employees": 15000,
+  "controlAge": 5,
+  "sites": 1,
+  "inList": false
+ },
+ {
+  "name": "Driftwood Refining",
+  "niche": "Refinery",
+  "region": "South East Asia",
+  "employees": 180,
+  "controlAge": 2,
+  "sites": 1,
+  "inList": false
+ },
+ {
+  "name": "Edgecombe Water",
+  "niche": "Water treatment works",
+  "region": "South East Asia",
+  "employees": 15000,
+  "controlAge": 6,
+  "sites": 1,
+  "inList": false
+ },
+ {
+  "name": "Fernhill Offshore Group",
+  "niche": "Offshore platform",
+  "region": "Middle East",
+  "employees": 180,
+  "controlAge": 4,
+  "sites": 1,
+  "inList": false
+ },
+ {
+  "name": "Hartwell Power",
+  "niche": "Power station",
+  "region": "Middle East",
+  "employees": 180,
+  "controlAge": 7,
+  "sites": 1,
+  "inList": false
+ },
+ {
+  "name": "Ivydale Energy",
+  "niche": "Power station",
+  "region": "Middle East",
+  "employees": 15000,
+  "controlAge": 5,
+  "sites": 1,
+  "inList": false
+ },
+ {
+  "name": "Kirkby Refinery",
+  "niche": "Refinery",
+  "region": "UK & Ireland",
+  "employees": 120,
+  "controlAge": 6,
+  "sites": 1,
+  "inList": false
+ },
+ {
+  "name": "Linton Water",
+  "niche": "Water treatment works",
+  "region": "South East Asia",
+  "employees": 120,
+  "controlAge": 4,
+  "sites": 1,
+  "inList": false
+ },
+ {
+  "name": "Maddox Power",
+  "niche": "Power station",
+  "region": "Middle East",
+  "employees": 180,
+  "controlAge": 7,
+  "sites": 1,
+  "inList": false
+ },
+ {
+  "name": "Newhaven Energy",
+  "niche": "Power station",
+  "region": "South East Asia",
+  "employees": 260,
+  "controlAge": 8,
+  "sites": 1,
+  "inList": false
+ },
+ {
+  "name": "Ormsby Water Services",
+  "niche": "Water treatment works",
+  "region": "South East Asia",
+  "employees": 120,
+  "controlAge": 6,
+  "sites": 1,
+  "inList": false
+ },
+ {
+  "name": "Prestwick Power",
+  "niche": "Power station",
+  "region": "UK & Ireland",
+  "employees": 260,
+  "controlAge": 3,
+  "sites": 1,
+  "inList": false
+ },
+ {
+  "name": "Rookwood Water",
+  "niche": "Water treatment works",
+  "region": "UK & Ireland",
+  "employees": 180,
+  "controlAge": 2,
+  "sites": 1,
+  "inList": false
+ },
+ {
+  "name": "Sedgemoor Water",
+  "niche": "Water treatment works",
+  "region": "UK & Ireland",
+  "employees": 260,
+  "controlAge": 8,
+  "sites": 1,
+  "inList": false
+ },
+ {
+  "name": "Trent Vale Power",
+  "niche": "Power station",
+  "region": "UK & Ireland",
+  "employees": 260,
+  "controlAge": 5,
+  "sites": 1,
+  "inList": false
+ },
+ {
+  "name": "Underhill Power",
+  "niche": "Power station",
+  "region": "UK & Ireland",
+  "employees": 260,
+  "controlAge": 2,
+  "sites": 1,
+  "inList": false
+ },
+ {
+  "name": "Wardle Offshore Group",
+  "niche": "Offshore platform",
+  "region": "UK & Ireland",
+  "employees": 120,
+  "controlAge": 8,
+  "sites": 1,
+  "inList": false
+ },
+ {
+  "name": "Amberley Refinery",
+  "niche": "Refinery",
+  "region": "Middle East",
+  "employees": 15000,
+  "controlAge": 3,
+  "sites": 1,
+  "inList": false
+ },
+ {
+  "name": "Blackwater Refinery",
+  "niche": "Refinery",
+  "region": "Middle East",
+  "employees": 180,
+  "controlAge": 6,
+  "sites": 1,
+  "inList": false
+ },
+ {
+  "name": "Carrick Offshore",
+  "niche": "Offshore platform",
+  "region": "UK & Ireland",
+  "employees": 120,
+  "controlAge": 2,
+  "sites": 1,
+  "inList": false
+ },
+ {
+  "name": "Dalton Refinery",
+  "niche": "Refinery",
+  "region": "Middle East",
+  "employees": 180,
+  "controlAge": 2,
+  "sites": 1,
+  "inList": false
+ },
+ {
+  "name": "Eskdale Subsea",
+  "niche": "Offshore platform",
+  "region": "UK & Ireland",
+  "employees": 180,
+  "controlAge": 4,
+  "sites": 1,
+  "inList": false
+ },
+ {
+  "name": "Foxley Refining",
+  "niche": "Refinery",
+  "region": "South East Asia",
+  "employees": 120,
+  "controlAge": 6,
+  "sites": 1,
+  "inList": false
+ },
+ {
+  "name": "Gilling Refining",
+  "niche": "Refinery",
+  "region": "Middle East",
+  "employees": 120,
+  "controlAge": 4,
+  "sites": 1,
+  "inList": false
+ },
+ {
+  "name": "Hexley Offshore Group",
+  "niche": "Offshore platform",
+  "region": "UK & Ireland",
+  "employees": 260,
+  "controlAge": 6,
+  "sites": 1,
+  "inList": false
+ },
+ {
+  "name": "Ingram Subsea",
+  "niche": "Offshore platform",
+  "region": "Middle East",
+  "employees": 15000,
+  "controlAge": 4,
+  "sites": 1,
+  "inList": false
+ },
+ {
+  "name": "Knowle Power Group",
+  "niche": "Power station",
+  "region": "UK & Ireland",
+  "employees": 15000,
+  "controlAge": 8,
+  "sites": 1,
+  "inList": false
+ },
+ {
+  "name": "Leyburn Refining",
+  "niche": "Refinery",
+  "region": "UK & Ireland",
+  "employees": 260,
+  "controlAge": 2,
+  "sites": 1,
+  "inList": false
+ },
+ {
+  "name": "Mallory Subsea",
+  "niche": "Offshore platform",
+  "region": "UK & Ireland",
+  "employees": 180,
+  "controlAge": 6,
+  "sites": 1,
+  "inList": false
+ },
+ {
+  "name": "Netherby Water Services",
+  "niche": "Water treatment works",
+  "region": "Middle East",
+  "employees": 260,
+  "controlAge": 3,
+  "sites": 1,
+  "inList": false
+ },
+ {
+  "name": "Otterburn Refining",
+  "niche": "Refinery",
+  "region": "Middle East",
+  "employees": 120,
+  "controlAge": 2,
+  "sites": 1,
+  "inList": false
+ },
+ {
+  "name": "Penrose Water",
+  "niche": "Water treatment works",
+  "region": "UK & Ireland",
+  "employees": 180,
+  "controlAge": 3,
+  "sites": 1,
+  "inList": false
+ },
+ {
+  "name": "Ravenscar Subsea",
+  "niche": "Offshore platform",
+  "region": "South East Asia",
+  "employees": 15000,
+  "controlAge": 8,
+  "sites": 1,
+  "inList": false
+ },
+ {
+  "name": "Skelton Refining",
+  "niche": "Refinery",
+  "region": "Middle East",
+  "employees": 180,
+  "controlAge": 4,
+  "sites": 1,
+  "inList": false
+ },
+ {
+  "name": "Tolland Power",
+  "niche": "Power station",
+  "region": "Middle East",
+  "employees": 15000,
+  "controlAge": 8,
+  "sites": 1,
+  "inList": false
+ },
+ {
+  "name": "Wyvern Power",
+  "niche": "Power station",
+  "region": "Middle East",
+  "employees": 15000,
+  "controlAge": 2,
+  "sites": 1,
+  "inList": false
+ },
+ {
+  "name": "Calloway Subsea",
+  "niche": "Offshore platform",
+  "region": "UK & Ireland",
+  "employees": 15000,
+  "controlAge": 2,
+  "sites": 1,
+  "inList": false
+ },
+ {
+  "name": "Fairhaven Subsea",
+  "niche": "Offshore platform",
+  "region": "Middle East",
+  "employees": 260,
+  "controlAge": 6,
+  "sites": 1,
+  "inList": false
+ },
+ {
+  "name": "Glaston Energy",
+  "niche": "Power station",
+  "region": "South East Asia",
+  "employees": 180,
+  "controlAge": 4,
+  "sites": 1,
+  "inList": false
+ },
+ {
+  "name": "Hollins Power",
+  "niche": "Power station",
+  "region": "Middle East",
+  "employees": 15000,
+  "controlAge": 5,
+  "sites": 1,
+  "inList": false
+ },
+ {
+  "name": "Lindale Refining Group",
+  "niche": "Refinery",
+  "region": "Middle East",
+  "employees": 120,
+  "controlAge": 3,
+  "sites": 1,
+  "inList": false
+ },
+ {
+  "name": "Mereford Refining Group",
+  "niche": "Refinery",
+  "region": "Middle East",
+  "employees": 120,
+  "controlAge": 4,
+  "sites": 1,
+  "inList": false
+ },
+ {
+  "name": "Norcross Subsea",
+  "niche": "Offshore platform",
+  "region": "Middle East",
+  "employees": 15000,
+  "controlAge": 2,
+  "sites": 1,
+  "inList": false
+ },
+ {
+  "name": "Pinewood Water",
+  "niche": "Water treatment works",
+  "region": "UK & Ireland",
+  "employees": 120,
+  "controlAge": 4,
+  "sites": 1,
+  "inList": false
+ },
+ {
+  "name": "Quillon Refining Group",
+  "niche": "Refinery",
+  "region": "UK & Ireland",
+  "employees": 120,
+  "controlAge": 2,
+  "sites": 1,
+  "inList": false
+ },
+ {
+  "name": "Ribston Power",
+  "niche": "Power station",
+  "region": "South East Asia",
+  "employees": 120,
+  "controlAge": 5,
+  "sites": 1,
+  "inList": false
+ }
+]

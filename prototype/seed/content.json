@@ -1,0 +1,213 @@
+{
+ "voice": [
+  "Plain, specific and short. One idea per sentence.",
+  "Lead with what changed at their site, never with us.",
+  "One ask per message, easy to say no to.",
+  "British English. No exclamation marks. No em dashes.",
+  "Name the source of every figure."
+ ],
+ "claims": [
+  {
+   "id": "C1",
+   "text": "Cut-overs completed inside the planned turnaround on 14 of 15 migration projects since 2021.",
+   "source": "Project close-out reports 2021 to 2026",
+   "reviewDate": "2026-09-30"
+  },
+  {
+   "id": "C2",
+   "text": "Average unplanned downtime fell 31% in the first year after migration at five refineries.",
+   "source": "Customer outcome study, May 2026",
+   "reviewDate": "2026-06-15"
+  },
+  {
+   "id": "C3",
+   "text": "Hot cut-over method keeps units running during the switch.",
+   "source": "Migration method guide v4",
+   "reviewDate": "2026-08-01"
+  },
+  {
+   "id": "C4",
+   "text": "Certified to IEC 61511 for safety instrumented systems.",
+   "source": "Certificate TUV-61511-2025",
+   "reviewDate": "2026-07-01"
+  },
+  {
+   "id": "C5",
+   "text": "Supports controllers from the three main legacy platforms.",
+   "source": "Compatibility matrix 2026",
+   "reviewDate": "2026-10-01"
+  },
+  {
+   "id": "C6",
+   "text": "Typical migration of one process unit takes 10 to 14 weeks from design freeze.",
+   "source": "Delivery playbook 2026",
+   "reviewDate": "2026-09-01"
+  },
+  {
+   "id": "C7",
+   "text": "Operators retrain in under two weeks with the side-by-side console.",
+   "source": "Training records 2025",
+   "reviewDate": "2026-05-20"
+  },
+  {
+   "id": "C8",
+   "text": "Lifecycle cost over 15 years was 22% lower than staying on extended support, in a published peer case.",
+   "source": "Peer case study, Northern LNG (anonymised)",
+   "reviewDate": "2026-04-10"
+  },
+  {
+   "id": "C9",
+   "text": "Continuous methane monitoring integrates with the control system without new cabling.",
+   "source": "Emissions module datasheet v2",
+   "reviewDate": "2026-10-15"
+  },
+  {
+   "id": "C10",
+   "text": "Remote support from UK and Rotterdam centres, 24 hours a day.",
+   "source": "Service catalogue 2026",
+   "reviewDate": "2026-09-01"
+  },
+  {
+   "id": "C11",
+   "text": "Fixed-price migration assessment in four weeks.",
+   "source": "Offer sheet Q4 2026",
+   "reviewDate": "2026-10-01"
+  },
+  {
+   "id": "C12",
+   "text": "Cyber security certified to IEC 62443-3-3.",
+   "source": "Certificate 62443-2026",
+   "reviewDate": "2026-07-12"
+  },
+  {
+   "id": "C13",
+   "text": "Alarm floods reduced by 40% after rationalisation at a gas plant.",
+   "source": "Case study K3",
+   "reviewDate": "2026-03-30"
+  },
+  {
+   "id": "C14",
+   "text": "Historian migration keeps 20 years of process data.",
+   "source": "Historian migration guide",
+   "reviewDate": "2026-06-01"
+  },
+  {
+   "id": "C15",
+   "text": "Over 120 control system migrations delivered in Europe.",
+   "source": "Company fact sheet 2026",
+   "reviewDate": "2026-10-01"
+  },
+  {
+   "id": "C16",
+   "text": "Engineering tools convert 85% of legacy logic automatically.",
+   "source": "Conversion tool benchmark 2025",
+   "reviewDate": "2026-02-14"
+  },
+  {
+   "id": "C17",
+   "text": "A dedicated safety case manager on every project.",
+   "source": "Delivery playbook 2026",
+   "reviewDate": "2026-09-01"
+  },
+  {
+   "id": "C18",
+   "text": "Spare parts guaranteed for 15 years after go-live.",
+   "source": "Lifecycle agreement template",
+   "reviewDate": "2026-08-20"
+  },
+  {
+   "id": "C19",
+   "text": "Pilot on one unit before committing to a site-wide plan.",
+   "source": "Offer sheet Q4 2026",
+   "reviewDate": "2026-10-01"
+  },
+  {
+   "id": "C20",
+   "text": "Average payback of 3.2 years on efficiency gains across eight sites.",
+   "source": "Customer outcome study, May 2026",
+   "reviewDate": "2026-06-15"
+  }
+ ],
+ "banned": [
+  "best-in-class",
+  "world-class",
+  "game-changer",
+  "revolutionary",
+  "cutting-edge",
+  "synergy",
+  "guaranteed results",
+  "no-brainer",
+  "act now",
+  "once-in-a-lifetime",
+  "leading provider",
+  "seamless"
+ ],
+ "toneRules": [
+  {
+   "pattern": "!",
+   "label": "No exclamation marks"
+  },
+  {
+   "pattern": "—",
+   "label": "No em dashes"
+  }
+ ],
+ "templates": [
+  {
+   "name": "Signal-led first touch",
+   "structure": "What changed at their site → one proof point → one easy ask",
+   "status": "Provisional (unproven)"
+  },
+  {
+   "name": "Campaign touch 2",
+   "structure": "Reinforce the shared trigger → one statistic or asset from the Knowledge Hub → soft ask",
+   "status": "Provisional (unproven)"
+  },
+  {
+   "name": "Campaign touch 3",
+   "structure": "Direct ask referencing the trigger and the proof",
+   "status": "Provisional (unproven)"
+  }
+ ],
+ "badExamples": [
+  "\"We are the best-in-class partner for all your automation needs!\" (generic, banned phrase, exclamation)",
+  "\"Our platform cuts costs by 50%.\" (a figure without a source)"
+ ],
+ "cases": [
+  {
+   "id": "K1",
+   "title": "Northern LNG terminal migration",
+   "passage": "The terminal migrated two process units during a planned outage and restarted on schedule; methane data now flows to the control room.",
+   "page": "p. 3",
+   "doc": "Northern LNG terminal migration (case study, PDF)"
+  },
+  {
+   "id": "K2",
+   "title": "Coastal refinery hot cut-over",
+   "passage": "Units stayed online while 1,400 loops moved to the new system over nine weekends.",
+   "page": "p. 2",
+   "doc": "Coastal refinery hot cut-over (case study, PDF)"
+  },
+  {
+   "id": "K3",
+   "title": "Gas plant alarm rationalisation",
+   "passage": "Alarm floods fell sharply after rationalisation, and operators handled upsets with fewer manual overrides.",
+   "page": "p. 4",
+   "doc": "Gas plant alarm rationalisation (case study, PDF)"
+  },
+  {
+   "id": "K4",
+   "title": "Speciality chemicals safety upgrade",
+   "passage": "The safety instrumented system was replaced and certified without extending the turnaround.",
+   "page": "p. 2",
+   "doc": "Speciality chemicals safety upgrade (case study, PDF)"
+  },
+  {
+   "id": "K5",
+   "title": "Petrochemical historian migration",
+   "passage": "Twenty years of process history moved to the new historian with no data loss.",
+   "page": "p. 5",
+   "doc": "Petrochemical historian migration (case study, PDF)"
+  }
+ ]
+}

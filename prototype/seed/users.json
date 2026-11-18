@@ -1,0 +1,65 @@
+{
+ "sofia": {
+  "id": "sofia",
+  "name": "Sofia Ahlgren",
+  "role": "rep",
+  "title": "Sales rep · UK, Ireland and Nordics",
+  "color": "#0094DA",
+  "territory": [
+   "UK & Ireland",
+   "Nordics"
+  ]
+ },
+ "marco": {
+  "id": "marco",
+  "name": "Marco Lindqvist",
+  "role": "rep",
+  "title": "Sales rep · Benelux",
+  "color": "#2E8B57",
+  "territory": [
+   "Benelux"
+  ]
+ },
+ "aisha": {
+  "id": "aisha",
+  "name": "Aisha Rahman",
+  "role": "rep",
+  "title": "Sales rep · Middle East and South East Asia",
+  "color": "#C2410C",
+  "territory": [
+   "Middle East",
+   "South East Asia"
+  ]
+ },
+ "kenji": {
+  "id": "kenji",
+  "name": "Kenji Mori",
+  "role": "rep",
+  "title": "Sales rep · DACH",
+  "color": "#B42318",
+  "territory": [
+   "DACH"
+  ]
+ },
+ "daniel": {
+  "id": "daniel",
+  "name": "Daniel Brooks",
+  "role": "manager",
+  "title": "Sales manager",
+  "color": "#7D52A2"
+ },
+ "helen": {
+  "id": "helen",
+  "name": "Helen Varga",
+  "role": "leader",
+  "title": "Sales leader",
+  "color": "#191020"
+ },
+ "rajiv": {
+  "id": "rajiv",
+  "name": "Rajiv Nair",
+  "role": "admin",
+  "title": "Admin (RevOps)",
+  "color": "#5E3A80"
+ }
+}

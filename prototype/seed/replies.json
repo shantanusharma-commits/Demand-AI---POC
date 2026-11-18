@@ -1,0 +1,21 @@
+[
+ {
+  "id": "rep-001",
+  "sendId": "snd-003",
+  "accountId": "harrowgate",
+  "contactId": "c001",
+  "at": "2026-07-03T15:00:00",
+  "text": "Thanks, not this year. Try me again after the budget round.",
+  "matched": true
+ },
+ {
+  "id": "rep-002",
+  "sendId": null,
+  "accountId": null,
+  "contactId": null,
+  "at": "2026-11-17T08:00:00",
+  "from": "r.ellis@unknown-sender.example",
+  "text": "Saw your note about migrations. Who should I speak to?",
+  "matched": false
+ }
+]

@@ -1,0 +1,59 @@
+[
+ {
+  "id": "snd-001",
+  "accountId": "whitlock",
+  "contactId": "c009",
+  "channel": "Email",
+  "at": "2026-11-12T10:00:00",
+  "by": "sofia",
+  "signalIds": [],
+  "messageVersion": "m-1",
+  "ruleVersion": "rules 2026.10.4",
+  "segment": "Refinery × Tender or expansion",
+  "capture": "Read back from the mailbox",
+  "subject": "Your control system tender"
+ },
+ {
+  "id": "snd-002",
+  "accountId": "elsworth",
+  "contactId": "c020",
+  "channel": "Email",
+  "at": "2026-08-15T11:00:00",
+  "by": "marco",
+  "signalIds": [],
+  "messageVersion": "m-1",
+  "ruleVersion": "rules 2026.08.1",
+  "segment": "Refinery × Announcement",
+  "capture": "Read back from the mailbox",
+  "subject": "Turnaround planning"
+ },
+ {
+  "id": "snd-003",
+  "accountId": "harrowgate",
+  "contactId": "c001",
+  "channel": "Email",
+  "at": "2026-07-01T09:00:00",
+  "by": "sofia",
+  "signalIds": [],
+  "messageVersion": "m-1",
+  "ruleVersion": "rules 2026.06.2",
+  "segment": "Refinery × New plant head",
+  "capture": "Late capture: rebuilt from the approval",
+  "subject": "Congratulations on the new role"
+ },
+ {
+  "id": "snd-004",
+  "accountId": "a034",
+  "contactId": "c077",
+  "channel": "Email",
+  "at": "2026-09-29T09:00:00",
+  "by": "kenji",
+  "signalIds": [],
+  "messageVersion": "m-1",
+  "ruleVersion": "rules 2026.09.1",
+  "segment": "Refinery × Hiring surge",
+  "capture": "Read back from the mailbox",
+  "bounced": true,
+  "subject": "Hiring for the upgrade"
+ }
+]

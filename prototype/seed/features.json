@@ -1,0 +1,1050 @@
+[
+ {
+  "id": "FND-01",
+  "module": "Platform and memory",
+  "feature": "Connector framework, scheduler and events",
+  "why": "Every source needs one safe, repeatable way in, so a failing or missing source never stops the product.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "FND-02",
+  "module": "Platform and memory",
+  "feature": "Identity graph",
+  "why": "The same person appears in the CRM, email, LinkedIn and data providers. Without one record, signals and sends attach to the wrong person.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "FND-03",
+  "module": "Platform and memory",
+  "feature": "Context graph",
+  "why": "Every agent must read the same history before it acts and write back after. This memory is what compounds, and it is what the customer owns.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "FND-04",
+  "module": "Platform and memory",
+  "feature": "Facts with expiry",
+  "why": "A signal that is months old must stop counting, or old news keeps ranking accounts.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "FND-05",
+  "module": "Platform and memory",
+  "feature": "Exclusions and suppression",
+  "why": "Contacting a customer, a competitor or someone who opted out is the costliest mistake, so this check comes before everything else.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "FND-06",
+  "module": "Platform and memory",
+  "feature": "Account timeline",
+  "why": "A rep, and the AI, must see one account's whole story from first touch to today.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "FND-07",
+  "module": "Platform and memory",
+  "feature": "Decision traces and audit trail",
+  "why": "Any rank or action must be explainable later, with the evidence and the rules in force that day.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "FND-08",
+  "module": "Platform and memory",
+  "feature": "Write-time capture",
+  "why": "Outcomes only teach the system if every send is logged with its exact cause.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "FND-09",
+  "module": "Platform and memory",
+  "feature": "Knowledge Hub (retrieval, RAG)",
+  "why": "Messages and assets must be grounded in the customer's own documents and cite them, so nothing is invented.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "FND-10",
+  "module": "Platform and memory",
+  "feature": "Chat experience",
+  "why": "Reps should ask, decide and act in one conversation, not across screens.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "FND-11",
+  "module": "Platform and memory",
+  "feature": "Backtest and evaluation harness",
+  "why": "Nothing should reach reps until it has been tested on cases where the answer is already known.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "FND-12",
+  "module": "Platform and memory",
+  "feature": "Versioned prompts, rules and cost logging",
+  "why": "Prompts and rules change. Every change must be versioned, costed and reversible.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "FND-13",
+  "module": "Platform and memory",
+  "feature": "Lessons and objections store",
+  "why": "Lessons from lost deals and objections must be stored so the system can use them later.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "FND-14",
+  "module": "Platform and memory",
+  "feature": "Escalation queue (human in the loop)",
+  "why": "When the AI cannot decide, a named person must get the item with a reason, a deadline and a default.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "FND-15",
+  "module": "Platform and memory",
+  "feature": "Customer configuration and onboarding",
+  "why": "Each customer needs its own setup. Reaching a first ranked queue in four weeks depends on setup being configuration, not code.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "FND-16",
+  "module": "Platform and memory",
+  "feature": "Roles, tenancy and audit",
+  "why": "Different people need different access, and one customer's data must never mix with another's.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "PRO-01",
+  "module": "01 Prospecting and enrichment",
+  "feature": "ICP definition",
+  "why": "The customer may or may not know their ICP. Either way a confirmed ICP is needed to start.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "PRO-02",
+  "module": "01 Prospecting and enrichment",
+  "feature": "Account search",
+  "why": "The confirmed ICP must turn into a list of real candidate accounts and contacts.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "PRO-03",
+  "module": "01 Prospecting and enrichment",
+  "feature": "Waterfall aggregation",
+  "why": "No single data provider is complete. Trying the cheapest first controls cost.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "PRO-04",
+  "module": "01 Prospecting and enrichment",
+  "feature": "Identity resolution and tiers",
+  "why": "Providers can disagree. Each record needs a trust level so doubtful ones are not used blindly.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "PRO-05",
+  "module": "01 Prospecting and enrichment",
+  "feature": "Fit-matched list",
+  "why": "Only accounts that fit should be paid for, so fit is judged on free attributes first.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "PRO-07",
+  "module": "01 Prospecting and enrichment",
+  "feature": "CRM deduplication and identity match",
+  "why": "The list must not contain existing customers or open deals.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "PRO-08",
+  "module": "01 Prospecting and enrichment",
+  "feature": "Enrichment and cross-check",
+  "why": "Reps need verified contact details and company facts, paid for only when an account fits.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "PRO-09",
+  "module": "01 Prospecting and enrichment",
+  "feature": "Hand-off to signals and scoring",
+  "why": "The next stages need the whole list and everything collected, not a summary.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "PRO-10",
+  "module": "01 Prospecting and enrichment",
+  "feature": "Held records and escalation",
+  "why": "Doubtful records must not vanish or pass silently. They are held, retried, then given to a person.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "PRO-11",
+  "module": "01 Prospecting and enrichment",
+  "feature": "Refresh and profile-change reconciliation",
+  "why": "People change jobs and emails. Stored records must stay right without good data being overwritten by errors.",
+  "release": "R2",
+  "treatment": "Demo data screen, labelled"
+ },
+ {
+  "id": "PRO-12",
+  "module": "01 Prospecting and enrichment",
+  "feature": "Coverage monitoring",
+  "why": "The team must see where data coverage is thin so the waterfall can be widened.",
+  "release": "R2",
+  "treatment": "Demo data screen, labelled"
+ },
+ {
+  "id": "SIG-01",
+  "module": "02 Signals",
+  "feature": "Signal registry",
+  "why": "Every signal type needs a defined source, level, tier and window in one place.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "SIG-02",
+  "module": "02 Signals",
+  "feature": "Capture: pull",
+  "why": "Signals must be fetched for each target account on a schedule.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "SIG-03",
+  "module": "02 Signals",
+  "feature": "Market signals",
+  "why": "A whole sector moving (rules, energy, news) changes timing for many accounts at once.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "SIG-04",
+  "module": "02 Signals",
+  "feature": "Company signals",
+  "why": "Events at an account (tenders, funding, hiring) are the clearest evidence of timing.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "SIG-05",
+  "module": "02 Signals",
+  "feature": "Competitor signals",
+  "why": "An account committed to a rival, or one that is weakening, is a reason to act now.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "SIG-06",
+  "module": "02 Signals",
+  "feature": "Personal signals",
+  "why": "A new executive, or a champion's move, is a reason to reach a person now.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "SIG-07",
+  "module": "02 Signals",
+  "feature": "First-party: website and marketing",
+  "why": "How accounts engage with us (website, content, email) shows interest.",
+  "release": "R2",
+  "treatment": "Demo data screen, labelled"
+ },
+ {
+  "id": "SIG-08",
+  "module": "02 Signals",
+  "feature": "First-party: conversations",
+  "why": "Replies, LinkedIn threads and call notes contain dates and next steps.",
+  "release": "R2",
+  "treatment": "Demo data screen, labelled"
+ },
+ {
+  "id": "SIG-09",
+  "module": "02 Signals",
+  "feature": "First-party: CRM-derived",
+  "why": "CRM activity shows a known contact resurfacing or a new contact appearing.",
+  "release": "R2",
+  "treatment": "Demo data screen, labelled"
+ },
+ {
+  "id": "SIG-10",
+  "module": "02 Signals",
+  "feature": "Warm paths",
+  "why": "A personal connection makes outreach warmer and more likely to work.",
+  "release": "R2",
+  "treatment": "Demo data screen, labelled"
+ },
+ {
+  "id": "SIG-11",
+  "module": "02 Signals",
+  "feature": "AI assistant referral signal",
+  "why": "Buyers now research through AI assistants, and that traffic is intent.",
+  "release": "R2",
+  "treatment": "Demo data screen, labelled"
+ },
+ {
+  "id": "SIG-12",
+  "module": "02 Signals",
+  "feature": "Entry gate",
+  "why": "A late or repeated signal should weigh less than a fresh first one.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "SIG-13",
+  "module": "02 Signals",
+  "feature": "Qualification filter",
+  "why": "Only signals that are verifiable, predictive and time-bound should count.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "SIG-14",
+  "module": "02 Signals",
+  "feature": "Strength score (content in context)",
+  "why": "Two events of the same type are not equally strong. The content decides.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "SIG-15",
+  "module": "02 Signals",
+  "feature": "Tier, decay and expiry",
+  "why": "Signals fade at different speeds. The tier sets the points and the decay.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "SIG-16",
+  "module": "02 Signals",
+  "feature": "Disqualifiers and persona mapping",
+  "why": "A signal that no longer applies (a champion moved) must be removed, and each signal tied to the right persona.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "SIG-17",
+  "module": "02 Signals",
+  "feature": "Fast lane",
+  "why": "Some signals (a positive reply, a live demo) need action in minutes, not the next morning.",
+  "release": "R2",
+  "treatment": "Demo data screen, labelled"
+ },
+ {
+  "id": "SIG-18",
+  "module": "02 Signals",
+  "feature": "Anomaly detection",
+  "why": "A signal far outside its normal range may be a real event worth an alert.",
+  "release": "R3",
+  "treatment": "Demo data screen, labelled"
+ },
+ {
+  "id": "SIG-19",
+  "module": "02 Signals",
+  "feature": "Outcome-gated weights and source scoring",
+  "why": "New signals should earn weight from results, and sources that fail should be flagged.",
+  "release": "R3",
+  "treatment": "Demo data screen, labelled"
+ },
+ {
+  "id": "SIG-20",
+  "module": "02 Signals",
+  "feature": "Continuous signal discovery",
+  "why": "The list of signals must keep growing as gaps and anomalies appear.",
+  "release": "R3",
+  "treatment": "Demo data screen, labelled"
+ },
+ {
+  "id": "SIG-21",
+  "module": "02 Signals",
+  "feature": "LinkedIn engagement signals",
+  "why": "Comments, likes and shares on LinkedIn show interest, but only if the content shows the interest is relevant.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "SCR-01",
+  "module": "03 Lead scoring",
+  "feature": "Fit score",
+  "why": "Reps need to know how well an account matches the ICP.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "SCR-02",
+  "module": "03 Lead scoring",
+  "feature": "Timing score",
+  "why": "Timing must reflect how many live signals there are, and how fresh and strong they are.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "SCR-03",
+  "module": "03 Lead scoring",
+  "feature": "Rank and account tiers",
+  "why": "Ranking by fit times timing puts accounts that fit and are ready first. A good fit with nothing happening ranks zero.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "SCR-04",
+  "module": "03 Lead scoring",
+  "feature": "Why line and calibrated confidence",
+  "why": "A rank needs a one-line reason and an honest confidence.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "SCR-05",
+  "module": "03 Lead scoring",
+  "feature": "Scoring backtest gate",
+  "why": "Scoring must be proven on known won and lost accounts before reps rely on it.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "SCR-06",
+  "module": "03 Lead scoring",
+  "feature": "AI-authored rules",
+  "why": "Scoring rules should be drafted from the customer's own won deals and be readable.",
+  "release": "R2",
+  "treatment": "Demo data screen, labelled"
+ },
+ {
+  "id": "SCR-07",
+  "module": "03 Lead scoring",
+  "feature": "Baseline-relative scoring",
+  "why": "Big accounts always have signals, so each account should be compared with its own normal.",
+  "release": "R3",
+  "treatment": "Demo data screen, labelled"
+ },
+ {
+  "id": "SCR-08",
+  "module": "03 Lead scoring",
+  "feature": "Learned weights",
+  "why": "Weights should be re-learned from outcomes.",
+  "release": "R3",
+  "treatment": "Demo data screen, labelled"
+ },
+ {
+  "id": "SEG-01",
+  "module": "04 Segmentation",
+  "feature": "Niche taxonomy",
+  "why": "Messages and plays must fit the customer's niche, not only the industry.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "SEG-02",
+  "module": "04 Segmentation",
+  "feature": "Microsegments",
+  "why": "What triggered the account decides the angle of the message.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "SEG-03",
+  "module": "04 Segmentation",
+  "feature": "Personas",
+  "why": "The message depends on who is being contacted.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "SEG-04",
+  "module": "04 Segmentation",
+  "feature": "Exclusion and recent-touch check",
+  "why": "Nothing may be routed to an excluded account, or one touched recently.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "SEG-05",
+  "module": "04 Segmentation",
+  "feature": "Buying committee grid",
+  "why": "Selling to a committee needs the right set of people.",
+  "release": "R2",
+  "treatment": "Demo data screen, labelled"
+ },
+ {
+  "id": "SEG-06",
+  "module": "04 Segmentation",
+  "feature": "Buying motivation tag",
+  "why": "The framing depends on whether buyers care about growth or cost.",
+  "release": "R2",
+  "treatment": "Demo data screen, labelled"
+ },
+ {
+  "id": "SEG-07",
+  "module": "04 Segmentation",
+  "feature": "NBC eligibility rule",
+  "why": "A group sharing a trigger is best worked as one campaign. A rule decides when.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "SEG-08",
+  "module": "04 Segmentation",
+  "feature": "Segment lessons",
+  "why": "What worked per segment should shape the next plays.",
+  "release": "R3",
+  "treatment": "Demo data screen, labelled"
+ },
+ {
+  "id": "NBA-01",
+  "module": "05 Next best action and campaign",
+  "feature": "De-dup gate and history",
+  "why": "Two reps must not work the same live opportunity, and history must inform the message.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "NBA-02",
+  "module": "05 Next best action and campaign",
+  "feature": "Warm-path score",
+  "why": "A warm path changes the channel and the odds.",
+  "release": "R2",
+  "treatment": "Demo data screen, labelled"
+ },
+ {
+  "id": "NBA-03",
+  "module": "05 Next best action and campaign",
+  "feature": "Status watch",
+  "why": "Reps need to know the moment someone else engages, an account closes or a champion moves.",
+  "release": "R2",
+  "treatment": "Demo data screen, labelled"
+ },
+ {
+  "id": "NBA-04",
+  "module": "05 Next best action and campaign",
+  "feature": "Message structure selection",
+  "why": "Messages need a proven structure. Until one is proven, the draft is marked unproven.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "NBA-05",
+  "module": "05 Next best action and campaign",
+  "feature": "NBA brief",
+  "why": "A rep needs one decided action: who, what, channel, why now, with the evidence.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "NBA-06",
+  "module": "05 Next best action and campaign",
+  "feature": "Channel selection",
+  "why": "The channel should be chosen from verified data and from what has worked.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "NBA-07",
+  "module": "05 Next best action and campaign",
+  "feature": "Message verification",
+  "why": "Nothing unsupported or off-brand should go out.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "NBA-08",
+  "module": "05 Next best action and campaign",
+  "feature": "Confidence routing and criteria",
+  "why": "The AI should decide what it can and give a person only what it cannot.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "NBA-09",
+  "module": "05 Next best action and campaign",
+  "feature": "Approval card (escalations only)",
+  "why": "A person decides the items that fail a criterion, and every campaign.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "NBA-10",
+  "module": "05 Next best action and campaign",
+  "feature": "Ranked morning queue",
+  "why": "Reps start the day with a ranked list of what changed and what to do.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "NBA-11",
+  "module": "05 Next best action and campaign",
+  "feature": "NBC detection and brief",
+  "why": "A trigger shared by many accounts is worth one coordinated three-touch campaign.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "NBA-12",
+  "module": "05 Next best action and campaign",
+  "feature": "Plays library",
+  "why": "Repeatable outreach needs versioned plays.",
+  "release": "R2",
+  "treatment": "Demo data screen, labelled"
+ },
+ {
+  "id": "NBA-13",
+  "module": "05 Next best action and campaign",
+  "feature": "Event-driven ranking",
+  "why": "The list must re-order the moment something happens.",
+  "release": "R2",
+  "treatment": "Demo data screen, labelled"
+ },
+ {
+  "id": "NBA-14",
+  "module": "05 Next best action and campaign",
+  "feature": "Team routing",
+  "why": "Work must go to the right team by territory, product or deal size.",
+  "release": "R2",
+  "treatment": "Demo data screen, labelled"
+ },
+ {
+  "id": "NBA-15",
+  "module": "05 Next best action and campaign",
+  "feature": "Delivery and notifications",
+  "why": "Actions must reach reps where they work.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "NBA-16",
+  "module": "05 Next best action and campaign",
+  "feature": "Pattern cache, explore and exploit",
+  "why": "The system should reuse what is proven and keep testing alternatives.",
+  "release": "R3",
+  "treatment": "Demo data screen, labelled"
+ },
+ {
+  "id": "CON-01",
+  "module": "06 Content",
+  "feature": "Content Library",
+  "why": "Writers and checkers need one source of voice, tone, approved claims and banned phrases.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "CON-02",
+  "module": "06 Content",
+  "feature": "Asset request and engine plug-in",
+  "why": "Assets (decks, one-pagers) must be made in the customer's brand without us building a design tool.",
+  "release": "R2",
+  "treatment": "Demo data screen, labelled"
+ },
+ {
+  "id": "CON-03",
+  "module": "06 Content",
+  "feature": "Asset formats",
+  "why": "Different steps need different formats.",
+  "release": "R2",
+  "treatment": "Demo data screen, labelled"
+ },
+ {
+  "id": "CON-04",
+  "module": "06 Content",
+  "feature": "Grounding, verify and approve (assets)",
+  "why": "Assets must be grounded, cited and checked before use.",
+  "release": "R2",
+  "treatment": "Demo data screen, labelled"
+ },
+ {
+  "id": "CON-05",
+  "module": "06 Content",
+  "feature": "Research-first outreach",
+  "why": "Outreach should open with why the account fits, and cite sources.",
+  "release": "R2",
+  "treatment": "Demo data screen, labelled"
+ },
+ {
+  "id": "CON-06",
+  "module": "06 Content",
+  "feature": "Campaign corpus",
+  "why": "Past campaigns should become experience for the next one.",
+  "release": "R2",
+  "treatment": "Demo data screen, labelled"
+ },
+ {
+  "id": "CON-07",
+  "module": "06 Content",
+  "feature": "Content backlog",
+  "why": "Questions the library cannot answer show what content is missing.",
+  "release": "R2",
+  "treatment": "Demo data screen, labelled"
+ },
+ {
+  "id": "CON-08",
+  "module": "06 Content",
+  "feature": "Asset assignment and live swap",
+  "why": "An asset should be swappable in a live campaign.",
+  "release": "R2",
+  "treatment": "Demo data screen, labelled"
+ },
+ {
+  "id": "CON-09",
+  "module": "06 Content",
+  "feature": "Learning from edits",
+  "why": "Rep edits show what good looks like, so the system should learn from them.",
+  "release": "R3",
+  "treatment": "Demo data screen, labelled"
+ },
+ {
+  "id": "CON-10",
+  "module": "06 Content",
+  "feature": "Small tuned models",
+  "why": "Repeated narrow jobs should run on small, cheap models.",
+  "release": "R3",
+  "treatment": "Demo data screen, labelled"
+ },
+ {
+  "id": "CMP-01",
+  "module": "07 Campaign execution",
+  "feature": "Interim sending via the rep's mailbox",
+  "why": "Until integrated sending exists, reps send from their own mailbox, and the system must still capture each send.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "CMP-02",
+  "module": "07 Campaign execution",
+  "feature": "Autonomy policy and approval enforcement",
+  "why": "The system must enforce who approves what, and when the AI may send alone.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "CMP-03",
+  "module": "07 Campaign execution",
+  "feature": "Send coordination and windows",
+  "why": "A person must never be hit on three channels in 48 hours.",
+  "release": "R3",
+  "treatment": "Demo data screen, labelled"
+ },
+ {
+  "id": "CMP-04",
+  "module": "07 Campaign execution",
+  "feature": "Integrated sends",
+  "why": "Sends should run through the tools the customer already uses.",
+  "release": "R3",
+  "treatment": "Demo data screen, labelled"
+ },
+ {
+  "id": "CMP-05",
+  "module": "07 Campaign execution",
+  "feature": "Self-serve campaigns via connectors",
+  "why": "Customer teams should be able to run campaigns themselves by connecting their tools.",
+  "release": "R3",
+  "treatment": "Demo data screen, labelled"
+ },
+ {
+  "id": "CMP-06",
+  "module": "07 Campaign execution",
+  "feature": "Persistent follow-up",
+  "why": "Follow-up should continue until there is a clear answer.",
+  "release": "R3",
+  "treatment": "Demo data screen, labelled"
+ },
+ {
+  "id": "RSP-01",
+  "module": "08 Response tracking",
+  "feature": "Replies logged",
+  "why": "Every reply must be saved against its account.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "RSP-02",
+  "module": "08 Response tracking",
+  "feature": "Six reply statuses",
+  "why": "Each reply needs a status and a default next step.",
+  "release": "R2",
+  "treatment": "Demo data screen, labelled"
+ },
+ {
+  "id": "RSP-03",
+  "module": "08 Response tracking",
+  "feature": "Lineage and signal-to-reply",
+  "why": "We must know which signal and message started each conversation.",
+  "release": "R2",
+  "treatment": "Demo data screen, labelled"
+ },
+ {
+  "id": "RSP-04",
+  "module": "08 Response tracking",
+  "feature": "Views",
+  "why": "Someone who looked but did not reply is a warm lead.",
+  "release": "R2",
+  "treatment": "Demo data screen, labelled"
+ },
+ {
+  "id": "RSP-05",
+  "module": "08 Response tracking",
+  "feature": "Objection learning",
+  "why": "Which reply beat which objection should improve future replies.",
+  "release": "R3",
+  "treatment": "Demo data screen, labelled"
+ },
+ {
+  "id": "LRN-01",
+  "module": "09 Learning, analytics and quota",
+  "feature": "Decision log and baseline",
+  "why": "Every decision must be logged, and today's numbers recorded as the baseline.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "LRN-02",
+  "module": "09 Learning, analytics and quota",
+  "feature": "Outcome logging",
+  "why": "Outcomes, hits and misses alike, are what the system learns from.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "LRN-03",
+  "module": "09 Learning, analytics and quota",
+  "feature": "Funnel per 100 and prioritised vs the rest",
+  "why": "Results must be compared fairly: per 100 accounts, and prioritised against the rest.",
+  "release": "R2",
+  "treatment": "Demo data screen, labelled"
+ },
+ {
+  "id": "LRN-04",
+  "module": "09 Learning, analytics and quota",
+  "feature": "Analytics and scorecards",
+  "why": "Rep, manager and leader each need their own numbers.",
+  "release": "R2",
+  "treatment": "Demo data screen, labelled"
+ },
+ {
+  "id": "LRN-05",
+  "module": "09 Learning, analytics and quota",
+  "feature": "Qualified meeting ledger",
+  "why": "The customer pays per qualified meeting, so the definition must be tracked.",
+  "release": "R2",
+  "treatment": "Demo data screen, labelled"
+ },
+ {
+  "id": "LRN-06",
+  "module": "09 Learning, analytics and quota",
+  "feature": "Learning loop job",
+  "why": "The system should improve every month without a bigger model.",
+  "release": "R3",
+  "treatment": "Demo data screen, labelled"
+ },
+ {
+  "id": "LRN-07",
+  "module": "09 Learning, analytics and quota",
+  "feature": "Baseline comparison",
+  "why": "Each channel should be checked against an outside benchmark.",
+  "release": "R3",
+  "treatment": "Demo data screen, labelled"
+ },
+ {
+  "id": "LRN-08",
+  "module": "09 Learning, analytics and quota",
+  "feature": "Weekly learning review",
+  "why": "A person should review learned changes before they ship.",
+  "release": "R3",
+  "treatment": "Demo data screen, labelled"
+ },
+ {
+  "id": "LRN-09",
+  "module": "09 Learning, analytics and quota",
+  "feature": "Quota plan",
+  "why": "A leader needs the gap to quota and a plan to close it.",
+  "release": "R3",
+  "treatment": "Demo data screen, labelled"
+ },
+ {
+  "id": "RES-01",
+  "module": "Research agent",
+  "feature": "Category research",
+  "why": "We need to know why customers in the category buy, and what they cite.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "RES-02",
+  "module": "Research agent",
+  "feature": "Rival detection, review reading and matching",
+  "why": "What a rival's customers complain about is the angle for our message.",
+  "release": "R2",
+  "treatment": "Demo data screen, labelled"
+ },
+ {
+  "id": "RES-03",
+  "module": "Research agent",
+  "feature": "Complaint themes by segment",
+  "why": "Complaint themes should be tested against replies, per segment.",
+  "release": "R3",
+  "treatment": "Demo data screen, labelled"
+ },
+ {
+  "id": "RES-04",
+  "module": "Research agent",
+  "feature": "Closed-won transcript mining",
+  "why": "The customer's own won conversations hold patterns worth mining.",
+  "release": "R3",
+  "treatment": "Demo data screen, labelled"
+ },
+ {
+  "id": "WRK-01",
+  "module": "Morning workflows (chat)",
+  "feature": "Who replied, and what to write",
+  "why": "A rep's first question each morning is who replied and what to write.",
+  "release": "R2",
+  "treatment": "Demo data screen, labelled"
+ },
+ {
+  "id": "WRK-02",
+  "module": "Morning workflows (chat)",
+  "feature": "Who has not replied but looked",
+  "why": "Someone who looked but did not reply is worth a second touch.",
+  "release": "R2",
+  "treatment": "Demo data screen, labelled"
+ },
+ {
+  "id": "WRK-03",
+  "module": "Morning workflows (chat)",
+  "feature": "How are my campaigns doing",
+  "why": "Managers and reps need to see which step of a campaign is weak and what to change.",
+  "release": "R2",
+  "treatment": "Demo data screen, labelled"
+ },
+ {
+  "id": "WRK-04",
+  "module": "Morning workflows (chat)",
+  "feature": "Show me this account's history",
+  "why": "A rep needs one account's whole history before a call.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "WRK-05",
+  "module": "Morning workflows (chat)",
+  "feature": "Prep me for today's meetings",
+  "why": "A meeting needs a brief, a deck and the missing stakeholders found.",
+  "release": "R3",
+  "treatment": "Demo data screen, labelled"
+ },
+ {
+  "id": "WRK-06",
+  "module": "Morning workflows (chat)",
+  "feature": "Follow up on this week's demos",
+  "why": "After a demo the follow-up, gaps and risks must be captured the same day.",
+  "release": "R3",
+  "treatment": "Demo data screen, labelled"
+ },
+ {
+  "id": "WRK-07",
+  "module": "Morning workflows (chat)",
+  "feature": "How far am I from quota",
+  "why": "A rep needs to know how far they are from quota and what to do about it.",
+  "release": "R3",
+  "treatment": "Demo data screen, labelled"
+ },
+ {
+  "id": "INT-01",
+  "module": "Channels and integrations",
+  "feature": "CRM connectors",
+  "why": "The customer's CRM stays the record. We read it so we never contact customers or open deals, and we never write to it.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "INT-02",
+  "module": "Channels and integrations",
+  "feature": "Email and calendar connectors",
+  "why": "Sends, replies and meetings live in email and calendar.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "INT-03",
+  "module": "Channels and integrations",
+  "feature": "Slack bot",
+  "why": "Reps work in Slack and need alerts and actions there.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "INT-04",
+  "module": "Channels and integrations",
+  "feature": "Microsoft Teams bot",
+  "why": "Reps work in Teams and need alerts and actions there.",
+  "release": "R1",
+  "treatment": "Real logic on seeded data (R1)"
+ },
+ {
+  "id": "INT-05",
+  "module": "Channels and integrations",
+  "feature": "Command line interface",
+  "why": "Power users and operations want a command line.",
+  "release": "R2",
+  "treatment": "Demo data screen, labelled"
+ },
+ {
+  "id": "INT-06",
+  "module": "Channels and integrations",
+  "feature": "MCP server",
+  "why": "The customer's own tools and other agents should be able to call our reasoning layer.",
+  "release": "R2",
+  "treatment": "Demo data screen, labelled"
+ },
+ {
+  "id": "INT-07",
+  "module": "Channels and integrations",
+  "feature": "MCP clients",
+  "why": "Our agents should be able to use the tools the customer has already connected.",
+  "release": "R2",
+  "treatment": "Demo data screen, labelled"
+ },
+ {
+  "id": "INT-08",
+  "module": "Channels and integrations",
+  "feature": "Marketing and analytics connectors",
+  "why": "First-party events (web, marketing) are signals.",
+  "release": "R2",
+  "treatment": "Demo data screen, labelled"
+ },
+ {
+  "id": "INT-09",
+  "module": "Channels and integrations",
+  "feature": "Call and conversation connectors",
+  "why": "Conversations and LinkedIn views are signals.",
+  "release": "R2",
+  "treatment": "Demo data screen, labelled"
+ },
+ {
+  "id": "INT-10",
+  "module": "Channels and integrations",
+  "feature": "Reporting and open API",
+  "why": "Customers want the data in their own BI tools.",
+  "release": "R2",
+  "treatment": "Demo data screen, labelled"
+ }
+]

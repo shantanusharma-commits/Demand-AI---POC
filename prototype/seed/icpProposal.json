@@ -1,0 +1,68 @@
+{
+ "website": "vantor-controls.example",
+ "read": [
+  "Products: distributed control systems, safety instrumented systems, migration services",
+  "Industries served: refining, petrochemicals, LNG, gas processing, water",
+  "Case studies: 6, all brownfield migrations at sites with 1,000+ staff"
+ ],
+ "interview": [
+  "Who signs off a migration? Usually the plant director with the head of automation.",
+  "What triggers a project? A turnaround, a new plant head, or end-of-support on the old system."
+ ],
+ "criteria": [
+  {
+   "label": "Niche (plant type)",
+   "attr": "niche",
+   "type": "in",
+   "values": [
+    "Refinery",
+    "Petrochemical complex",
+    "LNG terminal",
+    "Gas processing plant"
+   ],
+   "partial": [
+    "Water treatment works",
+    "Specialty chemicals plant"
+   ],
+   "weight": 30,
+   "key": true
+  },
+  {
+   "label": "Region",
+   "attr": "region",
+   "type": "in",
+   "values": [
+    "UK & Ireland",
+    "Nordics",
+    "Benelux",
+    "DACH"
+   ],
+   "partial": [],
+   "weight": 15,
+   "key": true
+  },
+  {
+   "label": "Staff",
+   "attr": "employees",
+   "type": "range",
+   "min": 1000,
+   "max": 10000,
+   "weight": 20
+  },
+  {
+   "label": "Control system age (years)",
+   "attr": "controlAge",
+   "type": "min",
+   "min": 10,
+   "weight": 25,
+   "key": true
+  },
+  {
+   "label": "Sites",
+   "attr": "sites",
+   "type": "min",
+   "min": 1,
+   "weight": 10
+  }
+ ]
+}

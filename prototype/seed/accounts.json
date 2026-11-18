@@ -1,0 +1,2149 @@
+[
+ {
+  "id": "harrowgate",
+  "name": "Harrowgate Refining",
+  "niche": "Refinery",
+  "nicheConfidence": 0.76,
+  "region": "UK & Ireland",
+  "country": "United Kingdom",
+  "owner": "sofia",
+  "attributes": {
+   "niche": "Refinery",
+   "region": "UK & Ireland",
+   "employees": 2400,
+   "controlAge": 18,
+   "sites": 3
+  },
+  "crm": {},
+  "description": "Coastal refinery, 210,000 barrels a day, control system installed 2008.",
+  "scenario": 3,
+  "segmentPolicy": null,
+  "domain": "harrowgate-refining.example"
+ },
+ {
+  "id": "halden",
+  "name": "Halden Process Systems",
+  "niche": "Specialty chemicals plant",
+  "nicheConfidence": 0.81,
+  "region": "UK & Ireland",
+  "country": "United Kingdom",
+  "owner": "sofia",
+  "attributes": {
+   "niche": "Specialty chemicals plant",
+   "region": "UK & Ireland",
+   "employees": 1800,
+   "controlAge": 16,
+   "sites": 2
+  },
+  "crm": {},
+  "description": "Speciality chemicals producer, two sites in the north of England.",
+  "scenario": 4,
+  "segmentPolicy": null,
+  "domain": "halden-process-systems.example"
+ },
+ {
+  "id": "brightwell",
+  "name": "Brightwell Chemicals",
+  "niche": "Petrochemical complex",
+  "nicheConfidence": 0.8,
+  "region": "UK & Ireland",
+  "country": "United Kingdom",
+  "owner": "sofia",
+  "attributes": {
+   "niche": "Petrochemical complex",
+   "region": "UK & Ireland",
+   "employees": 4800,
+   "controlAge": 15,
+   "sites": 4
+  },
+  "crm": {
+   "status": "Customer",
+   "since": "2023-03-14",
+   "field": "Stage = Closed won"
+  },
+  "description": "Existing customer (closed won, 2023).",
+  "scenario": 5,
+  "segmentPolicy": null,
+  "domain": "brightwell-chemicals.example"
+ },
+ {
+  "id": "kestrel",
+  "name": "Kestrel Gas Processing",
+  "niche": "Gas processing plant",
+  "nicheConfidence": 0.79,
+  "region": "Nordics",
+  "country": "Norway",
+  "owner": "sofia",
+  "attributes": {
+   "niche": "Gas processing plant",
+   "region": "Nordics",
+   "employees": 1200,
+   "controlAge": 17,
+   "sites": 2
+  },
+  "crm": {},
+  "description": "",
+  "scenario": 8,
+  "segmentPolicy": null,
+  "domain": "kestrel-gas-processing.example"
+ },
+ {
+  "id": "fenwick",
+  "name": "Fenwick Refining",
+  "niche": "Refinery",
+  "nicheConfidence": 0.85,
+  "region": "Nordics",
+  "country": "Sweden",
+  "owner": "sofia",
+  "attributes": {
+   "niche": "Refinery",
+   "region": "Nordics",
+   "employees": 3500,
+   "controlAge": 19,
+   "sites": 2
+  },
+  "crm": {},
+  "description": "",
+  "scenario": 9,
+  "segmentPolicy": null,
+  "domain": "fenwick-refining.example"
+ },
+ {
+  "id": "caldbeck",
+  "name": "Caldbeck Petrochemicals",
+  "niche": "Petrochemical complex",
+  "nicheConfidence": 0.95,
+  "region": "UK & Ireland",
+  "country": "United Kingdom",
+  "owner": "sofia",
+  "attributes": {
+   "niche": "Petrochemical complex",
+   "region": "UK & Ireland",
+   "employees": 6200,
+   "controlAge": 14,
+   "sites": 3
+  },
+  "crm": {},
+  "description": "",
+  "scenario": 10,
+  "segmentPolicy": null,
+  "domain": "caldbeck-petrochemicals.example"
+ },
+ {
+  "id": "whitlock",
+  "name": "Whitlock Refining",
+  "niche": "Refinery",
+  "nicheConfidence": 0.92,
+  "region": "UK & Ireland",
+  "country": "Ireland",
+  "owner": "sofia",
+  "attributes": {
+   "niche": "Refinery",
+   "region": "UK & Ireland",
+   "employees": 1800,
+   "controlAge": 20,
+   "sites": 2
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "whitlock-refining.example"
+ },
+ {
+  "id": "ravensworth",
+  "name": "Ravensworth Chemicals",
+  "niche": "Specialty chemicals plant",
+  "nicheConfidence": 0.83,
+  "region": "Nordics",
+  "country": "Denmark",
+  "owner": "sofia",
+  "attributes": {
+   "niche": "Specialty chemicals plant",
+   "region": "Nordics",
+   "employees": 2400,
+   "controlAge": 13,
+   "sites": 3
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "ravensworth-chemicals.example"
+ },
+ {
+  "id": "saltire",
+  "name": "Saltire Hydrogen",
+  "niche": "Hydrogen project",
+  "nicheConfidence": 0.84,
+  "region": "UK & Ireland",
+  "country": "United Kingdom",
+  "owner": "sofia",
+  "attributes": {
+   "niche": "Hydrogen project",
+   "region": "UK & Ireland",
+   "employees": 900,
+   "controlAge": 14,
+   "sites": 2
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "saltire-hydrogen.example"
+ },
+ {
+  "id": "thornbury",
+  "name": "Thornbury Power",
+  "niche": "Power station",
+  "nicheConfidence": 0.89,
+  "region": "UK & Ireland",
+  "country": "United Kingdom",
+  "owner": "sofia",
+  "attributes": {
+   "niche": "Power station",
+   "region": "UK & Ireland",
+   "employees": 1200,
+   "controlAge": 21,
+   "sites": 2
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "thornbury-power.example"
+ },
+ {
+  "id": "ingleby",
+  "name": "Ingleby Terminals",
+  "niche": "Tank storage terminal",
+  "nicheConfidence": 0.76,
+  "region": "Nordics",
+  "country": "Finland",
+  "owner": "sofia",
+  "attributes": {
+   "niche": "Tank storage terminal",
+   "region": "Nordics",
+   "employees": 800,
+   "controlAge": 16,
+   "sites": 3
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "ingleby-terminals.example"
+ },
+ {
+  "id": "glenmoor",
+  "name": "Glenmoor Gas Processing",
+  "niche": "Gas processing plant",
+  "nicheConfidence": 0.84,
+  "region": "UK & Ireland",
+  "country": "United Kingdom",
+  "owner": "sofia",
+  "attributes": {
+   "niche": "Gas processing plant",
+   "region": "UK & Ireland",
+   "employees": 1200,
+   "controlAge": 15,
+   "sites": 2
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "glenmoor-gas-processing.example"
+ },
+ {
+  "id": "oakhurst",
+  "name": "Oakhurst Industrial",
+  "niche": null,
+  "nicheConfidence": 0.41,
+  "region": "UK & Ireland",
+  "country": "United Kingdom",
+  "owner": "sofia",
+  "attributes": {
+   "niche": "Refinery",
+   "region": "UK & Ireland",
+   "employees": 1800,
+   "controlAge": 17,
+   "sites": 2
+  },
+  "crm": {},
+  "description": "Website describes \"industrial services\"; the classifier could not tell the plant type.",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "oakhurst-industrial.example"
+ },
+ {
+  "id": "pellworth",
+  "name": "Pellworth Energy",
+  "niche": "Gas processing plant",
+  "nicheConfidence": 0.85,
+  "region": "Nordics",
+  "country": "Norway",
+  "owner": "sofia",
+  "attributes": {
+   "niche": "Gas processing plant",
+   "region": "Nordics",
+   "employees": 2400,
+   "controlAge": null,
+   "sites": 2
+  },
+  "crm": {},
+  "description": "Control system age not found in any source.",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "pellworth-energy.example"
+ },
+ {
+  "id": "upwood",
+  "name": "Upwood Refining",
+  "niche": "Refinery",
+  "nicheConfidence": 0.84,
+  "region": "Benelux",
+  "country": "Netherlands",
+  "owner": "marco",
+  "attributes": {
+   "niche": "Refinery",
+   "region": "Benelux",
+   "employees": 3500,
+   "controlAge": 18,
+   "sites": 2
+  },
+  "crm": {
+   "openDeal": {
+    "name": "Upwood DCS migration phase 1",
+    "stage": "Proposal",
+    "owner": "marco",
+    "value": "GBP 1.4M"
+   }
+  },
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "upwood-refining.example"
+ },
+ {
+  "id": "varney",
+  "name": "Varney Chemicals",
+  "niche": "Specialty chemicals plant",
+  "nicheConfidence": 0.86,
+  "region": "Benelux",
+  "country": "Belgium",
+  "owner": "marco",
+  "attributes": {
+   "niche": "Specialty chemicals plant",
+   "region": "Benelux",
+   "employees": 1800,
+   "controlAge": 14,
+   "sites": 2
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "varney-chemicals.example"
+ },
+ {
+  "id": "elsworth",
+  "name": "Elsworth Refining",
+  "niche": "Refinery",
+  "nicheConfidence": 0.84,
+  "region": "Benelux",
+  "country": "Netherlands",
+  "owner": "marco",
+  "attributes": {
+   "niche": "Refinery",
+   "region": "Benelux",
+   "employees": 2400,
+   "controlAge": 17,
+   "sites": 3
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "elsworth-refining.example"
+ },
+ {
+  "id": "dunmore",
+  "name": "Dunmore Chemicals",
+  "niche": "Specialty chemicals plant",
+  "nicheConfidence": 0.81,
+  "region": "DACH",
+  "country": "Germany",
+  "owner": "kenji",
+  "attributes": {
+   "niche": "Specialty chemicals plant",
+   "region": "DACH",
+   "employees": 1200,
+   "controlAge": 15,
+   "sites": 2
+  },
+  "crm": {
+   "nameOnlyMatch": "Dunmore Chemical Holdings (no domain on the CRM record)"
+  },
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "dunmore-chemicals.example"
+ },
+ {
+  "id": "northgate",
+  "name": "Northgate Terminals",
+  "niche": "LNG terminal",
+  "nicheConfidence": 0.76,
+  "region": "UK & Ireland",
+  "country": "Ireland",
+  "owner": "sofia",
+  "attributes": {
+   "niche": "LNG terminal",
+   "region": "UK & Ireland",
+   "employees": 2800,
+   "controlAge": 15,
+   "sites": 2
+  },
+  "crm": {},
+  "description": "",
+  "scenario": 6,
+  "segmentPolicy": null,
+  "domain": "northgate-terminals.example"
+ },
+ {
+  "id": "a020",
+  "name": "Ashby LNG",
+  "niche": "LNG terminal",
+  "nicheConfidence": 0.9,
+  "region": "UK & Ireland",
+  "country": "United Kingdom",
+  "owner": "sofia",
+  "attributes": {
+   "niche": "LNG terminal",
+   "region": "UK & Ireland",
+   "employees": 1400,
+   "controlAge": 18,
+   "sites": 2
+  },
+  "crm": {},
+  "description": "",
+  "scenario": 6,
+  "segmentPolicy": null,
+  "domain": "ashby-lng.example"
+ },
+ {
+  "id": "a021",
+  "name": "Corrin Gas Terminal",
+  "niche": "LNG terminal",
+  "nicheConfidence": 0.8,
+  "region": "UK & Ireland",
+  "country": "United Kingdom",
+  "owner": "sofia",
+  "attributes": {
+   "niche": "LNG terminal",
+   "region": "UK & Ireland",
+   "employees": 2800,
+   "controlAge": 18,
+   "sites": 3
+  },
+  "crm": {},
+  "description": "",
+  "scenario": 6,
+  "segmentPolicy": null,
+  "domain": "corrin-gas-terminal.example"
+ },
+ {
+  "id": "a022",
+  "name": "Westmere Gas Terminal",
+  "niche": "LNG terminal",
+  "nicheConfidence": 0.91,
+  "region": "Benelux",
+  "country": "Netherlands",
+  "owner": "marco",
+  "attributes": {
+   "niche": "LNG terminal",
+   "region": "Benelux",
+   "employees": 2800,
+   "controlAge": 17,
+   "sites": 3
+  },
+  "crm": {},
+  "description": "",
+  "scenario": 6,
+  "segmentPolicy": null,
+  "domain": "westmere-gas-terminal.example"
+ },
+ {
+  "id": "a023",
+  "name": "Brackley LNG",
+  "niche": "LNG terminal",
+  "nicheConfidence": 0.94,
+  "region": "Benelux",
+  "country": "Belgium",
+  "owner": "marco",
+  "attributes": {
+   "niche": "LNG terminal",
+   "region": "Benelux",
+   "employees": 1400,
+   "controlAge": 19,
+   "sites": 3
+  },
+  "crm": {},
+  "description": "",
+  "scenario": 6,
+  "segmentPolicy": null,
+  "domain": "brackley-lng.example"
+ },
+ {
+  "id": "a024",
+  "name": "Larchmont LNG",
+  "niche": "LNG terminal",
+  "nicheConfidence": 0.81,
+  "region": "Benelux",
+  "country": "Netherlands",
+  "owner": "marco",
+  "attributes": {
+   "niche": "LNG terminal",
+   "region": "Benelux",
+   "employees": 2800,
+   "controlAge": 16,
+   "sites": 2
+  },
+  "crm": {},
+  "description": "",
+  "scenario": 6,
+  "segmentPolicy": null,
+  "domain": "larchmont-lng.example"
+ },
+ {
+  "id": "a025",
+  "name": "Morrow Gas Terminal",
+  "niche": "LNG terminal",
+  "nicheConfidence": 0.87,
+  "region": "Middle East",
+  "country": "Qatar",
+  "owner": "aisha",
+  "attributes": {
+   "niche": "LNG terminal",
+   "region": "Middle East",
+   "employees": 900,
+   "controlAge": 14,
+   "sites": 2
+  },
+  "crm": {},
+  "description": "",
+  "scenario": 6,
+  "segmentPolicy": null,
+  "domain": "morrow-gas-terminal.example"
+ },
+ {
+  "id": "a026",
+  "name": "Penhallow Gas Terminal",
+  "niche": "LNG terminal",
+  "nicheConfidence": 0.85,
+  "region": "Middle East",
+  "country": "United Arab Emirates",
+  "owner": "aisha",
+  "attributes": {
+   "niche": "LNG terminal",
+   "region": "Middle East",
+   "employees": 900,
+   "controlAge": 18,
+   "sites": 2
+  },
+  "crm": {},
+  "description": "",
+  "scenario": 6,
+  "segmentPolicy": null,
+  "domain": "penhallow-gas-terminal.example"
+ },
+ {
+  "id": "a027",
+  "name": "Quarrybank LNG",
+  "niche": "LNG terminal",
+  "nicheConfidence": 0.96,
+  "region": "Middle East",
+  "country": "Oman",
+  "owner": "aisha",
+  "attributes": {
+   "niche": "LNG terminal",
+   "region": "Middle East",
+   "employees": 1400,
+   "controlAge": 13,
+   "sites": 3
+  },
+  "crm": {},
+  "description": "",
+  "scenario": 6,
+  "segmentPolicy": null,
+  "domain": "quarrybank-lng.example"
+ },
+ {
+  "id": "a028",
+  "name": "Ullswater LNG",
+  "niche": "LNG terminal",
+  "nicheConfidence": 0.95,
+  "region": "DACH",
+  "country": "Switzerland",
+  "owner": "kenji",
+  "attributes": {
+   "niche": "LNG terminal",
+   "region": "DACH",
+   "employees": 1400,
+   "controlAge": 13,
+   "sites": 2
+  },
+  "crm": {},
+  "description": "",
+  "scenario": 6,
+  "segmentPolicy": null,
+  "domain": "ullswater-lng.example"
+ },
+ {
+  "id": "a029",
+  "name": "Vexford Gas Terminal",
+  "niche": "LNG terminal",
+  "nicheConfidence": 0.91,
+  "region": "DACH",
+  "country": "Austria",
+  "owner": "kenji",
+  "attributes": {
+   "niche": "LNG terminal",
+   "region": "DACH",
+   "employees": 900,
+   "controlAge": 13,
+   "sites": 3
+  },
+  "crm": {},
+  "description": "",
+  "scenario": 6,
+  "segmentPolicy": null,
+  "domain": "vexford-gas-terminal.example"
+ },
+ {
+  "id": "a030",
+  "name": "Yarrow Refinery",
+  "niche": "Refinery",
+  "nicheConfidence": 0.96,
+  "region": "Benelux",
+  "country": "Netherlands",
+  "owner": "marco",
+  "attributes": {
+   "niche": "Refinery",
+   "region": "Benelux",
+   "employees": 1200,
+   "controlAge": 13,
+   "sites": 2
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "yarrow-refinery.example"
+ },
+ {
+  "id": "a031",
+  "name": "Aldermoor Refinery",
+  "niche": "Refinery",
+  "nicheConfidence": 0.77,
+  "region": "DACH",
+  "country": "Switzerland",
+  "owner": "kenji",
+  "attributes": {
+   "niche": "Refinery",
+   "region": "DACH",
+   "employees": 2400,
+   "controlAge": 19,
+   "sites": 1
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "aldermoor-refinery.example"
+ },
+ {
+  "id": "a032",
+  "name": "Birchfield Refining",
+  "niche": "Refinery",
+  "nicheConfidence": 0.89,
+  "region": "Middle East",
+  "country": "Oman",
+  "owner": "aisha",
+  "attributes": {
+   "niche": "Refinery",
+   "region": "Middle East",
+   "employees": 3500,
+   "controlAge": 18,
+   "sites": 2
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "birchfield-refining.example"
+ },
+ {
+  "id": "a033",
+  "name": "Farrowdale Refining",
+  "niche": "Refinery",
+  "nicheConfidence": 0.99,
+  "region": "South East Asia",
+  "country": "Singapore",
+  "owner": "aisha",
+  "attributes": {
+   "niche": "Refinery",
+   "region": "South East Asia",
+   "employees": 2400,
+   "controlAge": 15,
+   "sites": 3
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "farrowdale-refining.example"
+ },
+ {
+  "id": "a034",
+  "name": "Harcastle Refinery",
+  "niche": "Refinery",
+  "nicheConfidence": 0.84,
+  "region": "DACH",
+  "country": "Germany",
+  "owner": "kenji",
+  "attributes": {
+   "niche": "Refinery",
+   "region": "DACH",
+   "employees": 3500,
+   "controlAge": 18,
+   "sites": 3
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "harcastle-refinery.example"
+ },
+ {
+  "id": "a035",
+  "name": "Juniper Point Refining",
+  "niche": "Refinery",
+  "nicheConfidence": 0.88,
+  "region": "Benelux",
+  "country": "Netherlands",
+  "owner": "marco",
+  "attributes": {
+   "niche": "Refinery",
+   "region": "Benelux",
+   "employees": 2400,
+   "controlAge": 17,
+   "sites": 2
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "juniper-point-refining.example"
+ },
+ {
+  "id": "a036",
+  "name": "Kingsmere Refinery",
+  "niche": "Refinery",
+  "nicheConfidence": 0.88,
+  "region": "Middle East",
+  "country": "Qatar",
+  "owner": "aisha",
+  "attributes": {
+   "niche": "Refinery",
+   "region": "Middle East",
+   "employees": 1200,
+   "controlAge": 14,
+   "sites": 3
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "kingsmere-refinery.example"
+ },
+ {
+  "id": "a037",
+  "name": "Lowther Refining",
+  "niche": "Refinery",
+  "nicheConfidence": 0.81,
+  "region": "DACH",
+  "country": "Austria",
+  "owner": "kenji",
+  "attributes": {
+   "niche": "Refinery",
+   "region": "DACH",
+   "employees": 3500,
+   "controlAge": 17,
+   "sites": 3
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "lowther-refining.example"
+ },
+ {
+  "id": "a038",
+  "name": "Marlow Bay Refining",
+  "niche": "Refinery",
+  "nicheConfidence": 0.97,
+  "region": "South East Asia",
+  "country": "Thailand",
+  "owner": "aisha",
+  "attributes": {
+   "niche": "Refinery",
+   "region": "South East Asia",
+   "employees": 2400,
+   "controlAge": 12,
+   "sites": 3
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "marlow-bay-refining.example"
+ },
+ {
+  "id": "a039",
+  "name": "Norland Hydrogen",
+  "niche": "Hydrogen project",
+  "nicheConfidence": 0.92,
+  "region": "Middle East",
+  "country": "Oman",
+  "owner": "aisha",
+  "attributes": {
+   "niche": "Hydrogen project",
+   "region": "Middle East",
+   "employees": 4800,
+   "controlAge": 10,
+   "sites": 3
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "norland-hydrogen.example"
+ },
+ {
+  "id": "a040",
+  "name": "Redcliffe Terminals",
+  "niche": "Tank storage terminal",
+  "nicheConfidence": 0.78,
+  "region": "DACH",
+  "country": "Germany",
+  "owner": "kenji",
+  "attributes": {
+   "niche": "Tank storage terminal",
+   "region": "DACH",
+   "employees": 8500,
+   "controlAge": 20,
+   "sites": 1
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "redcliffe-terminals.example"
+ },
+ {
+  "id": "a041",
+  "name": "Silverdale Chemicals",
+  "niche": "Specialty chemicals plant",
+  "nicheConfidence": 0.96,
+  "region": "South East Asia",
+  "country": "Thailand",
+  "owner": "aisha",
+  "attributes": {
+   "niche": "Specialty chemicals plant",
+   "region": "South East Asia",
+   "employees": 4800,
+   "controlAge": 8,
+   "sites": 5
+  },
+  "crm": {
+   "status": "Customer",
+   "since": "2025-08-08",
+   "field": "Stage = Closed won"
+  },
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "silverdale-chemicals.example"
+ },
+ {
+  "id": "a042",
+  "name": "Tarnbrook Energy",
+  "niche": "Power station",
+  "nicheConfidence": 0.89,
+  "region": "Benelux",
+  "country": "Belgium",
+  "owner": "marco",
+  "attributes": {
+   "niche": "Power station",
+   "region": "Benelux",
+   "employees": 320,
+   "controlAge": 15,
+   "sites": 4
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "tarnbrook-energy.example"
+ },
+ {
+  "id": "a043",
+  "name": "Wexcombe Hydrogen",
+  "niche": "Hydrogen project",
+  "nicheConfidence": 0.98,
+  "region": "Benelux",
+  "country": "Belgium",
+  "owner": "marco",
+  "attributes": {
+   "niche": "Hydrogen project",
+   "region": "Benelux",
+   "employees": 2400,
+   "controlAge": 16,
+   "sites": 1
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "wexcombe-hydrogen.example"
+ },
+ {
+  "id": "a044",
+  "name": "Arden Green Hydrogen",
+  "niche": "Hydrogen project",
+  "nicheConfidence": 0.84,
+  "region": "Benelux",
+  "country": "Belgium",
+  "owner": "marco",
+  "attributes": {
+   "niche": "Hydrogen project",
+   "region": "Benelux",
+   "employees": 3500,
+   "controlAge": 19,
+   "sites": 1
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "arden-green-hydrogen.example"
+ },
+ {
+  "id": "a045",
+  "name": "Bramwell Midstream",
+  "niche": "Gas processing plant",
+  "nicheConfidence": 0.91,
+  "region": "Benelux",
+  "country": "Netherlands",
+  "owner": "marco",
+  "attributes": {
+   "niche": "Gas processing plant",
+   "region": "Benelux",
+   "employees": 1800,
+   "controlAge": 14,
+   "sites": 5
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "bramwell-midstream.example"
+ },
+ {
+  "id": "a046",
+  "name": "Coldharbour Gas Processing",
+  "niche": "Gas processing plant",
+  "nicheConfidence": 0.96,
+  "region": "Middle East",
+  "country": "United Arab Emirates",
+  "owner": "aisha",
+  "attributes": {
+   "niche": "Gas processing plant",
+   "region": "Middle East",
+   "employees": 3500,
+   "controlAge": 9,
+   "sites": 3
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "coldharbour-gas-processing.example"
+ },
+ {
+  "id": "a047",
+  "name": "Deverell Storage",
+  "niche": "Tank storage terminal",
+  "nicheConfidence": 0.84,
+  "region": "South East Asia",
+  "country": "Thailand",
+  "owner": "aisha",
+  "attributes": {
+   "niche": "Tank storage terminal",
+   "region": "South East Asia",
+   "employees": 6200,
+   "controlAge": 6,
+   "sites": 5
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "deverell-storage.example"
+ },
+ {
+  "id": "a048",
+  "name": "Eastwick Olefins",
+  "niche": "Petrochemical complex",
+  "nicheConfidence": 0.97,
+  "region": "Benelux",
+  "country": "Netherlands",
+  "owner": "marco",
+  "attributes": {
+   "niche": "Petrochemical complex",
+   "region": "Benelux",
+   "employees": 320,
+   "controlAge": 13,
+   "sites": 3
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "eastwick-olefins.example"
+ },
+ {
+  "id": "a049",
+  "name": "Fallowfield Petrochemicals",
+  "niche": "Petrochemical complex",
+  "nicheConfidence": 0.85,
+  "region": "Nordics",
+  "country": "Finland",
+  "owner": "sofia",
+  "attributes": {
+   "niche": "Petrochemical complex",
+   "region": "Nordics",
+   "employees": 320,
+   "controlAge": 6,
+   "sites": 4
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "fallowfield-petrochemicals.example"
+ },
+ {
+  "id": "a050",
+  "name": "Greyhaven Hydrogen",
+  "niche": "Hydrogen project",
+  "nicheConfidence": 0.84,
+  "region": "Benelux",
+  "country": "Belgium",
+  "owner": "marco",
+  "attributes": {
+   "niche": "Hydrogen project",
+   "region": "Benelux",
+   "employees": 12500,
+   "controlAge": 21,
+   "sites": 1
+  },
+  "crm": {
+   "status": "Customer",
+   "since": "2026-01-13",
+   "field": "Stage = Closed won"
+  },
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "greyhaven-hydrogen.example"
+ },
+ {
+  "id": "a051",
+  "name": "Holloway Hydrogen",
+  "niche": "Hydrogen project",
+  "nicheConfidence": 0.97,
+  "region": "UK & Ireland",
+  "country": "United Kingdom",
+  "owner": "sofia",
+  "attributes": {
+   "niche": "Hydrogen project",
+   "region": "UK & Ireland",
+   "employees": 1800,
+   "controlAge": 10,
+   "sites": 3
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "holloway-hydrogen.example"
+ },
+ {
+  "id": "a052",
+  "name": "Ironbridge Energy",
+  "niche": "Power station",
+  "nicheConfidence": 0.92,
+  "region": "DACH",
+  "country": "Germany",
+  "owner": "kenji",
+  "attributes": {
+   "niche": "Power station",
+   "region": "DACH",
+   "employees": 320,
+   "controlAge": 6,
+   "sites": 1
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "ironbridge-energy.example"
+ },
+ {
+  "id": "a053",
+  "name": "Jarrow Midstream",
+  "niche": "Gas processing plant",
+  "nicheConfidence": 0.85,
+  "region": "DACH",
+  "country": "Germany",
+  "owner": "kenji",
+  "attributes": {
+   "niche": "Gas processing plant",
+   "region": "DACH",
+   "employees": 1200,
+   "controlAge": 14,
+   "sites": 2
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "jarrow-midstream.example"
+ },
+ {
+  "id": "a054",
+  "name": "Langholm Refining",
+  "niche": "Refinery",
+  "nicheConfidence": 0.76,
+  "region": "DACH",
+  "country": "Austria",
+  "owner": "kenji",
+  "attributes": {
+   "niche": "Refinery",
+   "region": "DACH",
+   "employees": 4800,
+   "controlAge": 21,
+   "sites": 5
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "langholm-refining.example"
+ },
+ {
+  "id": "a055",
+  "name": "Merrow Olefins",
+  "niche": "Petrochemical complex",
+  "nicheConfidence": 0.85,
+  "region": "Middle East",
+  "country": "Qatar",
+  "owner": "aisha",
+  "attributes": {
+   "niche": "Petrochemical complex",
+   "region": "Middle East",
+   "employees": 12500,
+   "controlAge": 22,
+   "sites": 5
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "merrow-olefins.example"
+ },
+ {
+  "id": "a056",
+  "name": "Nethercott Power",
+  "niche": "Power station",
+  "nicheConfidence": 0.89,
+  "region": "Middle East",
+  "country": "United Arab Emirates",
+  "owner": "aisha",
+  "attributes": {
+   "niche": "Power station",
+   "region": "Middle East",
+   "employees": 6200,
+   "controlAge": 21,
+   "sites": 1
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "nethercott-power.example"
+ },
+ {
+  "id": "a057",
+  "name": "Orwell Power",
+  "niche": "Power station",
+  "nicheConfidence": 0.98,
+  "region": "DACH",
+  "country": "Austria",
+  "owner": "kenji",
+  "attributes": {
+   "niche": "Power station",
+   "region": "DACH",
+   "employees": 4800,
+   "controlAge": 17,
+   "sites": 3
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "orwell-power.example"
+ },
+ {
+  "id": "a058",
+  "name": "Pembury Chemicals",
+  "niche": "Specialty chemicals plant",
+  "nicheConfidence": 0.83,
+  "region": "UK & Ireland",
+  "country": "United Kingdom",
+  "owner": "sofia",
+  "attributes": {
+   "niche": "Specialty chemicals plant",
+   "region": "UK & Ireland",
+   "employees": 2400,
+   "controlAge": 17,
+   "sites": 3
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "pembury-chemicals.example"
+ },
+ {
+  "id": "a059",
+  "name": "Rushmere Subsea",
+  "niche": "Offshore platform",
+  "nicheConfidence": 0.79,
+  "region": "Benelux",
+  "country": "Netherlands",
+  "owner": "marco",
+  "attributes": {
+   "niche": "Offshore platform",
+   "region": "Benelux",
+   "employees": 12500,
+   "controlAge": 15,
+   "sites": 2
+  },
+  "crm": {
+   "status": "Customer",
+   "since": "2025-01-30",
+   "field": "Stage = Closed won"
+  },
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "rushmere-subsea.example"
+ },
+ {
+  "id": "a060",
+  "name": "Stoneleigh Gas Processing",
+  "niche": "Gas processing plant",
+  "nicheConfidence": 0.98,
+  "region": "Middle East",
+  "country": "United Arab Emirates",
+  "owner": "aisha",
+  "attributes": {
+   "niche": "Gas processing plant",
+   "region": "Middle East",
+   "employees": 2400,
+   "controlAge": 7,
+   "sites": 4
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "stoneleigh-gas-processing.example"
+ },
+ {
+  "id": "a061",
+  "name": "Thorne Water",
+  "niche": "Water treatment works",
+  "nicheConfidence": 0.77,
+  "region": "DACH",
+  "country": "Switzerland",
+  "owner": "kenji",
+  "attributes": {
+   "niche": "Water treatment works",
+   "region": "DACH",
+   "employees": 6200,
+   "controlAge": 17,
+   "sites": 2
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "thorne-water.example"
+ },
+ {
+  "id": "a062",
+  "name": "Ulverston Green Hydrogen",
+  "niche": "Hydrogen project",
+  "nicheConfidence": 0.98,
+  "region": "UK & Ireland",
+  "country": "United Kingdom",
+  "owner": "sofia",
+  "attributes": {
+   "niche": "Hydrogen project",
+   "region": "UK & Ireland",
+   "employees": 1800,
+   "controlAge": 10,
+   "sites": 3
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "ulverston-green-hydrogen.example"
+ },
+ {
+  "id": "a063",
+  "name": "Vale Refinery",
+  "niche": "Refinery",
+  "nicheConfidence": 0.88,
+  "region": "Benelux",
+  "country": "Belgium",
+  "owner": "marco",
+  "attributes": {
+   "niche": "Refinery",
+   "region": "Benelux",
+   "employees": 1200,
+   "controlAge": 11,
+   "sites": 1
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "vale-refinery.example"
+ },
+ {
+  "id": "a064",
+  "name": "Ainsley Chemicals",
+  "niche": "Specialty chemicals plant",
+  "nicheConfidence": 0.78,
+  "region": "DACH",
+  "country": "Austria",
+  "owner": "kenji",
+  "attributes": {
+   "niche": "Specialty chemicals plant",
+   "region": "DACH",
+   "employees": 1200,
+   "controlAge": 21,
+   "sites": 5
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "ainsley-chemicals.example"
+ },
+ {
+  "id": "a065",
+  "name": "Bexmoor Gas Processing",
+  "niche": "Gas processing plant",
+  "nicheConfidence": 0.79,
+  "region": "Middle East",
+  "country": "Oman",
+  "owner": "aisha",
+  "attributes": {
+   "niche": "Gas processing plant",
+   "region": "Middle East",
+   "employees": 2400,
+   "controlAge": 17,
+   "sites": 4
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "bexmoor-gas-processing.example"
+ },
+ {
+  "id": "a066",
+  "name": "Castleford Refining",
+  "niche": "Refinery",
+  "nicheConfidence": 0.77,
+  "region": "Nordics",
+  "country": "Finland",
+  "owner": "sofia",
+  "attributes": {
+   "niche": "Refinery",
+   "region": "Nordics",
+   "employees": 6200,
+   "controlAge": 20,
+   "sites": 5
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "castleford-refining.example"
+ },
+ {
+  "id": "a067",
+  "name": "Driftwood Midstream",
+  "niche": "Gas processing plant",
+  "nicheConfidence": 0.81,
+  "region": "UK & Ireland",
+  "country": "United Kingdom",
+  "owner": "sofia",
+  "attributes": {
+   "niche": "Gas processing plant",
+   "region": "UK & Ireland",
+   "employees": 6200,
+   "controlAge": 6,
+   "sites": 5
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "driftwood-midstream.example"
+ },
+ {
+  "id": "a068",
+  "name": "Edgecombe Gas Processing",
+  "niche": "Gas processing plant",
+  "nicheConfidence": 0.93,
+  "region": "UK & Ireland",
+  "country": "United Kingdom",
+  "owner": "sofia",
+  "attributes": {
+   "niche": "Gas processing plant",
+   "region": "UK & Ireland",
+   "employees": 3500,
+   "controlAge": 8,
+   "sites": 4
+  },
+  "crm": {
+   "status": "Customer",
+   "since": "2024-08-19",
+   "field": "Stage = Closed won"
+  },
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "edgecombe-gas-processing.example"
+ },
+ {
+  "id": "a069",
+  "name": "Fernhill Offshore",
+  "niche": "Offshore platform",
+  "nicheConfidence": 0.78,
+  "region": "UK & Ireland",
+  "country": "United Kingdom",
+  "owner": "sofia",
+  "attributes": {
+   "niche": "Offshore platform",
+   "region": "UK & Ireland",
+   "employees": 2400,
+   "controlAge": 20,
+   "sites": 3
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "fernhill-offshore.example"
+ },
+ {
+  "id": "a070",
+  "name": "Hartwell Green Hydrogen",
+  "niche": "Hydrogen project",
+  "nicheConfidence": 0.77,
+  "region": "Nordics",
+  "country": "Norway",
+  "owner": "sofia",
+  "attributes": {
+   "niche": "Hydrogen project",
+   "region": "Nordics",
+   "employees": 320,
+   "controlAge": 19,
+   "sites": 5
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "hartwell-green-hydrogen.example"
+ },
+ {
+  "id": "a071",
+  "name": "Ivydale Terminals",
+  "niche": "Tank storage terminal",
+  "nicheConfidence": 0.88,
+  "region": "Benelux",
+  "country": "Belgium",
+  "owner": "marco",
+  "attributes": {
+   "niche": "Tank storage terminal",
+   "region": "Benelux",
+   "employees": 3500,
+   "controlAge": 15,
+   "sites": 3
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "ivydale-terminals.example"
+ },
+ {
+  "id": "a072",
+  "name": "Kirkby Subsea",
+  "niche": "Offshore platform",
+  "nicheConfidence": 0.78,
+  "region": "DACH",
+  "country": "Switzerland",
+  "owner": "kenji",
+  "attributes": {
+   "niche": "Offshore platform",
+   "region": "DACH",
+   "employees": 3500,
+   "controlAge": 15,
+   "sites": 5
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "kirkby-subsea.example"
+ },
+ {
+  "id": "a073",
+  "name": "Linton Green Hydrogen",
+  "niche": "Hydrogen project",
+  "nicheConfidence": 0.77,
+  "region": "Benelux",
+  "country": "Netherlands",
+  "owner": "marco",
+  "attributes": {
+   "niche": "Hydrogen project",
+   "region": "Benelux",
+   "employees": 12500,
+   "controlAge": 11,
+   "sites": 1
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "linton-green-hydrogen.example"
+ },
+ {
+  "id": "a074",
+  "name": "Maddox Terminals",
+  "niche": "Tank storage terminal",
+  "nicheConfidence": 0.79,
+  "region": "UK & Ireland",
+  "country": "United Kingdom",
+  "owner": "sofia",
+  "attributes": {
+   "niche": "Tank storage terminal",
+   "region": "UK & Ireland",
+   "employees": 3500,
+   "controlAge": 19,
+   "sites": 5
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "maddox-terminals.example"
+ },
+ {
+  "id": "a075",
+  "name": "Newhaven Olefins",
+  "niche": "Petrochemical complex",
+  "nicheConfidence": 0.86,
+  "region": "DACH",
+  "country": "Switzerland",
+  "owner": "kenji",
+  "attributes": {
+   "niche": "Petrochemical complex",
+   "region": "DACH",
+   "employees": 12500,
+   "controlAge": 13,
+   "sites": 3
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "newhaven-olefins.example"
+ },
+ {
+  "id": "a076",
+  "name": "Ormsby Speciality Chemicals",
+  "niche": "Specialty chemicals plant",
+  "nicheConfidence": 0.96,
+  "region": "Benelux",
+  "country": "Belgium",
+  "owner": "marco",
+  "attributes": {
+   "niche": "Specialty chemicals plant",
+   "region": "Benelux",
+   "employees": 700,
+   "controlAge": 18,
+   "sites": 5
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "ormsby-speciality-chemicals.example"
+ },
+ {
+  "id": "a077",
+  "name": "Prestwick Refinery",
+  "niche": "Refinery",
+  "nicheConfidence": 0.88,
+  "region": "Benelux",
+  "country": "Belgium",
+  "owner": "marco",
+  "attributes": {
+   "niche": "Refinery",
+   "region": "Benelux",
+   "employees": 2400,
+   "controlAge": 13,
+   "sites": 2
+  },
+  "crm": {
+   "status": "Customer",
+   "since": "2024-08-13",
+   "field": "Stage = Closed won"
+  },
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "prestwick-refinery.example"
+ },
+ {
+  "id": "a078",
+  "name": "Rookwood Water Services",
+  "niche": "Water treatment works",
+  "nicheConfidence": 0.96,
+  "region": "Nordics",
+  "country": "Finland",
+  "owner": "sofia",
+  "attributes": {
+   "niche": "Water treatment works",
+   "region": "Nordics",
+   "employees": 1200,
+   "controlAge": 13,
+   "sites": 5
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "rookwood-water-services.example"
+ },
+ {
+  "id": "a079",
+  "name": "Sedgemoor Speciality Chemicals",
+  "niche": "Specialty chemicals plant",
+  "nicheConfidence": 0.94,
+  "region": "Nordics",
+  "country": "Norway",
+  "owner": "sofia",
+  "attributes": {
+   "niche": "Specialty chemicals plant",
+   "region": "Nordics",
+   "employees": 6200,
+   "controlAge": 15,
+   "sites": 3
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "sedgemoor-speciality-chemicals.example"
+ },
+ {
+  "id": "a080",
+  "name": "Trent Vale Gas Processing",
+  "niche": "Gas processing plant",
+  "nicheConfidence": 0.88,
+  "region": "UK & Ireland",
+  "country": "United Kingdom",
+  "owner": "sofia",
+  "attributes": {
+   "niche": "Gas processing plant",
+   "region": "UK & Ireland",
+   "employees": 1800,
+   "controlAge": 21,
+   "sites": 2
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "trent-vale-gas-processing.example"
+ },
+ {
+  "id": "a081",
+  "name": "Underhill Refinery",
+  "niche": "Refinery",
+  "nicheConfidence": 0.98,
+  "region": "South East Asia",
+  "country": "Singapore",
+  "owner": "aisha",
+  "attributes": {
+   "niche": "Refinery",
+   "region": "South East Asia",
+   "employees": 12500,
+   "controlAge": 9,
+   "sites": 2
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "underhill-refinery.example"
+ },
+ {
+  "id": "a082",
+  "name": "Wardle Offshore",
+  "niche": "Offshore platform",
+  "nicheConfidence": 0.91,
+  "region": "South East Asia",
+  "country": "Singapore",
+  "owner": "aisha",
+  "attributes": {
+   "niche": "Offshore platform",
+   "region": "South East Asia",
+   "employees": 12500,
+   "controlAge": 11,
+   "sites": 3
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "wardle-offshore.example"
+ },
+ {
+  "id": "a083",
+  "name": "Amberley Storage",
+  "niche": "Tank storage terminal",
+  "nicheConfidence": 0.95,
+  "region": "Middle East",
+  "country": "Oman",
+  "owner": "aisha",
+  "attributes": {
+   "niche": "Tank storage terminal",
+   "region": "Middle East",
+   "employees": 4800,
+   "controlAge": 12,
+   "sites": 1
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "amberley-storage.example"
+ },
+ {
+  "id": "a084",
+  "name": "Blackwater Power",
+  "niche": "Power station",
+  "nicheConfidence": 0.97,
+  "region": "South East Asia",
+  "country": "Malaysia",
+  "owner": "aisha",
+  "attributes": {
+   "niche": "Power station",
+   "region": "South East Asia",
+   "employees": 8500,
+   "controlAge": 13,
+   "sites": 1
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "blackwater-power.example"
+ },
+ {
+  "id": "a085",
+  "name": "Carrick Water Services",
+  "niche": "Water treatment works",
+  "nicheConfidence": 0.8,
+  "region": "UK & Ireland",
+  "country": "United Kingdom",
+  "owner": "sofia",
+  "attributes": {
+   "niche": "Water treatment works",
+   "region": "UK & Ireland",
+   "employees": 4800,
+   "controlAge": 12,
+   "sites": 3
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "carrick-water-services.example"
+ },
+ {
+  "id": "a086",
+  "name": "Dalton Hydrogen",
+  "niche": "Hydrogen project",
+  "nicheConfidence": 0.95,
+  "region": "UK & Ireland",
+  "country": "Ireland",
+  "owner": "sofia",
+  "attributes": {
+   "niche": "Hydrogen project",
+   "region": "UK & Ireland",
+   "employees": 1800,
+   "controlAge": 16,
+   "sites": 3
+  },
+  "crm": {
+   "status": "Customer",
+   "since": "2024-07-23",
+   "field": "Stage = Closed won"
+  },
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "dalton-hydrogen.example"
+ },
+ {
+  "id": "a087",
+  "name": "Eskdale Power",
+  "niche": "Power station",
+  "nicheConfidence": 0.9,
+  "region": "Middle East",
+  "country": "Oman",
+  "owner": "aisha",
+  "attributes": {
+   "niche": "Power station",
+   "region": "Middle East",
+   "employees": 6200,
+   "controlAge": 10,
+   "sites": 3
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "eskdale-power.example"
+ },
+ {
+  "id": "a088",
+  "name": "Foxley Speciality Chemicals",
+  "niche": "Specialty chemicals plant",
+  "nicheConfidence": 0.82,
+  "region": "UK & Ireland",
+  "country": "United Kingdom",
+  "owner": "sofia",
+  "attributes": {
+   "niche": "Specialty chemicals plant",
+   "region": "UK & Ireland",
+   "employees": 2400,
+   "controlAge": 19,
+   "sites": 4
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "foxley-speciality-chemicals.example"
+ },
+ {
+  "id": "a089",
+  "name": "Gilling Green Hydrogen",
+  "niche": "Hydrogen project",
+  "nicheConfidence": 0.92,
+  "region": "South East Asia",
+  "country": "Malaysia",
+  "owner": "aisha",
+  "attributes": {
+   "niche": "Hydrogen project",
+   "region": "South East Asia",
+   "employees": 2400,
+   "controlAge": 8,
+   "sites": 1
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "gilling-green-hydrogen.example"
+ },
+ {
+  "id": "a090",
+  "name": "Hexley Subsea",
+  "niche": "Offshore platform",
+  "nicheConfidence": 0.77,
+  "region": "Middle East",
+  "country": "Oman",
+  "owner": "aisha",
+  "attributes": {
+   "niche": "Offshore platform",
+   "region": "Middle East",
+   "employees": 3500,
+   "controlAge": 18,
+   "sites": 2
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "hexley-subsea.example"
+ },
+ {
+  "id": "a091",
+  "name": "Ingram Midstream",
+  "niche": "Gas processing plant",
+  "nicheConfidence": 0.86,
+  "region": "Benelux",
+  "country": "Belgium",
+  "owner": "marco",
+  "attributes": {
+   "niche": "Gas processing plant",
+   "region": "Benelux",
+   "employees": 1200,
+   "controlAge": 15,
+   "sites": 3
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "ingram-midstream.example"
+ },
+ {
+  "id": "a092",
+  "name": "Knowle Energy",
+  "niche": "Power station",
+  "nicheConfidence": 0.85,
+  "region": "South East Asia",
+  "country": "Singapore",
+  "owner": "aisha",
+  "attributes": {
+   "niche": "Power station",
+   "region": "South East Asia",
+   "employees": 320,
+   "controlAge": 17,
+   "sites": 2
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "knowle-energy.example"
+ },
+ {
+  "id": "a093",
+  "name": "Leyburn Speciality Chemicals",
+  "niche": "Specialty chemicals plant",
+  "nicheConfidence": 0.95,
+  "region": "UK & Ireland",
+  "country": "United Kingdom",
+  "owner": "sofia",
+  "attributes": {
+   "niche": "Specialty chemicals plant",
+   "region": "UK & Ireland",
+   "employees": 4800,
+   "controlAge": 13,
+   "sites": 2
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "leyburn-speciality-chemicals.example"
+ },
+ {
+  "id": "a094",
+  "name": "Mallory Green Hydrogen",
+  "niche": "Hydrogen project",
+  "nicheConfidence": 0.95,
+  "region": "South East Asia",
+  "country": "Singapore",
+  "owner": "aisha",
+  "attributes": {
+   "niche": "Hydrogen project",
+   "region": "South East Asia",
+   "employees": 12500,
+   "controlAge": 16,
+   "sites": 5
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "mallory-green-hydrogen.example"
+ },
+ {
+  "id": "a095",
+  "name": "Netherby Offshore",
+  "niche": "Offshore platform",
+  "nicheConfidence": 0.8,
+  "region": "Nordics",
+  "country": "Denmark",
+  "owner": "sofia",
+  "attributes": {
+   "niche": "Offshore platform",
+   "region": "Nordics",
+   "employees": 320,
+   "controlAge": 16,
+   "sites": 3
+  },
+  "crm": {
+   "status": "Customer",
+   "since": "2025-08-08",
+   "field": "Stage = Closed won"
+  },
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "netherby-offshore.example"
+ },
+ {
+  "id": "a096",
+  "name": "Otterburn Subsea",
+  "niche": "Offshore platform",
+  "nicheConfidence": 0.88,
+  "region": "DACH",
+  "country": "Switzerland",
+  "owner": "kenji",
+  "attributes": {
+   "niche": "Offshore platform",
+   "region": "DACH",
+   "employees": 2400,
+   "controlAge": 13,
+   "sites": 4
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "otterburn-subsea.example"
+ },
+ {
+  "id": "a097",
+  "name": "Penrose Refinery",
+  "niche": "Refinery",
+  "nicheConfidence": 0.78,
+  "region": "DACH",
+  "country": "Austria",
+  "owner": "kenji",
+  "attributes": {
+   "niche": "Refinery",
+   "region": "DACH",
+   "employees": 3500,
+   "controlAge": 9,
+   "sites": 4
+  },
+  "crm": {},
+  "description": "",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "penrose-refinery.example"
+ },
+ {
+  "id": "a098",
+  "name": "Orrin Automation",
+  "niche": "Specialty chemicals plant",
+  "nicheConfidence": 0.91,
+  "region": "South East Asia",
+  "country": "Malaysia",
+  "owner": "aisha",
+  "attributes": {
+   "niche": "Specialty chemicals plant",
+   "region": "South East Asia",
+   "employees": 8500,
+   "controlAge": 9,
+   "sites": 1
+  },
+  "crm": {
+   "competitor": true
+  },
+  "description": "A competitor of Vantor Controls.",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "orrin-automation.example"
+ },
+ {
+  "id": "a099",
+  "name": "Calder Process Systems",
+  "niche": "Specialty chemicals plant",
+  "nicheConfidence": 0.84,
+  "region": "Middle East",
+  "country": "United Arab Emirates",
+  "owner": "aisha",
+  "attributes": {
+   "niche": "Specialty chemicals plant",
+   "region": "Middle East",
+   "employees": 4800,
+   "controlAge": 13,
+   "sites": 3
+  },
+  "crm": {
+   "competitor": true
+  },
+  "description": "A competitor of Vantor Controls.",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "calder-process-systems.example"
+ },
+ {
+  "id": "a100",
+  "name": "Brennick Controls",
+  "niche": "Specialty chemicals plant",
+  "nicheConfidence": 0.79,
+  "region": "DACH",
+  "country": "Switzerland",
+  "owner": "kenji",
+  "attributes": {
+   "niche": "Specialty chemicals plant",
+   "region": "DACH",
+   "employees": 3500,
+   "controlAge": 15,
+   "sites": 1
+  },
+  "crm": {
+   "competitor": true
+  },
+  "description": "A competitor of Vantor Controls.",
+  "scenario": null,
+  "segmentPolicy": null,
+  "domain": "brennick-controls.example"
+ }
+]

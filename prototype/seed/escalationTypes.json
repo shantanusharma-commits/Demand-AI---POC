@@ -1,0 +1,162 @@
+[
+ {
+  "n": "1",
+  "escalation": "Failed criterion: medium confidence",
+  "what_makes_it_one": "Confidence is between 0.50 and 0.75",
+  "who_gets_it": "Owning rep",
+  "what_they_decide": "Approve, edit or skip",
+  "how_it_appears": "Approval card",
+  "due_and_default": "3 days: expires and the account re-ranks",
+  "feature": "NBA-08"
+ },
+ {
+  "n": "2",
+  "escalation": "Failed criterion: message verification",
+  "what_makes_it_one": "An unsupported claim, a banned phrase or a tone problem the AI could not correct",
+  "who_gets_it": "Owning rep",
+  "what_they_decide": "Fix the draft, approve or skip",
+  "how_it_appears": "Approval card",
+  "due_and_default": "3 days: expires and re-ranks",
+  "feature": "NBA-07"
+ },
+ {
+  "n": "3",
+  "escalation": "Failed criterion: identity tier I3 or I5",
+  "what_makes_it_one": "The contact was found by an unconfirmed or single source",
+  "who_gets_it": "Owning rep",
+  "what_they_decide": "Approve, edit or skip; ask the admin to verify",
+  "how_it_appears": "Approval card",
+  "due_and_default": "3 days: expires and re-ranks",
+  "feature": "PRO-04"
+ },
+ {
+  "n": "4",
+  "escalation": "Failed criterion: segment policy requires a person",
+  "what_makes_it_one": "The segment is set to require approval",
+  "who_gets_it": "Owning rep",
+  "what_they_decide": "Approve, edit or skip",
+  "how_it_appears": "Approval card",
+  "due_and_default": "3 days: expires and re-ranks",
+  "feature": "CMP-02"
+ },
+ {
+  "n": "5",
+  "escalation": "A protective check could not run",
+  "what_makes_it_one": "The CRM, the exclusions list or the approval service cannot be read",
+  "who_gets_it": "Owning rep sees the reason; admin is alerted",
+  "what_they_decide": "Wait for the check, or skip",
+  "how_it_appears": "Held item with the reason",
+  "due_and_default": "Stays held until the check runs",
+  "feature": "FND-05, SEG-04, PRO-07"
+ },
+ {
+  "n": "6",
+  "escalation": "No draft produced",
+  "what_makes_it_one": "The language model failed",
+  "who_gets_it": "Owning rep",
+  "what_they_decide": "Write the message or retry",
+  "how_it_appears": "Card with the signals attached",
+  "due_and_default": "3 days: expires and re-ranks",
+  "feature": "NBA-05"
+ },
+ {
+  "n": "7",
+  "escalation": "No verified channel",
+  "what_makes_it_one": "The contact has no verified email, LinkedIn or phone",
+  "who_gets_it": "Owning rep",
+  "what_they_decide": "Choose a channel or ask for enrichment",
+  "how_it_appears": "Approval card",
+  "due_and_default": "3 days: expires and re-ranks",
+  "feature": "NBA-06"
+ },
+ {
+  "n": "8",
+  "escalation": "A campaign (NBC)",
+  "what_makes_it_one": "A segment is flagged: 10 or more accounts share a microsegment in 7 days",
+  "who_gets_it": "Sales manager",
+  "what_they_decide": "Confirm, edit or decline the campaign and each touch. Always needed before it starts",
+  "how_it_appears": "Campaign card",
+  "due_and_default": "3 days: falls back to individual NBAs",
+  "feature": "NBA-11"
+ },
+ {
+  "n": "9",
+  "escalation": "A campaign touch fails its re-check",
+  "what_makes_it_one": "Before a touch, a protective check or message verification fails (for example the contact became excluded)",
+  "who_gets_it": "Owning rep",
+  "what_they_decide": "Fix or skip that touch",
+  "how_it_appears": "Approval card",
+  "due_and_default": "The touch is skipped",
+  "feature": "NBA-11"
+ },
+ {
+  "n": "10",
+  "escalation": "A held record",
+  "what_makes_it_one": "Held after three failed refresh cycles: an identity dispute (I4) or a name-only CRM match",
+  "who_gets_it": "Owning rep (admin for configuration)",
+  "what_they_decide": "Resolve the dispute or confirm or reject the match",
+  "how_it_appears": "Item in the escalation queue",
+  "due_and_default": "Stays held",
+  "feature": "PRO-10"
+ },
+ {
+  "n": "11",
+  "escalation": "An unmatched reply",
+  "what_makes_it_one": "A reply cannot be matched to a send or contact",
+  "who_gets_it": "Owning rep",
+  "what_they_decide": "Match it",
+  "how_it_appears": "Item in the escalation queue",
+  "due_and_default": "Stays unmatched",
+  "feature": "RSP-01"
+ },
+ {
+  "n": "12",
+  "escalation": "Unclear niche or persona",
+  "what_makes_it_one": "The classifier has low confidence",
+  "who_gets_it": "Owning rep",
+  "what_they_decide": "Set the niche or persona",
+  "how_it_appears": "Flag",
+  "due_and_default": "A generic persona or no niche",
+  "feature": "SEG-01, SEG-03"
+ },
+ {
+  "n": "13",
+  "escalation": "The customer does not know their ICP",
+  "what_makes_it_one": "The AI has proposed an ICP from the website and an interview",
+  "who_gets_it": "Admin",
+  "what_they_decide": "Confirm or edit the ICP",
+  "how_it_appears": "Configuration item",
+  "due_and_default": "Blocks list building",
+  "feature": "PRO-01"
+ },
+ {
+  "n": "14",
+  "escalation": "Setup decisions",
+  "what_makes_it_one": "The ICP and the CRM field and value that mean closed-won",
+  "who_gets_it": "Admin with the sales leader",
+  "what_they_decide": "Decide",
+  "how_it_appears": "Configuration item",
+  "due_and_default": "Blocks go-live",
+  "feature": "FND-15"
+ },
+ {
+  "n": "15",
+  "escalation": "Backtest below the bar",
+  "what_makes_it_one": "Under 12 of 15 won in Tier A or B, or over 3 of 15 lost, or a tier above 40% of the random set",
+  "who_gets_it": "Sales leader and product",
+  "what_they_decide": "Fix and rerun; below 9 of 15 stop selling scoring",
+  "how_it_appears": "Backtest report",
+  "due_and_default": "Blocks go-live",
+  "feature": "SCR-05"
+ },
+ {
+  "n": "16",
+  "escalation": "Enabling autopilot for a segment",
+  "what_makes_it_one": "The admin wants the AI to send without a click",
+  "who_gets_it": "Admin with the sales leader",
+  "what_they_decide": "Enable only after the backtest and a dry run pass",
+  "how_it_appears": "Policy switch",
+  "due_and_default": "Stays off",
+  "feature": "CMP-02"
+ }
+]

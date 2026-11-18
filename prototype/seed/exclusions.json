@@ -1,0 +1,123 @@
+[
+ {
+  "id": "X-brightwell",
+  "kind": "Customer",
+  "accountId": "brightwell",
+  "reason": "Closed-won in the CRM (2023-03-14)",
+  "source": "CRM (read-only)",
+  "date": "2023-03-14"
+ },
+ {
+  "id": "X-a041",
+  "kind": "Customer",
+  "accountId": "a041",
+  "reason": "Closed-won in the CRM (2025-08-08)",
+  "source": "CRM (read-only)",
+  "date": "2025-08-08"
+ },
+ {
+  "id": "X-a050",
+  "kind": "Customer",
+  "accountId": "a050",
+  "reason": "Closed-won in the CRM (2026-01-13)",
+  "source": "CRM (read-only)",
+  "date": "2026-01-13"
+ },
+ {
+  "id": "X-a059",
+  "kind": "Customer",
+  "accountId": "a059",
+  "reason": "Closed-won in the CRM (2025-01-30)",
+  "source": "CRM (read-only)",
+  "date": "2025-01-30"
+ },
+ {
+  "id": "X-a068",
+  "kind": "Customer",
+  "accountId": "a068",
+  "reason": "Closed-won in the CRM (2024-08-19)",
+  "source": "CRM (read-only)",
+  "date": "2024-08-19"
+ },
+ {
+  "id": "X-a077",
+  "kind": "Customer",
+  "accountId": "a077",
+  "reason": "Closed-won in the CRM (2024-08-13)",
+  "source": "CRM (read-only)",
+  "date": "2024-08-13"
+ },
+ {
+  "id": "X-a086",
+  "kind": "Customer",
+  "accountId": "a086",
+  "reason": "Closed-won in the CRM (2024-07-23)",
+  "source": "CRM (read-only)",
+  "date": "2024-07-23"
+ },
+ {
+  "id": "X-a095",
+  "kind": "Customer",
+  "accountId": "a095",
+  "reason": "Closed-won in the CRM (2025-08-08)",
+  "source": "CRM (read-only)",
+  "date": "2025-08-08"
+ },
+ {
+  "id": "X-a098",
+  "kind": "Competitor",
+  "accountId": "a098",
+  "reason": "Named competitor",
+  "source": "Admin list",
+  "date": "2026-10-02"
+ },
+ {
+  "id": "X-a099",
+  "kind": "Competitor",
+  "accountId": "a099",
+  "reason": "Named competitor",
+  "source": "Admin list",
+  "date": "2026-10-02"
+ },
+ {
+  "id": "X-a100",
+  "kind": "Competitor",
+  "accountId": "a100",
+  "reason": "Named competitor",
+  "source": "Admin list",
+  "date": "2026-10-02"
+ },
+ {
+  "id": "X-seg-offshore-platform",
+  "kind": "Paused segment",
+  "segment": "Offshore platform",
+  "reason": "Paused by the sales leader until the 2027 plan",
+  "source": "Admin",
+  "date": "2026-10-20"
+ },
+ {
+  "id": "X-seg-water-treatment-works",
+  "kind": "Paused segment",
+  "segment": "Water treatment works",
+  "reason": "Paused by the sales leader until the 2027 plan",
+  "source": "Admin",
+  "date": "2026-10-20"
+ },
+ {
+  "id": "X-c114",
+  "kind": "Do not contact",
+  "contactId": "c114",
+  "accountId": "a049",
+  "reason": "Asked not to be contacted (legal request)",
+  "source": "Admin",
+  "date": "2026-09-12"
+ },
+ {
+  "id": "X-open-upwood",
+  "kind": "Open deal",
+  "accountId": "upwood",
+  "reason": "Open opportunity \"Upwood DCS migration phase 1\" (Proposal), owned by Marco Lindqvist",
+  "source": "CRM (read-only)",
+  "date": "2026-10-28"
+ }
+]

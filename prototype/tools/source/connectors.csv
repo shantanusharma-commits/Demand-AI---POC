@@ -1,0 +1,41 @@
+id,category,connector,what_it_gives,access,release,fallback,feature
+N1,Data provider,Apollo,Discover (POST /mixed_people/search) and enrich (POST /people/match; bulk up to 10 per call); waterfall email and phone arrive on a webhook,API key; credits per enrichment,R1,Next provider,PRO-03
+N2,Data provider,ZoomInfo,"Lookup, Search Contacts, POST /data/v1/contacts/enrich. Search and lookup free; enrich one credit per record, then Under Management 12 months","JWT from /authenticate, about 60 minutes, no refresh token; three rate-limit windows; API often gated to Advanced or Elite (PD6)",R1,Cached until a key (PD6),PRO-03
+N3,Data provider,Lusha,GET /person?email=; fills mobile gaps; a no-match is a 404 and free,API key; 25 requests per second,R1,Mark single-source,PRO-03
+N4,Signals,LinkedIn engagement provider (Common Room; LinkedIn page analytics where approved),"Comments, likes and shares with the post text",Licence; source per PD27,R1,Seeded and labelled,SIG-21
+N5,Signals,Crunchbase,"Funding, M&A, news",Paid API,R1,Cached,SIG-04
+N6,Signals,PredictLeads,"Hiring, news, tech, leadership",Licence (PD17),R1,Cached,SIG-04
+N7,Signals,SEC EDGAR,"8-K incidents, M&A, 10-K and 10-Q full-text search",Free,R1,Skip,SIG-04
+N8,Signals,BuiltWith,Tech-stack change,Paid API,R1,PredictLeads,SIG-04
+N9,Signals,GDELT,Structured market events,Free,R1,NewsCatcher,SIG-03
+N10,Signals,"Firecrawl (monitor, scrape)","Narrative news, trend pages, page monitoring",Key,R1,Exa Monitors,SIG-03
+N11,Signals,NewsCatcher,News and hiring signals,Key,R1,GDELT,SIG-03
+N12,Signals,Exa Monitors; Tavily,Sector watching; evidence capture,Keys,R1,Firecrawl,SIG-03
+N13,Signals,Apollo job postings and Job Change Alerts,Hiring; champion and role changes,Key,R1,PredictLeads,SIG-06
+N14,Signals,UserGems,Champion job changes,Licence,R1,Apollo alerts,SIG-06
+N15,Signals,HG Insights,Contract renewals; rival customer health,Licence,R1,Seeded and labelled,SIG-05
+N16,Signals,"G2 (Buyer Intent, reviews)",Rival and own research intent; rival reviews,Licence; check review terms,R1 intent; R2 reviews,Public pages,SIG-05
+N17,Signals,Verid,"Rival pricing, careers and customer-wall changes",Licence,R1,Firecrawl monitor,SIG-05
+N18,Signals,Regulatory calendars; tender portals,Deadlines; tenders,Free,R1,Admin feed,SIG-03
+N19,Signals,Common Room named-account engagement,Named-account engagement (same licence as N4),Licence,R2,Skip,SIG-04
+N20,Signals,Apify no-cookies actors; patent source,Broad profile and company data; patents,Legal review; source to decide,R2,Skip,SIG-04
+N21,CRM,Salesforce,"Accounts, contacts, deals, stages, activity. Read-only: never written to",OAuth,R1 read-only,Last snapshot,INT-01
+N22,CRM,HubSpot,Same,OAuth,R1 read-only,Last snapshot,INT-01
+N23,CRM,Microsoft Dynamics 365,Same,Entra ID app,R1 read-only,Last snapshot,INT-01
+N24,Email and calendar,"Microsoft Graph (Outlook, Calendar)","Sends, replies, meetings; send as the rep",OAuth,R1,Rep logs by hand,INT-02
+N25,Email and calendar,Gmail and Google Calendar,Same,OAuth,R1,Rep logs by hand,INT-02
+N26,LinkedIn,Dripify; Sales Navigator,Conversation export; message views; profile views,Dripify account; Sales Navigator or Premium seat,R2,Manual upload,INT-09
+N27,Analytics,GA4; RB2B,Website visits; AI assistant referrals; visitor identification,Property access; licence,R2,CSV upload,INT-08
+N28,Marketing automation,HubSpot; Marketo; Pardot; Salesforce Marketing Cloud,"Content downloads, email events; nurture sends (R3)",Per customer,R2 read; R3 sends,CSV upload,INT-08
+N29,Calls,Gong; Fireflies; Teams transcripts,"Transcripts, renewal dates, follow-ups",Per customer,R2,Manual note,INT-09
+N30,Collaboration,Slack,Push (R1); interactive cards and queries (R2),Workspace app,R1 push; R2 interactive,Chat,INT-03
+N31,Collaboration,Microsoft Teams,Same; inquiries captured as signals,Teams app,R1 push; R2 interactive,Chat,INT-04
+N32,Agent interfaces,MCP server (ours),"Queue, why, brief and memory callable by Claude, OpenAI agents or customer tooling",Token,R2,None,INT-06
+N33,Agent interfaces,MCP clients (HubSpot MCP and others),Use the customer's connected MCP servers,Per server,R2,None,INT-07
+N34,Agent interfaces,Command line interface,"Ask, queue, approve, status, admin",Token,R2,Chat,INT-05
+N35,Content,Claude API (text and design),"Drafts, verification, assets",Key,R1 text; R2 assets,Smaller model,CON-02
+N36,Content,Canva Connect and MCP; Moda; Figma MCP; Gamma,Brand-template design and decks. To evaluate,Per tool; check API tier and brand templates,R2,One-pager template,CON-02
+N37,Content,HeyGen; Synthesia,Short video,Licence,R3,Skip,CON-02
+N38,Sending,Outlook and Gmail (interim),Rep sends from own mailbox,OAuth,R1,Rep logs by hand,CMP-01
+N39,Sending,"Sequencers (Outreach, Salesloft, Apollo); Dripify; Marketing Cloud; HubSpot sequences",Integrated sends; stop on reply,Per customer,R3,Interim sending,CMP-04
+N40,Reporting,Power BI export; open API; webhooks,Data out,Token,R2,None,INT-10

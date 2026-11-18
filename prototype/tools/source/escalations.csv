@@ -1,0 +1,17 @@
+n,escalation,what_makes_it_one,who_gets_it,what_they_decide,how_it_appears,due_and_default,feature
+1,Failed criterion: medium confidence,Confidence is between 0.50 and 0.75,Owning rep,"Approve, edit or skip",Approval card,3 days: expires and the account re-ranks,NBA-08
+2,Failed criterion: message verification,"An unsupported claim, a banned phrase or a tone problem the AI could not correct",Owning rep,"Fix the draft, approve or skip",Approval card,3 days: expires and re-ranks,NBA-07
+3,Failed criterion: identity tier I3 or I5,The contact was found by an unconfirmed or single source,Owning rep,"Approve, edit or skip; ask the admin to verify",Approval card,3 days: expires and re-ranks,PRO-04
+4,Failed criterion: segment policy requires a person,The segment is set to require approval,Owning rep,"Approve, edit or skip",Approval card,3 days: expires and re-ranks,CMP-02
+5,A protective check could not run,"The CRM, the exclusions list or the approval service cannot be read",Owning rep sees the reason; admin is alerted,"Wait for the check, or skip",Held item with the reason,Stays held until the check runs,"FND-05, SEG-04, PRO-07"
+6,No draft produced,The language model failed,Owning rep,Write the message or retry,Card with the signals attached,3 days: expires and re-ranks,NBA-05
+7,No verified channel,"The contact has no verified email, LinkedIn or phone",Owning rep,Choose a channel or ask for enrichment,Approval card,3 days: expires and re-ranks,NBA-06
+8,A campaign (NBC),A segment is flagged: 10 or more accounts share a microsegment in 7 days,Sales manager,"Confirm, edit or decline the campaign and each touch. Always needed before it starts",Campaign card,3 days: falls back to individual NBAs,NBA-11
+9,A campaign touch fails its re-check,"Before a touch, a protective check or message verification fails (for example the contact became excluded)",Owning rep,Fix or skip that touch,Approval card,The touch is skipped,NBA-11
+10,A held record,Held after three failed refresh cycles: an identity dispute (I4) or a name-only CRM match,Owning rep (admin for configuration),Resolve the dispute or confirm or reject the match,Item in the escalation queue,Stays held,PRO-10
+11,An unmatched reply,A reply cannot be matched to a send or contact,Owning rep,Match it,Item in the escalation queue,Stays unmatched,RSP-01
+12,Unclear niche or persona,The classifier has low confidence,Owning rep,Set the niche or persona,Flag,A generic persona or no niche,"SEG-01, SEG-03"
+13,The customer does not know their ICP,The AI has proposed an ICP from the website and an interview,Admin,Confirm or edit the ICP,Configuration item,Blocks list building,PRO-01
+14,Setup decisions,The ICP and the CRM field and value that mean closed-won,Admin with the sales leader,Decide,Configuration item,Blocks go-live,FND-15
+15,Backtest below the bar,"Under 12 of 15 won in Tier A or B, or over 3 of 15 lost, or a tier above 40% of the random set",Sales leader and product,Fix and rerun; below 9 of 15 stop selling scoring,Backtest report,Blocks go-live,SCR-05
+16,Enabling autopilot for a segment,The admin wants the AI to send without a click,Admin with the sales leader,Enable only after the backtest and a dry run pass,Policy switch,Stays off,CMP-02

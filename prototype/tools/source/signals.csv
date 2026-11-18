@@ -1,0 +1,43 @@
+code,level,signal,source_or_api,capture,signal_tier,release,access_and_notes,feature
+M1,Market,Industry and regulatory events,GDELT (structured events); NewsCatcher,"Pull, daily",3 (proposed),R1,GDELT free; NewsCatcher key,SIG-03
+M2,Market,Narrative news and trends,Firecrawl monitor; Exa Monitors,"Pull, daily",3 (proposed),R1,Keys,SIG-03
+M3,Market,Energy and commodity shifts,GDELT; NewsCatcher; public energy data,"Pull, daily",3 (proposed),R1,Keys,SIG-03
+M4,Market,Compliance or regulatory deadline approaching (C1g),Public regulatory calendars,"Pull, daily",3,R1,Free,SIG-03
+Co1,Company,Funding announcement (C1a),Crunchbase,"Pull, per account",1,R1,Paid API,SIG-04
+Co2,Company,"Hiring surge, new postings (C1b)",PredictLeads; Apollo job postings,"Pull, per account",2,R1,PredictLeads licence (PD17),SIG-04
+Co3,Company,Breach or security incident (C1d),SEC EDGAR 8-K; breach trackers,"Pull, per account",1,R1,Free (EDGAR),SIG-04
+Co4,Company,M&A activity (C1e),Crunchbase; SEC EDGAR; PredictLeads news,"Pull, per account",2,R1,Paid API,SIG-04
+Co5,Company,Tech-stack change (C1f),BuiltWith; PredictLeads,"Pull, per account",2,R1,Paid API,SIG-04
+Co6,Company,"Tender published, capex or project announced, plant expansion",Tender portals; public web; filings; PredictLeads; admin feed,"Pull, per account",1,R1,Free and paid,SIG-04
+Co7,Company,10-K or 10-Q language shift (C1h),SEC EDGAR full-text search,"Pull, per account",3 (proposed),R1,Free,SIG-04
+Co8,Company,General announcement or tool-gap statement (C1i),PredictLeads news; Crunchbase news; NewsCatcher,"Pull, per account",3 (proposed),R1,Paid API,SIG-04
+Co9,Company,New plant head or leadership change at the account,PredictLeads; Apollo,"Pull, per account",1,R1,Paid API,SIG-04
+Co11,Company,Named-account engagement (C1p),Common Room,"Pull, per account",2 (proposed),R2,Common Room licence,SIG-04
+Co12,Company,Patent filings,Patent source (to decide),"Pull, per account",3 (proposed),R2,Source to decide,SIG-04
+Co13,Company,"Broad engagement, profile and company data (C1q)",Three Apify no-cookies actors,Pull,3 (proposed),R2,Legal review first,SIG-04
+Cm1,Competitor,Contract-renewal window with a named rival (C1j),HG Insights Contracts field,"Pull, per account",1,R1,HG Insights licence,SIG-05
+Cm2,Competitor,Rival customer-health decline (C1k),HG Insights AI Maturity and Technographics,"Pull, per account",2,R1,HG Insights licence,SIG-05
+Cm3,Competitor,Account researching a named rival (C1t),G2 Buyer Intent,"Push, reconciled to the target list",1,R1,G2 licence,SIG-05
+Cm4,Competitor,Rival named in job posts or on the tech stack,Apollo job postings; PredictLeads; BuiltWith,"Pull, per account",2 (proposed),R1,Keys,SIG-05
+Cm5,Competitor,"Rival pricing, careers and customer-wall changes",Verid,"Pull, daily",3 (proposed),R1,Verid licence,SIG-05
+Cm6,Competitor,Complaints in rival reviews,G2 public pages (research agent),Pull,2 (proposed),R2,Check G2 terms first,RES-02
+P1,Personal,New executive hire (C1c),PredictLeads; Apollo Job Change Alerts,"Pull, per account",1,R1,Keys,SIG-06
+P2,Personal,Champion changes job (C1n),Apollo Job Change Alerts; UserGems,"Pull, per contact",1,R1,UserGems licence,SIG-06
+P3,Personal,Buyer role change,PredictLeads; Apollo,"Pull, per contact",2 (proposed),R1,Keys,SIG-06
+P5,Personal,"LinkedIn comment on a relevant post (the customer's own, or the account's)",LinkedIn engagement provider (Common Room; page analytics where approved),"Pull, per account",2 (proposed),R1,Licence; source per PD27,SIG-21
+P6,Personal,"LinkedIn share or repost, with or without a comment",LinkedIn engagement provider,"Pull, per account","2 (proposed) with a comment, 3 (proposed) without",R1,Licence; source per PD27,SIG-21
+P7,Personal,LinkedIn like or reaction on a relevant post,LinkedIn engagement provider,"Pull, per account",3 (proposed),R1,Licence; source per PD27,SIG-21
+P4,Personal,Warm path through the team's LinkedIn,Each rep's own LinkedIn connections (own login only); CRM relationships,Pull,2 (proposed),R2,Rep consent; no bulk scrape,SIG-10
+F1,First-party,Visited our website (C1u),GA4; RB2B-style de-anonymisation,"Push, reconciled","1 pricing page, 2 general",R2,GA4 connector,SIG-07
+F2,First-party,Account researching us on G2 (C1v),G2 Buyer Intent,"Push, reconciled",1 pricing tab,R2,G2 licence,SIG-07
+F3,First-party,Content download (C1w),"HubSpot, Marketo, Pardot, Salesforce Marketing Cloud","Push, already matched",2,R2,Per customer,SIG-07
+F4,First-party,Email opened or clicked (C1x),Sequencing tool; Outlook,"Push, already matched","3 open, 2 (proposed) click",R2,Per customer,SIG-07
+F5,First-party,Reply on an active thread,Outlook; Gmail; Dripify,"Push, fast lane",1,R2,Connectors,SIG-08
+F6,First-party,"LinkedIn conversations: messages, accepts, replies",Dripify export; Sales Navigator,Pull,2 (proposed),R2,Dripify; Sales Navigator,SIG-08
+F7,First-party,"Renewal date, requested follow-up, budget statement","Call transcripts (Gong, Fireflies, Teams); notes",Pull,"1 renewal, 2 (proposed) follow-up",R2,Transcript source,SIG-08
+F8,First-party,Known CRM contact resurfaces at a target account (C1r),CRM,Pull,2 (proposed),R2,CRM read,SIG-09
+F9,First-party,Existing account now has a different contact (C1s),CRM,Pull,2 (proposed),R2,CRM read,SIG-09
+F10,First-party,Live webinar or demo attendance,Webinar platform; calendar,"Push, fast lane",1,R2,Per customer,SIG-17
+F11,First-party,High-confidence comment on a post the account owns or was tagged in,LinkedIn via Dripify or Sales Navigator,"Push, fast lane",1 (proposed),R2,Dripify,SIG-17
+F12,First-party,AI assistant referral (formerly AI search discovery),GA4 referrals from ChatGPT and Claude,"Push, reconciled",2 (proposed),R2,GA4 connector,SIG-11
+F13,First-party,Event and webinar attendee lists,CSV upload; platform export,Upload,2 (proposed),R2,Manual,SIG-07

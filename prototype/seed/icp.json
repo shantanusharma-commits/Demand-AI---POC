@@ -1,0 +1,73 @@
+{
+ "version": "ICP v3 · confirmed 4 Nov 2026",
+ "status": "confirmed",
+ "path": "A",
+ "text": "We modernise control and safety systems for refineries, petrochemical complexes, LNG terminals and gas processing plants in the UK and Ireland, the Nordics, Benelux and DACH. Best fit: 500 to 10,000 staff, a control system older than 12 years, two or more sites.",
+ "criteria": [
+  {
+   "label": "Niche (plant type)",
+   "attr": "niche",
+   "type": "in",
+   "values": [
+    "Refinery",
+    "Petrochemical complex",
+    "LNG terminal",
+    "Gas processing plant",
+    "Specialty chemicals plant"
+   ],
+   "partial": [
+    "Tank storage terminal",
+    "Hydrogen project",
+    "Power station"
+   ],
+   "weight": 30,
+   "key": true
+  },
+  {
+   "label": "Region",
+   "attr": "region",
+   "type": "in",
+   "values": [
+    "UK & Ireland",
+    "Nordics",
+    "Benelux",
+    "DACH"
+   ],
+   "partial": [
+    "Middle East",
+    "South East Asia"
+   ],
+   "weight": 15,
+   "key": true
+  },
+  {
+   "label": "Staff",
+   "attr": "employees",
+   "type": "range",
+   "min": 500,
+   "max": 10000,
+   "weight": 15
+  },
+  {
+   "label": "Control system age (years)",
+   "attr": "controlAge",
+   "type": "min",
+   "min": 12,
+   "weight": 25,
+   "key": true
+  },
+  {
+   "label": "Sites",
+   "attr": "sites",
+   "type": "min",
+   "min": 2,
+   "weight": 15
+  }
+ ],
+ "closedWon": {
+  "field": null,
+  "value": null,
+  "note": "Not set yet: the CRM field and value that mean closed-won"
+ },
+ "weightsSource": "Category research (reference set, 4 Nov 2026)"
+}
