@@ -21,6 +21,31 @@ Open `index.html` in Chrome or Edge (double-click). Fonts need an internet conne
 | `admin/settings.html` | General, Appearance, Notifications, Security and access, Data and privacy, Usage |
 | `admin/07-…15-*.html` | The legacy prototype screens (setup, content, users, prospecting, scoring, NBA, analytics, review), copied with the admin sidebar |
 
+## Aligned with the R1 PRD (18 Nov)
+
+The mock now follows the Demand AI R1 (Prioritise) PRD. The look, the screens and the story are unchanged.
+
+| PRD rule | Where to see it |
+|---|---|
+| Score = Fit × Timing ÷ 100; Timing = S1 + ½ S2 + ¼ S3 …, capped at 100; tiers by percentile (A top 15%, B next 25%) | Account page, Overview: the breakdown, with the PRD example (30.5) |
+| Signal tiers and decay (tier 1: 100 points, full 3 days, zero by 14; tier 2: 60, 14, 60; tier 3: 30, 60, 90); strength 1–5 gives × 0.6–1.0 | `assets/mock-data.js`; Accounts › Signals |
+| The five criteria: confidence high, message verification, protective checks, identity I1 or I2, segment policy | Approvals; the account page's Engagement tab; Admin › R1 controls › Policy |
+| Assisted mode: all five met means Ready to send with a one-click Send; any failure means an approval card to the owning rep, due in 3 days | Today › Your day (Decide, Send, Reply, Review); Approvals |
+| Low confidence goes to nurture; I4 identity disputes are held; open deals and touches in the last 14 days are held | Account page › Holds and exclusions |
+| Fail closed: if the CRM or the exclusions list can't be read, every action is held and the rep sees why | Admin › R1 controls › Simulate |
+| Escalations, each with an owner, a reason, a due time and a default | Approvals › Also needs you (rep: unmatched reply, unclear niche or persona, held campaign touch; manager: campaign; leader: backtest) |
+| Next best campaign: 10+ accounts in a micro-segment in 7 days; the manager confirms; touches on day 0, 4 and 9 become tasks for each owner; each touch is re-checked; a reply removes pending touches; no confirmation in 3 days falls back to next best actions | Campaigns › Turnaround season 2027 |
+| Context graph: people, account, signals, segment, CRM facts and actions, each link with its source and date | Account page › Context graph |
+| Identity tiers I1–I5 and how each was found | Account page › Details |
+| Opt-out | Account page › Add opt-out |
+| Cold start (path A: ICP shared, spend = accounts passing the fit check; path B: proposed ICP, nothing searched until confirmed), exclusions, bands, autonomy by segment (autopilot off), connectors, run log and cost, backtest | Admin › R1 controls |
+| Backtest (15 won, 15 lost, 15 random; three bars; degrade switch) and the weekly summary | Sign in as Helen Varga (leader) › Approvals |
+| Not in R1 | Analytics, Content and first-party signals are labelled R2 |
+
+The demo clock (Admin › R1 controls › Simulate) moves time for every screen: at day 2 a campaign contact at Mangrove Aromatics opts out and their next touch is held; at day 3 unanswered approval cards expire and the accounts re-rank, and an unconfirmed campaign falls back.
+
+The PRD's ten scenarios run on the mock's own accounts: cold start A and B (admin), Juniper Petrochem (signal to action), Cinder Aromatics and Oakmere Gas Processing (a failed criterion), Wildfern Aromatics (a customer, excluded), Turnaround season 2027 (campaign), CRM unreachable (fail closed), Halcyon (LinkedIn engagement), Add opt-out on any account, and Cedar Petrochemicals (a medium-confidence card that expires at day 3).
+
 ## Five screens (18 Nov)
 
 The look, fonts and Today stay exactly as they were. The menu now has five screens; everything else opens as a tab inside one of them.

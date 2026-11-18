@@ -143,8 +143,8 @@
   const MODE = { NBC: ['Campaign · NBC', 'b-brand'], NBA: ['My actions · NBA', 'b-sec'], Building: ['Building toward a campaign', 'b-grey'] };
   const modeBadge = s => `<span class="badge ${MODE[s.mode][1]}">${s.mode === 'Building' ? `Building · ${s.building} of 10` : MODE[s.mode][0]}</span>`;
   const CSTAT = { 'Ready to confirm': 'b-ter', Running: 'b-pos', Completed: 'b-grey', Draft: 'b-warn' };
-  const campStatus = c => S.camp[c.id] || c.status;
-  const campBadge = c => `<span class="badge ${S.camp[c.id] ? (S.camp[c.id] === 'Confirmed' ? 'b-pos' : 'b-ter') : CSTAT[c.status] || 'b-grey'}">${esc(campStatus(c))}</span>`;
+  const campStatus = c => S.camp[c.id + 'x'] ? 'Declined' : S.camp[c.id] || (c.status === 'Ready to confirm' && (window.MOCK.SIM.days || 0) >= 3 ? 'Fell back to next best actions' : c.status);
+  const campBadge = c => `<span class="badge ${/Declined|Fell back/.test(campStatus(c)) ? 'b-grey' : S.camp[c.id] ? (S.camp[c.id] === 'Confirmed' ? 'b-pos' : 'b-ter') : CSTAT[c.status] || 'b-grey'}">${esc(campStatus(c))}</span>`;
   const stateBadge = st => { const k = /Meeting|positive/.test(st) ? 'b-pos' : /objection|Bounced|Taken out/.test(st) ? 'b-warn' : /Out of office|Draft/.test(st) ? 'b-grey' : /Waiting/.test(st) ? 'b-ter' : 'b-sec'; return `<span class="badge ${k}">${esc(st)}</span>`; };
   const KIND_B = { Positive: 'b-pos', 'Meeting booked': 'b-pos', Objection: 'b-warn', 'Out of office': 'b-grey' };
   const decLabel = d => ({ approved: 'Approved · scheduled', 'with-manager': 'With Daniel', skipped: 'Skipped', 'sent-back': 'Sent back', signed: 'Signed off' }[d] || d);
@@ -227,10 +227,8 @@
         const [action, ch, proven] = GACT[type] || ['Send a short, relevant note', 'Email', false];
         a.seg = sid; a.segment = s.name;
         a.nba = { action, runnerUp: 'Share a peer case study', channel: ch, confidence: a.contact.idTier <= 2 ? 'High' : 'Medium', proven, reason: null, status: 'review', due: 'Today 17:00', subject: ch === 'Email' ? `${type} at ${a.name}` : '', body: `Hi ${first(a.contact.name)},\n\nI noticed this at ${a.name}: ${a.whyNow.text.charAt(0).toLowerCase() + a.whyNow.text.slice(1)}.\n\n${action}: it's short and specific to ${a.industry.toLowerCase()} teams in ${a.city}.\n\nWorth a 20-minute conversation next week?\n\nBest,\n${first(USERS[a.owner].name)}` };
-        const fails = gate(a).filter(x => !x[1]);
-        if (fails.length) Object.assign(a.nba, { reason: { 'High confidence': 'Medium confidence', 'Proven message': 'Unproven message', 'Identity confirmed': 'Identity unconfirmed' }[fails[0][0]] || 'Spot-check', reasonNote: `It didn't pass: ${fails.map(x => x[0].toLowerCase()).join(', ')}.` });
-        else a.nba.status = 'auto';
-        a.activity.push({ k: 'nba', when: 'Today', t: 'Next best action: ' + action, d: `${ch} · ${fails.length ? 'waiting for a person' : 'ready to send with one click'}` });
+        a.nba.orig = 'ready'; routeAll();
+        a.activity.push({ k: 'nba', when: 'Today', t: 'Next best action: ' + action, d: `${ch} · ${a.nba.status === 'auto' ? 'ready to send with one click' : a.nba.status === 'review' ? 'approval card: ' + a.nba.reason : a.nba.reasonNote || a.nba.status}` });
       });
     });
     g.routed = true; g.routedNow = true;
@@ -1525,7 +1523,7 @@
   }
   /* Leader: the backtest before go-live (PRD §11) and the weekly summary */
   function backtestBlock() {
-    const bad = !!S.btDegrade, won = bad ? 7 : 12, lost = bad ? 6 : 2, topR = bad ? 47 : 13;
+    const bad = !!(S.btDegrade || CFG1.degrade), won = bad ? 7 : 12, lost = bad ? 6 : 2, topR = bad ? 47 : 13;
     const bars = [['Won accounts in Tier A or B', won + ' of 15', won >= 10, 'At least 10 of 15'], ['Lost accounts in Tier A or B', lost + ' of 15', lost <= 4, 'At most 4 of 15'], ['Random accounts in Tier A', topR + '%', topR <= 40, 'No more than 40%']];
     const pass = bars.every(b => b[2]), W = { scored: 81, ready: apprItems('ready').length + 6, cards: ACCOUNTS.filter(a => a.nba && a.nba.status === 'review').length, sent: 18 + Object.keys(S.sent1 || {}).length, replies: 5, meetings: 2 };
     return `<div class="card" style="margin-bottom:12px"><div class="card-b"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><b>Scoring backtest · 15 won, 15 lost, 15 random</b><span class="badge ${pass ? 'b-pos' : 'b-neg'} nodot">${pass ? 'Passed: go-live allowed' : 'Failed: go-live blocked'}</span><span class="sp" style="flex:1"></span><label class="sm" style="display:flex;gap:6px;align-items:center"><input type="checkbox" ${bad ? 'checked' : ''} onchange="App.btDegrade(this.checked)"> Degrade the rules (demo)</label></div>

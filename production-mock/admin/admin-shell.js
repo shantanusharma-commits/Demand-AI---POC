@@ -26,7 +26,7 @@
   var NAV = [
     [null, [['index.html', 'Admin home', 'home']]],
     ['Set up', [['09-setup.html', 'Data and signals', 'data'], ['integrations.html', 'Integrations and email', 'plug'], ['07-content.html', 'Content library', 'book'], ['users.html', 'Users and roles', 'users']]],
-    ['Govern', [['rules.html', 'Rules', 'rules'], ['14-review.html', 'Review queue', 'check'], ['audit.html', 'Audit log', 'audit'], ['settings.html', 'Settings', 'gear']]],
+    ['Govern', [['r1.html', 'R1 controls', 'flag'], ['rules.html', 'Rules', 'rules'], ['14-review.html', 'Review queue', 'check'], ['audit.html', 'Audit log', 'audit'], ['settings.html', 'Settings', 'gear']]],
     ['The process behind the chat', [['chats.html', 'All chat flows', 'chat'], ['process.html#find', 'Find prospects', 'up'], ['process.html#score', 'Score', 'pulse'], ['process.html#route', 'Segment and route', 'layers'], ['process.html#nba', 'Next best actions', 'bolt'], ['process.html#campaigns', 'Campaigns', 'plane'], ['process.html#replies', 'Replies and hand-off', 'mail'], ['process.html#content', 'Content', 'pen'], ['process.html#objectives', 'Objectives and catch-up', 'flag'], ['process.html#analytics', 'Analytics', 'bars'], ['process.html#learning', 'Learning loop', 'spark']]],
     ['Measure', [['13-analytics.html', 'Analytics', 'bars']]]
   ];
