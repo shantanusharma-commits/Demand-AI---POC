@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Integrations · Demand AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/mock.css">
+<script src="../assets/theme.js"></script>
+<link rel="stylesheet" href="admin-shell.css">
+<link rel="stylesheet" href="admin.css">
+</head>
+<body>
+<div class="shell">
+<nav class="nav"></nav>
+<main class="main">
+  <div class="a-top"><div><span class="t">Integrations and email</span><span class="d">What Demand AI reads from and sends through</span></div></div>
+  <div class="a-canvas">
+    <div class="placeholder-note">Every connection here is a <b>placeholder</b> in the mock: the buttons show the flow, nothing connects. Provider names are generic on purpose.</div>
+
+    <div class="grp"><h2>CRM</h2><span>Read-only by default. Writing back is the client's choice.</span></div>
+    <div class="tiles">
+      <div class="tile"><div class="h"><b>CRM</b><span class="badge b-pos">Connected</span></div><p>Accounts, contacts, opportunities and activity history. Used for de-dup, the live-owner gate, history and warm paths.</p><div class="f"><button class="btn sm" onclick="toast('Manage CRM (mock)')">Manage</button><span class="muted" style="font-size:11px">Synced 5 min ago</span></div></div>
+      <div class="tile"><div class="h"><b>Closed-won field</b><span class="badge b-pos">Mapped</span></div><p>Opportunity stage = "Closed Won". Set per client, never hard-coded.</p><div class="f"><a class="btn sm" href="rules.html#icp">Change</a></div></div>
+      <div class="tile"><div class="h"><b>Write back to the CRM</b><span class="switch" onclick="this.classList.toggle('on');toast(this.classList.contains('on')?'Write-back on: score, tier and actions go to the CRM (mock)':'Write-back off')"></span></div><p>Off. When on: new accounts and contacts, score and tier, the action taken and its outcome.</p></div>
+    </div>
+
+    <div class="grp"><h2>Contact data</h2><span>A waterfall: cheapest first, fallbacks cross-checked.</span></div>
+    <div class="tiles">
+      <div class="tile"><div class="h"><b>Primary provider</b><span class="badge b-pos">Connected</span></div><p>Broadest and cheapest. A first-try hit is accepted as identity tier 1.</p><div class="f"><button class="btn sm">Manage</button><span class="muted" style="font-size:11px">3,180 credits left</span></div></div>
+      <div class="tile"><div class="h"><b>Fallback provider</b><span class="badge b-warn">Awaiting API access</span></div><p>More accurate, more expensive. Its hits are cross-checked before they're trusted.</p><div class="f"><button class="btn sm pri" onclick="toast('Request sent to procurement (mock)')">Request access</button></div></div>
+      <div class="tile"><div class="h"><b>Last-resort provider</b><span class="badge b-pos">Connected</span></div><p>Fills mobile-number gaps and acts as the cross-check. A no-match costs nothing.</p><div class="f"><button class="btn sm">Manage</button></div></div>
+    </div>
+
+    <div class="grp"><h2>Signal sources</h2><span>18 of 24 signal types live</span></div>
+    <div class="tiles">
+      <div class="tile"><div class="h"><b>Funding, M&amp;A and news</b><span class="badge b-pos">Live</span></div><p>Expansion and capex approvals, funding, M&amp;A, general announcements.</p></div>
+      <div class="tile"><div class="h"><b>Hiring and job changes</b><span class="badge b-pos">Live</span></div><p>Hiring surges, new executives, champions changing jobs.</p></div>
+      <div class="tile"><div class="h"><b>Contracts and tech stack</b><span class="badge b-pos">Live</span></div><p>Renewal windows with a named competitor, tech-stack changes.</p></div>
+      <div class="tile"><div class="h"><b>Public filings and regulation</b><span class="badge b-pos">Live</span></div><p>Incidents, filing language shifts, compliance deadlines.</p></div>
+      <div class="tile"><div class="h"><b>Review-site intent</b><span class="badge b-pos">Live</span></div><p>Accounts researching us or a named competitor.</p></div>
+      <div class="tile"><div class="h"><b>Website visitor ID</b><span class="badge b-neg">Error</span></div><p>Webhook rejected since 02:14: the auth token expired.</p><div class="f"><button class="btn sm pri" onclick="this.closest('.tile').querySelector('.badge').className='badge b-pos';this.closest('.tile').querySelector('.badge').textContent='Live';toast('Reconnected (mock)')">Reconnect</button></div></div>
+      <div class="tile"><div class="h"><b>Marketing automation</b><span class="badge b-grey nodot">Not connected</span></div><p>Content downloads, already matched to a contact. The client uses its own platform; set per client.</p><div class="f"><button class="btn sm">Connect</button></div></div>
+      <div class="tile"><div class="h"><b>Social and community</b><span class="badge b-grey nodot">After pilot</span></div><p>Company page activity, named-account engagement.</p></div>
+    </div>
+
+    <div class="grp" id="email"><h2>Email connectivity</h2><span>Each rep sends from their own mailbox. Sending is after the pilot.</span></div>
+    <div class="card" style="overflow:hidden"><table class="tbl">
+      <thead><tr><th>Person</th><th>Mailbox</th><th>Status</th><th>Send window</th><th>Daily cap</th><th></th></tr></thead>
+      <tbody>
+        <tr><td class="nm">Sofia Ahlgren</td><td>sofia.ahlgren@client.example</td><td><span class="badge b-pos">Connected</span></td><td>09:00–17:00 SGT</td><td class="mono">50</td><td><button class="btn sm">Manage</button></td></tr>
+        <tr><td class="nm">Daniel Brooks</td><td>–</td><td><span class="badge b-grey nodot">Not connected</span></td><td>–</td><td>–</td><td><button class="btn sm pri" onclick="toast('Invite sent to connect a mailbox (mock)')">Invite to connect</button></td></tr>
+        <tr><td class="nm">Marco Lindqvist</td><td>–</td><td><span class="badge b-grey nodot">Not connected</span></td><td>–</td><td>–</td><td><button class="btn sm pri" onclick="toast('Invite sent (mock)')">Invite to connect</button></td></tr>
+        <tr><td class="nm">Aisha Rahman</td><td>–</td><td><span class="badge b-grey nodot">Not connected</span></td><td>–</td><td>–</td><td><button class="btn sm pri" onclick="toast('Invite sent (mock)')">Invite to connect</button></td></tr>
+        <tr><td class="nm">Kenji Mori</td><td>–</td><td><span class="badge b-grey nodot">Not connected</span></td><td>–</td><td>–</td><td><button class="btn sm pri" onclick="toast('Invite sent (mock)')">Invite to connect</button></td></tr>
+      </tbody></table></div>
+
+    <div class="grp"><h2>Channels and notifications</h2></div>
+    <div class="tiles">
+      <div class="tile"><div class="h"><b>LinkedIn</b><span class="badge b-grey nodot">Placeholder</span></div><p>Each rep's own login and own connections, for warm paths and LinkedIn touches. No bulk scraping.</p></div>
+      <div class="tile"><div class="h"><b>Team chat</b><span class="badge b-pos">Connected</span></div><p>Alerts to reps and managers: positive replies, champion moves, anomalies, approvals waiting.</p></div>
+      <div class="tile"><div class="h"><b>Agent access (MCP)</b><span class="switch" onclick="this.classList.toggle('on')"></span></div><p>Lets the client's own AI assistants ask Demand AI who to contact and why. Off.</p></div>
+    </div>
+  </div>
+</main>
+</div>
+<script>function toast(m){document.querySelectorAll('.toast').forEach(t=>t.remove());const t=document.createElement('div');t.className='toast';t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),3000);}</script>
+<script src="admin-shell.js"></script>
+</body>
+</html>
