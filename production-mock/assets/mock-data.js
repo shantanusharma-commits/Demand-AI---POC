@@ -16,9 +16,13 @@
 
   /* Signal tiers and decay, from the Score process flow (section 2.3, step 6). */
   const TIER_BASE = { 1: 100, 2: 60, 3: 30 };
+  /* The demo clock: Admin › Simulate can move time forward, so signals decay and cards expire (stored in this browser). */
+  const SIM = (() => { try { return JSON.parse(localStorage.getItem('dmock_sim') || '{}') || {}; } catch (e) { return {}; } })();
+  const SHIFT = SIM.days || 0;
+  /* Signal tier 1: 100 points, full for 3 days, zero by day 14. Tier 2: 60, full 14, zero 60. Tier 3: 30, full 60, zero 90 (PRD §12). */
   function decayed(tier, age) {
     const base = TIER_BASE[tier];
-    const full = tier === 1 ? 3 : tier === 2 ? 14 : 30;
+    const full = tier === 1 ? 3 : tier === 2 ? 14 : 60;
     const zero = tier === 1 ? 14 : tier === 2 ? 60 : 90;
     if (age <= full) return base;
     if (age >= zero) return 0;
@@ -329,18 +333,35 @@
     if (st === 'sent') a.outcome = pick(['Sent · awaiting reply', 'Opened · no reply yet', 'Sent · awaiting reply']);
   });
 
-  /* Fit × Timing = Score (Score process flow, steps 8 and 10). */
+  /* Scenario cases from the R1 PRD (§18), placed in this story. */
+  const SC = id => ACCOUNTS.find(a => a.id === id);
+  const sc5 = SC('wildfernaromatics'); if (sc5) sc5.crm = { customer: true, since: '2024-05-12', field: 'Opportunity.Stage = Closed won' };
+  const sc8 = SC('halcyon'); if (sc8) sc8.signals.unshift(Object.assign(s('LinkedIn comment', 2, 1, 1, '"How did you keep the units running during the cut-over? We face the same with our 2009 system." (a question on the Client\'s migration post)', 'LinkedIn engagement (seeded)'), { relevance: 'Relevant: a question about our category from the head of automation, naming the age of their own system. Strong.', persona: 'technical lead' }));
+  const v2 = SC('oakmeregasprocessing'); if (v2 && v2.nba) v2.nba.body = v2.nba.body.replace('A short note from Client', 'As the best-in-class partner, Client cuts downtime by 40%. A short note from Client');
+  const nd = SC('dunmoregasprocessing'); if (nd && nd.nba) nd.nba.llmFailed = true;
+  const nc = SC('kingsbayrefining'); if (nc) Object.assign(nc.contact, { email: '', linkedin: false, phone: '' });
+  const i4 = SC('foxglovepetrochem'); if (i4) Object.assign(i4.contact, { idTier: 4, heldCycles: 3 });
+  const od = SC('saltmarsh'); if (od) od.crm = { openDeal: { name: 'Saltmarsh historian upgrade', stage: 'Proposal', owner: 'Marco Lindqvist' } };
+  const rt = SC('tidewater'); if (rt) rt.lastTouch = { days: 5, channel: 'Email' };
+  const un = SC('coralbay'); if (un) un.nicheUnclear = { conf: 0.41, why: 'The website says "industrial services"; the classifier could not tell the plant type.' };
+  const pu = SC('sandpiperolefins'); if (pu) pu.personaUnclear = 'Transformation Champion';
+
+  /* Score out of 100 (PRD §9): each signal's points = tier points × strength factor × decay; Timing = S1 + ½ S2 + ¼ S3 …, capped at 100;
+     Score = Fit × Timing ÷ 100. Account tiers by percentile of score: A the top 15%, B the next 25%, C the rest. */
+  const SF = st => { const k = Math.max(1, Math.min(5, Math.round(st * 5))); return { k, f: 0.6 + (k - 1) * 0.1 }; };
   ACCOUNTS.forEach(a => {
-    a.signals.forEach(x => { x.weight = Math.round(decayed(x.tier, x.age) * x.strength * 10) / 10; });
+    a.signals.forEach(x => { x.age0 = x.age0 != null ? x.age0 : x.age; x.age = x.age0 + SHIFT; const f = SF(x.strength); x.str5 = f.k; x.sf = f.f; x.weight = Math.round(decayed(x.tier, x.age) * f.f * 10) / 10; });
     const ws = a.signals.map(x => x.weight).sort((p, q) => q - p);
-    // Everything on 0–100: Timing is the stacked points as a share of 200, Score = Fit × Timing ÷ 100
-    a.points = Math.round(ws.reduce((t, w, i) => t + w / Math.pow(2, i), 0) * 10) / 10;
-    a.timing = Math.min(100, Math.round(a.points / 2));
-    a.score = Math.round(a.fit * a.timing / 100);
-    a.tier = a.score >= 40 ? 'A' : a.score >= 20 ? 'B' : a.score > 0 ? 'C' : '–';
+    a.points = Math.round(ws.reduce((t, w, i) => t + w / Math.pow(2, i), 0) * 100) / 100;
+    a.timing = Math.min(100, Math.round(a.points * 10) / 10);
+    a.score = Math.round(a.fit * a.timing / 10) / 10;
     a.whyNow = a.signals.length ? a.signals.slice().sort((p, q) => q.weight - p.weight)[0] : null;
+    if (a.whyNow && !(a.whyNow.weight > 0)) a.whyNow = null;
   });
   ACCOUNTS.sort((p, q) => q.score - p.score);
+  const ranked = ACCOUNTS.filter(a => a.score > 0 && !(a.crm && a.crm.customer)), nA = Math.max(1, Math.round(ranked.length * 0.15)), nB = Math.round(ranked.length * 0.25);
+  const TIER_CUTS = { A: ranked[nA - 1] ? ranked[nA - 1].score : 100, B: ranked[nA + nB - 1] ? ranked[nA + nB - 1].score : 0 };
+  ACCOUNTS.forEach(a => { a.tier = a.crm && a.crm.customer ? '–' : !(a.score > 0) ? '–' : a.score >= TIER_CUTS.A ? 'A' : a.score >= TIER_CUTS.B ? 'B' : 'C'; });
   ACCOUNTS.forEach((a, i) => { a.rank = i + 1; });
 
   /* ─── Campaigns (NBC) ─── */
@@ -504,5 +525,5 @@
     kenji: { todo: 4, overdue: 3, approved: 4, sent: 7, replies: 1, meetings: 0, target: 3, accept: 57 },
   };
 
-  window.MOCK = { TODAY, USERS, REPS, ACCOUNTS, SEGMENTS, LISTS, CONTENT, PROSPECTS_FOUND, CAMPAIGNS, REPLIES, BLOCKERS, LEARNED, SCHEDULED, TEAM_STATS, decayed };
+  window.MOCK = { SIM, TIER_CUTS, TODAY, USERS, REPS, ACCOUNTS, SEGMENTS, LISTS, CONTENT, PROSPECTS_FOUND, CAMPAIGNS, REPLIES, BLOCKERS, LEARNED, SCHEDULED, TEAM_STATS, decayed };
 })();
