@@ -1511,6 +1511,7 @@
     if (isLeader) L.push(['backtest', 15, 'Backtest result', 'The scoring backtest passed: 12 of 15 won accounts in Tier A or B, 2 of 15 lost, no tier above 40% of the random set', 'Before go-live', 'Blocks go-live if it fails', "App.openAppr('needs')", 'Open the report']);
     else if (isMgr) { L.push(['meet', 'ML', 'Confirm a meeting', 'Eastgate Refining: first meeting held Tue 27 Oct with the expansion lead. Confirm it counts as qualified', 'Tue 3 Nov', 'Not counted', null, 'Confirm']); if (campStatus(campOf('c1')) === 'Ready to confirm' && !campFell('c1')) L.push(['camp', 8, 'A campaign (NBC)', 'Turnaround season 2027: 11 accounts share a turnaround announcement inside 7 days', DUE3, 'Falls back to individual next best actions', "App.goCampaign('c1')", 'Open']); }
     else {
+      L.push(['nameonly', 10, 'A name-only CRM match', 'Dunmore Gas Processing matches the CRM account "Dunmore Gas Sdn Bhd" by name only, with no domain match. Held, not dropped', 'Stays held', 'Stays held', null, 'Confirm the match']);
       L.push(['reply', 11, 'An unmatched reply', 'r.ellis@unknown-sender.example: "Saw your note about migrations. Who should I speak to?"', 'No due time', 'Stays unmatched', null, 'Match to Juniper Petrochem']);
       ACCOUNTS.filter(a => a.owner === me.id && a.nicheUnclear).forEach(a => L.push(['niche-' + a.id, 12, 'Unclear niche', `${a.name}: ${a.nicheUnclear.why} (confidence ${a.nicheUnclear.conf})`, 'This week', 'No niche', null, 'Set as refinery']));
       ACCOUNTS.filter(a => a.owner === me.id && a.personaUnclear).forEach(a => L.push(['persona-' + a.id, 12, 'Unclear persona', `"${a.personaUnclear}" at ${a.name}: a generic persona is used until you set one`, 'This week', 'A generic persona', null, 'Set as operations']));
@@ -1552,6 +1553,18 @@
   /* Person drawer (opens over the module, beside the chat) */
   const ACT_IC = { signal: 'bolt', score: 'layers', segment: 'layers', campaign: 'megaphone', sent: 'mail', open: 'mail', reply: 'reply', watch: 'alert', nba: 'spark', wait: 'clock', crm: 'clock' };
   /* Holds and exclusions on the account page: why the account is or isn't in a queue (PRD §4, §6) */
+  function wdiff(a0, b0) {
+    const A = a0.split(/\s+/), B = b0.split(/\s+/), out = []; let i = 0, j = 0;
+    while (i < A.length || j < B.length) { if (A[i] === B[j]) { out.push(esc(A[i])); i++; j++; } else if (j < B.length && !A.slice(i).includes(B[j])) { out.push(`<ins class="dif-i">${esc(B[j])}</ins>`); j++; } else if (i < A.length) { out.push(`<del class="dif-d">${esc(A[i])}</del>`); i++; } else { out.push(`<ins class="dif-i">${esc(B[j])}</ins>`); j++; } }
+    return out.join(' ');
+  }
+  function actExtras(a) {
+    const caps = (S.captures || []).filter(c => c.account === a.name), dr = S.drafts && S.drafts[a.id], h = [];
+    const first = a.signals.slice().sort((p, q) => q.age - p.age)[0];
+    if (caps.length) h.push(`<div class="sec-t">Send record</div>${caps.map(c => `<div class="sig"><div><div style="font-weight:600">${esc(c.channel)} to ${esc(c.person)} · ${esc(c.at)}</div><div class="muted" style="font-size:11.5px">Segment ${esc(c.segment)} · signals ${esc(c.signals.join(', '))} · message ${esc(c.message)} · ${esc(c.rules)}</div></div><span class="badge b-sec nodot">Captured</span></div>`).join('')}`);
+    if (dr && dr.body && a.nba && a.nba.body && dr.body !== a.nba.body) h.push(`<div class="sec-t">Your edit, stored as a diff</div><div class="placeholder-note"><div style="white-space:normal">${wdiff(a.nba.body, dr.body)}</div></div>`);
+    return h.join('');
+  }
   function holdsBlock(a) {
     const L = [], ex = excluded1(a), p = protect1(a);
     if (ex) L.push(['Excluded', ex, 'b-neg']);
@@ -1734,6 +1747,7 @@
     });
   }
   routeAll();
+  (k => { if (k && k.activity) k.activity.push({ k: 'crm', when: 'Mon 26 Oct', t: 'Champion moved: signal replaced', d: 'Arif Rahman, who championed us at Tidewater, joined Kingfisher Refining as plant head. The signal tied to his old role was removed and a new "champion moved" signal was created here.' }); })(ACCOUNTS.find(a => a.id === 'kingfisher'));
   function gateBlock(a) {
     const g = gate(a), fails = g.filter(x => !x[1]);
     return `<div class="gate ${fails.length ? 'no' : 'ok'}"><div class="gate-t">${fails.length ? `${ic('alert', 14)} ${/sent/.test(a.nba.status) ? 'A person approved it, because it didn\'t pass' : 'Needs you: it didn\'t pass'} ${fails.map(x => x[0].toLowerCase()).join(', ')}` : `${ic('check', 14)} Meets all five criteria: ready to send with one click, no approval card`}</div><div class="gate-r">${g.map(([k, ok]) => `<span class="gc ${ok ? 'ok' : 'no'}">${ok ? '✓' : '✕'} ${k}</span>`).join('')}</div></div>`;
@@ -1782,7 +1796,7 @@
       const out = S.outcomes[a.id], list = a.activity.slice().reverse();
       return `<div class="sec-t">What happened</div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 14px">${['Sent', 'Replied', 'Meeting booked', 'No response'].map(x => `<button class="chip" style="${out === x ? 'border-color:var(--brand);color:var(--brand-dk);background:var(--brand-lt)' : ''}" onclick="App.logOutcome('${a.id}','${x}')">${x}</button>`).join('')}</div>
-        <div class="sec-t">Timeline · open any step for detail</div>
+        ${actExtras(a)}<div class="sec-t">Timeline · open any step for detail</div>
         <div class="timeline">${list.map((x, i) => `<button class="tl-row" onclick="App.toggleAct(${i})"><span class="ic k-${x.k}">${ic(ACT_IC[x.k] || 'clock', 13)}</span><div class="grow"><div class="nm">${esc(x.t)}</div><div class="sm">${esc(x.d)}</div>${actOpen === i ? actDetail(a, x) : ''}</div><span class="when">${esc(x.when)}</span></button>`).join('')}</div>`;
     }
     if (recTab === 'graph') return graphPane(a);

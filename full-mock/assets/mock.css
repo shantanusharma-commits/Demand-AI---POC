@@ -1566,3 +1566,5 @@ h1 .r2tag{font-size:11px;padding:3px 7px}
 .hub-l.k-d{stroke-dasharray:4 4}
 .hub-key{display:flex;flex-wrap:wrap;gap:12px;padding:6px 8px 2px;font-size:11.5px;color:var(--i3)}
 .hub-key span{display:inline-flex;align-items:center;gap:5px}.hub-key span::before{content:"";width:9px;height:9px;border-radius:50%;display:inline-block}
+
+.dif-i{background:var(--pos-lt);color:var(--pos);text-decoration:none;border-radius:3px;padding:0 2px}.dif-d{background:var(--neg-lt,#fde8e8);color:var(--neg,#b91c1c);border-radius:3px;padding:0 2px}

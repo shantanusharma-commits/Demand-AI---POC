@@ -272,14 +272,14 @@
   const MODULES = Object.assign({ inbox: 'Inbox', accounts: 'Accounts', segments: 'Segments', campaigns: 'Campaigns', approvals: 'Approvals', studio: 'Content studio' }, isMgr ? { analytics: 'Team' } : {});
   const MOD_IC = { inbox: 'inbox', accounts: 'users', segments: 'layers', campaigns: 'megaphone', approvals: 'task', studio: 'pen', analytics: 'bars' };
   /* Five screens in the menu. Segments and Signals open as tabs in Accounts; next best actions and content as tabs in Campaigns; Analytics from Today. */
-  const NAV5 = isMgr ? ['accounts', 'campaigns', 'approvals', 'analytics'] : ['inbox', 'accounts', 'campaigns', 'approvals'];
+  const NAV5 = isMgr ? ['accounts', 'campaigns', 'approvals', 'analytics'] : ['inbox', 'accounts', 'campaigns', 'studio', 'approvals'];
   const R2TAG = '';
-  const navOn = v => v === 'segments' ? 'accounts' : v === 'studio' ? 'campaigns' : v;
+  const navOn = v => v === 'segments' ? 'accounts' : v === 'studio' && isMgr ? 'campaigns' : v;
   let accSub = 'list', campSub = 'list', sigTab = 'live';
   function modTabs() {
     const v = view(), G = {
       accounts: [['accounts', 'Accounts', v === 'accounts' && accSub !== 'signals'], ['segments', 'Segments', v === 'segments'], ['signals', 'Signals', v === 'accounts' && accSub === 'signals']],
-      campaigns: [['campaigns', 'Campaigns', v === 'campaigns' && campSub !== 'nba'], ['nba', 'Next best actions', v === 'campaigns' && campSub === 'nba'], ['studio', 'Content', v === 'studio']]
+      campaigns: [['campaigns', 'Campaigns', v === 'campaigns' && campSub === 'list'], ['nba', 'Next best actions', v === 'campaigns' && campSub === 'nba'], ['plays', 'Plays', v === 'campaigns' && campSub === 'plays']].concat(isMgr ? [['studio', 'Content', v === 'studio']] : [])
     }[navOn(v)];
     return G && !segSel && !campSel ? `<div class="dtabs mod-tabs">${G.map(([k, l, on]) => `<button class="${on ? 'on' : ''}" onclick="App.modTab('${k}')">${l}</button>`).join('')}</div>` : '';
   }
@@ -1198,6 +1198,16 @@
 
   /* ─── Analytics (sales manager) ─── */
   function renderAnalytics() {
+    renderAnalytics0();
+    const cv = $('cv'); if (!cv) return;
+    const F = [['Qualified', 100], ['Contacted', 82], ['Replied', 14], ['Meetings', 4.1], ['Won', 0.9]];
+    cv.insertAdjacentHTML('beforeend', `<div class="lbl" style="margin:20px 0 8px">Results per 100 accounts worked</div><div class="card"><div class="card-b"><div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">${F.map(f => `<div style="flex:1;min-width:90px"><div style="height:${Math.max(6, f[1] * 1.2)}px;background:var(--brand);opacity:${0.35 + f[1] / 160};border-radius:6px 6px 0 0"></div><div class="nm" style="margin-top:6px">${f[1]}</div><div class="sm muted">${f[0]}</div></div>`).join('')}</div><div class="sm" style="margin-top:12px"><b>Prioritised against the rest:</b> Tier A and B accounts booked 6.2 meetings per 100, Tier C 1.4. Measured in the CRM each quarter.</div></div></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;margin-top:12px">
+      <div class="card"><div class="card-b"><div class="lbl" style="margin-bottom:8px">Reply rate by signal type</div><table class="tbl"><tbody>${[['Champion moved', 27], ['New exec hire', 22], ['Rival contract ending', 19], ['Turnaround announced', 17], ['Hiring surge', 11], ['Regulatory deadline', 6]].map(r => `<tr><td>${r[0]}</td><td class="mono">${r[1]} per 100 sends</td></tr>`).join('')}</tbody></table></div></div>
+      <div class="card"><div class="card-b"><div class="lbl" style="margin-bottom:8px">Each channel against its benchmark</div><table class="tbl"><tbody>${[['Email', '7.9%', '5.1%', 1], ['LinkedIn', '11.2%', '8.0%', 1], ['Phone', '2.1%', '3.5%', 0]].map(r => `<tr><td>${r[0]}</td><td class="mono">${r[1]} vs ${r[2]}</td><td><span class="badge ${r[3] ? 'b-pos' : 'b-neg'} nodot">${r[3] ? 'Above' : 'Below: flagged'}</span></td></tr>`).join('')}</tbody></table></div></div></div>
+      <div class="lbl" style="margin:20px 0 8px">Qualified meeting ledger</div><div class="card tbl-wrap"><table class="tbl"><thead><tr><th>Account</th><th>Rep</th><th>Held</th><th>Recommended before first touch</th><th>Confirmed</th></tr></thead><tbody>${[['Eastgate Refining', 'Sofia', 'Tue 27 Oct', 'Yes, 9 days before', (S.resolvedEsc || {}).meet ? 'Daniel, today' : 'Waiting (due Tue 3 Nov)'], ['Ironwood Refining', 'Marco', 'Fri 23 Oct', 'Yes, 14 days before', 'Daniel, Mon 26 Oct'], ['Moonstone Aromatics', 'Marco', 'Wed 14 Oct', 'Yes, 6 days before', 'Daniel, Thu 15 Oct'], ['Copperhill Aromatics', 'Kenji', 'Tue 6 Oct', 'No: their own outreach', 'Not counted']].map(r => `<tr>${r.map((x, i) => `<td class="${i ? 'sm' : 'nm'}">${esc(x)}</td>`).join('')}</tr>`).join('')}</tbody></table></div><div class="sm muted" style="margin-top:8px">Team routing: accounts go to a team by territory, product line and deal size (Singapore and Malaysia to Sofia's pod; deals over USD 1M to Marco's). Quarterly true-up on 31 Dec: prioritised accounts must beat the rest in the CRM, or the meeting fee steps down.</div>`);
+  }
+  function renderAnalytics0() {
     const reps = ownerF === 'all' ? REPS : [ownerF], sum = k => reps.reduce((n, r) => n + TEAM_STATS[r][k], 0);
     /* A dashboard page, not a chat: the important numbers first as cards, then the detail */
     $('main').className = 'an-pg';
@@ -1365,7 +1375,7 @@
   function renderNbaList() {
     const rows = nbaRows().sort((p, q) => q.score - p.score);
     const cv = frame('Next best actions', 'One account, one action. When it meets all five criteria it is ready to send with one click; the rest wait in Approvals with the failed criterion.', `<button class="btn sm" onclick="App.nav('approvals')">${ic('task', 13)} Approvals</button>`);
-    cv.innerHTML = `<div class="rule"><b>Next best action or campaign?</b> When 10 or more accounts share one micro-segment within 7 days, they become one campaign (NBC) that the sales manager confirms. Below that, each account gets its own next best action (NBA), written from its strongest signal.</div>
+    cv.innerHTML = `<div class="placeholder-note" style="margin-bottom:10px"><div><b>Live order.</b> The queue re-orders the moment something happens. 09:42: Halcyon moved up 4 places after a reply on LinkedIn. 08:15: Juniper moved to first after a pricing-page visit.</div></div><div class="rule"><b>Next best action or campaign?</b> When 10 or more accounts share one micro-segment within 7 days, they become one campaign (NBC) that the sales manager confirms. Below that, each account gets its own next best action (NBA), written from its strongest signal.</div>
       ${nbaTop({ rate: null }, rows)}<div style="margin-top:12px">${nbaTable(rows)}</div>`;
   }
   function nbaCounts(rows) {
@@ -1413,9 +1423,22 @@
   function repliesTable(list) { return list.length ? `<div class="card tbl-wrap"><table class="tbl"><thead><tr><th>Person</th><th>Reply</th><th>Type</th><th>When</th></tr></thead><tbody>${list.map(r => { const a = acct(r.acc); return `<tr class="row-link" onclick="App.openRecord('${a.id}','activity')"><td><div style="display:flex;gap:9px;align-items:center">${pAvatar(a)}<div><div class="nm">${esc(r.from)}</div><div class="sm">${esc(a.name)}</div></div></div></td><td>"${esc(r.text)}"</td><td><span class="badge ${S6[st6(r)][0]}">${st6(r)}</span></td><td class="sm">${esc(r.at)}</td></tr>`; }).join('')}</tbody></table></div>` : '<div class="card"><div class="empty">No replies yet.</div></div>'; }
 
   /* Campaigns: list → campaign (Enrollments, Steps, Outbox, Replies) → person drawer */
+  function renderPlays() {
+    const P = [['Turnaround announced', 'Refinery or petrochemical, Tier A or B', 'Operations', [['Log the trigger and set a recontact date', 'auto'], ['Email: the three risks peers hit', 'review'], ['LinkedIn: pre-turnaround checklist (carousel)', 'review'], ['Direct ask for a health check', 'review']], 'Checklist carousel', 'v3', '58 per 100 replied · 12 outcomes'],
+      ['New reliability leader', 'Tier A or B, leader joined in the last 30 days', 'Buyer', [['Add the leader to the committee', 'auto'], ['Email: first 90 days', 'review'], ['Case study one-pager', 'review']], 'One-pager PDF', 'v5', '64 per 100 positive · 14 outcomes'],
+      ['Rival contract ending', 'Named rival, contract ends within 6 months', 'Technical lead', [['Set the recontact date to 90 days before the end', 'auto'], ['Email: switch now or at contract end', 'review'], ['Comparison document', 'review'], ['Persistent follow-up until a clear answer', 'review']], 'Comparison document', 'v2', '48 per 100 positive · 21 outcomes'],
+      ['Low confidence, Tier C', 'Any', 'Any', [['Watch for a stronger signal', 'nurture']], '–', 'v1', 'Nurture']];
+    const C = [['Control-system migration, Q2', 'Rival contract ending', 'Technical lead', 'Email + LinkedIn', 'Extend vs migrate', '5 replies, 3 meetings'], ['New leaders, Q3', 'New exec hire', 'Buyer', 'Email', 'First 90 days', '9 replies, 4 meetings'], ['Expansion projects, Sep', 'Capex approved', 'Operations', 'Email', 'Automation for the project', '4 replies, 2 meetings']];
+    const cv = frame('Plays', 'Versioned plays: trigger, qualifier, persona, steps and asset. Fixed steps run on their own; anything customer-facing follows the autonomy policy.', '');
+    cv.innerHTML = `<div class="card tbl-wrap"><table class="tbl"><thead><tr><th>Trigger</th><th>Qualifier</th><th>Persona</th><th>Steps</th><th>Asset</th><th>Version</th><th>Results</th></tr></thead><tbody>${P.map((p, i) => `<tr><td class="nm">${esc(p[0])}</td><td class="sm">${esc(p[1])}</td><td class="sm">${esc(p[2])}</td><td class="sm">${p[3].map(s => `<div>${esc(s[0])} <span class="badge ${s[1] === 'auto' ? 'b-pos' : s[1] === 'review' ? 'b-ter' : 'b-grey'} nodot">${s[1]}</span></div>`).join('')}</td><td class="sm">${esc(p[4])}${p[4] !== '–' ? `<div><button class="btn sm ghost" onclick="App.toast('Asset swapped on the live campaign. Sent touches keep the old version.')">Swap asset</button></div>` : ''}</td><td class="sm">${p[5]}</td><td class="sm">${esc(p[6])}</td></tr>`).join('')}</tbody></table></div>
+      <div class="sm muted" style="margin:8px 2px 16px">Persistent follow-up: on a thread with no clear answer, a short follow-up goes every 5 days, up to 3 times, and stops on any reply or opt-out.</div>
+      <div class="lbl" style="margin-bottom:8px">Campaign corpus · new briefs start from what worked for similar accounts</div>
+      <div class="card tbl-wrap"><table class="tbl"><thead><tr><th>Past campaign</th><th>Signal</th><th>Persona</th><th>Channels</th><th>Structure</th><th>Result</th></tr></thead><tbody>${C.map(c => `<tr>${c.map((x, i) => `<td class="${i ? 'sm' : 'nm'}">${esc(x)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+  }
   function renderCampaigns() {
     if (campSel) return renderCampaign();
     if (campSub === 'nba') return renderNbaList();
+    if (campSub === 'plays') return renderPlays();
     const order = ['Ready to confirm', 'Draft', 'Running', 'Completed'];
     const list = CAMPAIGNS.slice().sort((p, q) => order.indexOf(p.status) - order.indexOf(q.status));
     const cv = frame('Campaigns', `${list.length} campaigns · email and LinkedIn`, `<button class="btn sm pri" onclick="App.ask('Build the campaign')">${ic('plus', 13)} New campaign</button>`);
@@ -1457,7 +1480,7 @@
           <div class="seq">${sq.map((t, i) => touchEditor(c, t, i, sq.length)).join('')}</div>
           <div class="muted" style="font-size:11.5px;margin-top:10px">Explore / exploit: ${esc(c.explore)}</div>`
       : `<div class="seq-basis">${ic('spark', 14)}<div>Built from the <b>${s ? esc(s.trigger.toLowerCase()) : 'segment'}</b> signals, the ${s ? esc(s.proven.toLowerCase()) : 'provisional'} message structure, and outreach best practice: one ask per step, a short plain-text first touch, proof in the middle, email and LinkedIn alternating 3–5 days apart. Each person's messages are personalised; open a person to edit theirs.</div></div>${seqTrack(c, sq)}`}
-      <div class="placeholder-note" style="margin-top:14px"><div><b>Sending.</b> Through the team's sequencer and LinkedIn tool, from each rep's own identity. Stops for an account on any reply or opt-out. Never three channels to one person in 48 hours; send windows 08:00–17:00 local. Each touch carries its asset from Content studio, and the format of each touch was confirmed by ${esc(first(USERS.pavan.name))}.</div></div>
+      <div class="placeholder-note" style="margin-top:14px"><div><b>Sending.</b> Through the team's sequencer and LinkedIn tool, from each rep's own identity. Stops for an account on any reply or opt-out. Never three channels to one person in 48 hours; send windows 08:00–17:00 local. Threads with no clear answer get a persistent follow-up every 5 days, up to 3 times. Each touch carries its asset from Content studio, and the format of each touch was confirmed by ${esc(first(USERS.pavan.name))}.</div></div>
       <div class="lbl" style="margin:18px 0 6px">Updates</div>${c.updates.map(u => `<div class="upd"><span class="when">${esc(u.t)}</span><div class="sm" style="font-size:12.5px;color:var(--i1)">${esc(u.x)}</div></div>`).join('')}`;
   }
   function touchEditor(c, t, i, n) {
@@ -1533,6 +1556,7 @@
     else {
       L.push(['watch', 8, 'Status watch', 'Ironwood Refining: a procurement contact opened the proposal and the CRM stage moved to Evaluation', 'No due time', 'None', "App.openRecord('ironwood','activity')", 'Open']);
       L.push(['anom', 9, 'Anomaly alert', '4 refineries in Johor posted control-systems roles in 48 hours, 5 times the 90-day rate: a temporary tier 1 override for those accounts', 'Today', 'None', null, 'See the accounts']);
+      L.push(['nameonly', 10, 'A name-only CRM match', 'Dunmore Gas Processing matches the CRM account "Dunmore Gas Sdn Bhd" by name only, with no domain match. Held, not dropped', 'Stays held', 'Stays held', null, 'Confirm the match']);
       L.push(['reply', 11, 'An unmatched reply', 'r.ellis@unknown-sender.example: "Saw your note about migrations. Who should I speak to?"', 'No due time', 'Stays unmatched', null, 'Match to Juniper Petrochem']);
       ACCOUNTS.filter(a => a.owner === me.id && a.nicheUnclear).forEach(a => L.push(['niche-' + a.id, 12, 'Unclear niche', `${a.name}: ${a.nicheUnclear.why} (confidence ${a.nicheUnclear.conf})`, 'This week', 'No niche', null, 'Set as refinery']));
       ACCOUNTS.filter(a => a.owner === me.id && a.personaUnclear).forEach(a => L.push(['persona-' + a.id, 12, 'Unclear persona', `"${a.personaUnclear}" at ${a.name}: a generic persona is used until you set one`, 'This week', 'A generic persona', null, 'Set as operations']));
@@ -1582,6 +1606,19 @@
     return `<div class="sec-t">Buying committee</div><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Role</th><th>Person</th><th>Title</th></tr></thead><tbody>${grid.map(r => `<tr><td class="sm">${r[0]}</td><td class="nm">${esc(r[1])}</td><td class="sm">${esc(r[2])}</td></tr>`).join('')}</tbody></table></div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-top:12px"><div class="placeholder-note" style="margin:0"><div><b>Motivation: ${esc(a.motivation || (h % 2 ? 'Cost' : 'Growth'))}</b><br>From case studies and reviews. Sets the message framing, never the rank.</div></div><div class="placeholder-note" style="margin:0"><div><b>Warm path: ${a.warm ? a.warm.score : 0}</b><br>${a.warm ? esc(a.warm.note) : 'No connection on the team.'} From each rep's own LinkedIn connections and the CRM.</div></div></div>
       ${rival ? `<div class="sec-t">Rival research</div><div class="placeholder-note"><div>The installed rival's own customers complain most about <b>slow support response</b> (14 of 40 recent reviews) and <b>upgrade cost</b> (9 of 40). Matched to our proof: the 4-hour support SLA (CS-01) and the phased migration (OP-02). The renewal window makes it urgent: the angle is <b>support you can count on through the switch</b>.</div></div>` : ''}`;
+  }
+  function wdiff(a0, b0) {
+    const A = a0.split(/\s+/), B = b0.split(/\s+/), out = []; let i = 0, j = 0;
+    while (i < A.length || j < B.length) { if (A[i] === B[j]) { out.push(esc(A[i])); i++; j++; } else if (j < B.length && !A.slice(i).includes(B[j])) { out.push(`<ins class="dif-i">${esc(B[j])}</ins>`); j++; } else if (i < A.length) { out.push(`<del class="dif-d">${esc(A[i])}</del>`); i++; } else { out.push(`<ins class="dif-i">${esc(B[j])}</ins>`); j++; } }
+    return out.join(' ');
+  }
+  function actExtras(a) {
+    const caps = (S.captures || []).filter(c => c.account === a.name), dr = S.drafts && S.drafts[a.id], h = [];
+    const first = a.signals.slice().sort((p, q) => q.age - p.age)[0];
+    if (first) h.push(`<div class="sec-t">Lineage</div><div class="placeholder-note"><div>First touch came from <b>${esc(first.type)}</b> (${esc(first.source)}), then ${a.nba ? 'the next best action "' + esc(a.nba.action) + '"' : 'the campaign'}${a.outcome ? ', which led to: <b>' + esc(a.outcome) + '</b>' : ''}. Reply rate for this signal type across the team: ${12 + (first.tier === 1 ? 9 : first.tier === 2 ? 4 : 0)} per 100 sends.</div></div>`);
+    if (caps.length) h.push(`<div class="sec-t">Send record</div>${caps.map(c => `<div class="sig"><div><div style="font-weight:600">${esc(c.channel)} to ${esc(c.person)} · ${esc(c.at)}</div><div class="muted" style="font-size:11.5px">Segment ${esc(c.segment)} · signals ${esc(c.signals.join(', '))} · message ${esc(c.message)} · ${esc(c.rules)}</div></div><span class="badge b-sec nodot">Captured</span></div>`).join('')}`);
+    if (dr && dr.body && a.nba && a.nba.body && dr.body !== a.nba.body) h.push(`<div class="sec-t">Your edit, stored as a diff</div><div class="placeholder-note"><div style="white-space:normal">${wdiff(a.nba.body, dr.body)}</div></div>`);
+    return h.join('');
   }
   function holdsBlock(a) {
     const L = [], ex = excluded1(a), p = protect1(a);
@@ -1766,6 +1803,7 @@
     });
   }
   routeAll();
+  (k => { if (k && k.activity) k.activity.push({ k: 'crm', when: 'Mon 26 Oct', t: 'Champion moved: signal replaced', d: 'Arif Rahman, who championed us at Tidewater, joined Kingfisher Refining as plant head. The signal tied to his old role was removed and a new "champion moved" signal was created here.' }); })(ACCOUNTS.find(a => a.id === 'kingfisher'));
   function gateBlock(a) {
     const g = gate(a), fails = g.filter(x => !x[1]);
     return `<div class="gate ${fails.length ? 'no' : 'ok'}"><div class="gate-t">${fails.length ? `${ic('alert', 14)} ${/sent/.test(a.nba.status) ? 'A person approved it, because it didn\'t pass' : 'Needs you: it didn\'t pass'} ${fails.map(x => x[0].toLowerCase()).join(', ')}` : `${ic('check', 14)} Meets all five criteria: ready to send with one click, no approval card`}</div><div class="gate-r">${g.map(([k, ok]) => `<span class="gc ${ok ? 'ok' : 'no'}">${ok ? '✓' : '✕'} ${k}</span>`).join('')}</div></div>`;
@@ -1808,13 +1846,13 @@
       return `<div class="formula"><div class="box"><div class="v">${a.fit}</div><div class="k">Fit /100: how well they match</div></div><span class="op">×</span><div class="box"><div class="v">${a.timing}</div><div class="k">Timing /100: what changed</div></div><span class="op">=</span><div class="box hl"><div class="v">${sc(a)}</div><div class="k">Score · #${a.rank} · tier ${a.tier}</div></div></div>
         ${sig.length ? `<div class="sec-t">Why now · signals, strongest first</div>${sig.map((x, i) => `<div class="sig"><div><div style="font-weight:600">${esc(x.type)}</div><div class="muted" style="font-size:11.5px">${esc(x.text)} · ${esc(x.source)}</div></div><span class="badge ${x.tier === 1 ? 'b-pos' : x.tier === 2 ? 'b-sec' : 'b-grey'} nodot">Tier ${x.tier}</span><div><div class="bar"><i style="width:${Math.min(100, x.weight)}%"></i></div><div class="muted" style="font-size:10.5px;margin-top:3px">${ago(x.age)}</div></div><span class="mono" style="text-align:right">${i ? (i === 1 ? '½×' : '¼×') : ''}${x.weight}</span></div>`).join('')}
           <div class="placeholder-note" style="margin-top:12px"><div>Timing = ${sig.filter(x => x.weight > 0).map((x, i) => (i ? (i === 1 ? '½ × ' : i === 2 ? '¼ × ' : '1/' + Math.pow(2, i) + ' × ') : '') + x.weight).join(' + ')} = ${a.points} points${a.points > 100 ? ', capped at 100' : ''}, so Timing is <b>${a.timing}</b> out of 100. Score = Fit × Timing ÷ 100 = <b>${a.score}</b> out of 100, so a perfect fit with no live signal scores zero.</div></div>`
-          : '<div class="placeholder-note">No live signal, so the score is zero and nothing is suggested. The account stays watched.</div>'}${holdsBlock(a)}${committeeBlock(a)}${a.signals.length ? scoreProcess(a) : ''}`;
+          : '<div class="placeholder-note">No live signal, so the score is zero and nothing is suggested. The account stays watched.</div>'}${a.signals.length ? `<div class="placeholder-note" style="margin-top:10px"><div><b>Against its own normal:</b> timing is ${(1.4 + (a.score % 17) / 10).toFixed(1)} times this account's 90-day average, so big accounts don't dominate the list just by being big.</div></div>` : ''}${holdsBlock(a)}${committeeBlock(a)}${a.signals.length ? scoreProcess(a) : ''}`;
     }
     if (recTab === 'activity') {
       const out = S.outcomes[a.id], list = a.activity.slice().reverse();
       return `<div class="sec-t">What happened</div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 14px">${['Sent', 'Replied', 'Meeting booked', 'No response'].map(x => `<button class="chip" style="${out === x ? 'border-color:var(--brand);color:var(--brand-dk);background:var(--brand-lt)' : ''}" onclick="App.logOutcome('${a.id}','${x}')">${x}</button>`).join('')}</div>
-        <div class="sec-t">Timeline · open any step for detail</div>
+        ${actExtras(a)}<div class="sec-t">Timeline · open any step for detail</div>
         <div class="timeline">${list.map((x, i) => `<button class="tl-row" onclick="App.toggleAct(${i})"><span class="ic k-${x.k}">${ic(ACT_IC[x.k] || 'clock', 13)}</span><div class="grow"><div class="nm">${esc(x.t)}</div><div class="sm">${esc(x.d)}</div>${actOpen === i ? actDetail(a, x) : ''}</div><span class="when">${esc(x.when)}</span></button>`).join('')}</div>`;
     }
     if (recTab === 'graph') return graphPane(a);
@@ -1883,12 +1921,17 @@
     return { kind: 'text', html: 'Tell me what to change: shorter, more formal, add proof, rewrite the intro, or add a section on a topic. You can also click a paragraph to change just that one.' };
   }
   function renderStudio() {
+    renderStudio0();
+    const cv = $('cv');
+    if (!S.studio.doc && studioTab === 'backlog' && cv) cv.innerHTML = `<div class="placeholder-note" style="margin-bottom:10px"><div>Questions the library could not answer, from drafts and replies. Ranked by how often they came up. Each one is a piece of content worth writing.</div></div><div class="card tbl-wrap"><table class="tbl"><thead><tr><th>Question</th><th>Asked</th><th>Segment</th><th></th></tr></thead><tbody>${[['What does a phased migration cost per year of outage saved?', 7, 'Rival contract ending'], ['Which sites like ours finished a migration inside one turnaround?', 5, 'Turnaround season 2027'], ['How do you handle a mixed vendor estate?', 4, 'Historian & tech-stack change'], ['What support response time do you commit to?', 3, 'Researching competitors']].map(q => `<tr><td class="nm">${esc(q[0])}</td><td>${q[1]}</td><td class="sm">${esc(q[2])}</td><td><button class="btn sm" onclick="App.studioGo(${js(q[0])},'One-pager PDF')">Write it</button></td></tr>`).join('')}</tbody></table></div>`;
+  }
+  function renderStudio0() {
     const d = S.studio.doc;
     if (!d) {
       const all = S.content.concat(CONTENT);
       $('main').className = 'canvas studio-home';
       $('main').innerHTML = `<div class="cv-h"><div class="cv-ht" style="display:flex;flex-direction:row;align-items:baseline;gap:14px"><div class="cv-t">Content studio</div><div class="cv-s">Every format in the Client's brand voice, grounded in the Knowledge Hub and cited</div></div></div>${modTabs()}
-        <div class="dtabs" style="margin:0;padding:0 22px;background:var(--surf)">${[['write', 'Write'], ['saved', `Saved content <i>${all.length}</i>`]].map(([k, l]) => `<button class="${studioTab === k ? 'on' : ''}" onclick="App.setStudioTab('${k}')">${l}</button>`).join('')}</div>
+        <div class="dtabs" style="margin:0;padding:0 22px;background:var(--surf)">${[['write', 'Write'], ['saved', `Saved content <i>${all.length}</i>`], ['backlog', 'Backlog <i>4</i>']].map(([k, l]) => `<button class="${studioTab === k ? 'on' : ''}" onclick="App.setStudioTab('${k}')">${l}</button>`).join('')}</div>
         <div class="cv-b" id="cv">${studioTab === 'write' ? `<div class="st-hero"><h1>What should we write?</h1><p>Describe it in your own words. It's written in a canvas beside the chat, and you change it by talking to it.</p>
           <div class="st-box"><label class="sr" for="stBrief">Brief</label><textarea id="stBrief" rows="2" placeholder="e.g. A whitepaper on legacy control system modernisation for plant managers" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();App.studioGo()}"></textarea>
             <div class="st-f"><div class="seg" style="flex-wrap:wrap">${STUDIO_TYPES.slice(0, 2).map(x => `<button class="${studioType === x ? 'on' : ''}" onclick="App.setStudioType('${x}')">${ic(x === 'Blog' ? 'pen' : 'doc', 13)} ${x}</button>`).join('')}</div><button class="send" onclick="App.studioGo()" title="Write">${ic('send', 16)}</button></div></div>
@@ -1988,7 +2031,7 @@
     btDegrade(on) { S.btDegrade = on; save(); toast(on ? 'Rules degraded: the backtest fails and go-live is blocked.' : 'Rules restored: the backtest passes.'); renderAll(); },
     send1(id) { const a = acct(id); S.sent1 = S.sent1 || {}; S.sent1[id] = { at: 'Today ' + new Date().toTimeString().slice(0, 5), by: me.name }; S.captures = S.captures || []; S.captures.push({ account: a.name, person: a.contact.name, channel: chan1(a), signals: a.signals.filter(x => x.weight > 0).slice(0, 3).map(x => x.type), segment: a.segment, message: 'm1', rules: 'rules 2026.11.1', at: S.sent1[id].at }); routeAll(); save(); toast('Sent from your mailbox. Logged with the person, segment, signals, message version and rule version.'); renderAll(); },
     optOut(id) { const a = acct(id); S.optouts = S.optouts || {}; S.optouts[id] = { by: me.name, at: 'Today' }; routeAll(); save(); toast(`${a.contact.name} opted out. Suppressed in every queue and every later run.`); renderAll(); },
-    modTab(k) { art = null; recId = null; thrId = null; expanded = true; if (k === 'signals' || k === 'accounts') { accSub = k === 'signals' ? 'signals' : 'list'; go('accounts'); } else if (k === 'nba' || k === 'campaigns') { campSel = null; campSub = k === 'nba' ? 'nba' : 'list'; go('campaigns'); } else { if (k === 'segments') segSel = null; if (k === 'studio') S.studio.doc = null; go(k); } },
+    modTab(k) { art = null; recId = null; thrId = null; expanded = true; if (k === 'signals' || k === 'accounts') { accSub = k === 'signals' ? 'signals' : 'list'; go('accounts'); } else if (k === 'nba' || k === 'campaigns' || k === 'plays') { campSel = null; campSub = k === 'campaigns' ? 'list' : k; go('campaigns'); } else { if (k === 'segments') segSel = null; if (k === 'studio') S.studio.doc = null; go(k); } },
     setSigTab(k) { sigTab = k; renderAll(); },
     resolveEsc(id, msg) { S.resolvedEsc = S.resolvedEsc || {}; S.resolvedEsc[id] = true; save(); toast(msg); renderAll(); },
     setApprRep(r) { apprRep = r; renderAll(); },
