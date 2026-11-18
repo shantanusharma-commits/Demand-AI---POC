@@ -56,17 +56,17 @@
     },
     {
       id: 'cedar', name: 'Cedar Petrochemicals', industry: 'Petrochemicals', country: 'Malaysia', size: '3,100 staff', fit: 82, owner: 'sofia',
-      segment: 'Contract renewal', motivation: 'Cost',
+      segment: 'Rival contract ending', motivation: 'Cost',
       contact: { name: 'Mei Tan', title: 'Head of Instrumentation & Control', email: 'mei.tan@cedarpc.example', phone: '+60 3 2201 8833', linkedin: true, idTier: 2 },
       warm: { score: 35, note: 'No direct connection. A sibling contact (procurement) is in CRM.' },
       signals: [
-        s('Contract renewal window', 1, 3, 0.9, 'Control-system support contract with a named competitor ends in 5 months.', 'Contract data'),
+        s('Rival contract ending', 1, 3, 0.9, 'Control-system support contract with a named competitor ends in 5 months.', 'Contract data'),
         s('Researching a competitor', 1, 5, 0.75, 'Comparing two DCS vendors on a review site.', 'Buyer intent'),
       ],
       nba: {
         action: 'Propose a migration-path discussion', runnerUp: 'Offer a site assessment', channel: 'Email', confidence: 'Medium', proven: true,
         reason: 'Medium confidence', reasonNote: 'The contact was matched on a fallback provider and confirmed (identity tier 2), but the warm path is weak.', status: 'review', due: 'Today 17:00',
-        subject: 'Your control-system support renewal',
+        subject: 'When your current support contract ends',
         body: 'Hi Mei,\n\nWith Cedar\'s control-system support contract coming up for renewal next year, many I&C teams use the window to compare the cost of extending versus a phased migration.\n\nWe\'ve put together a short migration-path comparison for Malaysian petrochemical sites: lifecycle cost, outage windows and the risk profile of each option.\n\nWould it help if I walked your team through it, ahead of your renewal decision?\n\nBest regards,\nSofia',
       },
       history: [{ d: '20 Jun 2026', t: 'Trade show · badge scan', o: 'No follow-up logged' }],
@@ -124,10 +124,10 @@
     },
     {
       id: 'ironwood', name: 'Ironwood Refining', industry: 'Refining', country: 'Thailand', size: '2,200 staff', fit: 81, owner: 'marco',
-      segment: 'Contract renewal', motivation: 'Cost',
+      segment: 'Rival contract ending', motivation: 'Cost',
       contact: { name: 'Ana Cruz', title: 'Maintenance Manager', email: 'ana.cruz@ironwood.example', phone: '+66 2 777 1200', linkedin: true, idTier: 1 },
       warm: { score: 61, note: 'Marco is connected; 3 contacts in CRM.' },
-      signals: [s('Contract renewal window', 1, 2, 0.85, 'Safety-system service contract ends in 4 months.', 'Contract data')],
+      signals: [s('Rival contract ending', 1, 2, 0.85, 'Safety-system service contract ends in 4 months.', 'Contract data')],
       nba: { action: 'Propose a migration-path discussion', runnerUp: 'Offer a site assessment', channel: 'Email', confidence: 'High', proven: true, reason: null, status: 'auto', subject: '', body: '' },
       history: [],
     },
@@ -197,10 +197,10 @@
     },
     {
       id: 'sapphire', name: 'Sapphire Aromatics', industry: 'Petrochemicals', country: 'Singapore', size: '1,100 staff', fit: 85, owner: 'sofia',
-      segment: 'Contract renewal', motivation: 'Cost',
+      segment: 'Rival contract ending', motivation: 'Cost',
       contact: { name: 'Wei Ling Goh', title: 'Procurement Director', email: 'weiling.goh@sapphirearom.example', phone: '+65 6789 2201', linkedin: true, idTier: 1 },
       warm: { score: 50, note: 'Sofia met her at a 2025 customer event.' },
-      signals: [s('Contract renewal window', 1, 11, 0.7, 'Analyser maintenance contract ends in 7 months.', 'Contract data'), s('Email opened', 3, 2, 0.4, 'Opened "Total cost of analyser ownership" email.', 'Sequencing tool')],
+      signals: [s('Rival contract ending', 1, 11, 0.7, 'Analyser maintenance contract ends in 7 months.', 'Contract data'), s('Email opened', 3, 2, 0.4, 'Opened "Total cost of analyser ownership" email.', 'Sequencing tool')],
       nba: { action: 'Propose a migration-path discussion', runnerUp: 'Offer a site assessment', channel: 'Email', confidence: 'High', proven: true, reason: null, status: 'sent', subject: 'Analyser maintenance: options before renewal', body: '' },
       outcome: 'Sent · awaiting reply', history: [{ d: 'Mon 26 Oct', t: 'Email sent · options before renewal', o: 'Sent, no response yet' }],
     },
@@ -238,7 +238,7 @@
     { id: 's8', name: 'Turnaround season 2027', trigger: 'Turnaround announced', mode: 'NBC', campaign: 'c1', proven: 'Proven', rate: 58, outcomes: 19,
       why: '11 accounts announced a planned maintenance shutdown for H1 2027 in the last 6 days. That crosses the campaign threshold, so they wait for one campaign instead of 11 separate actions.',
       structure: 'Turnaround readiness: reference the shutdown date → the 3 risks peers hit → offer a pre-turnaround health check' },
-    { id: 's2', name: 'Control-system renewal window', trigger: 'Contract renewal window', mode: 'NBC', campaign: 'c2', proven: 'Proven', rate: 48, outcomes: 21,
+    { id: 's2', name: 'Rival contract ending', trigger: 'Rival contract ending', mode: 'NBC', campaign: 'c2', proven: 'Proven', rate: 48, outcomes: 21,
       why: 'Accounts whose control-system or safety-system support contract with a named competitor ends within 6 months.',
       structure: 'Extend vs. migrate: the cost question framed for their renewal date → comparison document → direct ask' },
     { id: 's4', name: 'Expansion & capex projects', trigger: 'Expansion / capex approved', mode: 'NBC', campaign: 'c3', proven: 'Proven', rate: 52, outcomes: 11,
@@ -282,7 +282,7 @@
   const TITLES = ['VP Reliability', 'Head of Maintenance', 'Operations Director', 'Plant Manager', 'Head of Instrumentation & Control', 'Engineering Manager', 'Automation Lead', 'HSE Director', 'Project Director', 'Procurement Director'];
   const SIG = {
     s8: [['Turnaround announced', 1, 'Planned maintenance shutdown announced for H1 2027.', 'Funding & news'], ['Hiring surge', 2, 'Contract maintenance roles posted for the turnaround.', 'Hiring data']],
-    s2: [['Contract renewal window', 1, 'Control-system support contract with a named competitor ends within 6 months.', 'Contract data'], ['Email opened', 3, 'Opened the renewal comparison.', 'Sequencing tool']],
+    s2: [['Rival contract ending', 1, 'Control-system support contract with a named competitor ends within 6 months.', 'Contract data'], ['Email opened', 3, 'Opened the renewal comparison.', 'Sequencing tool']],
     s4: [['Expansion / capex approved', 1, 'Expansion project approved by the board.', 'Funding & news'], ['Hiring surge', 2, 'Engineering roles posted for the new unit.', 'Hiring data']],
     s1: [['New exec hire', 1, 'New reliability or operations leader appointed.', 'Job-change alerts']],
     s3: [['Compliance deadline', 3, 'New emissions-reporting rules apply from 1 Jan 2027.', 'Regulatory calendar']],
@@ -374,7 +374,7 @@
       explore: '1 of 11 accounts gets a different opening (cost of a delayed restart) to keep the pattern honest.',
       updates: [{ t: 'Today 06:05', x: 'Crossed the threshold: 11 accounts in 6 days. Waiting for Daniel to confirm.' }, { t: 'Mon 26 Oct', x: '3 more accounts announced shutdowns (8 → 11).' }],
       blockers: [] },
-    { id: 'c2', seg: 's2', name: 'Control-system renewal window', status: 'Running', launched: 'Mon 12 Oct', day: 15,
+    { id: 'c2', seg: 's2', name: 'Rival contract ending', status: 'Running', launched: 'Mon 12 Oct', day: 15,
       touches: [
         { day: 0, ch: 'Email', fmt: 'Plain text', t: 'Extend vs. migrate: the cost question, framed for their renewal date.', state: 'Sent 12 Oct' },
         { day: 4, ch: 'Email', fmt: 'Comparison document', t: 'Migration-path comparison: lifecycle cost and outage windows.', state: 'Sent 16 Oct' },

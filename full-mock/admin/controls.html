@@ -27,9 +27,21 @@
 <div class="shell">
 <nav class="nav"></nav>
 <main class="main">
-  <div class="a-top"><div><span class="t">Controls</span><span class="d">The ICP and cold start, exclusions, the five criteria and autonomy, connectors and interfaces, the runs and cost, learning, the backtest and the demo controls</span></div></div>
-  <div class="a-tabs" role="tablist"><button data-t="icp">ICP and cold start</button><button data-t="exclusions">Exclusions</button><button data-t="policy">Policy</button><button data-t="connectors">Connectors</button><button data-t="interfaces">Interfaces</button><button data-t="learning">Learning</button><button data-t="runlog">Run log and cost</button><button data-t="backtest">Backtest</button><button data-t="simulate">Simulate</button></div>
+  <div class="a-top"><div><span class="t" id="secT">Home</span><span class="d" id="secD"></span></div></div>
+  <div class="a-tabs" role="tablist"><button data-t="home" data-sec="home">Overview</button><button data-t="runlog" data-sec="home">Run log and cost</button><button data-t="learning" data-sec="home">Learning</button><button data-t="simulate" data-sec="home">Demo</button><button data-t="connectors" data-sec="connections">Connectors</button><button data-t="interfaces" data-sec="connections">Interfaces</button><button data-t="icp" data-sec="icp">ICP and cold start</button><button data-t="signals" data-sec="icp">Signals and tiers</button><button data-t="exclusions" data-sec="icp">Exclusions</button><button data-t="backtest" data-sec="icp">Backtest</button><button data-t="policy" data-sec="rules">Five criteria and autonomy</button><button data-t="escal" data-sec="rules">Who decides what</button></div>
   <div class="a-canvas">
+
+    <div class="a-grid" data-pane="home"><div class="card c12"><div class="card-h"><span class="lbl">Last night's run</span><span class="muted sm" id="homeWhen"></span></div><div class="card-b"><div class="ctl-kv" id="homeKv"></div></div></div>
+      <div class="card c12"><div class="card-h"><span class="lbl">Needs the admin</span><span class="muted sm">each with a due time and a default</span></div><div class="card-b" style="padding:0"><table class="tbl"><thead><tr><th>What</th><th>Why</th><th>If nobody acts</th><th></th></tr></thead><tbody id="homeNeeds"></tbody></table></div></div></div>
+    <div class="a-grid" data-pane="signals"><div class="card c7"><div class="card-h"><span class="lbl">Signal tiers</span><span class="muted sm">points, full weight and decay</span></div><div class="card-b" style="padding:0"><table class="tbl"><thead><tr><th>Tier</th><th>Points</th><th>Full weight</th><th>Zero by</th><th>Examples</th></tr></thead><tbody>
+      <tr><td class="nm">1</td><td>100</td><td>3 days</td><td>day 14</td><td class="sm">Tender or capex announced, champion moves, new plant head, rival contract ending</td></tr>
+      <tr><td class="nm">2</td><td>60</td><td>14 days</td><td>day 60</td><td class="sm">Hiring surge, tech-stack change, M&amp;A, a LinkedIn comment on a relevant post</td></tr>
+      <tr><td class="nm">3</td><td>30</td><td>60 days</td><td>day 90</td><td class="sm">Regulatory deadline, a like or a share, market news</td></tr>
+    </tbody></table><div class="sm muted" style="padding:10px 14px">Strength 1 to 5 scales a signal from × 0.6 to × 1.0. A date in the source overrides the window. Timing = strongest + ½ second + ¼ third …, capped at 100. Score = Fit × Timing ÷ 100.</div></div></div>
+      <div class="card c5"><div class="card-h"><span class="lbl">Every signal must pass</span></div><div class="card-b"><div class="chk"><span class="dot ok">1</span><div class="grow"><b>Observable</b><div class="sm">Verifiable from a public source</div></div></div><div class="chk"><span class="dot ok">2</span><div class="grow"><b>Predictive</b><div class="sm">A documented link to buying in this category</div></div></div><div class="chk"><span class="dot ok">3</span><div class="grow"><b>Time-bound</b><div class="sm">A finite relevance window</div></div></div><div class="sm muted" style="margin-top:8px">Before the tests, the entry gate checks recency and repeats and merges the same event from several sources. A failed test discards the signal and keeps the reason.</div></div></div>
+      <div class="card c12"><div class="card-h"><span class="lbl">Category research</span><span class="muted sm">refreshed monthly</span></div><div class="card-b"><div class="sm"><b>Who buys:</b> reliability, maintenance and operations leaders at refineries, petrochemical and gas-processing plants. <b>Why:</b> unplanned downtime, an ageing control system, a support contract ending. <b>Problems they cite:</b> outage windows, migration risk, slow vendor support. These weights feed the fit match, the signal tests and the message angles.</div></div></div></div>
+    <div class="a-grid" data-pane="escal"><div class="card c12"><div class="card-h"><span class="lbl">Who decides what</span><span class="muted sm">the AI decides what it can; everything else goes to a named person</span></div><div class="card-b" style="padding:0"><table class="tbl"><thead><tr><th>#</th><th>What reaches a person</th><th>Who</th><th>If nobody acts</th></tr></thead><tbody id="escRows"></tbody></table></div></div></div>
+
     <div class="a-grid" data-pane="icp"><div class="card c12"><div class="card-h"><span class="lbl">Cold start</span><span class="muted sm">two ways in, nothing is enriched until it passes the fit check</span></div><div class="card-b">
       <div class="ctl-path"><button class="btn sm" id="pA" onclick="CTL.path('A')">Path A · the client shares an ICP</button><button class="btn sm" id="pB" onclick="CTL.path('B')">Path B · the ICP is unknown</button></div>
       <div id="pathBody"></div></div></div></div>
@@ -39,15 +51,15 @@
 
     <div class="a-grid" data-pane="policy">
       <div class="card c6"><div class="card-h"><span class="lbl">The five criteria</span><span class="badge b-pos nodot">All five required</span></div><div class="card-b">
-        <div class="chk"><span class="dot ok">1</span><div class="grow"><b>Confidence is high</b><div class="sm">At or above the high band below. Medium goes to the rep as a card; low goes to nurture.</div></div></div>
+        <div class="chk"><span class="dot ok">1</span><div class="grow"><b>Confidence: high or medium</b><div class="sm">Confidence: high is 0.75 or more; confidence: medium is 0.50 to 0.75; both pass. Confidence: low (under 0.50) goes to nurture and nobody is asked to decide.</div></div></div>
         <div class="chk"><span class="dot ok">2</span><div class="grow"><b>Message verification passes</b><div class="sm">Approved claims or cited signals only, no banned phrase, every figure has a source. An unproven message is not a failure.</div></div></div>
         <div class="chk"><span class="dot ok">3</span><div class="grow"><b>Every protective check passes</b><div class="sm">Exclusions, suppression, open deal, a touch in the last 14 days. If a check cannot run, the action is held (fail closed).</div></div></div>
         <div class="chk"><span class="dot ok">4</span><div class="grow"><b>Identity tier is I1 or I2</b><div class="sm">I1 Apollo first try; I2 ZoomInfo after Apollo missed and Lusha agrees. I3 and I5 get a card; I4 is held.</div></div></div>
         <div class="chk"><span class="dot ok">5</span><div class="grow"><b>The segment's policy allows it</b><div class="sm">Set per segment on the right.</div></div></div>
         <div class="sm muted" style="margin-top:10px">All five met: Ready to send, the rep sends with one click (assisted mode). Any one failed: an approval card to the owning rep, due in 3 days, then it expires and the account re-ranks.</div></div></div>
       <div class="card c6"><div class="card-h"><span class="lbl">Bands and thresholds</span><span class="muted sm" id="cfgVer"></span></div><div class="card-b">
-        <div class="set-row"><div><div class="k">High confidence from</div><div class="d">0 to 1</div></div><input id="bHigh" type="number" step="0.01" min="0.5" max="0.99"></div>
-        <div class="set-row"><div><div class="k">Medium confidence from</div><div class="d">Below this is low: nurture</div></div><input id="bMed" type="number" step="0.01" min="0.1" max="0.9"></div>
+        <div class="set-row"><div><div class="k">Confidence: high from</div><div class="d">0 to 1</div></div><input id="bHigh" type="number" step="0.01" min="0.5" max="0.99"></div>
+        <div class="set-row"><div><div class="k">Confidence: medium from</div><div class="d">Below this is confidence: low, which goes to nurture</div></div><input id="bMed" type="number" step="0.01" min="0.1" max="0.9"></div>
         <div class="set-row"><div><div class="k">Campaign threshold</div><div class="d">Accounts in one micro-segment within 7 days</div></div><input value="10 accounts in 7 days" readonly></div>
         <div class="set-row"><div><div class="k">Card due time</div><div class="d">Then it expires and the account re-ranks</div></div><input value="3 days" readonly></div>
         <div class="set-row"><div><div class="k">Recent touch window</div><div class="d">A touch inside it holds the action</div></div><input value="14 days" readonly></div>
@@ -170,19 +182,46 @@
     document.getElementById('swCrm').classList.toggle('on', !!sim.crm); document.getElementById('swEx').classList.toggle('on', !!sim.exclusions);
     document.getElementById('dayN').textContent = 'Day ' + (sim.days || 0);
   }
-  function all() { drawPath(); drawEx(); drawPol(); drawCon(); drawRun(); drawBt(); drawSim(); }
+
+  var SEC = {"home": ["Home", "Health at a glance, what needs the admin, the run log, learning and the demo controls"], "connections": ["Connections", "Everything connected: CRM, data providers, signal sources, email, chat tools, sending tools, agents and the API"], "icp": ["ICP and scoring", "The ICP and cold start, the signal tiers, exclusions and the backtest"], "rules": ["Rules", "The five criteria, the confidence bands, the mode for each segment and who decides what"]}, ESC = [["2", "Message verification failed", "Owning rep", "3 days, then it expires and the account re-ranks"], ["3", "Identity tier I3 or I5", "Owning rep", "3 days, then it expires and re-ranks"], ["4", "Segment set to require approval", "Owning rep", "3 days, then it expires and re-ranks"], ["5", "A protective check could not run", "Owning rep sees why; admin alerted", "Stays held until the check runs"], ["6", "No draft produced", "Owning rep", "3 days, then it expires and re-ranks"], ["7", "No verified channel", "Owning rep", "3 days, then it expires and re-ranks"], ["8", "A campaign (10+ accounts in a micro-segment in 7 days)", "Sales manager: the campaign and each touch format", "3 days, then individual next best actions"], ["9", "A campaign touch fails its re-check", "Owning rep", "The touch is skipped"], ["10", "A held record (identity dispute, name-only CRM match)", "Owning rep; admin for configuration", "Stays held"], ["11", "An unmatched reply", "Owning rep", "Stays unmatched"], ["12", "Unclear niche or persona", "Owning rep", "A generic persona"], ["\u2013", "A meeting to confirm as qualified", "Sales manager", "Not counted after five working days"], ["13", "The customer does not know their ICP", "Admin", "Blocks list building"], ["14", "Setup: the ICP and the closed-won field", "Admin with the sales manager", "Blocks go-live"], ["15", "Backtest below the bar", "Admin", "Blocks go-live"], ["16", "Enabling autopilot for a segment", "Admin with the sales manager", "Stays off"], ["\u2013", "Status watch or an anomaly alert", "Owning rep", "None"], ["\u2013", "A source underperforms; the weekly learning review", "Admin", "Nothing ships until reviewed"]];
+  var done = cfg.done || {};
+  function secOf(tab) { var b = document.querySelector('.a-tabs button[data-t="' + tab + '"]'); return b ? b.dataset.sec : 'home'; }
+  function applySec() {
+    var tab = (location.hash || '#home').slice(1), s = secOf(tab), m = {};
+    document.querySelectorAll('.a-tabs button').forEach(function (b) { b.hidden = b.dataset.sec !== s; m[b.dataset.t] = b.dataset.sec; });
+    document.getElementById('secT').textContent = SEC[s][0]; document.getElementById('secD').textContent = SEC[s][1];
+    window.ADM_SEC = { home: 'home', runlog: 'home', learning: 'home', simulate: 'home', connectors: 'connectors', interfaces: 'connectors', icp: 'icp', signals: 'icp', exclusions: 'icp', backtest: 'icp', policy: 'policy', escal: 'policy' };
+    if (window.ADM && ADM.redraw) ADM.redraw();
+  }
+  function drawHome() {
+    var held = sim.crm || sim.exclusions, bad = !!cfg.degrade;
+    document.getElementById('homeWhen').textContent = 'Today 06:05 · demo day ' + (sim.days || 0);
+    document.getElementById('homeKv').innerHTML = [['Run', held ? 'Held' : 'Completed'], ['Accounts scored', M.ACCOUNTS.length], ['Connectors', held ? 'One down' : 'All connected'], ['Held records', 1], ['Cost tonight', 'USD 11.40 of 40']].map(function (k) { return '<div><b>' + k[1] + '</b><span>' + k[0] + '</span></div>'; }).join('');
+    var N = [];
+    if (held) N.push(['check', 'A protective check cannot run', (sim.crm ? 'The CRM' : 'The exclusions list') + ' cannot be read, so every action is held and the reps see why', 'Stays held until the check runs', 'Open Demo', "location.hash='#simulate'"]);
+    N.push(['held', 'Held record', 'Foxglove Petrochem: identity dispute (I4) for 3 refresh cycles. ZoomInfo and Lusha disagree on the contact\'s title', 'Stays held', 'Resolve']);
+    N.push(['bt', 'Backtest result', bad ? 'Failed: 7 of 15 won in Tier A or B, 6 of 15 lost, 47% of random in Tier A' : 'Passed: 12 of 15 won in Tier A or B, 2 of 15 lost, 13% of random in Tier A', 'Blocks go-live', bad ? 'Open the backtest' : 'Approve go-live', bad ? "location.hash='#backtest'" : null]);
+    N.push(['learn', 'Weekly learning review', '3 changes passed the backtest: raise "New exec hire"; validate the turnaround structure (12 outcomes, 0.64); demote the LinkedIn compliance structure', 'Nothing ships until reviewed', 'Approve the changes']);
+    N.push(['src', 'A source underperforms', 'News feed B: 6 replies per 100 signals over 90 days, against 19 for its level', 'Reviewed in the weekly learning review', 'Flag for renewal']);
+    N.push(['auto', 'Enable autopilot', 'Daniel asked for autopilot on "New reliability & operations leaders". The backtest and a dry run passed', 'Stays off', 'Enable']);
+    N = N.filter(function (x) { return !done[x[0]]; });
+    document.getElementById('homeNeeds').innerHTML = N.length ? N.map(function (x) { return '<tr><td class="nm">' + esc(x[1]) + '</td><td class="sm">' + esc(x[2]) + '</td><td class="sm">' + esc(x[3]) + '</td><td><button class="btn sm" onclick="' + (x[5] || "CTL.done('" + x[0] + "')") + '">' + esc(x[4]) + '</button></td></tr>'; }).join('') : '<tr><td colspan="4" class="sm muted">Nothing needs you.</td></tr>';
+    document.getElementById('escRows').innerHTML = ESC.map(function (r) { return '<tr><td class="sm">' + r[0] + '</td><td class="nm">' + esc(r[1]) + '</td><td class="sm">' + esc(r[2]) + '</td><td class="sm">' + esc(r[3]) + '</td></tr>'; }).join('');
+  }
+  function all() { drawHome(); drawPath(); drawEx(); drawPol(); drawCon(); drawRun(); drawBt(); drawSim(); }
   window.CTL = {
+    done: function (k) { done[k] = 1; cfg.done = done; put('dmock_cfg', cfg); log('Admin decided: ' + k); drawHome(); drawRun(); toast('Done. Logged with who and when.'); },
     path: function (p) { path = p; drawPath(); },
     confirmIcp: function () { pBconf = true; log('ICP confirmed (path B)'); drawPath(); drawRun(); toast('ICP confirmed. The overnight run will search with it.'); },
     addDom: function () { var v = document.getElementById('exDom').value.trim(); if (!v) return; doms.push(v); cfg.domains = doms; put('dmock_cfg', cfg); log('Domain excluded: ' + v); document.getElementById('exDom').value = ''; drawEx(); drawRun(); toast('Added. Accounts on this domain leave every queue on the next run.'); },
     saveBands: function () { var h = +document.getElementById('bHigh').value, m = +document.getElementById('bMed').value; if (!(h > m && m > 0 && h < 1)) { toast('High must be above medium, both between 0 and 1'); return; } cfg.high = h; cfg.medium = m; cfg.ver = '2026.11.2'; put('dmock_cfg', cfg); log('Bands set: high ' + h + ', medium ' + m); drawPol(); drawRun(); toast('Saved as rules 2026.11.2. Past decisions keep the version they ran under.'); },
     pol: function (id, v) { cfg.policy = cfg.policy || {}; cfg.policy[id] = v; put('dmock_cfg', cfg); log('Segment policy: ' + id + ' set to ' + v); drawPol(); drawRun(); toast('Saved. Applies on the next screen load.'); },
-    degrade: function (on) { cfg.degrade = on; put('dmock_cfg', cfg); drawBt(); toast(on ? 'Rules degraded: the backtest fails.' : 'Rules restored.'); },
+    degrade: function (on) { cfg.degrade = on; put('dmock_cfg', cfg); drawBt(); drawHome(); toast(on ? 'Rules degraded: the backtest fails.' : 'Rules restored.'); },
     sim: function (k) { sim[k] = !sim[k]; log((k === 'crm' ? 'CRM unreachable' : 'Exclusions list unreadable') + ': ' + (sim[k] ? 'on' : 'off')); put('dmock_sim', sim); all(); toast(sim[k] ? 'Simulated. Open the sales workspace: actions are held and the rep sees why.' : 'Restored.'); },
     adv: function (n) { sim.days = n ? (sim.days || 0) + n : 0; log(n ? 'Clock moved +' + n + ' day' + (n > 1 ? 's' : '') : 'Clock reset'); put('dmock_sim', sim); all(); toast('Demo day ' + sim.days); },
     resetAll: function () { try { localStorage.removeItem('dmock_sim'); localStorage.removeItem('dmock_cfg'); sessionStorage.clear(); } catch (e) {} sim = { log: [] }; cfg = {}; doms = ['rival-controls.example', 'partner-integrator.example']; all(); toast('Demo reset.'); }
   };
-  ADM.tabs(); all();
+  ADM.tabs(); all(); applySec(); window.addEventListener('hashchange', applySec);
 })();
 </script>
 </body>

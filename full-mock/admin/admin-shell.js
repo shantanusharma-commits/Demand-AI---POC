@@ -24,11 +24,8 @@
     panel: '<rect x="3" y="4" width="18" height="16" rx="2"/><line x1="9" y1="4" x2="9" y2="20"/>'
   };
   var NAV = [
-    [null, [['index.html', 'Admin home', 'home']]],
-    ['Set up', [['09-setup.html', 'Data and signals', 'data'], ['integrations.html', 'Integrations and email', 'plug'], ['07-content.html', 'Content library', 'book'], ['users.html', 'Users and roles', 'users']]],
-    ['Govern', [['controls.html', 'Controls', 'flag'], ['rules.html', 'Rules', 'rules'], ['14-review.html', 'Review queue', 'check'], ['audit.html', 'Audit log', 'audit'], ['settings.html', 'Settings', 'gear']]],
-    ['The process behind the chat', [['chats.html', 'All chat flows', 'chat'], ['process.html#find', 'Find prospects', 'up'], ['process.html#score', 'Score', 'pulse'], ['process.html#route', 'Segment and route', 'layers'], ['process.html#nba', 'Next best actions', 'bolt'], ['process.html#campaigns', 'Campaigns', 'plane'], ['process.html#replies', 'Replies and hand-off', 'mail'], ['process.html#content', 'Content', 'pen'], ['process.html#objectives', 'Objectives and catch-up', 'flag'], ['process.html#analytics', 'Analytics', 'bars'], ['process.html#learning', 'Learning loop', 'spark']]],
-    ['Measure', [['13-analytics.html', 'Analytics', 'bars']]]
+    [null, [['controls.html#home', 'Home', 'home']]],
+    ['Set up', [['controls.html#connectors', 'Connections', 'plug'], ['controls.html#icp', 'ICP and scoring', 'pulse'], ['controls.html#policy', 'Rules', 'rules'], ['07-content.html', 'Content library', 'book'], ['users.html', 'Users and audit', 'users']]]
   ];
   function svg(n, s) { return '<svg class="nav-ic" width="' + (s || 16) + '" height="' + (s || 16) + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + I[n] + '</svg>'; }
   var here = (location.pathname.split('/').pop() || 'index.html');
@@ -43,14 +40,22 @@
     NAV.forEach(function (g, gi) {
       if (gi) h += '<div class="nav-div"></div>';
       if (g[0]) h += '<div class="nav-sec">' + g[0] + '</div>';
-      var cur = here + (here === 'process.html' ? (location.hash || '#find') : '');
+      var cur = here === 'controls.html' ? 'controls.html#' + ((window.ADM_SEC || {})[(location.hash || '#home').slice(1)] || 'home') : (here === 'audit.html' || here === 'settings.html') ? 'users.html' : here;
       g[1].forEach(function (it) { h += '<a class="nav-item ' + (it[0] === cur ? 'active' : '') + '" href="' + it[0] + '" title="' + it[1] + '">' + svg(it[2]) + '<span class="nav-lbl">' + it[1] + '</span></a>'; });
     });
     h += '</div><div class="nav-foot"><div class="nav-user"><div class="nav-av">RN</div><div class="nav-ut"><div class="nav-un">Rajiv Nair</div><div class="nav-ur">Admin</div></div></div>' +
       '<div class="nav-links"><a href="../app.html" onclick="try{localStorage.setItem(\'dmock_user\',\'pavan\')}catch(e){}">Sales workspace</a><a href="../index.html">Sign out</a></div></div>';
     nav.innerHTML = h;
   }
+  function strip() {
+    if (!/^(users|audit|settings)\.html$/.test(here) || document.querySelector('.ua-strip')) return;
+    var top = document.querySelector('.a-top'); if (!top) return;
+    var d = document.createElement('div'); d.className = 'a-tabs ua-strip';
+    d.innerHTML = [['users.html', 'Users and roles'], ['audit.html', 'Audit log'], ['settings.html', 'Settings']].map(function (x) { return '<a href="' + x[0] + '" class="' + (x[0] === here ? 'on' : '') + '" style="display:inline-flex;align-items:center;padding:10px 12px;text-decoration:none;color:inherit;border-bottom:2px solid ' + (x[0] === here ? 'var(--brand)' : 'transparent') + '">' + x[1] + '</a>'; }).join('');
+    top.parentNode.insertBefore(d, top.nextSibling);
+  }
   window.ADM = {
+    redraw: function () { draw(); },
     toggleNav: function () { col = !col; try { localStorage.setItem('dmock_nav', col ? '1' : ''); } catch (e) {} draw(); },
     tabs: function (root) {
       var bar = document.querySelector(root || '.a-tabs'); if (!bar) return;
@@ -68,5 +73,5 @@
   };
   if (!window.toast) window.toast = function (m) { document.querySelectorAll('.toast').forEach(function (t) { t.remove(); }); var t = document.createElement('div'); t.className = 'toast'; t.textContent = m; document.body.appendChild(t); setTimeout(function () { t.remove(); }, 3000); };
   window.addEventListener('hashchange', function () { if (here === 'process.html') draw(); });
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', draw); else draw();
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { draw(); strip(); }); else { draw(); strip(); }
 })();

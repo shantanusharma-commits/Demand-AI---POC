@@ -21,6 +21,10 @@ Open `index.html` in Chrome or Edge (double-click). Fonts need an internet conne
 | `admin/settings.html` | General, Appearance, Notifications, Security and access, Data and privacy, Usage |
 | `admin/07-…15-*.html` | The legacy prototype screens (setup, content, users, prospecting, scoring, NBA, analytics, review), copied with the admin sidebar |
 
+## Rep, manager and admin (18 Nov, second pass)
+
+There is no sales leader. The rep works Inbox, Accounts, Campaigns and Approvals. The manager works Accounts, Campaigns (confirming each campaign and the format of each touch), Approvals (campaigns and meetings to confirm; reps' cards are read-only with a Nudge) and Team. Confidence shows as "confidence: high", "confidence: medium" or "confidence: low": high and medium pass, low goes to nurture. Admin has six screens: Home, Connections, ICP and scoring, Rules, Content library, Users and audit. The context graph is a hub: the account in the middle and everything linked around it.
+
 ## Aligned with the R1 PRD (18 Nov)
 
 The mock now follows the Demand AI R1 (Prioritise) PRD. The look, the screens and the story are unchanged.
@@ -39,7 +43,7 @@ The mock now follows the Demand AI R1 (Prioritise) PRD. The look, the screens an
 | Identity tiers I1–I5 and how each was found | Account page › Details |
 | Opt-out | Account page › Add opt-out |
 | Cold start (path A: ICP shared, spend = accounts passing the fit check; path B: proposed ICP, nothing searched until confirmed), exclusions, bands, autonomy by segment (autopilot off), connectors, run log and cost, backtest | Admin › R1 controls |
-| Backtest (15 won, 15 lost, 15 random; three bars; degrade switch) and the weekly summary | Sign in as Helen Varga (leader) › Approvals |
+| Backtest (15 won, 15 lost, 15 random; three bars; degrade switch) | Admin › ICP and scoring › Backtest; the go-live decision on Admin › Home |
 | Not in R1 | Analytics, Content and first-party signals are labelled R2 |
 
 The demo clock (Admin › R1 controls › Simulate) moves time for every screen: at day 2 a campaign contact at Mangrove Aromatics opts out and their next touch is held; at day 3 unanswered approval cards expire and the accounts re-rank, and an unconfirmed campaign falls back.
