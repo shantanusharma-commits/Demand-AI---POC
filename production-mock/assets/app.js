@@ -151,6 +151,17 @@
   const mailbox = a => `${USERS[a.owner].name.toLowerCase().replace(' ', '.')}@client.example`;
 
   /* ─── Work items ─── */
+  /* Each option keeps its own message: the runner-up is a different message, not just a different label */
+  function runMsg(a) {
+    const f = first(a.contact.name), w = a.whyNow ? a.whyNow.type.toLowerCase() : 'recent news', r = a.nba.runnerUp;
+    return { subject: r, body: `Hi ${f},\n\nI saw the ${w} at ${a.name}. Rather than ask for a call, I'd like to ${r.charAt(0).toLowerCase() + r.slice(1)}. A site of a similar size faced the same question last year, and I can share what they did first and what it changed.\n\nIf it's useful, I can send a one-page version to share with your team.\n\nBest,\n${first(USERS[a.owner].name)}` };
+  }
+  function switchOpt(a, o) {
+    const d = draftOf(a); if (d.option === o) return d;
+    d['ed_' + d.option] = { subject: d.subject, body: d.body };
+    const n = d['ed_' + o] || (o === 'run' ? runMsg(a) : { subject: a.nba.subject, body: a.nba.body });
+    Object.assign(d, { option: o, subject: n.subject, body: n.body }); S.drafts[a.id] = d; return d;
+  }
   function draftOf(a) { return Object.assign({ subject: a.nba.subject, body: a.nba.body, channel: a.nba.channel, option: 'rec' }, S.drafts[a.id] || {}); }
   function openItems() { return ACCOUNTS.filter(a => a.nba && (a.nba.status === 'ready' || a.nba.status === 'review')); }
   function apprItems(tab) {
@@ -980,7 +991,7 @@
     if (!a.nba) return { kind: 'nba', id: a.id };
     const d = draftOf(a);
     let body = d.body;
-    if (/runner/.test(t)) { S.drafts[a.id] = Object.assign(d, { option: 'run' }); return { kind: 'nba', id: a.id, note: `Switched to the runner-up: <b>${esc(a.nba.runnerUp)}</b>.` }; }
+    if (/runner/.test(t)) { switchOpt(a, 'run'); return { kind: 'nba', id: a.id, note: `Switched to the runner-up: <b>${esc(a.nba.runnerUp)}</b>. I rewrote the subject and the message for it; switch back any time and your earlier version returns.` }; }
     if (/shorter/.test(t)) { const p = body.split('\n\n'); body = p.length > 3 ? [p[0], p[1].split('. ')[0] + '.', p[p.length - 2], p[p.length - 1]].join('\n\n') : body; }
     if (/cost/.test(t)) { const p = body.split('\n\n'); p.splice(Math.max(1, p.length - 2), 0, 'Most sites we work with start from cost: an hour of unplanned downtime on a unit this size typically costs well over USD 100k.'); body = p.join('\n\n'); }
     if (/formal/.test(t)) body = body.replace(/^Hi /, 'Dear ').replace(/Best,|Best regards,/, 'Kind regards,');
@@ -1833,7 +1844,7 @@
     return `<div class="eng-h"><div class="lbl">${ic('bolt', 13)} Next best action</div><div class="eng-grid"><div><span>Action</span>${esc(d.option === 'run' ? a.nba.runnerUp : a.nba.action)}</div><div><span>Status</span>${stepBadge(a)}</div><div><span>Channel</span>${a.nba.channel}</div><div><span>Due</span>${esc(a.nba.due || '–')}</div></div><div class="lbl" style="margin:12px 0 6px">Delivery</div>${deliveryRow(a)}</div>${gateBlock(a)}${banner}
       <div style="margin-top:10px">
         <button class="opt ${d.option === 'rec' ? 'on' : ''}" onclick="App.setOption('${a.id}','rec')"><div class="h">${esc(a.nba.action)}<span class="badge b-brand nodot">Recommended</span></div><div class="d">${a.nba.confidence} confidence · ${a.nba.proven ? 'proven structure for ' + esc(a.segment) : 'provisional structure (first try)'}</div></button>
-        <button class="opt ${d.option === 'run' ? 'on' : ''}" onclick="App.setOption('${a.id}','run')"><div class="h">${esc(a.nba.runnerUp)}<span class="badge b-grey nodot">Runner-up</span></div><div class="d">The next best option.</div></button></div>
+        <button class="opt ${d.option === 'run' ? 'on' : ''}" onclick="App.setOption('${a.id}','run')"><div class="h">${esc(a.nba.runnerUp)}<span class="badge b-grey nodot">Runner-up</span></div><div class="d">A lighter touch: something useful instead of a meeting ask. Picking it rewrites the message.</div></button></div>
       <div style="display:flex;gap:8px;margin:10px 0 8px;align-items:center;flex-wrap:wrap"><label class="sr" for="chanSel">Channel</label><select class="sel" id="chanSel" onchange="App.setChannel('${a.id}',this.value)">${['Email', 'LinkedIn'].map(c => `<option ${d.channel === c ? 'selected' : ''}>${c}</option>`).join('')}</select><span class="muted" style="font-size:11.5px">${esc(USERS[a.owner].name)} to ${esc(a.contact.name)}</span></div>
       ${d.channel === 'Email' ? `<label class="sr" for="dSubj">Subject</label><input class="edit" id="dSubj" value="${esc(d.subject)}" onchange="App.saveDraft('${a.id}')" style="margin-bottom:8px">` : ''}
       <label class="sr" for="dBody">Message</label><textarea class="edit" id="dBody" onchange="App.saveDraft('${a.id}')">${esc(d.body)}</textarea>
@@ -2083,7 +2094,7 @@
     docSet(f, v) { const d = S.studio.doc; d[f] = v; if (f === 'length' && v === 'Short') studioRespond('shorter'); if (f === 'length' && v === 'Long') studioRespond('add a section on lifecycle planning'); if (f === 'tone' && v === 'Formal') studioRespond('formal'); S.studio.thread.push({ who: 'ai', kind: 'text', html: `${f === 'tone' ? 'Tone' : 'Length'} set to ${esc(v.toLowerCase())}. The brand checks still pass.` }); save(); renderAll(); },
     toggleDl() { $('dlMenu').classList.toggle('open'); },
     addToLibrary() { const d = S.studio.doc; d.status = 'In Content library'; S.content.unshift({ id: 'u' + Date.now(), type: d.type, title: d.title, status: 'In Content library', seg: 's8', led: 'Available to reps in email and LinkedIn steps', by: first(me.name) }); S.studio.thread.push({ who: 'ai', kind: 'text', html: 'Added to the Content library. Reps can now add it to an email or LinkedIn step in Campaigns, or to a next best action.' }); save(); toast('Added to the Content library'); renderAll(); },
-    setOption(id, o) { S.drafts[id] = Object.assign(draftOf(acct(id)), { option: o }); save(); renderAll(); },
+    setOption(id, o) { const a = acct(id); switchOpt(a, o); save(); toast(o === 'run' ? 'Switched to the runner-up: new subject and message' : 'Back to the recommended action and its message'); renderAll(); },
     setChannel(id, c) { S.drafts[id] = Object.assign(draftOf(acct(id)), { channel: c }); save(); renderAll(); },
     saveDraft(id) { const d = draftOf(acct(id)); if ($('dSubj')) d.subject = $('dSubj').value; if ($('dBody')) d.body = $('dBody').value; S.drafts[id] = d; save(); },
     undo(id) { delete S.decisions[id]; save(); renderAll(); },
