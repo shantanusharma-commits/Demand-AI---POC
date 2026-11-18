@@ -51,6 +51,14 @@ const M = process.argv[2], full = M === 'full-mock', dir = '/home/user/Demand-AI
     t = await run(() => App.setRecTab('activity')); chk('RSP-03 lineage', /Lineage/i.test(t), 'Account › Activity');
     t = await run(() => App.nav('inbox')); chk('RSP-02 six statuses', /Further action/i.test(t) && /Wrong person/i.test(t), 'Inbox');
   }
+  // round 4: admin can act on connectors; decision traces; caps; persona edit
+  t = await adm('connectors'); await p.evaluate(() => { CTL.conPick('HubSpot', 'oauth'); CTL.conAdd('HubSpot'); CTL.conKey('ZoomInfo'); CTL.conLog('ZoomInfo'); }); await p.waitForTimeout(250); t = await body();
+  chk('FND-01 add a connector, remove a key (cached, labelled), per-connector log', /HubSpot/.test(t) && /Cached: serving data/i.test(t) && /Run log · ZoomInfo/i.test(t), 'Admin › Connections');
+  await p.evaluate(() => { CTL.conKey('ZoomInfo'); CTL.conLog('Lusha'); }); t = await body(); chk('FND-01 404 is free, 401 not retried', /404 no match/i.test(t) && /401 unauthorised → not retried/i.test(t), 'Admin › Connections › Log');
+  t = await adm('traces'); await p.waitForTimeout(200); t = await body(); chk('FND-07 traces with evidence and versions; older decision keeps old version', /Decision traces/i.test(t) && /rules 2026\.10\.4/.test(t) && /Evidence/i.test(t), 'Admin › Home › Decision traces');
+  await p.fill('#trF', 'oakmere'); await p.evaluate(() => CTL.trExport()); t = await body(); chk('FND-07 filter and export', (await p.$$eval('#trRows tr', r => r.length)) >= 1 && /when,decision/i.test(await p.inputValue('#trOut')), 'Admin › Home › Decision traces');
+  t = await adm('runlog'); chk('FND-12 cost cap alert and stop', /alert at 80%/i.test(t), 'Admin › Home › Run log');
+  await as('sofia'); t = await run(() => App.openRecord('juniper', 'overview')); await p.selectOption('#perSel', 'Technical lead'); chk('FND-03 edit persona (audited)', await p.evaluate(() => /Technical lead/.test(document.querySelector('#perSel').value)), 'Account › Details');
   // round 3
   t = await run(() => { App.openRecord('juniper', 'graph'); }); await p.click('g.hub-n'); await p.waitForTimeout(300); t = await body(); chk('Context graph nodes clickable with detail', /Open/i.test(t) && (await p.$('g.hub-n.on')) !== null, 'Account › Context graph');
   chk('Actions name their signal (no placeholder)', await p.evaluate(() => !MOCK.ACCOUNTS.some(a => a.nba && /Introduce Client/.test(a.nba.action)) && /Congratulate Budi/.test(MOCK.ACCOUNTS.find(a => a.id === 'juniper').nba.action)), 'Next best actions');

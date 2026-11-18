@@ -122,3 +122,5 @@ body{overflow:hidden;height:100vh;}
 .tbl tr[hidden]{display:none;}
 @media (max-width:1100px){.ck-r{grid-template-columns:24px minmax(0,1fr) auto;}.ck-p{grid-column:2;}}
 .um .sm{font-size:12px;color:var(--i3);}
+
+.con-cat{display:flex;flex-direction:column;gap:10px}.con-g{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.con-g .lbl{min-width:150px}.con-form{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px;padding:10px;border:1px solid var(--border);border-radius:10px}
