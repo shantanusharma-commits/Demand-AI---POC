@@ -124,3 +124,23 @@ body{overflow:hidden;height:100vh;}
 .um .sm{font-size:12px;color:var(--i3);}
 
 .con-cat{display:flex;flex-direction:column;gap:10px}.con-g{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.con-g .lbl{min-width:150px}.con-form{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px;padding:10px;border:1px solid var(--border);border-radius:10px}
+
+/* Connect flow · built from the design tokens in mock.css */
+.con-how{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:16px}
+.con-how-s{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--border);border-radius:var(--rmd);background:var(--s50)}
+.con-how-s b{display:block;font-size:12.5px}.con-how-s span:not(.con-n){font-size:11.5px;color:var(--i2)}
+.con-n{width:22px;height:22px;border-radius:50%;background:var(--brand);color:#fff;font:600 11px var(--fb);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+.con-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px;flex:1}
+.con-g{align-items:flex-start}
+.con-tile{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--rmd);background:var(--surf)}
+.con-tile.on{background:var(--pos-lt);border-color:transparent}
+.con-av{width:32px;height:32px;border-radius:var(--rsm);background:var(--brand-lt);color:var(--brand-dk);font:600 12px var(--fd);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+.con-tt{flex:1;min-width:0}.con-tt b{display:block;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.con-tt span{font-size:11px;color:var(--i3)}
+#wz.wz-on{position:fixed;inset:0;z-index:60}.wz-bg{position:absolute;inset:0;background:rgba(20,26,33,.28)}
+.wz{position:absolute;top:0;right:0;bottom:0;width:min(480px,100%);background:var(--surf);box-shadow:var(--sh-lg);display:flex;flex-direction:column}
+.wz-h{display:flex;gap:10px;align-items:center;padding:14px 18px;border-bottom:1px solid var(--border)}.wz-h .grow{flex:1}
+.wz-steps{display:flex;gap:6px;list-style:none;margin:0;padding:12px 18px;border-bottom:1px solid var(--border);font-size:12px;color:var(--i3)}
+.wz-steps li{display:flex;align-items:center;gap:6px;flex:1}.wz-steps li span{width:20px;height:20px;border-radius:50%;border:1px solid var(--bdk);display:inline-flex;align-items:center;justify-content:center;font-size:11px}
+.wz-steps li.on{color:var(--i1);font-weight:600}.wz-steps li.on span{background:var(--brand);border-color:var(--brand);color:#fff}.wz-steps li.done span{background:var(--pos-lt);border-color:transparent;color:var(--pos)}
+.wz-b{flex:1;overflow:auto;padding:16px 18px;display:flex;flex-direction:column;gap:10px}.wz-b .btn{align-self:flex-start}
+.wz-f{display:flex;gap:8px;padding:12px 18px;border-top:1px solid var(--border)}

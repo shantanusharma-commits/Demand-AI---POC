@@ -12,7 +12,10 @@ const M = process.argv[2], full = M === 'full-mock', dir = '/home/user/Demand-AI
   t = await adm('runlog'); chk('FND-12 versions, LRN-01 baseline, cost', /Versions in force/i.test(t) && /Baseline reply rate/i.test(t) && /USD/i.test(t), 'Admin › Home › Run log');
   t = await adm('connectors'); const t2 = await adm('interfaces'); chk('INT-01..04 connectors, Slack, Teams', /CRM/i.test(t) && /Slack/i.test(t + t2) && /Teams/i.test(t + t2), 'Admin › Connections');
   t = await adm('interfaces'); chk('FND-10 chat and interfaces', /Web chat/i.test(t), 'Admin › Connections › Interfaces');
-  t = await adm('icp'); chk('PRO-01/02/05 ICP and cold start', /Path A/i.test(t), 'Admin › ICP and scoring');
+  t = await adm('icp'); chk('PRO-01 ICP library and fit weights (admin)', /ICP library/i.test(t) && /Fit weights/i.test(t), 'Admin › ICP and scoring');
+  await p.evaluate(() => CTL.conPick('Crunchbase', 'key', 'Signal sources', 1)); await p.waitForTimeout(150); let w1 = await body(); await p.evaluate(() => { CTL.wzAuth(); CTL.wzGo(1); }); let w2 = await body(); await p.evaluate(() => CTL.wzGo(1)); let w3 = await body(); await p.evaluate(() => CTL.wzGo(1)); let w4 = await body();
+  chk('Connect flow: authorise, map, test, schedule', /Connect Crunchbase/i.test(w1) && /Funding announcement/i.test(w2) && /Connection OK/i.test(w3) && /If it fails/i.test(w4), 'Admin › Connections › Connect');
+  await p.evaluate(() => { CTL.conAdd('Crunchbase'); CTL.wzClose(); });
   t = await adm('signals'); chk('SIG-12/13/15, RES-01 category research', /Observable/i.test(t) && /Category research/i.test(t), 'Admin › ICP › Signals and tiers');
   t = await adm('registry'); chk('SIG-01 registry, SIG-16 champion move', /Signal registry/i.test(t) && /champion/i.test(t), 'Admin › ICP › Signal registry');
   t = await adm('quality'); chk('PRO-07 name-only, PRO-10 held', /Name-only/i.test(t) && /Identity dispute/i.test(t), 'Admin › ICP › Data quality');
@@ -59,6 +62,9 @@ const M = process.argv[2], full = M === 'full-mock', dir = '/home/user/Demand-AI
   await p.fill('#trF', 'oakmere'); await p.evaluate(() => CTL.trExport()); t = await body(); chk('FND-07 filter and export', (await p.$$eval('#trRows tr', r => r.length)) >= 1 && /when,decision/i.test(await p.inputValue('#trOut')), 'Admin › Home › Decision traces');
   t = await adm('runlog'); chk('FND-12 cost cap alert and stop', /alert at 80%/i.test(t), 'Admin › Home › Run log');
   await as('sofia'); t = await run(() => App.openRecord('juniper', 'overview')); await p.selectOption('#perSel', 'Technical lead'); chk('FND-03 edit persona (audited)', await p.evaluate(() => /Technical lead/.test(document.querySelector('#perSel').value)), 'Account › Details');
+  await as('sofia'); t = await run(() => App.ask('What is our ICP?'), 2500); chk('ICP remembered and shown in chat', /ICP v\d/i.test(t) && /Every new list starts from it/i.test(t), 'Chat');
+  t = await run(() => App.ask('Find heads of operations in Singapore'), 2500); chk('New lists use the confirmed ICP', /Used the confirmed ICP v/i.test(t), 'Chat');
+  if (full) { t = await run(() => App.ask('What is our ICP?'), 2500); chk('ICP learns from reps\' edits (proposed to the rep)', /reps removed 6 sites/i.test(t), 'Chat'); }
   // round 3
   t = await run(() => { App.openRecord('juniper', 'graph'); }); await p.click('g.hub-n'); await p.waitForTimeout(300); t = await body(); chk('Context graph nodes clickable with detail', /Open/i.test(t) && (await p.$('g.hub-n.on')) !== null, 'Account › Context graph');
   chk('Actions name their signal (no placeholder)', await p.evaluate(() => !MOCK.ACCOUNTS.some(a => a.nba && /Introduce Client/.test(a.nba.action)) && /Congratulate Budi/.test(MOCK.ACCOUNTS.find(a => a.id === 'juniper').nba.action)), 'Next best actions');
