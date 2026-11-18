@@ -21,6 +21,20 @@ Open `index.html` in Chrome or Edge (double-click). Fonts need an internet conne
 | `admin/settings.html` | General, Appearance, Notifications, Security and access, Data and privacy, Usage |
 | `admin/07-…15-*.html` | The legacy prototype screens (setup, content, users, prospecting, scoring, NBA, analytics, review), copied with the admin sidebar |
 
+## Five screens (18 Nov)
+
+The look, fonts and Today stay exactly as they were. The menu now has five screens; everything else opens as a tab inside one of them.
+
+| Screen | Tabs and what you do there |
+|---|---|
+| Today | Where you stand, while you were away, your day (Day, Week, List), chats that need you. Analytics opens from "pipeline the AI influenced" |
+| Inbox | Replies from email and LinkedIn by folder, and a new **Tracking** folder: every next best action and campaign touch from prepared to sent, delivered, opened and replied |
+| Accounts | **Accounts** (lists, score out of 100), **Segments** (micro-segments, NBA or NBC), **Signals** (new: live, first-party, expired and discarded, by level: market, company, competitor, personal, first-party) |
+| Campaigns | **Campaigns** (confirm, sequence, tasks), **Next best actions** (new: one action per account, delivery tracked), **Content** (the content studio) |
+| Approvals | Only what needs a person, now with **If nobody acts** for each item, and **Also needs you**: an unmatched reply, a held record, an unclear persona (rep) or a campaign and the backtest (manager) |
+
+The sign-in page adds **Helen Varga (sales leader)**, who sees the whole team like the manager.
+
 ## Fixes after the 29 Oct review
 
 1. **Prospecting follows the request.** Ask for anyone in any chat ("Find maintenance heads at refineries in Thailand", "Find marketing heads in Sydney working in tech"): the role, place and industry become the list, and the chat is named after it. Scoring, "Route to NBA and NBC", "Save the scored list", "Assign them to Kenji" (manager), "Send them" and "Send an update" all work on that list. When 10 or more accounts share a trigger, they become a new draft campaign in Campaigns; the rest get next best actions in Segments, which go ahead on their own only if they pass the six checks. The new list, segments and campaign stay after a reload. "Find prospects like my last 10 wins" still gives the seeded list.

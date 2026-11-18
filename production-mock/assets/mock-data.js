@@ -9,6 +9,7 @@
     aisha: { id: 'aisha', name: 'Aisha Rahman', role: 'rep', title: 'Account executive · Indonesia', color: '#2E7D5A' },
     kenji: { id: 'kenji', name: 'Kenji Mori', role: 'rep', title: 'Account executive · Philippines', color: '#B23F3F' },
     pavan: { id: 'pavan', name: 'Daniel Brooks', role: 'manager', title: 'Sales manager · SEA', color: '#7D52A2' },
+    helen: { id: 'helen', name: 'Helen Varga', role: 'leader', title: 'Sales leader', color: '#191020' },
     rajiv: { id: 'rajiv', name: 'Rajiv Nair', role: 'admin', title: 'Sales operations admin', color: '#5E3A80' },
   };
   const REPS = ['sofia', 'marco', 'aisha', 'kenji'];

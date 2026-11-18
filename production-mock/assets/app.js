@@ -13,7 +13,7 @@
   };
   let me = USERS[store.get('dmock_user') || 'sofia'] || USERS.sofia;
   if (me.role === 'admin') { location.href = 'admin/index.html'; return; }
-  const isMgr = me.role === 'manager';
+  const isMgr = me.role === 'manager' || me.role === 'leader', isLeader = me.role === 'leader';
   const STATE_KEY = 'dmock_state_v10_' + me.id;
   let saved = {};
   try { saved = JSON.parse(store.get(STATE_KEY, true) || '{}'); } catch (e) { saved = {}; }
@@ -276,6 +276,17 @@
   /* ─── Routing: #today or a module; a result or a record opens in the canvas beside the chat ─── */
   const MODULES = Object.assign({ inbox: 'Inbox', accounts: 'Accounts', segments: 'Segments', campaigns: 'Campaigns', approvals: 'Approvals', studio: 'Content studio' }, isMgr ? { analytics: 'Analytics' } : {});
   const MOD_IC = { inbox: 'inbox', accounts: 'users', segments: 'layers', campaigns: 'megaphone', approvals: 'task', studio: 'pen', analytics: 'bars' };
+  /* Five screens in the menu. Segments and Signals open as tabs in Accounts; next best actions and content as tabs in Campaigns; Analytics from Today. */
+  const NAV5 = ['inbox', 'accounts', 'campaigns', 'approvals'];
+  const navOn = v => v === 'segments' ? 'accounts' : v === 'studio' ? 'campaigns' : v;
+  let accSub = 'list', campSub = 'list', sigTab = 'live';
+  function modTabs() {
+    const v = view(), G = {
+      accounts: [['accounts', 'Accounts', v === 'accounts' && accSub !== 'signals'], ['segments', 'Segments', v === 'segments'], ['signals', 'Signals', v === 'accounts' && accSub === 'signals']],
+      campaigns: [['campaigns', 'Campaigns', v === 'campaigns' && campSub !== 'nba'], ['nba', 'Next best actions', v === 'campaigns' && campSub === 'nba'], ['studio', 'Content', v === 'studio']]
+    }[navOn(v)];
+    return G && !segSel && !campSel ? `<div class="dtabs mod-tabs">${G.map(([k, l, on]) => `<button class="${on ? 'on' : ''}" onclick="App.modTab('${k}')">${l}</button>`).join('')}</div>` : '';
+  }
   /* Where you came from: jumping from a chat or Analytics into a module keeps a way back */
   let backs = [], keep = null;
   function remember(to) {
@@ -290,7 +301,7 @@
   const backChip = () => backs.length ? `<button class="back-chip" onclick="App.goBack()" title="Back to ${esc(backs[backs.length - 1].label)}">${ic('left', 13)}<span>${esc(backs[backs.length - 1].label)}</span></button>` : '';
   function view() { const r = (location.hash || '').slice(1); return MODULES[r] ? r : null; }
   function go(r) { if (view() === r || (!r && !view())) renderAll(); else location.hash = r ? '#' + r : '#today'; }
-  function nav(r) { backs = []; keep = null; art = null; recId = null; thrId = null; ctx = null; expanded = false; if (!r) S.cur = 'home'; if (r === 'campaigns') campSel = null; if (r === 'segments') segSel = null; if (r === 'studio') S.studio.doc = null; go(r); }
+  function nav(r) { if (r === 'accounts') accSub = 'list'; if (r === 'campaigns') campSub = 'list'; backs = []; keep = null; art = null; recId = null; thrId = null; ctx = null; expanded = false; if (!r) S.cur = 'home'; if (r === 'campaigns') campSel = null; if (r === 'segments') segSel = null; if (r === 'studio') S.studio.doc = null; go(r); }
   function openMod(r) { remember(r); art = null; recId = null; thrId = null; expanded = true; go(r); }
   window.addEventListener('hashchange', () => renderAll());
 
@@ -303,11 +314,11 @@
       <button class="side-new" onclick="App.newChat()" title="New chat">${ic('plus', 14)}<span>New chat</span></button>
       <a class="side-item ${!v ? 'on' : ''}" href="#today" onclick="App.nav(null);return false" title="Today">${ic('home', 16)}<span class="lbl-t">Today</span></a>
       <div class="side-sep"></div>
-      <nav class="side-nav" aria-label="Modules">${Object.keys(MODULES).map(k => `<a class="side-item ${v === k ? 'on' : ''}" href="#${k}" onclick="App.nav('${k}');return false" title="${MODULES[k]}">${ic(MOD_IC[k], 16)}<span class="lbl-t">${MODULES[k]}</span>${(k === 'approvals' ? n : k === 'inbox' ? threads().filter(needsReply).length : 0) ? `<span class="cnt">${k === 'approvals' ? n : threads().filter(needsReply).length}</span>` : ''}</a>`).join('')}</nav>
+      <nav class="side-nav" aria-label="Modules">${NAV5.map(k => `<a class="side-item ${navOn(v) === k ? 'on' : ''}" href="#${k}" onclick="App.nav('${k}');return false" title="${MODULES[k]}">${ic(MOD_IC[k], 16)}<span class="lbl-t">${MODULES[k]}</span>${(k === 'approvals' ? n : k === 'inbox' ? threads().filter(needsReply).length : 0) ? `<span class="cnt">${k === 'approvals' ? n : threads().filter(needsReply).length}</span>` : ''}</a>`).join('')}</nav>
       <div class="side-sec">Recent chats${S.chats.some(c => c.attn) ? '<span class="side-attn">Needs you</span>' : ''}</div>
       <div class="side-recent">${S.chats.map(c => c.obj ? `<button class="obj ${!v && c.id === S.cur ? 'on' : ''} ${c.attn ? 'hot' : ''}" onclick="App.openChat('${c.id}')" title="${esc(c.title)}">${ic('flag', 13)}<span><b>${esc(c.title)}</b><em>${c.attn ? attnLine(c) : `${objDone(c).length} of ${c.obj.total}${c.reminder ? ' · reminder ' + esc(c.reminder) : ''}`}</em><u><s style="width:${Math.round(objDone(c).length / c.obj.total * 100)}%"></s></u></span>${c.attn ? '<i class="attn" title="Needs your attention">' + (c.obj.total - objDone(c).length) + '</i>' : `<i>${esc(c.when)}</i>`}</button>` : `<button class="${!v && c.id === S.cur ? 'on' : ''} ${c.attn ? 'obj hot' : ''}" onclick="App.openChat('${c.id}')" title="${esc(c.title)}">${ic('chat', 13)}${c.attn ? `<span><b>${esc(c.title)}</b><em>${esc(attnLine(c))}</em></span><i class="attn" title="Needs your attention">1</i>` : `<span>${esc(c.title)}</span><i>${esc(c.when)}</i>`}</button>`).join('')}</div>
       <div class="side-foot">
-        <div class="side-user">${avatar(me, 30)}<div class="lbl-t"><div class="nm">${esc(me.name)}</div><div class="rl">${isMgr ? 'Sales manager · 4 reps' : 'Sales rep'}</div></div></div>
+        <div class="side-user">${avatar(me, 30)}<div class="lbl-t"><div class="nm">${esc(me.name)}</div><div class="rl">${isLeader ? 'Sales leader · whole team' : isMgr ? 'Sales manager · 4 reps' : 'Sales rep'}</div></div></div>
         <div class="side-links lbl-t"><button onclick="App.switchUser('${isMgr ? 'sofia' : 'pavan'}')">Switch to ${isMgr ? 'Sofia (rep)' : 'Daniel (manager)'}</button><a href="index.html" onclick="App.signOut()">Sign out</a></div>
       </div>`;
   }
@@ -724,7 +735,7 @@
     { d: 4, s: '09:00', m: 45, t: 'Weekly team review', k: 'Internal', w: 'Sofia, Marco, Aisha, Kenji', r: 20, who: ['pavan', 'sofia'] },
     { d: 4, s: '14:00', m: 30, t: 'Kingfisher Refining · plant manager intro', acc: 'kingfisher', k: 'Client call', w: 'Linh Pham, Sofia Ahlgren', r: 35, g: 'Introduce the team to the new plant manager', who: ['pavan', 'sofia'] },
   ];
-  const myMeets = () => MEETS.filter(x => x.who.includes(me.id));
+  const myMeets = () => MEETS.filter(x => x.who.includes(isLeader ? 'pavan' : me.id));
   const toMin = t => +t.slice(0, 2) * 60 + +t.slice(3);
   const hhmm = n => String(Math.floor(n / 60)).padStart(2, '0') + ':' + String(n % 60).padStart(2, '0');
   const dayIx = str => { if (!str || /Today/.test(str)) return TODAYI; if (/Tomorrow/.test(str)) return TODAYI + 1; const m = str.match(/\b(Mon|Tue|Wed|Thu|Fri)\b/); return m ? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].indexOf(m[1]) : TODAYI; };
@@ -1104,29 +1115,43 @@
   /* Inbox: folders, the message list and a reading pane, like a mail client */
   const unread = r => !S.read[r.id] && !S.handled[r.id];
   function subjOf(r) { const out = acct(r.acc).activity.filter(x => x.msg).pop(); return r.ch === 'Email' ? 'Re: ' + (out ? out.msg.subject : r.source) : 'LinkedIn message · ' + r.source; }
-  const FOLDERS = [['all', 'Inbox', 'inbox'], ['needs', 'Needs a reply', 'reply'], ['Positive', 'Positive', 'up'], ['Objection', 'Objection', 'alert'], ['Meeting booked', 'Meetings', 'check'], ['Out of office', 'Out of office', 'clock'], ['sent', 'Sent', 'plane'], ['archived', 'Archived', 'savei']];
-  const inFolder = (r, k) => k === 'archived' ? !!S.archived[r.id] : k === 'sent' ? !!S.handled[r.id] : !S.archived[r.id] && (k === 'all' || (k === 'needs' ? needsReply(r) : r.kind === k));
+  const FOLDERS = [['all', 'Inbox', 'inbox'], ['needs', 'Needs a reply', 'reply'], ['Positive', 'Positive', 'up'], ['Objection', 'Objection', 'alert'], ['Meeting booked', 'Meetings', 'check'], ['Out of office', 'Out of office', 'clock'], ['sent', 'Sent', 'plane'], ['tracking', 'Tracking', 'bars'], ['archived', 'Archived', 'savei']];
+  const inFolder = (r, k) => k === 'tracking' ? false : k === 'archived' ? !!S.archived[r.id] : k === 'sent' ? !!S.handled[r.id] : !S.archived[r.id] && (k === 'all' || (k === 'needs' ? needsReply(r) : r.kind === k));
+  /* Inbox › Tracking: every next best action and campaign touch, email and LinkedIn, from prepared to replied */
+  function trackRows() {
+    const nb = nbaRows().filter(a => ibCh === 'all' || a.nba.channel === ibCh).map(a => ({ a, t: track(a), what: a.nba.action, ch: a.nba.channel, src: 'Next best action' }));
+    const cp = ACCOUNTS.filter(a => a.campaign && visible(a) && campOf(a.campaign).status === 'Running').map(a => { const h = hsh(a.id), st = /Replied/.test(a.campState || '') ? 4 : [2, 3, 2, 3, 1][h % 5]; return { a, t: { stage: st, label: a.campState || STAGES[st], cls: st === 4 ? 'b-pos' : 'b-sec', how: 'Went ahead on its own', when: 'This week' }, what: campOf(a.campaign).name, ch: h % 2 ? 'LinkedIn' : 'Email', src: 'Campaign touch' }; }).filter(r => ibCh === 'all' || r.ch === ibCh);
+    return nb.concat(cp);
+  }
+  function trackingPane(rows) {
+    const n = k => rows.filter(r => r.t.stage >= k).length;
+    const bar = STAGES.map((x, i) => `<div class="dlv-s"><b>${n(i)}</b><span>${x}</span><i style="width:${Math.max(4, n(i) / (rows.length || 1) * 100)}%"></i></div>`).join(`<span class="dlv-a">${ic('right', 14)}</span>`);
+    return `<div class="rp-h"><div class="rp-top"><h2>Tracking</h2></div><div class="sm muted" style="padding:0 2px">Every send is captured when it goes out: person, segment, signals, message version and channel.</div></div>
+      <div style="padding:14px 18px"><div class="dlv">${bar}</div>
+      <div class="sm muted" style="margin-top:12px">${rows.filter(r => r.t.cls === 'b-neg').length} bounced (the address is re-checked before a retry) · a reply pauses that person's remaining campaign steps.</div></div>`;
+  }
   function renderInbox() {
     const src = threads(), q = ($('ibQ') && $('ibQ').value || '').toLowerCase();
     const list = src.filter(r => inFolder(r, inboxTab) && (ibCh === 'all' || r.ch === ibCh) && (!q || (r.from + acct(r.acc).name + r.text).toLowerCase().includes(q)));
-    if (!thrId && innerWidth > 900 && list.length) thrId = list[0].id;
+    const trk = inboxTab === 'tracking' ? trackRows() : null;
+    if (!trk && !thrId && innerWidth > 900 && list.length) thrId = list[0].id;
     const cur = thrId ? REPLIES.find(x => x.id === thrId) : null;
     $('main').className = 'ibx-pg';
     $('main').innerHTML = `<div class="ibx ${cur ? 'has-sel' : ''}">
       <aside class="ibx-f">
         <div class="ibx-ttl">Inbox</div>
         <button class="btn pri ibx-new" onclick="App.toast('New messages start from a campaign step or a next best action (mock)')">${ic('pen', 14)} <span>New message</span></button>
-        <nav class="ibx-nav">${FOLDERS.map(([k, l, i]) => { const n = k === 'all' ? src.filter(r => inFolder(r, 'all') && unread(r)).length : src.filter(r => inFolder(r, k)).length; return `<button class="${inboxTab === k ? 'on' : ''}" onclick="App.setInboxTab('${k}')" title="${l}">${ic(i, 15)}<span>${l}</span><i>${n || ''}</i></button>`; }).join('')}</nav>
+        <nav class="ibx-nav">${FOLDERS.map(([k, l, i]) => { const n = k === 'tracking' ? '' : k === 'all' ? src.filter(r => inFolder(r, 'all') && unread(r)).length : src.filter(r => inFolder(r, k)).length; return `<button class="${inboxTab === k ? 'on' : ''}" onclick="App.setInboxTab('${k}')" title="${l}">${ic(i, 15)}<span>${l}</span><i>${n || ''}</i></button>`; }).join('')}</nav>
         <div class="ibx-sec">Channel</div>
         <nav class="ibx-nav">${[['all', 'All channels', 'layers'], ['Email', 'Email', 'mail'], ['LinkedIn', 'LinkedIn', 'li']].map(([k, l, i]) => `<button class="${ibCh === k ? 'on' : ''}" onclick="App.setIbCh('${k}')" title="${l}">${ic(i, 15)}<span>${l}</span></button>`).join('')}</nav>
         <div class="ibx-sec">Mailbox</div>${isMgr ? `<div class="ibx-mb">${ownerSel()}</div>` : `<div class="ibx-mb muted">${esc(mailbox({ owner: me.id }))}</div>`}
       </aside>
       <section class="ibx-l">
         <div class="ibx-lh">${backChip()}<div class="search">${ic('search', 14)}<label class="sr" for="ibQ">Search mail</label><input id="ibQ" placeholder="Search mail" value="${esc(q)}" oninput="App.renderAll()"></div></div>
-        <div class="ibx-lt"><b>${FOLDERS.find(f => f[0] === inboxTab)[1]}</b><span class="muted">${list.length} conversation${list.length === 1 ? '' : 's'}</span></div>
-        <div class="ibx-rows">${list.map(r => { const a = acct(r.acc); return `<button class="ibx-r ${unread(r) ? 'unread' : ''} ${thrId === r.id ? 'on' : ''}" onclick="App.openThread('${r.id}')">${pAvatar(a, 34)}<div class="grow"><div class="ibx-r1"><span class="fr">${esc(r.from)}</span><span class="when">${esc(r.at)}</span></div><div class="ibx-r2">${esc(subjOf(r))}</div><div class="ibx-r3">${esc(r.text)}</div><div class="ibx-r4">${chIc(r.ch)}<span class="badge ${KIND_B[r.kind]}">${r.kind}</span>${isMgr ? `<span>${esc(first(USERS[r.owner].name))}</span>` : ''}${S.handled[r.id] ? '<span>· replied</span>' : ''}</div></div></button>`; }).join('') || '<div class="empty">No conversations here.</div>'}</div>
+        <div class="ibx-lt"><b>${FOLDERS.find(f => f[0] === inboxTab)[1]}</b><span class="muted">${trk ? trk.length + ' sends' : list.length + ' conversation' + (list.length === 1 ? '' : 's')}</span></div>
+        <div class="ibx-rows">${trk ? trk.map(r => `<button class="ibx-r" onclick="App.openRecord('${r.a.id}','engage')">${pAvatar(r.a, 34)}<div class="grow"><div class="ibx-r1"><span class="fr">${esc(r.a.contact.name)}</span><span class="when">${esc(r.t.when || '')}</span></div><div class="ibx-r2">${esc(r.what)}</div><div class="ibx-r3">${esc(r.a.name)} · ${esc(r.src)}</div><div class="ibx-r4">${chIc(r.ch)}${dots(r.t)}<span class="badge ${r.t.cls}">${esc(r.t.label)}</span>${isMgr ? `<span>${esc(first(USERS[r.a.owner].name))}</span>` : ''}</div></div></button>`).join('') : list.map(r => { const a = acct(r.acc); return `<button class="ibx-r ${unread(r) ? 'unread' : ''} ${thrId === r.id ? 'on' : ''}" onclick="App.openThread('${r.id}')">${pAvatar(a, 34)}<div class="grow"><div class="ibx-r1"><span class="fr">${esc(r.from)}</span><span class="when">${esc(r.at)}</span></div><div class="ibx-r2">${esc(subjOf(r))}</div><div class="ibx-r3">${esc(r.text)}</div><div class="ibx-r4">${chIc(r.ch)}<span class="badge ${KIND_B[r.kind]}">${r.kind}</span>${isMgr ? `<span>${esc(first(USERS[r.owner].name))}</span>` : ''}${S.handled[r.id] ? '<span>· replied</span>' : ''}</div></div></button>`; }).join('') || '<div class="empty">No conversations here.</div>'}</div>
       </section>
-      <section class="ibx-v">${cur ? readingPane(cur) : `<div class="ibx-empty">${ic('inbox', 40, 1.5)}<div>Select a conversation to read it</div></div>`}</section>
+      <section class="ibx-v">${trk ? trackingPane(trk) : cur ? readingPane(cur) : `<div class="ibx-empty">${ic('inbox', 40, 1.5)}<div>Select a conversation to read it</div></div>`}</section>
     </div>`;
     if (q) { const s = $('ibQ'); s.focus(); s.setSelectionRange(q.length, q.length); }
   }
@@ -1230,7 +1255,7 @@
   /* ─── Module and canvas frames ─── */
   function frame(title, sub, actions, closable) {
     $('main').className = 'canvas';
-    $('main').innerHTML = `<div class="cv-h">${backChip()}<div class="cv-ht"><div class="cv-t">${title}</div>${sub ? `<div class="cv-s">${sub}</div>` : ''}</div><div class="cv-a">${actions || ''}<button class="ic-btn" onclick="App.closeCanvas()" title="Close">${ic('x', 16)}</button></div></div><div class="cv-b" id="cv"></div>`;
+    $('main').innerHTML = `<div class="cv-h">${backChip()}<div class="cv-ht"><div class="cv-t">${title}</div>${sub ? `<div class="cv-s">${sub}</div>` : ''}</div><div class="cv-a">${actions || ''}<button class="ic-btn" onclick="App.closeCanvas()" title="Close">${ic('x', 16)}</button></div></div>${modTabs()}<div class="cv-b" id="cv"></div>`;
     return $('cv');
   }
   const filt = (label, ic2, on) => `<button class="fchip ${on ? 'on' : ''}">${ic2 ? ic(ic2, 13) : ''}${label}</button>`;
@@ -1250,6 +1275,7 @@
 
   /* Accounts (lists are saved selections: tabs above the table) */
   function renderAccounts() {
+    if (accSub === 'signals') return renderSignals();
     const lists = [{ id: 'all', name: 'All accounts' }].concat(S.lists, LISTS);
     const l = lists.find(x => x.id === listSel) || lists[0];
     let rows = l.id === 'all' ? ACCOUNTS : l.ids ? l.ids.map(acct) : l.seg ? ACCOUNTS.filter(a => a.seg === l.seg) : l.id === 'L1' ? listAccounts() : ACCOUNTS.filter(a => a.score > 0);
@@ -1295,6 +1321,29 @@
   }
   /* Segments track both: a campaign segment (NBC) through its campaign, every other segment (NBA) through the delivery of each account's action */
   const segNba = s => ACCOUNTS.filter(a => a.seg === s.id && a.nba && !a.campaign && /auto|sent|review|ready/.test(a.nba.status) && visible(a));
+  /* ─── Accounts › Signals: every signal by level, first-party included, and what the filter discarded ─── */
+  const LEVEL = x => /visitor|website|webinar|download|email (open|click)|g2 buyer/i.test(x.source + ' ' + x.type) ? 'First-party' : /linkedin/i.test(x.source + ' ' + x.type) ? 'Personal · LinkedIn' : /job-change|exec|plant head|champion|role/i.test(x.source + ' ' + x.type) ? 'Personal' : /rival|competitor|renewal|contract/i.test(x.source + ' ' + x.type) ? 'Competitor' : /regulat|market|price|standard|deadline/i.test(x.source + ' ' + x.type) ? 'Market' : 'Company';
+  function renderSignals() {
+    const rows = ACCOUNTS.filter(visible).flatMap(a => a.signals.map(x => ({ a, x, lv: LEVEL(x) }))).sort((p, q) => q.x.weight - p.x.weight);
+    const live = rows.filter(r => r.x.weight > 0), fp = rows.filter(r => r.lv === 'First-party'), exp = rows.filter(r => !(r.x.weight > 0));
+    const pick = i => (ACCOUNTS.filter(visible)[i % Math.max(1, ACCOUNTS.filter(visible).length)] || ACCOUNTS[0]).name;
+    const DISC = [['Headquartered in Singapore', 'Time-bound', 'Has no end date, so it never makes a conversation timely'], ['Company size inferred from office photos', 'Observable', 'Cannot be verified from a public source'], ['Liked a post about a charity cycling event', 'Predictive', 'A passive like on a post with no link to the category'], ['Sponsors a local football club', 'Predictive', 'No documented link to buying'], ['Rumoured restructuring on a forum', 'Observable', 'No reliable source'], ['Evergreen careers page: "always hiring"', 'Time-bound', 'No finite window']];
+    const tabs = [['live', `Live (${live.length})`], ['first', `First-party (${fp.length})`], ['expired', `Expired (${exp.length})`], ['discarded', `Discarded (${DISC.length})`]];
+    const cv = frame('Signals', `What makes a conversation timely, at five levels: market, company, competitor, personal and first-party. Every signal keeps its source and date.`, '');
+    const row = r => `<tr class="row-link" onclick="App.openRecord('${r.a.id}','overview')"><td><div class="nm">${esc(r.x.type)}</div><div class="sm">${esc(r.x.text)}</div></td><td>${esc(r.a.name)}</td><td><span class="badge ${r.lv === 'First-party' ? 'b-ter' : r.lv === 'Competitor' ? 'b-warn' : 'b-sec'}">${esc(r.lv)}</span></td><td><span class="badge b-grey">Tier ${r.x.tier}</span></td><td class="sm">${ago(r.x.age)}</td><td class="mono">${r.x.weight > 0 ? r.x.weight : '<span class="muted">expired</span>'}</td><td class="sm">${esc(r.x.source)}</td></tr>`;
+    const head = '<thead><tr><th>Signal</th><th>Account</th><th>Level</th><th>Signal tier</th><th>Age</th><th>Points today</th><th>Source</th></tr></thead>';
+    cv.innerHTML = `<div class="rule"><b>How a signal counts.</b> Only signals that are observable, predictive and time-bound count. Tier 1 is worth 100 points, tier 2 60 and tier 3 30; each fades with age and stops at its expiry. The same event from several sources counts once, and a repeat inside 30 days counts less.</div>
+      <div class="dtabs" style="margin-top:0">${tabs.map(([k, l]) => `<button class="${sigTab === k ? 'on' : ''}" onclick="App.setSigTab('${k}')">${l}</button>`).join('')}</div>
+      ${sigTab === 'discarded' ? `<div class="card tbl-wrap"><table class="tbl"><thead><tr><th>What was found</th><th>Account</th><th>Failed test</th><th>Why</th></tr></thead><tbody>${DISC.map((d, i) => `<tr><td>${esc(d[0])}</td><td>${esc(pick(i * 3))}</td><td><span class="badge b-neg">${d[1]}</span></td><td class="sm">${esc(d[2])}</td></tr>`).join('')}</tbody></table></div><div class="sm muted" style="margin-top:8px">Discarded signals are not escalations; they are kept so anyone can see what the filter dropped and why.</div>`
+      : `${sigTab === 'first' ? '<div class="placeholder-note" style="margin:0 0 10px"><div><b>Demo data.</b> Website visits, content downloads and email clicks connect in R2. A visit to the pricing page or a live webinar takes the fast lane to the rep within minutes.</div></div>' : ''}<div class="card tbl-wrap"><table class="tbl">${head}<tbody>${(sigTab === 'first' ? fp : sigTab === 'expired' ? exp : live).map(row).join('') || '<tr><td colspan="7" class="empty">None</td></tr>'}</tbody></table></div>`}`;
+  }
+  /* ─── Campaigns › Next best actions: one action per account, tracked from prepared to replied ─── */
+  function renderNbaList() {
+    const rows = nbaRows().sort((p, q) => q.score - p.score);
+    const cv = frame('Next best actions', 'One account, one action. It goes ahead on its own when it passes every check; the rest wait in Approvals with the reason.', `<button class="btn sm" onclick="App.nav('approvals')">${ic('task', 13)} Approvals</button>`);
+    cv.innerHTML = `<div class="rule"><b>Next best action or campaign?</b> When 10 or more accounts share one micro-segment within 7 days, they become one campaign (NBC) that the sales manager confirms. Below that, each account gets its own next best action (NBA), written from its strongest signal.</div>
+      ${nbaTop({ rate: null }, rows)}<div style="margin-top:12px">${nbaTable(rows)}</div>`;
+  }
   function nbaCounts(rows) {
     const t = rows.map(track);
     return { all: rows.length, went: t.filter(x => x.how === 'Went ahead on its own').length, wait: t.filter(x => x.stage === 0 && x.how === 'Needs a person').length, sent: t.filter(x => x.stage >= 1).length, deliv: t.filter(x => x.stage >= 2).length, opened: t.filter(x => x.stage >= 3).length, replied: t.filter(x => x.stage >= 4).length, bounced: t.filter(x => x.cls === 'b-neg').length };
@@ -1342,6 +1391,7 @@
   /* Campaigns: list → campaign (Enrollments, Steps, Outbox, Replies) → person drawer */
   function renderCampaigns() {
     if (campSel) return renderCampaign();
+    if (campSub === 'nba') return renderNbaList();
     const order = ['Ready to confirm', 'Draft', 'Running', 'Completed'];
     const list = CAMPAIGNS.slice().sort((p, q) => order.indexOf(p.status) - order.indexOf(q.status));
     const cv = frame('Campaigns', `${list.length} campaigns · email and LinkedIn`, `<button class="btn sm pri" onclick="App.ask('Build the campaign')">${ic('plus', 13)} New campaign</button>`);
@@ -1413,6 +1463,20 @@
     return `<div class="dlv-p">${STAGES.map((x, i) => `<div class="${i <= t.stage ? (t.cls === 'b-neg' && i === t.stage ? 'bad' : 'on') : ''}"><span></span><b>${x}</b></div>`).join('')}</div><div class="sm muted" style="margin-top:4px">${/own/.test(t.how) ? mkAI(t.how) : /Needs/.test(t.how) ? mkWait(t.how) : mkHu(t.how)} ${esc(t.label)}${t.when ? ' · ' + esc(t.when) : ''}</div>`;
   }
 
+  /* Other things only a person can decide: each with an owner, a reason, a due time and what happens if nobody acts */
+  function otherEsc() {
+    const R = S.resolvedEsc || {}, kf = acct('kingfisher'), cd = acct('cedar');
+    const L = (isMgr ? [
+      ['camp-fb', 'A campaign waits for you', 'Turnaround season 2027: 11 accounts share a turnaround announcement inside 7 days', 'Today 17:00', 'Falls back to separate next best actions after 3 days', "App.goCampaign('c1')", 'Open'],
+      ['backtest', 'Scoring check before go-live', 'The monthly backtest passed: 12 of 15 won accounts in Tier A or B, 2 of 15 lost', 'Friday', 'Release stays open; nothing to do', null, 'Noted']
+    ] : [
+      ['reply', 'A reply we could not match', 'r.ellis@unknown-sender.example: "Saw your note about migrations. Who should I speak to?"', 'Stays unmatched', 'Stays unmatched until you match it', null, 'Match to an account'],
+      ['identity', 'A held record', `${kf ? kf.contact.name + ' at ' + kf.name : 'A contact'}: providers disagree on the email, held for 3 refresh cycles`, 'Stays held', 'Stays held; never shown as sendable', null, 'Keep the first provider'],
+      ['persona', 'Unclear persona', `"Transformation Champion" at ${cd ? cd.name : 'an account'}: a generic persona is used until you set one`, 'This week', 'A generic persona', null, 'Set as operations']
+    ]).filter(x => !R[x[0]]);
+    if (!L.length) return '';
+    return `<div class="lbl" style="margin:18px 0 8px">Also needs you · ${L.length}</div><div class="card tbl-wrap"><table class="tbl"><thead><tr><th>What</th><th>Why it needs a person</th><th>Due</th><th>If nobody acts</th><th></th></tr></thead><tbody>${L.map(x => `<tr><td class="nm">${esc(x[1])}</td><td class="sm">${esc(x[2])}</td><td class="sm" style="white-space:nowrap">${esc(x[3])}</td><td class="sm">${esc(x[4])}</td><td><button class="btn sm" onclick="${x[5] || `App.resolveEsc('${x[0]}','Done. Logged with who and when.')`}">${esc(x[6])}</button></td></tr>`).join('')}</tbody></table></div>`;
+  }
   function renderApprovals() {
     const tabs = isMgr ? [['needs', 'Needs me'], ['team', 'Team exceptions'], ['ahead', 'Went ahead'], ['done', 'Decided']] : [['todo', 'Needs you'], ['waiting', 'With Daniel'], ['ahead', 'Went ahead'], ['done', 'Decided']];
     const items = apprItems(apprTab), readyIds = items.filter(a => !a.nba.reason && !S.decisions[a.id]);
@@ -1421,10 +1485,10 @@
       <div class="dtabs" style="margin-top:0">${tabs.map(([k, l]) => `<button class="${apprTab === k ? 'on' : ''}" onclick="App.setApprTab('${k}')">${l} (${apprItems(k).length})</button>`).join('')}
         ${isMgr && apprTab === 'team' ? `<label class="sr" for="repSel">Rep</label><select class="sel" id="repSel" style="margin-left:auto" onchange="App.setApprRep(this.value)"><option value="all">All reps</option>${REPS.map(r => `<option value="${r}" ${apprRep === r ? 'selected' : ''}>${USERS[r].name}</option>`).join('')}</select>` : ''}</div>
       ${isMgr && apprTab === 'needs' ? CAMPAIGNS.filter(c => (c.status === 'Ready to confirm' || S.camp[c.id] === 'Sent for confirmation') && S.camp[c.id] !== 'Confirmed').map(c => `<div class="card" style="margin-bottom:10px"><div class="card-b" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap"><span class="badge b-ter">Campaign</span><div class="grow" style="min-width:200px"><b>${esc(c.name)}</b><div class="sm muted" style="font-size:12px">${c.accounts.length} people · ${seqSpan(c)} · email and LinkedIn</div></div><button class="btn sm pri" onclick="App.confirmCampaign('${c.id}')">Confirm</button><button class="btn sm" onclick="App.goCampaign('${c.id}','steps')">Review steps</button></div></div>`).join('') : ''}
-      <div class="card tbl-wrap">${items.length ? `<table class="tbl"><thead><tr><th>Person</th><th>Next best action</th><th>Micro-segment</th><th>Checks</th>${isMgr ? '<th>Rep</th>' : ''}<th>Due</th><th></th></tr></thead><tbody>
-        ${items.map(a => { const d = S.decisions[a.id]; return `<tr class="row-link" onclick="App.openRecord('${a.id}','engage')"><td><div style="display:flex;gap:9px;align-items:center">${pAvatar(a)}<div><div class="nm">${esc(a.contact.name)}</div><div class="sm">${esc(a.name)}</div></div></div></td><td>${esc(a.nba.action)}<div class="sm">${chIc(a.nba.channel)} ${a.nba.channel}</div></td><td><span class="seg-link" onclick="event.stopPropagation();App.openSegment('${a.seg}')">${esc(a.segment)}</span></td><td><div class="gcell">${gateCell(a)}</div>${a.nba.reasonNote && !/auto|sent/.test(a.nba.status) ? `<div class="sm" style="max-width:260px;white-space:normal;margin-top:4px">${esc(a.nba.reasonNote)}</div>` : ''}</td>${isMgr ? `<td>${ownerPick(a)}</td>` : ''}<td style="white-space:nowrap">${esc(a.nba.due)}</td>
+      <div class="card tbl-wrap">${items.length ? `<table class="tbl"><thead><tr><th>Person</th><th>Next best action</th><th>Micro-segment</th><th>Checks</th>${isMgr ? '<th>Rep</th>' : ''}<th>Due</th><th>If nobody acts</th><th></th></tr></thead><tbody>
+        ${items.map(a => { const d = S.decisions[a.id]; return `<tr class="row-link" onclick="App.openRecord('${a.id}','engage')"><td><div style="display:flex;gap:9px;align-items:center">${pAvatar(a)}<div><div class="nm">${esc(a.contact.name)}</div><div class="sm">${esc(a.name)}</div></div></div></td><td>${esc(a.nba.action)}<div class="sm">${chIc(a.nba.channel)} ${a.nba.channel}</div></td><td><span class="seg-link" onclick="event.stopPropagation();App.openSegment('${a.seg}')">${esc(a.segment)}</span></td><td><div class="gcell">${gateCell(a)}</div>${a.nba.reasonNote && !/auto|sent/.test(a.nba.status) ? `<div class="sm" style="max-width:260px;white-space:normal;margin-top:4px">${esc(a.nba.reasonNote)}</div>` : ''}</td>${isMgr ? `<td>${ownerPick(a)}</td>` : ''}<td style="white-space:nowrap">${esc(a.nba.due)}</td><td class="sm" style="min-width:150px">${d || /auto|sent/.test(a.nba.status) ? '<span class="muted">–</span>' : a.nba.sensitive ? 'Stays held for ' + (isMgr ? 'you' : 'Daniel') : 'Expires in 3 days and the account re-ranks'}</td>
           <td style="white-space:nowrap" onclick="event.stopPropagation()">${d ? mkHu(decLabel(d)) : /auto|sent/.test(a.nba.status) ? mkAI('Went ahead on its own') : `${!a.nba.reason || (isMgr && a.nba.sensitive) ? `<button class="btn sm pri" onclick="App.approve('${a.id}')">${isMgr && a.nba.sensitive ? 'Sign off' : 'Approve'}</button> ` : ''}<button class="btn sm" onclick="App.openRecord('${a.id}','engage')">Review</button>`}</td></tr>`; }).join('')}
-        </tbody></table>` : `<div class="empty">Nothing here. ${apprTab === 'done' ? 'Decisions you make show up here.' : 'You\'re all caught up.'}</div>`}</div>`;
+        </tbody></table>` : `<div class="empty">Nothing here. ${apprTab === 'done' ? 'Decisions you make show up here.' : 'You\'re all caught up.'}</div>`}</div>${apprTab === 'todo' || apprTab === 'needs' ? otherEsc() : ''}`;
   }
 
   /* Person drawer (opens over the module, beside the chat) */
@@ -1609,7 +1673,7 @@
     if (!d) {
       const all = S.content.concat(CONTENT);
       $('main').className = 'canvas studio-home';
-      $('main').innerHTML = `<div class="cv-h"><div class="cv-ht" style="display:flex;flex-direction:row;align-items:baseline;gap:14px"><div class="cv-t">Content studio</div><div class="cv-s">Blogs and whitepapers in the Client's brand voice · more formats coming soon</div></div></div>
+      $('main').innerHTML = `<div class="cv-h"><div class="cv-ht" style="display:flex;flex-direction:row;align-items:baseline;gap:14px"><div class="cv-t">Content studio</div><div class="cv-s">Blogs and whitepapers in the Client's brand voice · more formats coming soon</div></div></div>${modTabs()}
         <div class="dtabs" style="margin:0;padding:0 22px;background:var(--surf)">${[['write', 'Write'], ['saved', `Saved content <i>${all.length}</i>`]].map(([k, l]) => `<button class="${studioTab === k ? 'on' : ''}" onclick="App.setStudioTab('${k}')">${l}</button>`).join('')}</div>
         <div class="cv-b" id="cv">${studioTab === 'write' ? `<div class="st-hero"><h1>What should we write?</h1><p>Describe it in your own words. It's written in a canvas beside the chat, and you change it by talking to it.</p>
           <div class="st-box"><label class="sr" for="stBrief">Brief</label><textarea id="stBrief" rows="2" placeholder="e.g. A whitepaper on legacy control system modernisation for plant managers" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();App.studioGo()}"></textarea>
@@ -1707,6 +1771,9 @@
     goTo(target) { const [k, v] = target.split(':'); if (k === 'campaign') goCampaign(v); else if (k === 'record') openRecord(v, 'engage'); else if (k === 'ask') ask(v); },
     repApprovals(r) { apprTab = 'team'; apprRep = r; openMod('approvals'); },
     setApprTab(k) { apprTab = k; renderAll(); },
+    modTab(k) { art = null; recId = null; thrId = null; expanded = true; if (k === 'signals' || k === 'accounts') { accSub = k === 'signals' ? 'signals' : 'list'; go('accounts'); } else if (k === 'nba' || k === 'campaigns') { campSel = null; campSub = k === 'nba' ? 'nba' : 'list'; go('campaigns'); } else { if (k === 'segments') segSel = null; if (k === 'studio') S.studio.doc = null; go(k); } },
+    setSigTab(k) { sigTab = k; renderAll(); },
+    resolveEsc(id, msg) { S.resolvedEsc = S.resolvedEsc || {}; S.resolvedEsc[id] = true; save(); toast(msg); renderAll(); },
     setApprRep(r) { apprRep = r; renderAll(); },
     setIbCh(k) { ibCh = k; thrId = null; renderAll(); },
     closeThread() { thrId = null; renderAll(); },

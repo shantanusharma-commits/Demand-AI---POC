@@ -1532,3 +1532,5 @@ body.nav-col .side .side-sec{height:1px;padding:0;margin:8px 12px;background:var
 .bub .mcards.an-c .mcard.row-link:hover{border-color:var(--brand-mid);}
 @media (max-width:640px){.back-chip{max-width:140px;}}
 .nba-d .sm{white-space:normal;overflow:visible;text-overflow:clip;}
+/* Tabs that group screens inside the five menu items */
+.mod-tabs{margin:0!important;padding:0 22px;background:var(--surf)}
