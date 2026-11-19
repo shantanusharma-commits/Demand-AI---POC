@@ -297,14 +297,14 @@
   const MODULES = Object.assign({ inbox: 'Inbox', accounts: 'Accounts', segments: 'Segments', campaigns: 'Campaigns', approvals: 'Approvals', studio: 'Content studio' }, isMgr ? { analytics: 'Team' } : {});
   const MOD_IC = { inbox: 'inbox', accounts: 'users', segments: 'layers', campaigns: 'megaphone', approvals: 'task', studio: 'pen', analytics: 'bars' };
   /* Five screens in the menu. Segments and Signals open as tabs in Accounts; next best actions and content as tabs in Campaigns; Analytics from Today. */
-  const NAV5 = isMgr ? ['inbox', 'accounts', 'campaigns', 'approvals', 'analytics'] : ['inbox', 'accounts', 'campaigns', 'studio', 'approvals'];
+  const NAV5 = isMgr ? ['inbox', 'accounts', 'campaigns', 'approvals', 'analytics'] : ['inbox', 'accounts', 'campaigns', 'approvals'];
   const R2TAG = '';
-  const navOn = v => v === 'segments' ? 'accounts' : v === 'studio' && isMgr ? 'campaigns' : v;
+  const navOn = v => v === 'segments' ? 'accounts' : v === 'studio' ? 'campaigns' : v;
   let accSub = 'list', campSub = 'list', sigTab = 'live';
   function modTabs() {
     const v = view(), G = {
       accounts: [['accounts', 'Accounts', v === 'accounts' && accSub !== 'signals'], ['segments', 'Segments', v === 'segments'], ['signals', 'Signals', v === 'accounts' && accSub === 'signals']],
-      campaigns: [['campaigns', 'Campaigns', v === 'campaigns' && campSub === 'list'], ['nba', 'Next best actions', v === 'campaigns' && campSub === 'nba'], ['plays', 'Plays', v === 'campaigns' && campSub === 'plays']].concat(isMgr ? [['studio', 'Content', v === 'studio']] : [])
+      campaigns: [['campaigns', 'Campaigns', v === 'campaigns' && campSub === 'list'], ['nba', 'Next best actions', v === 'campaigns' && campSub === 'nba'], ['plays', 'Plays', v === 'campaigns' && campSub === 'plays'], ['studio', 'Content', v === 'studio']]
     }[navOn(v)];
     return G && !segSel && !campSel ? `<div class="dtabs mod-tabs">${G.map(([k, l, on]) => `<button class="${on ? 'on' : ''}" onclick="App.modTab('${k}')">${l}</button>`).join('')}</div>` : '';
   }

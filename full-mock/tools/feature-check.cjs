@@ -46,7 +46,7 @@ const M = process.argv[2], full = M === 'full-mock', dir = '/home/user/Demand-AI
   t = await run(() => App.modTab('signals')); chk('SIG-02..06 and SIG-21 signals', /Live/i.test(t) && /Discarded/i.test(t), 'Accounts › Signals');
   t = await run(() => App.goCampaign('c1')); chk('NBA-11/SEG-07 campaign, touch tasks', /Touch tasks by owner/i.test(t), 'Campaigns › campaign');
   if (full) {
-    chk('Content in the rep menu', /Content/i.test(await p.innerText('.side-nav')), 'Menu');
+    t = await run(() => App.modTab('campaigns')); chk('Content inside Campaigns', /Content/i.test(await p.$$eval('.mod-tabs button', x => x.map(y => y.textContent).join(' '))), 'Campaigns › Content');
     t = await run(() => App.modTab('plays')); chk('NBA-12 plays, CON-06 corpus, CON-08 swap, CMP-06 follow-up', /Campaign corpus/i.test(t) && /Swap asset/i.test(t) && /Persistent follow-up/i.test(t), 'Campaigns › Plays');
     t = await run(() => App.modTab('nba')); chk('NBA-13 live order', /Live order/i.test(t), 'Campaigns › Next best actions');
     t = await run(() => { App.nav('studio'); }); t = await run(() => App.setStudioTab('backlog')); chk('CON-07 content backlog', /could not answer/i.test(t), 'Content › Backlog');
