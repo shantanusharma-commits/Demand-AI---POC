@@ -47,7 +47,7 @@ const M = process.argv[2], full = M === 'full-mock', dir = '/home/user/Demand-AI
   t = await run(() => App.modTab('campaigns'), 500); chk('Campaigns and next best actions on one screen', /Next best actions · one account, one action/i.test(t) && /Turnaround season 2027/i.test(t), 'Campaigns');
   t = await run(() => App.goCampaign('c1')); chk('NBA-11/SEG-07 campaign, touch tasks', /Touch tasks by owner/i.test(t), 'Campaigns › campaign');
   if (full) {
-    t = await run(() => App.modTab('campaigns')); chk('Content studio in the menu', /Content studio/i.test(await p.innerText('.side-nav')), 'Menu'); chk('Content inside Campaigns', /Content/i.test(await p.$$eval('.mod-tabs button', x => x.map(y => y.textContent).join(' '))), 'Campaigns › Content');
+    t = await run(() => App.modTab('campaigns')); chk('Content studio in the menu', /Content studio/i.test(await p.innerText('.side-nav')), 'Menu'); await run(() => App.nav('studio'), 400); chk('Content studio has no campaign tabs', (await p.$$('.mod-tabs button')).length === 0, 'Content studio'); await run(() => App.modTab('campaigns'), 400); chk('Content inside Campaigns', /Content/i.test(await p.$$eval('.mod-tabs button', x => x.map(y => y.textContent).join(' '))), 'Campaigns › Content');
     t = await run(() => App.modTab('plays')); chk('NBA-12 plays, CON-06 corpus, CON-08 swap, CMP-06 follow-up', /Campaign corpus/i.test(t) && /Swap asset/i.test(t) && /Persistent follow-up/i.test(t), 'Campaigns › Plays');
     t = await run(() => App.modTab('nba')); chk('NBA-13 live order', /Live order/i.test(t), 'Campaigns › Next best actions');
     t = await run(() => { App.nav('studio'); }); t = await run(() => App.setStudioTab('backlog')); chk('CON-07 content backlog', /could not answer/i.test(t), 'Content › Backlog');
@@ -78,7 +78,7 @@ const M = process.argv[2], full = M === 'full-mock', dir = '/home/user/Demand-AI
   }
   // manager
   await as('pavan'); t = await body(); chk('Manager Today: confirm campaign and meeting, coach', /Confirm the Eastgate meeting/i.test(t) && /Coach Marco/i.test(t), 'Manager › Today');
-  chk('Manager menu has Inbox and Team', /Team/i.test(await p.innerText('.side-nav')) && /Inbox/i.test(await p.innerText('.side-nav')), 'Manager menu');
+  chk('Manager menu has Inbox and Analytics', /Analytics/i.test(await p.innerText('.side-nav')) && /Inbox/i.test(await p.innerText('.side-nav')), 'Manager menu');
   t = await run(() => App.nav('inbox'), 500); chk('Manager inbox shows the team\'s replies with an owner filter', /Inbox/i.test(t) && (await p.$('select')) !== null, 'Manager › Inbox');
   t = await run(() => App.goCampaign('c1')); chk('NBA-11 manager confirms touch formats', /Confirm the format of each touch/i.test(t), 'Manager › Campaign');
   if (full) { t = await run(() => App.nav('analytics'), 600); chk('LRN-03 per 100, LRN-05 ledger, LRN-07 benchmark, RSP-03 by signal', /Results per 100 accounts/i.test(t) && /Qualified meeting ledger/i.test(t) && /benchmark/i.test(t) && /Reply rate by signal type/i.test(t), 'Manager › Team'); }

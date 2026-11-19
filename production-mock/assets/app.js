@@ -294,7 +294,7 @@
   }
 
   /* ─── Routing: #today or a module; a result or a record opens in the canvas beside the chat ─── */
-  const MODULES = Object.assign({ inbox: 'Inbox', accounts: 'Accounts', segments: 'Segments', campaigns: 'Campaigns', approvals: 'Approvals', studio: 'Content studio' }, isMgr ? { analytics: 'Team' } : {});
+  const MODULES = Object.assign({ inbox: 'Inbox', accounts: 'Accounts', segments: 'Segments', campaigns: 'Campaigns and NBA', approvals: 'Approvals', studio: 'Content studio' }, isMgr ? { analytics: 'Analytics' } : {});
   const MOD_IC = { inbox: 'inbox', accounts: 'users', segments: 'layers', campaigns: 'megaphone', approvals: 'task', studio: 'pen', analytics: 'bars' };
   /* Five screens in the menu. Segments and Signals open as tabs in Accounts; next best actions and content as tabs in Campaigns; Analytics from Today. */
   const NAV5 = isMgr ? ['inbox', 'accounts', 'campaigns', 'approvals', 'analytics'] : ['inbox', 'accounts', 'campaigns', 'approvals'];
@@ -304,7 +304,7 @@
   function modTabs() {
     const v = view(), G = {
       accounts: [['accounts', 'Accounts', v === 'accounts' && accSub !== 'signals'], ['segments', 'Segments', v === 'segments'], ['signals', 'Signals', v === 'accounts' && accSub === 'signals']],
-      campaigns: [['campaigns', 'Campaigns and next best actions', v === 'campaigns'], ['studio', 'Content · R2', v === 'studio']]
+      campaigns: [['campaigns', 'Campaigns and NBA', v === 'campaigns'], ['studio', 'Content · R2', v === 'studio']]
     }[navOn(v)];
     return G && !segSel && !campSel ? `<div class="dtabs mod-tabs">${G.map(([k, l, on]) => `<button class="${on ? 'on' : ''}" onclick="App.modTab('${k}')">${l}</button>`).join('')}</div>` : '';
   }
@@ -1210,7 +1210,7 @@
     const reps = ownerF === 'all' ? REPS : [ownerF], sum = k => reps.reduce((n, r) => n + TEAM_STATS[r][k], 0);
     /* A dashboard page, not a chat: the important numbers first as cards, then the detail */
     $('main').className = 'an-pg';
-    $('main').innerHTML = `<div class="an-h"><div style="display:flex;align-items:center;gap:4px">${backChip()}<div><h1>Team ${R2TAG}</h1><div class="sub">Coming in R2, shown on demo data · Pilot week 3 · ${ownerF === 'all' ? 'whole team' : esc(USERS[ownerF].name)} · ${anPer === 'week' ? 'Mon 26 Oct – Sun 1 Nov' : 'October 2026'}</div></div></div><div class="an-ctl"><div class="seg">${[['week', 'This week'], ['month', 'This month']].map(([k, l]) => `<button class="${anPer === k ? 'on' : ''}" onclick="App.setAnPer('${k}')">${l}</button>`).join('')}</div>${ownerSel()}</div></div><div class="an-b" id="cv"></div>`;
+    $('main').innerHTML = `<div class="an-h"><div style="display:flex;align-items:center;gap:4px">${backChip()}<div><h1>Analytics ${R2TAG}</h1><div class="sub">Coming in R2, shown on demo data · Pilot week 3 · ${ownerF === 'all' ? 'whole team' : esc(USERS[ownerF].name)} · ${anPer === 'week' ? 'Mon 26 Oct – Sun 1 Nov' : 'October 2026'}</div></div></div><div class="an-ctl"><div class="seg">${[['week', 'This week'], ['month', 'This month']].map(([k, l]) => `<button class="${anPer === k ? 'on' : ''}" onclick="App.setAnPer('${k}')">${l}</button>`).join('')}</div>${ownerSel()}</div></div><div class="an-b" id="cv"></div>`;
     const cv = $('cv'), mo = anPer === 'month' ? 3.6 : 1, n = x => Math.round(x * mo), share = ownerF === 'all' ? 1 : 0.27;
     const spark = (pts, up) => { const mx = Math.max(...pts), mn = Math.min(...pts), w = 88, h = 30, xy = pts.map((v, i) => `${(i / (pts.length - 1) * w).toFixed(1)},${(h - 3 - (v - mn) / ((mx - mn) || 1) * (h - 6)).toFixed(1)}`); return `<svg class="spk" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-hidden="true"><polyline points="${xy.join(' ')}" fill="none" stroke="${up ? 'var(--pos)' : 'var(--neg)'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="${xy[xy.length - 1].split(',')[0]}" cy="${xy[xy.length - 1].split(',')[1]}" r="2.5" fill="${up ? 'var(--pos)' : 'var(--neg)'}"/></svg>`; };
     /* Each card: the value, its last five periods, and the change against the previous period (green when it moved the right way) */
@@ -1427,7 +1427,7 @@
     const order = ['Ready to confirm', 'Draft', 'Running', 'Completed'];
     const list = CAMPAIGNS.slice().sort((p, q) => order.indexOf(p.status) - order.indexOf(q.status));
     const nrows = nbaRows().sort((p, q) => q.score - p.score);
-    const cv = frame('Campaigns and next best actions', `${list.length} campaigns · ${nrows.length} next best actions`, `<button class="btn sm pri" onclick="App.ask('Build the campaign')">${ic('plus', 13)} New campaign</button>`);
+    const cv = frame('Campaigns and NBA', `${list.length} campaigns · ${nrows.length} next best actions`, `<button class="btn sm pri" onclick="App.ask('Build the campaign')">${ic('plus', 13)} New campaign</button>`);
     cv.innerHTML = `<div class="toolbar">${ownerSel()}${filt('Starred', 'star', false)}${filt('Active', '', false)}<div class="search" style="margin-left:auto">${ic('search', 14)}<input placeholder="Search…" aria-label="Search campaigns"></div></div>
       <div class="placeholder-note" style="margin:6px 0 12px">${ic('mail', 16)}<div><b>Placeholder.</b> Sending through email and LinkedIn connects after the pilot. Nothing is sent from the mock.</div></div>
       <div class="srow-list">${list.map(c => { const st = campStats(c); return `<div class="srow" onclick="App.goCampaign('${c.id}')">
