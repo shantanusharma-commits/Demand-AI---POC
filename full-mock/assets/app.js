@@ -189,6 +189,25 @@
   const icpNow = () => shared.icps.filter(x => x.status === 'In use').slice(-1)[0] || shared.icps[shared.icps.length - 1];
   const PROPOSED = ['Petrochemical and refining sites', 'Singapore, Malaysia, Thailand', '1,000–5,000 staff', 'Reliability and operations leaders', 'Control system older than 15 years'];
   function icpCard(crit, path, btn) { return `<div class="ccard"><div class="ccard-b"><div class="lbl" style="margin-bottom:6px">${esc(path)}</div>${crit.map(x => `<div class="mini-row"><div class="grow">${esc(x)}</div></div>`).join('')}</div><div class="ccard-f">${btn}</div></div>`; }
+  function perfChat(t) {
+    if (/needs? my approval|waiting (for me|in approvals)|what('s| is) in approvals|my approvals/.test(t)) return { kind: 'approvalsList' };
+    const say = h => ({ kind: 'text', html: h }), who = isMgr ? 'the team' : 'you';
+    const st = k => isMgr ? REPS.reduce((n, r) => n + TEAM_STATS[r][k], 0) : TEAM_STATS[me.id][k];
+    const open = (l, js) => `<div class="next-row"><button class="btn sm" onclick="${js}">${l}</button></div>`;
+    const cid = /turnaround|rival|renewal|contract|expansion|capex|hiring|surge|debottleneck/.test(t) ? findCampaign(t) : null;
+    if (cid && /perform|doing|going|result|stat|numbers|how is|how's/.test(t)) {
+      const c = campOf(cid), s = campStats(c), sq = seqOf(c), done = sq.filter(sent).length;
+      return say(`<p><b>${esc(c.name)}</b> · ${esc(campStatus(c))}${isMgr ? '' : ' · your accounts'}</p><div class="ccard"><div class="ccard-b">${[['Accounts', s.total], ['Started', s.started], ['Opened', s.opened + ' (' + pct(s.opened, s.started) + ')'], ['Replied', s.replies + ' (' + pct(s.replies, s.started) + ')'], ['Positive', s.positive], ['Meetings', s.meetings], ['Steps sent', done + ' of ' + sq.length]].map(r => `<div class="mini-row"><div class="grow">${r[0]}</div><b>${r[1]}</b></div>`).join('')}</div></div><p>${s.started ? (s.replies ? `Step 2 drew most replies. ${s.positive >= 2 ? 'It is ahead of the team average.' : 'Replies are below the team average: try a shorter step 1.'}` : 'Sent, no replies yet.') : campStatus(c) === 'Ready to confirm' ? 'Not started: it is waiting for Daniel to confirm the campaign and its touch formats.' : 'Not started yet.'}</p>${open('Open the campaign', `App.goCampaign('${cid}')`)}`);
+    }
+    if (/(best|top|worst|weakest|strongest).*campaign|campaign.*(best|top|perform|compare|ranking)/.test(t)) {
+      const rows = CAMPAIGNS.map(c => ({ c, s: campStats(c) })).filter(x => x.s.started).sort((p, q) => q.s.replies / q.s.started - p.s.replies / p.s.started);
+      return say(`<p>Campaigns ranked by reply rate${isMgr ? '' : ' on your accounts'}:</p><div class="ccard"><div class="ccard-b">${rows.map((x, i) => `<div class="mini-row row-link" onclick="App.goCampaign('${x.c.id}')"><div class="grow"><div class="nm">${i + 1}. ${esc(x.c.name)}</div><div class="sm">${x.s.started} started · ${x.s.meetings} meetings · ${esc(campStatus(x.c))}</div></div><b>${pct(x.s.replies, x.s.started)}</b></div>`).join('')}</div></div>${rows[0] ? `<p><b>${esc(rows[0].c.name)}</b> performs best; ${rows.length > 1 ? `<b>${esc(rows[rows.length - 1].c.name)}</b> is weakest, so its step 1 is the one to change.` : ''}</p>` : ''}`);
+    }
+    if (/reply rate|response rate|open rate/.test(t)) return say(`<p>Reply rate this week for ${who}: <b>${pct(st('replies'), st('sent'))}</b> (${st('replies')} replies from ${st('sent')} emails sent). ${isMgr ? '' : 'Team average: ' + pct(REPS.reduce((n, r) => n + TEAM_STATS[r].replies, 0), REPS.reduce((n, r) => n + TEAM_STATS[r].sent, 0)) + '.'}</p>${open('Open Analytics', "App.nav('analytics')")}`);
+    if (/how many meetings|meetings (did|have) (i|we)|meetings this week|meetings booked/.test(t)) return say(`<p>${isMgr ? 'The team' : 'You'} booked <b>${st('meetings')} of ${st('target')}</b> meetings this week. ${st('meetings') < st('target') ? `${st('target') - st('meetings')} short; the fastest route is the ${isMgr ? 'Turnaround campaign once you confirm it' : 'Ready to send items on Today'}.` : 'On target.'}</p>${open('Open Analytics', "App.nav('analytics')")}`);
+    if (!isMgr && /\bteam\b|other reps|everyone/.test(t) && /doing|perform|numbers|stats|how/.test(t)) return say(`<p>Team numbers are for your manager. Here are yours: <b>${st('meetings')} of ${st('target')}</b> meetings, reply rate <b>${pct(st('replies'), st('sent'))}</b>, ${st('approved')} actions approved, ${st('accept')}% of recommendations accepted.</p>${open('Open Analytics', "App.nav('analytics')")}`);
+    return null;
+  }
   function icpChat(t, text) {
     const cur = icpNow();
     if (/don.?t know|not sure|help me|propose|suggest|from (our|the) website/.test(t)) return { kind: 'text', html: `<p>Path B: I read your website (products, industries you serve, 6 case studies) and your 15 won accounts in the CRM, and drafted an ICP. Two quick questions would sharpen it; tap an answer or confirm as is.</p>${icpCard(PROPOSED, 'Proposed ICP · nothing is searched until you confirm', `<button class="btn sm pri" onclick="App.icpConfirm('B')">Confirm this ICP</button><button class="chip" onclick="App.ask('Our ICP should include gas processing too')">Include gas processing?</button><button class="chip" onclick="App.ask('Our ICP minimum is 500 staff')">Minimum 500 staff?</button>`)}<p class="sm muted">Sample it would find: Juniper Petrochem, Cedar Petrochemicals, Halcyon Gas Processing, Eastgate Refining, Kingfisher Refining.</p>` };
@@ -294,10 +313,10 @@
   }
 
   /* ─── Routing: #today or a module; a result or a record opens in the canvas beside the chat ─── */
-  const MODULES = Object.assign({ inbox: 'Inbox', accounts: 'Accounts', segments: 'Segments', campaigns: 'Campaigns and NBA', approvals: 'Approvals', studio: 'Content studio' }, isMgr ? { analytics: 'Analytics' } : {});
+  const MODULES = Object.assign({ inbox: 'Inbox', accounts: 'Accounts', segments: 'Segments', campaigns: 'Campaigns and NBA', approvals: 'Approvals', studio: 'Content studio' }, { analytics: 'Analytics' });
   const MOD_IC = { inbox: 'inbox', accounts: 'users', segments: 'layers', campaigns: 'megaphone', approvals: 'task', studio: 'pen', analytics: 'bars' };
   /* Five screens in the menu. Segments and Signals open as tabs in Accounts; next best actions and content as tabs in Campaigns; Analytics from Today. */
-  const NAV5 = isMgr ? ['inbox', 'accounts', 'campaigns', 'studio', 'approvals', 'analytics'] : ['inbox', 'accounts', 'campaigns', 'studio', 'approvals'];
+  const NAV5 = isMgr ? ['inbox', 'accounts', 'campaigns', 'studio', 'approvals', 'analytics'] : ['inbox', 'accounts', 'campaigns', 'studio', 'approvals', 'analytics'];
   const R2TAG = '';
   const navOn = v => v === 'segments' ? 'accounts' : v;
   let accSub = 'list', campSub = 'list', sigTab = 'live';
@@ -347,7 +366,7 @@
   /* ─── Chats: Today sessions, one chat per module, one per document ─── */
   const MOD_INTRO = {
     inbox: () => `Replies from email and LinkedIn in one place${isMgr ? ', for the whole team' : ''}. Each comes with a suggested answer; when someone replies, their remaining campaign steps pause.`,
-    analytics: () => 'The dashboard is beside this chat, showing the past week. Ask me a question and I answer here, then take you to the account or the rep behind the number.',
+    analytics: () => isMgr ? 'The dashboard is beside this chat, showing the past week for the team. Ask me a question and I answer here, then take you to the account or the rep behind the number.' : 'Your numbers are beside this chat: meetings, replies, what you sent and how your campaigns are doing. Only you and your manager see them. Ask me anything about them.',
     accounts: () => `This is every account ${isMgr ? 'on the team' : 'you own'}, ranked by Fit × Timing. Saved lists are the tabs above the table. Ask me to find more, score a list, or save what you're looking at.`,
     segments: () => 'Accounts grouped by why they\'re ready. Campaign segments (NBC) run as one sequence; the rest are next best actions (NBA). Open one, or ask me.',
     campaigns: () => `${CAMPAIGNS.filter(c => c.status === 'Running').length} campaigns running, ${CAMPAIGNS.filter(c => /Ready|Draft/.test(c.status)).length} waiting to start. Email and LinkedIn only. Ask me to build one, change a sequence, or explain the results.`,
@@ -355,7 +374,7 @@
   };
   const MOD_HINTS = {
     inbox: ['Any replies?', 'Which replies are objections?', 'Draft a reply to Dian with 3 times next week', 'What should I do with Greystone?'],
-    analytics: ['Where are we stuck?', 'What moved into pipeline last week?', 'How is my team doing?', 'Where is the funnel leaking?'],
+    analytics: isMgr ? ['Where are we stuck?', 'What moved into pipeline last week?', 'How is my team doing?', 'Which campaign is performing best?'] : ['What\'s my reply rate?', 'How many meetings did I book this week?', 'Which campaign is performing best?', 'How is the turnaround campaign performing?'],
     accounts: ['Find prospects like my last 10 wins', 'Score this list', 'Save as a list', 'Who should I call first?'],
     segments: ['Which segments are campaigns?', 'Create micro-segments', 'What\'s close to becoming a campaign?', 'Why is Juniper ranked first?'],
     campaigns: ['How are the campaigns doing?', 'Build the campaign', 'Add a LinkedIn touch to the turnaround campaign', 'Any replies?'],
@@ -863,7 +882,7 @@
     if (v === 'segments') return card('Micro-segments', `${SEGMENTS.length} segments`, SEGMENTS.filter(s => s.fromList).reverse().concat(SEGMENTS.filter(s => !s.fromList)).slice(0, 6).map(s => `<div class="mini-row row-link" onclick="App.openSegment('${s.id}')"><div class="grow"><div class="nm">${esc(s.name)}</div><div class="sm">${ACCOUNTS.filter(a => a.seg === s.id).length} accounts · ${esc(s.trigger)}</div></div>${modeBadge(s)}</div>`).join(''));
     if (v === 'campaigns') return card('Campaigns', `${CAMPAIGNS.length} campaigns`, CAMPAIGNS.map(c => `<div class="mini-row row-link" onclick="App.goCampaign('${c.id}')"><div class="grow"><div class="nm">${esc(c.name)}</div><div class="sm">${esc(progressText(c))}</div></div>${campBadge(c)}</div>`).join(''));
     if (v === 'inbox') { const th = threads(); return card('Inbox', `${th.filter(needsReply).length} need a reply`, th.slice(0, 6).map(r => `<div class="mini-row row-link" onclick="App.openThread('${r.id}')">${chIc(r.ch)}<div class="grow"><div class="nm">${esc(r.from)} <span class="muted" style="font-weight:400">· ${esc(acct(r.acc).name)}</span></div><div class="sm">"${esc(r.text)}"</div></div><span class="badge ${S6[st6(r)][0]}">${st6(r)}</span></div>`).join('') || '<div class="empty">No replies yet.</div>'); }
-    if (v === 'analytics') return card('Pilot week 3', 'whole team', (sum => [['Meetings this week', `${sum('meetings')} / ${sum('target')}`], ['Reply rate', pct(sum('replies'), sum('sent'))], ['Accepted first time', Math.round(sum('accept') / REPS.length) + '%'], ['Overdue items', sum('overdue')]])(k => REPS.reduce((x, r) => x + TEAM_STATS[r][k], 0)).map(([k, x]) => `<div class="mini-row"><div class="grow nm">${k}</div><b class="mono">${x}</b></div>`).join(''));
+    if (v === 'analytics') return card('This week', isMgr ? 'whole team' : 'your numbers', (sum => [['Meetings this week', `${sum('meetings')} / ${sum('target')}`], ['Reply rate', pct(sum('replies'), sum('sent'))], ['Accepted first time', Math.round(sum('accept') / (isMgr ? REPS.length : 1)) + '%'], ['Overdue items', sum('overdue')]])(k => (isMgr ? REPS : [me.id]).reduce((x, r) => x + TEAM_STATS[r][k], 0)).map(([k, x]) => `<div class="mini-row"><div class="grow nm">${k}</div><b class="mono">${x}</b></div>`).join(''));
     const items = apprItems(isMgr ? 'needs' : 'todo'), oth = escOther();
     return card('Needs you', `${items.length + oth.length} waiting`, items.length + oth.length ? items.map(apprMini).join('') + oth.map(escMini).join('') : '<div class="empty">Nothing is waiting for you.</div>');
   }
@@ -906,6 +925,7 @@
     if (fmt && /write|make|create|generate|draft|build|turn|design|produce/.test(t)) { startDoc(fmt, text); return { kind: 'text', html: `Started a <b>${esc(fmt.toLowerCase())}</b> in Content studio, in the brand template, grounded in the Knowledge Hub with every claim cited. Change it by talking to it.` }; }
     const wf = workflow(t); if (wf) return wf;
     if (v === 'studio') return studioRespond(t, text);
+    const pf = perfChat(t); if (pf) return pf;
     if (v === 'analytics' && !/stuck|moved into pipeline|what moved|autonomy|agents do/.test(t) || /\banalytics\b|dashboard|\bkpis?\b|\bmetrics\b/.test(t)) { const r = anRespond(t); if (r) return r; }
     const cc = chat();
     if (/remind me/.test(t)) { const when = (text.match(/remind me (on |at )?(.+?)( to |\.|$)/i) || [])[2] || 'tomorrow 09:00'; if (cc) cc.reminder = when.replace(/\bat\b/, '').trim(); const nt = text.match(/note:?\s*(.+)$/i); if (nt && cc) (cc.notes = cc.notes || []).push(nt[1]); return { kind: 'reminder', when: cc ? cc.reminder : when, extra: nt ? nt[1] : '' }; }
@@ -1232,14 +1252,14 @@
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;margin-top:12px">
       <div class="card"><div class="card-b"><div class="lbl" style="margin-bottom:8px">Reply rate by signal type</div><table class="tbl"><tbody>${[['Champion moved', 27], ['New exec hire', 22], ['Rival contract ending', 19], ['Turnaround announced', 17], ['Hiring surge', 11], ['Regulatory deadline', 6]].map(r => `<tr><td>${r[0]}</td><td class="mono">${r[1]} per 100 sends</td></tr>`).join('')}</tbody></table></div></div>
       <div class="card"><div class="card-b"><div class="lbl" style="margin-bottom:8px">Each channel against its benchmark</div><table class="tbl"><tbody>${[['Email', '7.9%', '5.1%', 1], ['LinkedIn', '11.2%', '8.0%', 1], ['Phone', '2.1%', '3.5%', 0]].map(r => `<tr><td>${r[0]}</td><td class="mono">${r[1]} vs ${r[2]}</td><td><span class="badge ${r[3] ? 'b-pos' : 'b-neg'} nodot">${r[3] ? 'Above' : 'Below: flagged'}</span></td></tr>`).join('')}</tbody></table></div></div></div>
-      <div class="lbl" style="margin:20px 0 8px">Qualified meeting ledger</div><div class="card tbl-wrap"><table class="tbl"><thead><tr><th>Account</th><th>Rep</th><th>Held</th><th>Recommended before first touch</th><th>Confirmed</th></tr></thead><tbody>${[['Eastgate Refining', 'Sofia', 'Tue 27 Oct', 'Yes, 9 days before', (S.resolvedEsc || {}).meet ? 'Daniel, today' : 'Waiting (due Tue 3 Nov)'], ['Ironwood Refining', 'Marco', 'Fri 23 Oct', 'Yes, 14 days before', 'Daniel, Mon 26 Oct'], ['Moonstone Aromatics', 'Marco', 'Wed 14 Oct', 'Yes, 6 days before', 'Daniel, Thu 15 Oct'], ['Copperhill Aromatics', 'Kenji', 'Tue 6 Oct', 'No: their own outreach', 'Not counted']].map(r => `<tr>${r.map((x, i) => `<td class="${i ? 'sm' : 'nm'}">${esc(x)}</td>`).join('')}</tr>`).join('')}</tbody></table></div><div class="sm muted" style="margin-top:8px">Team routing: accounts go to a team by territory, product line and deal size (Singapore and Malaysia to Sofia's pod; deals over USD 1M to Marco's). Quarterly true-up on 31 Dec: prioritised accounts must beat the rest in the CRM, or the meeting fee steps down.</div>`);
+      <div class="lbl" style="margin:20px 0 8px">Qualified meeting ledger</div><div class="card tbl-wrap"><table class="tbl"><thead><tr><th>Account</th><th>Rep</th><th>Held</th><th>Recommended before first touch</th><th>Confirmed</th></tr></thead><tbody>${[['Eastgate Refining', 'Sofia', 'Tue 27 Oct', 'Yes, 9 days before', (S.resolvedEsc || {}).meet ? 'Daniel, today' : 'Waiting (due Tue 3 Nov)'], ['Ironwood Refining', 'Marco', 'Fri 23 Oct', 'Yes, 14 days before', 'Daniel, Mon 26 Oct'], ['Moonstone Aromatics', 'Marco', 'Wed 14 Oct', 'Yes, 6 days before', 'Daniel, Thu 15 Oct'], ['Copperhill Aromatics', 'Kenji', 'Tue 6 Oct', 'No: their own outreach', 'Not counted']].filter(r => isMgr || r[1] === first(me.name)).map(r => `<tr>${r.map((x, i) => `<td class="${i ? 'sm' : 'nm'}">${esc(x)}</td>`).join('')}</tr>`).join('')}</tbody></table></div><div class="sm muted" style="margin-top:8px">${isMgr ? 'Team routing: accounts go to a team by territory, product line and deal size (Singapore and Malaysia to Sofia\'s pod; deals over USD 1M to Marco\'s). ' : ''}Quarterly true-up on 31 Dec: prioritised accounts must beat the rest in the CRM, or the meeting fee steps down.</div>`);
   }
   function renderAnalytics0() {
-    const reps = ownerF === 'all' ? REPS : [ownerF], sum = k => reps.reduce((n, r) => n + TEAM_STATS[r][k], 0);
+    const reps = (isMgr && ownerF === 'all') ? REPS : [isMgr ? ownerF : me.id], sum = k => reps.reduce((n, r) => n + TEAM_STATS[r][k], 0);
     /* A dashboard page, not a chat: the important numbers first as cards, then the detail */
     $('main').className = 'an-pg';
-    $('main').innerHTML = `<div class="an-h"><div style="display:flex;align-items:center;gap:4px">${backChip()}<div><h1>Analytics ${R2TAG}</h1><div class="sub">Week 44 · ${ownerF === 'all' ? 'whole team' : esc(USERS[ownerF].name)} · ${anPer === 'week' ? 'Mon 26 Oct – Sun 1 Nov' : 'October 2026'}</div></div></div><div class="an-ctl"><div class="seg">${[['week', 'This week'], ['month', 'This month']].map(([k, l]) => `<button class="${anPer === k ? 'on' : ''}" onclick="App.setAnPer('${k}')">${l}</button>`).join('')}</div>${ownerSel()}</div></div><div class="an-b" id="cv"></div>`;
-    const cv = $('cv'), mo = anPer === 'month' ? 3.6 : 1, n = x => Math.round(x * mo), share = ownerF === 'all' ? 1 : 0.27;
+    $('main').innerHTML = `<div class="an-h"><div style="display:flex;align-items:center;gap:4px">${backChip()}<div><h1>Analytics ${R2TAG}</h1><div class="sub">Week 44 · ${(isMgr && ownerF === 'all') ? 'whole team' : esc(USERS[isMgr ? ownerF : me.id].name)} · ${anPer === 'week' ? 'Mon 26 Oct – Sun 1 Nov' : 'October 2026'}</div></div></div><div class="an-ctl"><div class="seg">${[['week', 'This week'], ['month', 'This month']].map(([k, l]) => `<button class="${anPer === k ? 'on' : ''}" onclick="App.setAnPer('${k}')">${l}</button>`).join('')}</div>${isMgr ? ownerSel() : ''}</div></div><div class="an-b" id="cv"></div>`;
+    const cv = $('cv'), mo = anPer === 'month' ? 3.6 : 1, n = x => Math.round(x * mo), share = (isMgr && ownerF === 'all') ? 1 : 0.27;
     const spark = (pts, up) => { const mx = Math.max(...pts), mn = Math.min(...pts), w = 88, h = 30, xy = pts.map((v, i) => `${(i / (pts.length - 1) * w).toFixed(1)},${(h - 3 - (v - mn) / ((mx - mn) || 1) * (h - 6)).toFixed(1)}`); return `<svg class="spk" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-hidden="true"><polyline points="${xy.join(' ')}" fill="none" stroke="${up ? 'var(--pos)' : 'var(--neg)'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="${xy[xy.length - 1].split(',')[0]}" cy="${xy[xy.length - 1].split(',')[1]}" r="2.5" fill="${up ? 'var(--pos)' : 'var(--neg)'}"/></svg>`; };
     /* Each card: the value, its last five periods, and the change against the previous period (green when it moved the right way) */
     const kpi = (icn, k, shown, v, sub, unit, betterUp, steady, goal) => {
@@ -1250,7 +1270,7 @@
     };
     const m = n(sum('meetings')), tg = n(sum('target')), rr = sum('replies') / sum('sent') * 100, acc = Math.round(sum('accept') / reps.length), od = sum('overdue');
     const own = ACCOUNTS.filter(a => a.nba && !a.campaign && reps.includes(a.owner)), went = own.filter(a => a.nba.status === 'auto').length, tot = own.filter(a => /auto|sent|ready|review/.test(a.nba.status)).length || 1;
-    const g1 = ownerF === 'all' ? 12 : { sofia: 10, marco: 14, aisha: 9, kenji: 21 }[ownerF], pipe = 1.2 * (ownerF === 'all' ? 1 : TEAM_STATS[ownerF].meetings / 7 || 0.1) * mo;
+    const g1 = (isMgr && ownerF === 'all') ? 12 : { sofia: 10, marco: 14, aisha: 9, kenji: 21 }[isMgr ? ownerF : me.id], pipe = 1.2 * ((isMgr && ownerF === 'all') ? 1 : TEAM_STATS[isMgr ? ownerF : me.id].meetings / 7 || 0.1) * mo;
     const kpis = `<div class="kpis">
       ${kpi('check', 'Meetings booked', `${m}<span class="of"> / ${tg}</span>`, m, 'target ' + tg, '', true, false, [m >= tg ? 'On target' : 'Below target', m >= tg])}
       ${kpi('reply', 'Reply rate', rr.toFixed(1) + '%', rr, `${n(sum('replies'))} of ${n(sum('sent'))} sent`, '%', true)}
@@ -1262,7 +1282,7 @@
       ${kpi('alert', 'Overdue items', od, od, 'past their due time', '', false, od === 0)}
     </div>`;
     const card = (k, v, d) => `<div class="mcard"><div class="k">${k}</div><div class="v">${v}</div><div class="d">${d}</div></div>`;
-    const f = ownerF === 'all' ? 1 : 0.27, funnel = [['People found', 412], ['Identity checked', 368], ['Accounts scored', 81], ['With a live signal', 33], ['Next actions (NBA)', 31], ['In campaigns (NBC)', 44], ['Contacted', 58], ['Replied', 15], ['Positive', 8], ['Meetings', sum('meetings')]].map(([k, v], i) => [k, i === 9 ? v : Math.round(v * f)]);
+    const f = (isMgr && ownerF === 'all') ? 1 : 0.27, funnel = [['People found', 412], ['Identity checked', 368], ['Accounts scored', 81], ['With a live signal', 33], ['Next actions (NBA)', 31], ['In campaigns (NBC)', 44], ['Contacted', 58], ['Replied', 15], ['Positive', 8], ['Meetings', sum('meetings')]].map(([k, v], i) => [k, i === 9 ? v : Math.round(v * f)]);
     cv.innerHTML = `${kpis}
       <div class="an-grid">
         <section class="card"><div class="card-h"><span class="lbl">Funnel · this month</span></div><div class="card-b">${funnel.map(([k, v]) => `<div class="fn-r"><span>${k}</span><div class="fn-b"><i style="width:${Math.max(3, v / funnel[0][1] * 100)}%"></i></div><b class="mono">${v}</b></div>`).join('')}</div></section>

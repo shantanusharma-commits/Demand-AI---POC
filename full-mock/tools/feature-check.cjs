@@ -66,6 +66,12 @@ const M = process.argv[2], full = M === 'full-mock', dir = '/home/user/Demand-AI
   await as('sofia'); t = await run(() => App.ask('What is our ICP?'), 2500); chk('ICP remembered and shown in chat', /ICP v\d/i.test(t) && /Every new list starts from it/i.test(t), 'Chat');
   t = await run(() => App.ask('Find heads of operations in Singapore'), 2500); chk('New lists use the confirmed ICP', /Used the confirmed ICP v/i.test(t), 'Chat');
   if (full) { t = await run(() => App.ask('What is our ICP?'), 2500); chk('ICP learns from reps\' edits (proposed to the rep)', /reps removed 6 sites/i.test(t), 'Chat'); }
+  t = await run(() => App.nav('analytics'), 600); chk('Rep Analytics: own numbers only, no rep filter, no team numbers in chat', /Analytics/i.test(await p.innerText('.side-nav')) && /Sofia/i.test(t) && (await p.$$('.an-ctl select')).length === 0 && /your numbers/i.test(t) && !/whole team/i.test(t), 'Rep › Analytics');
+  t = await run(() => App.ask('How is the turnaround campaign performing?'), 2600); chk('Chat: one campaign\'s performance', /Steps sent/i.test(t), 'Chat');
+  t = await run(() => App.ask('Which campaign is performing best?'), 2600); chk('Chat: campaigns ranked', /ranked by reply rate/i.test(t), 'Chat');
+  t = await run(() => App.ask("What's my reply rate?"), 2600); chk('Chat: reply rate', /Reply rate this week for you/i.test(t), 'Chat');
+  t = await run(() => App.ask('How many meetings did I book this week?'), 2600); chk('Chat: meetings against target', /You booked/i.test(t), 'Chat');
+  t = await run(() => App.ask('What needs my approval?'), 2600); chk('Chat: approvals', /Waiting for you/i.test(t), 'Chat');
   // round 3
   t = await run(() => { App.openRecord('juniper', 'graph'); }); await p.click('g.hub-n'); await p.waitForTimeout(300); t = await body(); chk('Context graph nodes clickable with detail', /Open/i.test(t) && (await p.$('g.hub-n.on')) !== null, 'Account › Context graph');
   chk('Actions name their signal (no placeholder)', await p.evaluate(() => !MOCK.ACCOUNTS.some(a => a.nba && /Introduce Client/.test(a.nba.action)) && /Congratulate Budi/.test(MOCK.ACCOUNTS.find(a => a.id === 'juniper').nba.action)), 'Next best actions');
