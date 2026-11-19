@@ -77,7 +77,8 @@ const M = process.argv[2], full = M === 'full-mock', dir = '/home/user/Demand-AI
   }
   // manager
   await as('pavan'); t = await body(); chk('Manager Today: confirm campaign and meeting, coach', /Confirm the Eastgate meeting/i.test(t) && /Coach Marco/i.test(t), 'Manager › Today');
-  chk('Manager menu has Team, no Inbox', /Team/i.test(await p.innerText('.side-nav')) && !/Inbox/i.test(await p.innerText('.side-nav')), 'Manager menu');
+  chk('Manager menu has Inbox and Team', /Team/i.test(await p.innerText('.side-nav')) && /Inbox/i.test(await p.innerText('.side-nav')), 'Manager menu');
+  t = await run(() => App.nav('inbox'), 500); chk('Manager inbox shows the team\'s replies with an owner filter', /Inbox/i.test(t) && (await p.$('select')) !== null, 'Manager › Inbox');
   t = await run(() => App.goCampaign('c1')); chk('NBA-11 manager confirms touch formats', /Confirm the format of each touch/i.test(t), 'Manager › Campaign');
   if (full) { t = await run(() => App.nav('analytics'), 600); chk('LRN-03 per 100, LRN-05 ledger, LRN-07 benchmark, RSP-03 by signal', /Results per 100 accounts/i.test(t) && /Qualified meeting ledger/i.test(t) && /benchmark/i.test(t) && /Reply rate by signal type/i.test(t), 'Manager › Team'); }
   const bad = R.filter(r => !r[1]); console.log(M, ':', R.length - bad.length, 'of', R.length, 'checks pass'); bad.forEach(r => console.log('  FAIL', r[0], '·', r[2])); console.log('  page errors:', E.length ? E : 'none');

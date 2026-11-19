@@ -297,7 +297,7 @@
   const MODULES = Object.assign({ inbox: 'Inbox', accounts: 'Accounts', segments: 'Segments', campaigns: 'Campaigns', approvals: 'Approvals', studio: 'Content studio' }, isMgr ? { analytics: 'Team' } : {});
   const MOD_IC = { inbox: 'inbox', accounts: 'users', segments: 'layers', campaigns: 'megaphone', approvals: 'task', studio: 'pen', analytics: 'bars' };
   /* Five screens in the menu. Segments and Signals open as tabs in Accounts; next best actions and content as tabs in Campaigns; Analytics from Today. */
-  const NAV5 = isMgr ? ['accounts', 'campaigns', 'approvals', 'analytics'] : ['inbox', 'accounts', 'campaigns', 'approvals'];
+  const NAV5 = isMgr ? ['inbox', 'accounts', 'campaigns', 'approvals', 'analytics'] : ['inbox', 'accounts', 'campaigns', 'approvals'];
   const R2TAG = '<span class="r2tag" title="Not in R1: shown on demo data">R2</span>';
   const navOn = v => v === 'segments' ? 'accounts' : v === 'studio' ? 'campaigns' : v;
   let accSub = 'list', campSub = 'list', sigTab = 'live';
