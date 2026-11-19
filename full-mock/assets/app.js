@@ -297,14 +297,15 @@
   const MODULES = Object.assign({ inbox: 'Inbox', accounts: 'Accounts', segments: 'Segments', campaigns: 'Campaigns', approvals: 'Approvals', studio: 'Content studio' }, isMgr ? { analytics: 'Team' } : {});
   const MOD_IC = { inbox: 'inbox', accounts: 'users', segments: 'layers', campaigns: 'megaphone', approvals: 'task', studio: 'pen', analytics: 'bars' };
   /* Five screens in the menu. Segments and Signals open as tabs in Accounts; next best actions and content as tabs in Campaigns; Analytics from Today. */
-  const NAV5 = isMgr ? ['inbox', 'accounts', 'campaigns', 'approvals', 'analytics'] : ['inbox', 'accounts', 'campaigns', 'approvals'];
+  const NAV5 = isMgr ? ['inbox', 'accounts', 'campaigns', 'studio', 'approvals', 'analytics'] : ['inbox', 'accounts', 'campaigns', 'studio', 'approvals'];
   const R2TAG = '';
-  const navOn = v => v === 'segments' ? 'accounts' : v === 'studio' ? 'campaigns' : v;
+  const navOn = v => v === 'segments' ? 'accounts' : v;
   let accSub = 'list', campSub = 'list', sigTab = 'live';
   function modTabs() {
     const v = view(), G = {
       accounts: [['accounts', 'Accounts', v === 'accounts' && accSub !== 'signals'], ['segments', 'Segments', v === 'segments'], ['signals', 'Signals', v === 'accounts' && accSub === 'signals']],
-      campaigns: [['campaigns', 'Campaigns', v === 'campaigns' && campSub === 'list'], ['nba', 'Next best actions', v === 'campaigns' && campSub === 'nba'], ['plays', 'Plays', v === 'campaigns' && campSub === 'plays'], ['studio', 'Content', v === 'studio']]
+      campaigns: [['campaigns', 'Campaigns and next best actions', v === 'campaigns' && campSub !== 'plays'], ['plays', 'Plays', v === 'campaigns' && campSub === 'plays'], ['studio', 'Content', v === 'studio']],
+      studio: [['campaigns', 'Campaigns and next best actions', false], ['plays', 'Plays', false], ['studio', 'Content', true]]
     }[navOn(v)];
     return G && !segSel && !campSel ? `<div class="dtabs mod-tabs">${G.map(([k, l, on]) => `<button class="${on ? 'on' : ''}" onclick="App.modTab('${k}')">${l}</button>`).join('')}</div>` : '';
   }
@@ -1464,17 +1465,19 @@
   }
   function renderCampaigns() {
     if (campSel) return renderCampaign();
-    if (campSub === 'nba') return renderNbaList();
     if (campSub === 'plays') return renderPlays();
     const order = ['Ready to confirm', 'Draft', 'Running', 'Completed'];
     const list = CAMPAIGNS.slice().sort((p, q) => order.indexOf(p.status) - order.indexOf(q.status));
-    const cv = frame('Campaigns', `${list.length} campaigns · email and LinkedIn`, `<button class="btn sm pri" onclick="App.ask('Build the campaign')">${ic('plus', 13)} New campaign</button>`);
+    const nrows = nbaRows().sort((p, q) => q.score - p.score);
+    const cv = frame('Campaigns and next best actions', `${list.length} campaigns · ${nrows.length} next best actions`, `<button class="btn sm pri" onclick="App.ask('Build the campaign')">${ic('plus', 13)} New campaign</button>`);
     cv.innerHTML = `<div class="toolbar">${ownerSel()}${filt('Starred', 'star', false)}${filt('Active', '', false)}<div class="search" style="margin-left:auto">${ic('search', 14)}<input placeholder="Search…" aria-label="Search campaigns"></div></div>
       <div class="placeholder-note" style="margin:6px 0 12px">${ic('mail', 16)}<div><b>Placeholder.</b> Sending through email and LinkedIn connects after the pilot. Nothing is sent from the mock.</div></div>
       <div class="srow-list">${list.map(c => { const st = campStats(c); return `<div class="srow" onclick="App.goCampaign('${c.id}')">
         <div class="srow-n"><div class="nm">${esc(c.name)} ${campBadge(c)}${c.status === 'Running' ? '<span class="live-dot" title="Active"></span>' : ''}</div><div class="sm">${seqSpan(c)} · ${esc(c.seg ? segOf(c.seg).trigger : 'archived segment')}</div></div>
         <div class="srow-m"><div><b>${st.total}</b><span>Total enrollments</span></div><div><b>${st.progress}</b><span>In progress</span></div><div><b>${st.finished}</b><span>Finished</span></div><div><b>${pct(st.replies, st.started)}</b><span>Reply rate</span></div><div><b>${st.positive || '-'}</b><span>Positive</span></div><div><b>${st.positive + st.objection || '-'}</b><span>Positive + objection</span></div></div>
         <button class="ic-btn" title="Star" onclick="event.stopPropagation();App.star('${c.id}')" style="color:${S.starred[c.id] ? 'var(--ter)' : 'inherit'}">${ic('star', 15)}</button></div>`; }).join('')}</div>`;
+    cv.insertAdjacentHTML('beforeend', `<div class="lbl" id="nbaSec" style="margin:22px 0 8px">Next best actions · one account, one action</div><div class="placeholder-note" style="margin-bottom:10px"><div><b>Live order.</b> The queue re-orders the moment something happens. 09:42: Halcyon moved up 4 places after a reply on LinkedIn. 08:15: Juniper moved to first after a pricing-page visit.</div></div><div class="rule"><b>Campaign or next best action?</b> When 10 or more accounts share one micro-segment within 7 days they become one campaign above, which the sales manager confirms. Below that, each account gets its own next best action here.</div>${nbaTop({ rate: null }, nrows)}<div style="margin-top:12px">${nbaTable(nrows)}</div>`);
+    if (campSub === 'nba') setTimeout(() => { const e = document.getElementById('nbaSec'); if (e) e.scrollIntoView({ block: 'start' }); }, 60);
   }
   function campTasks(c, accs) {
     const conf = S.camp[c.id] === 'Confirmed', fell = campFell(c.id) || S.camp[c.id + 'x'];
