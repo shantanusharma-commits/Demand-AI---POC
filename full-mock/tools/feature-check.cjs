@@ -72,6 +72,9 @@ const M = process.argv[2], full = M === 'full-mock', dir = '/home/user/Demand-AI
   t = await run(() => App.ask("What's my reply rate?"), 2600); chk('Chat: reply rate', /Reply rate this week for you/i.test(t), 'Chat');
   t = await run(() => App.ask('How many meetings did I book this week?'), 2600); chk('Chat: meetings against target', /You booked/i.test(t), 'Chat');
   t = await run(() => App.ask('What needs my approval?'), 2600); chk('Chat: approvals', /Waiting for you/i.test(t), 'Chat');
+  await run(() => { App.modTab('studio'); }, 300); t = await run(() => App.setStudioTab('saved'), 400);
+  chk('Content Library: status dashboard, review table, filters, artifact cards, vehicle guide', /Under review/i.test(t) && /To approve/i.test(t) && /In outreach/i.test(t) && (await p.$$('.lc')).length >= 10 && (await p.$$('#lf-ind, #lf-seg, #lf-per, #lf-topicK, #lf-type, #lf-veh')).length === 6 && /Which vehicle for which asset/i.test(t), 'Content studio › Library');
+  await p.selectOption('#lf-topicK', 'Initiative'); await p.waitForTimeout(150); chk('Content Library: filter by topic', (await p.$$eval('.lc', x => x.length)) > 0 && (await p.$$eval('.lc', x => x.every(c => /Initiative/.test(c.innerText)))), 'Content studio › Library'); await p.evaluate(() => { App.libClear(); App.nav(null); }); await p.waitForTimeout(300);
   // round 3
   t = await run(() => { App.openRecord('juniper', 'graph'); }); await p.click('g.hub-n'); await p.waitForTimeout(300); t = await body(); chk('Context graph nodes clickable with detail', /Open/i.test(t) && (await p.$('g.hub-n.on')) !== null, 'Account › Context graph');
   chk('Actions name their signal (no placeholder)', await p.evaluate(() => !MOCK.ACCOUNTS.some(a => a.nba && /Introduce Client/.test(a.nba.action)) && /Congratulate Budi/.test(MOCK.ACCOUNTS.find(a => a.id === 'juniper').nba.action)), 'Next best actions');

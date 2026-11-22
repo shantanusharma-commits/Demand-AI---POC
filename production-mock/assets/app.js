@@ -1912,13 +1912,74 @@
     if (sec) { const name = sec[1].replace(/[?.!]$/, ''); d.blocks.splice(d.blocks.length - 2, 0, { k: 'h2', t: name.charAt(0).toUpperCase() + name.slice(1), nw: true }, { k: 'p', t: `Treat ${name} as a plan, not a one-off: map each system's end-of-support date, group the work by planned shutdown, and budget for it year by year. [BR-03]`, nw: true }); return { kind: 'text', html: `Added a section on ${esc(name)} before the next step.` }; }
     return { kind: 'text', html: 'Tell me what to change: shorter, more formal, add proof, rewrite the intro, or add a section on a topic. You can also click a paragraph to change just that one.' };
   }
-  function renderStudio() {
+  /* ─── Content studio › Library: every saved asset as an artifact, with review status, filters and the vehicle guide ─── */
+  const VEH = { 'Outbound email': ['Outbound', 'Starting a conversation with a named contact', 'Reply rate, meetings'], 'Newsletter': ['Inbound / owned', 'Ongoing nurture across the buying committee', 'Clicks, account-level engagement'], 'Blog email': ['Inbound / owned', 'Problem-led education, one topic at a time', 'Clicks, read-through'], 'LinkedIn DM': ['Outbound', 'Personal outreach to a connected contact', 'Reply rate, meetings'], 'LinkedIn post': ['Community / social', 'Visibility, peer proof, warming accounts before outreach', 'Engagement from target-account people'] };
+  const AST = { 'Whitepaper': ['Consideration → evaluation', 'Technical evaluators and analytical buyers; deep proof of the value proposition'], 'Infographic': ['Awareness → consideration', 'Busy executives; one problem or stat at a glance'], 'Carousel': ['Awareness', 'LinkedIn feed; a problem → solution story in 5–8 slides'], 'PDF one-pager': ['Consideration', 'A leave-behind any role can forward internally'] };
+  const COMBO = { 'Whitepaper': { 'Outbound email': 'link, later in the sequence', 'Newsletter': 'featured link', 'Blog email': '"go deeper" link', 'LinkedIn DM': 'after a reply' }, 'Infographic': { 'Outbound email': 'best opener', 'Newsletter': 'inline image', 'Blog email': 'inline', 'LinkedIn DM': 'opener', 'LinkedIn post': 'yes' }, 'Carousel': { 'LinkedIn DM': 'yes', 'LinkedIn post': 'native format' }, 'PDF one-pager': { 'Outbound email': 'tracked link', 'Newsletter': 'featured link', 'LinkedIn DM': 'attachment' } };
+  const LIB0 = [
+    ['l1', 'Turnaround readiness: the 3 risks refineries miss', 'Whitepaper', ['Outbound email', 'Newsletter'], 'Refining', 'Turnaround season 2027', 'Operations manager', 'Pain point', 'Turnaround overruns', 'Completed', 'Daniel Brooks', '3 days ago', 11, '7 replies from 11 accounts'],
+    ['l2', 'Where unplanned downtime really comes from', 'Infographic', ['Outbound email', 'LinkedIn DM'], 'Petrochemicals', 'New reliability & operations leaders', 'Reliability leader', 'Pain point', 'Unplanned trips', 'Completed', 'Sofia Ahlgren', '5 days ago', 9, 'Reply rate 24%'],
+    ['l3', 'Switch at contract end: the 5-slide decision', 'Carousel', ['LinkedIn post', 'LinkedIn DM'], 'Petrochemicals', 'Rival contract ending', 'Technical lead (I&C)', 'Initiative', 'Vendor switch', 'To approve', 'Sofia Ahlgren', 'Today', 0, '–'],
+    ['l4', '2027 emissions-reporting checklist', 'PDF one-pager', ['Outbound email', 'Newsletter'], 'Gas processing', '2027 emissions-reporting deadline', 'Plant head', 'Need', 'Compliance by 2027', 'Under review', 'Marco Lindqvist', 'Today', 0, '–'],
+    ['l5', 'Historian migration: a phased path', 'Whitepaper', ['Blog email', 'LinkedIn DM'], 'Gas processing', 'Historian & tech-stack change', 'Technical lead (I&C)', 'Initiative', 'Historian upgrade', 'Under review', 'Kenji Watanabe', 'Yesterday', 0, '–'],
+    ['l6', 'A peer site cut unplanned trips by 18%', 'Infographic', ['Newsletter', 'Blog email'], 'Refining', 'New reliability & operations leaders', 'Reliability leader', 'Pain point', 'Unplanned trips', 'Completed', 'Sofia Ahlgren', '2 weeks ago', 31, '9 replies · 3 meetings'],
+    ['l7', 'Scope expansion automation in 30 days', 'Carousel', ['LinkedIn post'], 'Petrochemicals', 'Expansion & capex projects', 'Operations manager', 'Initiative', 'Plant expansion', 'Completed', 'Aisha Rahman', '1 week ago', 14, '212 engagements from target accounts'],
+    ['l8', 'Staffing a control-system upgrade', 'Infographic', ['Outbound email', 'LinkedIn post'], 'Refining', 'Control-systems hiring surge', 'Plant head', 'Need', 'Skills gap', 'To approve', 'Marco Lindqvist', 'Today', 0, '–'],
+    ['l9', 'LNG terminal reliability benchmark', 'Whitepaper', ['Newsletter', 'Outbound email'], 'LNG', 'Rival contract ending', 'Reliability leader', 'Need', 'Benchmark against peers', 'Draft', 'Aisha Rahman', 'Today', 0, '–'],
+    ['l10', 'The cost of a delayed restart', 'PDF one-pager', ['Outbound email', 'LinkedIn DM'], 'Refining', 'Turnaround season 2027', 'Procurement', 'Pain point', 'Restart delays', 'Completed', 'Daniel Brooks', '4 days ago', 8, 'Reply rate 19%'],
+    ['l11', 'Support you can count on through the switch', 'Carousel', ['LinkedIn post', 'LinkedIn DM'], 'Petrochemicals', 'Researching competitors', 'Technical lead (I&C)', 'Pain point', 'Slow vendor support', 'Under review', 'Sofia Ahlgren', 'Today', 0, '–'],
+    ['l12', 'Monthly reliability brief: three numbers', 'Infographic', ['Newsletter'], 'Refining', 'New reliability & operations leaders', 'Reliability leader', 'Need', 'Peer benchmarks', 'Completed', 'Daniel Brooks', '1 week ago', 46, 'Clicks from 19 target accounts']
+  ].map(r => ({ id: r[0], t: r[1], type: r[2], veh: r[3], ind: r[4], seg: r[5], per: r[6], topicK: r[7], topic: r[8], st: r[9], by: r[10], at: r[11], used: r[12], metric: r[13] }));
+  const libF = { ind: '', seg: '', per: '', topicK: '', type: '', veh: '', q: '' };
+  let libTabK = 'To approve';
+  function libAll() {
+    const mine = (S.content || []).map((c, i) => ({ id: 'u' + i, t: c.title || 'Untitled piece', type: AST[c.type] ? c.type : 'Whitepaper', veh: ['Outbound email'], ind: 'Refining', seg: 'From Content studio', per: 'Any', topicK: 'Need', topic: c.audience || 'From Content studio', st: 'Under review', by: me.name, at: 'Today', used: 0, metric: '–' }));
+    return mine.concat(LIB0).map(a => Object.assign({}, a, (S.libSt || {})[a.id] ? { st: S.libSt[a.id] } : {}));
+  }
+  const libPass = a => (!libF.ind || a.ind === libF.ind) && (!libF.seg || a.seg === libF.seg) && (!libF.per || a.per === libF.per) && (!libF.topicK || a.topicK === libF.topicK) && (!libF.type || a.type === libF.type) && (!libF.veh || a.veh.includes(libF.veh)) && (!libF.q || (a.t + ' ' + a.topic).toLowerCase().includes(libF.q.toLowerCase()));
+  function libThumb(a) {
+    const k = { Whitepaper: 'wp', Infographic: 'ig', Carousel: 'ca', 'PDF one-pager': 'pdf' }[a.type];
+    const inner = k === 'wp' ? '<div class="lt-pg"><i class="lt-h"></i><i></i><i></i><i class="s"></i><i></i><i class="s"></i></div>'
+      : k === 'ig' ? '<div class="lt-pg"><i class="lt-h"></i><div class="lt-bars"><b style="height:40%"></b><b style="height:72%"></b><b style="height:55%"></b><b style="height:90%"></b></div><i class="s"></i></div>'
+      : k === 'ca' ? '<div class="lt-ca"><div class="lt-sl"></div><div class="lt-sl"></div><div class="lt-sl"><i class="lt-h"></i><i></i><i class="s"></i></div></div>'
+      : '<div class="lt-pg"><div class="lt-band"></div><i></i><i class="s"></i><i></i></div>';
+    const tt = a.t ? `<b class="lt-tt">${esc(a.t.length > 46 ? a.t.slice(0, 44) + '…' : a.t)}</b>` : '';
+    return `<div class="lt th-${k}">${a.t ? inner.replace('<i class="lt-h"></i>', tt).replace('<div class="lt-band"></div>', '<div class="lt-band"></div>' + tt) : inner}</div>`;
+  }
+  function libView() {
+    const all = libAll(), vis = all.filter(libPass), n = s => all.filter(a => a.st === s).length;
+    const inUse = all.filter(a => a.st === 'Completed' && a.used).length;
+    const opts = (k, label, vals) => `<label class="sr" for="lf-${k}">${label}</label><select id="lf-${k}" class="sel" onchange="App.libSet('${k}',this.value)"><option value="">${label}</option>${vals.map(v => `<option ${libF[k] === v ? 'selected' : ''}>${esc(v)}</option>`).join('')}</select>`;
+    const uniq = k => [...new Set(all.map(a => a[k]))].sort();
+    const tabs = ['Under review', 'To approve', 'Completed'], rows = vis.filter(a => a.st === libTabK);
+    const act = a => a.st === 'To approve' ? (isMgr ? `<button class="btn sm pri" onclick="event.stopPropagation();App.libApprove('${a.id}')">Approve</button>` : '<span class="sm muted">Waiting for Daniel</span>') : a.st === 'Under review' ? '<span class="sm muted">Brand and claim checks: 2 of 3 passed</span>' : `<span class="sm">${esc(a.metric)}</span>`;
+    const card = a => `<button class="lc" onclick="App.studioGo(${js(a.t)},${js(a.type === 'PDF one-pager' ? 'One-pager PDF' : a.type)})">${libThumb(a)}<div class="lc-b"><div class="lc-t">${esc(a.t)}</div><div class="lc-m">${esc(a.type)} · ${esc(a.ind)} · ${esc(a.at)}</div><div class="lc-tags"><span class="badge b-grey nodot">${esc(a.per)}</span><span class="badge ${a.topicK === 'Pain point' ? 'b-warn' : a.topicK === 'Initiative' ? 'b-sec' : 'b-ter'} nodot">${esc(a.topicK)}: ${esc(a.topic)}</span></div><div class="lc-f"><span class="lc-v">${a.veh.map(v => esc(v)).join(' · ')}</span><span class="lc-st st-${a.st.replace(/ /g, '').toLowerCase()}">${esc(a.st)}</span></div></div></button>`;
+    return `<div class="lib" id="lib">
+      <div class="lib-top">
+        <div class="lib-kpis">${[['Under review', n('Under review'), 'brand, claim and fact checks running', 'Under review'], ['To approve', n('To approve'), isMgr ? 'waiting for you' : 'waiting for Daniel', 'To approve'], ['Completed', n('Completed'), 'approved and in the library', 'Completed'], ['In outreach', inUse, 'attached to live campaigns or actions', 'Completed']].map(k => `<button class="lib-k ${libTabK === k[3] && k[0] !== 'In outreach' ? 'on' : ''}" onclick="App.libTab('${k[3]}')"><span class="lib-kn">${k[1]}</span><span class="lib-kl">${k[0]}</span><span class="lib-ks">${k[2]}</span></button>`).join('')}</div>
+        <div class="lib-fil">${opts('ind', 'Industry', uniq('ind'))}${opts('seg', 'Segment', uniq('seg'))}${opts('per', 'Persona', uniq('per'))}${opts('topicK', 'Topic', ['Pain point', 'Initiative', 'Need'])}${opts('type', 'Asset type', Object.keys(AST))}${opts('veh', 'Vehicle', Object.keys(VEH))}<div class="search lib-q">${ic('search', 14)}<input placeholder="Search assets" aria-label="Search assets" value="${esc(libF.q)}" oninput="App.libSet('q',this.value,true)"></div>${Object.values(libF).some(Boolean) ? '<button class="btn sm ghost" onclick="App.libClear()">Clear</button>' : ''}</div>
+      </div>
+      <div class="lib-rev card"><div class="lib-rev-h"><div class="dtabs" style="margin:0">${tabs.map(s => `<button class="${libTabK === s ? 'on' : ''}" onclick="App.libTab('${s}')">${s} <i>${vis.filter(a => a.st === s).length}</i></button>`).join('')}</div></div>
+        <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Asset</th><th>Type</th><th>Segment · persona</th><th>Topic</th><th>Owner</th><th>Updated</th><th></th></tr></thead><tbody>${rows.length ? rows.slice(0, 4).map(a => `<tr class="row-link" onclick="App.studioGo(${js(a.t)},${js(a.type === 'PDF one-pager' ? 'One-pager PDF' : a.type)})"><td class="nm">${esc(a.t)}</td><td class="sm">${esc(a.type)}</td><td class="sm">${esc(a.seg)}<div class="muted">${esc(a.per)}</div></td><td class="sm">${esc(a.topicK)}: ${esc(a.topic)}</td><td class="sm">${esc(a.by)}</td><td class="sm">${esc(a.at)}</td><td style="white-space:nowrap">${act(a)}</td></tr>`).join('') : `<tr><td colspan="7" class="sm muted">Nothing ${libTabK.toLowerCase()} for these filters.</td></tr>`}</tbody></table></div></div>
+      <div class="lib-new"><span class="lbl">Make something new</span>${Object.keys(AST).map(t => `<button class="lib-nt" onclick="App.setStudioTab('write');App.setStudioType(${js(t === 'PDF one-pager' ? 'One-pager PDF' : t)})">${libThumb({ type: t })}<span>${t}</span></button>`).join('')}<details class="lib-guide"><summary>Which vehicle for which asset?</summary><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Vehicle</th><th>Channel type</th><th>Best for</th><th>Main metric</th>${Object.keys(AST).map(t => `<th>${t}</th>`).join('')}</tr></thead><tbody>${Object.keys(VEH).map(v => `<tr><td class="nm">${v}</td><td class="sm">${VEH[v][0]}</td><td class="sm">${VEH[v][1]}</td><td class="sm">${VEH[v][2]}</td>${Object.keys(AST).map(t => `<td class="sm">${COMBO[t][v] ? '✓ ' + COMBO[t][v] : '<span class="muted">–</span>'}</td>`).join('')}</tr>`).join('')}</tbody></table></div><div class="sm muted" style="margin-top:6px">${Object.keys(AST).map(t => `<b>${t}</b>: ${AST[t][0]}, ${AST[t][1]}.`).join(' ')} Attach files in LinkedIn DMs; in cold email send a tracked link instead.</div></details></div>
+      <div class="lib-grid-h"><span class="lbl">Assets · ${vis.length}</span></div>
+      <div class="lib-grid">${vis.map(card).join('') || '<div class="empty">No assets match these filters.</div>'}</div></div>`;
+  }
+  function libHook() {
+    if (S.studio.doc || studioTab !== 'saved') return;
+    const cv = $('cv'); if (!cv) return;
+    const keep = cv.scrollTop; cv.innerHTML = libView(); cv.scrollTop = keep;
+    const tog = () => { const l = $('lib'); if (l) l.classList.toggle('lib-scrolled', cv.scrollTop > 40); };
+    cv.onscroll = tog; tog();
+  }
+  function renderStudio() { renderStudio0(); libHook(); }
+  function renderStudio0() {
     const d = S.studio.doc;
     if (!d) {
       const all = S.content.concat(CONTENT);
       $('main').className = 'canvas studio-home';
       $('main').innerHTML = `<div class="cv-h"><div class="cv-ht" style="display:flex;flex-direction:row;align-items:baseline;gap:14px"><div class="cv-t">Content studio</div><div class="cv-s">Blogs and whitepapers in Vantera's brand voice · more formats coming soon</div></div></div>${modTabs()}
-        <div class="dtabs" style="margin:0;padding:0 22px;background:var(--surf)">${[['write', 'Write'], ['saved', `Saved content <i>${all.length}</i>`]].map(([k, l]) => `<button class="${studioTab === k ? 'on' : ''}" onclick="App.setStudioTab('${k}')">${l}</button>`).join('')}</div>
+        <div class="dtabs" style="margin:0;padding:0 22px;background:var(--surf)">${[['write', 'Write'], ['saved', `Library <i>${libAll().length}</i>`]].map(([k, l]) => `<button class="${studioTab === k ? 'on' : ''}" onclick="App.setStudioTab('${k}')">${l}</button>`).join('')}</div>
         <div class="cv-b" id="cv">${studioTab === 'write' ? `<div class="st-hero"><h1>What should we write?</h1><p>Describe it in your own words. It's written in a canvas beside the chat, and you change it by talking to it.</p>
           <div class="st-box"><label class="sr" for="stBrief">Brief</label><textarea id="stBrief" rows="2" placeholder="e.g. A whitepaper on legacy control system modernisation for plant managers" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();App.studioGo()}"></textarea>
             <div class="st-f"><div class="seg">${['Blog', 'Whitepaper'].map(x => `<button class="${studioType === x ? 'on' : ''}" onclick="App.setStudioType('${x}')">${ic(x === 'Blog' ? 'pen' : 'doc', 13)} ${x}</button>`).join('')}</div><button class="send" onclick="App.studioGo()" title="Write">${ic('send', 16)}</button></div></div>
@@ -2108,6 +2169,10 @@
     seqAdd(cid, ch) { editSeq(cid, (sq, c) => sq.push(newTouch(sq, c, ch))); toast(`${ch} step added at the end`); renderAll(); setTimeout(() => { const el = [...document.querySelectorAll('.tedit:not(.locked)')].pop(); if (el) { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); const m = el.querySelector('textarea'); if (m) m.focus({ preventScroll: true }); } }, 60); },
     seqRewrite(cid, i) { editSeq(cid, sq => { const t = sq[i]; t.t = t.ch === 'LinkedIn' ? `Saw the news at your site. ${t.t.split('.')[0]}. Worth a quick chat?` : `${t.t.split('.')[0]}. Here is what a comparable site learned, in one page, and the first step that kept its options open.`; }); toast('Rewritten. Brand and claim checks still pass'); renderAll(); },
     seqReset(cid) { delete S.seq[cid]; save(); toast('Back to the AI draft'); renderAll(); },
+    libSet(k, v, keepFocus) { libF[k] = v; libHook(); if (keepFocus) { const i = document.querySelector('.lib-q input'); if (i) { i.focus(); i.setSelectionRange(v.length, v.length); } } },
+    libClear() { Object.keys(libF).forEach(k => { libF[k] = ''; }); libHook(); },
+    libTab(k) { libTabK = k; libHook(); },
+    libApprove(id) { S.libSt = S.libSt || {}; S.libSt[id] = 'Completed'; save(); toast('Approved. It is in the library and ready for outreach.'); libHook(); },
     setStudioTab(k) { studioTab = k; renderAll(); },
     setStudioType(x) { studioType = x; renderAll(); },
     studioGo(text, type) { const v = text || ($('stBrief') && $('stBrief').value) || ''; if (!v.trim()) { toast('Describe what to write first'); return; } const soon = !text && v.match(/\b(ppt|powerpoint|slides?|deck|pdf|brochure|infographic|carousel|podcast|video|single image|linkedin (text )?post)\b/i); if (soon) { toast(`${soon[0].charAt(0).toUpperCase() + soon[0].slice(1)} is coming soon. For now, pick Blog or Whitepaper.`); return; } startDoc(type || (/whitepaper/i.test(v) ? 'Whitepaper' : studioType), v); },
