@@ -1619,3 +1619,35 @@ h1 .r2tag{font-size:11px;padding:3px 7px}
 @media (max-width:760px){.lib-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.lib-q{margin-left:0;flex:1}}
 .lt-tt{display:block;font:600 8.5px/1.25 var(--fd);color:var(--i1);margin-bottom:6%;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical}.th-pdf .lt-tt{margin-top:6%}.lc .lt-pg{width:52%}.lc .lt-ca{width:56%}
 .lc .lt-bars{flex:0 0 42%}.lc .th-ig .lt-tt{-webkit-line-clamp:2}
+
+/* Library controls in the style of Claude's Artifacts page */
+.lib-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.lib-tabs{display:flex;gap:4px}.lib-tabs button{padding:6px 14px;border-radius:999px;font-size:13px;color:var(--i2)}.lib-tabs button:hover{color:var(--i1)}.lib-tabs button.on{background:var(--s75);color:var(--i1);font-weight:600}
+.lib-tools{margin-left:auto;display:flex;align-items:center;gap:4px}
+.lib-ib{width:34px;height:34px;border-radius:var(--rsm);display:inline-flex;align-items:center;justify-content:center;color:var(--i2)}.lib-ib:hover{background:var(--s75);color:var(--i1)}.lib-ib.on{background:var(--brand-lt);color:var(--brand-dk)}
+.lib-q{min-width:220px}
+.lib-mw,.st-pw{position:relative}
+.lib-scrim{position:fixed;inset:0;z-index:20}
+.lib-menu{position:absolute;right:0;top:40px;z-index:21;min-width:280px;background:var(--surf);border:1px solid var(--border);border-radius:var(--rmd);box-shadow:var(--sh-lg);padding:6px}
+.lib-mi{display:flex;justify-content:space-between;align-items:center;gap:16px;width:100%;padding:8px 10px;border-radius:var(--rsm);font-size:13px;text-align:left}.lib-mi:hover{background:var(--s50)}
+.lib-mv{color:var(--i3);font-size:12.5px;white-space:nowrap}.lib-mback{color:var(--i2);font-weight:600}
+.lib-msep{height:1px;background:var(--border);margin:4px 2px}
+.lib-chips{display:flex;flex-wrap:wrap;gap:6px}.lib-chip{display:inline-flex;align-items:center;gap:6px;padding:3px 6px 3px 10px;border-radius:999px;background:var(--brand-lt);color:var(--brand-dk);font-size:12px}.lib-chip button{font-size:10px;color:var(--brand-dk);opacity:.7}
+.lib-ut{padding:0;overflow:hidden}.lib-tbl td{vertical-align:middle;padding-top:9px;padding-bottom:9px}
+.lib-ua{display:flex;align-items:center;gap:10px}.lib-ua .lt{width:44px;height:34px;border-radius:var(--rsm);flex-shrink:0}
+.lib-use{display:inline-block;margin:2px 4px 2px 0;padding:2px 8px;border-radius:999px;background:var(--s75);font-size:11.5px;color:var(--i1);white-space:nowrap}
+.lib-stack{display:inline-flex}.lib-stack .lib-av{margin-left:-6px;border:2px solid var(--surf)}.lib-stack .lib-av:first-child{margin-left:0}
+.lib-by{display:inline-flex;align-items:center;gap:8px}
+.lib-av{display:inline-flex;align-items:center;justify-content:center;border-radius:50%;color:#fff;font-weight:600;flex-shrink:0}
+.lib-more{display:block;width:100%;padding:9px;border-top:1px solid var(--border);font-size:12.5px;color:var(--brand-dk);font-weight:600}.lib-more:hover{background:var(--s50)}
+.lib-grid-h{display:flex;align-items:baseline;gap:10px}
+.lib-scrolled .lib-bar{margin-top:-2px}
+/* Write: the asset-type pill */
+.st-pill{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid var(--border);border-radius:999px;font-size:12.5px;font-weight:600;background:var(--surf)}.st-pill:hover{border-color:var(--brand)}
+.st-car{font-size:10px;color:var(--i3)}
+.st-pm{left:0;right:auto;top:auto;bottom:40px;min-width:320px}
+.st-pd{display:block;font-size:11.5px;color:var(--i3);font-weight:400;margin-top:1px}
+.st-sl{flex-basis:100%;font-size:11.5px;color:var(--i3);text-transform:uppercase;letter-spacing:.04em;font-weight:600}
+.lib{flex-shrink:0}.lib>*{flex-shrink:0}
+.st-pm{top:40px;bottom:auto}
+.lib .sm{font-size:12px}.lib .lc-f .sm{font-size:11.5px}.lib-grid-h .sm{font-size:12px}
