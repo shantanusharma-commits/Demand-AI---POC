@@ -1321,24 +1321,40 @@
     if (q) { const s = $('artQ'); s.focus(); s.setSelectionRange(q.length, q.length); }
   }
 
+  /* Filter and sort, Claude style: a search icon and one menu instead of pills and dropdowns */
+  const FSM = {}, FSS = {};
+  let ldTier = '', ldSeg = '', ldSort = 'Score', ldQ = '', sgMode = '', sgSort = 'Most accounts', sgQ = '';
+  const FS_SVG = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="17" x2="14" y2="17"/></svg>';
+  function fsTools(ns, o) {
+    const m = FSM[ns] || null, lab = (k, v) => { const e = o.keys.find(x => x[1] === k), f = e && e[2].find(x => x[0] === v); return f ? f[1] : v; };
+    const chips = o.keys.filter(([l, k]) => o.val(k)).map(([l, k]) => `<span class="lib-chip">${l}: ${esc(lab(k, o.val(k)))}<button aria-label="Remove ${l} filter" onclick="App.fsPick('${ns}','${k}','')">✕</button></span>`).join('');
+    let menu = '';
+    if (m === 'root') menu = `<div class="lib-scrim" onclick="App.fsMenu('${ns}',null)"></div><div class="lib-menu" role="menu">${o.keys.map(([l, k]) => `<button class="lib-mi" onclick="App.fsMenu('${ns}','${k}')"><span>${l}</span><span class="lib-mv">${esc(o.val(k) ? lab(k, o.val(k)) : 'Any')} ›</span></button>`).join('')}<div class="lib-msep"></div><button class="lib-mi" onclick="App.fsMenu('${ns}','sort')"><span>Sort by</span><span class="lib-mv">${esc(o.sort)} ›</span></button></div>`;
+    else if (m) { const e = o.keys.find(x => x[1] === m), list = m === 'sort' ? o.sorts.map(s => [s, s]) : [['', 'Any']].concat(e[2]), cur = m === 'sort' ? o.sort : o.val(m);
+      menu = `<div class="lib-scrim" onclick="App.fsMenu('${ns}',null)"></div><div class="lib-menu" role="menu"><button class="lib-mi lib-mback" onclick="App.fsMenu('${ns}','root')">‹ ${m === 'sort' ? 'Sort by' : e[0]}</button><div class="lib-msep"></div>${list.map(([v, l]) => `<button class="lib-mi" onclick="App.fsPick('${ns}','${m}',${js(v)})"><span>${esc(l)}</span>${cur === v ? '<span class="lib-mv">✓</span>' : ''}</button>`).join('')}</div>`; }
+    const search = FSS[ns] || o.q ? `<div class="search lib-q">${ic('search', 14)}<input id="${ns}Q" placeholder="${esc(o.qph)}" aria-label="${esc(o.qph)}" value="${esc(o.q)}" oninput="App.fsPick('${ns}','q',this.value,1)"></div>` : `<button class="lib-ib" title="Search" aria-label="Search" onclick="App.fsSearch('${ns}')">${ic('search', 17)}</button>`;
+    return { tools: `<div class="lib-tools">${search}<span class="lib-mw"><button class="lib-ib ${m || chips ? 'on' : ''}" title="Filter and sort" aria-label="Filter and sort" onclick="App.fsMenu('${ns}','${m ? '' : 'root'}')">${FS_SVG}</button>${menu}</span>${o.extra || ''}</div>`, chips };
+  }
+  const FS_SET = {
+    ld: (k, v) => { if (k === 'list') listSel = v || 'all'; else if (k === 'tier') ldTier = v; else if (k === 'own') ownerF = v || 'all'; else if (k === 'seg') ldSeg = v; else if (k === 'sort') ldSort = v || 'Score'; else if (k === 'q') ldQ = v; },
+    sg: (k, v) => { if (k === 'mode') sgMode = v; else if (k === 'own') ownerF = v || 'all'; else if (k === 'sort') sgSort = v || 'Most accounts'; else if (k === 'q') sgQ = v; }
+  };
   /* Accounts (lists are saved selections: tabs above the table) */
   function renderAccounts() {
     if (accSub === 'signals') return renderSignals();
     const lists = [{ id: 'all', name: 'All leads' }].concat(S.lists, LISTS);
     const l = lists.find(x => x.id === listSel) || lists[0];
     let rows = l.id === 'all' ? ACCOUNTS : l.ids ? l.ids.map(acct) : l.seg ? ACCOUNTS.filter(a => a.seg === l.seg) : l.id === 'L1' ? listAccounts() : ACCOUNTS.filter(a => a.score > 0);
-    const q = ($('accQ') && $('accQ').value || '').toLowerCase(), tf = ($('accT') && $('accT').value) || 'all';
-    rows = rows.filter(a => visible(a) && (!q || (a.name + a.contact.name + a.country + a.segment).toLowerCase().includes(q)) && (tf === 'all' || a.tier === tf));
+    const q = ldQ.toLowerCase();
+    rows = rows.filter(a => visible(a) && (!q || (a.name + a.contact.name + a.country + a.segment).toLowerCase().includes(q)) && (!ldTier || a.tier === ldTier) && (!ldSeg || a.seg === ldSeg));
+    if (ldSort === 'Newest signal') rows = rows.slice().sort((p, r) => (p.whyNow ? p.whyNow.age : 999) - (r.whyNow ? r.whyNow.age : 999)); else if (ldSort === 'Name A–Z') rows = rows.slice().sort((p, r) => p.name.localeCompare(r.name)); else rows = rows.slice().sort((p, r) => r.score - p.score);
+    const fs = fsTools('ld', { keys: [['List', 'list', lists.map(x => [x.id === 'all' ? '' : x.id, x.name])], ['Tier', 'tier', [['A', 'Tier A'], ['B', 'Tier B'], ['C', 'Tier C']]], ['Micro-segment', 'seg', SEGMENTS.map(s => [s.id, s.name])]].concat(isMgr ? [['Rep', 'own', REPS.map(r => [r, USERS[r].name])]] : []), val: k => k === 'list' ? (l.id === 'all' ? '' : l.id) : k === 'tier' ? ldTier : k === 'seg' ? ldSeg : k === 'own' ? (ownerF === 'all' ? '' : ownerF) : '', sorts: ['Score', 'Newest signal', 'Name A–Z'], sort: ldSort, q: ldQ, qph: 'Search accounts, people, segments', extra: `<button class="lib-ib ${showProc ? 'on' : ''}" title="How scoring works" aria-label="How scoring works" onclick="App.toggleProc()">${ic('layers', 17)}</button>` });
     const cv = frame('Leads', `${rows.length} leads${l.id === 'all' ? '' : ' in this list'} · Score = Fit × Timing`, `<button class="btn sm" onclick="App.saveView()">${ic('savei', 13)} Save as a list</button><button class="btn sm pri" onclick="App.ask('Find prospects like my last 10 wins')">${ic('search', 13)} Find prospects</button>`);
-    cv.innerHTML = `<div class="list-tabs">${lists.map(x => `<button class="${x.id === l.id ? 'on' : ''}" onclick="App.openList('${x.id}')">${esc(x.name)}${x.kind ? `<i>${esc(x.kind)}</i>` : ''}</button>`).join('')}</div>
+    cv.innerHTML = `<div class="lib-bar ld-bar"><div class="ld-h"><b>${esc(l.name)}</b><span class="sm muted">${rows.length} leads · sorted by ${esc(ldSort.toLowerCase())}</span></div>${fs.tools}</div>${fs.chips ? `<div class="lib-chips">${fs.chips}</div>` : ''}
       ${l.note ? `<div class="list-note">${esc(l.note)} · saved by ${esc(l.by)} · ${esc(l.when)}<span style="flex:1"></span>${btn('Score this list', 'Score this list')}${btn('Create micro-segments', 'Create micro-segments')}</div>` : ''}
-      <div class="toolbar">${ownerSel()}
-        <label class="sr" for="accT">Tier</label><select class="sel" id="accT" onchange="App.renderAll()">${[['all', 'All tiers'], ['A', 'Tier A'], ['B', 'Tier B'], ['C', 'Tier C']].map(([k, lb]) => `<option value="${k}" ${tf === k ? 'selected' : ''}>${lb}</option>`).join('')}</select>
-        <div class="search">${ic('search', 14)}<label class="sr" for="accQ">Search</label><input id="accQ" placeholder="Search accounts, people, segments" value="${esc(q)}" oninput="App.renderAll()"></div><button class="btn sm ghost" onclick="App.toggleProc()">${ic('layers', 13)} ${showProc ? 'Hide' : 'How scoring works'}</button></div>
       ${showProc ? scoreProcess(rows.find(a => a.score > 0), true) : ''}
       <div class="card tbl-wrap"><table class="tbl"><thead><tr><th>#</th><th>Account</th><th>Person</th><th>Tier</th><th>Score</th><th>Why now</th><th>Micro-segment</th>${isMgr ? '<th>Owner</th>' : ''}<th>Status</th></tr></thead><tbody>
         ${rows.map((a, i) => `<tr class="row-link" onclick="App.openRecord('${a.id}','overview')"><td class="mono muted">${i + 1}</td><td><div class="nm">${esc(a.name)}</div><div class="sm">${esc(a.industry)} · ${esc(a.country)}</div></td><td>${esc(a.contact.name)}<div class="sm">${esc(a.contact.title)}</div></td><td>${tierBadge(a.tier)}</td><td class="mono">${sc(a)}</td><td>${a.whyNow ? `${esc(a.whyNow.type)}<div class="sm">${ago(a.whyNow.age)}</div>` : '<span class="muted">No live signal</span>'}</td><td>${a.seg ? `<span class="seg-link" onclick="event.stopPropagation();App.openSegment('${a.seg}')">${esc(a.segment)}</span>` : '–'}</td>${isMgr ? `<td>${ownerPick(a)}</td>` : ''}<td>${stepBadge(a)}</td></tr>`).join('')}</tbody></table></div>`;
-    const s = $('accQ'); if (q) { s.focus(); s.setSelectionRange(q.length, q.length); }
   }
   const ownerPick = a => isMgr ? `<label class="sr" for="own-${a.id}">Owner</label><select class="sel own-sel" id="own-${a.id}" onclick="event.stopPropagation()" onchange="App.reassign(['${a.id}'],this.value)">${(REPS.includes(a.owner) ? REPS : [a.owner].concat(REPS)).map(r => `<option value="${r}" ${a.owner === r ? 'selected' : ''}>${esc(first(USERS[r].name))}</option>`).join('')}</select>` : `<span class="sm">${esc(first(USERS[a.owner].name))}</span>`;
   const assignAll = (ids, what) => isMgr && ids.length ? `<label class="sr" for="asg-${what}">Assign ${what}</label><select class="sel own-sel" id="asg-${what}" onclick="event.stopPropagation()" onchange="if(this.value)App.reassign(${esc(JSON.stringify(ids))},this.value)"><option value="">Assign ${what} to…</option>${REPS.map(r => `<option value="${r}">${esc(USERS[r].name)}</option>`).join('')}</select>` : '';
@@ -1363,13 +1379,15 @@
   }
   function renderSegments() {
     if (segSel) return renderSegment();
-    const cv = frame('Micro-segments', `${SEGMENTS.length} segments`, `<button class="btn sm pri" onclick="App.ask('Create micro-segments')">${ic('spark', 13)} Segment a list</button>`);
-    cv.innerHTML = `<div class="toolbar">${ownerSel()}${filt('Campaign · NBC', '', false)}${filt('My actions · NBA', '', false)}${filt('Building', '', false)}<div class="search" style="margin-left:auto">${ic('search', 14)}<input placeholder="Search…" aria-label="Search segments"></div></div>
+    const SG = SEGMENTS.filter(x => (!sgMode || (sgMode === 'NBA' ? x.mode !== 'NBC' && x.mode !== 'Building' : x.mode === sgMode)) && (!sgQ || (x.name + ' ' + x.trigger).toLowerCase().includes(sgQ.toLowerCase()))).sort(sgSort === 'Name A–Z' ? (p, q) => p.name.localeCompare(q.name) : sgSort === 'Positive rate' ? (p, q) => (q.rate || 0) - (p.rate || 0) : (p, q) => segStats(q).total - segStats(p).total);
+    const fs = fsTools('sg', { keys: [['Type', 'mode', [['NBC', 'Campaign · NBC'], ['NBA', 'My actions · NBA'], ['Building', 'Building toward a campaign']]]].concat(isMgr ? [['Rep', 'own', REPS.map(r => [r, USERS[r].name])]] : []), val: k => k === 'mode' ? sgMode : k === 'own' ? (ownerF === 'all' ? '' : ownerF) : '', sorts: ['Most accounts', 'Positive rate', 'Name A–Z'], sort: sgSort, q: sgQ, qph: 'Search segments' });
+    const cv = frame('Micro-segments', `${SG.length} of ${SEGMENTS.length} segments`, `<button class="btn sm pri" onclick="App.ask('Create micro-segments')">${ic('spark', 13)} Segment a list</button>`);
+    cv.innerHTML = `<div class="lib-bar ld-bar"><div class="ld-h"><b>Micro-segments</b><span class="sm muted">sorted by ${esc(sgSort.toLowerCase())}</span></div>${fs.tools}</div>${fs.chips ? `<div class="lib-chips">${fs.chips}</div>` : ''}
       <div class="rule"><b>Campaign or my action?</b> 10 or more accounts in one segment within 7 days become a campaign (NBC) once ${isMgr ? 'you confirm' : 'Daniel confirms'}. Fewer, and each account gets its own next best action (NBA). Sensitive segments never become campaigns.</div>
       <div class="seg-grp-h">${ic('megaphone', 15)} Campaign segments · NBC<span>one sequence for the whole segment; delivery is tracked in Campaigns</span></div>
-      <div class="srow-list">${SEGMENTS.filter(x => x.mode === 'NBC').map(segRow).join('')}</div>
+      <div class="srow-list">${SG.filter(x => x.mode === 'NBC').map(segRow).join('') || '<div class="empty">No campaign segments match.</div>'}</div>
       <div class="seg-grp-h">${ic('bolt', 15)} Next best action segments · NBA<span>one action per account, from the segment's message structure; delivery is tracked here</span></div>
-      <div class="srow-list">${SEGMENTS.filter(x => x.mode !== 'NBC').map(segRow).join('')}</div>`;
+      <div class="srow-list">${SG.filter(x => x.mode !== 'NBC').map(segRow).join('') || '<div class="empty">No segments match.</div>'}</div>`;
   }
   /* Segments track both: a campaign segment (NBC) through its campaign, every other segment (NBA) through the delivery of each account's action */
   const segNba = s => ACCOUNTS.filter(a => a.seg === s.id && a.nba && !a.campaign && /auto|sent|review|ready/.test(a.nba.status) && visible(a));
@@ -1974,7 +1992,7 @@
     ['l12', 'Monthly reliability brief: three numbers', 'Infographic', ['Newsletter'], 'Refining', 'New reliability & operations leaders', 'Reliability leader', 'Need', 'Peer benchmarks', 'Completed', 'Daniel Brooks', '1 week ago', 46, 'Clicks from 19 target accounts', ['Monthly newsletter · Nov'], ['pavan'], 'Tue 20 Oct', 7]
   ].map(r => ({ id: r[0], t: r[1], type: r[2], fmt: r[3], ind: r[4], seg: r[5], per: r[6], topicK: r[7], topic: r[8], st: r[9], by: r[10], at: r[11], used: r[12], metric: r[13], inC: r[14], usedBy: r[15], created: r[16], age: r[17] }));
   const libF = { ind: '', seg: '', per: '', topicK: '', type: '', fmt: '', q: '' };
-  let libTabK = 'All', libSort = 'Last updated', libMenu = null, libSearch = false, libList = false;
+  let libTabK = 'All', libSort = 'Last updated', libMenu = null, libSearch = false, libList = true;
   function libAll() {
     const mine = (S.content || []).filter(c => AST[c.type]).map((c, i) => ({ id: c.id || 'u' + i, t: c.title || 'Untitled piece', type: c.type, fmt: Object.keys(COMBO[c.type]).slice(0, 2), ind: 'Refining', seg: 'From Content studio', per: c.aud || 'Any', topicK: 'Need', topic: c.aud || 'From Content studio', st: isMgr ? 'Completed' : 'To approve', by: me.name, at: 'Just now', used: 0, metric: '–', inC: [], usedBy: [], created: 'Today', age: 0 }));
     return mine.concat(LIB0).map(a => Object.assign({}, a, (S.libSt || {})[a.id] ? { st: S.libSt[a.id] } : {}));
@@ -2060,8 +2078,7 @@
     const pill = pillMenu('icp', `ICP v${cur.v}`, 'users', `<div class="lib-menu st-pm ob-wide" role="menu"><div class="ob-mh">ICP library · ${shared.icps.length} versions</div>${shared.icps.slice().reverse().map(x => `<button class="lib-mi" onclick="App.icpPick(${x.v})"><span class="ob-mt"><b>Version ${x.v}${x.status === 'In use' ? ' · in use' : ''}</b><span>${esc(x.crit.slice(0, 3).join(' · '))}</span></span>${cur.v === x.v ? '<span class="lib-mv">✓</span>' : ''}</button>`).join('')}<div class="lib-msep"></div><button class="lib-mi" onclick="App.obPill(null);App.ask('Update our ICP')"><span>Change the ICP in the chat</span></button></div>`);
     const sugg = `<div class="st-sugg">${['Find prospects like my last 10 wins', 'Score this list', 'Create micro-segments'].map(s => `<button class="chip" onclick="App.ask(${js(s)})">${esc(s)}</button>`).join('')}</div>`;
     const v = view(), on = k => k === 'signals' ? v === 'accounts' && accSub === 'signals' : k === 'segments' ? v === 'segments' : v === 'accounts' && accSub !== 'signals';
-    return obBox('leads', { h: 'Who should we go after?', label: 'Describe the leads', ph: 'Describe the leads: industry, country, role or a signal. Paste a website to build an ICP from it', pills: pill, send: "App.obSend('leads')", below: sugg })
-      + `<div class="dtabs ob-tabs">${[['accounts', 'Leads'], ['signals', 'Signals'], ['segments', 'Segments']].map(([k, l]) => `<button class="${on(k) ? 'on' : ''}" onclick="App.modTab('${k}')">${l}</button>`).join('')}</div>`;
+    return `<div class="dtabs ob-tabs">${[['accounts', 'Leads'], ['signals', 'Signals'], ['segments', 'Segments']].map(([k, l]) => `<button class="${on(k) ? 'on' : ''}" onclick="App.modTab('${k}')">${l}</button>`).join('')}</div>`;
   }
   function leadsHook() { if (segSel) return; const cv = $('cv'); if (cv && !cv.querySelector('.ob')) cv.insertAdjacentHTML('afterbegin', leadsTop()); }
 
@@ -2163,8 +2180,7 @@
     const k = (key, v, l, d, extra) => `<button class="lib-k ${libTabK === key ? 'on' : ''} ${extra || ''}" onclick="App.libTab('${libTabK === key ? 'All' : key}')"><span class="lib-kn">${v}</span><span class="lib-kl">${l}</span><span class="lib-ks">${d}</span></button>`;
     const cards = `<div class="lib-kpis st-cards">${k('To approve', n('To approve'), 'To approve', isMgr ? 'waiting for you' : 'waiting for Daniel')}${k('Completed', n('Completed'), 'Completed', 'approved and in the library')}${k('In outreach', inUse, 'In outreach', 'used in live campaigns or actions')}
       <button class="lib-k lib-top1 ${libSort === 'Top performing' ? 'on' : ''}" onclick="App.libTopPerf()"><span class="lib-kl">${ic('flame', 13)} Top performing</span><span class="lib-kt">${esc(top.t)}</span><span class="lib-ks">${esc(top.metric)} · ${top.inC.length} campaign${top.inC.length === 1 ? '' : 's'}</span></button></div>`;
-    const fmts = `<div class="st-fmts"><div class="st-fh"><span>Formats it makes</span><span class="sm muted">pick one, then describe it above</span></div><div class="st-fg">${Object.keys(AST).map(t => `<button class="st-ft ${studioType === t ? 'on' : ''}" onclick="App.setStudioType(${js(t)})">${libThumb({ type: t })}<b>${t}</b><span>${esc(AST[t][1].split(';')[0])}</span><i>${Object.keys(COMBO[t]).slice(0, 3).join(' · ')}</i></button>`).join('')}</div>
-      <div class="st-sugg st-sugg-l"><span class="st-sl">Try a ${esc(studioType.toLowerCase())} prompt</span>${(ST_PROMPTS[studioType] || ST_PROMPTS.Whitepaper).map(s => `<button class="chip" onclick="App.studioGo(${js(s)})">${esc(s)}</button>`).join('')}</div></div>`;
+    const fmts = `<div class="st-fmts"><div class="st-fh"><span>Formats it makes</span><span class="sm muted">pick one, then describe it above</span></div><div class="st-fg">${Object.keys(AST).map(t => `<button class="st-ft ${studioType === t ? 'on' : ''}" onclick="App.setStudioType(${js(t)})">${libThumb({ type: t })}<b>${t}</b><span>${esc(AST[t][1].split(';')[0])}</span><i>${Object.keys(COMBO[t]).slice(0, 3).join(' · ')}</i></button>`).join('')}</div></div>`;
     return cards + obBox('studio', { id: 'stBrief', h: 'What should we write?', label: 'Brief', ph: 'Describe the asset: who it is for, the pain point, initiative or need it answers', pills: stPill() + dsPill(), send: 'App.studioGo()', below: fmts });
   }
   const BACKLOG = [['What does a phased migration cost per year of outage saved?', 7, 'Rival contract ending'], ['Which sites like ours finished a migration inside one turnaround?', 5, 'Turnaround season 2027'], ['How do you handle a mixed vendor estate?', 4, 'Historian & tech-stack change'], ['What support response time do you commit to?', 3, 'Researching competitors']];
@@ -2373,6 +2389,9 @@
     libApprove(id) { S.libSt = S.libSt || {}; S.libSt[id] = 'Completed'; save(); toast('Approved. It is in the library and ready for outreach.'); libHook(); },
     setStudioTab(k) { studioTab = 'write'; S.studio.doc = null; if (view() !== 'studio') nav('studio'); else renderAll(); setTimeout(() => App.obFocus('studio'), 80); },
     obIn(k, v) { obVal[k] = v; },
+    fsMenu(ns, k) { FSM[ns] = k || null; renderAll(); },
+    fsPick(ns, k, v, live) { FS_SET[ns](k, v); if (!live) FSM[ns] = null; renderAll(); if (live) { const s = $(ns + 'Q'); if (s) { s.focus(); s.setSelectionRange(v.length, v.length); } } },
+    fsSearch(ns) { FSS[ns] = !FSS[ns]; renderAll(); setTimeout(() => $(ns + 'Q') && $(ns + 'Q').focus(), 0); },
     obMenu(k) { obMenu = !k || obMenu === k ? null : k; obPillK = null; stPillOpen = false; renderAll(); },
     obAdd(k, i) { const p = OB_PLUS[k][i]; obAtt[k] = (obAtt[k] || []).filter(x => x !== p[2]).concat(p[2]); obMenu = null; toast(`${p[0]}: added ${p[2]} (placeholder)`); renderAll(); },
     obRm(k, i) { (obAtt[k] || []).splice(i, 1); renderAll(); },
