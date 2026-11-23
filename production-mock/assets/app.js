@@ -1199,7 +1199,6 @@
     $('main').innerHTML = `<div class="ibx ${cur ? 'has-sel' : ''}">
       <aside class="ibx-f">
         <div class="ibx-ttl">Inbox</div>
-        <button class="btn pri ibx-new" onclick="App.toast('New messages start from a campaign step or a next best action (mock)')">${ic('pen', 14)} <span>New message</span></button>
         <nav class="ibx-nav">${FOLDERS.map(([k, l, i]) => { const n = k === 'tracking' ? '' : k === 'all' ? src.filter(r => inFolder(r, 'all') && unread(r)).length : src.filter(r => inFolder(r, k)).length; return `<button class="${inboxTab === k ? 'on' : ''}" onclick="App.setInboxTab('${k}')" title="${l}">${ic(i, 15)}<span>${l}</span><i>${n || ''}</i></button>`; }).join('')}</nav>
         <div class="ibx-sec">Channel</div>
         <nav class="ibx-nav">${[['all', 'All channels', 'layers'], ['Email', 'Email', 'mail'], ['LinkedIn', 'LinkedIn', 'li']].map(([k, l, i]) => `<button class="${ibCh === k ? 'on' : ''}" onclick="App.setIbCh('${k}')" title="${l}">${ic(i, 15)}<span>${l}</span></button>`).join('')}</nav>
