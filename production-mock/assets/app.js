@@ -313,7 +313,7 @@
   }
 
   /* ─── Routing: #today or a module; a result or a record opens in the canvas beside the chat ─── */
-  const MODULES = Object.assign({ inbox: 'Inbox', accounts: 'Accounts', segments: 'Segments', campaigns: 'Campaigns and NBA', approvals: 'Approvals', studio: 'Content studio' }, { analytics: 'Analytics' });
+  const MODULES = Object.assign({ inbox: 'Inbox', accounts: 'Leads', segments: 'Segments', campaigns: 'Campaigns and NBA', approvals: 'Approvals', studio: 'Content studio' }, { analytics: 'Analytics' });
   const MOD_IC = { inbox: 'inbox', accounts: 'users', segments: 'layers', campaigns: 'megaphone', approvals: 'task', studio: 'pen', analytics: 'bars' };
   /* Five screens in the menu. Segments and Signals open as tabs in Accounts; next best actions and content as tabs in Campaigns; Analytics from Today. */
   const NAV5 = isMgr ? ['inbox', 'accounts', 'campaigns', 'studio', 'approvals', 'analytics'] : ['inbox', 'accounts', 'campaigns', 'studio', 'approvals', 'analytics'];
@@ -322,7 +322,6 @@
   let accSub = 'list', campSub = 'list', sigTab = 'live';
   function modTabs() {
     const v = view(), G = {
-      accounts: [['accounts', 'Accounts', v === 'accounts' && accSub !== 'signals'], ['segments', 'Segments', v === 'segments'], ['signals', 'Signals', v === 'accounts' && accSub === 'signals']],
       campaigns: [['campaigns', 'Campaigns and NBA', v === 'campaigns'], ['studio', 'Content · R2', v === 'studio']]
     }[navOn(v)];
     return G && !segSel && !campSel ? `<div class="dtabs mod-tabs">${G.map(([k, l, on]) => `<button class="${on ? 'on' : ''}" onclick="App.modTab('${k}')">${l}</button>`).join('')}</div>` : '';
@@ -1325,12 +1324,12 @@
   /* Accounts (lists are saved selections: tabs above the table) */
   function renderAccounts() {
     if (accSub === 'signals') return renderSignals();
-    const lists = [{ id: 'all', name: 'All accounts' }].concat(S.lists, LISTS);
+    const lists = [{ id: 'all', name: 'All leads' }].concat(S.lists, LISTS);
     const l = lists.find(x => x.id === listSel) || lists[0];
     let rows = l.id === 'all' ? ACCOUNTS : l.ids ? l.ids.map(acct) : l.seg ? ACCOUNTS.filter(a => a.seg === l.seg) : l.id === 'L1' ? listAccounts() : ACCOUNTS.filter(a => a.score > 0);
     const q = ($('accQ') && $('accQ').value || '').toLowerCase(), tf = ($('accT') && $('accT').value) || 'all';
     rows = rows.filter(a => visible(a) && (!q || (a.name + a.contact.name + a.country + a.segment).toLowerCase().includes(q)) && (tf === 'all' || a.tier === tf));
-    const cv = frame('Accounts', `${rows.length} accounts${l.id === 'all' ? '' : ' in this list'} · Score = Fit × Timing`, `<button class="btn sm" onclick="App.saveView()">${ic('savei', 13)} Save as a list</button><button class="btn sm pri" onclick="App.ask('Find prospects like my last 10 wins')">${ic('search', 13)} Find prospects</button>`);
+    const cv = frame('Leads', `${rows.length} leads${l.id === 'all' ? '' : ' in this list'} · Score = Fit × Timing`, `<button class="btn sm" onclick="App.saveView()">${ic('savei', 13)} Save as a list</button><button class="btn sm pri" onclick="App.ask('Find prospects like my last 10 wins')">${ic('search', 13)} Find prospects</button>`);
     cv.innerHTML = `<div class="list-tabs">${lists.map(x => `<button class="${x.id === l.id ? 'on' : ''}" onclick="App.openList('${x.id}')">${esc(x.name)}${x.kind ? `<i>${esc(x.kind)}</i>` : ''}</button>`).join('')}</div>
       ${l.note ? `<div class="list-note">${esc(l.note)} · saved by ${esc(l.by)} · ${esc(l.when)}<span style="flex:1"></span>${btn('Score this list', 'Score this list')}${btn('Create micro-segments', 'Create micro-segments')}</div>` : ''}
       <div class="toolbar">${ownerSel()}
@@ -1444,6 +1443,8 @@
   /* Campaigns: list → campaign (Enrollments, Steps, Outbox, Replies) → person drawer */
   function renderCampaigns() {
     if (campSel) return renderCampaign();
+    if (outSel) return renderOutGen();
+    if (campSub !== 'plays') { const cv0 = frame('Campaigns and NBA', 'Build a campaign for a segment or a next best action for one person; everything you run, by status', ''); cv0.innerHTML = outView(); return; }
     const order = ['Ready to confirm', 'Draft', 'Running', 'Completed'];
     const list = CAMPAIGNS.slice().sort((p, q) => order.indexOf(p.status) - order.indexOf(q.status));
     const nrows = nbaRows().sort((p, q) => q.score - p.score);
@@ -1937,7 +1938,7 @@
     return `<article class="doc-paper"><div class="wp-cover"><span class="ig-ey">${esc(BRANDN)} · Whitepaper</span><h1>${esc(d.title)}</h1><p>For ${esc(d.audience.toLowerCase())}</p></div>${d.blocks.map((b, i) => b.k === 'h2' ? `<h2 class="${b.nw ? 'nw' : ''}">${esc(b.t)}</h2>` : b.k === 'ul' ? `<ul>${b.items.map(y => `<li>${esc(y)}</li>`).join('')}</ul>` : `<p class="${S.studio.sel === i ? 'sel' : ''} ${b.nw ? 'nw' : ''}" onclick="App.selPara(${i})" title="Click to change just this paragraph">${cite(b.t)}</p>`).join('')}</article>`;
   }
   function startDoc(type, brief) {
-    const d = makeDoc(type, brief);
+    const d = makeDoc(type, brief); d.tpl = S.dsT || '';
     S.studio = { doc: d, sel: null, thread: [{ who: 'me', text: brief }, { who: 'ai', kind: 'text', html: `I'll write a ${d.length.toLowerCase()} ${type.toLowerCase()} on <b>${esc(d.title.toLowerCase())}</b> for ${esc(d.audience.toLowerCase())}, in a direct voice, using the ${type.toLowerCase()} instructions and Brand v3. It can cite CS-01, OP-02 and BR-03, the approved sources for this audience.` }, { who: 'ai', kind: 'docCard' }, { who: 'ai', kind: 'text', html: 'Written with AI from the brief and the brand pack. Any proof is an approved claim, word for word, and every part went through the same brand and claim checks.<br><br>Tell me what to change, or click a paragraph in the canvas to change just that one. Add it to the Content library when it\'s right; reps can then add it to an email or LinkedIn step in a campaign.' }] };
     save(); location.hash = '#studio'; renderAll();
   }
@@ -1979,7 +1980,7 @@
     return mine.concat(LIB0).map(a => Object.assign({}, a, (S.libSt || {})[a.id] ? { st: S.libSt[a.id] } : {}));
   }
   const libPass = a => (!libF.ind || a.ind === libF.ind) && (!libF.seg || a.seg === libF.seg) && (!libF.per || a.per === libF.per) && (!libF.topicK || a.topicK === libF.topicK) && (!libF.type || a.type === libF.type) && (!libF.fmt || a.fmt.includes(libF.fmt)) && (!libF.q || (a.t + ' ' + a.topic + ' ' + a.seg).toLowerCase().includes(libF.q.toLowerCase()));
-  const libSorted = L => L.slice().sort(libSort === 'Most used' ? (p, q) => q.used - p.used : libSort === 'Title A–Z' ? (p, q) => p.t.localeCompare(q.t) : (p, q) => p.age - q.age);
+  const libSorted = L => L.slice().sort(libSort === 'Top performing' ? (p, q) => libPerf(q) - libPerf(p) : libSort === 'Most used' ? (p, q) => q.used - p.used : libSort === 'Title A–Z' ? (p, q) => p.t.localeCompare(q.t) : (p, q) => p.age - q.age);
   const uAv = (k, s) => USERS[k] ? `<span class="av lib-av" title="${esc(USERS[k].name)}" style="background:${USERS[k].color};width:${s || 22}px;height:${s || 22}px;font-size:${Math.round((s || 22) * 0.4)}px">${initials(USERS[k].name)}</span>` : '';
   function libThumb(a) {
     const k = { Whitepaper: 'wp', Infographic: 'ig', Carousel: 'ca', 'PDF one-pager': 'pdf' }[a.type];
@@ -1995,11 +1996,11 @@
     if (!libMenu) return '';
     const vals = k => k === 'topicK' ? ['Pain point', 'Initiative', 'Need'] : k === 'type' ? Object.keys(AST) : k === 'fmt' ? Object.keys(FMT) : [...new Set(all.map(a => a[k]))].sort();
     if (libMenu === 'root') return `<div class="lib-scrim" onclick="App.libMenu(null)"></div><div class="lib-menu" role="menu">${LIB_KEYS.map(([l, k], i) => `${i === 1 ? '<div class="lib-msep"></div>' : ''}<button class="lib-mi" onclick="App.libMenu('${k || 'sort'}')"><span>${l}</span><span class="lib-mv">${k ? esc(libF[k] || 'Any') : esc(libSort)} ›</span></button>`).join('')}${Object.values(libF).some(Boolean) ? '<div class="lib-msep"></div><button class="lib-mi" onclick="App.libClear()"><span>Clear filters</span></button>' : ''}</div>`;
-    const k = libMenu, list = k === 'sort' ? ['Last updated', 'Most used', 'Title A–Z'] : [''].concat(vals(k)), cur = k === 'sort' ? libSort : libF[k];
+    const k = libMenu, list = k === 'sort' ? ['Last updated', 'Top performing', 'Most used', 'Title A–Z'] : [''].concat(vals(k)), cur = k === 'sort' ? libSort : libF[k];
     return `<div class="lib-scrim" onclick="App.libMenu(null)"></div><div class="lib-menu" role="menu"><button class="lib-mi lib-mback" onclick="App.libMenu('root')">‹ ${k === 'sort' ? 'Sort by' : LIB_KEYS.find(x => x[1] === k)[0]}</button><div class="lib-msep"></div>${list.map(v => `<button class="lib-mi" onclick="App.libPick('${k}',${js(v)})"><span>${esc(v || 'Any')}</span>${cur === v ? '<span class="lib-mv">✓</span>' : ''}</button>`).join('')}</div>`;
   }
   function libView() {
-    const all = libAll(), base = libSorted(all.filter(libPass)), vis = libTabK === 'All' ? base : base.filter(a => a.st === libTabK), n = s => all.filter(a => a.st === s).length;
+    const all = libAll(), base = libSorted(all.filter(libPass)), vis = libTabK === 'All' ? base : libTabK === 'In outreach' ? base.filter(a => a.inC.length) : base.filter(a => a.st === libTabK), n = s => all.filter(a => a.st === s).length;
     const inUse = all.filter(a => a.inC.length).length;
     const chips = LIB_KEYS.filter(([l, k]) => k && libF[k]).map(([l, k]) => `<span class="lib-chip">${l}: ${esc(libF[k])}<button aria-label="Remove ${l} filter" onclick="App.libPick('${k}','')">✕</button></span>`).join('');
     const stPill = s => `<span class="lc-st st-${s.replace(/ /g, '').toLowerCase()}">${esc(s)}</span>`;
@@ -2009,8 +2010,7 @@
     const card = a => `<button class="lc" onclick="${open(a)}">${libThumb(a)}<div class="lc-b"><div class="lc-t">${esc(a.t)}</div><div class="lc-m">${esc(a.type)} · ${esc(a.ind)} · ${esc(a.at)}</div><div class="lc-tags"><span class="badge b-grey nodot">${esc(a.per)}</span><span class="badge ${a.topicK === 'Pain point' ? 'b-warn' : a.topicK === 'Initiative' ? 'b-sec' : 'b-ter'} nodot">${esc(a.topicK)}: ${esc(a.topic)}</span></div><div class="lc-f"><span class="lib-by">${uAv(UK[a.by], 20)}<span class="sm muted">${a.inC.length ? 'In ' + a.inC.length + (a.inC.length > 1 ? ' campaigns' : ' campaign') : 'Not used yet'}</span></span>${stPill(a.st)}</div></div></button>`;
     return `<div class="lib" id="lib">
       <div class="lib-top">
-        <div class="lib-kpis">${[['Under review', n('Under review'), 'brand, claim and fact checks running'], ['To approve', n('To approve'), isMgr ? 'waiting for you' : 'waiting for Daniel'], ['Completed', n('Completed'), 'approved and in the library'], ['In outreach', inUse, 'used in live campaigns or actions']].map(k => `<button class="lib-k ${libTabK === k[0] ? 'on' : ''}" onclick="App.libTab('${k[0] === 'In outreach' ? 'Completed' : k[0]}')"><span class="lib-kn">${k[1]}</span><span class="lib-kl">${k[0]}</span><span class="lib-ks">${k[2]}</span></button>`).join('')}</div>
-        <div class="lib-bar"><div class="lib-tabs">${['All', 'Under review', 'To approve', 'Completed'].map(s => `<button class="${libTabK === s ? 'on' : ''}" onclick="App.libTab('${s}')">${s}</button>`).join('')}</div>
+        <div class="lib-bar"><div class="lib-tabs">${['All', 'To approve', 'Under review', 'Completed', 'In outreach'].map(s => `<button class="${libTabK === s ? 'on' : ''}" onclick="App.libTab('${s}')">${s}</button>`).join('')}</div>
           <div class="lib-tools">${libSearch || libF.q ? `<div class="search lib-q">${ic('search', 14)}<input id="libQ" placeholder="Search assets" aria-label="Search assets" value="${esc(libF.q)}" oninput="App.libSet('q',this.value,true)"></div>` : `<button class="lib-ib" title="Search" aria-label="Search" onclick="App.libSearch()">${ic('search', 17)}</button>`}
             <span class="lib-mw"><button class="lib-ib ${libMenu || chips ? 'on' : ''}" title="Filter and sort" aria-label="Filter and sort" onclick="App.libMenu('${libMenu ? '' : 'root'}')"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg></button>${libMenuHtml(all)}</span>
             <button class="lib-ib ${libList ? 'on' : ''}" title="${libList ? 'Grid view' : 'List view'}" aria-label="Switch view" onclick="App.libListView(${!libList})"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/></svg></button>
@@ -2018,24 +2018,158 @@
         ${chips ? `<div class="lib-chips">${chips}</div>` : ''}
       </div>
       ${libList ? `<div class="lib-grid-h"><span class="lbl">Assets · ${vis.length}</span></div>${usage(vis)}` : `
-      <div class="lib-grid-h"><span class="lbl">Where assets are used</span><span class="sm muted">which campaign, who used it, who made it and when</span></div>${usage(vis.filter(a => libTabK !== 'All' || a.inC.length || a.st === 'To approve'), 4)}
-      <div class="lib-new"><span class="lbl">Make something new</span>${Object.keys(AST).map(t => `<button class="lib-nt" onclick="App.setStudioTab('write');App.setStudioType(${js(t)})">${libThumb({ type: t })}<span>${t}</span></button>`).join('')}</div>
-      <div class="lib-grid-h"><span class="lbl">Assets · ${vis.length}</span></div>
-      <div class="lib-grid">${vis.map(card).join('') || '<div class="empty">No assets match these filters.</div>'}</div>`}
+      <div class="lib-grid-h"><span class="lbl">Assets · ${vis.length}</span><span class="sm muted">${libSort === 'Top performing' ? 'ranked by campaign response' : 'newest first'}</span></div><div class="lib-grid">${vis.map(card).join('') || '<div class="empty">No assets match these filters.</div>'}</div>
+      <div class="lib-grid-h"><span class="lbl">Where assets are used</span><span class="sm muted">which campaign, who used it, who made it and when</span></div>${usage(vis)}`}
       <details class="lib-guide"><summary>Which format for which asset?</summary><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Format</th><th>Channel type</th><th>Best for</th><th>Main metric</th>${Object.keys(AST).map(t => `<th>${t}</th>`).join('')}</tr></thead><tbody>${Object.keys(FMT).map(v => `<tr><td class="nm">${v}</td><td class="sm">${FMT[v][0]}</td><td class="sm">${FMT[v][1]}</td><td class="sm">${FMT[v][2]}</td>${Object.keys(AST).map(t => `<td class="sm">${COMBO[t][v] ? '✓ ' + COMBO[t][v] : '<span class="muted">–</span>'}</td>`).join('')}</tr>`).join('')}</tbody></table></div><div class="sm muted" style="margin-top:6px">${Object.keys(AST).map(t => `<b>${t}</b>: ${AST[t][0]}, ${AST[t][1]}.`).join(' ')} Attach files in LinkedIn DMs; in cold email send a tracked link instead.</div></details></div>`;
   }
   function libHook() {
-    if (S.studio.doc || studioTab !== 'saved') return;
+    if (S.studio.doc || view() !== 'studio') return;
     const cv = $('cv'); if (!cv) return;
-    const keep = cv.scrollTop; cv.innerHTML = libView(); cv.scrollTop = keep;
-    const tog = () => { const l = $('lib'); if (l) l.classList.toggle('lib-scrolled', cv.scrollTop > 40); };
-    cv.onscroll = tog; tog();
+    const keep = cv.scrollTop; cv.innerHTML = studioHome(); cv.scrollTop = keep;
   }
   /* Write: one asset-type pill; only the four asset types; prompts that fit the chosen type */
   const ST_PROMPTS = { 'Whitepaper': ['A whitepaper on turnaround readiness for refinery operations managers', 'A whitepaper on a phased historian migration for I&C leads', 'A whitepaper benchmarking LNG terminal reliability against peers'], 'Infographic': ['An infographic on where unplanned downtime really comes from, for reliability leaders', 'An infographic on staffing a control-system upgrade, for plant heads', 'An infographic with three peer reliability numbers for the monthly newsletter'], 'Carousel': ['A 6-slide carousel on switching at the end of a rival contract', 'A carousel on scoping expansion automation in 30 days', 'A carousel on what slow vendor support costs a plant'], 'PDF one-pager': ['A PDF one-pager: the 2027 emissions-reporting checklist for plant heads', 'A PDF one-pager on the cost of a delayed restart, for procurement', 'A PDF one-pager comparing extend vs switch for I&C leads'] };
   let stPillOpen = false;
   function stPill() {
     return `<span class="st-pw"><button class="st-pill" onclick="App.stPill()" aria-haspopup="menu" aria-expanded="${stPillOpen}">${ic('doc', 13)} ${esc(studioType)} <span class="st-car">▾</span></button>${stPillOpen ? `<div class="lib-scrim" onclick="App.stPill()"></div><div class="lib-menu st-pm" role="menu">${Object.keys(AST).map(x => `<button class="lib-mi" onclick="App.setStudioType(${js(x)})"><span><b>${x}</b></span>${studioType === x ? '<span class="lib-mv">✓</span>' : ''}</button>`).join('')}</div>` : ''}</span>`;
+  }
+  /* ─── Open screens: one Claude-style box at the top of Leads, Campaigns and NBA, and Content studio ─── */
+  const obVal = {}, obAtt = {};
+  let obMenu = null, obPillK = null, obIcp = null;
+  const OB_PLUS = {
+    leads: [['Upload a list (CSV)', 'Scored and de-duplicated against the CRM', 'prospects-nov.csv'], ['Pull a CRM view', 'A saved view, kept in sync', 'CRM view: open pipeline, SEA'], ['Start from a website', 'Proposes an ICP from the site (path B)', 'Website: sea-refining.example'], ['Use my last 10 wins', 'Finds look-alikes of closed-won accounts', 'Last 10 wins']],
+    out: [['Pick a micro-segment', 'Run it for one segment', 'Segment: Turnaround season 2027'], ['Upload a list', 'Event attendees, a partner list', 'event-attendees.csv'], ['Attach a library asset', 'Send approved content with it', 'Asset: A peer site cut unplanned trips by 18%'], ['Start from a play', 'Reuse a proven sequence', 'Play: Rival contract ending v2']],
+    studio: [['Attach a file', 'PDF, Word or slides to draw from', 'site-visit-notes.pdf'], ['Add from the Knowledge Hub', 'Approved sources and claims', 'Knowledge Hub: CS-01, OP-02'], ['Reference a library asset', 'Reuse its structure or numbers', 'Asset: A peer site cut unplanned trips by 18%'], ['Brand voice and claims', 'What it must and must not say', 'Brand voice v3']]
+  };
+  const OB_SAMPLE = { ob_leads: 'Refineries in Thailand and Malaysia with a new reliability leader in the last 30 days', ob_out: 'A campaign for sites whose rival contract ends in the next 6 months, to book meetings' };
+  function obBox(k, o) {
+    const id = o.id || 'ob_' + k, att = obAtt[k] || [];
+    return `<div class="ob" id="obWrap_${k}"><h1 class="ob-h">${o.h}</h1><div class="ob-box">
+      ${att.length ? `<div class="ob-att">${att.map((a, i) => `<span class="lib-chip">${ic('doc', 12)} ${esc(a)}<button aria-label="Remove ${esc(a)}" onclick="App.obRm('${k}',${i})">✕</button></span>`).join('')}</div>` : ''}
+      <label class="sr" for="${id}">${esc(o.label || 'Describe it')}</label><textarea id="${id}" rows="2" placeholder="${esc(o.ph)}" oninput="App.obIn('${k}',this.value)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();${o.send}}">${esc(obVal[k] || '')}</textarea>
+      <div class="ob-f"><span class="st-pw"><button class="ob-plus ${obMenu === k ? 'on' : ''}" title="Add files and sources" aria-label="Add files and sources" aria-haspopup="menu" onclick="App.obMenu('${k}')">${ic(obMenu === k ? 'x' : 'plus', 16)}</button>${obMenu === k ? `<div class="lib-scrim" onclick="App.obMenu(null)"></div><div class="lib-menu ob-pm" role="menu">${OB_PLUS[k].map((p, i) => `<button class="lib-mi" onclick="App.obAdd('${k}',${i})"><span class="ob-mt"><b>${esc(p[0])}</b><span>${esc(p[1])}</span></span></button>`).join('')}</div>` : ''}</span>
+        ${o.pills || ''}<span style="flex:1"></span>
+        <button class="ic-btn mic" id="${id}Mic" title="Talk: say it, then press send" onclick="App.dictate('${id}')">${ic('mic', 16)}</button><button class="send" onclick="${o.send}" title="Send">${ic('send', 16)}</button></div></div>${o.below || ''}</div>`;
+  }
+  const obText = k => { const v = (obVal[k] || '').trim(), a = obAtt[k] || []; return v + (a.length ? ` (using ${a.join(', ')})` : ''); };
+  const pillMenu = (k, label, icn, body) => `<span class="st-pw"><button class="st-pill" onclick="App.obPill('${k}')" aria-haspopup="menu" aria-expanded="${obPillK === k}">${ic(icn, 13)} ${label} <span class="st-car">▾</span></button>${obPillK === k ? `<div class="lib-scrim" onclick="App.obPill(null)"></div>${body}` : ''}</span>`;
+
+  /* Leads: the open box, then Leads, Signals and Segments */
+  function leadsTop() {
+    const cur = obIcp ? shared.icps.find(x => x.v === obIcp) || icpNow() : icpNow();
+    const pill = pillMenu('icp', `ICP v${cur.v}`, 'users', `<div class="lib-menu st-pm ob-wide" role="menu"><div class="ob-mh">ICP library · ${shared.icps.length} versions</div>${shared.icps.slice().reverse().map(x => `<button class="lib-mi" onclick="App.icpPick(${x.v})"><span class="ob-mt"><b>Version ${x.v}${x.status === 'In use' ? ' · in use' : ''}</b><span>${esc(x.crit.slice(0, 3).join(' · '))}</span></span>${cur.v === x.v ? '<span class="lib-mv">✓</span>' : ''}</button>`).join('')}<div class="lib-msep"></div><button class="lib-mi" onclick="App.obPill(null);App.ask('Update our ICP')"><span>Change the ICP in the chat</span></button></div>`);
+    const sugg = `<div class="st-sugg">${['Find prospects like my last 10 wins', 'Score this list', 'Create micro-segments'].map(s => `<button class="chip" onclick="App.ask(${js(s)})">${esc(s)}</button>`).join('')}</div>`;
+    const v = view(), on = k => k === 'signals' ? v === 'accounts' && accSub === 'signals' : k === 'segments' ? v === 'segments' : v === 'accounts' && accSub !== 'signals';
+    return obBox('leads', { h: 'Who should we go after?', label: 'Describe the leads', ph: 'Describe the leads: industry, country, role or a signal. Paste a website to build an ICP from it', pills: pill, send: "App.obSend('leads')", below: sugg })
+      + `<div class="dtabs ob-tabs">${[['accounts', 'Leads'], ['signals', 'Signals'], ['segments', 'Segments']].map(([k, l]) => `<button class="${on(k) ? 'on' : ''}" onclick="App.modTab('${k}')">${l}</button>`).join('')}</div>`;
+  }
+  function leadsHook() { if (segSel) return; const cv = $('cv'); if (cv && !cv.querySelector('.ob')) cv.insertAdjacentHTML('afterbegin', leadsTop()); }
+
+  /* Campaigns and NBA: three status cards, the open box with clarifying questions, then every campaign and action */
+  let outTab = 'All', outMenu = null, outSort = 'Most recent', outSearch = false, outList = true, outKind = 'NBC', outQ = null, outSel = null;
+  const outF = { kind: '', ch: '', seg: '', q: '' };
+  const OUT_KEYS = [['Type', 'kind'], ['Channel', 'ch'], ['Segment', 'seg'], ['Sort by', '']];
+  function outItems() {
+    const G = (S.outGen || []).map(g => ({ id: g.id, kind: g.kind, name: g.name, sub: `Generated ${g.at} · ${g.obj}`, b: g.b, ch: g.ch, seg: g.seg || '', who: g.who, res: g.b === 'In outreach' ? 'Sending in the next window' : 'Not sent yet', open: `App.outOpen('${g.id}')`, rate: 0 }));
+    const C = CAMPAIGNS.map(c => { const st = campStats(c), conf = S.camp[c.id] === 'Confirmed'; return { id: c.id, kind: 'NBC', name: c.name, sub: `${seqSpan(c)} · ${c.seg ? segOf(c.seg).trigger : 'archived segment'}`, b: c.status === 'Running' ? 'In outreach' : c.status === 'Completed' ? 'Completed' : conf ? 'Approved' : 'Under review', ch: [...new Set((c.touches || []).map(t => t.ch))], seg: c.seg ? segOf(c.seg).name : '', who: `${st.total} enrolled`, res: `${pct(st.replies, st.started)} replied · ${st.positive || 0} positive`, open: `App.goCampaign('${c.id}')`, rate: st.started ? st.replies / st.started : 0 }; });
+    const N = nbaRows().map(a => { const t = track(a), sg = segOf(a.seg); return { id: a.id, kind: 'NBA', name: a.nba.action, sub: `${a.contact.name} · ${a.name}`, b: t.stage >= 1 ? 'In outreach' : t.how === 'Ready to send' ? 'Approved' : /Expired|Skipped|Sent back/.test(t.how) ? 'Completed' : 'Under review', ch: [a.nba.channel], seg: sg ? sg.name : '', who: a.contact.name, res: t.label, open: `App.openRecord('${a.id}','engage')`, rate: t.stage / 4 }; });
+    return G.concat(C, N);
+  }
+  const outPass = x => (!outF.kind || x.kind === outF.kind) && (!outF.ch || x.ch.includes(outF.ch)) && (!outF.seg || x.seg === outF.seg) && (!outF.q || (x.name + ' ' + x.sub + ' ' + x.seg).toLowerCase().includes(outF.q.toLowerCase()));
+  const outSorted = L => outSort === 'Reply rate' ? L.slice().sort((p, q) => q.rate - p.rate) : outSort === 'Name A–Z' ? L.slice().sort((p, q) => p.name.localeCompare(q.name)) : L;
+  function outMenuHtml(all) {
+    if (!outMenu) return '';
+    if (outMenu === 'root') return `<div class="lib-scrim" onclick="App.outMenu(null)"></div><div class="lib-menu" role="menu">${OUT_KEYS.map(([l, k], i) => `${i === 3 ? '<div class="lib-msep"></div>' : ''}<button class="lib-mi" onclick="App.outMenu('${k || 'sort'}')"><span>${l}</span><span class="lib-mv">${k ? esc(outF[k] || 'Any') : esc(outSort)} ›</span></button>`).join('')}</div>`;
+    const k = outMenu, list = k === 'sort' ? ['Most recent', 'Reply rate', 'Name A–Z'] : [''].concat(k === 'kind' ? ['NBC', 'NBA'] : [...new Set(all.flatMap(x => k === 'ch' ? x.ch : [x.seg]).filter(Boolean))].sort()), cur = k === 'sort' ? outSort : outF[k];
+    return `<div class="lib-scrim" onclick="App.outMenu(null)"></div><div class="lib-menu" role="menu"><button class="lib-mi lib-mback" onclick="App.outMenu('root')">‹ ${k === 'sort' ? 'Sort by' : OUT_KEYS.find(x => x[1] === k)[0]}</button><div class="lib-msep"></div>${list.map(v => `<button class="lib-mi" onclick="App.outPick('${k}',${js(v)})"><span>${v ? esc(k === 'kind' ? (v === 'NBC' ? 'Campaign (NBC)' : 'Next best action (NBA)') : v) : 'Any'}</span>${cur === v ? '<span class="lib-mv">✓</span>' : ''}</button>`).join('')}</div>`;
+  }
+  const OQ = {
+    NBC: () => [['obj', 'What is the objective?', ['Book meetings', 'Win the switch at contract end', 'Re-open stalled deals', 'Event or webinar sign-ups']], ['seg', 'Who is it for?', SEGMENTS.slice(0, 5).map(s => s.name)], ['ch', 'Which channels?', ['Email', 'LinkedIn', 'Phone', 'Direct mail'], true], ['seq', 'How long a sequence?', ['3 touches over 10 days', '5 touches over 3 weeks', '7 touches over 6 weeks']], ['ct', 'Which content goes with it?', ['Let the AI pick from the library'].concat(LIB0.filter(a => a.st === 'Completed').slice(0, 3).map(a => a.t))]],
+    NBA: () => [['obj', 'What should this action achieve?', ['Book a meeting', 'Get a reply', 'Re-engage after silence', 'Introduce us to a new leader']], ['who', 'Who is it for?', nbaRows().sort((p, q) => q.score - p.score).slice(0, 5).map(a => `${a.contact.name} · ${a.name}`)], ['ch', 'Which channel?', ['Email', 'LinkedIn', 'Phone call']], ['when', 'When should it go?', ['Next send window', 'After the next signal', 'Before their contract end date']], ['ct', 'Attach content?', ['Let the AI pick from the library'].concat(LIB0.filter(a => a.st === 'Completed').slice(0, 3).map(a => a.t))]]
+  };
+  function outGuess(kind, v) {
+    const t = v.toLowerCase(), a = {}, Q = OQ[kind]();
+    a.obj = /meeting/.test(t) ? Q[0][2][0] : /switch|rival|contract/.test(t) && kind === 'NBC' ? Q[0][2][1] : /reply|answer/.test(t) && kind === 'NBA' ? Q[0][2][1] : /stall|silen|re-?engage/.test(t) ? Q[0][2][kind === 'NBC' ? 2 : 2] : /event|webinar/.test(t) && kind === 'NBC' ? Q[0][2][3] : /leader|intro/.test(t) && kind === 'NBA' ? Q[0][2][3] : '';
+    const opts = Q[1][2], hit = opts.find(o => o.toLowerCase().split(/[ ·&]+/).filter(w => w.length > 4).some(w => t.includes(w)));
+    a[Q[1][0]] = hit || '';
+    a.ch = kind === 'NBC' ? ['Email', 'LinkedIn', 'Phone'].filter(c => t.includes(c.toLowerCase())) : (/linkedin/.test(t) ? 'LinkedIn' : /call|phone/.test(t) ? 'Phone call' : /email/.test(t) ? 'Email' : '');
+    return a;
+  }
+  function outClarify() {
+    if (!outQ) return '';
+    const Q = OQ[outQ.kind](), a = outQ.a, need = Q.filter(q => !q[3]).slice(0, 2).every(q => a[q[0]]) && (outQ.kind === 'NBA' || (a.ch || []).length);
+    const read = Object.keys(outQ.pre).filter(k => outQ.pre[k] && (Array.isArray(outQ.pre[k]) ? outQ.pre[k].length : true));
+    return `<div class="oq card"><div class="oq-h"><span class="ai-mark">${ic('spark', 13)}</span><div><b>A few questions before I build the ${outQ.kind === 'NBC' ? 'campaign' : 'next best action'}</b><div class="sm muted">${read.length ? `From your brief I already have: ${read.map(k => esc(Array.isArray(outQ.pre[k]) ? outQ.pre[k].join(', ') : outQ.pre[k])).join(' · ')}. Change anything below.` : 'Pick an answer for each, or type your own in the last box.'}</div></div></div>
+      ${Q.map(([k, l, opts, multi], i) => `<div class="oq-q"><div class="oq-l"><span>${i + 1}</span>${esc(l)}${multi ? ' <i>pick any</i>' : ''}</div><div class="oq-o">${opts.map(o => { const on = multi ? (a[k] || []).includes(o) : a[k] === o; return `<button class="chip ${on ? 'on' : ''}" aria-pressed="${on}" onclick="App.outAns('${k}',${js(o)},${multi ? 1 : 0})">${esc(o)}</button>`; }).join('')}</div></div>`).join('')}
+      <div class="oq-q"><div class="oq-l"><span>${Q.length + 1}</span>Anything else? <i>tone, accounts to leave out, timing</i></div><label class="sr" for="oqNote">Anything else</label><input id="oqNote" class="inp" placeholder="For example: keep it short, leave out accounts with an open deal" value="${esc(a.note || '')}" oninput="App.outAns('note',this.value,2)"></div>
+      <div class="oq-f"><button class="btn sm ghost" onclick="App.outCancel()">Cancel</button><span class="sm muted">${need ? 'Ready to build' : `Answer ${outQ.kind === 'NBC' ? 'the objective, audience and channels' : 'the objective and the person'} to build it`}</span><button class="btn sm pri" ${need ? '' : 'disabled'} onclick="App.outBuild()">${ic('spark', 13)} Build the ${outQ.kind === 'NBC' ? 'campaign' : 'action'}</button></div></div>`;
+  }
+  function outTop(all) {
+    const n = b => all.filter(x => x.b === b), card = (b, d) => { const L = n(b); return `<button class="lib-k ${outTab === b ? 'on' : ''}" onclick="App.outTab('${outTab === b ? 'All' : b}')"><span class="lib-kn">${L.length}</span><span class="lib-kl">${b}</span><span class="lib-ks">${L.filter(x => x.kind === 'NBC').length} campaigns · ${L.filter(x => x.kind === 'NBA').length} actions · ${d}</span></button>`; };
+    const pill = pillMenu('kind', outKind === 'NBC' ? 'Campaign · NBC' : 'Next best action · NBA', outKind === 'NBC' ? 'megaphone' : 'bolt', `<div class="lib-menu st-pm ob-wide" role="menu">${[['NBC', 'Campaign · NBC', 'One sequence for a whole micro-segment; the manager confirms it'], ['NBA', 'Next best action · NBA', 'One account, one action, on the right channel']].map(([k, l, d]) => `<button class="lib-mi" onclick="App.outKind('${k}')"><span class="ob-mt"><b>${l}</b><span>${d}</span></span>${outKind === k ? '<span class="lib-mv">✓</span>' : ''}</button>`).join('')}</div>`);
+    const sugg = outQ ? '' : `<div class="st-sugg">${(outKind === 'NBC' ? ['A campaign for sites whose rival contract ends soon, to book meetings', 'Invite turnaround-season accounts to the reliability webinar', 'Re-open stalled deals in gas processing'] : ['A LinkedIn note to Mei Tan about the comparison she opened', 'Get a reply from the new reliability leader at Juniper', 'Re-engage Kingfisher after 3 weeks of silence']).map(s => `<button class="chip" onclick="App.outStart(${js(s)})">${esc(s)}</button>`).join('')}</div>`;
+    return `<div class="lib-kpis ob-cards3">${card('Under review', 'waiting for a person')}${card('Approved', 'go in the next send window')}${card('In outreach', 'live and being tracked')}</div>`
+      + obBox('out', { h: 'What should we run?', label: 'Describe the campaign or action', ph: outKind === 'NBC' ? 'Describe the campaign: objective, who it is for, channels, how long' : 'Describe the action: who, what it should achieve, which channel', pills: pill, send: "App.obSend('out')", below: outClarify() + sugg });
+  }
+  function outView() {
+    const all = outItems(), base = outSorted(all.filter(outPass)), vis = outTab === 'All' ? base : base.filter(x => x.b === outTab);
+    const chips = OUT_KEYS.filter(([l, k]) => k && outF[k]).map(([l, k]) => `<span class="lib-chip">${l}: ${esc(outF[k])}<button aria-label="Remove ${l} filter" onclick="App.outPick('${k}','')">✕</button></span>`).join('');
+    const bPill = b => `<span class="lc-st st-${b.replace(/ /g, '').toLowerCase()}">${esc(b)}</span>`, kB = x => `<span class="badge ${x.kind === 'NBC' ? 'b-brand' : 'b-sec'} nodot">${x.kind}</span>`;
+    const chs = x => x.ch.map(c => `<span class="ob-ch">${chIc(c)} ${esc(c)}</span>`).join('');
+    const table = `<div class="card tbl-wrap"><table class="tbl"><thead><tr><th>Campaign or action</th><th>Type</th><th>Channels</th><th>Segment</th><th>Status</th><th>Result</th></tr></thead><tbody>${vis.map(x => `<tr class="row-link" onclick="${x.open}"><td><div class="nm">${esc(x.name)}</div><div class="sm">${esc(x.sub)}</div></td><td>${kB(x)}</td><td class="sm">${chs(x)}</td><td class="sm">${esc(x.seg || '–')}</td><td>${bPill(x.b)}</td><td class="sm">${esc(x.res)}</td></tr>`).join('') || '<tr><td colspan="6" class="sm muted">Nothing matches these filters.</td></tr>'}</tbody></table></div>`;
+    const grid = `<div class="lib-grid">${vis.map(x => `<button class="lc oc" onclick="${x.open}"><div class="lc-b"><div class="oc-h">${kB(x)}${bPill(x.b)}</div><div class="lc-t">${esc(x.name)}</div><div class="lc-m">${esc(x.sub)}</div><div class="oc-c">${chs(x)}</div><div class="lc-f"><span class="sm muted">${esc(x.seg || 'No segment')}</span><span class="sm">${esc(x.res)}</span></div></div></button>`).join('') || '<div class="empty">Nothing matches these filters.</div>'}</div>`;
+    return `${outTop(all)}<div class="lib" id="outLib"><div class="lib-top"><div class="lib-bar"><div class="lib-tabs">${['All', 'Under review', 'Approved', 'In outreach', 'Completed'].map(s => `<button class="${outTab === s ? 'on' : ''}" onclick="App.outTab('${s}')">${s}</button>`).join('')}</div>
+      <div class="lib-tools">${outSearch || outF.q ? `<div class="search lib-q">${ic('search', 14)}<input id="outQ" placeholder="Search campaigns and actions" aria-label="Search campaigns and actions" value="${esc(outF.q)}" oninput="App.outPick('q',this.value,true)"></div>` : `<button class="lib-ib" title="Search" aria-label="Search" onclick="App.outSearch()">${ic('search', 17)}</button>`}
+        <span class="lib-mw"><button class="lib-ib ${outMenu || chips ? 'on' : ''}" title="Filter and sort" aria-label="Filter and sort" onclick="App.outMenu('${outMenu ? '' : 'root'}')"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="17" x2="14" y2="17"/></svg></button>${outMenuHtml(all)}</span>
+        <button class="lib-ib ${outList ? 'on' : ''}" title="${outList ? 'Grid view' : 'List view'}" aria-label="Switch view" onclick="App.outList(${!outList})"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/></svg></button>
+        <button class="lib-ib" title="Build something new" aria-label="Build something new" onclick="App.obFocus('out')">${ic('plus', 17)}</button></div></div>${chips ? `<div class="lib-chips">${chips}</div>` : ''}</div>
+      <div class="lib-grid-h"><span class="lbl">${outTab === 'All' ? 'Everything' : esc(outTab)} · ${vis.length}</span><span class="sm muted">Sending connects after the pilot; nothing is sent from the mock</span></div>${outTab === 'All' || outTab === 'Under review' ? '<div class="placeholder-note" style="margin:0 0 10px"><div><b>Live order.</b> The next best actions re-order the moment something happens. 09:42: Halcyon moved up 4 places after a reply on LinkedIn. 08:15: Juniper moved to first after a pricing-page visit.</div></div>' : ''}${outList ? table : grid}</div>`;
+  }
+  function outSteps(g) {
+    const n = g.kind === 'NBA' ? 1 : +(g.seq || '5').split(' ')[0], days = n === 1 ? [0] : n === 3 ? [0, 4, 9] : n === 5 ? [0, 3, 7, 12, 19] : [0, 3, 7, 12, 18, 27, 40];
+    const ch = g.kind === 'NBA' ? [g.ch[0] || 'Email'] : g.ch.length ? g.ch : ['Email'];
+    const T = { Email: ['Opening: the risk peers hit first', 'Proof: what a comparable site did', 'The direct ask: a two-day site assessment', 'Short follow-up', 'Last note: close the loop'], LinkedIn: ['Connection note', 'Share the carousel', 'Comment-led follow-up'], Phone: ['Call: confirm the timing', 'Call: book the assessment'], 'Phone call': ['Call: confirm the timing'], 'Direct mail': ['Printed one-pager to the plant head'] };
+    return days.map((d, i) => { const c = ch[i % ch.length], L = T[c] || T.Email; return { day: d, ch: c, step: L[Math.floor(i / ch.length) % L.length], asset: i === 1 || n === 1 ? (g.ct && !/Let the AI/.test(g.ct) ? g.ct : 'AI picks: A peer site cut unplanned trips by 18%') : '' }; });
+  }
+  function renderOutGen() {
+    const g = (S.outGen || []).find(x => x.id === outSel); if (!g) { outSel = null; return renderCampaigns(); }
+    const steps = outSteps(g), who = g.kind === 'NBA' ? (g.who || '').split(' · ')[0] : '', fn = who.split(' ')[0] || 'there';
+    const cv = frame(`<button class="back-l" onclick="App.outOpen(null)">${ic('left', 14)}</button> ${esc(g.name)} <span class="badge ${g.kind === 'NBC' ? 'b-brand' : 'b-sec'} nodot">${g.kind}</span>`, `Built from your brief and answers · ${esc(g.b)}`,
+      g.b === 'Under review' ? (isMgr ? `<button class="btn sm pri" onclick="App.outMove('${g.id}','Approved')">${ic('check', 13)} Approve</button>` : `<button class="btn sm pri" onclick="App.outMove('${g.id}','Under review',1)">${ic('task', 13)} Send for approval</button>`) : g.b === 'Approved' ? `<button class="btn sm pri" onclick="App.outMove('${g.id}','In outreach')">${ic('plane', 13)} Start outreach</button>` : '');
+    const row = (k, v) => `<div class="og-r"><span>${k}</span><b>${esc(v || '–')}</b></div>`;
+    cv.innerHTML = `<div class="og"><div class="og-meta card">${row('Objective', g.obj)}${row(g.kind === 'NBC' ? 'Micro-segment' : 'Person', g.kind === 'NBC' ? g.seg : g.who)}${row(g.kind === 'NBC' ? 'Channels' : 'Channel', g.ch.join(', '))}${row(g.kind === 'NBC' ? 'Sequence' : 'When', g.kind === 'NBC' ? g.seq : g.when)}${row('Content', g.ct)}${g.note ? row('Also', g.note) : ''}${row('Your brief', g.brief)}</div>
+      <div class="lbl" style="margin:18px 0 8px">${g.kind === 'NBC' ? `Sequence · ${steps.length} touches over ${steps[steps.length - 1].day} days` : 'The action'}</div>
+      <div class="card tbl-wrap"><table class="tbl"><thead><tr><th>Day</th><th>Channel</th><th>Step</th><th>Content</th></tr></thead><tbody>${steps.map(s => `<tr><td class="mono">${s.day}</td><td>${chIc(s.ch)} ${esc(s.ch)}</td><td class="nm">${esc(s.step)}</td><td class="sm">${esc(s.asset || '–')}</td></tr>`).join('')}</tbody></table></div>
+      <div class="lbl" style="margin:18px 0 8px">First message · draft</div>
+      <div class="card og-msg"><div class="sm muted">${esc(steps[0].ch)} · ${g.kind === 'NBC' ? 'personalised for each person when it goes out' : 'to ' + esc(who)}</div><p>Hi ${esc(g.kind === 'NBC' ? '{first name}' : fn)},</p><p>${esc(/switch|contract/i.test(g.obj) ? 'Your current support contract ends soon, and that is the cheapest moment to change platform. A comparable refinery switched within one planned shutdown.' : /stall|silence|Re-engage/i.test(g.obj) ? 'We last spoke a few weeks ago about the migration timing. One thing has changed since: a peer site cut unplanned trips by 18% in its first year.' : /leader/i.test(g.obj) ? 'Congratulations on the new role. Most new reliability leaders start with the same question: where does the downtime really come from?' : /webinar|event/i.test(g.obj) ? 'We are running a 30-minute session on turnaround readiness with two plant heads from the region.' : 'Sites planning their next shutdown are setting the migration timing now, before support timing sets it for them.')}</p><p>${esc(/meeting|Book/i.test(g.obj) ? 'Would 20 minutes next week work to walk through what they did?' : /webinar|event/i.test(g.obj) ? 'Can I save you a seat?' : 'Worth a short reply either way?')}</p><div class="sm muted">Brand and claim checks pass · confidence: high</div></div>
+      <div class="og-f"><button class="btn sm" onclick="App.outEdit('${g.id}')">${ic('edit', 13)} Change the answers</button><button class="btn sm ghost" onclick="App.outDrop('${g.id}')">${ic('trash', 13)} Discard</button></div></div>`;
+  }
+
+  /* Content studio: four cards, the box, the formats it makes, then every asset as cards and as a table */
+  const DS_TPL = [['Vantera Brand v3', 'Sora, Plus Jakarta Sans +1', '#7D52A2', '#130D1C', 'Org default'], ['Field guide', 'Warm, for operations teams', '#B4652A', '#2B1A0E'], ['Boardroom', 'Navy, for executives', '#1F4E8C', '#0E1B2E'], ['Night shift', 'Dark, high contrast', '#6C5CE7', '#0B0B14'], ['Plain paper', 'Monochrome, print-first', '#3B3B3B', '#1A1A1A']];
+  let dsQ = '';
+  const dsOf = n => DS_TPL.find(x => x[0] === n) || DS_TPL[0];
+  const dsStyle = n => { const t = dsOf(n); return t === DS_TPL[0] ? '' : `--brand:${t[2]};--brand-mid:color-mix(in srgb,${t[2]} 45%,white);--brand-lt:color-mix(in srgb,${t[2]} 12%,white);--rail:${t[3]}`; };
+  const dsSw = t => `<span class="ds-sw">${[95, 80, 60, 40, 20, 0].map(p => `<i style="background:color-mix(in srgb,${t[2]} ${100 - p}%,white)"></i>`).join('')}<i style="background:${t[3]}"></i></span>`;
+  function dsPill() {
+    const cur = dsOf(S.dsT), L = DS_TPL.slice(1).filter(t => !dsQ || (t[0] + t[1]).toLowerCase().includes(dsQ.toLowerCase()));
+    return pillMenu('ds', `${esc(cur[0])}`, 'layers', `<div class="lib-menu st-pm ds-pm" role="menu"><div class="search ds-q">${ic('search', 13)}<input placeholder="Search design systems" aria-label="Search design systems" value="${esc(dsQ)}" oninput="App.dsSearch(this.value)"></div>
+      <button class="ds-cur ${cur === DS_TPL[0] ? 'on' : ''}" onclick="App.dsPick('')"><span class="ds-ic">${ic('layers', 16)}</span><span class="ob-mt"><b>${DS_TPL[0][0]}</b><span>${DS_TPL[0][1]}</span></span><span class="ds-def">Org default</span></button>
+      <div class="ob-mh">Included templates</div><div class="ds-grid">${L.map(t => `<button class="ds-card ${cur === t ? 'on' : ''}" onclick="App.dsPick(${js(t[0])})"><span class="ds-prev" style="--c:${t[2]};--r:${t[3]}"><b>${esc(t[0])}</b>${dsSw(t)}<span class="ds-aa">Aa · the quick brown fox</span></span><span class="ds-n">${esc(t[0])}</span><span class="ds-d">${esc(t[1])}</span></button>`).join('') || '<div class="sm muted" style="padding:8px">No match</div>'}</div></div>`);
+  }
+  const libPerf = a => { const m = a.metric || '', r = +(m.match(/(\d+) repl/) || [0, 0])[1], mt = +(m.match(/(\d+) meet/) || [0, 0])[1], rr = +(m.match(/rate (\d+)/i) || [0, 0])[1]; return mt * 10 + r + rr / 3 + (+(m.match(/(\d+) engage/) || [0, 0])[1]) / 40; };
+  function studioTop() {
+    const all = libAll(), n = s => all.filter(a => a.st === s).length, inUse = all.filter(a => a.inC.length).length, top = all.slice().sort((p, q) => libPerf(q) - libPerf(p))[0];
+    const k = (key, v, l, d, extra) => `<button class="lib-k ${libTabK === key ? 'on' : ''} ${extra || ''}" onclick="App.libTab('${libTabK === key ? 'All' : key}')"><span class="lib-kn">${v}</span><span class="lib-kl">${l}</span><span class="lib-ks">${d}</span></button>`;
+    const cards = `<div class="lib-kpis st-cards">${k('To approve', n('To approve'), 'To approve', isMgr ? 'waiting for you' : 'waiting for Daniel')}${k('Completed', n('Completed'), 'Completed', 'approved and in the library')}${k('In outreach', inUse, 'In outreach', 'used in live campaigns or actions')}
+      <button class="lib-k lib-top1 ${libSort === 'Top performing' ? 'on' : ''}" onclick="App.libTopPerf()"><span class="lib-kl">${ic('flame', 13)} Top performing</span><span class="lib-kt">${esc(top.t)}</span><span class="lib-ks">${esc(top.metric)} · ${top.inC.length} campaign${top.inC.length === 1 ? '' : 's'}</span></button></div>`;
+    const fmts = `<div class="st-fmts"><div class="st-fh"><span>Formats it makes</span><span class="sm muted">pick one, then describe it above</span></div><div class="st-fg">${Object.keys(AST).map(t => `<button class="st-ft ${studioType === t ? 'on' : ''}" onclick="App.setStudioType(${js(t)})">${libThumb({ type: t })}<b>${t}</b><span>${esc(AST[t][1].split(';')[0])}</span><i>${Object.keys(COMBO[t]).slice(0, 3).join(' · ')}</i></button>`).join('')}</div>
+      <div class="st-sugg st-sugg-l"><span class="st-sl">Try a ${esc(studioType.toLowerCase())} prompt</span>${(ST_PROMPTS[studioType] || ST_PROMPTS.Whitepaper).map(s => `<button class="chip" onclick="App.studioGo(${js(s)})">${esc(s)}</button>`).join('')}</div></div>`;
+    return cards + obBox('studio', { id: 'stBrief', h: 'What should we write?', label: 'Brief', ph: 'Describe the asset: who it is for, the pain point, initiative or need it answers', pills: stPill() + dsPill(), send: 'App.studioGo()', below: fmts });
+  }
+  const BACKLOG = [['What does a phased migration cost per year of outage saved?', 7, 'Rival contract ending'], ['Which sites like ours finished a migration inside one turnaround?', 5, 'Turnaround season 2027'], ['How do you handle a mixed vendor estate?', 4, 'Historian & tech-stack change'], ['What support response time do you commit to?', 3, 'Researching competitors']];
+  function studioHome() {
+    return `<div class="st-home">${studioTop()}${libView()}<details class="lib-guide st-bl"><summary>Backlog · ${BACKLOG.length} questions the library could not answer</summary><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Question</th><th>Asked</th><th>Segment</th><th></th></tr></thead><tbody>${BACKLOG.map(q => `<tr><td class="nm">${esc(q[0])}</td><td>${q[1]}</td><td class="sm">${esc(q[2])}</td><td><button class="btn sm" onclick="App.studioGo(${js(q[0])},'PDF one-pager')">Write it</button></td></tr>`).join('')}</tbody></table></div></details></div>`;
   }
   function renderStudio() { renderStudio0(); libHook(); }
   function renderStudio0() {
@@ -2044,19 +2178,14 @@
       const all = S.content.concat(CONTENT);
       $('main').className = 'canvas studio-home';
       $('main').innerHTML = `<div class="cv-h"><div class="cv-ht" style="display:flex;flex-direction:row;align-items:baseline;gap:14px"><div class="cv-t">Content studio</div><div class="cv-s">Whitepapers, infographics, carousels and PDF one-pagers in Vantera's brand voice</div></div></div>${modTabs()}
-        <div class="dtabs" style="margin:0;padding:0 22px;background:var(--surf)">${[['write', 'Write'], ['saved', `Library <i>${libAll().length}</i>`]].map(([k, l]) => `<button class="${studioTab === k ? 'on' : ''}" onclick="App.setStudioTab('${k}')">${l}</button>`).join('')}</div>
-        <div class="cv-b" id="cv">${studioTab === 'write' ? `<div class="st-hero"><h1>What should we write?</h1>
-          <div class="st-box"><label class="sr" for="stBrief">Brief</label><textarea id="stBrief" rows="2" placeholder="Describe the asset: who it is for, the pain point, initiative or need it answers" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();App.studioGo()}"></textarea>
-            <div class="st-f">${stPill()}<span class="sp" style="flex:1"></span><button class="ic-btn mic" id="stBriefMic" title="Talk: say the brief, then press send" onclick="App.dictate('stBrief')">${ic('mic', 16)}</button><button class="send" onclick="App.studioGo()" title="Write">${ic('send', 16)}</button></div></div>
-          <div class="st-sugg"><span class="st-sl">Try a ${esc(studioType.toLowerCase())} prompt</span>${(ST_PROMPTS[studioType] || ST_PROMPTS.Whitepaper).map(s => `<button class="chip" onclick="App.studioGo(${js(s)})">${esc(s)}</button>`).join('')}</div></div>`
-          : `<div class="card tbl-wrap"><table class="tbl"><thead><tr><th>Piece</th><th>Type</th><th>Status</th><th>Audience</th><th>What it led to</th></tr></thead><tbody>${all.map(k => `<tr class="row-link" onclick="App.studioGo(${js(k.title)},${js(k.type === 'Whitepaper' ? 'Whitepaper' : 'Blog')})"><td class="nm">${esc(k.title)}</td><td>${esc(k.type)}</td><td><span class="badge ${/Approved|library/.test(k.status) ? 'b-pos' : /sign-off/.test(k.status) ? 'b-ter' : 'b-grey'} nodot">${esc(k.status)}</span></td><td class="sm">${esc(segOf(k.seg) ? segOf(k.seg).name : '')}</td><td class="sm" style="white-space:normal">${esc(k.led)}</td></tr>`).join('')}</tbody></table></div>`}</div>`;
+                <div class="cv-b" id="cv">${studioHome()}</div>`;
       return;
     }
     $('main').className = 'canvas';
     $('main').innerHTML = `<div class="cv-h doc-h"><div class="cv-ht" style="display:flex;flex-direction:row;align-items:center;gap:10px;flex-wrap:wrap"><span class="doc-ic">${ic('doc', 16)}</span><div class="cv-t">${esc(d.title)}</div><span class="badge ${d.status === 'Draft' ? 'b-grey' : 'b-pos'}">${esc(d.status)}</span><span class="muted" style="font-size:12px">Saved</span></div>
         <div class="cv-a"><div style="position:relative"><button class="btn sm" onclick="App.toggleDl()">Download ${ic('downa', 12)}</button><div class="menu" id="dlMenu" style="top:36px;right:0;width:170px">${docDl(d).map(o => `<button onclick="App.toast('Downloads are a placeholder in the mock')">${o}</button>`).join('')}</div></div>${d.status === 'Draft' ? '<button class="btn sm pri" onclick="App.addToLibrary()">Add to Content library</button>' : '<span class="badge b-pos">In Content library</span>'}<button class="ic-btn" title="Close" onclick="App.nav(\'studio\')">${ic('x', 16)}</button></div></div>
       <div class="doc-bar"><label for="dTone">Tone</label><select id="dTone" class="sel" onchange="App.docSet('tone',this.value)">${['Direct', 'Warm', 'Technical', 'Formal'].map(x => `<option ${d.tone === x ? 'selected' : ''}>${x}</option>`).join('')}</select><label for="dLen">Length</label><select id="dLen" class="sel" onchange="App.docSet('length',this.value)">${['Short', 'Medium', 'Long'].map(x => `<option ${d.length === x ? 'selected' : ''}>${x}</option>`).join('')}</select><span class="muted" style="margin-left:auto;font-size:12px">${docMeta(d)}</span></div>
-      <div class="cv-b doc-bg" id="cv"><div class="doc-tags"><span class="badge b-brand nodot">${esc(d.type)}</span><span class="badge b-grey">${esc(d.audience)}</span><span class="badge b-sec">Brand v3</span><span class="badge b-brand">AI-assisted · High</span></div>
+      <div class="cv-b doc-bg" id="cv" style="${dsStyle(d.tpl)}"><div class="doc-tags"><span class="badge b-brand nodot">${esc(d.type)}</span><span class="badge b-grey">${esc(d.audience)}</span><span class="badge b-sec">${esc(dsOf(d.tpl)[0])}</span><span class="badge b-brand">AI-assisted · High</span></div>
         ${docBody(d)}</div>`;
   }
 
@@ -2097,7 +2226,7 @@
     $('ws').classList.toggle('nochat', studioHome || inboxV);
     $('ws').classList.toggle('solo', !split && !home && !studioHome && !inboxV);
     renderNav(); renderChat();
-    const MODR = { inbox: renderInbox, accounts: renderAccounts, segments: renderSegments, campaigns: renderCampaigns, approvals: renderApprovals, studio: renderStudio, analytics: renderAnalytics };
+    const MODR = { inbox: renderInbox, accounts: () => { renderAccounts(); leadsHook(); }, segments: () => { renderSegments(); leadsHook(); }, campaigns: renderCampaigns, approvals: renderApprovals, studio: renderStudio, analytics: renderAnalytics };
     const draw = art ? renderArt : v === 'studio' || v === 'inbox' || v === 'analytics' || (v && expanded) ? MODR[v] : board ? renderBoard : () => { $('main').className = ''; $('main').innerHTML = ''; };
     const key = [v, home, expanded, art, campSel, segSel, listSel, studioTab, !!S.studio.doc, board ? S.cur : ''].join('|');
     const fresh = key !== lastKey;
@@ -2175,10 +2304,10 @@
     skipWith(id, why) { S.skipR[id] = why; skipOpen = null; decide(id, 'skipped', `Skipped: ${why.toLowerCase()}. It feeds the learning loop.`); },
     handoff(id) { const r = REPLIES.find(x => x.id === id); S.handled[id] = true; if (!S.today) S.today = { id: 'home', title: 'Today', thread: todayThread() }; S.today.thread.push({ who: 'ai', kind: 'text', html: `Handed <b>${esc(acct(r.acc).name)}</b> to the proposal team with the reply, the signals and the account history, so they start from context, not a form. ${esc(first(USERS[acct(r.acc).owner].name))} stays the owner.` }); save(); toast('Handed to proposals with the full context (placeholder)'); renderAll(); },
     dictate(id) {
-      id = id || 'composer'; const el = $(id), mic = $(id + 'Mic'), keep = id === 'thrBody' || id === 'stBrief'; if (!el) return;
+      id = id || 'composer'; const el = $(id), mic = $(id + 'Mic'), keep = id === 'thrBody' || id === 'stBrief' || /^ob_/.test(id); if (!el) return;
       if (speech) { speech.stop(); return; }
       const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-      const fake = () => { el.value = id === 'thrBody' ? el.value : id === 'stBrief' ? (ST_PROMPTS[studioType] || ST_PROMPTS.Whitepaper)[0] : (recId ? 'Why is this here?' : 'Where are we stuck this week?'); toast(id === 'stBrief' ? 'Voice needs microphone access in Chrome; filled a sample brief. Edit it, then press send' : 'Dictation needs microphone access in Chrome; filled a sample question'); if (!keep) setTimeout(() => sendFrom(id), 700); };
+      const fake = () => { el.value = id === 'thrBody' ? el.value : OB_SAMPLE[id] ? OB_SAMPLE[id] : id === 'stBrief' ? (ST_PROMPTS[studioType] || ST_PROMPTS.Whitepaper)[0] : (recId ? 'Why is this here?' : 'Where are we stuck this week?'); toast(id === 'stBrief' || OB_SAMPLE[id] ? 'Voice needs microphone access in Chrome; filled a sample brief. Edit it, then press send' : 'Dictation needs microphone access in Chrome; filled a sample question'); el.dispatchEvent(new Event('input')); if (!keep) setTimeout(() => sendFrom(id), 700); };
       if (!SR) return fake();
       speech = new SR(); speech.lang = 'en-US'; speech.interimResults = true; speech.continuous = false;
       const base = keep ? el.value + (el.value ? ' ' : '') : ''; let said = '', failed = false;
@@ -2242,9 +2371,40 @@
     libListView(on) { libList = on; libHook(); },
     stPill() { stPillOpen = !stPillOpen; renderAll(); },
     libApprove(id) { S.libSt = S.libSt || {}; S.libSt[id] = 'Completed'; save(); toast('Approved. It is in the library and ready for outreach.'); libHook(); },
-    setStudioTab(k) { studioTab = k; renderAll(); },
+    setStudioTab(k) { studioTab = 'write'; S.studio.doc = null; if (view() !== 'studio') nav('studio'); else renderAll(); setTimeout(() => App.obFocus('studio'), 80); },
+    obIn(k, v) { obVal[k] = v; },
+    obMenu(k) { obMenu = !k || obMenu === k ? null : k; obPillK = null; stPillOpen = false; renderAll(); },
+    obAdd(k, i) { const p = OB_PLUS[k][i]; obAtt[k] = (obAtt[k] || []).filter(x => x !== p[2]).concat(p[2]); obMenu = null; toast(`${p[0]}: added ${p[2]} (placeholder)`); renderAll(); },
+    obRm(k, i) { (obAtt[k] || []).splice(i, 1); renderAll(); },
+    obPill(k) { obPillK = !k || obPillK === k ? null : k; obMenu = null; stPillOpen = false; dsQ = ''; renderAll(); },
+    obFocus(k) { const w = $('obWrap_' + k), el = w && w.querySelector('textarea'); if (w) w.scrollIntoView({ block: 'start', behavior: 'smooth' }); if (el) el.focus({ preventScroll: true }); },
+    icpPick(v) { obIcp = v; obPillK = null; toast(`Searching with ICP version ${v}`); renderAll(); },
+    obSend(k) { if (!(obVal[k] || '').trim()) { toast('Describe it first'); return; } if (k === 'out') return App.outStart(obVal[k]); const tx = obText(k); obVal[k] = ''; obAtt[k] = []; ask(tx); },
+    outKind(k) { outKind = k; obPillK = null; outQ = null; renderAll(); },
+    outStart(v) { obVal.out = v; const pre = outGuess(outKind, v); outQ = { kind: outKind, brief: obText('out'), pre, a: Object.assign({}, pre, { ch: Array.isArray(pre.ch) ? pre.ch.slice() : pre.ch }) }; renderAll(); setTimeout(() => { const q = document.querySelector('.oq'); if (q) q.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }, 60); },
+    outAns(k, v, mode) { if (!outQ) return; const a = outQ.a; if (mode === 2) { a[k] = v; return; } if (mode === 1) { const L = a[k] || []; a[k] = L.includes(v) ? L.filter(x => x !== v) : L.concat(v); } else a[k] = a[k] === v ? '' : v; renderAll(); },
+    outCancel() { outQ = null; renderAll(); },
+    outBuild() {
+      const q = outQ; if (!q) return; const a = q.a, kind = q.kind, Q = OQ[kind]();
+      const g = { id: 'g' + Date.now(), kind, brief: q.brief, obj: a.obj, seg: a.seg || '', who: a.who || '', ch: kind === 'NBC' ? (a.ch || []).slice() : [a.ch || 'Email'], seq: a.seq || Q[3][2][1], when: a.when || Q[3][2][0], ct: a.ct || Q[4][2][0], note: a.note || '', b: 'Under review', at: 'just now' };
+      g.name = kind === 'NBC' ? `${g.seg}: ${g.obj.toLowerCase()}` : `${g.ch[0]} to ${g.who.split(' · ')[0]}: ${g.obj.toLowerCase()}`;
+      S.outGen = [g].concat(S.outGen || []); outQ = null; obVal.out = ''; obAtt.out = []; outSel = g.id; save();
+      toast(kind === 'NBC' ? 'Campaign built. It waits in Under review until it is approved' : 'Next best action built. It waits in Under review until it is approved'); renderAll();
+    },
+    outOpen(id) { outSel = id; renderAll(); },
+    outMove(id, b, asked) { const g = (S.outGen || []).find(x => x.id === id); if (!g) return; g.b = b; save(); toast(asked ? 'Sent to Daniel for approval. It stays in Under review until he approves' : b === 'Approved' ? 'Approved. It goes out in the next send window (placeholder)' : 'Outreach started (placeholder: nothing is sent)'); renderAll(); },
+    outEdit(id) { const g = (S.outGen || []).find(x => x.id === id); if (!g) return; outKind = g.kind; outQ = { kind: g.kind, brief: g.brief, pre: {}, a: { obj: g.obj, seg: g.seg, who: g.who, ch: g.kind === 'NBC' ? g.ch.slice() : g.ch[0], seq: g.seq, when: g.when, ct: g.ct, note: g.note } }; obVal.out = g.brief; S.outGen = S.outGen.filter(x => x.id !== id); outSel = null; save(); renderAll(); },
+    outDrop(id) { S.outGen = (S.outGen || []).filter(x => x.id !== id); outSel = null; save(); toast('Discarded'); renderAll(); },
+    outTab(s) { outTab = s; renderAll(); },
+    outMenu(k) { outMenu = k || null; renderAll(); },
+    outPick(k, v, live) { if (k === 'q') outF.q = v; else if (k === 'sort') outSort = v || 'Most recent'; else outF[k] = v; if (!live) outMenu = null; renderAll(); if (live) { const s = $('outQ'); if (s) { s.focus(); s.setSelectionRange(v.length, v.length); } } },
+    outSearch() { outSearch = !outSearch; renderAll(); setTimeout(() => $('outQ') && $('outQ').focus(), 0); },
+    outList(v) { outList = v; renderAll(); },
+    dsSearch(v) { dsQ = v; renderAll(); const s = document.querySelector('.ds-q input'); if (s) { s.focus(); s.setSelectionRange(v.length, v.length); } },
+    dsPick(n) { S.dsT = n || ''; obPillK = null; dsQ = ''; save(); toast(`${n || 'Vantera Brand v3'} will be used for the next asset`); renderAll(); },
+    libTopPerf() { libSort = libSort === 'Top performing' ? 'Last updated' : 'Top performing'; libTabK = 'All'; renderAll(); },
     setStudioType(x) { studioType = AST[x] ? x : x === 'One-pager PDF' ? 'PDF one-pager' : 'Whitepaper'; stPillOpen = false; renderAll(); },
-    studioGo(text, type) { const v = text || ($('stBrief') && $('stBrief').value) || ''; if (!v.trim()) { toast('Describe what to write first'); return; } const said = /carousel/i.test(v) ? 'Carousel' : /infographic/i.test(v) ? 'Infographic' : /one-pager|\bpdf\b/i.test(v) ? 'PDF one-pager' : /whitepaper/i.test(v) ? 'Whitepaper' : null; const raw = type || said || studioType; startDoc(AST[raw] ? raw : raw === 'One-pager PDF' ? 'PDF one-pager' : /carousel/i.test(raw) ? 'Carousel' : /infographic|image/i.test(raw) ? 'Infographic' : 'Whitepaper', v); },
+    studioGo(text, type) { const v = text || ($('stBrief') && $('stBrief').value) || ''; if (!v.trim()) { toast('Describe what to write first'); return; } const said = /carousel/i.test(v) ? 'Carousel' : /infographic/i.test(v) ? 'Infographic' : /one-pager|\bpdf\b/i.test(v) ? 'PDF one-pager' : /whitepaper/i.test(v) ? 'Whitepaper' : null; const raw = type || said || studioType; startDoc(AST[raw] ? raw : raw === 'One-pager PDF' ? 'PDF one-pager' : /carousel/i.test(raw) ? 'Carousel' : /infographic|image/i.test(raw) ? 'Infographic' : 'Whitepaper', v); const at = obAtt.studio || []; obVal.studio = ''; if (at.length) { S.studio.thread.splice(2, 0, { who: 'ai', kind: 'text', html: 'Also drawing on: ' + at.map(esc).join(', ') + '.' }); obAtt.studio = []; save(); renderAll(); } },
     focusDoc() { if (view() !== 'studio') location.hash = '#studio'; },
     selPara(i) { S.studio.sel = S.studio.sel === i ? null : i; save(); renderAll(); if (S.studio.sel != null) $('composer').focus(); },
     docSet(f, v) { const d = S.studio.doc; d[f] = v; if (f === 'length' && v === 'Short') studioRespond('shorter'); if (f === 'length' && v === 'Long') studioRespond('add a section on lifecycle planning'); if (f === 'tone' && v === 'Formal') studioRespond('formal'); S.studio.thread.push({ who: 'ai', kind: 'text', html: `${f === 'tone' ? 'Tone' : 'Length'} set to ${esc(v.toLowerCase())}. The brand checks still pass.` }); save(); renderAll(); },
