@@ -127,6 +127,11 @@ const M = process.argv[2], full = M === 'full-mock', dir = '/home/user/Demand-AI
   const ct = await p.$eval('.route .as-open', e => e.textContent); await p.click('.route .as-open'); await p.waitForTimeout(800);
   chk('Clicking the content opens that asset in Content studio', (await p.evaluate(() => location.hash)) === '#studio' && (await p.$eval('.cv-t', e => e.textContent).catch(() => '')) === ct, 'Content studio');
   await p.evaluate(() => App.nav(null)); await p.waitForTimeout(300);
+  // round 14: prospecting follows the prompt
+  await p.evaluate(() => { App.nav(null); App.newChat(); }); await p.waitForTimeout(300); await p.evaluate(() => App.ask('Find prospects for refineries in Thailand with a new reliability leader')); await p.waitForTimeout(5000);
+  chk('Find prospects builds the list from the prompt (place, industry, role, signal), not lookalikes', /Thailand/.test(await body()) && /new leader in the team/i.test(await body()) && !/last 10 wins · scored/i.test(await body()), 'Chat › prospecting');
+  await p.evaluate(() => { App.nav(null); App.newChat(); }); await p.waitForTimeout(300); await p.evaluate(() => App.ask('Find prospects')); await p.waitForTimeout(3000);
+  chk('Find prospects with nothing to go on starts the ICP interview', !!(await p.$('.icq')) && /Who should I look for/.test(await body()), 'Chat › prospecting'); await p.evaluate(() => { App.icpCancel(); App.nav(null); }); await p.waitForTimeout(300);
   // round 3
   t = await run(() => { App.openRecord('juniper', 'graph'); }); await p.click('g.hub-n'); await p.waitForTimeout(300); t = await body(); chk('Context graph nodes clickable with detail', /Open/i.test(t) && (await p.$('g.hub-n.on')) !== null, 'Account › Context graph');
   chk('Actions name their signal (no placeholder)', await p.evaluate(() => !MOCK.ACCOUNTS.some(a => a.nba && /Introduce Client/.test(a.nba.action)) && /Congratulate Budi/.test(MOCK.ACCOUNTS.find(a => a.id === 'juniper').nba.action)), 'Next best actions');

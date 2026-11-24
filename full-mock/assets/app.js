@@ -220,6 +220,7 @@
     const learn = shared.icps.some(x => /Learned/.test(x.path)) ? '' : `<p>I also noticed something from the team's work: reps removed 6 sites under 300 staff from their lists this month. Should the ICP say 300 staff or more?</p><div class="next-row"><button class="btn sm" onclick="App.icpLearn()">Yes, update the ICP</button></div>`;
     return { kind: 'text', html: `<p>We use <b>ICP v${cur.v}</b>, confirmed by ${esc(cur.by)} on ${esc(cur.at)} (${esc(cur.path.toLowerCase())}). Every new list starts from it.</p>${icpCard(cur.crit, 'Current ICP', `<button class="chip" onclick="App.ask('Help me define our ICP from our website')">Propose a new one</button><button class="chip" onclick="App.ask('Our ICP is refineries and petrochemical plants in Singapore and Malaysia, 500+ staff, reliability leaders')">Type a new one</button>`)}${learn}` };
   }
+  const sigOfPrompt = t => /new (leader|hire|head|reliability|plant|operations)|joined|appointed/.test(t) ? 'New leader in the team' : /hiring|vacanc|open roles/.test(t) ? 'Hiring in the team' : /pricing|visited|website visit/.test(t) ? 'Visited your pricing page' : /migrat|historian|tech.?stack|dcs/.test(t) ? 'Tech stack change' : /turnaround|shutdown|outage/.test(t) ? 'Turnaround announced' : /rival|contract end|competitor contract/.test(t) ? 'Rival contract ending' : /expansion|capex|new unit/.test(t) ? 'Expansion approved' : /funding|raised/.test(t) ? 'Funding round' : /event|webinar|conference/.test(t) ? 'Event attendance' : '';
   function parseICP(text) {
     const t = ' ' + text.toLowerCase().replace(/[,.]/g, ' ') + ' ';
     const ck = Object.keys(CITIES).find(k => t.includes(' ' + k + ' ')), nk = Object.keys(COUNTRIES).find(k => t.includes(' ' + k + ' '));
@@ -233,8 +234,8 @@
   const LAST = ['Nguyen', 'Smith', 'Patel', 'Wilson', 'Chen', 'Taylor', 'Brown', 'Singh', 'Walker', 'Kelly', 'Murphy', 'Lee', 'Harris', 'Martin', 'Wong', 'Clarke', 'Ryan', 'Thompson', 'Kaur', 'Edwards'];
   const PRE = ['Harbourline', 'Bluegum', 'Wattlebird', 'Opalcrest', 'Coastline', 'Kestrel', 'Ironbark', 'Northshore', 'Brightwater', 'Saltbush', 'Redgum', 'Silverleaf', 'Tidewell', 'Southwind', 'Lyrebird', 'Cobalt Bay', 'Emberline', 'Paperbark', 'Highfield', 'Riverstone'];
   const SUF = { Technology: ['Software', 'Labs', 'Cloud', 'Analytics', 'Digital', 'Systems', 'Data', 'AI'], 'Financial services': ['Capital', 'Finance', 'Payments', 'Wealth', 'Lending'], Retail: ['Retail', 'Brands', 'Commerce', 'Stores'], Healthcare: ['Health', 'Medical', 'Care', 'Diagnostics'], Manufacturing: ['Industries', 'Manufacturing', 'Fabrication', 'Works'], Logistics: ['Logistics', 'Freight', 'Transport'], Energy: ['Energy', 'Power', 'Renewables'], Telecommunications: ['Telecom', 'Networks', 'Connect'], Education: ['Learning', 'Education', 'Academy'], 'Refining & petrochemicals': ['Refining', 'Petrochem', 'Olefins'] };
-  const GSIG = [['Funding round', 1, 'Raised a new funding round this month', 'News'], ['New leader in the team', 1, 'A new head of the team started two weeks ago', 'LinkedIn'], ['Hiring in the team', 2, 'Three open roles in the team', 'Job boards'], ['Visited your pricing page', 1, 'Pricing and case-study pages, twice this week', 'Website visitor ID'], ['Tech stack change', 2, 'Switched a core platform', 'Technographics'], ['Event attendance', 3, 'Registered for an industry event', 'Events']];
-  const GACT = { 'New leader in the team': ['Congratulate the new leader and share a 90-day plan', 'LinkedIn', true], 'Visited your pricing page': ['Send a short comparison with a peer example', 'Email', true], 'Hiring in the team': ['Share how peers scaled the team', 'Email', false], 'Tech stack change': ['Share a migration checklist', 'Email', false], 'Event attendance': ['Suggest meeting at the event', 'LinkedIn', false] };
+  const GSIG = [['Funding round', 1, 'Raised a new funding round this month', 'News'], ['New leader in the team', 1, 'A new head of the team started two weeks ago', 'LinkedIn'], ['Hiring in the team', 2, 'Three open roles in the team', 'Job boards'], ['Visited your pricing page', 1, 'Pricing and case-study pages, twice this week', 'Website visitor ID'], ['Tech stack change', 2, 'Switched a core platform', 'Technographics'], ['Event attendance', 3, 'Registered for an industry event', 'Events'], ['Turnaround announced', 1, 'Announced a planned turnaround for next year', 'News'], ['Rival contract ending', 1, 'Support contract with a rival vendor ends within 6 months', 'Procurement data'], ['Expansion approved', 1, 'Capex approved for a new unit', 'News']];
+  const GACT = { 'New leader in the team': ['Congratulate the new leader and share a 90-day plan', 'LinkedIn', true], 'Visited your pricing page': ['Send a short comparison with a peer example', 'Email', true], 'Hiring in the team': ['Share how peers scaled the team', 'Email', false], 'Tech stack change': ['Share a migration checklist', 'Email', false], 'Event attendance': ['Suggest meeting at the event', 'LinkedIn', false] , 'Turnaround announced': ['Share the turnaround readiness checklist', 'Email', true], 'Rival contract ending': ['Compare extending with switching before the contract ends', 'Email', true], 'Expansion approved': ['Offer a scope review for the new unit', 'Email', false]};
   function seeded(str) { let h = 2166136261; for (const ch of str) h = Math.imul(h ^ ch.charCodeAt(0), 16777619); return () => { h = Math.imul(h ^ (h >>> 15), 2246822507) ^ Math.imul(h ^ (h >>> 13), 3266489909); h ^= h >>> 16; return (h >>> 0) / 4294967296; }; }
   function genList(g) {
     if (ACCOUNTS.some(a => a.fromList === g.id)) return;
@@ -244,7 +245,8 @@
     for (let i = 0; i < 16; i++) {
       let name; do { name = `${PRE[Math.floor(r() * PRE.length)]} ${sufs[Math.floor(r() * sufs.length)]}`; } while (used.has(name)); used.add(name);
       const fnm = FIRST[Math.floor(r() * FIRST.length)], lnm = LAST[Math.floor(r() * LAST.length)], slug = name.toLowerCase().replace(/[^a-z]+/g, '');
-      const lead = i < 10 ? GSIG[0] : GSIG[1 + (i % 5)];
+      const named = GSIG.find(x => x[0] === icp.sig) || (/Refining/.test(ind) ? GSIG.find(x => x[0] === 'Turnaround announced') : GSIG[0]);
+      const lead = i < 10 ? named : GSIG[1 + (i % 5)];
       const sigs = [lead].concat(GSIG.filter(x => x !== lead && r() > 0.6).slice(0, 2)).map(([type, tier, text, source]) => { const age = 1 + Math.floor(r() * (tier === 1 ? 6 : tier === 2 ? 20 : 40)), strength = Math.round((0.6 + r() * 0.35) * 100) / 100; return { type, tier, text, source, age, strength, weight: Math.round(decayed(tier, age) * strength * 10) / 10 }; });
       sigs.slice(1).forEach(x => { x.weight = Math.min(x.weight, Math.max(0, sigs[0].weight - 5)); });
       const ws = sigs.map(x => x.weight).sort((p, q) => q - p);
@@ -488,7 +490,8 @@
       ${accs.map(a => `<button class="dd-i" onclick="App.ddScope(event,'${a.id}')">${pAvatar(a, 24)}<span><b>${esc(a.name)}</b><em>${esc(a.contact.name)} · ${esc(first(USERS[a.owner].name))}</em></span></button>`).join('')}</div></div>`;
   }
   const mainActs = () => [
-    ['search', 'Find prospects', 'Lookalikes of your wins from signals, CRM and news · lands in Accounts', 'Find prospects like my last 10 wins'],
+    ['search', 'Find prospects', 'Describe who you want, or answer a few ICP questions · lands in Leads', 'Find prospects'],
+    ['users', 'Lookalikes of my wins', 'Accounts like your last 10 wins, from signals, CRM and news', 'Find prospects like my last 10 wins'],
     ['bars', 'Score a list', 'Fit and timing for every account · opens in Accounts', 'Score this list'],
     ['layers', 'Build micro-segments', 'Groups accounts by trigger and motivation · opens in Segments', 'Create micro-segments'],
     ['bolt', 'Prepare next best actions', 'One checked action per account · waits in Approvals if it needs you', 'Prepare the next actions'],
@@ -1044,15 +1047,21 @@
     }
     const leadsV = view() === 'accounts' || view() === 'segments';
     const leadAsk = leadsV && /refiner|petro|chemical|\bgas\b|lng|plant|sites?\b|compan|accounts|leads|prospects|leader|heads?\b|manager|director|\bvp\b|engineer|thailand|malaysia|singapore|indonesia|vietnam|philippines/.test(t) && !/score|segment|call first|save|assign|send|route|campaign|draft|why|how |explain|what is/.test(t);
-    let findIcp = (/\b(find|look for|search|show me|get me|prospect|who are)\b/.test(t) || leadAsk) && !/like (my|our) last|replies|analytics|emails sent|meetings|linkedin touches|sequence|pipeline|hot|stuck/.test(t) ? parseICP(text) || (leadAsk ? parseICP(text + ' singapore') : null) : null;
-    if (findIcp && leadsV && !findIcp.industry) findIcp.industry = 'Refining & petrochemicals';
-    if (findIcp && leadsV && !findIcp.fn) findIcp.fn = 'Reliability';
+    const lookAsk = /like (my|our) last|look ?alike|like (my|our) (best |recent )?(wins|customers)/.test(t);
+    const findAsk = /\b(find|look for|search|show me|get me|prospects?|who are|build (me )?a list|list of|new leads)\b/.test(t) && !lookAsk && !/replies|analytics|emails sent|meetings|linkedin touches|sequence|pipeline|hot|stuck|campaign|content|asset|signal on|score this|segment/.test(t);
+    const hasCrit = /refin|petro|chemical|\bgas\b|lng|power|plant|reliab|operat|maint|procure|engineer|instrument|turnaround|shutdown|expansion|capex|hiring|new (leader|hire|head)|joined|rival|contract|pricing|migrat|historian|staff|tier|thailand|malaysia|singapore|indonesia|vietnam|philippines|australia|india|japan/.test(t);
+    let findIcp = (findAsk || leadAsk) ? parseICP(text) || (hasCrit ? parseICP(text + ' singapore') : null) : null;
+    if (findIcp && !findIcp.industry) findIcp.industry = 'Refining & petrochemicals';
+    if (findIcp && /plant (head|manager)/.test(t)) { findIcp.fn = 'Operations'; findIcp.lvl = 'Head'; }
+    if (findIcp && !findIcp.fn) findIcp.fn = 'Reliability';
+    if (findIcp) findIcp.sig = sigOfPrompt(t);
+    if (findAsk && !findIcp && !hasCrit) { icpStart(text, null); accSub = 'list'; if (view() !== 'accounts') openMod('accounts'); return { kind: 'text', html: `<p>Who should I look for? I'll build the list from your answers, not from old wins. A few questions are open on the right, one at a time: what you sell, industries, where, size, who buys, the signals that mean they're ready now, and who to leave out.</p><p>Or just tell me in one line, for example: <i>refineries in Thailand with a new reliability leader</i>, or paste your website and I'll draft the ICP.</p>` }; }
     if (findIcp) {
       const id = 'Q' + (S.genLists.length + 1) + Date.now().toString(36).slice(-4), place = [findIcp.city, findIcp.country !== findIcp.city ? findIcp.country : null].filter(Boolean).join(', ');
       const who = findIcp.lvl === 'Head' ? `Heads of ${findIcp.fn || 'the team'}` : findIcp.lvl === 'Chief' ? `Chief ${findIcp.fn || ''} Officers` : findIcp.lvl === 'VP' ? `VPs of ${findIcp.fn || 'the team'}` : `${findIcp.fn || 'Team'} ${findIcp.lvl.toLowerCase()}s`;
-      const g = { id, q: text, icp: findIcp, owner: me.id, title: [who, place, findIcp.industry].filter(Boolean).join(' · ') };
+      const g = { id, q: text, icp: findIcp, owner: me.id, title: [who, place, findIcp.industry, findIcp.sig ? findIcp.sig.toLowerCase() : ''].filter(Boolean).join(' · ') };
       S.genLists.push(g); genList(g); if (leadsV) { listSel = id; accSub = 'list'; } if (cc) { cc.listId = id; if (S.chats.includes(cc) && cc.thread.filter(m => m.who === 'me').length <= 1) { cc.title = g.title; cc.naming = false; } }
-      return { kind: 'prospects', open: 'prospects', steps: [`Used the confirmed ICP v${icpNow().v} (${esc(icpNow().crit.slice(0, 2).join(', '))}) and your request`, `Turned your request into a filter: ${esc(who)}${place ? ' · ' + esc(place) : ''}${findIcp.industry ? ' · ' + esc(findIcp.industry) : ''}`, 'Searched the primary contact provider, then the fallback for the misses', 'Cross-checked fallback hits and gave everyone an identity tier', 'Removed existing customers and accounts another rep owns (CRM, read-only)'] };
+      return { kind: 'prospects', open: 'prospects', steps: [`Used the confirmed ICP v${icpNow().v} (${esc(icpNow().crit.slice(0, 2).join(', '))}) and your request`, `Turned your request into a filter: ${esc(who)}${place ? ' · ' + esc(place) : ''}${findIcp.industry ? ' · ' + esc(findIcp.industry) : ''}${findIcp.sig ? ' · ready now: ' + esc(findIcp.sig.toLowerCase()) : ''}`, 'Searched the primary contact provider, then the fallback for the misses', 'Cross-checked fallback hits and gave everyone an identity tier', 'Removed existing customers and accounts another rep owns (CRM, read-only)'] };
     }
     const asc = t.match(/assign (the )?(campaign|nbc|next (best )?actions|nbas?|actions) to (sofia|marco|aisha|kenji)/);
     if (asc) { if (!isMgr) return { kind: 'text', html: 'Daniel assigns work. I can send him a note: say "send an update to Daniel".' }; const camp = /campaign|nbc/.test(asc[2]), ids = listAccounts().filter(a => camp ? a.campaign : a.nba && !a.campaign).map(a => a.id); if (!ids.length) return { kind: 'text', html: `There ${camp ? 'is no campaign' : 'are no next best actions'} on this list yet. Say "Route to NBA and NBC" first.` }; ids.forEach(id => { acct(id).owner = asc[4]; shared.assign[id] = asc[4]; }); saveShared(); return { kind: 'text', html: `Assigned ${camp ? `the campaign (${ids.length} accounts)` : `${ids.length} next best actions`} to <b>${esc(USERS[asc[4]].name)}</b>. It shows in their Today and their Approvals.` }; }
@@ -1100,7 +1109,7 @@
     if (/learn|worked|working|what changed|readout/.test(t)) return { kind: 'learned', steps: ['Read 214 outcomes logged this month (wins and misses)', 'Re-ran pattern promotion and demotion', 'Compared signal sources by conversion'] };
     if (/to ?do|what should i do first|my day|first today/.test(t)) return { kind: 'todo' };
     if (/approve all/.test(t)) { approveAll(true); return { kind: 'text', html: 'Done. Every ready, high-confidence item is approved and scheduled for the next send window (a placeholder in the mock).' }; }
-    if (/find|prospect|look ?alike|new accounts|like my|like our|more accounts/.test(t)) { if (cc) cc.listId = null; return { kind: 'prospects', steps: FIND_STEPS() }; }
+    if (lookAsk || /more accounts like/.test(t)) { if (cc) cc.listId = null; return { kind: 'prospects', steps: FIND_STEPS() }; }
     if (/rank|score|prioriti|who should i call|call first|top accounts/.test(t)) return { kind: 'ranked', steps: ['Pulled live signals from 23 sources', 'Applied tier, decay and stacking', 'Fit × Timing = Score'] };
     if (/thailand.*jump|spike/.test(t)) return { kind: 'text', html: 'Five Thai accounts posted control-systems roles within 2 days, far outside the normal range. The system gave them a temporary tier-1 boost, alerted Marco, and logged the event so signal research can check whether it\'s a new pattern.' };
     if (a && /shorter|cost|formal|friendl|rewrite|runner/.test(t)) return rewrite(a, t);
@@ -2663,7 +2672,7 @@
       shared.icps.forEach(x => { if (x.status === 'In use') x.status = 'Superseded'; });
       const v = shared.icps.length + 1; shared.icps.push({ v, crit, path: q.path === 'B' ? `Drafted from ${q.url} (path B)` : 'From the ICP interview (path A)', by: me.name, at: 'Today', status: 'In use' }); saveShared();
       const g0 = (a.geo[0] || 'Singapore').toLowerCase(), loc = CITIES[g0] || COUNTRIES[g0] || ['Singapore', 'Singapore'], r0 = a.roles[0];
-      const icp = { city: loc[0], country: loc[1], industry: 'Refining & petrochemicals', fn: /Reliab/.test(r0) ? 'Reliability' : /Operat|Plant/.test(r0) ? 'Operations' : /Technical/.test(r0) ? 'Engineering' : 'Procurement', lvl: /Plant head|leader/.test(r0) ? 'Head' : 'Manager' };
+      const icp = { city: loc[0], country: loc[1], industry: 'Refining & petrochemicals', fn: /Reliab/.test(r0) ? 'Reliability' : /Operat|Plant/.test(r0) ? 'Operations' : /Technical/.test(r0) ? 'Engineering' : 'Procurement', lvl: /Plant head|leader/.test(r0) ? 'Head' : 'Manager', sig: sigOfPrompt((a.sig[0] || '').toLowerCase()) };
       const id = 'Q' + (S.genLists.length + 1) + Date.now().toString(36).slice(-4);
       const g = { id, q: `ICP v${v}: ${crit.slice(0, 4).join(' · ')}`, icp, owner: me.id, title: `ICP v${v} leads · ${a.ind.slice(0, 2).join(' & ')} · ${a.geo.slice(0, 2).join(', ')}` };
       S.genLists.push(g); genList(g); listSel = id; accSub = 'list'; icpQ = null;
