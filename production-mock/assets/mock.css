@@ -1966,3 +1966,9 @@ h1 .r2tag{font-size:11px;padding:3px 7px}
 .chat .qs-rv{grid-template-columns:1fr auto}.chat .qs-rv span{grid-column:1/-1}
 .qs-rv b.qs-none{color:var(--i3);font-weight:500}
 .oq.qs [hidden]{display:none!important}
+
+/* Other: type your own answer, on every question */
+.qs-other{display:flex;align-items:center;gap:8px;margin-top:8px;padding:6px 6px 6px 12px;border:1px dashed var(--bdk);border-radius:10px;background:var(--surf)}
+.qs-other span{color:var(--i3);font-size:13px}
+.qs-other input{flex:1;min-width:0;border:0!important;outline:0;background:transparent;font:inherit;font-size:13.5px;color:var(--i1);padding:4px 0!important}
+.qs-other:focus-within{border-style:solid;border-color:var(--brand)}
