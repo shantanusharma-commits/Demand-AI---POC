@@ -2011,3 +2011,40 @@ button.qd-r:hover{background:var(--s50)}
 .coh-m div{display:flex;flex-direction:column}.coh-m b{font-family:var(--fd);font-size:16px}.coh-m span{font-size:11px;color:var(--i3)}
 .coh-l{font-size:12px;color:var(--i2);background:var(--s50);border-radius:var(--rmd);padding:6px 8px;display:flex;gap:6px;align-items:flex-start}
 .hints[hidden]{display:none!important}
+
+/* Cohort switcher: one place that scopes the campaign page */
+.coh-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:0 0 12px}
+.coh-bl{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;color:var(--i3);margin-right:4px}
+.coh-chip{display:inline-flex;align-items:center;gap:7px;padding:6px 12px;border:1px solid var(--border);border-radius:999px;background:var(--surf);font-size:12.5px;font-weight:500;color:var(--i2)}
+.coh-chip i{font-style:normal;font-size:11px;font-weight:700;color:var(--i3);background:var(--s75);border-radius:999px;padding:1px 7px}
+.coh-chip:hover{border-color:var(--brand-mid);color:var(--i1)}
+.coh-chip.on{background:var(--brand);border-color:var(--brand);color:#fff;font-weight:600}
+.coh-chip.on i{background:rgba(255,255,255,.22);color:#fff}
+.cp-scope{display:inline-flex;align-self:flex-start;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--brand);background:var(--brand-lt);border-radius:999px;padding:3px 10px}
+.cp-tabs{display:flex;align-items:center}
+.cp-tabs-s{margin-left:auto;font-size:12px;color:var(--i3)}
+button.coh{text-align:left;cursor:pointer;font:inherit;color:inherit;border:1px solid var(--border);transition:border-color var(--fast),box-shadow var(--fast)}
+button.coh:hover{border-color:var(--brand-mid);box-shadow:0 0 0 3px var(--brand-lt)}
+.coh-d{padding:14px 16px;display:flex;flex-direction:column;gap:6px;margin-bottom:4px}
+.coh-d .coh-l{align-items:center}.coh-d .coh-l span{flex:1}
+.coh-tag{display:inline-block;padding:2px 8px;border-radius:999px;background:var(--brand-lt);color:var(--brand-dk,var(--brand));font-size:11px;font-weight:600;white-space:nowrap;max-width:200px;overflow:hidden;text-overflow:ellipsis;vertical-align:middle}
+/* Messages header: cleaner, with Preview as */
+.msg-bar{display:flex;align-items:center;gap:14px;padding:14px 16px;margin:4px 0 10px}
+.msg-bi{flex-shrink:0;width:34px;height:34px;border-radius:10px;background:var(--brand-lt);color:var(--brand);display:inline-flex;align-items:center;justify-content:center}
+.msg-bt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.msg-bt b{font-family:var(--fd);font-size:14px;font-weight:600;color:var(--i1)}
+.msg-bt span{font-size:12.5px;color:var(--i2);line-height:1.45}
+.msg-pv{display:flex;flex-direction:column;gap:3px;flex-shrink:0;min-width:220px}
+.msg-pv span{font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--i3)}
+.msg-pv .sel{height:36px;border-radius:10px;font-size:13px}
+.msg-ol{border:1px solid var(--border);border-radius:var(--rmd);background:var(--surf);padding:10px 14px;margin-bottom:10px;display:flex;flex-direction:column;gap:8px}
+.msg-olh{font-size:12px;font-weight:600;color:var(--i1)}.msg-olh span{font-weight:400;color:var(--i3);margin-left:6px}
+.msg-olr{display:grid;grid-template-columns:minmax(140px,220px) 1fr;gap:10px;align-items:center}
+.msg-olr input{width:100%;border:1px solid var(--border);border-radius:8px;padding:7px 10px;font:inherit;font-size:12.5px;background:var(--surf);color:var(--i1)}
+.msg-olr input:focus{outline:none;border-color:var(--brand)}
+.camp-own2{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:12px;color:var(--ter-dk,#9A5B00);background:var(--ter-lt,#FFF4E5);border-radius:var(--rmd);padding:8px 12px;margin-bottom:6px}
+/* Start something new: a selected action */
+.cmp-pill.on{background:var(--brand-lt);border-color:var(--brand);color:var(--brand);font-weight:600}
+.cmp-x{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;margin-left:2px;font-style:normal}
+.cmp-x:hover{background:var(--brand);color:#fff}
+@media (max-width:900px){.msg-bar{flex-wrap:wrap}.msg-pv{min-width:0;width:100%}.msg-olr{grid-template-columns:1fr}}
