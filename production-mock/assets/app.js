@@ -431,8 +431,8 @@
         <div class="notes-add"><label class="sr" for="noteIn">Add a note</label><input id="noteIn" placeholder="Add a note, for example: call Cedar before their rival contract ends" onkeydown="if(event.key==='Enter'){event.preventDefault();App.addChatNote()}"><button class="btn sm pri" onclick="App.addChatNote()">Add note</button></div></div>` : ''}
       ${isHero(c) ? heroHtml(c, ph) : ''}<div class="thread" id="thread" ${isHero(c) ? 'hidden' : ''}><div class="thread-in">${c.thread.map((m, i) => (i === unreadAt(c) ? `<div class="unread-line" id="unreadLine"><span>New since you last looked${c.readAt ? ' · ' + esc(c.readAt) : ''}</span></div>` : '') + renderMsg(m).replace('<div class="msg', `<div data-i="${i}" class="msg`)).join('')}</div></div>
       <div class="composer-wrap" ${isHero(c) ? 'hidden' : ''}>
-        <div class="hints">${hints().slice(0, 3).map(h => `<button class="chip" onclick="App.ask(${js(h)})">${esc(h)}</button>`).join('')}</div>
-        ${isHero(c) ? '' : composerBox({ id: 'composer', ph, send: 'App.send()', actions: v === 'studio' ? null : recId ? personActs(acct(recId)) : mainActs(), scope: v !== 'studio' })}
+        ${qdHtml()}<div class="hints" ${qdModel() ? 'hidden' : ''}>${hints().slice(0, 3).map(h => `<button class="chip" onclick="App.ask(${js(h)})">${esc(h)}</button>`).join('')}</div>
+        ${isHero(c) ? '' : composerBox({ id: 'composer', ph: qdModel() ? 'Or reply directly…' : ph, send: 'App.send()', actions: v === 'studio' ? null : recId ? personActs(acct(recId)) : mainActs(), scope: v !== 'studio' })}
       </div>`;
     placeThread(c, v);
   }
@@ -490,12 +490,12 @@
       ${accs.map(a => `<button class="dd-i" onclick="App.ddScope(event,'${a.id}')">${pAvatar(a, 24)}<span><b>${esc(a.name)}</b><em>${esc(a.contact.name)} · ${esc(first(USERS[a.owner].name))}</em></span></button>`).join('')}</div></div>`;
   }
   const mainActs = () => [
-    ['search', 'Find prospects', 'Describe who you want, or answer a few ICP questions · lands in Leads', 'Find prospects'],
+    ['search', 'Find prospects', 'Describe who you want, then send · lands in Leads', '>Find prospects: '],
     ['users', 'Lookalikes of my wins', 'Accounts like your last 10 wins, from signals, CRM and news', 'Find prospects like my last 10 wins'],
     ['bars', 'Score a list', 'Fit and timing for every account · opens in Accounts', 'Score this list'],
     ['layers', 'Build micro-segments', 'Groups accounts by trigger and motivation · opens in Segments', 'Create micro-segments'],
     ['bolt', 'Prepare next best actions', 'One checked action per account · waits in Approvals if it needs you', 'Prepare the next actions'],
-    ['megaphone', 'Build a campaign', 'For segments of 10 or more accounts · opens in Campaigns', 'Build the campaign'],
+    ['megaphone', 'Build a campaign', 'Describe it, then send · opens in Campaigns', '>Build a campaign for '],
     ['inbox', 'Answer replies', 'Every reply with a suggested answer · opens Inbox', 'Pull the emails we received today'],
     ['doc', 'Write content', 'Blog or whitepaper from approved sources · opens Content studio', 'Write a blog on planning a control system migration'],
     ['bars', 'Ask about results', isMgr ? 'Where the pipeline is stuck and what to fix · Analytics' : 'How your campaigns are doing · Analytics', isMgr ? 'Where are we stuck?' : 'How are the campaigns doing?'],
@@ -515,12 +515,13 @@
   /* Questions before the AI routes a list and drafts the campaign and the next actions */
   const RQ_OBJ = ['Book meetings', 'Win the switch at contract end', 'Re-open stalled deals', 'Event or webinar sign-ups'];
   const RQ_STOP = ['Stop on any reply', 'Stop when a meeting is booked', 'Stop if an open deal appears', 'Stop on an out-of-office'];
-  function rqDefaults(mode) { QSTEP.rq = 0; return { mode, done: false, a: { obj: '', ch: ['Email', 'LinkedIn'], seq: '5 touches over 3 weeks', when: 'Next send window', stop: ['Stop on any reply', 'Stop if an open deal appears'], cs: '', note: '', ctN: '', ctA: '' } }; }
+  function rqDefaults(mode) { QSTEP.rq = 0; qdActive = 'rq'; return { mode, done: false, a: { obj: '', ch: ['Email', 'LinkedIn'], seq: '5 touches over 3 weeks', when: 'Next send window', stop: ['Stop on any reply', 'Stop if an open deal appears'], cs: '', note: '', ctN: '', ctA: '' } }; }
   function rqCampSeg() { const accs = listAccounts(), cid = (accs.find(a => a.campaign) || {}).campaign, c = cid ? campOf(cid) : null; return c && segOf(c.seg) ? segOf(c.seg).name : ''; }
   function rqRecs(a) { return { n: recContent('NBC', { obj: a.obj, seg: rqCampSeg(), ch: a.ch, cs: a.cs }), b: recContent('NBA', { obj: a.obj, ch: a.ch[0] || 'Email', cs: a.cs }) }; }
   const assetLink = x => x ? `<a href="#" class="as-open" onclick="App.openAsset('${x.id}');return false" title="Open it in Content studio">${esc(x.t)}</a>` : '';
   function routeQHtml() {
-    const q = S.routeQ; if (!q) return '';
+    const q = S.routeQ; if (!q) return '<p>Closed. Say "Route to NBA and NBC" to start again.</p>';
+    if (!q.done) return `<p>Before I ${q.mode === 'route' ? 'route the list and draft the campaign and the next actions' : 'prepare the next actions'}, a few questions, just below. ${q.mode === 'route' ? 'Accounts that share a trigger (10 or more in 7 days) go to one campaign; the rest get their own next best action.' : ''}</p>`;
     const a = q.a, R = rqRecs(a), nbcOn = q.mode === 'route', ctN = a.ctN || R.n.best.id, ctA = a.ctA || R.b.best.id, all = libAll(), byId = id => all.find(x => x.id === id);
     if (q.done) return `<p>Answered: <b>${esc(a.obj || 'Book meetings')}</b> · ${esc(a.ch.join(' + '))}${nbcOn ? ' · ' + esc(a.seq) : ''} · ${esc(a.stop.join(', ').toLowerCase() || 'no stop rules')}. Content: ${nbcOn ? `${assetLink(byId(ctN))} for the campaign, ` : ''}${assetLink(byId(ctA))} for the next actions.</p>`;
     const chip = (k, v, multi) => { const on = multi ? a[k].includes(v) : a[k] === v; return `<button class="chip ${on ? 'on' : ''}" aria-pressed="${on}" onclick="App.rqAns('${k}',${js(v)},${multi ? 1 : 0})">${esc(v)}</button>`; };
@@ -584,6 +585,71 @@
     if (q && /^[1-9]$/.test(e.key)) { const opts = q.querySelectorAll('.oq-o .chip, .oq-plan'), o = opts[+e.key - 1]; if (o) { e.preventDefault(); o.click(); } }
     else if (q && e.key === 'Enter') { e.preventDefault(); App.qGo(key, (QSTEP[key] || 0) + 1); }
   });
+  /* ─── Questions, docked above the message box like Claude: question, ‹ 1 of 3 ›, ×, numbered rows, Something else, Skip ─── */
+  let qdActive = null, campPick = null;
+  const qdFresh = {};
+  const qo = (v, label, sub, open) => ({ v, label: label || v, sub: sub || '', open: open || '' });
+  const planSub = (o, ch) => outSteps({ kind: 'NBC', seq: o, ch: ch && ch.length ? ch : ['Email'], ct: '' }).map(s => `Day ${s.day} ${s.ch}`).join(' · ');
+  function oqModel() {
+    const a = outQ.a, kind = outQ.kind, Q = OQ[kind]();
+    const qs = Q.map(([k, l, opts, multi]) => {
+      let O;
+      if (k === 'seq') O = opts.map(o => qo(o, o, planSub(o, a.ch)));
+      else if (k === 'ct') { const r = recContent(kind, a); O = [qo(r.best.t, r.best.t, 'Recommended · ' + r.why, r.best.id)].concat(r.alts.map(x => qo(x.t, x.t, `${x.type} · ${x.metric && x.metric !== '–' ? x.metric : 'approved'}`, x.id))); }
+      else O = opts.map(o => qo(o));
+      const cur = a[k]; (Array.isArray(cur) ? cur : cur ? [cur] : []).forEach(v => { if (!O.some(o => o.v === v)) O.push(qo(v, v, 'Your answer')); });
+      return { k, l: k === 'ct' ? 'Which content goes with it? The AI recommends one' : l, multi: !!multi, opts: O, empty: k === 'sig' && !opts.length ? 'Pick the person first; their strongest signals show here.' : '' };
+    });
+    const need = kind === 'NBC' ? !!(a.obj && (a.seg || []).length && (a.ch || []).length) : !!(a.obj && a.who);
+    return { key: 'oq', title: kind === 'NBC' ? 'Campaign' : 'Next best action', qs, get: k => a[k], set: (k, v, m) => App.outAns(k, v, m), build: 'App.outBuild()', buildLabel: kind === 'NBC' ? 'Build the campaign' : 'Build the action', need, needTxt: kind === 'NBC' ? 'Pick the objective, at least one cohort and a channel' : 'Pick the objective and the person', note: `The AI decides the rest: the message from each person's signal and profile${kind === 'NBC' ? ', who to reach in each account' : ''}, sending in the next window, and stopping on any reply or open deal.` };
+  }
+  function rqModel() {
+    const q = S.routeQ, a = q.a, R = rqRecs(a), nbcOn = q.mode === 'route';
+    const alts = [...new Map(R.n.alts.concat(R.b.alts).map(x => [x.id, x])).values()].filter(x => x.id !== R.b.best.id).slice(0, 3);
+    const qs = [{ k: 'obj', l: 'What is the objective?', opts: withCustom(RQ_OBJ, a.obj).map(o => qo(o)) }, { k: 'ch', l: 'Which channels?', multi: true, opts: withCustom(['Email', 'LinkedIn', 'Phone'], a.ch).map(o => qo(o)) }]
+      .concat(nbcOn ? [{ k: 'seq', l: 'How many steps in the campaign, and when?', opts: ['3 touches over 10 days', '5 touches over 3 weeks', '7 touches over 6 weeks'].map(o => qo(o, o, planSub(o, a.ch))) }] : [])
+      .concat([{ k: 'ctPick', l: 'Which content goes with it? The AI recommends', opts: [qo('rec', "The AI's picks", `${nbcOn ? R.n.best.t + ' for the campaign · ' : ''}${R.b.best.t} for the next actions. ${R.b.why}`, R.b.best.id)].concat(alts.map(x => qo(x.id, x.t, `Use it for everything · ${x.type} · ${x.metric && x.metric !== '–' ? x.metric : 'approved'}`, x.id)), a.note ? [qo(a.note, a.note, 'Your answer')] : []) }]);
+    return { key: 'rq', title: nbcOn ? 'Route and draft' : 'Next best actions', qs, get: k => a[k], set: (k, v, m) => { if (k === 'ctPick') { a.ctPick = v; if (v === 'rec') { a.ctN = ''; a.ctA = ''; } else if (libAll().some(x => x.id === v)) { a.ctN = v; a.ctA = v; } else a.note = v; save(); renderAll(); } else App.rqAns(k, v, m); }, build: 'App.rqGo()', buildLabel: nbcOn ? 'Route and draft' : 'Prepare the next actions', need: !!a.obj, needTxt: 'Pick the objective', note: `The AI decides the rest: the message from each person's signal and profile, who to reach in each account, sending in the next window, and stopping on any reply or open deal.` };
+  }
+  function icqModel() {
+    const q = icpQ, a = q.a, L = [['sell', 'What do you sell, and what problem does it solve?'], ['ind', 'Which industries?', 1], ['geo', 'Where?', 1], ['roles', 'Who buys, and who signs?', 1], ['sig', 'Which signals mean they are ready now?', 1]];
+    return { key: 'icq', title: q.path === 'B' ? `ICP drafted from ${q.url}` : 'Prospecting · ICP', qs: L.map(([k, l, m]) => ({ k, l, multi: !!m, opts: withCustom(ICQ[k], a[k]).map(o => qo(o)) })), get: k => a[k], set: (k, v, m) => App.icpAns(k, v, m), build: 'App.icpBuild()', buildLabel: 'Save the ICP and find leads', need: !!(a.ind.length && a.geo.length && a.roles.length), needTxt: 'Pick industries, where, and who buys', note: 'Existing customers, accounts with an open deal and competitors are always left out.' };
+  }
+  function pickModel() {
+    const opts = CAMPAIGNS.filter(c => c.status !== 'Completed').map(c => qo(c.id, c.name, `${campStatus(c)} · ${campStats(c).total} accounts · they join as a new cohort`)).concat([qo('new', 'A new campaign from these accounts', "Drafted with the AI's defaults; change anything after")]);
+    return { key: 'pick', title: 'Add to campaign', single: true, qs: [{ k: 'camp', l: `Add these ${campPick.n} accounts to which campaign?`, opts }], get: () => '', set: (k, v) => App.pickCampaign(v) };
+  }
+  function qdModel() {
+    if (qdActive === 'pick' && campPick) return pickModel();
+    if (qdActive === 'rq' && S.routeQ && !S.routeQ.done) return rqModel();
+    if (qdActive === 'oq' && outQ) return oqModel();
+    if (qdActive === 'icq' && icpQ) return icqModel();
+    return null;
+  }
+  const qdAns = (M, q) => { const c = M.get(q.k); return Array.isArray(c) ? c.length > 0 : !!c; };
+  const qdAnsText = (M, q) => { const c = M.get(q.k), L = Array.isArray(c) ? c : c ? [c] : []; return L.map(v => (q.opts.find(o => o.v === v) || { label: v }).label).join(', '); };
+  function qdHtml() {
+    const M = qdModel(); if (!M) return '';
+    const n = M.qs.length;
+    if (qdFresh[M.key]) { qdFresh[M.key] = false; const f = M.qs.findIndex(q => !qdAns(M, q)); QSTEP[M.key] = f < 0 ? n : f; }
+    const i = M.single ? 0 : Math.min(QSTEP[M.key] || 0, n);
+    const nav = M.single ? '' : `<span class="qd-nav"><button ${i ? '' : 'disabled'} aria-label="Previous question" onclick="App.qdGo(${i - 1})">${ic('left', 14)}</button><span>${Math.min(i + 1, n)} of ${n}</span><button ${i >= n ? 'disabled' : ''} aria-label="Next question" onclick="App.qdGo(${i + 1})">${ic('right', 14)}</button></span>`;
+    const head = tx => `<div class="qd-h"><b>${tx}</b>${nav}<button class="qd-x" title="Close" aria-label="Close the questions" onclick="App.qdClose()">${ic('x', 15)}</button></div>`;
+    if (i >= n) return `<div class="qd qd-rv" role="dialog" aria-label="${esc(M.title)}: check your answers"><div class="qd-k">${esc(M.title)}</div>${head('Check your answers')}<div class="qd-o">${M.qs.map((q, k) => `<button class="qd-r" onclick="App.qdGo(${k})"><span class="qd-n">${qdAns(M, q) ? ic('check', 13) : k + 1}</span><span class="qd-t"><i>${esc(q.l)}</i><b class="${qdAns(M, q) ? '' : 'qd-none'}">${esc(qdAnsText(M, q) || 'Not answered')}</b></span><span class="qd-ch">Change</span></button>`).join('')}</div>${M.note ? `<div class="qd-note">${ic('spark', 12)} ${esc(M.note)}</div>` : ''}<div class="qd-f"><span>${M.need ? '' : esc(M.needTxt)}</span><button class="btn sm ghost" onclick="App.qdClose()">Cancel</button><button class="btn sm pri" ${M.need ? '' : 'disabled'} onclick="${M.build}">${ic('spark', 13)} ${esc(M.buildLabel)}</button></div></div>`;
+    const q = M.qs[i], cur = M.get(q.k), on = v => Array.isArray(cur) ? cur.includes(v) : cur === v, answered = qdAns(M, q);
+    return `<div class="qd" role="dialog" aria-label="${esc(M.title)} questions"><div class="qd-k">${esc(M.title)}${q.multi ? ' · pick any, then Next' : ''}</div>${head(esc(q.l))}
+      ${q.empty && !q.opts.length ? `<div class="qd-e">${esc(q.empty)}</div>` : ''}
+      <div class="qd-o">${q.opts.map((o, j) => `<button class="qd-r ${on(o.v) ? 'on' : ''}" aria-pressed="${on(o.v)}" onclick="App.qdPick(${j})"><span class="qd-n">${on(o.v) ? ic('check', 13) : j + 1}</span><span class="qd-t"><b>${esc(o.label)}</b>${o.sub ? `<i>${esc(o.sub)}</i>` : ''}</span>${o.open ? `<a class="qd-open" href="#" onclick="event.stopPropagation();App.openAsset('${o.open}');return false">Open</a>` : ''}</button>`).join('')}
+        <div class="qd-r qd-other"><span class="qd-n">${ic('pen', 13)}</span><label class="sr" for="qdOther">Something else</label><input id="qdOther" placeholder="${q.multi ? 'Add something else' : 'Something else'}" onkeydown="if(event.key==='Enter'){event.preventDefault();event.stopPropagation();App.qdOther(this.value)}"><button class="qd-skip" onclick="${M.single ? 'App.qdClose()' : `App.qdGo(${i + 1})`}">${M.single ? 'Cancel' : q.multi && answered ? 'Next' : 'Skip'}</button></div></div></div>`;
+  }
+  document.addEventListener('keydown', e => {
+    const M = qdModel(); if (!M) return; const tg = e.target || {}, inC = tg.id === 'composer';
+    if (tg.id === 'qdOther') return;
+    if (/^(INPUT|TEXTAREA|SELECT)$/.test(tg.tagName || '') && !(inC && !tg.value)) return;
+    const i = M.single ? 0 : Math.min(QSTEP[M.key] || 0, M.qs.length);
+    if (/^[1-9]$/.test(e.key) && i < M.qs.length && M.qs[i].opts[+e.key - 1]) { e.preventDefault(); App.qdPick(+e.key - 1); }
+    else if (e.key === 'Escape') { e.preventDefault(); App.qdClose(); }
+  });
   function renderMsg(m) {
     if (m.who === 'me') return `<div class="msg me"><div class="bub">${esc(m.text)}</div></div>`;
     if (m.who === 'typing') return `<div class="msg"><span class="ai-av">${ic('spark', 14)}</span><div class="bub">${m.step ? `<div class="steps"><div class="st"><span class="typing"><i></i><i></i><i></i></span><span>${m.step}</span></div></div>` : '<span class="typing"><i></i><i></i><i></i></span>'}</div></div>`;
@@ -624,7 +690,7 @@
     const t = TABLES[key]();
     return `<div class="tcard"><div class="tcard-h"><span class="t">${ic('table', 15)} ${esc(t.title)}</span><span class="muted" style="font-size:12px;white-space:nowrap">${t.rows.length} records</span><div class="sp"></div>
         <button class="ic-btn" title="Save as a list" onclick="App.ask('Save as a list')">${ic('savei', 15)}</button><button class="ic-btn" title="Download" onclick="App.toast('Downloads are a placeholder in the mock')">${ic('dl', 15)}</button>
-        <button class="btn sm" onclick="App.ask('Build the campaign')">${ic('plane', 13)} Add to campaign</button><button class="ic-btn" title="Open beside the chat" onclick="App.openArt('${key}')">${ic('expand', 15)}</button></div>
+        <button class="btn sm" onclick="App.addToCampaign()">${ic('plane', 13)} Add to campaign</button><button class="ic-btn" title="Open beside the chat" onclick="App.openArt('${key}')">${ic('expand', 15)}</button></div>
       <div class="tbl-wrap"><table class="tbl"><thead><tr><th></th>${t.cols.slice(0, 4).map(c => `<th>${COL[c][0]}</th>`).join('')}</tr></thead><tbody>${t.rows.slice(0, 6).map((a, i) => `<tr class="row-link" onclick="App.openRecord('${a.id}','overview')"><td class="mono muted">${i + 1}</td>${t.cols.slice(0, 4).map(c => `<td>${COL[c][1](a)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
       ${t.rows.length > 6 ? `<button class="tcard-more" onclick="App.openArt('${key}')">Show all ${t.rows.length} ${ic('expand', 12)}</button>` : ''}</div>${note || ''}`;
   }
@@ -1029,7 +1095,7 @@
       const um = text.match(/\b((?:https?:\/\/)?(?:www\.)?[a-z0-9-]+(?:\.[a-z0-9-]+)*\.(?:com|net|org|io|ai|co|asia|sg|my|example)(?:\/\S*)?)/i), url = um ? um[1].replace(/^https?:\/\//, '').replace(/[.,)]+$/, '') : null;
       if (url || /\b(icp|ideal customer|interview)\b|^(find|get) (me )?(new |some )?(leads|prospects|accounts)\.?$|build (me )?(a )?(lead )?list|^prospect/.test(t)) {
         icpStart(text, url); if (view() !== 'accounts') location.hash = '#accounts'; accSub = 'list';
-        return { kind: 'text', html: url ? `<p>I read <b>${esc(url)}</b>: what you sell, the industries in its case studies and the roles it speaks to, and drafted an ICP. It is open on the right. Change anything, then press <b>Save the ICP and find leads</b>.</p>` : `<p>Let's agree the ICP first, then I'll find the leads. A few questions are open on the right, with what your message already says filled in. If it's easier, paste your website or a product page and I'll draft the ICP from it.</p>` };
+        return { kind: 'text', html: url ? `<p>I read <b>${esc(url)}</b>: what you sell, the industries in its case studies and the roles it speaks to, and drafted an ICP. Check it in the questions below, then I'll save it and find the leads.</p>` : `<p>Let's agree the ICP first, then I'll find the leads. A few questions, just below, with what your message already says filled in. If it's easier, paste your website or a product page and I'll draft the ICP from it.</p>` };
       }
     }
     if (/\b(icp|ideal customer)\b/.test(t)) return icpChat(t, text);
@@ -1039,7 +1105,7 @@
       outKind = (oneAsk || /next best action|\bnba\b|\baction\b|note to|reply from|get a reply|re-?engage|reach out to/.test(t)) && !/campaign/.test(t) ? 'NBA' : 'NBC'; outSel = null; obVal.out = text; campSel = null; campSub = 'list';
       if (view() !== 'campaigns' || !expanded) openMod('campaigns');
       setTimeout(() => App.outStart(text), view() === 'campaigns' ? 0 : 350);
-      return { kind: 'text', html: `I'll build ${outKind === 'NBC' ? 'a campaign (NBC)' : 'a next best action (NBA)'}. First, a few questions: they're open on the right, with what your message already says filled in. Change anything, then press <b>Build</b>.` };
+      return { kind: 'text', html: `I'll build ${outKind === 'NBC' ? 'a campaign (NBC)' : 'a next best action (NBA)'}. First, a few questions, just below. I've filled in what your message already says.` };
     }
     const leadsV = view() === 'accounts' || view() === 'segments';
     const leadAsk = leadsV && /refiner|petro|chemical|\bgas\b|lng|plant|sites?\b|compan|accounts|leads|prospects|leader|heads?\b|manager|director|\bvp\b|engineer|thailand|malaysia|singapore|indonesia|vietnam|philippines/.test(t) && !/score|segment|call first|save|assign|send|route|campaign|draft|why|how |explain|what is/.test(t);
@@ -1047,11 +1113,13 @@
     const findAsk = /\b(find|look for|search|show me|get me|prospects?|who are|build (me )?a list|list of|new leads)\b/.test(t) && !lookAsk && !/replies|analytics|emails sent|meetings|linkedin touches|sequence|pipeline|hot|stuck|campaign|content|asset|signal on|score this|segment/.test(t);
     const hasCrit = /refin|petro|chemical|\bgas\b|lng|power|plant|reliab|operat|maint|procure|engineer|instrument|turnaround|shutdown|expansion|capex|hiring|new (leader|hire|head)|joined|rival|contract|pricing|migrat|historian|staff|tier|thailand|malaysia|singapore|indonesia|vietnam|philippines|australia|india|japan/.test(t);
     let findIcp = (findAsk || leadAsk) ? parseICP(text) || (hasCrit ? parseICP(text + ' singapore') : null) : null;
+    const known = [Object.keys(CITIES).concat(Object.keys(COUNTRIES)).some(k => new RegExp('\\b' + k + '\\b').test(t)), INDUSTRIES.some(([re]) => re.test(t)) || /\blng\b|plant|site/.test(t), FUNCS.some(([re]) => re.test(t)) || /plant (head|manager)|leader|head of|manager|director|\bvp\b/.test(t), !!sigOfPrompt(t)].filter(Boolean).length;
+    if ((findAsk || leadAsk) && findIcp && known < 2) { icpStart(text, null); accSub = 'list'; if (view() !== 'accounts') openMod('accounts'); return { kind: 'text', html: `<p>I need a little more to find the right people. A few questions, just below; I've filled in what your message already says and start where it's missing.</p>` }; }
     if (findIcp && !findIcp.industry) findIcp.industry = 'Refining & petrochemicals';
     if (findIcp && /plant (head|manager)/.test(t)) { findIcp.fn = 'Operations'; findIcp.lvl = 'Head'; }
     if (findIcp && !findIcp.fn) findIcp.fn = 'Reliability';
     if (findIcp) findIcp.sig = sigOfPrompt(t);
-    if (findAsk && !findIcp && !hasCrit) { icpStart(text, null); accSub = 'list'; if (view() !== 'accounts') openMod('accounts'); return { kind: 'text', html: `<p>Who should I look for? I'll build the list from your answers, not from old wins. A few questions are open on the right, one at a time: what you sell, industries, where, size, who buys, the signals that mean they're ready now, and who to leave out.</p><p>Or just tell me in one line, for example: <i>refineries in Thailand with a new reliability leader</i>, or paste your website and I'll draft the ICP.</p>` }; }
+    if (findAsk && !findIcp && !hasCrit) { icpStart(text, null); accSub = 'list'; if (view() !== 'accounts') openMod('accounts'); return { kind: 'text', html: `<p>Who should I look for? I'll build the list from your answers, not from old wins. A few questions, just below, one at a time: what you sell, industries, where, size, who buys, the signals that mean they're ready now, and who to leave out.</p><p>Or just tell me in one line, for example: <i>refineries in Thailand with a new reliability leader</i>, or paste your website and I'll draft the ICP.</p>` }; }
     if (findIcp) {
       const id = 'Q' + (S.genLists.length + 1) + Date.now().toString(36).slice(-4), place = [findIcp.city, findIcp.country !== findIcp.city ? findIcp.country : null].filter(Boolean).join(', ');
       const who = findIcp.lvl === 'Head' ? `Heads of ${findIcp.fn || 'the team'}` : findIcp.lvl === 'Chief' ? `Chief ${findIcp.fn || ''} Officers` : findIcp.lvl === 'VP' ? `VPs of ${findIcp.fn || 'the team'}` : `${findIcp.fn || 'Team'} ${findIcp.lvl.toLowerCase()}s`;
@@ -1126,12 +1194,17 @@
     S.drafts[a.id] = Object.assign(d, { body });
     return { kind: 'nba', id: a.id, note: `Updated the ${esc(a.name)} draft. The checks re-ran and still pass.` };
   }
+  function promotePageChat(c, text) {
+    const v = view(), s = { id: 'p' + Date.now(), title: text.length > 38 ? text.slice(0, 36) + '…' : text, when: 'Now', page: v, thread: c.thread.slice() };
+    S.chats.unshift(s); S.mchat[v] = null; keep = s; S.cur = s.id; save(); return s;
+  }
   function ask(text) {
     if (!text || !text.trim()) return;
     /* From Today, a goal becomes its own chat (named for the goal, with progress); everything else is answered in Today */
     if (!view() && S.cur === 'home' && OBJ_RE.test(text)) { const id = 'n' + Date.now(), nm = text.match(/\d+/); const o = { id, title: objName(text), when: 'Now', obj: { ids: ACCOUNTS.filter(mine).filter(a => a.nba && /auto|ready|review/.test(a.nba.status) && !a.campaign).slice(0, nm ? +nm[0] : 10).map(a => a.id), done: [] }, thread: [] }; o.obj.total = o.obj.ids.length; S.chats.unshift(o); S.cur = id; renderAll(); }
-    const c = chat();
+    let c = chat();
     if (!c) return;
+    if (view() && view() !== 'studio' && c === S.mchat[view()]) c = promotePageChat(c, text);
     if (c.title === 'New chat' && S.chats.includes(c)) { c.title = text.trim().split(/\s+/).slice(0, 6).join(' ').replace(/[?.!,]+$/, ''); c.naming = false; }
     c.thread = c.thread.filter(m => m.who !== 'typing');
     if (c.title === 'New chat') c.title = text.length > 38 ? text.slice(0, 36) + '…' : text;
@@ -1418,7 +1491,7 @@
   /* Result table opened beside the chat */
   function renderArt() {
     const t = TABLES[art]();
-    const cv = frame(`${ic('table', 16)} ${esc(t.title)}`, `${t.rows.length} records`, `<button class="ic-btn" title="Save as a list" onclick="App.ask('Save as a list')">${ic('savei', 16)}</button><button class="ic-btn" title="Download" onclick="App.toast('Downloads are a placeholder in the mock')">${ic('dl', 16)}</button><button class="btn sm pri" onclick="App.ask('Build the campaign')">${ic('plane', 13)} Add to campaign</button>`, true);
+    const cv = frame(`${ic('table', 16)} ${esc(t.title)}`, `${t.rows.length} records`, `<button class="ic-btn" title="Save as a list" onclick="App.ask('Save as a list')">${ic('savei', 16)}</button><button class="ic-btn" title="Download" onclick="App.toast('Downloads are a placeholder in the mock')">${ic('dl', 16)}</button><button class="btn sm pri" onclick="App.addToCampaign()">${ic('plane', 13)} Add to campaign</button>`, true);
     const q = ($('artQ') && $('artQ').value || '').toLowerCase();
     const cols = artMore ? Object.keys(COL).filter(k => !['status'].includes(k) || art === 'ranked') : t.cols;
     const rows = t.rows.filter(a => !q || (a.name + a.contact.name + a.country).toLowerCase().includes(q));
@@ -1456,7 +1529,7 @@
     rows = rows.filter(a => visible(a) && (!q || (a.name + a.contact.name + a.country + a.segment).toLowerCase().includes(q)) && (!ldTier || a.tier === ldTier) && (!ldSeg || a.seg === ldSeg));
     if (ldSort === 'Newest signal') rows = rows.slice().sort((p, r) => (p.whyNow ? p.whyNow.age : 999) - (r.whyNow ? r.whyNow.age : 999)); else if (ldSort === 'Name A–Z') rows = rows.slice().sort((p, r) => p.name.localeCompare(r.name)); else rows = rows.slice().sort((p, r) => r.score - p.score);
     const fs = fsTools('ld', { keys: [['List', 'list', lists.map(x => [x.id === 'all' ? '' : x.id, x.name])], ['Tier', 'tier', [['A', 'Tier A'], ['B', 'Tier B'], ['C', 'Tier C']]], ['Micro-segment', 'seg', SEGMENTS.map(s => [s.id, s.name])]].concat(isMgr ? [['Rep', 'own', REPS.map(r => [r, USERS[r].name])]] : []), val: k => k === 'list' ? (l.id === 'all' ? '' : l.id) : k === 'tier' ? ldTier : k === 'seg' ? ldSeg : k === 'own' ? (ownerF === 'all' ? '' : ownerF) : '', sorts: ['Score', 'Newest signal', 'Name A–Z'], sort: ldSort, q: ldQ, qph: 'Search accounts, people, segments', extra: `<button class="lib-ib ${showProc ? 'on' : ''}" title="How scoring works" aria-label="How scoring works" onclick="App.toggleProc()">${ic('layers', 17)}</button>` });
-    const cv = frame('Leads', `${rows.length} leads${l.id === 'all' ? '' : ' in this list'} · Score = Fit × Timing`, `<button class="btn sm" onclick="App.saveView()">${ic('savei', 13)} Save as a list</button><button class="btn sm pri" onclick="App.ask('Build our ICP and find leads')">${ic('search', 13)} Find leads</button>`);
+    const cv = frame('Leads', `${rows.length} leads${l.id === 'all' ? '' : ' in this list'} · Score = Fit × Timing`, `<button class="btn sm" onclick="App.saveView()">${ic('savei', 13)} Save as a list</button><button class="btn sm pri" onclick="App.focusComposer('Find prospects: ')">${ic('search', 13)} Find leads</button>`);
     cv.innerHTML = `<div class="lib-bar ld-bar"><div class="ld-h"><b>${esc(l.name)}</b><span class="sm muted">${rows.length} leads · sorted by ${esc(ldSort.toLowerCase())}</span></div>${fs.tools}</div>${fs.chips ? `<div class="lib-chips">${fs.chips}</div>` : ''}
       ${l.note ? `<div class="list-note">${esc(l.note)} · saved by ${esc(l.by)} · ${esc(l.when)}<span style="flex:1"></span>${btn('Score this list', 'Score this list')}${btn('Create micro-segments', 'Create micro-segments')}</div>` : ''}
       ${showProc ? scoreProcess(rows.find(a => a.score > 0), true) : ''}
@@ -1554,7 +1627,7 @@
     const accs = ACCOUNTS.filter(a => a.seg === s.id && visible(a)).sort((p, q) => q.score - p.score);
     const cv = frame(`<button class="back-l" onclick="App.openSegment(null)">${ic('left', 14)}</button> ${esc(s.name)} ${modeBadge(s)}`, `${esc(s.trigger)} · ${st.total} accounts${s.fromList ? ' · from a prospect list' : ''}`, c ? `<button class="btn sm pri" onclick="App.goCampaign('${c.id}')">${ic('megaphone', 13)} Open campaign</button>` : `<button class="btn sm" onclick="App.saveSegList('${s.id}')">${ic('savei', 13)} Save as a list</button>`);
     const nrows = segNba(s);
-    cv.innerHTML = `${s.mode !== 'NBC' ? nbaTop(s, nrows) : `<div class="mcards">${[['Accounts', isMgr ? st.total : `${st.mine} of ${st.total}`, isMgr ? 'in this segment' : 'are yours'], ['Waiting on you', st.waiting, 'need a person'], ['Ready to send', st.ahead, 'all five criteria met'], ['Positive rate', s.rate ? s.rate + '%' : '--', `${s.outcomes} outcomes`], ['Message', s.proven, 'from the outcome cache']].map(([k, v, d]) => `<div class="mcard"><div class="k">${k}</div><div class="v">${v}</div><div class="d">${d}</div></div>`).join('')}</div>${c ? `<div class="tv-note" style="margin-top:12px">${ic('megaphone', 13)} This segment runs as one campaign. Each person's steps and delivery are in <a href="#campaigns" onclick="App.goCampaign('${c.id}');return false">${esc(c.name)}</a>.</div>` : ''}`}
+    cv.innerHTML = `${s.mode !== 'NBC' ? nbaTop(s, nrows) : `<div class="mcards">${[['Accounts', isMgr ? st.total : `${st.mine} of ${st.total}`, isMgr ? 'in this segment' : 'are yours'], ['Waiting on you', st.waiting, 'need a person'], ['Ready to send', st.ahead, 'all five criteria met'], ['Positive rate', s.rate ? s.rate + '%' : '--', `${s.outcomes} outcomes`]].map(([k, v, d]) => `<div class="mcard"><div class="k">${k}</div><div class="v">${v}</div><div class="d">${d}</div></div>`).join('')}</div>${c ? `<div class="tv-note" style="margin-top:12px">${ic('megaphone', 13)} This segment runs as one campaign. Each person's steps and delivery are in <a href="#campaigns" onclick="App.goCampaign('${c.id}');return false">${esc(c.name)}</a>.</div>` : ''}`}
       <div class="seg-why"><div><div class="lbl">Why these accounts are together</div><p class="p">${esc(s.why)}</p></div><div><div class="lbl">Message structure</div><p class="p">${esc(s.structure)}</p></div></div>
       <div class="dtabs">${[['accounts', s.mode === 'NBC' ? 'Accounts' : 'Next best actions'], ['activity', 'Activity'], ['replies', 'Replies']].map(([k, lb]) => `<button class="${segTab === k ? 'on' : ''}" onclick="App.setSegTab('${k}')">${lb}</button>`).join('')}${isMgr ? `<span style="margin-left:auto">${ownerSel()}</span>` : ''}</div>
       ${segTab === 'accounts' && s.mode !== 'NBC' ? nbaTable(nrows) : segTab === 'accounts' ? `<div class="card tbl-wrap"><table class="tbl"><thead><tr><th>Person</th><th>Links</th><th>Status</th><th>Company</th><th>Tier · score</th><th>${s.mode === 'NBC' ? 'Signal' : 'Next best action'}</th>${isMgr ? '<th>Owner</th>' : ''}<th>Last activity</th></tr></thead><tbody>
@@ -1591,6 +1664,19 @@
       : `<div class="placeholder-note" style="margin-top:12px"><div><b>Waiting for ${isMgr ? 'you' : first(USERS.pavan.name)} to confirm.</b> ${accs.length} accounts in this micro-segment crossed the threshold (10 or more in 7 days). If nobody confirms in 3 days, the accounts go back to individual next best actions.${isMgr ? `<div style="margin-top:10px"><b>Confirm the format of each touch</b>${c.touches.map((tc, i) => `<div style="display:flex;gap:8px;align-items:center;margin-top:6px;flex-wrap:wrap"><span class="sm" style="min-width:150px">Touch ${i + 1} · day ${tc.day} · ${tc.ch}</span><label class="sr" for="cf${i}">Format</label><select id="cf${i}" class="sel" onchange="App.seqEdit('${c.id}',${i},'fmt',this.value)">${FORMATS[tc.ch].concat(FORMATS[tc.ch].includes(tc.fmt) ? [] : [tc.fmt]).map(x => `<option ${seqOf(c)[i].fmt === x ? 'selected' : ''}>${x}</option>`).join('')}</select></div>`).join('')}</div>` : ''}${isMgr ? ` <button class="btn sm" onclick="App.declineCampaign('${c.id}')">Decline: use next best actions</button>` : ''}</div></div>`;
     return head + `<div class="sec-row" style="margin-top:14px"><div class="lbl">Touch tasks by owner</div></div><div class="card tbl-wrap"><table class="tbl"><thead><tr><th>Account</th><th>Owner</th>${c.touches.map((tc, i) => `<th>Touch ${i + 1} · day ${tc.day} · ${tc.ch}</th>`).join('')}<th></th></tr></thead><tbody>${accs.map(a => `<tr><td class="nm">${esc(a.name)}<div class="sm">${esc(a.contact.name)}</div></td><td class="sm">${esc(first(USERS[a.owner].name))}</td>${c.touches.map((_, i) => { const s = touchState(a, i); return `<td><span class="badge ${cls[s.s]} nodot" title="${esc(s.txt)}">${esc(s.s === 'due' ? 'Due today' : s.s === 'held' ? 'Held' : s.s === 'sent' ? 'Sent' : s.s === 'sched' ? 'Scheduled' : s.s === 'wait' ? 'Waiting' : 'Removed')}</span>${s.s === 'held' || s.s === 'off' || s.s === 'sched' ? `<div class="sm muted" style="max-width:190px">${esc(s.txt)}</div>` : ''}${s.s === 'due' && (a.owner === me.id || isMgr) ? ` <button class="btn sm pri" onclick="App.campSend('${a.id}',${i})">Send</button>` : ''}</td>`; }).join('')}<td>${conf && !(S.creply || {})[a.id] ? `<button class="btn sm" onclick="App.campReply('${a.id}')">Log a reply</button>` : ''}</td></tr>`).join('')}</tbody></table></div>`;
   }
+  /* A campaign runs several cohorts: its micro-segment and any list or segment added to it */
+  const COH_SEED = { c2: [{ name: 'Webinar attendees on rival platforms', src: 'List · uploaded by Daniel', n: 5, at: 'Joined on day 6', sent: 10, total: 15, rep: 1, line: 'You joined our session on running a mixed vendor estate; the contract question comes up there often.' }] };
+  function campCohorts(c) {
+    const s = c.seg ? segOf(c.seg) : null, dv = campDeliv(c), st = campStats(c), steps = seqOf(c).length;
+    return [{ name: s ? s.name : c.name, src: 'Micro-segment · ' + (s ? s.trigger : 'archived'), n: st.total, at: c.launched ? 'Since launch, ' + c.launched : 'Starts when the campaign is confirmed', sent: dv.out, total: dv.total, rep: st.replies, line: s ? `Opens with their own signal: ${s.trigger.toLowerCase()}.` : '', first: true }]
+      .concat(COH_SEED[c.id] || [], ((S.cohorts || {})[c.id] || []).map(x => ({ name: x.name, src: `${x.src} · added ${x.at}`, n: x.n, at: 'Starts at step 1 in the next send window', sent: 0, total: x.n * steps, rep: 0, line: 'Opens with the signal each account was found for.' })));
+  }
+  function cohortsHtml(c) {
+    const L = campCohorts(c);
+    return `<div class="camp-msg-h">${ic('layers', 14)}<div>A campaign can run several cohorts. Each cohort is a micro-segment or a list that joined it; all follow the same steps, and each opens with a line for its own signal. To add one, open a lead list and press <b>Add to campaign</b>.</div></div>
+      <div class="coh-g">${L.map(x => `<div class="coh card"><div class="coh-h"><b>${esc(x.name)}</b>${x.first ? '<span class="badge b-brand nodot">First cohort</span>' : '<span class="badge b-sec nodot">Added</span>'}</div><div class="sm muted">${esc(x.src)}</div>
+        <div class="coh-m"><div><b>${x.n}</b><span>accounts</span></div><div><b>${x.sent} of ${x.total}</b><span>messages sent</span></div><div><b>${x.rep}</b><span>replied</span></div></div>${omBar(x.sent, x.total)}<div class="sm muted">${esc(x.at)}</div>${x.line ? `<div class="coh-l">${ic('edit', 12)} Opening line: ${esc(x.line)}</div>` : ''}</div>`).join('')}</div>`;
+  }
   function renderCampaign() {
     const c = campOf(campSel), st = campStats(c), sq = seqOf(c), s = c.seg ? segOf(c.seg) : null;
     const accs = ACCOUNTS.filter(a => a.campaign === c.id && visible(a));
@@ -1604,17 +1690,17 @@
     const card = (k, v, d, icn) => `<div class="mcard"><div class="k">${icn ? ic(icn, 13) : ''} ${k}</div><div class="v">${v}</div><div class="d">${d}</div></div>`;
     const msgs = `${chans.map(ch => `<span class="chn">${chIc(ch)} ${ch} ×${nCh(ch)}</span>`).join('')}`;
     const own = accs.filter(a => S.pseq[a.id]), pv = acct(campPrev && accs.some(a => a.id === campPrev) ? campPrev : (accs[0] || {}).id);
-    const dv = campDeliv(c), ctab = campTab === 'steps' || campTab === 'msgs' ? 'msgs' : campTab === 'acc' ? 'acc' : 'ov', going = live || S.camp[c.id] === 'Confirmed';
+    const dv = campDeliv(c), ctab = campTab === 'steps' || campTab === 'msgs' ? 'msgs' : campTab === 'acc' ? 'acc' : campTab === 'coh' ? 'coh' : 'ov', cohN = campCohorts(c).length, going = live || S.camp[c.id] === 'Confirmed';
     const R = (k, v, d) => `<div class="cp-r"><span>${k}</span><b>${v}</b>${d ? `<i>${d}</i>` : ''}</div>`;
     const chip = (tc, i) => `<span class="cp-st ${sent(tc) || c.status === 'Completed' ? 'done' : i === dv.nextI ? 'next' : ''}" title="${esc(tc.ch)} · ${esc(tc.fmt)}">${sent(tc) || c.status === 'Completed' ? ic('check', 11) : `<em>${i + 1}</em>`}${chIc(tc.ch)} Day ${tc.day}</span>`;
     cv.innerHTML = `<div class="cp-hero card"><div class="cp-l"><div class="cp-big">${dv.out ? `<b>${dv.out}</b> of ${dv.total} messages sent` : '<b>Nothing sent yet</b>'}</div>${dv.out ? omBar(dv.out, dv.total) : ''}<div class="cp-sub">${esc(dv.txt)}</div><div class="cp-steps">${sq.map(chip).join('')}</div>${todo.length ? `<button class="cp-todo" onclick="App.setCampTab('acc')">${ic('task', 13)} ${todo.length} ${todo.length === 1 ? 'person waits' : 'people wait'} for approval · review</button>` : ''}</div>
       <div class="cp-rs">${R('Accounts', st.total, isMgr ? 'in this campaign' : 'yours')}${R('Replied', dv.out ? pct(st.replies, st.started) : '–', dv.out ? `${st.replies} people` : 'after the first send')}${R('Positive', dv.out ? st.positive : '–', dv.out ? `${pct(st.positive, st.replies)} of replies` : '')}${R('Meetings', dv.out ? st.meetings : '–', dv.out ? 'booked' : '')}</div></div>
-      <div class="dtabs cp-tabs">${[['ov', 'Overview'], ['msgs', `Messages <i>${sq.length}</i>`], ['acc', `Accounts <i>${accs.length}</i>`]].map(([k, l]) => `<button class="${ctab === k ? 'on' : ''}" onclick="App.setCampTab('${k}')">${l}</button>`).join('')}</div>
+      <div class="dtabs cp-tabs">${[['ov', 'Overview'], ['coh', `Cohorts <i>${cohN}</i>`], ['msgs', `Messages <i>${sq.length}</i>`], ['acc', `Accounts <i>${accs.length}</i>`]].map(([k, l]) => `<button class="${ctab === k ? 'on' : ''}" onclick="App.setCampTab('${k}')">${l}</button>`).join('')}</div>
       ${ctab === 'msgs' ? `      <div class="sec-row" style="margin-top:16px"><div class="lbl">Messages · one version for all ${accs.length} accounts</div><div class="sp"></div>${c.status !== 'Completed' ? `<button class="btn sm" onclick="App.seqAdd('${c.id}','Email')">${ic('plus', 12)} Email step</button><button class="btn sm" onclick="App.seqAdd('${c.id}','LinkedIn')">${ic('plus', 12)} LinkedIn step</button>${S.seq[c.id] ? `<button class="btn sm ghost" onclick="App.seqReset('${c.id}')">Reset to the AI draft</button>` : ''}` : ''}</div>
       <div class="camp-msg-h">${ic('spark', 14)}<div>It is signal-based outreach, so every account gets the same message. Change a step here and it applies to all ${accs.length} accounts; each person's first name, company and signal fill in when it goes out. Sent steps are locked.${own.length ? `<div class="camp-own">${own.length} ${own.length === 1 ? 'person has' : 'people have'} their own edits and keep them: ${own.map(a => esc(first(a.contact.name))).join(', ')}. <button class="btn sm ghost" onclick="App.campApplyAll('${c.id}')">Use the campaign version for them too</button></div>` : ''}</div>
         ${accs.length ? `<label class="camp-pv">Preview for <select class="sel" onchange="App.campPrev(this.value)">${accs.map(a => `<option value="${a.id}" ${pv && a.id === pv.id ? 'selected' : ''}>${esc(a.contact.name)} · ${esc(a.name)}</option>`).join('')}</select></label>` : ''}</div>
       <div class="seq">${sq.map((tc, i) => touchEditor(c, tc, i, sq.length) + ((x => x ? `<div class="camp-ct">${ic('doc', 13)} Content in this step: ${assetLink(x)} <span class="muted">· ${esc(x.type)} · ${esc(x.metric !== '–' ? x.metric : 'approved')}</span></div>` : '')(stepAsset(c, tc))) + (pv ? `<div class="camp-pvt"><span>Preview · ${esc(first(pv.contact.name))} at ${esc(pv.name)}</span><p>${esc(personal(tc, pv)).replace(/\n/g, '<br>')}</p></div>` : '')).join('')}</div>
-      <div class="muted" style="font-size:11.5px;margin:10px 0 4px">Explore / exploit: ${esc(c.explore)}</div>` : ctab === 'acc' ? `      <div class="sec-row"><div class="lbl">Accounts in this campaign · ${accs.length}</div><div class="sp"></div>${isMgr ? ownerSel() : ''}${assignAll(accs.map(a => a.id), 'the campaign')}${todo.length ? `<button class="btn sm pri" onclick="App.approveEnrollAll('${c.id}')">Approve all ${todo.length}</button>` : ''}</div>
+      <div class="muted" style="font-size:11.5px;margin:10px 0 4px">Explore / exploit: ${esc(c.explore)}</div>` : ctab === 'coh' ? cohortsHtml(c) : ctab === 'acc' ? `      <div class="sec-row"><div class="lbl">Accounts in this campaign · ${accs.length}</div><div class="sp"></div>${isMgr ? ownerSel() : ''}${assignAll(accs.map(a => a.id), 'the campaign')}${todo.length ? `<button class="btn sm pri" onclick="App.approveEnrollAll('${c.id}')">Approve all ${todo.length}</button>` : ''}</div>
       <div class="card tbl-wrap"><table class="tbl"><thead><tr><th>Person</th><th>Company</th><th>Messages</th><th>Current step</th><th>Status</th>${isMgr ? '<th>Owner</th>' : ''}<th></th></tr></thead><tbody>
         ${accs.map(a => { const done = sq.filter(sent).length, cur = sq[Math.min(done, sq.length - 1)]; return `<tr class="row-link" onclick="App.openRecord('${a.id}','engage')"><td><div style="display:flex;gap:9px;align-items:center">${pAvatar(a)}<div><div class="nm">${esc(a.contact.name)}</div><div class="sm">${esc(a.contact.title)}</div></div></div></td><td>${esc(a.name)}</td><td><div class="chns">${msgs}</div></td><td class="sm">${cur ? `Step ${Math.min(done + 1, sq.length)} of ${sq.length}<div>${cur.ch === 'Email' ? 'Email · ' + esc(cur.fmt) : 'LinkedIn · ' + esc(cur.fmt)}</div>` : '–'}</td><td>${S.enrollOK[a.id] ? '<span class="badge b-pos">Approved</span>' : stateBadge(a.campState)}</td>${isMgr ? `<td>${ownerPick(a)}</td>` : ''}<td style="white-space:nowrap" onclick="event.stopPropagation()">${needsOK(a) ? `<button class="btn sm pri" onclick="App.approveEnroll('${a.id}')">Approve</button> ` : ''}<button class="btn sm" onclick="App.openRecord('${a.id}','engage')">Open</button></td></tr>`; }).join('') || '<tr><td colspan="7" class="empty">None of your accounts are in this campaign.</td></tr>'}</tbody></table></div>` : `${c.blockers.map(b => `<div class="blk ${b.k}" style="margin-top:10px">${ic('alert', 15)}<div class="grow"><b>Blocker</b><span>${esc(b.x)}</span></div></div>`).join('')}${c.id === 'c1' ? campTasks(c, accs) : ''}
       <div class="lbl" style="margin:16px 0 8px">Delivery by step</div>
@@ -2207,7 +2293,7 @@
   const ICX = ['Existing customers (CRM)', 'Accounts with an open deal', 'Competitors and partners'];
   function icpStart(text, url) {
     const tl = text.toLowerCase(), pick = k => ICQ[k].filter(o => ICRE[o] && ICRE[o].test(tl)), one = k => pick(k)[0] || '';
-    QSTEP.icq = 0; icpQ = { path: url ? 'B' : 'A', url, a: url ? { sell: 'Control-system migration', ind: ['Refining', 'Petrochemicals'], geo: ['Singapore', 'Malaysia', 'Thailand'], size: '1,000–5,000 staff', roles: ['Reliability leader', 'Operations manager'], sig: ['Rival contract ending', 'Turnaround announced'], excl: ICX.slice(), note: '' }
+    QSTEP.icq = 0; qdActive = 'icq'; qdFresh.icq = true; icpQ = { path: url ? 'B' : 'A', url, a: url ? { sell: 'Control-system migration', ind: ['Refining', 'Petrochemicals'], geo: ['Singapore', 'Malaysia', 'Thailand'], size: '1,000–5,000 staff', roles: ['Reliability leader', 'Operations manager'], sig: ['Rival contract ending', 'Turnaround announced'], excl: ICX.slice(), note: '' }
       : { sell: one('sell'), ind: pick('ind'), geo: pick('geo'), size: /5,?000\+/.test(tl) ? '5,000+ staff' : /1,?000/.test(tl) ? '1,000–5,000 staff' : '', roles: pick('roles'), sig: pick('sig'), excl: ICX.slice(), note: '' } };
   }
   function icpQCard() {
@@ -2217,7 +2303,7 @@
       ${Q.map(([k, l, opts, multi], i) => `<div class="oq-q" data-k="${k}" data-multi="${multi ? 1 : 0}"><div class="oq-l"><span>${i + 1}</span>${esc(l)}${multi ? ' <i>pick any</i>' : ''}</div><div class="oq-o">${withCustom(opts, a[k]).map(o => { const on = multi ? a[k].includes(o) : a[k] === o; return `<button class="chip ${on ? 'on' : ''}" aria-pressed="${on}" onclick="App.icpAns('${k}',${js(o)},${multi ? 1 : 0})">${esc(o)}</button>`; }).join('')}</div></div>`).join('')}
       <div class="oq-f"><button class="btn sm ghost" onclick="App.icpCancel()">Cancel</button><span class="sm muted">${need ? `Ready: I will save it as ICP v${shared.icps.length + 1} and find the leads` : 'Pick the industries, where, and who buys to go on'}</span><button class="btn sm pri" ${need ? '' : 'disabled'} onclick="App.icpBuild()">${ic('search', 13)} Save the ICP and find leads</button></div></div>`;
   }
-  function leadsHook() { if (segSel) return; const cv = $('cv'); if (cv && !cv.querySelector('.ob')) cv.insertAdjacentHTML('afterbegin', leadsTop()); if (cv && icpQ && view() === 'accounts' && accSub !== 'signals' && !cv.querySelector('.icq')) { const tb = cv.querySelector('.ob-tabs'); if (tb) tb.insertAdjacentHTML('afterend', icpQCard()); } }
+  function leadsHook() { if (segSel) return; const cv = $('cv'); if (cv && !cv.querySelector('.ob')) cv.insertAdjacentHTML('afterbegin', leadsTop()); }
 
   /* Campaigns and NBA: three status cards, the open box with clarifying questions, then every campaign and action */
   let campPrev = null, corpSel = null;
@@ -2265,7 +2351,7 @@
     a = a || {};
     const ch = kind === 'NBC' ? ((a.ch || [])[0] || 'Email') : (a.ch || 'Email'), chK = /linkedin/i.test(ch) ? 'LinkedIn DM' : 'Outbound email', obj = a.obj || '';
     const want = a.cs ? CS_TYPE[a.cs] : /switch|contract/i.test(obj) ? ['PDF one-pager', 'Whitepaper'] : /stall|silence|re-engage/i.test(obj) ? ['Whitepaper', 'Infographic'] : /event|webinar/i.test(obj) ? ['Carousel'] : /leader/i.test(obj) ? ['Infographic'] : ['Infographic', 'PDF one-pager'];
-    const acc = kind === 'NBA' ? accOfWho(a.who) : null, seg = kind === 'NBC' ? a.seg : acc && segOf(acc.seg) ? segOf(acc.seg).name : '';
+    const acc = kind === 'NBA' ? accOfWho(a.who) : null, seg = kind === 'NBC' ? (Array.isArray(a.seg) ? a.seg[0] : a.seg) : acc && segOf(acc.seg) ? segOf(acc.seg).name : '';
     const L = libAll().filter(x => x.st === 'Completed').map(x => ({ x, s: (want.includes(x.type) ? 4 : 0) + (seg && x.seg === seg ? 3 : 0) + (COMBO[x.type] && COMBO[x.type][chK] ? 1 : 0) + libPerf(x) / 20 })).sort((p, q) => q.s - p.s);
     const b = L[0].x, combo = COMBO[b.type] && COMBO[b.type][chK];
     const why = `${b.type}${combo ? ` works as the ${combo} in ${chK === 'LinkedIn DM' ? 'a LinkedIn message' : 'an email'}` : ''}; ${b.metric && b.metric !== '–' ? `it got ${b.metric}` : 'it is approved and not used yet'}${seg && b.seg === seg ? ` in ${seg}` : ''}${want.includes(b.type) && (a.cs || obj) ? `, and ${a.cs ? 'it is the kind of proof you asked for' : `it suits "${obj.toLowerCase()}"`}` : ''}.`;
@@ -2278,7 +2364,7 @@
   }
   const withCustom = (opts, cur) => opts.concat((Array.isArray(cur) ? cur : cur ? [cur] : []).filter(v => v && !opts.includes(v)));
   const OQ = {
-    NBC: () => [['obj', 'What is the objective?', ['Book meetings', 'Win the switch at contract end', 'Re-open stalled deals', 'Event or webinar sign-ups']], ['seg', 'Which micro-segment?', SEGMENTS.slice(0, 5).map(s => s.name)], ['ch', 'Which channels?', ['Email', 'LinkedIn', 'Phone', 'Direct mail'], true], ['seq', 'How many steps, and when?', ['3 touches over 10 days', '5 touches over 3 weeks', '7 touches over 6 weeks']], ['ct', 'Content: what the AI recommends, and why', (r => [r.best.t].concat(r.alts.map(x => x.t)))(recContent('NBC', outQ ? outQ.a : {}))]],
+    NBC: () => [['obj', 'What is the objective?', ['Book meetings', 'Win the switch at contract end', 'Re-open stalled deals', 'Event or webinar sign-ups']], ['seg', 'Which cohorts? Each micro-segment you pick joins the campaign', SEGMENTS.slice(0, 6).map(s => s.name), true], ['ch', 'Which channels?', ['Email', 'LinkedIn', 'Phone', 'Direct mail'], true], ['seq', 'How many steps, and when?', ['3 touches over 10 days', '5 touches over 3 weeks', '7 touches over 6 weeks']], ['ct', 'Content: what the AI recommends, and why', (r => [r.best.t].concat(r.alts.map(x => x.t)))(recContent('NBC', outQ ? outQ.a : {}))]],
     NBA: () => [['obj', 'What should this action achieve?', ['Book a meeting', 'Get a reply', 'Re-engage after silence', 'Introduce us to a new leader']], ['who', 'Who is it for?', nbaRows().sort((p, q) => q.score - p.score).slice(0, 5).map(a => `${a.contact.name} · ${a.name}`)], ['sig', 'Which signal should it lead with?', sigOpts(accOfWho(outQ && outQ.a.who))], ['ch', 'Which channel?', ['Email', 'LinkedIn', 'Phone call']], ['ct', 'Content: what the AI recommends, and why', (r => [r.best.t].concat(r.alts.map(x => x.t)))(recContent('NBA', outQ ? outQ.a : {}))]]
   };
   function outGuess(kind, v) {
@@ -2312,7 +2398,7 @@
     const chs = x => x.ch.map(c => `<span class="ob-ch">${chIc(c)} ${esc(c)}</span>`).join('');
     const table = `<div class="card tbl-wrap"><table class="tbl"><thead><tr><th>Campaign or action</th><th>Messages</th><th>Type</th><th>Channels</th><th>Segment</th><th>Status</th></tr></thead><tbody>${vis.map(x => `<tr class="row-link" onclick="${x.open}"><td><div class="nm">${esc(x.name)}</div><div class="sm">${esc(x.sub)}</div></td><td>${outMeter(x)}</td><td>${kB(x)}</td><td class="sm">${chs(x)}</td><td class="sm">${esc(x.seg || '–')}</td><td>${bPill(x.b)}</td></tr>`).join('') || '<tr><td colspan="6" class="sm muted">Nothing matches these filters.</td></tr>'}</tbody></table></div>`;
     const grid = `<div class="lib-grid">${vis.map(x => `<button class="lc oc" onclick="${x.open}">${outMeter(x)}<div class="lc-b"><div class="oc-h">${kB(x)}${bPill(x.b)}</div><div class="lc-t">${esc(x.name)}</div><div class="lc-m">${esc(x.sub)}</div><div class="oc-c">${chs(x)}</div><div class="lc-f"><span class="sm muted">${esc(x.seg || 'No segment')}</span><span class="sm">${esc(x.res)}</span></div></div></button>`).join('') || '<div class="empty">Nothing matches these filters.</div>'}</div>`;
-    return `${outQ ? `<div class="oq-wrap">${outClarify()}</div>` : ''}<div class="lib" id="outLib"><div class="lib-top"><div class="lib-bar"><div class="lib-tabs">${['All', 'Under review', 'Approved', 'In outreach', 'Completed'].map(s => `<button class="${outTab === s ? 'on' : ''}" onclick="App.outTab('${s}')">${s} <i class="lib-n">${(s === 'All' ? base : base.filter(x => x.b === s)).length}</i></button>`).join('')}</div>
+    return `<div class="lib" id="outLib"><div class="lib-top"><div class="lib-bar"><div class="lib-tabs">${['All', 'Under review', 'Approved', 'In outreach', 'Completed'].map(s => `<button class="${outTab === s ? 'on' : ''}" onclick="App.outTab('${s}')">${s} <i class="lib-n">${(s === 'All' ? base : base.filter(x => x.b === s)).length}</i></button>`).join('')}</div>
       <div class="lib-tools">${outSearch || outF.q ? `<div class="search lib-q">${ic('search', 14)}<input id="outQ" placeholder="Search campaigns and actions" aria-label="Search campaigns and actions" value="${esc(outF.q)}" oninput="App.outPick('q',this.value,true)"></div>` : `<button class="lib-ib" title="Search" aria-label="Search" onclick="App.outSearch()">${ic('search', 17)}</button>`}
         <span class="lib-mw"><button class="lib-ib ${outMenu || chips ? 'on' : ''}" title="Filter and sort" aria-label="Filter and sort" onclick="App.outMenu('${outMenu ? '' : 'root'}')"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="17" x2="14" y2="17"/></svg></button>${outMenuHtml(all)}</span>
         <button class="lib-ib ${outList ? 'on' : ''}" title="${outList ? 'Grid view' : 'List view'}" aria-label="Switch view" onclick="App.outList(${!outList})"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/></svg></button>
@@ -2451,7 +2537,7 @@
       S.chats.unshift({ id, title: 'New chat', naming: true, when: 'Now', thread: [] });
       S.cur = id; ctx = null; art = null; recId = null; thrId = null; expanded = false; chatClosed = false; save(); go(null); setTimeout(() => $('composer') && $('composer').focus(), 0);
     },
-    openChat(id) { backs = []; keep = null; S.cur = id; const oc = S.chats.find(x => x.id === id); art = oc && oc.art ? oc.art : null; recId = null; thrId = null; const c = S.chats.find(x => x.id === id); if (c) setTimeout(() => { c.attn = false; save(); renderNav(); }, 1200); save(); go(null); },
+    openChat(id) { backs = []; keep = null; S.cur = id; const oc = S.chats.find(x => x.id === id); art = oc && oc.art ? oc.art : null; recId = null; thrId = null; const c = S.chats.find(x => x.id === id); if (c) setTimeout(() => { c.attn = false; save(); renderNav(); }, 1200); save(); if (oc && oc.page && MODULES[oc.page]) { keep = oc; expanded = true; go(oc.page); } else go(null); },
     goBack() { const b = backs.pop(); if (!b) return; if (!b.v || !backs.length) keep = null; recId = null; thrId = null; art = null; if (b.v) { campSel = b.campSel; segSel = b.segSel; listSel = b.listSel; expanded = b.v !== 'analytics' && b.v !== 'inbox' && b.v !== 'studio'; location.hash = '#' + b.v; renderAll(); } else { S.cur = b.cur; art = b.art || null; expanded = false; save(); go(null); } },
     closeCanvas() { if (art) art = null; else expanded = false; renderAll(); },
     expand() { art = null; recId = null; thrId = null; expanded = true; renderAll(); },
@@ -2541,7 +2627,7 @@
     star(id) { S.starred[id] = !S.starred[id]; save(); renderAll(); },
     openList(id) { remember('accounts'); listSel = id || 'all'; art = null; recId = null; thrId = null; expanded = true; go('accounts'); },
     saveView() { const name = `My view · ${listSel === 'all' ? 'all accounts' : 'list'} · 27 Oct`; const ids = Array.from(document.querySelectorAll('#cv tbody tr')).length; addList(name, 'Saved view', `${ids} accounts saved from the Accounts view`, ACCOUNTS.filter(mine).map(a => a.id)); listSel = S.lists[0].id; save(); toast('Saved as a list. It\'s a tab now'); renderAll(); },
-    openSegment(id) { remember('segments'); segSel = id; segTab = 'accounts'; art = null; recId = null; thrId = null; expanded = true; go('segments'); },
+    openSegment(id) { const sg0 = id && segOf(id); if (sg0 && sg0.mode === 'NBC' && sg0.campaign) return goCampaign(sg0.campaign); remember('segments'); segSel = id; segTab = 'accounts'; art = null; recId = null; thrId = null; expanded = true; go('segments'); },
     saveSegList(segId) { const s = segOf(segId); addList(s.name + ' · 27 Oct', 'Segment', 'Saved from Segments', ACCOUNTS.filter(a => a.seg === segId).map(a => a.id)); save(); toast('Saved. It\'s a tab in Accounts'); },
     confirmCampaign(id) { S.camp[id] = 'Confirmed'; S.campDay0 = S.campDay0 || {}; S.campDay0[id] = SIM.days || 0; save(); toast('Campaign confirmed. Touch 1 is now a task for each account\'s owner; touches 2 and 3 follow on day 4 and day 9.'); renderAll(); },
     declineCampaign(id) { S.camp[id + 'x'] = me.name; save(); toast('Declined. The accounts go back to their own next best actions.'); renderAll(); },
@@ -2569,6 +2655,18 @@
     libApprove(id) { window.CONTENT_LIB.setSt(id, 'Completed', me.name); toast('Approved. It is in the library and ready for outreach.'); libHook(); },
     setStudioTab(k) { studioTab = 'write'; S.studio.doc = null; if (view() !== 'studio') nav('studio'); else renderAll(); setTimeout(() => App.obFocus('studio'), 80); },
     obIn(k, v) { obVal[k] = v; },
+    qdGo(i) { const M = qdModel(); if (!M) return; QSTEP[M.key] = Math.max(0, Math.min(i, M.qs.length)); renderAll(); },
+    qdPick(j) { const M = qdModel(); if (!M) return; const i = M.single ? 0 : Math.min(QSTEP[M.key] || 0, M.qs.length - 1), q = M.qs[i], o = q.opts[j]; if (!o) return; if (q.multi) { M.set(q.k, o.v, 1); return; } const cur = M.get(q.k); QSTEP[M.key] = i + 1; if (cur === o.v) { renderAll(); return; } M.set(q.k, o.v, 0); renderAll(); },
+    qdOther(v) { v = (v || '').trim(); if (!v) return; const M = qdModel(); if (!M) return; if (M.key === 'pick') return App.pickCampaign('new', v); const i = Math.min(QSTEP[M.key] || 0, M.qs.length - 1), q = M.qs[i]; if (q.multi) { M.set(q.k, v, 1); return; } QSTEP[M.key] = i + 1; M.set(q.k, v, 0); renderAll(); },
+    qdClose() { const k = qdActive; if (k === 'oq') outQ = null; else if (k === 'icq') icpQ = null; else if (k === 'rq') { S.routeQ = null; save(); } else if (k === 'pick') campPick = null; qdActive = null; renderAll(); },
+    addToCampaign() { const ls = listAccounts(); campPick = { n: ls.length, title: listTitle() }; qdActive = 'pick'; renderAll(); },
+    pickCampaign(v, name) {
+      const P = campPick || { n: 0, title: 'this list' }; campPick = null; qdActive = null; const c = chat();
+      if (v === 'new') { const A = { obj: 'Book meetings', seg: [P.title], ch: ['Email', 'LinkedIn'], seq: '5 touches over 3 weeks', stop: ['Stop on any reply', 'Stop if an open deal appears'], per: [] }; A.ct = recContent('NBC', A).best.t; outKind = 'NBC'; outQ = { kind: 'NBC', brief: name ? 'A campaign: ' + name : `A campaign for the list "${P.title}"`, pre: {}, a: A }; App.outBuild(); campSel = null; campSub = 'list'; if (c) { c.thread.push({ who: 'ai', kind: 'text', html: `<p>Drafted a new campaign from the ${P.n} accounts on "${esc(P.title)}" with my defaults: book meetings, email and LinkedIn, 5 touches over 3 weeks, and ${esc(A.ct)} as the content. It waits in Under review; change anything on it before it goes out.</p>` }); save(); } if (view() !== 'campaigns' || !expanded) openMod('campaigns'); renderAll(); return; }
+      const cp = campOf(v); S.cohorts = S.cohorts || {}; (S.cohorts[v] = S.cohorts[v] || []).push({ name: P.title, src: 'List', n: P.n, at: 'today' });
+      if (c) c.thread.push({ who: 'ai', kind: 'text', html: `<p>Added the ${P.n} accounts on "${esc(P.title)}" to <b>${esc(cp.name)}</b> as a new cohort. They start at step 1 in the next send window, with the campaign's messages and an opening line for their own signal.${cp.status === 'Running' ? '' : isMgr ? ' Confirm the campaign to start it.' : ' Daniel confirms the campaign before anything goes out.'}</p><div class="next-row"><button class="btn sm" onclick="App.goCampaign('${cp.id}','coh')">${ic('expand', 12)} Open its cohorts</button></div>` });
+      save(); toast(`Added to ${cp.name} as a new cohort`); renderAll();
+    },
     qOther(key, k, v, multi) { v = (v || '').trim(); if (!v) return; if (key === 'oq') App.outAns(k, v, multi ? 1 : 0); else if (key === 'rq') { if (k === 'ct') { S.routeQ.a.note = v; save(); } else App.rqAns(k, v, multi ? 1 : 0); } else App.icpAns(k, v, multi ? 1 : 0); if (!multi) QSTEP[key] = (QSTEP[key] || 0) + 1; renderAll(); },
     openListNBAs() { const segs = [...new Set(listAccounts().filter(a => a.nba && !a.campaign && a.seg).map(a => a.seg))].filter(id => segOf(id)); if (segs.length === 1) return App.openSegment(segs[0]); sgOnly = segs.length ? segs : null; App.modTab('segments'); },
     sgOnlyClear() { sgOnly = null; renderAll(); },
@@ -2611,12 +2709,12 @@
     icpPick(v) { obIcp = v; obPillK = null; toast(`Searching with ICP version ${v}`); renderAll(); },
     obSend(k) { if (!(obVal[k] || '').trim()) { toast('Describe it first'); return; } if (k === 'out') return App.outStart(obVal[k]); const tx = obText(k); obVal[k] = ''; obAtt[k] = []; ask(tx); },
     outKind(k) { outKind = k; obPillK = null; outQ = null; renderAll(); },
-    outStart(v) { obVal.out = v; const pre = outGuess(outKind, v); const at = obAtt.out || [], sA = at.find(x => /^Segment: /.test(x)), cA = at.find(x => /^Asset: /.test(x)); if (sA) pre.seg = sA.slice(9); if (cA) pre.ct = cA.slice(7); QSTEP.oq = 0; outQ = { kind: outKind, brief: obText('out'), pre, a: Object.assign({ stop: outKind === 'NBC' ? ['Stop on any reply', 'Stop if an open deal appears'] : [], per: [] }, pre, { ch: Array.isArray(pre.ch) ? pre.ch.slice() : pre.ch }) }; if (pre.who) { const acc = accOfWho(pre.who); outQ.a.sig = sigOpts(acc)[0] || ''; } if (outQ.a.ct) outQ.a.ctPicked = true; else outQ.a.ct = recContent(outKind, outQ.a).best.t; renderAll(); setTimeout(() => { const q = document.querySelector('.oq'); if (q) q.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }, 60); },
+    outStart(v) { obVal.out = v; const pre = outGuess(outKind, v); const at = obAtt.out || [], sA = at.find(x => /^Segment: /.test(x)), cA = at.find(x => /^Asset: /.test(x)); if (sA) pre.seg = sA.slice(9); if (cA) pre.ct = cA.slice(7); QSTEP.oq = 0; qdActive = 'oq'; qdFresh.oq = true; outQ = { kind: outKind, brief: obText('out'), pre, a: Object.assign({ stop: outKind === 'NBC' ? ['Stop on any reply', 'Stop if an open deal appears'] : [], per: [] }, pre, { ch: Array.isArray(pre.ch) ? pre.ch.slice() : pre.ch }) }; if (pre.who) { const acc = accOfWho(pre.who); outQ.a.sig = sigOpts(acc)[0] || ''; } if (outQ.kind === 'NBC') outQ.a.seg = Array.isArray(outQ.a.seg) ? outQ.a.seg : outQ.a.seg ? [outQ.a.seg] : []; if (outQ.a.ct) outQ.a.ctPicked = true; else outQ.a.ct = recContent(outKind, outQ.a).best.t; renderAll(); setTimeout(() => { const q = document.querySelector('.oq'); if (q) q.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }, 60); },
     outAns(k, v, mode) { if (!outQ) return; const a = outQ.a; if (mode === 2) { a[k] = v; return; } if (mode === 1) { const L = a[k] || []; a[k] = L.includes(v) ? L.filter(x => x !== v) : L.concat(v); } else a[k] = a[k] === v && k !== 'ct' ? '' : v; if (k === 'ct') a.ctPicked = true; else if (!a.ctPicked && /obj|seg|cs|ch|who/.test(k)) setTimeout(() => { if (outQ && !outQ.a.ctPicked) { outQ.a.ct = recContent(outQ.kind, outQ.a).best.t; renderAll(); } }, 0); if (k === 'who') { const acc = accOfWho(a.who); a.sig = sigOpts(acc)[0] || ''; if (acc && !a.ch) a.ch = acc.nba.channel === 'Phone' ? 'Phone call' : acc.nba.channel; } renderAll(); },
     outCancel() { outQ = null; renderAll(); },
     outBuild() {
       const q = outQ; if (!q) return; const a = q.a, kind = q.kind, Q = OQ[kind]();
-      const g = { id: 'g' + Date.now(), kind, brief: q.brief, obj: a.obj, seg: a.seg || '', who: a.who || '', ch: kind === 'NBC' ? (a.ch || []).slice() : [a.ch || 'Email'], seq: a.seq || (Q.find(x => x[0] === 'seq') || [0, 0, ['', '']])[2][1], when: a.when || 'Next send window', ct: a.ct || Q.find(x => x[0] === 'ct')[2][0], per: (a.per || []).slice(), stop: (a.stop || []).slice(), sig: a.sig || '', note: a.note || '', b: 'Under review', at: 'just now' };
+      const g = { id: 'g' + Date.now(), kind, brief: q.brief, obj: a.obj, seg: Array.isArray(a.seg) ? a.seg.join(' + ') : (a.seg || ''), cohorts: Array.isArray(a.seg) ? a.seg.slice() : [], who: a.who || '', ch: kind === 'NBC' ? (a.ch || []).slice() : [a.ch || 'Email'], seq: a.seq || (Q.find(x => x[0] === 'seq') || [0, 0, ['', '']])[2][1], when: a.when || 'Next send window', ct: a.ct || Q.find(x => x[0] === 'ct')[2][0], per: (a.per || []).slice(), stop: (a.stop || []).slice(), sig: a.sig || '', note: a.note || '', b: 'Under review', at: 'just now' };
       g.name = kind === 'NBC' ? `${g.seg}: ${g.obj.toLowerCase()}` : `${g.ch[0]} to ${g.who.split(' · ')[0]}: ${g.obj.toLowerCase()}`;
       g.why = (r => r.best.t === g.ct ? r.why : 'Chosen by you instead of the recommendation')(recContent(kind, a));
       S.outGen = [g].concat(S.outGen || []); outQ = null; obVal.out = ''; obAtt.out = []; outSel = g.id; save();
@@ -2624,7 +2722,7 @@
     },
     outOpen(id) { outSel = id; renderAll(); },
     outMove(id, b, asked) { const g = (S.outGen || []).find(x => x.id === id); if (!g) return; g.b = b; save(); toast(asked ? 'Sent to Daniel for approval. It stays in Under review until he approves' : b === 'Approved' ? 'Approved. It goes out in the next send window (placeholder)' : 'Outreach started (placeholder: nothing is sent)'); renderAll(); },
-    outEdit(id) { const g = (S.outGen || []).find(x => x.id === id); if (!g) return; outKind = g.kind; outQ = { kind: g.kind, brief: g.brief, pre: {}, a: { obj: g.obj, seg: g.seg, who: g.who, ch: g.kind === 'NBC' ? g.ch.slice() : g.ch[0], seq: g.seq, when: g.when, ct: g.ct, note: g.note, per: (g.per || []).slice(), stop: (g.stop || []).slice(), sig: g.sig } }; obVal.out = g.brief; S.outGen = S.outGen.filter(x => x.id !== id); outSel = null; save(); renderAll(); },
+    outEdit(id) { const g = (S.outGen || []).find(x => x.id === id); if (!g) return; outKind = g.kind; qdActive = 'oq'; QSTEP.oq = 0; outQ = { kind: g.kind, brief: g.brief, pre: {}, a: { obj: g.obj, seg: g.kind === 'NBC' ? (g.cohorts && g.cohorts.length ? g.cohorts.slice() : g.seg ? [g.seg] : []) : g.seg, who: g.who, ch: g.kind === 'NBC' ? g.ch.slice() : g.ch[0], seq: g.seq, when: g.when, ct: g.ct, note: g.note, per: (g.per || []).slice(), stop: (g.stop || []).slice(), sig: g.sig } }; obVal.out = g.brief; S.outGen = S.outGen.filter(x => x.id !== id); outSel = null; save(); renderAll(); },
     outDrop(id) { S.outGen = (S.outGen || []).filter(x => x.id !== id); outSel = null; save(); toast('Discarded'); renderAll(); },
     outTab(s) { outTab = s; renderAll(); },
     outMenu(k) { outMenu = k || null; renderAll(); },
