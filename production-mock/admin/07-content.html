@@ -593,6 +593,44 @@ img.lg{display:block;object-fit:contain;}
 .panel:has(.info){overflow:visible;}
 .panel:has(.info) .panel-hdr{position:relative;z-index:30;}
 .info-p .flow-a{display:none;}
+/* Assets and templates: one library with Content studio */
+.as-sync{padding:11px 14px;margin-bottom:14px;border-radius:var(--rmd,10px);background:var(--brand-lt);font-size:12.5px;line-height:1.5;color:var(--i1)}
+.as-stats{margin-bottom:14px}
+.as-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.as-q,.as-sel{padding:6px 10px;border:1px solid var(--bdk);border-radius:var(--rsm,6px);font-size:12.5px;background:#fff;color:var(--i1)}
+.as-q{width:200px}
+.as-wrap{overflow-x:auto}
+.as-t{width:100%;border-collapse:collapse;font-size:12.5px}
+.as-t th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--i3);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--border);white-space:nowrap}
+.as-t td{padding:10px;border-bottom:1px solid var(--border);vertical-align:top}
+.as-n{display:flex;gap:10px;align-items:flex-start;min-width:240px}
+.as-n b{display:block;font-size:13px;color:var(--i1)}.as-n span:not(.as-ic){font-size:11.5px;color:var(--i3)}
+.as-ic{flex-shrink:0;width:28px;height:28px;border-radius:7px;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:#fff}
+.as-W{background:#7D52A2}.as-I{background:#0094DA}.as-C{background:#FF8820}.as-P{background:#2E7D5A}
+.as-use{display:inline-block;margin:0 4px 4px 0;padding:2px 8px;border-radius:999px;background:var(--s75,#eef0f4);font-size:11px;white-space:nowrap}
+.as-m{white-space:normal;padding-right:14px}.as-src{font-size:12px}
+.as-due{color:#B42318;font-weight:600}.as-due-s{font-size:10.5px;color:#B42318}
+.as-l{font-size:11.5px;color:var(--brand)}
+.as-t{table-layout:fixed;min-width:860px}.as-t th:nth-child(1){width:27%}.as-t th:nth-child(2){width:11%}.as-t th:nth-child(3){width:17%}.as-t th:nth-child(4){width:13%}.as-t th:nth-child(5){width:13%}.as-t th:nth-child(6){width:10%}.as-t th:nth-child(7){width:96px}.as-n{min-width:0}.as-use{white-space:normal}
+.as-act{width:96px}.as-act .btn{display:block;width:100%;margin:0 0 4px;text-align:center}
+.as-t td:nth-child(5){min-width:120px}
+.as-2{display:grid;grid-template-columns:1.3fr 1fr;gap:14px}
+.as-gap{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--border)}
+.as-gap:last-child{border-bottom:0}.as-gap b{display:block;font-size:12.5px;color:var(--i1)}.as-gap span{font-size:11.5px;color:var(--i3)}
+.as-log{display:flex;flex-direction:column;padding:7px 0;border-bottom:1px solid var(--border);font-size:12.5px}.as-log:last-child{border-bottom:0}
+.as-ovt{font-family:var(--fd);font-size:16px;font-weight:700;color:var(--i1)}
+.as-ovf{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+.as-g{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
+.as-drop{padding:16px;border:1.5px dashed var(--bdk);border-radius:var(--rmd,10px);text-align:center;font-size:12px;color:var(--i3);cursor:pointer}
+.as-drop.on{border-color:var(--brand);color:var(--brand);background:var(--brand-lt)}
+.tp-r{display:grid;grid-template-columns:minmax(200px,1fr) minmax(0,2fr) auto;gap:14px;align-items:start;padding:12px 0;border-bottom:1px solid var(--border)}
+.tp-r:last-child{border-bottom:0}.tp-r.off{opacity:.6}
+.tp-n b{font-size:13px;color:var(--i1);margin-right:6px}.tp-n .tag{margin-right:4px}
+.tp-s{display:flex;flex-wrap:wrap;gap:6px}
+.tp-s span{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;background:var(--s75,#eef0f4);font-size:11.5px;color:var(--i2)}
+.tp-s i{font-style:normal;font-weight:700;color:var(--brand);font-size:10.5px}
+.tp-a{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
+@media (max-width:900px){.as-2,.tp-r,.as-g{grid-template-columns:1fr}.tp-a{justify-content:flex-start}}
 </style>
 <script src="../assets/theme.js"></script>
 <link rel="stylesheet" href="admin-shell.css">
@@ -630,6 +668,7 @@ img.lg{display:block;object-fit:contain;}
 <script src="demandai-nba.js"></script>
 <script src="demandai-logos.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="../assets/content-lib.js"></script>
 <script src="demandai-content.js"></script>
 <script>
 function showToast(msg){document.querySelectorAll('.toast').forEach(t=>t.remove());const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2600);}
@@ -697,7 +736,7 @@ function search(fn, ph){ return `<div class="sl-srch"><svg width="12" height="12
 const pill = (cur,id,label) => `<div class="seg-pill ${cur===id?'active':''}" onclick="filt='${id}';renderResults()">${label}</div>`;
 
 /* ═══════════════ CONTENT LIBRARY: the brand pack the drafts follow ═══════════════ */
-let tab = (t => ['guidelines','voice','negative','claims','framework','content','versions'].includes(t) ? t : 'guidelines')(new URLSearchParams(location.search).get('tab')), DRAFT = null, SUGGEST = null;
+let tab = (t => ['guidelines','voice','negative','claims','framework','content','templates','versions'].includes(t) ? t : 'guidelines')(new URLSearchParams(location.search).get('tab')), DRAFT = null, SUGGEST = null;
 const canEdit = () => ['Admin','Sales manager'].includes(getRole());
 const canPublish = () => getRole()==='Admin';
 function me(){ const r = getRole(); return { who: ROLE_PERSON[r] || r, role: r }; }
@@ -725,11 +764,11 @@ function render(){
   const ft = (k,l) => `<div class="ftab ${tab===k?'active':''}" onclick="go('${k}')">${l}${changed.some(c=>SECTION_OF[c]===k)?' <span class="chg-dot" title="Changed, not saved yet"></span>':''}</div>`;
   document.getElementById('mainArea').innerHTML = `
     <div class="topbar"><div class="topbar-l"><span class="tb-title">Content library</span><span class="tb-badge badge-neutral">${esc(DemandAI.brandVersion())}</span></div></div>
-    <div class="ftabs">${[['guidelines','Brand guidelines'],['framework','Messaging frameworks'],['voice','Voice and tone'],['negative','Negative keywords'],['claims','Approved claims'],['content','Content'],['versions','Versions']].map(([k,l])=>ft(k,l)).join('')}</div>
+    <div class="ftabs">${[['guidelines','Brand guidelines'],['framework','Messaging frameworks'],['voice','Voice and tone'],['negative','Negative keywords'],['claims','Approved claims'],['content','Assets'],['templates','Templates'],['versions','Versions']].map(([k,l])=>ft(k,l)).join('')}</div>
     <div class="canvas cl-canvas">
       ${saveBar(live, changed)}
       ${!canEdit() ? `<div style="font-size:12px;color:var(--i3);margin-bottom:14px">View only: the admin and the sales manager maintain the brand pack.</div>` : ''}
-      ${({guidelines:guidelinesTab, framework:frameworkTab, voice:voiceTab, negative:negativeTab, claims:claimsTab, content:contentTab, versions:versionsTab})[tab]()}
+      ${({guidelines:guidelinesTab, framework:frameworkTab, voice:voiceTab, negative:negativeTab, claims:claimsTab, content:assetsTab, templates:templatesTab, versions:versionsTab})[tab]()}
     </div>`;
 }
 const SECTION_OF = { 'Brand guidelines':'guidelines', 'Messaging frameworks':'framework', 'Voice and tone':'voice', 'Negative keywords':'negative', 'Approved claims':'claims' };
@@ -1073,6 +1112,93 @@ const CLAIM_TOPICS = [['Modernisation', /migrat|legacy|moderni[sz]|end of suppor
 function claimFits(text){ const m = CLAIM_TOPICS.filter(([,re])=>re.test(text)).map(([k])=>k); return m.length ? m : SEGS.slice(); }
 /* ─── Content: what Content studio writes, once added to the library. Reps add these to messages. ─── */
 let CTF = null;
+/* ─── Assets: the same library reps use in Content studio. Approve, retire, set a review date, add an asset ─── */
+let ASF = 'All', ASQ = '', ASY = '';
+const AS_TODAY = new Date('29 Oct 2026');
+const AS_SEGS = ['Turnaround season 2027', 'New reliability & operations leaders', 'Rival contract ending', '2027 emissions-reporting deadline', 'Historian & tech-stack change', 'Expansion & capex projects', 'Control-systems hiring surge'];
+const AS_PERS = ['Plant head', 'Operations manager', 'Reliability leader', 'Technical lead (I&C)', 'Procurement'];
+const AS_FMT = { 'Whitepaper': ['Outbound email', 'Newsletter'], 'Infographic': ['Outbound email', 'LinkedIn DM'], 'Carousel': ['LinkedIn post', 'LinkedIn DM'], 'PDF one-pager': ['Outbound email', 'Newsletter'] };
+const asStatus = a => a.st === 'Retired' ? 'Retired' : a.st === 'Completed' && a.inC && a.inC.length ? 'In outreach' : a.st;
+const asDue = a => { if (!a.review || a.st === 'Retired') return false; const d = new Date(a.review); return !isNaN(d) && (d - AS_TODAY) / 864e5 < 35; };
+const asIc = t => ({ 'Whitepaper': 'W', 'Infographic': 'I', 'Carousel': 'C', 'PDF one-pager': 'P' })[t] || '·';
+function assetsTab() {
+  const L = window.CONTENT_LIB; if (!L) return '<div class="cl-intro">The shared library did not load.</div>';
+  const all = L.all(), n = s => all.filter(a => asStatus(a) === s).length, due = all.filter(asDue);
+  const vis = all.filter(a => (ASF === 'All' ? a.st !== 'Retired' : ASF === 'Review due' ? asDue(a) : ASF === 'Completed' ? a.st === 'Completed' : asStatus(a) === ASF) && (!ASY || a.type === ASY) && (!ASQ || (a.t + ' ' + a.seg + ' ' + a.topic + ' ' + a.per).toLowerCase().includes(ASQ.toLowerCase())));
+  const tile = (k, sub, v) => `<a class="stat stat-link ${ASF === k ? 'on' : ''}" href="#" onclick="ASF=ASF==='${k}'?'All':'${k}';render();return false"><div class="stat-lbl">${k}</div><div class="stat-val">${v === undefined ? n(k) : v}</div><div class="stat-sub">${sub}</div></a>`;
+  const tag = s => `<span class="tag ${s === 'Completed' || s === 'In outreach' ? 'tag-green' : s === 'Retired' ? 'tag-grey' : s === 'To approve' ? 'tag-amber' : 'tag-blue'}">${s === 'Completed' ? 'In the library' : esc(s)}</span>`;
+  const act = a => !canEdit() ? '' : `${/To approve|Under review/.test(a.st) ? `<button class="btn btn-primary btn-sm" onclick="asSet('${a.id}','Completed')">Approve</button>` : ''}${a.st === 'Retired' ? `<button class="btn btn-ghost btn-sm" onclick="asSet('${a.id}','Completed')">Restore</button>` : `<button class="btn btn-ghost btn-sm" onclick="asSet('${a.id}','Retired')">Retire</button>`}`;
+  const rows = vis.map(a => `<tr><td><div class="as-n"><span class="as-ic as-${asIc(a.type)}">${asIc(a.type)}</span><div><b>${esc(a.t)}</b><span>${esc(a.type)} · ${esc(a.per)} · ${esc(a.seg)}</span></div></div></td>
+      <td>${tag(asStatus(a))}</td>
+      <td>${a.inC && a.inC.length ? a.inC.map(c => `<span class="as-use">${esc(c)}</span>`).join('') : '<span class="cl-s">Not used yet</span>'}</td>
+      <td class="as-m">${a.metric && a.metric !== '–' ? esc(a.metric) : '<span class="cl-s">–</span>'}</td>
+      <td><div class="as-src">${esc(a.src || 'Content studio')}</div><div class="cl-s">${esc(a.by)} · ${esc(a.created || a.at)}</div></td>
+      <td>${a.review ? `<span class="${asDue(a) ? 'as-due' : ''}">${esc(a.review)}</span>${asDue(a) ? '<div class="as-due-s">Review due</div>' : ''}` : '<span class="cl-s">Not set</span>'}${canEdit() && a.st !== 'Retired' ? `<div><a href="#" class="as-l" onclick="asReview('${a.id}');return false">${a.review ? 'Change' : 'Set a date'}</a></div>` : ''}</td>
+      <td class="as-act">${act(a)}<a class="btn btn-sec btn-sm" href="../app.html#studio" style="text-decoration:none">Open</a></td></tr>`).join('');
+  const gaps = L.gaps(), log = L.log().slice(0, 6);
+  return `<div class="as-sync"><b>One library with Content studio.</b> Assets saved in Content studio appear here; what you approve, retire or add here shows in Content studio and in the AI's content recommendations straight away. Retired assets are never recommended or attached to outreach.</div>
+    <div class="stats as-stats">${tile('To approve', 'waiting for the sales manager or admin')}${tile('Under review', 'brand, claim and fact checks running')}${tile('Completed', 'approved, in the library', all.filter(a => a.st === 'Completed').length)}${tile('In outreach', 'used in live campaigns or actions')}${tile('Review due', 'in the next 5 weeks: re-check the facts', due.length)}</div>
+    ${card(`Assets <span class="cl-s">· ${vis.length}${ASF !== 'All' ? ' · ' + esc(ASF) : ''}</span>`, `<div class="as-tools"><input class="as-q" placeholder="Search assets" value="${esc(ASQ)}" oninput="ASQ=this.value;render();const q=document.querySelector('.as-q');q.focus();q.setSelectionRange(q.value.length,q.value.length)"><select class="as-sel" onchange="ASY=this.value;render()"><option value="">All formats</option>${L.TYPES.map(t => `<option ${ASY === t ? 'selected' : ''}>${t}</option>`).join('')}</select>${canEdit() ? '<button class="btn btn-primary btn-sm" onclick="asAdd()">+ Add an asset</button>' : ''}</div>`,
+      vis.length ? `<div class="as-wrap"><table class="as-t"><thead><tr><th>Asset</th><th>Status</th><th>Used in</th><th>Results</th><th>Source</th><th>Review by</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>` : '<div class="cl-s" style="padding:6px 0">No assets match.</div>')}
+    <div class="as-2">${card('Content gaps <span class="cl-s">· questions the library could not answer</span>', '', `${gaps.map(g => `<div class="as-gap"><div><b>${esc(g[0])}</b><span>Asked ${g[1]} times · ${esc(g[2])}</span></div><a class="btn btn-ghost btn-sm" href="../app.html#studio" style="text-decoration:none">Write it in Content studio</a></div>`).join('')}`)}
+      ${card('Recent changes', '', log.length ? log.map(x => `<div class="as-log"><span>${esc(x.x)}</span><span class="cl-s">${esc(x.who)} · ${esc(x.at)}</span></div>`).join('') : '<div class="cl-s">Nothing changed yet. Approvals, retirements, new assets and template changes are listed here, from both sides.</div>')}</div>`;
+}
+function asSet(id, st) { if (!canEdit()) return; window.CONTENT_LIB.setSt(id, st, me().who); showToast(st === 'Completed' ? 'Approved. It is in the library and in Content studio' : 'Retired. It is no longer recommended or attached to outreach'); render(); }
+function asReview(id) {
+  const a = window.CONTENT_LIB.all().find(x => x.id === id); if (!a) return;
+  overlayHtml(`<div class="as-ovt">Review date</div><div class="cl-s" style="margin:4px 0 12px">On this date the owner re-checks the facts and numbers in "${esc(a.t)}". Until then it can be recommended.</div>
+    <input id="asRd" type="date" style="${field};width:100%"><div class="as-ovf"><button class="btn btn-ghost btn-sm" onclick="closeOverlayHtml()">Cancel</button><button class="btn btn-primary btn-sm" onclick="asReviewSave('${id}')">Save</button></div>`, 420);
+}
+const asFmtDate = v => { if (!v) return ''; const d = new Date(v); return isNaN(d) ? v : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }); };
+function asReviewSave(id) { const v = document.getElementById('asRd').value; if (!v) { showToast('Pick a date'); return; } window.CONTENT_LIB.setReview(id, asFmtDate(v), me().who); closeOverlayHtml(); showToast('Review date saved'); render(); }
+function asAdd() {
+  if (!canEdit()) { showToast('Only the admin or the sales manager can add assets'); return; }
+  const sel = (id, l, L) => `<div>${label(l)}<select id="${id}" style="${field};width:100%">${L.map(x => `<option>${esc(x)}</option>`).join('')}</select></div>`;
+  overlayHtml(`<div class="as-ovt">Add an asset</div><div class="cl-s" style="margin:4px 0 6px">It goes straight into the library that Content studio and the reps use. Add only assets that are already approved for external use.</div>
+    ${label('File')}<div class="as-drop" onclick="this.classList.add('on');this.querySelector('span').textContent='case-study-peer-refinery.pdf · 1.2 MB (placeholder)'"><span>Drop a PDF, image or slides here, or click to choose</span></div>
+    ${label('Title')}<input id="asT" style="${field};width:100%" placeholder="For example: How a peer refinery cut restart delays by a third">
+    <div class="as-g">${sel('asY', 'Format', window.CONTENT_LIB.TYPES)}${sel('asI', 'Industry', ['Refining', 'Petrochemicals', 'Gas processing', 'LNG'])}${sel('asS', 'Micro-segment', AS_SEGS)}${sel('asP', 'Persona', AS_PERS)}${sel('asK', 'Topic type', ['Pain point', 'Initiative', 'Need'])}<div>${label('Topic')}<input id="asTo" style="${field};width:100%" placeholder="For example: Restart delays"></div><div>${label('Review by')}<input id="asR" type="date" style="${field};width:100%"></div></div>
+    <div class="as-ovf"><button class="btn btn-ghost btn-sm" onclick="closeOverlayHtml()">Cancel</button><button class="btn btn-primary btn-sm" onclick="asAddSave()">Add to the library</button></div>`, 620);
+}
+function asAddSave() {
+  const v = id => (document.getElementById(id).value || '').trim(); if (!v('asT')) { showToast('Give it a title'); return; }
+  window.CONTENT_LIB.add({ id: 'a' + Date.now(), t: v('asT'), type: v('asY'), fmt: AS_FMT[v('asY')], ind: v('asI'), seg: v('asS'), per: v('asP'), topicK: v('asK'), topic: v('asTo') || v('asK'), st: 'Completed', by: me().who, at: 'Just now', used: 0, metric: '–', inC: [], usedBy: [], created: 'Today', age: 0, src: 'Added in the admin', review: asFmtDate(v('asR')) }, me().who);
+  closeOverlayHtml(); ASF = 'All'; showToast('Added. It is in Content studio now'); render();
+}
+
+/* ─── Templates: the structure and look of each format. Content studio uses each format's default template ─── */
+const TPL_DESIGNS = ['Vantera Brand v3', 'Field guide', 'Boardroom', 'Night shift', 'Plain paper'];
+function templatesTab() {
+  const L = window.CONTENT_LIB, T = L.templates();
+  return `<div class="as-sync"><b>Templates set the structure and look of each format.</b> Content studio writes every new asset from the default template for its format, in the brand voice and with approved claims. A template changes the sections and the design, never the voice or the claims.</div>
+    ${canEdit() ? '<div style="display:flex;justify-content:flex-end;margin:-4px 0 12px"><button class="btn btn-primary btn-sm" onclick="tplEdit()">+ New template</button></div>' : ''}
+    ${L.TYPES.map(type => { const R = T.filter(x => x.type === type); return card(`${esc(type)} <span class="cl-s">· ${R.length} template${R.length === 1 ? '' : 's'}</span>`, '', R.length ? R.map(x => `<div class="tp-r ${x.st !== 'Active' ? 'off' : ''}">
+        <div class="tp-n"><b>${esc(x.name)}</b>${x.def ? '<span class="tag tag-violet">Default</span>' : ''}<span class="tag ${x.st === 'Active' ? 'tag-green' : x.st === 'Draft' ? 'tag-amber' : 'tag-grey'}">${esc(x.st)}</span><div class="cl-s">${esc(x.design)} · used for ${x.uses} asset${x.uses === 1 ? '' : 's'} · ${esc(x.by)}, ${esc(x.at)}</div></div>
+        <div class="tp-s">${x.sections.map((s, i) => `<span><i>${i + 1}</i>${esc(s)}</span>`).join('')}</div>
+        <div class="tp-a">${canEdit() ? `${!x.def && x.st === 'Active' ? `<button class="btn btn-ghost btn-sm" onclick="tplDefault('${x.id}')">Make default</button>` : ''}<button class="btn btn-ghost btn-sm" onclick="tplEdit('${x.id}')">Edit</button><button class="btn btn-ghost btn-sm" onclick="tplDup('${x.id}')">Duplicate</button><button class="btn btn-ghost btn-sm" onclick="tplToggle('${x.id}')">${x.st === 'Active' ? 'Archive' : 'Activate'}</button>` : ''}</div></div>`).join('') : '<div class="cl-s">No templates yet.</div>'); }).join('')}`;
+}
+const tplL = () => window.CONTENT_LIB.templates().map(x => Object.assign({}, x, { sections: x.sections.slice() }));
+function tplStore(L, msg) { window.CONTENT_LIB.saveTemplates(L, msg, me().who); showToast(msg); render(); }
+function tplDefault(id) { const L = tplL(), t = L.find(x => x.id === id); L.forEach(x => { if (x.type === t.type) x.def = x.id === id; }); tplStore(L, `${t.name} is now the default ${t.type.toLowerCase()} template`); }
+function tplToggle(id) { const L = tplL(), t = L.find(x => x.id === id); t.st = t.st === 'Active' ? 'Archived' : 'Active'; if (t.st !== 'Active' && t.def) { t.def = false; const nx = L.find(x => x.type === t.type && x.st === 'Active' && x.id !== id); if (nx) nx.def = true; } tplStore(L, `${t.name} ${t.st === 'Active' ? 'activated' : 'archived'}`); }
+function tplDup(id) { const L = tplL(), t = L.find(x => x.id === id); L.push(Object.assign({}, t, { id: 't' + Date.now(), name: t.name + ' (copy)', def: false, st: 'Draft', uses: 0, by: me().who, at: 'Today', sections: t.sections.slice() })); tplStore(L, `Duplicated ${t.name} as a draft`); }
+function tplEdit(id) {
+  if (!canEdit()) return; const t = id ? tplL().find(x => x.id === id) : { name: '', type: 'Whitepaper', design: 'Vantera Brand v3', sections: ['Opening', 'Why it matters now', 'Proof', 'Next step'] };
+  overlayHtml(`<div class="as-ovt">${id ? 'Edit template' : 'New template'}</div>
+    ${label('Name')}<input id="tpN" style="${field};width:100%" value="${esc(t.name)}" placeholder="For example: Peer comparison">
+    <div class="as-g"><div>${label('Format')}<select id="tpY" style="${field};width:100%">${window.CONTENT_LIB.TYPES.map(x => `<option ${t.type === x ? 'selected' : ''}>${x}</option>`).join('')}</select></div><div>${label('Design')}<select id="tpD" style="${field};width:100%">${TPL_DESIGNS.map(x => `<option ${t.design === x ? 'selected' : ''}>${x}</option>`).join('')}</select></div></div>
+    ${label('Sections, one per line, in order')}<textarea id="tpS" style="${field};width:100%;min-height:120px">${esc(t.sections.join('\n'))}</textarea>
+    <div class="as-ovf"><button class="btn btn-ghost btn-sm" onclick="closeOverlayHtml()">Cancel</button><button class="btn btn-primary btn-sm" onclick="tplEditSave(${id ? `'${id}'` : 'null'})">${id ? 'Save' : 'Add as a draft'}</button></div>`, 560);
+}
+function tplEditSave(id) {
+  const v = k => document.getElementById(k).value.trim(), secs = v('tpS').split('\n').map(s => s.trim()).filter(Boolean);
+  if (!v('tpN') || !secs.length) { showToast('Give it a name and at least one section'); return; }
+  const L = tplL();
+  if (id) { const t = L.find(x => x.id === id); Object.assign(t, { name: v('tpN'), type: v('tpY'), design: v('tpD'), sections: secs }); }
+  else L.push({ id: 't' + Date.now(), name: v('tpN'), type: v('tpY'), design: v('tpD'), sections: secs, st: 'Draft', def: false, by: me().who, at: 'Today', uses: 0 });
+  closeOverlayHtml(); tplStore(L, id ? `Saved ${v('tpN')}` : `Added ${v('tpN')} as a draft. Activate it to use it`);
+}
+
 function contentTab(){
   const C = window.ContentLink; if(!C) return '<div class="cl-intro">Content studio is not loaded.</div>';
   const all = C.items().slice().sort((a,b)=>b.updated-a.updated), inLib = all.filter(i=>i.status==='Ready'), drafts = all.filter(i=>i.status!=='Ready');
