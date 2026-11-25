@@ -156,6 +156,15 @@ const M = process.argv[2], full = M === 'full-mock', dir = '/home/user/Demand-AI
   await p.evaluate(() => { App.nav(null); App.newChat(); }); await p.waitForTimeout(300); await p.evaluate(() => { const b = [...document.querySelectorAll('.dd-i')].find(x => /Find prospects/.test(x.textContent)); b.click(); }); await p.waitForTimeout(300);
   chk('Find prospects is selected in Start something new and waits for the prompt', /Find prospects/.test(await p.$eval('.cmp-pill', e => e.textContent)) && (await p.inputValue('#composer')) === '' && (await p.$$('#thread .msg.me')).length === 0, 'Chat'); await p.evaluate(() => App.actClear());
   await p.evaluate(() => { document.getElementById('composer').value = ''; App.nav(null); }); await p.waitForTimeout(300);
+  // round 18: ICP interview when no details are given; each cohort's messages come from its micro-segment
+  await p.evaluate(() => { try { App.qdClose(); } catch (e) {} App.nav(null); App.newChat(); }); await p.waitForTimeout(300);
+  await p.evaluate(() => App.ask('Can you help me find an ICP for my newly launched product?')); await p.waitForTimeout(3500);
+  chk('ICP: no details given, so it interviews first (no drafted ICP)', !!(await p.$('.qd')) && /What do you sell/.test(await p.innerText('.qd')) && !/Path B/.test(await p.innerText('#thread')), 'Prospecting › ICP');
+  await p.evaluate(() => { App.icpAns('ind', 'Refining', 1); App.icpAns('geo', 'Thailand', 1); App.icpAns('roles', 'Reliability leader', 1); App.icpBuild(); }); await p.waitForTimeout(5000);
+  chk('ICP: the answers save the ICP and find the prospects', /Saved ICP v\d[\s\S]*found \d+ leads/.test(await p.innerText('#thread')), 'Prospecting › ICP');
+  t = await run(() => App.goCampaign('c2'), 800); await p.evaluate(() => { App.setCampTab('msgs'); App.campCoh('w1'); }); await p.waitForTimeout(300);
+  chk('Cohorts: pick one and see the messages from its micro-segment', /Messages for Webinar attendees/.test(await p.innerText('.cm-card')) && (await p.$$('.cm-ang')).length >= 3, 'Campaigns › cohorts');
+  await p.evaluate(() => { App.campCoh('all'); App.nav(null); }); await p.waitForTimeout(300);
   // round 17: pages start with a fresh chat; cohort switcher scopes the campaign
   await p.evaluate(() => App.nav('accounts')); await p.waitForTimeout(500); await p.evaluate(() => App.ask('Find refineries in Malaysia with a new plant head')); await p.waitForTimeout(5000); await p.evaluate(() => App.nav(null)); await p.waitForTimeout(300); await p.evaluate(() => App.nav('accounts')); await p.waitForTimeout(600);
   chk('A page opens with a fresh chat; the earlier one is in Recent chats', (await p.$$('#thread .msg.me')).length === 0 && /Heads of Operations · Kuala Lumpur/.test(await p.innerText('.side-recent')), 'Chat sessions');
