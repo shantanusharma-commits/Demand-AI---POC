@@ -2048,3 +2048,20 @@ button.coh:hover{border-color:var(--brand-mid);box-shadow:0 0 0 3px var(--brand-
 .cmp-x{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;margin-left:2px;font-style:normal}
 .cmp-x:hover{background:var(--brand);color:#fff}
 @media (max-width:900px){.msg-bar{flex-wrap:wrap}.msg-pv{min-width:0;width:100%}.msg-olr{grid-template-columns:1fr}}
+
+/* Today: the funnel across every campaign and next best action */
+.fn-src{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 14px;border-bottom:1px solid var(--border);font-size:12px;color:var(--i3)}
+.fn-src button{display:inline-flex;align-items:baseline;gap:5px;padding:4px 10px;border:1px solid var(--border);border-radius:999px;background:var(--surf);font:inherit;font-size:12px;color:var(--i2);cursor:pointer}
+.fn-src button b{font-family:var(--fd);font-size:13.5px;font-weight:600;color:var(--i1)}
+.fn-src button:hover{border-color:var(--brand-mid);background:var(--brand-lt)}
+.fn-st{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:1px;background:var(--s75)}
+.fn-s{display:flex;flex-direction:column;align-items:flex-start;gap:3px;padding:12px 14px;background:var(--surf);text-align:left;font:inherit;color:inherit;border:0;cursor:pointer;transition:background var(--fast) var(--ease)}
+.fn-s:hover{background:var(--brand-lt)}
+.fn-l{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--i3)}
+.fn-s b{font-family:var(--fd);font-size:22px;font-weight:600;letter-spacing:-.02em;line-height:1.1;color:var(--i1)}
+.fn-d{font-size:12px;color:var(--i2);line-height:1.35}
+.fn-bar{display:block;width:100%;height:6px;border-radius:999px;background:var(--s75);margin-top:6px;overflow:hidden}
+.fn-bar i{display:block;height:100%;border-radius:999px;background:var(--brand)}
+.fn-s em{font-style:normal;font-size:11.5px;font-weight:600;color:var(--brand)}
+.fn .zt-f b{color:var(--i1)}
+@media (max-width:900px){.fn-st{grid-template-columns:repeat(2,minmax(0,1fr))}}

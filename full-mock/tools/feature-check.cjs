@@ -32,7 +32,7 @@ const M = process.argv[2], full = M === 'full-mock', dir = '/home/user/Demand-AI
   }
   // rep
   await as('sofia'); t = await body();
-  chk('NBA-10 morning queue, confidence label', /Your day/i.test(t) && /confidence: (high|medium)/i.test(t), 'Today');
+  chk('NBA-10 morning queue, confidence label', /Your week/i.test(t) && /Leads generated/i.test(t) && /Leads closed/i.test(t) && /confidence: (high|medium)/i.test(t), 'Today');
   t = await run(() => App.nav('approvals')); t = await run(() => App.expand());
   chk('NBA-09 approval cards, escalations, name-only to rep', /Message verification/i.test(t) && /name-only CRM match/i.test(t), 'Approvals');
   t = await run(() => App.openRecord('juniper', 'overview'));

@@ -61,7 +61,7 @@
     });
   })();
   let notesOpen = false, speech = null, chatClosed = false, dayView = 'day', dayFilt = 'all', daySel = 1;
-  let cuF = 'since', skipOpen = null, listening = false, focusFull = false, anPer = 'week', copOpen = false, pEdit = null, thrId = null, ibCh = 'all', ownerF = 'all', inboxTab = 'all', homeMet = 'team', showProc = false, loadTok = 0, expanded = false, ctx = null, art = null, recId = null, recTab = 'engage', listSel = 'all', campSel = null, campTab = 'enroll', segSel = null, segTab = 'accounts', apprTab = isMgr ? 'needs' : 'todo', apprRep = 'all', scope = isMgr ? 'team' : 'mine', studioTab = 'write', studioType = 'Whitepaper', actOpen = null, artMore = false;
+  let funF = 'month', cuF = 'since', skipOpen = null, listening = false, focusFull = false, anPer = 'week', copOpen = false, pEdit = null, thrId = null, ibCh = 'all', ownerF = 'all', inboxTab = 'all', homeMet = 'team', showProc = false, loadTok = 0, expanded = false, ctx = null, art = null, recId = null, recTab = 'engage', listSel = 'all', campSel = null, campTab = 'enroll', segSel = null, segTab = 'accounts', apprTab = isMgr ? 'needs' : 'todo', apprRep = 'all', scope = isMgr ? 'team' : 'mine', studioTab = 'write', studioType = 'Whitepaper', actOpen = null, artMore = false;
 
   /* ─── Helpers ─── */
   const $ = id => document.getElementById(id);
@@ -861,6 +861,22 @@
       ${blk ? `<div class="zt-warn">${ic('alert', 14)}<span><b>${esc(blk.t)}.</b> ${esc(blk.d)}</span></div>` : ''}
       <div class="zt-f"><span>${mkAI('AI')} done by the AI on its own · ${mkHu('Person')} done by a person · ${mkWait('Needs you')} waiting for you</span><button onclick="App.ask('How much do agents do on their own?')">How much the AI does alone</button></div></div>`;
   }
+  /* The funnel: every campaign and next best action together, leads in to leads closed */
+  const FUN = {
+    week: { l: 'This week', mgr: [312, 104, 37, 9, 2], rep: [78, 26, 9, 2, 1] },
+    month: { l: 'This month', mgr: [1240, 412, 138, 31, 9], rep: [318, 104, 36, 8, 2] },
+    quarter: { l: 'This quarter', mgr: [3480, 1105, 371, 86, 24], rep: [902, 288, 97, 22, 6] },
+  };
+  function funnelTile() {
+    const F = FUN[funF], v = isMgr ? F.mgr : F.rep;
+    const camps = CAMPAIGNS.length + (S.outGen || []).filter(g => g.kind === 'NBC').length, nbas = ACCOUNTS.filter(a => a.nba && mine(a)).length + (S.outGen || []).filter(g => g.kind !== 'NBC').length, segs = SEGMENTS.length;
+    const st = [['Leads generated', 'found and scored by the AI', "App.nav('accounts')"], ['Clicked', 'opened a link or an asset', "App.nav('analytics')"], ['Responded', 'replied on any channel', "App.nav('inbox')"], ['Meetings', 'booked from a reply', "App.nav('inbox')"], ['Leads closed', 'won from this outreach', "App.nav('analytics')"]];
+    const pct = (a, b) => b ? Math.round(a / b * 100) : 0, fmt = n => n.toLocaleString('en-US');
+    return `<div class="zt fn"><div class="zt-h"><b>Funnel · all campaigns and next best actions</b><span class="zseg">${Object.entries(FUN).map(([k, x]) => `<button class="${funF === k ? 'on' : ''}" onclick="App.setFun('${k}')">${x.l}</button>`).join('')}</span></div>
+      <div class="fn-src"><button onclick="App.modTab('campaigns')"><b>${camps}</b> campaigns</button><button onclick="App.modTab('nba')"><b>${nbas}</b> next best actions</button><button onclick="App.openMod('segments')"><b>${segs}</b> micro-segments</button><span>feed the funnel below</span></div>
+      <div class="fn-st">${st.map(([l, d, on], i) => `<button class="fn-s" onclick="${on}"><span class="fn-l">${l}</span><b>${fmt(v[i])}</b><span class="fn-d">${d}</span><span class="fn-bar"><i style="width:${Math.max(3, pct(v[i], v[0]))}%"></i></span>${i ? `<em>${pct(v[i], v[i - 1])}% of ${st[i - 1][0].toLowerCase()}</em>` : '<em>100%</em>'}</button>`).join('')}</div>
+      <div class="zt-f"><span>Lead to close: <b>${(v[4] / v[0] * 100).toFixed(1)}%</b> · response rate <b>${pct(v[2], v[0])}%</b> · every number opens its list</span></div></div>`;
+  }
   function standingTile() {
     const ts = TEAM_STATS, reps = isMgr ? REPS : [me.id], sum = f => reps.reduce((n, r) => n + ts[r][f], 0);
     const meet = sum('meetings'), tgt = sum('target'), sentN = sum('sent'), cap = isMgr ? 160 : 40;
@@ -951,10 +967,10 @@
   function yourDay() {
     const all = dayItems(), items = all.filter(x => dayFilt === 'all' || x.k === dayFilt), cnt = k => all.filter(x => x.k === k).length;
     const kinds = ['Decide', 'Send', 'Reply', 'Review'].filter(cnt);
-    const head = `<div class="yd-h"><div><div class="bsec-t">Your ${dayView === 'day' ? 'day' : 'week'}</div><div class="yd-s">${kinds.map(k => `${cnt(k)} to ${k.toLowerCase()}`).join(' · ')} · placed where you have time, most urgent first</div></div>
+    const head = `<div class="yd-h"><div><div class="bsec-t">Your week</div><div class="yd-s">${kinds.map(k => `${cnt(k)} to ${k.toLowerCase()}`).join(' · ')} · most urgent first</div></div>
       <div class="yd-c"><span class="yd-f">${[['all', `All · ${all.length}`]].concat(kinds.map(k => [k, `${k} · ${cnt(k)}`])).map(([k, l]) => `<button class="${dayFilt === k ? 'on' : ''}" onclick="App.setDay(null,'${k}')">${l}</button>`).join('')}</span>
-      <span class="zseg">${[['day', 'Day'], ['week', 'Week'], ['list', 'List']].map(([k, l]) => `<button class="${dayView === k ? 'on' : ''}" onclick="App.setDay('${k}')">${l}</button>`).join('')}</span></div></div>`;
-    return head + (dayView === 'week' ? weekView(items) : dayView === 'list' ? listView(items) : dayViewH(items));
+</div></div>`;
+    return head + listView(items);
   }
   const yRow = (x, n) => `<div class="yr ${x.k === 'Decide' ? 'dec' : ''}">${n != null ? `<span class="yr-n">${n}</span>` : ''}${ktag(x.k)}<div class="yr-m"><b>${esc(x.t)}</b><span>${esc(x.m)}</span></div><span class="yr-due ${/Today|Overdue/.test(x.due) ? 'now' : ''}">${esc(x.due)}</span><button class="btn sm ${x.k === 'Decide' ? 'pri' : ''}" onclick="${x.go}">${x.btn} ${ic('right', 12)}</button></div>`;
   function meetCard(mt, items) {
@@ -1018,6 +1034,7 @@
     } else {
       t = 'Today'; sb = `Tuesday 27 October · ${isMgr ? 'your team' : 'your accounts'}`;
       body = `${attnChats().length ? `<section class="bsec"><div class="bsec-h">Picking up from your chats</div><div class="zcall-l">${callouts()}</div></section>` : ''}
+        <section class="bsec"><div class="bsec-h">Funnel</div>${funnelTile()}</section>
         <section class="bsec"><div class="bsec-h">Where ${isMgr ? 'the team stands' : 'you stand'}</div>${standingTile()}</section>
         <section class="bsec"><div class="bsec-h">While you were away</div>${noLead(catchupTile())}</section>
         <section class="bsec" id="yourDay">${yourDay()}</section>
@@ -2676,6 +2693,7 @@
     focusFull() { focusFull = !focusFull; renderAll(); },
     toggleNav() { navCol = !navCol; try { localStorage.setItem('dmock_nav', navCol ? '1' : ''); } catch (e) {} document.body.classList.toggle('nav-col', navCol); renderNav(); },
     setCu(k) { cuF = k; renderAll(); },
+    setFun(k) { funF = k; renderAll(); },
     openAppr(tab) { apprTab = tab; art = null; recId = null; thrId = null; expanded = true; go('approvals'); },
     setAuto(k, v) { S.auto[k] = v; save(); toast(`Set to ${v}. Work done this way is marked on every list.`); renderAll(); },
     chatOpen(on) { chatClosed = !on; renderAll(); if (on) setTimeout(() => $('composer') && $('composer').focus(), 0); },
