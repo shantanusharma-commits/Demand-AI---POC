@@ -111,9 +111,10 @@ const M = process.argv[2], full = M === 'full-mock', dir = '/home/user/Demand-AI
   await p.evaluate(() => { App.outAns('obj', 'Win the switch at contract end', 0); }); await p.waitForTimeout(300); await p.evaluate(() => App.qdGo(4)); await p.waitForTimeout(200);
   chk('Content recommendation follows the answers (switch at contract end → a one-pager or whitepaper)', /Recommended · (PDF one-pager|Whitepaper)/.test(await p.$eval('.qd .qd-r .qd-t i', e => e.textContent).catch(() => '')), 'Campaigns and NBA'); await p.evaluate(() => App.outCancel());
   await p.evaluate(() => App.nav('accounts')); await p.waitForTimeout(600); await p.evaluate(() => App.ask('Build our ICP and find leads')); await p.waitForTimeout(2500);
-  chk('ICP interview on Leads, in the dock', !!(await p.$('.qd')) && !(await p.$('.icq')) && (await p.$eval('.qd-nav span', e => e.textContent).catch(() => '')) === '1 of 5' && /What do you sell/.test(await p.$eval('.qd .qd-h b', e => e.textContent).catch(() => '')), 'Leads');
-  await p.evaluate(() => { App.icpAns('ind', 'Refining', 1); App.icpAns('geo', 'Malaysia', 1); App.icpAns('roles', 'Reliability leader', 1); App.icpBuild(); }); await p.waitForTimeout(600);
-  chk('ICP interview saves a new ICP version and finds the leads', /ICP v\d+ leads/.test(await p.$eval('.ld-h b', e => e.textContent).catch(() => '')) && (await p.$$eval('#main .tbl tbody tr', x => x.length)) >= 10, 'Leads');
+  const talk = async xs => { for (const x of xs) { await p.evaluate(x => App.ask(x), x); await p.waitForTimeout(1500); } };
+  chk('ICP interview on Leads is a conversation: open questions, no options', !(await p.$('.qd')) && /What does it do, and what problem does it solve/.test(await body()), 'Leads');
+  await talk(['A control-system migration service for ageing plants', 'Refining', 'Malaysia', '1000 to 5000 staff', 'the reliability leader, and the plant manager signs', 'a planned turnaround', 'current customers', 'confirm', 'find the prospects']); await p.waitForTimeout(1500);
+  chk('ICP interview saves a new ICP version and finds the leads in the same chat', /Saved as ICP v\d+/.test(await body()) && /ICP v\d+ prospects/.test(await p.$eval('.ld-h b', e => e.textContent).catch(() => '')) && (await p.$$eval('#main .tbl tbody tr', x => x.length)) >= 10, 'Leads');
   await p.evaluate(() => App.ask('Our product page is vantera.example/products/migration')); await p.waitForTimeout(2500);
   chk('ICP drafted from a web page, every answer pre-picked for review', /ICP drafted from vantera\.example/i.test(await p.$eval('.qd .qd-k', e => e.textContent).catch(() => '')) && (await p.$$('.qd-rv .qd-r')).length === 5, 'Leads'); await p.evaluate(() => { App.icpCancel(); App.nav(null); }); await p.waitForTimeout(300);
   // round 13: questions before routing; content opens the asset; one question at a time
@@ -131,7 +132,7 @@ const M = process.argv[2], full = M === 'full-mock', dir = '/home/user/Demand-AI
   await p.evaluate(() => { App.nav(null); App.newChat(); }); await p.waitForTimeout(300); await p.evaluate(() => App.ask('Find prospects for refineries in Thailand with a new reliability leader')); await p.waitForTimeout(5000);
   chk('Find prospects builds the list from the prompt (place, industry, role, signal), not lookalikes', /Thailand/.test(await body()) && /new leader in the team/i.test(await body()) && !/last 10 wins · scored/i.test(await body()), 'Chat › prospecting');
   await p.evaluate(() => { App.nav(null); App.newChat(); }); await p.waitForTimeout(300); await p.evaluate(() => App.ask('Find prospects')); await p.waitForTimeout(3000);
-  chk('Find prospects with nothing to go on starts the ICP interview', !!(await p.$('.qd')) && /Who should I look for/.test(await body()), 'Chat › prospecting'); await p.evaluate(() => { App.qdClose(); App.nav(null); }); await p.waitForTimeout(300);
+  chk('Find prospects with nothing to go on starts the ICP interview', !(await p.$('.qd')) && /tell me about the product/i.test(await body()), 'Chat › prospecting'); await p.evaluate(() => { App.qdClose(); App.nav(null); }); await p.waitForTimeout(300);
   // round 15: Other answers; micro-segments in Campaigns and NBA; a list's next best actions open in their micro-segments
   await p.evaluate(() => { App.nav('campaigns'); }); await p.waitForTimeout(600);
   chk('Micro-segments is a tab in Campaigns and NBA', (await p.$$eval('.mod-tabs button', x => x.map(e => e.textContent))).includes('Micro-segments'), 'Campaigns and NBA');
@@ -159,9 +160,13 @@ const M = process.argv[2], full = M === 'full-mock', dir = '/home/user/Demand-AI
   // round 18: ICP interview when no details are given; each cohort's messages come from its micro-segment
   await p.evaluate(() => { try { App.qdClose(); } catch (e) {} App.nav(null); App.newChat(); }); await p.waitForTimeout(300);
   await p.evaluate(() => App.ask('Can you help me find an ICP for my newly launched product?')); await p.waitForTimeout(3500);
-  chk('ICP: no details given, so it interviews first (no drafted ICP)', !!(await p.$('.qd')) && /What do you sell/.test(await p.innerText('.qd')) && !/Path B/.test(await p.innerText('#thread')), 'Prospecting › ICP');
-  await p.evaluate(() => { App.icpAns('ind', 'Refining', 1); App.icpAns('geo', 'Thailand', 1); App.icpAns('roles', 'Reliability leader', 1); App.icpBuild(); }); await p.waitForTimeout(5000);
-  chk('ICP: the answers save the ICP and find the prospects', /Saved ICP v\d[\s\S]*found \d+ leads/.test(await p.innerText('#thread')), 'Prospecting › ICP');
+  chk('ICP: no details given, so it interviews first (open questions, no options, no drafted ICP)', !(await p.$('.qd')) && /What does it do/.test(await p.innerText('#thread')) && !/Path B/.test(await p.innerText('#thread')), 'Prospecting › ICP');
+  await talk(['Continuous emissions monitoring that catches methane leaks early', "I'm not sure"]);
+  chk('ICP: "not sure" gets a proposal to confirm, built from the product', /I'd start with Gas processing and Refining/.test(await p.innerText('#thread')), 'Prospecting › ICP');
+  await talk(['yes', 'Thailand and Malaysia', 'around 500 to 3000 employees', 'the HSE manager has the problem, the plant manager signs', 'new reporting rules and audits', 'none']);
+  chk('ICP: shows the agreed ICP to confirm, then accepts a change in words', /Proposed ICP · from this conversation/i.test(await p.innerText('#thread')) && await (async () => { await talk(['also add Indonesia']); return /Where: Thailand, Malaysia, Indonesia|Where: Malaysia, Thailand, Indonesia/.test(await p.innerText('#thread')); })(), 'Prospecting › ICP');
+  await talk(['looks good, confirm', 'find the prospects for it']); await p.waitForTimeout(2500);
+  chk('ICP: confirmed, then the prospects are found in the same chat', /Saved as ICP v\d+/.test(await p.innerText('#thread')) && /Used ICP v\d+, the one we just agreed/.test(await p.innerText('#thread')), 'Prospecting › ICP');
   t = await run(() => App.goCampaign('c2'), 800); await p.evaluate(() => { App.setCampTab('msgs'); App.campCoh('w1'); }); await p.waitForTimeout(300);
   chk('Cohorts: pick one and see the messages from its micro-segment', /Messages for Webinar attendees/.test(await p.innerText('.cm-card')) && (await p.$$('.cm-ang')).length >= 3, 'Campaigns › cohorts');
   await p.evaluate(() => { App.campCoh('all'); App.nav(null); }); await p.waitForTimeout(300);

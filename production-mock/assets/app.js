@@ -1084,7 +1084,146 @@
   }
   function findCampaign(t) { return /turnaround/.test(t) ? 'c1' : /renewal|rival|contract/.test(t) ? 'c2' : /expansion|capex/.test(t) ? 'c3' : /hiring|surge/.test(t) ? 'c5' : null; }
   function addList(name, kind, note, ids) { const id = 'U' + (S.lists.length + 1); S.lists.unshift({ id, name, kind, by: 'Chat', when: 'Today', note, ids }); return id; }
+  /* ─── ICP interview: a conversation. The AI asks open questions one at a time, builds on each answer,
+     proposes when the user is unsure, shows the ICP to confirm, then finds prospects in the same chat. ─── */
+  const IV_ORDER = ['prod', 'ind', 'geo', 'size', 'roles', 'sig', 'excl'];
+  const IV_X = {
+    ind: [[/refin/, 'Refining'], [/petro|chemical/, 'Petrochemicals'], [/\bgas\b|gas process/, 'Gas processing'], [/\blng\b/, 'LNG'], [/power|utilit|energy/, 'Power and utilities'], [/software|saas|tech/, 'Software'], [/bank|financ|fintech|insur/, 'Financial services'], [/health|hospital|clinic/, 'Healthcare'], [/pharma|life science/, 'Pharmaceuticals'], [/manufactur|factor/, 'Manufacturing'], [/retail|e-?commerce/, 'Retail'], [/logistic|shipping|freight/, 'Logistics'], [/mining|mine/, 'Mining'], [/telecom/, 'Telecommunications'], [/educat|universit|school/, 'Education'], [/food|beverage/, 'Food and beverage'], [/water|wastewater/, 'Water'], [/steel|metal/, 'Metals'], [/cement|construct/, 'Construction materials']],
+    geo: [[/singapore/, 'Singapore'], [/malaysia|kuala/, 'Malaysia'], [/thailand|bangkok/, 'Thailand'], [/indonesia|jakarta/, 'Indonesia'], [/vietnam/, 'Vietnam'], [/philippines|manila/, 'Philippines'], [/australia|sydney|melbourne/, 'Australia'], [/india\b|mumbai|delhi|bangalore/, 'India'], [/japan|tokyo/, 'Japan'], [/korea/, 'South Korea'], [/china/, 'China'], [/middle east|gulf|uae|saudi|qatar/, 'Middle East'], [/europe|\beu\b/, 'Europe'], [/\buk\b|united kingdom|britain/, 'United Kingdom'], [/\bus\b|usa|united states|america/, 'United States'], [/asean|south-?east asia|\bsea\b/, 'Southeast Asia']],
+    roles: [[/plant (head|manager)|site (head|manager)/, 'Plant head'], [/reliab/, 'Reliability leader'], [/operat/, 'Operations manager'], [/i&c|instrument|control engineer|technical/, 'Technical lead (I&C)'], [/procure|purchas|sourcing/, 'Procurement'], [/hse|environment|sustainab|esg|safety/, 'HSE and sustainability lead'], [/maint/, 'Maintenance manager'], [/\bcto\b|chief tech/, 'CTO'], [/\bcfo\b|financ/, 'Finance leader'], [/\bceo\b|founder|owner|managing director/, 'CEO or managing director'], [/\bcoo\b/, 'COO'], [/\bit (team|leader|head|manager|director)\b|\bcio\b|information tech/, 'IT leader'], [/marketing|cmo/, 'Marketing leader'], [/sales|revenue|cro\b/, 'Sales leader'], [/engineer/, 'Engineering manager']],
+    sig: [[/new (leader|hire|head|coo|ceo|cto|manager)|joined|appoint/, 'New leader'], [/turnaround|shutdown|outage plan/, 'Turnaround announced'], [/rival|competitor|contract (end|renew|expir)|renewal/, 'Rival contract ending'], [/expan|capex|new plant|new site|build/, 'Expansion approved'], [/hiring|recruit|job post/, 'Hiring surge'], [/pricing|website visit|demo request/, 'Pricing-page visit'], [/regulat|complian|deadline|audit|reporting rule|mandate/, 'Regulation deadline'], [/fund|raised|investment round/, 'New funding'], [/acqui|merger|m&a/, 'Merger or acquisition'], [/incident|failure|trip|breakdown|leak|fine\b|penalt/, 'Recent incident']],
+    excl: [[/customer/, 'Existing customers (CRM)'], [/open deal|pipeline|in deal/, 'Accounts with an open deal'], [/competitor|partner/, 'Competitors and partners'], [/(under|below|less than|smaller than) ?(\d[\d,]*)/, null]],
+  };
+  const ivVague = s => /^(not sure|no idea|unsure|idk|dunno|any(thing| of them)?|whatever|no preference|you (tell|decide|suggest|choose|pick)|suggest|help)\b|not sure|don.?t know|no idea|you suggest|up to you/.test(s);
+  const ivYes = s => /^(yes|yep|yeah|yup|sure|ok(ay)?|sounds (good|right)|go (with|for) (that|it)|that works|correct|right|fine|perfect|do it|go ahead|agreed|exactly|great)\b/.test(s);
+  const ivList = a => a.length < 2 ? (a[0] || '') : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1];
+  const ivCap = s => s.charAt(0).toUpperCase() + s.slice(1);
+  const ivProdShort = a => { const s = (a.prod || 'your product').replace(/^(it|we|our product|the product)\s+(is|does|helps|lets)\s+/i, '').split(/[.;\n]/)[0].trim(); return s.length > 80 ? s.slice(0, 78).replace(/\s+\S*$/, '') + '…' : s; };
+  const ivKind = a => { const s = ((a.prod || '') + ' ' + (a.ind || []).join(' ')).toLowerCase(); return /emission|carbon|methane|flare|esg|sustainab/.test(s) ? 'emis' : /migrat|control system|dcs|scada|automation/.test(s) ? 'ctrl' : /reliab|predict|asset.health|vibration|maintenance|condition monitor/.test(s) ? 'rel' : /instrument|analy[sz]er|sensor/.test(s) ? 'inst' : /software|saas|platform|app\b|crm|analytics|\bai\b/.test(s) ? 'sw' : 'gen'; };
+  function ivPick(k, text) {
+    const s = text.toLowerCase();
+    if (k === 'size') { const m = s.match(/(\d[\d,.]*)\s*(k\b)?\s*(?:-|–|to)\s*(\d[\d,.]*)\s*(k\b)?/), one = s.match(/(\d[\d,.]*)\s*(k\b)?\s*\+?\s*(staff|employees|people|headcount)?/);
+      if (m) { const f = (n, k2) => Math.round(parseFloat(n.replace(/,/g, '')) * (k2 ? 1000 : 1)).toLocaleString('en-US'); return `${f(m[1], m[2])}–${f(m[3], m[4])} staff`; }
+      if (/mid-?(size|market)|medium/.test(s)) return '300–5,000 staff'; if (/enterprise|large|big/.test(s)) return '5,000+ staff'; if (/small|smb|startup/.test(s)) return 'Under 300 staff';
+      if (one && /staff|employees|people|headcount|\+|over|more than|at least|above/.test(s)) return `${Math.round(parseFloat(one[1].replace(/,/g, '')) * (one[2] ? 1000 : 1)).toLocaleString('en-US')}+ staff`;
+      if (/site|plant/.test(s) && one) return `${one[1]}+ sites`; return ''; }
+    if (k === 'prod') return text.trim().replace(/^(find prospects|build a campaign):\s*/i, '');
+    const hits = []; (IV_X[k] || []).forEach(([re, v]) => { if (k === 'excl' && !v) { const m = s.match(re); if (m) hits.push(`Sites under ${m[2]} staff`); return; } if (re.test(s) && !hits.includes(v)) hits.push(v); });
+    if (k === 'geo' && hits.includes('Southeast Asia')) { const named = hits.filter(x => x !== 'Southeast Asia'); return named.length ? named : ['Singapore', 'Malaysia', 'Thailand', 'Indonesia', 'Vietnam', 'Philippines']; }
+    return hits;
+  }
+  function ivRaw(text) { return text.replace(/^(find prospects|build a campaign):\s*/i, '').split(/,|;|\/|\band\b|\n/).map(x => x.trim().replace(/^(mostly|mainly|probably|maybe|i think|we sell to|in|the)\s+/i, '').replace(/[.!?]+$/, '')).filter(x => x && x.length < 48).slice(0, 4).map(ivCap); }
+  const ivEmpty = (a, k) => Array.isArray(a[k]) ? !a[k].length : !a[k];
+  function ivPropose(a, k) {
+    const kd = ivKind(a), ind0 = (a.ind[0] || 'these').toLowerCase();
+    if (k === 'ind') return { v: { emis: ['Gas processing', 'Refining'], ctrl: ['Refining', 'Petrochemicals'], rel: ['Refining', 'LNG'], inst: ['Petrochemicals', 'Gas processing'], sw: ['Software', 'Financial services'], gen: ['Refining', 'Petrochemicals'] }[kd], why: { emis: 'where emissions reporting is tightest', ctrl: 'where ageing control systems are most common', rel: 'where unplanned downtime costs the most', inst: 'where analyser fleets are largest', sw: 'where teams adopt new tools fastest', gen: 'where our current accounts are' }[kd] };
+    if (k === 'geo') return { v: ['Singapore', 'Malaysia', 'Thailand'], why: 'where the team already sells and can support customers' };
+    if (k === 'size') return { v: kd === 'sw' ? '200–2,000 staff' : '1,000–5,000 staff', why: 'big enough to feel the problem, small enough to decide quickly on something new' };
+    if (k === 'roles') return { v: { emis: ['HSE and sustainability lead', 'Plant head'], ctrl: ['Technical lead (I&C)', 'Plant head'], rel: ['Reliability leader', 'Operations manager'], inst: ['Technical lead (I&C)', 'Maintenance manager'], sw: ['IT leader', 'COO'], gen: ['Operations manager', 'Plant head'] }[kd], why: `the person who lives with the problem and the one who usually signs at ${ind0} companies` };
+    if (k === 'sig') return { v: { emis: ['Regulation deadline', 'Expansion approved'], ctrl: ['Rival contract ending', 'Turnaround announced'], rel: ['Turnaround announced', 'Recent incident'], inst: ['Expansion approved', 'Turnaround announced'], sw: ['New leader', 'New funding'], gen: ['New leader', 'Expansion approved'] }[kd], why: 'the moments buyers of something like this usually act' };
+    return { v: ICX.slice(), why: 'the usual exclusions' };
+  }
+  function ivQuestion(a, k, lead) {
+    const ps = ivProdShort(a), kd = ivKind(a), ind0 = (a.ind[0] || 'a target').toLowerCase();
+    const Q = {
+      prod: `${lead ? '' : ''}First, tell me about the product. What does it do, and what problem does it solve for the customer?`,
+      ind: `Who feels that problem most? Tell me the industries or the kinds of company you have in mind.`,
+      geo: `Where should we look? Name the countries or regions you can sell into and support.`,
+      size: `How big does a company need to be to buy this? A rough staff count, revenue or number of sites is enough.`,
+      roles: `Inside ${/^[aeiou]/.test(ind0) ? 'an' : 'a'} ${ind0} company, who lives with the problem day to day, and who signs off the purchase?`,
+      sig: `What usually happens at a company just before it needs ${ps.length > 40 ? 'something like this' : ps.charAt(0).toLowerCase() + ps.slice(1).replace(/[.…]+$/, '')}? That's what I'll watch for as the sign they're ready now.${kd === 'emis' ? " With emissions it's often a new reporting rule or an audit; is that what you see, or something else?" : kd === 'ctrl' ? " For control systems it's often a vendor contract coming up or a planned shutdown; does that match?" : kd === 'rel' ? " For reliability it's often a planned turnaround or a recent unplanned trip; does that match?" : ''}`,
+      excl: `Last one: is there anyone I should leave out of the search?`,
+    };
+    return Q[k];
+  }
+  function ivAck(a, k) {
+    if (k === 'prod') return `Got it: <b>${esc(ivProdShort(a).replace(/[.…]+$/, ''))}</b>.`;
+    if (k === 'size') return `${esc(a.size)}, noted.`;
+    if (k === 'excl') return a.excl.length ? `I'll leave out ${esc(ivList(a.excl).toLowerCase().replace('(crm)', '(CRM)'))}.` : `No exclusions beyond the usual: I'll still skip your current customers.`;
+    return `${esc(ivList(a[k]))}, noted.`;
+  }
+  function ivCrit(a) {
+    return [a.prod ? 'Sells: ' + ivProdShort(a) : null, a.ind.length ? 'Industries: ' + a.ind.join(', ') : null, a.geo.length ? 'Where: ' + a.geo.join(', ') : null, a.size ? 'Size: ' + a.size : null, a.roles.length ? 'Who buys: ' + a.roles.join(', ') : null, a.sig.length ? 'Ready now when: ' + a.sig.join(', ').toLowerCase() : null, a.excl.length ? 'Leave out: ' + a.excl.join(', ').toLowerCase().replace('(crm)', '(CRM)') : null].filter(Boolean);
+  }
+  function ivCard(a) {
+    return `<p>Here's the ICP from what you told me. Nothing is searched until you confirm it.</p>${icpCard(ivCrit(a), 'Proposed ICP · from this conversation', `<button class="btn sm pri" onclick="App.ask('Confirm the ICP')">${ic('check', 13)} Confirm the ICP</button><span class="sm muted" style="margin-left:6px">or tell me what to change, in your own words</span>`)}`;
+  }
+  /* fill other fields the answer also mentions (e.g. "refineries in Thailand" answers where too) */
+  const IV_LBL = { ind: 'industries', geo: 'where', roles: 'who buys', sig: 'buying signals', size: 'size' };
+  function ivSpill(a, text, except) { const got = []; (except === 'prod' ? ['ind', 'geo'] : ['ind', 'geo', 'roles', 'sig']).forEach(k => { if (k !== except && ivEmpty(a, k)) { const h = ivPick(k, text); if (h.length) { a[k] = h; got.push(`${IV_LBL[k]}: ${ivList(h)}`); } } }); if (except !== 'size' && !a.size) { const z = ivPick('size', text); if (z && /staff|employ|people|size|sites|plants/.test(text.toLowerCase())) { a.size = z; got.push('size: ' + z); } } return got; }
+  const ivAlso = got => got.length ? ` I've also noted ${esc(got.join('; '))}.` : '';
+  function ivNext(I, pre) {
+    const a = I.a, k = IV_ORDER.find(x => ivEmpty(a, x) && !(I.skip || []).includes(x));
+    if (!k) { I.ask = 'confirm'; return { kind: 'text', html: `${pre ? `<p>${pre}</p>` : ''}${ivCard(a)}` }; }
+    I.ask = k; return { kind: 'text', html: `${pre ? `<p>${pre}</p>` : ''}<p>${esc(ivQuestion(a, k))}</p>` };
+  }
+  function icpBegin(text) {
+    const c = chat(); if (!c) return null;
+    const s = text.toLowerCase(), a = { prod: '', ind: [], geo: [], size: '', roles: [], sig: [], excl: [] };
+    ivSpill(a, text, null);
+    const launch = /new(ly)?\s+(launched\s+)?products?|launch/.test(s);
+    c.icpI = { a, ask: null, skip: [], pend: null, launch };
+    const got = ivCrit(a).length;
+    const intro = `Let's build the ICP together first; then I'll use it to find the prospects. ${launch ? 'A newly launched product has no wins to learn from yet, so your answers set it. ' : ''}I'll ask a few short questions, one at a time. Answer in your own words; say "not sure" and I'll suggest a starting point.${got ? ` From your message I already have ${esc(ivList(ivCrit(a).map(x => x.split(':')[0].toLowerCase())))}.` : ''}`;
+    return ivNext(c.icpI, intro);
+  }
+  function icpTalk(c, text) {
+    const I = c.icpI, a = I.a, s = text.toLowerCase().replace(/^(find prospects|build a campaign):\s*/, '').trim();
+    if (/^(stop|cancel|never ?mind|forget it|quit)\b/.test(s)) { delete c.icpI; return { kind: 'text', html: 'Stopped the ICP interview. Nothing was saved.' }; }
+    if (/\b[a-z0-9-]+\.(com|net|org|io|ai|co|asia|sg|my|example)(\/\S*)?\b/.test(s) && I.ask !== 'done') { delete c.icpI; return null; } /* a web page: draft from it instead */
+    if (I.ask === 'done') {
+      if (/\b(find|generate|search|look for|get|build|pull|run)\b.*\b(prospects?|leads?|list|accounts|companies|people)\b|^(yes|yep|sure|ok(ay)?|go ahead|do it|please)\b|find (them|those)|prospects? for (this|the|my) icp/.test(s)) return icpProspects(c);
+      return null;
+    }
+    if (I.ask === 'confirm') {
+      const change = /\b(add|remove|drop|without|instead|change|replace|only|just|also|not|exclude|include|swap|make it)\b/.test(s);
+      if (!change && /confirm|looks good|look good|that'?s (it|right|good)|save( it)?|perfect|approve|^(yes|yep|ok(ay)?|correct|great|good)\b/.test(s)) {
+        shared.icps.forEach(x => { if (x.status === 'In use') x.status = 'Superseded'; });
+        const v = shared.icps.length + 1; shared.icps.push({ v, crit: ivCrit(a), path: 'From the ICP interview (path A)', by: me.name, at: 'Today', status: 'In use' }); saveShared();
+        I.ask = 'done'; I.v = v;
+        return { kind: 'text', html: `<p>Saved as <b>ICP v${v}</b>. It's in the ICP library, and every new list starts from it.</p><p>Whenever you're ready, ask me to find the prospects for it, right here in this chat.</p><div class="next-row"><button class="btn sm pri" onclick="App.ask('Find prospects for this ICP')">${ic('users', 13)} Find prospects for this ICP</button></div>` };
+      }
+      let hit = false; const rm = /\b(remove|drop|without|not|exclude)\b/.test(s), only = /\b(only|just|instead|replace|change .* to|make it|swap)\b/.test(s);
+      ['ind', 'geo', 'roles', 'sig'].forEach(k => { const h = ivPick(k, text); if (!h.length) return; hit = true; a[k] = rm ? a[k].filter(x => !h.includes(x)) : only ? h : a[k].concat(h.filter(x => !a[k].includes(x))); });
+      const z = ivPick('size', text); if (z) { a.size = z; hit = true; }
+      if (/product|sell/.test(s) && /:/.test(text)) { a.prod = text.split(':').slice(1).join(':').trim(); hit = true; }
+      return hit ? { kind: 'text', html: `<p>Updated.</p>${ivCard(a)}` } : { kind: 'text', html: '<p>Which part should change? Tell me in your own words, for example the region, the company size or who buys, and I will update the ICP.</p>' };
+    }
+    const k = I.ask;
+    if (I.pend && I.pend.k === k) {
+      const P = I.pend; I.pend = null;
+      if (ivYes(s) || ivVague(s)) { a[k] = P.v; return ivNext(I, `Going with ${esc(Array.isArray(P.v) ? ivList(P.v) : P.v)}.`); }
+    }
+    if (/^(skip|pass|next|no idea, skip)\b/.test(s)) { I.skip.push(k); return ivNext(I, 'Skipped; we can add it later.'); }
+    if (k !== 'prod' && ivVague(s)) { const P = ivPropose(a, k); I.pend = { k, v: P.v }; return { kind: 'text', html: `<p>No problem. From what you've told me, I'd start with <b>${esc(Array.isArray(P.v) ? ivList(P.v) : P.v)}</b>: ${esc(P.why)}. Shall I go with that, or would you change it?</p>` }; }
+    if (k === 'excl') { const h = ivPick('excl', text); a.excl = /^(no|none|nobody|nothing|no one|not really)\b/.test(s) ? ICX.slice(0, 1) : h.length ? h : ivRaw(text); if (!a.excl.length) a.excl = ICX.slice(0, 1); return ivNext(I, ivAck(a, 'excl')); }
+    if (k === 'size') { const z = ivPick('size', text); if (!z) { const P = ivPropose(a, 'size'); I.pend = { k, v: P.v }; return { kind: 'text', html: `<p>I couldn't read a size from that. I'd suggest <b>${esc(P.v)}</b>: ${esc(P.why)}. Shall I go with that, or give me a rough number?</p>` }; } a.size = z; const g2 = ivSpill(a, text, 'size'); return ivNext(I, ivAck(a, 'size') + ivAlso(g2)); }
+    if (k === 'prod') { if (ivVague(s) || s.length < 4) return { kind: 'text', html: '<p>Even a sentence helps: what does it do, and who is it for? For example, what a customer could stop worrying about once they have it.</p>' }; a.prod = ivPick('prod', text); const g2 = ivSpill(a, text, 'prod'); return ivNext(I, ivAck(a, 'prod') + ivAlso(g2)); }
+    const h = ivPick(k, text); a[k] = h.length ? h : ivRaw(text);
+    if (!a[k].length) return { kind: 'text', html: `<p>Sorry, I didn't catch that. ${esc(ivQuestion(a, k))}</p>` };
+    const g2 = ivSpill(a, text, k); return ivNext(I, ivAck(a, k) + ivAlso(g2));
+  }
+  function icpProspects(c) {
+    const I = c.icpI, a = I.a, s0 = (a.ind.join(' ') + ' ' + (a.prod || '')).toLowerCase();
+    const industry = /refin|petro|chemical|\bgas\b|lng/.test(s0) ? 'Refining & petrochemicals' : /power|energy|utilit/.test(s0) ? 'Energy' : /financ|bank|insur/.test(s0) ? 'Financial services' : /health|pharma/.test(s0) ? 'Healthcare' : /manufactur|metal|cement/.test(s0) ? 'Manufacturing' : /retail/.test(s0) ? 'Retail' : /logistic/.test(s0) ? 'Logistics' : /telecom/.test(s0) ? 'Telecommunications' : /educat/.test(s0) ? 'Education' : /software|saas|tech/.test(s0) ? 'Technology' : 'Refining & petrochemicals';
+    const g0 = (a.geo[0] || 'Singapore').toLowerCase(), loc = CITIES[g0] || COUNTRIES[g0] || [a.geo[0] || 'Singapore', a.geo[0] || 'Singapore'], r0 = a.roles[0] || 'Operations manager';
+    const fn = /Reliab/.test(r0) ? 'Reliability' : /Operat|Plant|COO/.test(r0) ? 'Operations' : /Technical|Engineer|CTO/.test(r0) ? 'Engineering' : /HSE|sustain/i.test(r0) ? 'Sustainability' : /Maint/.test(r0) ? 'Maintenance' : /IT /.test(r0 + ' ') ? 'IT' : /Finance/.test(r0) ? 'Finance' : /Marketing/.test(r0) ? 'Marketing' : /Sales/.test(r0) ? 'Sales' : /Procure/.test(r0) ? 'Procurement' : 'Operations';
+    const lvl = /Plant head|leader|lead\b|CEO|COO|CTO/.test(r0) ? 'Head' : 'Manager';
+    const icp = { city: loc[0], country: loc[1], industry, fn, lvl, sig: sigOfPrompt(a.sig.join(' ').toLowerCase()) };
+    const id = 'Q' + (S.genLists.length + 1) + Date.now().toString(36).slice(-4), v = I.v || icpNow().v;
+    const g = { id, q: `ICP v${v}: ${ivCrit(a).slice(0, 4).join(' · ')}`, icp, owner: me.id, title: `ICP v${v} prospects · ${a.ind.slice(0, 2).join(' & ') || industry} · ${a.geo.slice(0, 2).join(', ') || loc[1]}` };
+    S.genLists.push(g); genList(g); listSel = id; accSub = 'list'; c.listId = id; I.listId = id;
+    /* keep the list inside the agreed ICP: every country named, and the size range */
+    const rng = (a.size.match(/([\d,]+)\D+([\d,]+)/) || []).slice(1).map(x => +x.replace(/,/g, '')), lo1 = (a.size.match(/([\d,]+)\+/) || [])[1];
+    ACCOUNTS.filter(x => x.fromList === id).forEach((x, i) => {
+      const gname = a.geo.length ? a.geo[i % a.geo.length] : null, L = gname ? CITIES[gname.toLowerCase()] || COUNTRIES[gname.toLowerCase()] : null; if (L) { x.city = L[0]; x.country = L[1]; } else if (gname) { x.country = gname; }
+      const sfx = String(x.size).replace(/^[\d,\s]+/, ''), n0 = parseInt(String(x.size).replace(/[^\d]/g, ''), 10) || 1000; if (rng.length === 2) x.size = (rng[0] + (n0 * 7919 + i * 613) % Math.max(1, rng[1] - rng[0])).toLocaleString('en-US') + (sfx ? ' ' + sfx.trim() : ''); else if (lo1) { const lo = +lo1.replace(/,/g, ''); if (n0 < lo) x.size = (lo + n0).toLocaleString('en-US') + (sfx ? ' ' + sfx.trim() : ''); }
+    });
+    const who = lvl === 'Head' ? `Heads of ${fn}` : `${fn} managers`;
+    return { kind: 'prospects', open: 'prospects', steps: [`Used ICP v${v}, the one we just agreed: ${esc(ivCrit(a).slice(1, 4).join(' · '))}`, `Turned it into a filter: ${esc(who)} · ${esc(a.geo.join(', ') || loc[1])} · ${esc(a.ind.join(', ') || industry)}${a.size ? ' · ' + esc(a.size) : ''}${a.sig.length ? ' · ready now: ' + esc(a.sig.join(', ').toLowerCase()) : ''}`, 'Searched the primary contact provider, then the fallback for the misses', 'Cross-checked fallback hits and gave everyone an identity tier', `Removed ${esc(ivList(a.excl.length ? a.excl : ['existing customers']).toLowerCase())}`] };
+  }
   function respond(text) {
+    { const ci = chat(); if (ci && ci.icpI) { const r = icpTalk(ci, text); if (r) return r; } }
     const t = text.toLowerCase(), lk = lastKind(), v = view();
     if (/datasheet|knowledge hub|what does (the|our) .*(say|claim)|case study say/.test(t)) return /support|sla|response time|downtime|trip/.test(t) ? { kind: 'text', html: `From the Knowledge Hub: <i>"Sites that planned the cut-over around a shutdown cut unplanned trips by 18% in the first year."</i> <span class="badge b-sec nodot">CL-07 case study, page 3</span> Approved claim, reviewed Sep 2026.` } : { kind: 'text', html: 'Not found in the Knowledge Hub, so I won\'t answer from memory. I added the question to the content backlog.' };
     const soon = t.match(/\b(ppt|powerpoint|slides?|deck|pdf|brochure|infographic|carousel|podcast|video|single image|image post|linkedin (text )?post)\b/);
@@ -1114,6 +1253,7 @@
     if ((view() === 'accounts' || view() === 'segments') && !/like (my|our) last|score|micro-?segment|save|assign|send|route|campaign|draft|why|explain/.test(t)) {
       const um = text.match(/\b((?:https?:\/\/)?(?:www\.)?[a-z0-9-]+(?:\.[a-z0-9-]+)*\.(?:com|net|org|io|ai|co|asia|sg|my|example)(?:\/\S*)?)/i), url = um ? um[1].replace(/^https?:\/\//, '').replace(/[.,)]+$/, '') : null;
       if (url || /\b(icp|ideal customer|interview)\b|^(find|get) (me )?(new |some )?(leads|prospects|accounts)\.?$|build (me )?(a )?(lead )?list|^prospect/.test(t)) {
+        if (!url) { const r0 = icpBegin(text); if (r0) return r0; }
         icpStart(text, url); if (view() !== 'accounts') location.hash = '#accounts'; accSub = 'list';
         return { kind: 'text', html: url ? `<p>I read <b>${esc(url)}</b>: what you sell, the industries in its case studies and the roles it speaks to, and drafted an ICP. Check it in the questions below, then I'll save it and find the leads.</p>` : `<p>Let's agree the ICP first, then I'll find the leads. A few questions, just below, with what your message already says filled in. If it's easier, paste your website or a product page and I'll draft the ICP from it.</p>` };
       }
@@ -1122,6 +1262,7 @@
       /* No details given: interview first, then the ICP finds the prospects. A website still drafts from the site. */
       if (!/from (our|the|my) (web)?site/.test(t) && !/^(what|show|which)\b/.test(t.replace(/^(find prospects|build a campaign):\s*/, '')) && /help|find|define|build|create|draft|new|launch|work out|figure|propose|suggest|not sure|don.?t know|interview|set up|start/.test(t) && !/should include|minimum|(icp|ideal customer)[^:]*?(\bis\b|:)\s*\S.{12,}/.test(t)) {
         const launch = /new(ly)? (launched )?product|launch/.test(t);
+        { const r0 = icpBegin(text); if (r0) return r0; }
         icpStart(text, null); accSub = 'list';
         return { kind: 'text', html: `<p>Let's work out the ICP together first. ${launch ? 'A newly launched product has no wins to learn from yet, so your answers set it. ' : ''}Five short questions, just below, one at a time: what you sell and the problem it solves, which industries, where, who buys, and the signals that mean they're ready now. Answer what you can or type your own.</p><p>Then I'll save the ICP and use it to find the prospects.</p>` };
       }
@@ -1142,12 +1283,12 @@
     const hasCrit = /refin|petro|chemical|\bgas\b|lng|power|plant|reliab|operat|maint|procure|engineer|instrument|turnaround|shutdown|expansion|capex|hiring|new (leader|hire|head)|joined|rival|contract|pricing|migrat|historian|staff|tier|thailand|malaysia|singapore|indonesia|vietnam|philippines|australia|india|japan/.test(t);
     let findIcp = (findAsk || leadAsk) ? parseICP(text) || (hasCrit ? parseICP(text + ' singapore') : null) : null;
     const known = [Object.keys(CITIES).concat(Object.keys(COUNTRIES)).some(k => new RegExp('\\b' + k + '\\b').test(t)), INDUSTRIES.some(([re]) => re.test(t)) || /\blng\b|plant|site/.test(t), FUNCS.some(([re]) => re.test(t)) || /plant (head|manager)|leader|head of|manager|director|\bvp\b/.test(t), !!sigOfPrompt(t)].filter(Boolean).length;
-    if ((findAsk || leadAsk) && findIcp && known < 2) { icpStart(text, null); accSub = 'list'; if (view() !== 'accounts') openMod('accounts'); return { kind: 'text', html: `<p>I need a little more to find the right people. A few questions, just below; I've filled in what your message already says and start where it's missing.</p>` }; }
+    if ((findAsk || leadAsk) && findIcp && known < 2) { const r0 = icpBegin(text); if (r0) return r0; icpStart(text, null); accSub = 'list'; if (view() !== 'accounts') openMod('accounts'); return { kind: 'text', html: `<p>I need a little more to find the right people. A few questions, just below; I've filled in what your message already says and start where it's missing.</p>` }; }
     if (findIcp && !findIcp.industry) findIcp.industry = 'Refining & petrochemicals';
     if (findIcp && /plant (head|manager)/.test(t)) { findIcp.fn = 'Operations'; findIcp.lvl = 'Head'; }
     if (findIcp && !findIcp.fn) findIcp.fn = 'Reliability';
     if (findIcp) findIcp.sig = sigOfPrompt(t);
-    if (findAsk && !findIcp && !hasCrit) { icpStart(text, null); accSub = 'list'; if (view() !== 'accounts') openMod('accounts'); return { kind: 'text', html: `<p>Who should I look for? I'll build the list from your answers, not from old wins. A few questions, just below, one at a time: what you sell, industries, where, size, who buys, the signals that mean they're ready now, and who to leave out.</p><p>Or just tell me in one line, for example: <i>refineries in Thailand with a new reliability leader</i>, or paste your website and I'll draft the ICP.</p>` }; }
+    if (findAsk && !findIcp && !hasCrit) { const r0 = icpBegin(text); if (r0) return r0; icpStart(text, null); accSub = 'list'; if (view() !== 'accounts') openMod('accounts'); return { kind: 'text', html: `<p>Who should I look for? I'll build the list from your answers, not from old wins. A few questions, just below, one at a time: what you sell, industries, where, size, who buys, the signals that mean they're ready now, and who to leave out.</p><p>Or just tell me in one line, for example: <i>refineries in Thailand with a new reliability leader</i>, or paste your website and I'll draft the ICP.</p>` }; }
     if (findIcp) {
       const id = 'Q' + (S.genLists.length + 1) + Date.now().toString(36).slice(-4), place = [findIcp.city, findIcp.country !== findIcp.city ? findIcp.country : null].filter(Boolean).join(', ');
       const who = findIcp.lvl === 'Head' ? `Heads of ${findIcp.fn || 'the team'}` : findIcp.lvl === 'Chief' ? `Chief ${findIcp.fn || ''} Officers` : findIcp.lvl === 'VP' ? `VPs of ${findIcp.fn || 'the team'}` : `${findIcp.fn || 'Team'} ${findIcp.lvl.toLowerCase()}s`;
