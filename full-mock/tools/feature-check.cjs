@@ -157,6 +157,15 @@ const M = process.argv[2], full = M === 'full-mock', dir = '/home/user/Demand-AI
   await p.evaluate(() => { App.nav(null); App.newChat(); }); await p.waitForTimeout(300); await p.evaluate(() => { const b = [...document.querySelectorAll('.dd-i')].find(x => /Find prospects/.test(x.textContent)); b.click(); }); await p.waitForTimeout(300);
   chk('Find prospects is selected in Start something new and waits for the prompt', /Find prospects/.test(await p.$eval('.cmp-pill', e => e.textContent)) && (await p.inputValue('#composer')) === '' && (await p.$$('#thread .msg.me')).length === 0, 'Chat'); await p.evaluate(() => App.actClear());
   await p.evaluate(() => { document.getElementById('composer').value = ''; App.nav(null); }); await p.waitForTimeout(300);
+  // round 19: every Today number lists its exact records, in the chat on the left
+  await p.evaluate(() => { try { App.qdClose(); } catch (e) {} App.nav(null); App.newChat(); App.nav(null); }); await p.waitForTimeout(400);
+  { await p.evaluate(() => { App.nav(null); }); await p.goto(p.url().replace(/#.*$/, '') + '#today'); await p.waitForTimeout(600);
+    const nums = await p.$$eval('.fn-s b', x => x.map(e => +e.textContent.replace(/,/g, '')));
+    const mono = nums.length === 5 && nums.every((n, i) => i === 0 || n <= nums[i - 1]);
+    let same = true; for (const i of [1, 3]) { await p.click(`.fn-s >> nth=${i}`); await p.waitForTimeout(1600); const rows = await p.$$eval('#thread .tcard.mx', x => x[x.length - 1].querySelectorAll('tbody tr.row-link').length); if (rows !== nums[i]) same = false; }
+    chk('Today funnel narrows stage by stage, and a number opens exactly its records in the chat', mono && same && !!(await p.$('.fn')), 'Today › funnel');
+    await p.evaluate(() => App.metric('pipeline')); await p.waitForTimeout(1600);
+    chk('Pipeline number lists the opportunities that add up to it', /USD (1,200|300)k/.test(await p.$$eval('#thread .tcard.mx .mx-f b', x => x.map(e => e.textContent).pop() || '')), 'Today › funnel'); }
   // round 18: ICP interview when no details are given; each cohort's messages come from its micro-segment
   await p.evaluate(() => { try { App.qdClose(); } catch (e) {} App.nav(null); App.newChat(); }); await p.waitForTimeout(300);
   await p.evaluate(() => App.ask('Can you help me find an ICP for my newly launched product?')); await p.waitForTimeout(3500);

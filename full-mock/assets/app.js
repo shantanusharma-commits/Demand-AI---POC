@@ -849,9 +849,9 @@
     return `<p>${greeting()}, ${esc(first(me.name))}. Here is what the AI did while you were away${isMgr ? ', across the team' : ''}. Every number opens its list.</p>
       <div class="zt"><div class="zt-h"><b>What happened · ${k.when}</b><span class="zseg">${[['since', 'Since you last logged in'], ['today', 'Today'], ['week', 'This week']].map(([x, l]) => `<button class="${cuF === x ? 'on' : ''}" onclick="App.setCu('${x}')">${l}</button>`).join('')}</span></div>
       <div class="zt-stats">
-        ${zStat(k.sig.split(',')[0].replace(' new signals', ''), 'new signals found, ' + k.sig.split(', ')[1], mkAI('AI'), "App.openArt('ranked')")}
+        ${zStat(k.sig.split(',')[0].replace(' new signals', ''), 'new signals found, ' + k.sig.split(', ')[1], mkAI('AI'), "App.modTab('signals')")}
         ${zStat(k.sc, `accounts re-scored, ${k.segs} micro-segments rebuilt`, mkAI('AI'), "App.openArt('ranked')")}
-        ${zStat(prep * wk, 'next best actions prepared', mkAI('AI'), "App.openMod('segments')")}
+        ${zStat(prep * wk, 'next best actions prepared', mkAI('AI'), "App.modTab('nba')")}
         ${zStat(auto * wk, 'ready to send: met all five criteria, no approval card', mkAI('Prepared by AI'), "App.modTab('nba')")}
         ${zStat(k.camp, k.camp > 1 ? 'campaigns proposed' : 'campaign proposed: Turnaround season 2027', mkAI('AI'), "App.goCampaign('c1')")}
         ${zStat(myReplies().length, 'replies from prospects', mkHu('From customers'), "App.nav('inbox')")}
@@ -861,6 +861,86 @@
       ${blk ? `<div class="zt-warn">${ic('alert', 14)}<span><b>${esc(blk.t)}.</b> ${esc(blk.d)}</span></div>` : ''}
       <div class="zt-f"><span>${mkAI('AI')} done by the AI on its own · ${mkHu('Person')} done by a person · ${mkWait('Needs you')} waiting for you</span><button onclick="App.ask('How much do agents do on their own?')">How much the AI does alone</button></div></div>`;
   }
+  /* ─── Outcome records behind every Today number: one fixed history per account (found → sent → clicked →
+     replied → meeting → closed), built to match the team's weekly stats, so each number lists its exact records ─── */
+  let FX = null;
+  const FX_PER = { week: [6, 'this week'], month: [29, 'this month'], quarter: [89, 'this quarter'] };
+  const FX_MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], FX_WD = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const fxDay = age => { if (age === 0) return 'Today'; if (age === 1) return 'Yesterday'; const d = new Date(2026, 9, 27 - age); return `${FX_WD[d.getDay()]} ${d.getDate()} ${FX_MON[d.getMonth()]}`; };
+  const fxAgeOf = at => { if (/^Today/.test(at)) return 0; if (/^Yesterday/.test(at)) return 1; const m = String(at).match(/(\d+) (Sep|Oct|Nov)/); if (m) return m[2] === 'Oct' ? 27 - +m[1] : m[2] === 'Sep' ? 57 - +m[1] : 0; return 3; };
+  const fxH = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619); return (h >>> 0) / 4294967296; };
+  const fxFrom = a => a.campaign && campOf(a.campaign) ? 'Campaign · ' + campOf(a.campaign).name : 'Next best action';
+  const FX_RTXT = { Positive: 'Yes, worth a conversation. Can you send times for next week?', 'Not now': 'Not this quarter; try us again after the budget round.', 'Further action': 'Can you send the comparison to our technical lead first?', Objection: 'We are happy with our current vendor for now.', 'Meeting booked': 'Booked Thursday 10:00, see you then.' };
+  function fxBuild() {
+    const E = { leads: [], sent: [], clicked: [], responded: [], meetings: [], closed: [], pipeline: [] };
+    const assets = libAll().filter(x => x.st !== 'Retired');
+    REPS.forEach(r => {
+      const ts = TEAM_STATS[r], A = ACCOUNTS.filter(a => a.owner === r && !a.fromList);
+      A.forEach(a => { const ages = (a.signals || []).map(s => s.age); E.leads.push({ acc: a.id, age: ages.length ? Math.min(89, Math.min(...ages)) : Math.floor(30 + fxH(a.id) * 59), how: a.whyNow ? a.whyNow.type : 'Matched the ICP', src: a.signals && a.signals[0] ? a.signals[0].source : 'Account data' }); });
+      const real = REPLIES.filter(x => x.owner === r), realIds = real.map(x => x.acc);
+      const pool = A.filter(a => a.campaign || a.nba || (a.activity || []).some(x => /^Opened/.test(x.t))).sort((p2, q) => (realIds.includes(q.id) - realIds.includes(p2.id)) || ((q.activity || []).some(x => /^Opened/.test(x.t)) - (p2.activity || []).some(x => /^Opened/.test(x.t))) || fxH(p2.id + r) - fxH(q.id + r));
+      if (!pool.length) return;
+      const W = [[0, 6, 1], [7, 29, 0], [30, 89, 0]], Q = { sent: [ts.sent, ts.sent * 3, ts.sent * 5], clicked: [ts.replies * 2 + 1, ts.replies * 3, ts.replies * 4], responded: [ts.replies, Math.round(ts.replies * 1.6), ts.replies * 2], meetings: [ts.meetings, ts.meetings, ts.meetings * 2], closed: [ts.meetings >= 2 ? 1 : 0, Math.round(ts.meetings * 0.5), ts.meetings] };
+      let cur = 0; const nxt = (avoid) => { for (let k = 0; k < pool.length; k++) { const a = pool[(cur + k) % pool.length]; if (!avoid || !avoid.has(a.id)) { cur = (cur + k + 1) % pool.length; return a; } } const a = pool[cur % pool.length]; cur++; return a; };
+      const ageIn = (w, s) => w[0] + Math.floor(fxH(s) * (w[1] - w[0] + 1));
+      W.forEach((w, wi) => {
+        for (let i = 0; i < Q.sent[wi]; i++) { const a = pool[(i * 7 + wi) % pool.length], c0 = a.campaign && campOf(a.campaign), sq = c0 ? seqOf(c0) : [], si = sq.length ? (i + wi) % sq.length : 0, tc = sq[si]; E.sent.push({ acc: a.id, age: ageIn(w, a.id + 's' + i + wi), ch: tc ? tc.ch : (a.nba && a.nba.channel) || 'Email', what: tc ? `Step ${si + 1} · ${tc.t || tc.fmt}` : a.nba ? a.nba.action : 'Follow-up', from: fxFrom(a) }); }
+        const cl = new Set(); for (let i = 0; i < Q.clicked[wi]; i++) { const a = nxt(cl); cl.add(a.id); const as = assets[Math.floor(fxH(a.id + 'as') * assets.length)] || { t: 'the comparison page', type: 'Link' }; E.clicked.push({ acc: a.id, age: ageIn(w, a.id + 'c' + wi), what: as.t, type: as.type, ch: fxH(a.id + 'ch') > 0.7 ? 'LinkedIn' : 'Email', from: fxFrom(a) }); }
+        const rs = new Set(), rIn = real.filter(x => { const g = fxAgeOf(x.at); return g >= w[0] && g <= w[1]; });
+        rIn.slice(0, Q.responded[wi]).forEach(x => { rs.add(x.acc); E.responded.push({ acc: x.acc, age: fxAgeOf(x.at), kind: x.kind, text: x.text, ch: x.ch || 'Email', from: x.source || fxFrom(acct(x.acc)), rid: x.id, who: x.from }); });
+        const clArr = [...cl]; let ci = 0;
+        while ([...rs].length < Q.responded[wi]) { const id = clArr.find(x => !rs.has(x)) || nxt(rs).id; rs.add(id); const a = acct(id), kinds = ['Positive', 'Not now', 'Further action', 'Positive', 'Objection', 'Meeting booked'], kd = kinds[Math.floor(fxH(id + 'k' + wi) * kinds.length)]; E.responded.push({ acc: id, age: ageIn(w, id + 'r' + wi), kind: kd, text: FX_RTXT[kd], ch: fxH(id + 'rc') > 0.65 ? 'LinkedIn' : 'Email', from: fxFrom(a), who: a.contact.name }); ci++; if (ci > 60) break; }
+        const rArr = E.responded.filter(e => rs.has(e.acc) && e.age >= w[0] && e.age <= w[1]).sort((p2, q) => (/Meeting|Positive/.test(q.kind) - /Meeting|Positive/.test(p2.kind)));
+        const ms = []; for (let i = 0; i < Q.meetings[wi]; i++) { const e = rArr[i % Math.max(1, rArr.length)]; if (!e) break; const a = acct(e.acc), when = e.age <= 1 ? 2 + Math.floor(fxH(a.id + 'm') * 3) : -Math.floor(fxH(a.id + 'm') * 4); ms.push(a.id); E.meetings.push({ acc: a.id, age: e.age, booked: fxDay(e.age), at: when > 0 ? `${FX_WD[new Date(2026, 9, 27 + when).getDay()]} ${27 + when > 31 ? 27 + when - 31 + ' Nov' : 27 + when + ' Oct'} · 10:00` : fxDay(Math.max(0, e.age - 2)) + ' · held', from: e.from, upcoming: when > 0 }); }
+        for (let i = 0; i < Q.closed[wi]; i++) { const id = ms[i % Math.max(1, ms.length)] || pool[i % pool.length].id, a = acct(id), v = 60 + Math.round(fxH(id + 'v' + wi) * 34) * 10; E.closed.push({ acc: id, age: ageIn(w, id + 'cl' + wi), value: v, what: /Gas|LNG/.test(a.industry) ? 'Emissions and analyser package' : /Refin/.test(a.industry) ? 'Control-system migration' : 'Reliability services', from: fxFrom(a) }); }
+      });
+      /* open pipeline the AI influenced: USD 0.3M per rep, over accounts with a meeting or a positive reply */
+      const pp = [...new Set(E.meetings.concat(E.responded.filter(e => /Positive|Meeting/.test(e.kind))).filter(e => acct(e.acc).owner === r).map(e => e.acc))].slice(0, 5);
+      if (pp.length) { let left = 300; pp.forEach((id, i) => { const v = i === pp.length - 1 ? left : Math.max(30, Math.round(300 / pp.length / 10 + (fxH(id + 'pv') - 0.5) * 4) * 10); left -= v; E.pipeline.push({ acc: id, value: v, stage: ['Meeting held', 'Proposal sent', 'Technical review', 'Negotiation'][Math.floor(fxH(id + 'st') * 4)], from: fxFrom(acct(id)), age: 0 }); }); }
+    });
+    return E;
+  }
+  function fxRows(k, per) {
+    if (!FX) FX = fxBuild();
+    const max = (FX_PER[per] || FX_PER.week)[0];
+    let L = (FX[k] || []).filter(e => e.age <= max && acct(e.acc) && mine(acct(e.acc)));
+    if (k === 'leads') L = L.concat(ACCOUNTS.filter(a => a.fromList && mine(a)).map(a => ({ acc: a.id, age: 0, how: 'Generated from your prompt', src: 'Prospect search' })));
+    L.sort((p2, q) => p2.age - q.age);
+    if (/^(clicked|responded|meetings|closed)$/.test(k)) { const seen = new Set(); L = L.filter(e => !seen.has(e.acc) && seen.add(e.acc)); } /* people, counted once: the newest event */
+    return L;
+  }
+  const FX_META = {
+    leads: ['Leads generated', 'users', 'found and scored by the AI'], sent: ['Messages sent', 'mail', 'sent from campaigns and next best actions'], clicked: ['People who clicked', 'spark', 'opened a link or an asset'],
+    responded: ['Replies', 'reply', 'replied on any channel'], meetings: ['Meetings booked', 'check', 'booked from a reply'], closed: ['Leads closed', 'up', 'won from this outreach'], pipeline: ['Pipeline the AI influenced', 'up', 'open opportunities'],
+  };
+  function fxCard(k, per) {
+    const rows = fxRows(k, per), M = FX_META[k], perL = k === 'pipeline' ? 'open now' : (FX_PER[per] || FX_PER.week)[1];
+    const who = a => `<div class="nm">${esc(a.contact.name)}</div><div class="sm">${esc(a.contact.title)} · ${esc(a.name)}${isMgr ? ` · ${esc(first(USERS[a.owner].name))}` : ''}</div>`;
+    const kb = kd => `<span class="badge ${/Positive|Meeting/.test(kd) ? 'b-pos' : /Objection|Opted|Wrong/.test(kd) ? 'b-neg' : 'b-grey'} nodot">${esc(kd)}</span>`;
+    const R = {
+      leads: e => { const a = acct(e.acc); return [`<div class="nm">${esc(a.name)}</div><div class="sm">${esc(a.contact.name)} · ${esc(a.contact.title)}${isMgr ? ` · ${esc(first(USERS[a.owner].name))}` : ''}</div>`, `${esc(e.how)}<div class="sm">${esc(e.src)}${a.score ? ` · score ${sc(a)}` : ''}</div>`, fxDay(e.age)]; },
+      sent: e => { const a = acct(e.acc); return [who(a), `${chIc(e.ch)} ${esc(e.what)}<div class="sm">${esc(e.from)}</div>`, fxDay(e.age)]; },
+      clicked: e => { const a = acct(e.acc); return [who(a), `${esc(e.what)}<div class="sm">${esc(e.type)} · ${esc(e.ch)} · ${esc(e.from)}</div>`, fxDay(e.age)]; },
+      responded: e => { const a = acct(e.acc); return [who(a), `${kb(e.kind)} <span class="sm">${esc(e.ch)}</span><div class="sm mx-q">"${esc(e.text)}"</div><div class="sm">${esc(e.from)}</div>`, fxDay(e.age)]; },
+      meetings: e => { const a = acct(e.acc); return [who(a), `${e.upcoming ? '<span class="badge b-sec nodot">Upcoming</span>' : '<span class="badge b-pos nodot">Held</span>'} ${esc(e.at)}<div class="sm">${esc(e.from)}</div>`, 'Booked ' + esc(e.booked)]; },
+      closed: e => { const a = acct(e.acc); return [`<div class="nm">${esc(a.name)}</div><div class="sm">${esc(a.contact.name)}${isMgr ? ` · ${esc(first(USERS[a.owner].name))}` : ''}</div>`, `${esc(e.what)}<div class="sm">${esc(e.from)}</div>`, `<b>USD ${e.value}k</b><div class="sm">${fxDay(e.age)}</div>`]; },
+      pipeline: e => { const a = acct(e.acc); return [`<div class="nm">${esc(a.name)}</div><div class="sm">${esc(a.contact.name)}${isMgr ? ` · ${esc(first(USERS[a.owner].name))}` : ''}</div>`, `${esc(e.stage)}<div class="sm">${esc(e.from)}</div>`, `<b>USD ${e.value}k</b>`]; },
+    };
+    const H3 = { leads: ['Lead', 'Why found', 'Found'], sent: ['Person', 'Message', 'Sent'], clicked: ['Person', 'What they clicked', 'When'], responded: ['Person', 'Reply', 'When'], meetings: ['Person', 'Meeting', 'Booked'], closed: ['Account', 'Won', 'Value'], pipeline: ['Account', 'Stage', 'Value'] }[k];
+    const tot = /closed|pipeline/.test(k) ? rows.reduce((n, e) => n + e.value, 0) : null;
+    const click = e => e.rid ? `App.openThread('${e.rid}')` : `App.openRecord('${e.acc}','activity')`;
+    return { kind: 'text', html: `<p>${k === 'pipeline' ? `The <b>USD ${(tot / 1000).toFixed(1)}M</b> pipeline the AI influenced, ${rows.length} open opportunities` : `The <b>${rows.length}</b> ${esc(M[0].toLowerCase())} ${perL}`}, from every campaign and next best action${isMgr ? ' across the team' : ''}. Newest first; click a row for the full record.</p>
+      <div class="tcard mx"><div class="tcard-h"><span class="t">${ic(M[1], 15)} ${esc(M[0])}</span><span class="muted" style="font-size:12px;white-space:nowrap">${rows.length} records · ${esc(perL)}</span></div>
+      <div class="mx-w"><table class="tbl mx-t"><thead><tr>${H3.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(e => { const c3 = R[k](e); return `<tr class="row-link" onclick="${click(e)}"><td>${c3[0]}</td><td>${c3[1]}</td><td class="mx-d">${c3[2]}</td></tr>`; }).join('') || `<tr><td colspan="3" class="empty">None ${esc(perL)}.</td></tr>`}</tbody></table></div>
+      ${tot != null ? `<div class="mx-f"><span>Total</span><b>USD ${tot.toLocaleString('en-US')}k</b></div>` : ''}</div>` };
+  }
+  function fxAsk(t) {
+    const m = t.match(/^show me (?:the )?(?:\d[\d,]* )?(leads generated|people who clicked|clicks|replies|meetings booked|meetings|leads closed|messages sent|emails sent|pipeline the ai influenced|pipeline)(?: (this week|this month|this quarter|open now))?/);
+    if (!m) return null;
+    const k = { 'leads generated': 'leads', 'people who clicked': 'clicked', clicks: 'clicked', replies: 'responded', 'meetings booked': 'meetings', meetings: 'meetings', 'leads closed': 'closed', 'messages sent': 'sent', 'emails sent': 'sent', 'pipeline the ai influenced': 'pipeline', pipeline: 'pipeline' }[m[1]];
+    const per = /month/.test(m[2] || '') ? 'month' : /quarter/.test(m[2] || '') ? 'quarter' : 'week';
+    return fxCard(k, per);
+  }
   /* The funnel: every campaign and next best action together, leads in to leads closed */
   const FUN = {
     week: { l: 'This week', mgr: [312, 104, 37, 9, 2], rep: [78, 26, 9, 2, 1] },
@@ -868,14 +948,14 @@
     quarter: { l: 'This quarter', mgr: [3480, 1105, 371, 86, 24], rep: [902, 288, 97, 22, 6] },
   };
   function funnelTile() {
-    const F = FUN[funF], v = isMgr ? F.mgr : F.rep;
+    const F = FUN[funF], v = ['leads', 'clicked', 'responded', 'meetings', 'closed'].map(k => fxRows(k, funF).length);
     const camps = CAMPAIGNS.length + (S.outGen || []).filter(g => g.kind === 'NBC').length, nbas = ACCOUNTS.filter(a => a.nba && mine(a)).length + (S.outGen || []).filter(g => g.kind !== 'NBC').length, segs = SEGMENTS.length;
-    const st = [['Leads generated', 'found and scored by the AI', "App.nav('accounts')"], ['Clicked', 'opened a link or an asset', "App.nav('analytics')"], ['Responded', 'replied on any channel', "App.nav('inbox')"], ['Meetings', 'booked from a reply', "App.nav('inbox')"], ['Leads closed', 'won from this outreach', "App.nav('analytics')"]];
+    const st = [['Leads generated', 'found and scored by the AI', "App.metric('leads')"], ['Clicked', 'opened a link or an asset', "App.metric('clicked')"], ['Responded', 'replied on any channel', "App.metric('responded')"], ['Meetings', 'booked from a reply', "App.metric('meetings')"], ['Leads closed', 'won from this outreach', "App.metric('closed')"]];
     const pct = (a, b) => b ? Math.round(a / b * 100) : 0, fmt = n => n.toLocaleString('en-US');
     return `<div class="zt fn"><div class="zt-h"><b>Funnel · all campaigns and next best actions</b><span class="zseg">${Object.entries(FUN).map(([k, x]) => `<button class="${funF === k ? 'on' : ''}" onclick="App.setFun('${k}')">${x.l}</button>`).join('')}</span></div>
-      <div class="fn-src"><button onclick="App.modTab('campaigns')"><b>${camps}</b> campaigns</button><button onclick="App.modTab('nba')"><b>${nbas}</b> next best actions</button><button onclick="App.openMod('segments')"><b>${segs}</b> micro-segments</button><span>feed the funnel below</span></div>
+      <div class="fn-src"><button onclick="App.modTab('campaigns')"><b>${camps}</b> campaigns</button><button onclick="App.modTab('nba')"><b>${nbas}</b> next best actions</button><button onclick="App.modTab('segments')"><b>${segs}</b> micro-segments</button><span>feed the funnel below</span></div>
       <div class="fn-st">${st.map(([l, d, on], i) => `<button class="fn-s" onclick="${on}"><span class="fn-l">${l}</span><b>${fmt(v[i])}</b><span class="fn-d">${d}</span><span class="fn-bar"><i style="width:${Math.max(3, pct(v[i], v[0]))}%"></i></span>${i ? `<em>${pct(v[i], v[i - 1])}% of ${st[i - 1][0].toLowerCase()}</em>` : '<em>100%</em>'}</button>`).join('')}</div>
-      <div class="zt-f"><span>Lead to close: <b>${(v[4] / v[0] * 100).toFixed(1)}%</b> · response rate <b>${pct(v[2], v[0])}%</b> · every number opens its list</span></div></div>`;
+      <div class="zt-f"><span>Lead to close: <b>${v[0] ? (v[4] / v[0] * 100).toFixed(1) : '0.0'}%</b> · response rate <b>${pct(v[2], v[0])}%</b> · every number opens its list</span></div></div>`;
   }
   function standingTile() {
     const ts = TEAM_STATS, reps = isMgr ? REPS : [me.id], sum = f => reps.reduce((n, r) => n + ts[r][f], 0);
@@ -883,10 +963,10 @@
     return `<p>${isMgr ? 'Where the team stands this week, outcomes first.' : 'Where you stand this week, outcomes first.'} You are <b>${tgt - meet} meeting${tgt - meet === 1 ? '' : 's'} short</b> of the target${isMgr ? '; the replies waiting below could close part of that' : ''}.</p>
       <div class="zt"><div class="zt-bar big" role="img" aria-label="${meet} of ${tgt} meetings"><i style="width:${Math.round(meet / tgt * 100)}%"></i></div>
       <div class="zt-stats">
-        ${zStat(`${meet}<small> / ${tgt}</small>`, 'meetings booked against target', '', "App.nav('inbox')", 'zgap')}
-        ${zStat(isMgr ? 'USD 1.2M' : 'USD 0.3M', 'pipeline the AI influenced', '', isMgr ? "App.nav('analytics')" : "App.openArt('ranked')")}
-        ${zStat(sum('replies'), `replies, ${isMgr ? 8 : myReplies().filter(r => /Positive|Meeting/.test(r.kind)).length} positive or booked`, '', "App.nav('inbox')")}
-        ${zStat(`${sentN}<small> / ${cap}</small>`, 'emails sent: the activity behind it', '', "App.openArt('sent')")}
+        ${zStat(`${meet}<small> / ${tgt}</small>`, 'meetings booked against target', '', "App.metric('meetings','week')", 'zgap')}
+        ${zStat(isMgr ? 'USD 1.2M' : 'USD 0.3M', 'pipeline the AI influenced', '', "App.metric('pipeline')")}
+        ${zStat(sum('replies'), `replies, ${fxRows('responded', 'week').filter(e => /Positive|Meeting/.test(e.kind)).length} positive or booked`, '', "App.metric('responded','week')")}
+        ${zStat(`${sentN}<small> / ${cap}</small>`, 'emails sent: the activity behind it', '', "App.metric('sent','week')")}
       </div></div>`;
   }
   function needsYouList() {
@@ -1224,6 +1304,7 @@
   }
   function respond(text) {
     { const ci = chat(); if (ci && ci.icpI) { const r = icpTalk(ci, text); if (r) return r; } }
+    { const mx = fxAsk(text.toLowerCase().trim()); if (mx) return mx; }
     const t = text.toLowerCase(), lk = lastKind(), v = view();
     if (/datasheet|knowledge hub|what does (the|our) .*(say|claim)|case study say/.test(t)) return /support|sla|response time|downtime|trip/.test(t) ? { kind: 'text', html: `From the Knowledge Hub: <i>"Sites that planned the cut-over around a shutdown cut unplanned trips by 18% in the first year."</i> <span class="badge b-sec nodot">CL-07 case study, page 3</span> Approved claim, reviewed Sep 2026.` } : { kind: 'text', html: 'Not found in the Knowledge Hub, so I won\'t answer from memory. I added the question to the content backlog.' };
     const fmt = fmtOf(t);
@@ -2857,6 +2938,7 @@
     toggleNav() { navCol = !navCol; try { localStorage.setItem('dmock_nav', navCol ? '1' : ''); } catch (e) {} document.body.classList.toggle('nav-col', navCol); renderNav(); },
     setCu(k) { cuF = k; renderAll(); },
     setFun(k) { funF = k; renderAll(); },
+    metric(k, per) { per = per || funF; const n = fxRows(k, per).length, M = FX_META[k]; ask(k === 'pipeline' ? 'Show me the pipeline the AI influenced' : `Show me the ${n} ${M[0].toLowerCase()} ${FX_PER[per][1]}`); },
     openAppr(tab) { apprTab = tab; art = null; recId = null; thrId = null; expanded = true; go('approvals'); },
     setAuto(k, v) { S.auto[k] = v; save(); toast(`Set to ${v}. Work done this way is marked on every list.`); renderAll(); },
     chatOpen(on) { chatClosed = !on; renderAll(); if (on) setTimeout(() => $('composer') && $('composer').focus(), 0); },
