@@ -159,6 +159,16 @@ const M = process.argv[2], full = M === 'full-mock', dir = '/home/user/Demand-AI
   await p.evaluate(() => { App.nav(null); App.newChat(); }); await p.waitForTimeout(300); await p.evaluate(() => { const b = [...document.querySelectorAll('.dd-i')].find(x => /Find prospects/.test(x.textContent)); b.click(); }); await p.waitForTimeout(300);
   chk('Find prospects is selected in Start something new and waits for the prompt', /Find prospects/.test(await p.$eval('.cmp-pill', e => e.textContent)) && (await p.inputValue('#composer')) === '' && (await p.$$('#thread .msg.me')).length === 0, 'Chat'); await p.evaluate(() => App.actClear());
   await p.evaluate(() => { document.getElementById('composer').value = ''; App.nav(null); }); await p.waitForTimeout(300);
+  // round 21: R1 features added to the prototype; manager cost per meeting and win rate
+  { const tn = await adm('niches'), tt = await adm('tags');
+    await p.goto('file://' + dir + '/admin/07-content.html?tab=offers'); await p.waitForTimeout(700); const to = await body();
+    chk('SEG-01 niche taxonomy, SEG-09 ICP tag library, CON-11 offer library (admin)', /Niche taxonomy/i.test(tn) && /Olefins and crackers/.test(tn) && /ICP tag library/i.test(tt) && /Micro-segments built from tags/i.test(tt) && /Pre-turnaround health check/.test(to) && /Add an offer/i.test(to), 'Admin › R1 additions');
+    await p.goto('file://' + dir + '/app.html'); await p.waitForTimeout(600); await p.evaluate(() => { App.nav(null); App.goCampaign('c1'); App.setCampTab('msgs'); }); await p.waitForTimeout(600);
+    const tags = await p.$$eval('.mst-tags', x => x.map(e => e.innerText)); const offer = !!(await p.$('.mst-offer select'));
+    chk('NBA-17 variable tags logged on every step; CON-11 offer picked on the closing step', tags.length >= 3 && tags.every(s => /Angle/.test(s) && /Length/.test(s) && /CTA/i.test(s)) && offer, 'Campaigns › messages');
+    await p.evaluate(() => App.nav(null)); await p.waitForTimeout(400);
+    const st = await p.$$eval('.bsec', s => { const x = s.find(e => /stand/i.test(e.textContent)); return x ? x.innerText : ''; });
+    const isM = await p.$$eval('.bsec-h', x => x.some(e => /your team/i.test(e.textContent))); chk('Today: the manager sees cost per meeting and win rate; the rep does not', isM ? (/cost per meeting/i.test(st) && /win rate/i.test(st)) : !/cost per meeting/i.test(st), 'Today › manager'); }
   // round 20: pick the channel when adding a step; change, remove or attach the content of a step
   await p.evaluate(() => { App.nav(null); App.goCampaign('c1'); App.setCampTab('msgs'); }); await p.waitForTimeout(600);
   { const opts = await p.$$eval('.mst-add option', x => x.map(e => e.value).filter(Boolean)); const n0 = (await p.$$('.mst')).length; await p.selectOption('.mst-add', 'LinkedIn'); await p.waitForTimeout(400); const n1 = (await p.$$('.mst')).length;

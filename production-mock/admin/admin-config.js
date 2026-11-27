@@ -78,6 +78,18 @@
   }
   if (!A.bt) seedBt();
   A.btTab = A.btTab || 'won';
+  /* Niche taxonomy (SEG-01): the client's ontology; each niche says which words in a company place it there */
+  A.niches = A.niches || [
+    { id: 'n1', name: 'Refining', parent: '', kw: 'refining, refinery' }, { id: 'n2', name: 'Complex refineries', parent: 'n1', kw: 'refining' , note: 'Fit 80 or more' },
+    { id: 'n3', name: 'Petrochemicals', parent: '', kw: 'petrochem, petrochemicals' }, { id: 'n4', name: 'Olefins and crackers', parent: 'n3', kw: 'olefins' }, { id: 'n5', name: 'Aromatics', parent: 'n3', kw: 'aromatics' },
+    { id: 'n6', name: 'Gas processing', parent: '', kw: 'gas processing, gas' }, { id: 'n7', name: 'LNG terminals', parent: 'n6', kw: 'lng' }];
+  /* ICP tag library (SEG-09): the tags micro-segments are built from */
+  A.tags = A.tags || [['Industry', 'Refining', 'refin'], ['Industry', 'Petrochemicals', 'petro|olefin|aromatic'], ['Industry', 'Gas processing', 'gas'], ['Industry', 'LNG', 'lng'],
+    ['Region', 'Singapore', 'singapore'], ['Region', 'Malaysia', 'malaysia'], ['Region', 'Thailand', 'thailand'], ['Region', 'Indonesia', 'indonesia'], ['Region', 'Vietnam', 'vietnam'], ['Region', 'Philippines', 'philippines'],
+    ['Size', '500 to 1,000 staff', '500-1000'], ['Size', '1,000 to 5,000 staff', '1000-5000'], ['Size', '5,000+ staff', '5000-1000000'],
+    ['Role', 'Reliability leader', 'reliab'], ['Role', 'Operations leader', 'operat'], ['Role', 'Plant head', 'plant'], ['Role', 'Technical lead (I&C)', 'technical|i&c|instrument'], ['Role', 'Maintenance leader', 'mainten'],
+    ['Trigger', 'New exec hire', 'new exec|hire'], ['Trigger', 'Turnaround announced', 'turnaround'], ['Trigger', 'Rival contract ending', 'rival'], ['Trigger', 'Expansion approved', 'expansion|capex'], ['Trigger', 'Hiring surge', 'hiring'],
+    ['Motive', 'Cost: lower lifecycle cost', 'cost'], ['Motive', 'Growth: add capacity', 'growth'], ['Motive', 'Risk: protect a planned shutdown', 'turnaround|shutdown'], ['Motive', 'Capacity: staff the build-out', 'hiring']].map(function (x, i) { return { id: 'g' + i, type: x[0], name: x[1], m: x[2] }; });
 
   /* ─── Scoring a backtest account with the current rubric ─── */
   function fitOf(a) {
@@ -190,20 +202,57 @@
       + '</tbody></table></div><div class="ac-foot"><span class="sm muted">What the backtest needs: 15 closed-won, 15 closed-lost and 15 random accounts from the last 18 months, with industry, country and staff (the rubric\'s variables), the outcome date and the deal value. ✓ means the rules tier the account the way its outcome says they should.</span></div><div class="ac-last">' + lastChange('bt') + '</div></div></div>';
   }
 
+  /* ─── Niches and tags ─── */
+  var ACC = (M.ACCOUNTS || []).filter(function (a) { return !a.fromList; });
+  function nicheAccts(n) { var kws = String(n.kw || '').toLowerCase().split(',').map(function (s) { return s.trim(); }).filter(Boolean); return ACC.filter(function (a) { var s = (a.name + ' ' + a.industry).toLowerCase(); return kws.some(function (k) { return s.indexOf(k) >= 0; }) && (!/Fit 80/.test(n.note || '') || a.fit >= 80); }); }
+  function nichesPane() {
+    var tops = A.niches.filter(function (n) { return !n.parent; }), kids = function (id) { return A.niches.filter(function (n) { return n.parent === id; }); };
+    var row = function (n, lvl) { var c = nicheAccts(n).length; return '<tr><td class="nm" style="padding-left:' + (14 + lvl * 22) + 'px">' + (lvl ? '└ ' : '') + esc(n.name) + (n.note ? ' <span class="muted sm">· ' + esc(n.note) + '</span>' : '') + '</td><td class="sm mono">' + esc(n.kw) + '</td><td>' + c + '</td><td class="ac-act">' + ibtn("AC.nicheEdit('" + n.id + "')", 'Edit') + (lvl ? '' : ibtn("AC.nicheEdit(null,'" + n.id + "')", '+ Sub-niche')) + ibtn("AC.nicheDel('" + n.id + "')", 'Remove') + '</td></tr>'; };
+    return '<div class="card c12"><div class="card-h"><span class="lbl">Niche taxonomy</span><span class="muted sm">the client\'s ontology as niches · leads, micro-segments and message angles are grouped by it</span></div><div class="card-b" style="padding:0"><div class="ac-bar"><span class="sm muted">Each niche says which words in a company\'s name or industry place it there. A company matches the most specific niche it fits. ' + ACC.length + ' accounts, ' + ACC.filter(function (a) { return !A.niches.some(function (n) { return nicheAccts(n).indexOf(a) >= 0; }); }).length + ' in no niche.</span><span class="sp"></span>' + ibtn('AC.nicheEdit()', '+ Add a niche', 'pri') + '</div><div class="tbl-wrap"><table class="tbl ac-t"><thead><tr><th>Niche</th><th>Matches on</th><th>Accounts</th><th></th></tr></thead><tbody>'
+      + tops.map(function (n) { return row(n, 0) + kids(n.id).map(function (k) { return row(k, 1); }).join(''); }).join('') + '</tbody></table></div><div class="ac-last">' + lastChange('niches') + '</div></div></div>';
+  }
+  function tagAccts(g) { var re; try { re = new RegExp(g.m, 'i'); } catch (e) { return []; } return ACC.filter(function (a) {
+    if (g.type === 'Size') { var r = String(g.m).split('-'), n = +String(a.size).replace(/[^\d]/g, ''); return n >= +r[0] && n < +(r[1] || 1e9); }
+    var s = g.type === 'Industry' ? a.industry + ' ' + a.name : g.type === 'Region' ? a.country : g.type === 'Role' ? (a.contact || {}).title : g.type === 'Trigger' ? (a.signals || []).map(function (x) { return x.type; }).join(' ') : (a.motivation || '') + ' ' + (a.signals || []).map(function (x) { return x.type; }).join(' ');
+    return re.test(String(s || '')); }); }
+  function segTags(sg) { var t = (sg.trigger || '') + ' ' + (sg.name || ''); return A.tags.filter(function (g) { if (!/Trigger|Motive/.test(g.type)) return false; try { return new RegExp(g.m, 'i').test(t); } catch (e) { return false; } }); }
+  function tagsPane() {
+    var types = ['Industry', 'Region', 'Size', 'Role', 'Trigger', 'Motive'];
+    return '<div class="card c12"><div class="card-h"><span class="lbl">ICP tag library</span><span class="muted sm">the tags accounts carry · micro-segments are built from them</span></div><div class="card-b" style="padding:0"><div class="ac-bar"><span class="sm muted">Every account gets a tag of each type it matches. A micro-segment is a combination of tags, usually a trigger plus a motive within the ICP.</span><span class="sp"></span>' + ibtn('AC.tagEdit()', '+ Add a tag', 'pri') + '</div><div class="tbl-wrap"><table class="tbl ac-t"><thead><tr><th style="width:110px">Type</th><th>Tags · accounts with each</th></tr></thead><tbody>'
+      + types.map(function (ty) { return '<tr><td class="nm">' + ty + '</td><td><div class="ac-tags">' + A.tags.filter(function (g) { return g.type === ty; }).map(function (g) { return '<button class="ac-tag" onclick="AC.tagEdit(\'' + g.id + '\')" title="Edit, merge or remove">' + esc(g.name) + ' <b>' + tagAccts(g).length + '</b></button>'; }).join('') + '</div></td></tr>'; }).join('')
+      + '</tbody></table></div><div class="ac-last">' + lastChange('tags') + '</div></div></div>'
+      + '<div class="card c12"><div class="card-h"><span class="lbl">Micro-segments built from tags</span><span class="muted sm">trigger and motive tags behind each micro-segment</span></div><div class="card-b" style="padding:0"><div class="tbl-wrap"><table class="tbl ac-t"><thead><tr><th>Micro-segment</th><th>Built from</th><th>Mode</th></tr></thead><tbody>'
+      + (M.SEGMENTS || []).map(function (sg) { var T = segTags(sg); return '<tr><td class="nm">' + esc(sg.name) + '</td><td><div class="ac-tags">' + (T.length ? T.map(function (g) { return badge(g.type + ': ' + g.name, g.type === 'Trigger' ? 'b-ter' : 'b-sec'); }).join('') : badge('Trigger: ' + (sg.trigger || '–'))) + '</div></td><td class="sm">' + esc(sg.mode || '') + '</td></tr>'; }).join('') + '</tbody></table></div></div></div>';
+  }
   /* ─── Mount ─── */
   function pane(name) { var P = document.querySelectorAll('[data-pane="' + name + '"]'); for (var i = 1; i < P.length; i++) P[i].parentNode.removeChild(P[i]); return P[0]; }
   function mount() {
     var wt = document.getElementById('wtRows'); if (wt) { var card = wt.closest('.card'); var c = document.createElement('div'); c.className = 'card c12'; c.id = 'acRubric'; card.parentNode.replaceChild(c, card); }
-    ['signals', 'registry', 'exclusions', 'escal', 'backtest'].forEach(function (n) { var p = pane(n); if (p) { p.innerHTML = ''; p.id = 'ac-' + n; } });
+    ['niches', 'tags', 'signals', 'registry', 'exclusions', 'escal', 'backtest'].forEach(function (n) { var p = pane(n); if (p) { p.innerHTML = ''; p.id = 'ac-' + n; } });
   }
   function draw() {
     var set = function (id, h) { var el = document.getElementById(id); if (el) el.innerHTML = h; };
-    set('acRubric', rubricCard()); set('ac-signals', signalsPane()); set('ac-registry', registryPane()); set('ac-exclusions', exclPane()); set('ac-escal', escalPane()); set('ac-backtest', backtestPane());
+    set('acRubric', rubricCard()); set('ac-signals', signalsPane()); set('ac-registry', registryPane()); set('ac-exclusions', exclPane()); set('ac-escal', escalPane()); set('ac-backtest', backtestPane()); set('ac-niches', nichesPane()); set('ac-tags', tagsPane());
   }
   var find = function (L, id) { return L.find(function (x) { return x.id === id; }); };
   window.AC = {
     close: function () { var el = document.getElementById('acDrawer'); if (el) { el.className = ''; el.innerHTML = ''; } CUR = null; },
     submit: function () { var v = vals(), miss = CUR.fields.find(function (f) { return f.req && !(Array.isArray(v[f.k]) ? v[f.k].length : v[f.k]); }); if (miss) { say('Fill in: ' + miss.label); return; } var cb = CUR.onSave; AC.close(); cb(v); },
+    /* niches and tags */
+    nicheEdit: function (id, parent) { var n = id ? find(A.niches, id) : { name: '', parent: parent || '', kw: '' };
+      form(id ? 'Edit the niche' : 'Add a niche', 'Part of the client\'s ontology', [
+        { k: 'name', label: 'Niche', req: 1, val: n.name, ph: 'e.g. Specialty chemicals, Fertilisers' },
+        { k: 'parent', label: 'Inside', type: 'select', val: n.parent, opts: [['', 'Top level']].concat(A.niches.filter(function (x) { return !x.parent && x.id !== id; }).map(function (x) { return [x.id, x.name]; })) },
+        { k: 'kw', label: 'Matches on', req: 1, val: n.kw, ph: 'Words in the company name or industry, separated by commas', hint: 'e.g. fertiliser, urea, ammonia' }],
+        function (o) { if (id) Object.assign(n, o); else A.niches.push(Object.assign({ id: uid() }, o)); persist((id ? 'Niche changed: ' : 'Niche added: ') + o.name + ' (' + nicheAccts(id ? n : A.niches[A.niches.length - 1]).length + ' accounts).', 'niches'); }, id ? 'Save' : 'Add the niche'); },
+    nicheDel: function (id) { var n = find(A.niches, id); A.niches = A.niches.filter(function (x) { return x.id !== id && x.parent !== id; }); persist('Niche removed: ' + n.name + ' and its sub-niches.', 'niches'); },
+    tagEdit: function (id) { var g = id ? find(A.tags, id) : { type: 'Trigger', name: '', m: '' };
+      form(id ? 'Edit the tag' : 'Add a tag', 'Accounts carry it when they match', [
+        { k: 'type', label: 'Type', type: 'select', val: g.type, opts: ['Industry', 'Region', 'Size', 'Role', 'Trigger', 'Motive'] },
+        { k: 'name', label: 'Tag', req: 1, val: g.name, ph: 'e.g. Flaring incident, Brownfield expansion' },
+        { k: 'm', label: 'Matches when', req: 1, val: g.m, ph: 'Words to look for, separated by |', hint: 'For a size, give the range as low-high, e.g. 1000-5000.' },
+        { k: 'merge', label: 'Merge into', type: 'select', val: '', opts: [['', 'Keep as its own tag']].concat(A.tags.filter(function (x) { return x.id !== id; }).map(function (x) { return [x.id, x.type + ': ' + x.name]; })) }],
+        function (o) { if (o.merge && id) { var into = find(A.tags, o.merge); into.m = into.m + '|' + g.m; A.tags = A.tags.filter(function (x) { return x.id !== id; }); persist('Tag merged: ' + g.name + ' into ' + into.name + '.', 'tags'); return; } delete o.merge; if (id) Object.assign(g, o); else A.tags.push(Object.assign({ id: uid() }, o)); persist((id ? 'Tag changed: ' : 'Tag added: ') + o.type + ' · ' + o.name + '.', 'tags'); }, id ? 'Save' : 'Add the tag'); },
     /* rubric */
     rubW: function (id, v) { find(A.rubric, id).w = Math.max(0, Math.min(100, +v || 0)); try { localStorage.setItem(K, JSON.stringify(A)); } catch (e) {} draw(); },
     rubEdit: function (id) { var v = id ? find(A.rubric, id) : { name: '', kind: 'List of values', vals: '', rule: 'Full points on a match', src: 'CRM field', w: 10, req: false };

@@ -2187,3 +2187,11 @@ button.coh:hover{border-color:var(--brand-mid);box-shadow:0 0 0 3px var(--brand-
 .ctp-q{flex:1 1 100%}
 .ctp-f{flex-wrap:wrap}
 .ctp-f .btn{white-space:normal;text-align:left}
+
+/* Step tags and the closing offer */
+.mst-tags{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:8px 16px;border-bottom:1px solid var(--border);background:var(--s50)}
+.mst-tagl{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--i3);margin-right:2px}
+.mst-tag{display:inline-flex;align-items:center;gap:5px;padding:2px 9px;border:1px solid var(--border);border-radius:999px;background:var(--surf);font-size:11.5px;color:var(--i1)}
+.mst-tag i{font-style:normal;color:var(--i3)}
+.mst-offer{border-color:var(--brand-mid,var(--border))}
+.mst-offer .sel{height:24px;font-size:11.5px;border:0;padding:0 4px;background:transparent;color:var(--brand);font-weight:600}

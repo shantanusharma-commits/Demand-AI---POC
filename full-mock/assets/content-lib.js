@@ -26,8 +26,14 @@
     { id: 't6', name: 'Extend vs switch', type: 'PDF one-pager', design: 'Plain paper', sections: ['Option A and option B', 'Five-year cost', 'Risks of each', 'Recommendation'], st: 'Draft', def: false, by: 'Daniel Brooks', at: 'Fri 13 Nov', uses: 0 }
   ];
   const GAPS = [['What does a phased migration cost per year of outage saved?', 7, 'Rival contract ending'], ['Which sites like ours finished a migration inside one turnaround?', 5, 'Turnaround season 2027'], ['How do you handle a mixed vendor estate?', 4, 'Historian & tech-stack change'], ['What support response time do you commit to?', 3, 'Researching competitors']];
+  const OFFERS0 = [
+    { id: 'o1', name: 'Pre-turnaround health check', what: 'Two engineers walk the control system and instrumentation with your team and hand back a prioritised list', terms: 'Free · on site or remote · 2 hours', best: 'Turnaround season 2027', used: 11, won: 4, st: 'Active' },
+    { id: 'o2', name: 'Side-by-side comparison', what: 'Lifecycle cost and outage windows for extending or migrating, worked out for their site', terms: 'Free · a document', best: 'Rival contract ending', used: 14, won: 6, st: 'Active', def: true },
+    { id: 'o3', name: 'Two-day site assessment', what: 'A plant walk and a written report they keep, whatever they decide', terms: 'Free for tier A · 2 days on site', best: 'Expansion & capex projects', used: 6, won: 2, st: 'Active' },
+    { id: 'o4', name: '60-minute migration workshop', what: 'Staffing and sequencing a migration, with their team', terms: 'Free · remote · 60 minutes', best: 'Control-systems hiring surge', used: 4, won: 1, st: 'Active' },
+    { id: 'o5', name: 'Early design review', what: 'Half a day with two engineers; they keep the output', terms: 'Free · half a day', best: 'Expansion & capex projects', used: 3, won: 1, st: 'Active' }];
   let D = {};
-  function load() { try { D = JSON.parse(localStorage.getItem(KEY) || 'null') || {}; } catch (e) { D = {}; } D.extra = D.extra || []; D.st = D.st || {}; D.review = D.review || {}; D.log = D.log || []; if (!D.tpl) D.tpl = TPL0.map(x => Object.assign({}, x, { sections: x.sections.slice() })); return D; }
+  function load() { try { D = JSON.parse(localStorage.getItem(KEY) || 'null') || {}; } catch (e) { D = {}; } D.extra = D.extra || []; D.st = D.st || {}; D.review = D.review || {}; D.log = D.log || []; if (!D.offers) D.offers = OFFERS0.map(o => Object.assign({}, o)); if (!D.tpl) D.tpl = TPL0.map(x => Object.assign({}, x, { sections: x.sections.slice() })); return D; }
   function save() { try { localStorage.setItem(KEY, JSON.stringify(D)); } catch (e) { /* storage blocked: changes last for this page only */ } }
   const log = (x, who) => { D.log.unshift({ x, who: who || '', at: 'Just now' }); D.log = D.log.slice(0, 30); };
   window.CONTENT_LIB = {
@@ -40,6 +46,8 @@
     templates() { load(); return D.tpl; },
     saveTemplates(L, msg, who) { load(); D.tpl = L; if (msg) log(msg, who); save(); },
     defTemplate(type) { const L = this.templates().filter(x => x.type === type && x.st === 'Active'); return L.find(x => x.def) || L[0] || null; },
+    offers() { load(); return D.offers; },
+    saveOffers(L, msg, who) { load(); D.offers = L; if (msg) log(msg, who); save(); },
     gaps: () => GAPS.map(g => g.slice()),
     log() { load(); return D.log; }
   };

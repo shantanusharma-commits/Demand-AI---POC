@@ -882,7 +882,7 @@
       const real = REPLIES.filter(x => x.owner === r), realIds = real.map(x => x.acc);
       const pool = A.filter(a => a.campaign || a.nba || (a.activity || []).some(x => /^Opened/.test(x.t))).sort((p2, q) => (realIds.includes(q.id) - realIds.includes(p2.id)) || ((q.activity || []).some(x => /^Opened/.test(x.t)) - (p2.activity || []).some(x => /^Opened/.test(x.t))) || fxH(p2.id + r) - fxH(q.id + r));
       if (!pool.length) return;
-      const W = [[0, 6, 1], [7, 29, 0], [30, 89, 0]], Q = { sent: [ts.sent, ts.sent * 3, ts.sent * 5], clicked: [ts.replies * 2 + 1, ts.replies * 3, ts.replies * 4], responded: [ts.replies, Math.round(ts.replies * 0.6), ts.replies], meetings: [ts.meetings, Math.round(ts.meetings * 0.5), ts.meetings], closed: [ts.meetings >= 2 ? 1 : 0, Math.round(ts.meetings * 0.3), Math.round(ts.meetings * 0.5)] };
+      const W = [[0, 6, 1], [7, 29, 0], [30, 89, 0]], Q = { sent: [ts.sent, ts.sent * 3, ts.sent * 5], clicked: [ts.replies * 2 + 1, ts.replies * 3, ts.replies * 4], responded: [ts.replies, Math.round(ts.replies * 0.6), ts.replies], meetings: [ts.meetings, Math.round(ts.meetings * 0.5), ts.meetings], closed: [ts.meetings >= 3 ? 1 : 0, Math.round(ts.meetings * 0.15), Math.round(ts.meetings * 0.3)] };
       let cur = 0; const nxt = (avoid) => { for (let k = 0; k < pool.length; k++) { const a = pool[(cur + k) % pool.length]; if (!avoid || !avoid.has(a.id)) { cur = (cur + k + 1) % pool.length; return a; } } const a = pool[cur % pool.length]; cur++; return a; };
       const ageIn = (w, s) => w[0] + Math.floor(fxH(s) * (w[1] - w[0] + 1));
       W.forEach((w, wi) => {
@@ -937,6 +937,8 @@
       ${tot != null ? `<div class="mx-f"><span>Total</span><b>USD ${tot.toLocaleString('en-US')}k</b></div>` : ''}</div>` };
   }
   function fxAsk(t) {
+    if (/^show me the cost per meeting/.test(t)) return costCard();
+    if (/^show me the win rate/.test(t)) return winCard();
     const f = t.match(/^show me (?:the )?(?:\d[\d,]* )?(leads generated|leads scored|leads in nba or campaigns|leads messaged|leads that opened|leads that replied|leads with a meeting booked|leads closed)(?: (this week|this month|this quarter))?/);
     if (f) return fnCard(FN.find(x => x[3] === f[1])[0], /month/.test(f[2] || '') ? 'month' : /quarter/.test(f[2] || '') ? 'quarter' : 'week');
     const m = t.match(/^show me (?:the )?(?:\d[\d,]* )?(leads generated|people who clicked|clicks|replies|meetings booked|meetings|leads closed|messages sent|emails sent)(?: (this week|this month|this quarter))?/);
@@ -999,15 +1001,32 @@
       <div class="fn-st fn8">${FN.map(([k, l, d], i) => `<button class="fn-s" onclick="App.fnShow('${k}')"><span class="fn-l"><i class="fn-i">${i + 1}</i>${l}</span><b>${fmt(v[i])}</b><span class="fn-d">${d}</span><span class="fn-bar"><i style="width:${Math.max(3, pct(v[i], v[0]))}%"></i></span>${i ? `<em>${pct(v[i], v[i - 1])}% of ${FN[i - 1][1].toLowerCase().replace("nba", "NBA")}</em>` : '<em>100%</em>'}</button>`).join('')}</div>
       <div class="zt-f"><span>Lead to close: <b>${v[0] ? (v[7] / v[0] * 100).toFixed(1) : '0.0'}%</b> · open rate <b>${pct(v[4], v[3])}%</b> · reply rate <b>${pct(v[5], v[3])}%</b> · every number opens its list</span></div></div>`;
   }
+  /* What the week cost, for cost per meeting: every line the customer pays for */
+  const COSTW = [['AI runs', 'Overnight scoring, drafting and checks: 7 nights × USD 11.40', 79.8], ['Contact data', 'Apollo, ZoomInfo and Lusha credits used for enrichment', 142], ['Signal sources', 'Job-change alerts, contract data, intent and news feeds', 44.2]];
+  function winRate() { const S4 = fnStages('quarter'), won = (S4.closed || []).length, n = (S4.meetings || []).length; return { won, n, pct: n ? Math.round(won / n * 100) : 0, S4 }; }
+  function costCard() {
+    const ts = TEAM_STATS, meet = REPS.reduce((n, r) => n + ts[r].meetings, 0), tot = COSTW.reduce((n, c) => n + c[2], 0), per = tot / Math.max(1, meet);
+    return { kind: 'text', html: `<p>Cost per meeting this week: <b>USD ${Math.round(per)}</b>. The team spent <b>USD ${tot.toFixed(2)}</b> and booked <b>${meet}</b> meetings. Rep time and the sending tools are not included.</p>
+      <div class="tcard mx"><div class="tcard-h"><span class="t">${ic('up', 15)} Cost per meeting</span><span class="muted" style="font-size:12px">this week</span></div>
+      <div class="mx-w"><table class="tbl mx-t"><thead><tr><th>Cost</th><th>What it covers</th><th>USD</th></tr></thead><tbody>${COSTW.map(c => `<tr><td class="nm">${c[0]}</td><td class="sm">${esc(c[1])}</td><td class="mx-d">${c[2].toFixed(2)}</td></tr>`).join('')}</tbody></table></div>
+      <div class="mx-f"><span>Total ÷ ${meet} meetings</span><b>USD ${per.toFixed(2)} a meeting</b></div></div>` };
+  }
+  function winCard() {
+    const w = winRate(), won = new Set(w.S4.closed.map(e => e.acc)), cl = {}; w.S4.closed.forEach(e => { cl[e.acc] = e.ev; });
+    return { kind: 'text', html: `<p>Win rate this quarter: <b>${w.pct}%</b>. ${w.won} of the ${w.n} meetings booked from campaigns and next best actions became won deals.</p>
+      <div class="tcard mx"><div class="tcard-h"><span class="t">${ic('check', 15)} Win rate</span><span class="muted" style="font-size:12px">${w.n} meetings · this quarter</span></div>
+      <div class="mx-w"><table class="tbl mx-t"><thead><tr><th>Lead</th><th>Outcome</th><th>Meeting</th></tr></thead><tbody>${w.S4.meetings.slice().sort((a, b) => won.has(b.acc) - won.has(a.acc)).map(e => { const a = acct(e.acc); return `<tr class="row-link" onclick="App.openRecord('${e.acc}','activity')"><td><div class="nm">${esc(a.contact.name)}</div><div class="sm">${esc(a.name)} · ${esc(first(USERS[a.owner].name))}</div></td><td>${won.has(e.acc) ? `<span class="badge b-pos nodot">Won</span> USD ${cl[e.acc] ? cl[e.acc].value : '–'}k` : '<span class="badge b-grey nodot">Still open</span>'}</td><td class="mx-d">${e.ev ? esc(e.ev.at) : fxDay(e.age)}</td></tr>`; }).join('')}</tbody></table></div></div>` };
+  }
   function standingTile() {
     const ts = TEAM_STATS, reps = isMgr ? REPS : [me.id], sum = f => reps.reduce((n, r) => n + ts[r][f], 0);
     const meet = sum('meetings'), tgt = sum('target'), sentN = sum('sent'), cap = isMgr ? 160 : 40;
     return `<p>${isMgr ? 'Where the team stands this week, outcomes first.' : 'Where you stand this week, outcomes first.'} You are <b>${tgt - meet} meeting${tgt - meet === 1 ? '' : 's'} short</b> of the target${isMgr ? '; the replies waiting below could close part of that' : ''}.</p>
       <div class="zt"><div class="zt-bar big" role="img" aria-label="${meet} of ${tgt} meetings"><i style="width:${Math.round(meet / tgt * 100)}%"></i></div>
-      <div class="zt-stats" style="grid-template-columns:repeat(3,minmax(0,1fr))">
+      <div class="zt-stats" style="grid-template-columns:repeat(${isMgr ? 5 : 3},minmax(0,1fr))">
         ${zStat(`${meet}<small> / ${tgt}</small>`, 'meetings booked against target', '', "App.metric('meetings','week')", 'zgap')}
         ${zStat(sum('replies'), `replies, ${fxRows('responded', 'week').filter(e => /Positive|Meeting/.test(e.kind)).length} positive or booked`, '', "App.metric('responded','week')")}
         ${zStat(`${sentN}<small> / ${cap}</small>`, 'emails sent: the activity behind it', '', "App.metric('sent','week')")}
+        ${isMgr ? zStat(`USD ${Math.round(COSTW.reduce((n, c) => n + c[2], 0) / Math.max(1, meet))}`, 'cost per meeting this week: AI, data and sources', '', "App.ask('Show me the cost per meeting this week')") + (w => zStat(`${w.pct}%`, `win rate this quarter: ${w.won} of ${w.n} meetings won`, '', "App.ask('Show me the win rate this quarter')"))(winRate()) : ''}
       </div></div>`;
   }
   function needsYouList() {
@@ -2031,6 +2050,7 @@
     const badge = /^Sent|Done/.test(o.state) ? `<span class="badge b-pos nodot">${ic('check', 11)} ${esc(o.state)}</span>` : o.state === 'Next' || o.state === 'First to go' ? `<span class="badge b-ter nodot">${esc(o.state)}</span>` : `<span class="badge b-grey nodot">${esc(o.state)}</span>`;
     return `<div class="mst ${o.locked ? 'locked' : ''}">
       <div class="mst-h"><span class="mst-n">${o.i + 1}</span><div class="mst-t"><b>${chIc(o.tc.ch)} ${esc(o.tc.ch)} · ${esc(o.tc.fmt)}</b><span>Day ${o.tc.day}${o.x ? ` · angle from ${esc(o.x.seg ? o.x.seg.name : o.x.name)}: ${esc(cpLow(o.x.first ? (cohAngle(o.x, o.i)) : cohAngle(o.x, o.i)))}` : ''}</span></div>${badge}${o.tools || ''}</div>
+      ${stepTags(o, cp, key)}
       <div class="mst-b">
         <div class="mst-ed"><div class="mst-l">Copy ${o.locked ? '<em class="ai">as sent</em>' : edited ? '<em>edited</em>' : '<em class="ai">AI draft</em>'}</div>
           ${em ? `<label class="sr" for="cs-${sk}">Subject</label><input class="mst-sub" id="cs-${sk}" value="${esc(cp.subject)}" placeholder="Subject" ${o.locked ? 'readonly' : `oninput="App.copyEdit('${key}')"`}>` : ''}
@@ -2058,6 +2078,16 @@
     return head + `<div class="ctp"><div class="ctp-h"><b>Pick content from the library</b><label class="sr" for="ctq">Search the library</label><input id="ctq" class="ctp-q" placeholder="Search assets" value="${esc(ctQv)}" oninput="App.ctQ(this.value)"></div>
       <div class="ctp-l">${L.map(x => `<button class="ctp-r ${a && a.id === x.id ? 'on' : ''}" onclick="App.ctSet('${key}','${x.id}')">${libThumb({ type: x.type })}<span class="ctp-t"><b>${esc(x.t)}</b><span>${esc(x.type)} · ${esc(x.st === 'Completed' ? 'approved' : (x.st || '').toLowerCase())}${x.metric && x.metric !== '–' ? ' · ' + esc(x.metric) : ''}</span></span><span class="ctp-go">${a && a.id === x.id ? 'Attached' : 'Attach'}</span></button>`).join('') || '<div class="muted sm" style="padding:10px">Nothing matches.</div>'}</div>
       <div class="ctp-f"><button class="btn sm" onclick="App.ctNew('${key}','${ty}')">${ic('spark', 12)} Make a new ${esc(ty.toLowerCase())} in Content studio</button><span class="sp"></span><button class="btn sm ghost" onclick="App.ctPick(null)">Cancel</button></div></div>`;
+  }
+  /* Variable tags logged on every step, and the offer on the closing step */
+  function offersAll() { try { return (window.CONTENT_LIB.offers() || []).filter(x => x.st !== 'Retired'); } catch (e) { return []; } }
+  function stepOfferOf(key, o) { const L = offersAll(), v = (S.stepOffer || {})[key]; if (v === 'none') return null; const segN = o.x && o.x.seg ? o.x.seg.name : o.x ? o.x.name : ''; return L.find(x => x.id === v) || L.find(x => x.best && segN && x.best === segN) || L.find(x => x.def) || null; }
+  function stepTags(o, cp, key) {
+    const words = String(cp.body || '').split(/\s+/).filter(Boolean).length, len = words < 45 ? 'Short' : words < 110 ? 'Medium' : 'Long', last = o.i === o.sq.length - 1;
+    const cta = /\?/.test(cp.body) ? (/call|conversation|session|workshop|walk/i.test(cp.body) ? 'Ask for a call' : 'Ask a question') : 'No ask';
+    const ang = o.x ? cohAngle(o.x, o.i) : (o.tc.t || ''), of = last ? stepOfferOf(key, o) : null;
+    const chip = (k, v) => `<span class="mst-tag"><i>${k}</i>${esc(v)}</span>`;
+    return `<div class="mst-tags"><span class="mst-tagl">Tags logged</span>${chip('Angle', ang.length > 48 ? ang.slice(0, 46) + '…' : ang)}${chip('Channel', o.tc.ch)}${chip('Format', o.tc.fmt)}${chip('Length', `${len} · ${words} words`)}${chip('CTA', cta)}${last ? (o.locked ? chip('Offer', of ? of.name : 'None') : `<label class="mst-tag mst-offer"><i>Offer</i><select class="sel" aria-label="Offer on the closing step" onchange="App.stepOffer('${key}', this.value)"><option value="none" ${!of ? 'selected' : ''}>No offer</option>${offersAll().map(x => `<option value="${x.id}" ${of && of.id === x.id ? 'selected' : ''}>${esc(x.name)}${x.def ? ' (default)' : ''}</option>`).join('')}</select></label>`) : ''}</div>`;
   }
   function cohMsgHead(x, pvList, pv, shared) {
     const sg = x.seg;
@@ -3111,6 +3141,7 @@
       bd.value = P.length > 2 ? [P[0]].concat(P.slice(1, -1).map(short), [P[P.length - 1]]).join('\n\n') : short(bd.value.replace(/^(Hi [^,]+, )/, '')) === bd.value ? bd.value : bd.value.replace(/^(Hi [^,]+, )(.*)$/s, (m, h, r) => h + r.split(/(?<=[.?!])\s+/).slice(0, 2).join(' '));
       App.copyEdit(key); toast('Rewritten shorter, same angle. Brand and claim checks still pass'); },
     copyReset(key) { if (S.copy) delete S.copy[key]; save(); toast('Back to the AI draft'); renderAll(); },
+    stepOffer(key, v) { S.stepOffer = S.stepOffer || {}; S.stepOffer[key] = v; save(); const o = offersAll().find(x => x.id === v); toast(o ? `Closing offer: ${o.name}. Logged on every send` : 'No offer on the closing step'); renderAll(); },
     ctPick(key) { ctOpen = !key || ctOpen === key ? null : key; ctQv = ''; renderAll(); setTimeout(() => { const q = $('ctq'); if (q) q.focus(); }, 30); },
     ctQ(v) { ctQv = v; renderAll(); const q = $('ctq'); if (q) { q.focus(); q.setSelectionRange(v.length, v.length); } },
     ctSet(key, id) { S.stepCt = S.stepCt || {}; S.stepCt[key] = id; ctOpen = null; save(); const a = libAll().find(x => x.id === id); toast(id === 'none' ? 'Content removed from this step' : `Attached: ${a ? a.t : 'the asset'}. It goes with this step for every person`); renderAll(); },

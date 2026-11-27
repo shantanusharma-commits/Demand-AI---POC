@@ -736,7 +736,7 @@ function search(fn, ph){ return `<div class="sl-srch"><svg width="12" height="12
 const pill = (cur,id,label) => `<div class="seg-pill ${cur===id?'active':''}" onclick="filt='${id}';renderResults()">${label}</div>`;
 
 /* ═══════════════ CONTENT LIBRARY: the brand pack the drafts follow ═══════════════ */
-let tab = (t => ['guidelines','voice','negative','claims','framework','content','templates','versions'].includes(t) ? t : 'guidelines')(new URLSearchParams(location.search).get('tab')), DRAFT = null, SUGGEST = null;
+let tab = (t => ['guidelines','voice','negative','claims','framework','content','templates','offers','versions'].includes(t) ? t : 'guidelines')(new URLSearchParams(location.search).get('tab')), DRAFT = null, SUGGEST = null;
 const canEdit = () => ['Admin','Sales manager'].includes(getRole());
 const canPublish = () => getRole()==='Admin';
 function me(){ const r = getRole(); return { who: ROLE_PERSON[r] || r, role: r }; }
@@ -764,11 +764,11 @@ function render(){
   const ft = (k,l) => `<div class="ftab ${tab===k?'active':''}" onclick="go('${k}')">${l}${changed.some(c=>SECTION_OF[c]===k)?' <span class="chg-dot" title="Changed, not saved yet"></span>':''}</div>`;
   document.getElementById('mainArea').innerHTML = `
     <div class="topbar"><div class="topbar-l"><span class="tb-title">Content library</span><span class="tb-badge badge-neutral">${esc(DemandAI.brandVersion())}</span></div></div>
-    <div class="ftabs">${[['guidelines','Brand guidelines'],['framework','Messaging frameworks'],['voice','Voice and tone'],['negative','Negative keywords'],['claims','Approved claims'],['content','Assets'],['templates','Templates'],['versions','Versions']].map(([k,l])=>ft(k,l)).join('')}</div>
+    <div class="ftabs">${[['guidelines','Brand guidelines'],['framework','Messaging frameworks'],['voice','Voice and tone'],['negative','Negative keywords'],['claims','Approved claims'],['content','Assets'],['templates','Templates'],['offers','Offers'],['versions','Versions']].map(([k,l])=>ft(k,l)).join('')}</div>
     <div class="canvas cl-canvas">
       ${saveBar(live, changed)}
       ${!canEdit() ? `<div style="font-size:12px;color:var(--i3);margin-bottom:14px">View only: the admin and the sales manager maintain the brand pack.</div>` : ''}
-      ${({guidelines:guidelinesTab, framework:frameworkTab, voice:voiceTab, negative:negativeTab, claims:claimsTab, content:assetsTab, templates:templatesTab, versions:versionsTab})[tab]()}
+      ${({guidelines:guidelinesTab, framework:frameworkTab, voice:voiceTab, negative:negativeTab, claims:claimsTab, content:assetsTab, templates:templatesTab, offers:offersTab, versions:versionsTab})[tab]()}
     </div>`;
 }
 const SECTION_OF = { 'Brand guidelines':'guidelines', 'Messaging frameworks':'framework', 'Voice and tone':'voice', 'Negative keywords':'negative', 'Approved claims':'claims' };
@@ -1168,6 +1168,22 @@ function asAddSave() {
 
 /* ─── Templates: the structure and look of each format. Content studio uses each format's default template ─── */
 const TPL_DESIGNS = ['Vantera Brand v3', 'Field guide', 'Boardroom', 'Night shift', 'Plain paper'];
+/* ─── Offers: what the closing step of a campaign offers. Reps pick one on the last step; every use is logged ─── */
+function offersTab() {
+  const L = window.CONTENT_LIB.offers(), ed = canEdit();
+  const pct = o => o.used ? Math.round(o.won / o.used * 100) + '%' : '–';
+  return `<div class="as-sync"><b>Offers are what the closing step asks for:</b> a health check, a comparison, a workshop. Reps pick one on the last step of a campaign; the default is used when none is picked. Every use is logged, so results show which offer gets accepted.</div>
+    <div class="card" style="padding:0;overflow:hidden;margin-top:12px"><table class="tbl"><thead><tr><th>Offer</th><th>What they get</th><th>Terms</th><th>Best for</th><th>Used</th><th>Accepted</th><th>Status</th><th></th></tr></thead><tbody>
+    ${L.map(o => `<tr style="${o.st === 'Retired' ? 'opacity:.55' : ''}"><td><b>${esc(o.name)}</b>${o.def ? ' <span class="tb-badge badge-neutral">Default</span>' : ''}</td><td style="font-size:12.5px">${esc(o.what)}</td><td style="font-size:12.5px">${esc(o.terms)}</td><td style="font-size:12.5px">${esc(o.best || 'Any')}</td><td>${o.used}</td><td>${pct(o)}</td><td>${esc(o.st)}</td><td style="white-space:nowrap;text-align:right">${ed ? `${o.def || o.st === 'Retired' ? '' : `<button class="btn btn-sm" onclick="offDefault('${o.id}')">Make default</button> `}<button class="btn btn-sm" onclick="offToggle('${o.id}')">${o.st === 'Retired' ? 'Restore' : 'Retire'}</button>` : ''}</td></tr>`).join('')}
+    </tbody></table></div>
+    ${ed ? `<div class="card" style="margin-top:12px;padding:14px 16px"><div style="font-weight:600;margin-bottom:8px">Add an offer</div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px">
+      <input id="ofN" placeholder="Offer, e.g. Outage-cost calculator" aria-label="Offer name"><input id="ofW" placeholder="What they get" aria-label="What they get"><input id="ofT" placeholder="Terms, e.g. Free · 30 minutes" aria-label="Terms"><input id="ofB" placeholder="Best for (micro-segment or trigger)" aria-label="Best for"></div>
+      <button class="btn btn-primary btn-sm" style="margin-top:10px" onclick="offAdd()">Add the offer</button></div>` : ''}`;
+}
+function offStore(L, msg) { window.CONTENT_LIB.saveOffers(L, msg, me().who); showToast(msg); render(); }
+function offAdd() { const v = id => (document.getElementById(id).value || '').trim(), n = v('ofN'); if (!n) { showToast('Name the offer first'); return; } const L = window.CONTENT_LIB.offers(); L.push({ id: 'o' + Date.now(), name: n, what: v('ofW'), terms: v('ofT'), best: v('ofB'), used: 0, won: 0, st: 'Active' }); offStore(L, `Offer added: ${n}`); }
+function offToggle(id) { const L = window.CONTENT_LIB.offers(), o = L.find(x => x.id === id); o.st = o.st === 'Retired' ? 'Active' : 'Retired'; if (o.st === 'Retired') o.def = false; offStore(L, `${o.st === 'Retired' ? 'Retired' : 'Restored'}: ${o.name}`); }
+function offDefault(id) { const L = window.CONTENT_LIB.offers(); L.forEach(x => { x.def = x.id === id; }); offStore(L, `Default offer: ${L.find(x => x.id === id).name}`); }
 function templatesTab() {
   const L = window.CONTENT_LIB, T = L.templates();
   return `<div class="as-sync"><b>Templates set the structure and look of each format.</b> Content studio writes every new asset from the default template for its format, in the brand voice and with approved claims. A template changes the sections and the design, never the voice or the claims.</div>

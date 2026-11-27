@@ -32,3 +32,6 @@
 .ac-checks label,.ac-tg{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:400;color:var(--i1);margin:0}
 #acDrawer.wz-on{position:fixed;inset:0;z-index:60}
 #acDrawer .wz-b{overflow:auto;flex:1}
+.ac-tag{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border:1px solid var(--border);border-radius:999px;background:var(--surf);font:inherit;font-size:12.5px;color:var(--i1);cursor:pointer}
+.ac-tag b{font-size:11px;color:var(--i3);font-weight:600}
+.ac-tag:hover{border-color:var(--brand);background:var(--brand-lt)}
