@@ -159,6 +159,12 @@ const M = process.argv[2], full = M === 'full-mock', dir = '/home/user/Demand-AI
   await p.evaluate(() => { App.nav(null); App.newChat(); }); await p.waitForTimeout(300); await p.evaluate(() => { const b = [...document.querySelectorAll('.dd-i')].find(x => /Find prospects/.test(x.textContent)); b.click(); }); await p.waitForTimeout(300);
   chk('Find prospects is selected in Start something new and waits for the prompt', /Find prospects/.test(await p.$eval('.cmp-pill', e => e.textContent)) && (await p.inputValue('#composer')) === '' && (await p.$$('#thread .msg.me')).length === 0, 'Chat'); await p.evaluate(() => App.actClear());
   await p.evaluate(() => { document.getElementById('composer').value = ''; App.nav(null); }); await p.waitForTimeout(300);
+  // round 20: pick the channel when adding a step; change, remove or attach the content of a step
+  await p.evaluate(() => { App.nav(null); App.goCampaign('c1'); App.setCampTab('msgs'); }); await p.waitForTimeout(600);
+  { const opts = await p.$$eval('.mst-add option', x => x.map(e => e.value).filter(Boolean)); const n0 = (await p.$$('.mst')).length; await p.selectOption('.mst-add', 'LinkedIn'); await p.waitForTimeout(400); const n1 = (await p.$$('.mst')).length;
+    await p.click('.mst-ct.empty .chip'); await p.waitForTimeout(300); const items = (await p.$$('.ctp-r')).length; await p.click('.ctp-r >> nth=0'); await p.waitForTimeout(300); const chosen = (await p.$$eval('.mst-ct', x => x.map(e => e.innerText))).some(s => /chosen by you/.test(s));
+    chk('Campaign steps: add a step and pick its channel; attach, change or remove the content of a step', opts.join() === 'Email,LinkedIn' && n1 === n0 + 1 && items > 3 && chosen, 'Campaigns › messages'); }
+  await p.evaluate(() => App.nav(null)); await p.waitForTimeout(300);
   // round 19: every Today number lists its exact records, in the chat on the left
   await p.evaluate(() => { try { App.qdClose(); } catch (e) {} App.nav(null); App.newChat(); App.nav(null); }); await p.waitForTimeout(400);
   { await p.evaluate(() => { App.nav(null); }); await p.goto(p.url().replace(/#.*$/, '') + '#today'); await p.waitForTimeout(600);

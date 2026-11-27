@@ -2158,3 +2158,32 @@ button.coh:hover{border-color:var(--brand-mid);box-shadow:0 0 0 3px var(--brand-
 .fn-st.fn8{grid-template-columns:repeat(4,minmax(0,1fr))}
 .fn-i{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:var(--brand-lt);color:var(--brand);font-style:normal;font-size:10px;margin-right:6px;letter-spacing:0}
 @media (max-width:900px){.fn-st.fn8{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* Step content: change, remove, attach from the library, or make a new one */
+.mst-ct{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.mst-ct .sp{flex:1}
+.mst-ct.empty{background:transparent;border:1px dashed var(--border)}
+.mst-ctl{font-weight:600;color:var(--i1)}
+.ctp{border:1px solid var(--brand-mid,var(--border));border-radius:10px;background:var(--surf);box-shadow:var(--sh);overflow:hidden}
+.ctp-h{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 12px;border-bottom:1px solid var(--border)}
+.ctp-h b{font-size:12.5px;flex:1}
+.ctp-q{flex:1 1 180px;height:32px;border:1px solid var(--border);border-radius:8px;padding:0 10px;font:inherit;font-size:12.5px;background:var(--surf);color:var(--i1)}
+.ctp-q:focus{outline:none;border-color:var(--brand)}
+.ctp-l{max-height:260px;overflow:auto;display:flex;flex-direction:column}
+.ctp-r{display:flex;align-items:center;gap:10px;padding:8px 12px;border:0;border-bottom:1px solid var(--s75);background:var(--surf);font:inherit;color:inherit;text-align:left;cursor:pointer}
+.ctp-r:hover{background:var(--brand-lt)}
+.ctp-r.on{background:var(--brand-lt)}
+.ctp-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.ctp-t b{font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ctp-t span{font-size:11.5px;color:var(--i3)}
+.ctp-go{font-size:11.5px;font-weight:600;color:var(--brand)}
+.ctp-f{display:flex;align-items:center;gap:8px;padding:10px 12px;border-top:1px solid var(--border)}
+.ctp-f .sp{flex:1}
+.mst-add{height:32px;font-size:12.5px;border-radius:8px;font-weight:600;color:var(--brand)}
+.cpv-bub.wa{background:#E7F8EE;border-color:#BFE8CF}
+.cpv-bub.sms{background:#EEF3FF;border-color:#CFDBF7}
+.og-ct .mst-ct{padding:4px 0;background:transparent}
+.ctp-h b{flex:1 1 100%}
+.ctp-q{flex:1 1 100%}
+.ctp-f{flex-wrap:wrap}
+.ctp-f .btn{white-space:normal;text-align:left}
