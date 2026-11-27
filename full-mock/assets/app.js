@@ -378,7 +378,7 @@
   };
   const MOD_HINTS = {
     inbox: ['Any replies?', 'Which replies are objections?', 'Draft a reply to Dian with 3 times next week', 'What should I do with Greystone?'],
-    analytics: isMgr ? ['Where are we stuck?', 'What moved into pipeline last week?', 'How is my team doing?', 'Which campaign is performing best?'] : ['What\'s my reply rate?', 'How many meetings did I book this week?', 'Which campaign is performing best?', 'How is the turnaround campaign performing?'],
+    analytics: isMgr ? ['Where are we stuck?', 'Which campaign is working best?', 'How is my team doing?', 'Which campaign is performing best?'] : ['What\'s my reply rate?', 'How many meetings did I book this week?', 'Which campaign is performing best?', 'How is the turnaround campaign performing?'],
     accounts: ['Build our ICP and find leads', 'Find prospects like my last 10 wins', 'Score this list', 'Who should I call first?'],
     segments: ['Which segments are campaigns?', 'Create micro-segments', 'What\'s close to becoming a campaign?', 'Why is Juniper ranked first?'],
     campaigns: ['How are the campaigns doing?', 'Build the campaign', 'Add a LinkedIn touch to the turnaround campaign', 'Any replies?'],
@@ -935,9 +935,9 @@
       ${tot != null ? `<div class="mx-f"><span>Total</span><b>USD ${tot.toLocaleString('en-US')}k</b></div>` : ''}</div>` };
   }
   function fxAsk(t) {
-    const m = t.match(/^show me (?:the )?(?:\d[\d,]* )?(leads generated|people who clicked|clicks|replies|meetings booked|meetings|leads closed|messages sent|emails sent|pipeline the ai influenced|pipeline)(?: (this week|this month|this quarter|open now))?/);
+    const m = t.match(/^show me (?:the )?(?:\d[\d,]* )?(leads generated|people who clicked|clicks|replies|meetings booked|meetings|leads closed|messages sent|emails sent)(?: (this week|this month|this quarter))?/);
     if (!m) return null;
-    const k = { 'leads generated': 'leads', 'people who clicked': 'clicked', clicks: 'clicked', replies: 'responded', 'meetings booked': 'meetings', meetings: 'meetings', 'leads closed': 'closed', 'messages sent': 'sent', 'emails sent': 'sent', 'pipeline the ai influenced': 'pipeline', pipeline: 'pipeline' }[m[1]];
+    const k = { 'leads generated': 'leads', 'people who clicked': 'clicked', clicks: 'clicked', replies: 'responded', 'meetings booked': 'meetings', meetings: 'meetings', 'leads closed': 'closed', 'messages sent': 'sent', 'emails sent': 'sent' }[m[1]];
     const per = /month/.test(m[2] || '') ? 'month' : /quarter/.test(m[2] || '') ? 'quarter' : 'week';
     return fxCard(k, per);
   }
@@ -962,9 +962,8 @@
     const meet = sum('meetings'), tgt = sum('target'), sentN = sum('sent'), cap = isMgr ? 160 : 40;
     return `<p>${isMgr ? 'Where the team stands this week, outcomes first.' : 'Where you stand this week, outcomes first.'} You are <b>${tgt - meet} meeting${tgt - meet === 1 ? '' : 's'} short</b> of the target${isMgr ? '; the replies waiting below could close part of that' : ''}.</p>
       <div class="zt"><div class="zt-bar big" role="img" aria-label="${meet} of ${tgt} meetings"><i style="width:${Math.round(meet / tgt * 100)}%"></i></div>
-      <div class="zt-stats">
+      <div class="zt-stats" style="grid-template-columns:repeat(3,minmax(0,1fr))">
         ${zStat(`${meet}<small> / ${tgt}</small>`, 'meetings booked against target', '', "App.metric('meetings','week')", 'zgap')}
-        ${zStat(isMgr ? 'USD 1.2M' : 'USD 0.3M', 'pipeline the AI influenced', '', "App.metric('pipeline')")}
         ${zStat(sum('replies'), `replies, ${fxRows('responded', 'week').filter(e => /Positive|Meeting/.test(e.kind)).length} positive or booked`, '', "App.metric('responded','week')")}
         ${zStat(`${sentN}<small> / ${cap}</small>`, 'emails sent: the activity behind it', '', "App.metric('sent','week')")}
       </div></div>`;
@@ -998,8 +997,7 @@
     [0, 0.5, 1].forEach(v => { const y = T + (1 - v / mx) * (H - T - B); g += `<line x1="${L}" x2="${W - 4}" y1="${y}" y2="${y}" stroke="#ECEFF3"/><text x="${L - 6}" y="${y + 3}" text-anchor="end">${v}</text>`; });
     vals.forEach((v, i) => { const x = L + i * st + (st - bw) / 2, h = v / mx * (H - T - B), y = H - B - h; bars += `<rect x="${x}" y="${y}" width="${bw}" height="${h}" rx="3" style="fill:${i === 4 ? 'var(--brand)' : 'var(--brand-mid)'}"/><text x="${x + bw / 2}" y="${H - 7}" text-anchor="middle">${labs[i]}</text><text x="${x + bw / 2}" y="${y - 4}" text-anchor="middle" fill="#4A5664">${v}</text>`; });
     const ov = ACCOUNTS.filter(a => a.owner === 'kenji' && a.nba && /ready|review/.test(a.nba.status) && !S.decisions[a.id]).slice(0, 2);
-    return `<p>Pipeline the AI influenced is up for the fifth week, to <b>USD 1.2M</b>. Two places are stuck.</p>
-      <div class="zt"><div class="zt-h"><b>Pipeline influenced, by week</b><span class="muted">USD M</span></div><div class="zchart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Pipeline influenced by week, rising from 0.62 to 1.2 million US dollars">${g}${bars}</svg></div></div>
+    return `<p>Two places are stuck this week.</p>
       <div class="zl"><div class="zl-h"><b>Stuck</b></div>
         <div class="zr" onclick="App.openRecord('sapphire','activity')">${pAvatar(acct('sapphire'), 28)}<div class="zr-m"><div class="zr-t">Sapphire Aromatics <span>· ${esc(first(USERS[acct('sapphire').owner].name))}</span></div><div class="zr-d">Opened the switch comparison 3 times, no reply</div><div class="zr-why">Same channel three times</div></div><div class="zr-m2">${mkHu('Sent with one click')}</div><button class="btn sm" onclick="event.stopPropagation();App.openRecord('sapphire','activity')">Last touchpoint</button></div>
         ${isMgr && ov.length ? `<div class="zr" onclick="App.viewRep('kenji')"><span class="av" style="background:${USERS.kenji.color}">KM</span><div class="zr-m"><div class="zr-t">Kenji Mori <span>· 3 overdue, no meetings yet</span></div><div class="zr-d">${ov.map(a => esc(a.name)).join(' and ')} ${ov.length > 1 ? 'are' : 'is'} waiting on him</div><div class="zr-why">Aisha has room this week</div></div><div class="zr-m2">${mkWait()}</div><button class="btn sm pri" onclick="event.stopPropagation();App.reassign(${js(ov.map(a => a.id))},'aisha')">Move to Aisha</button></div>` : ''}
@@ -1320,7 +1318,7 @@
     if (cc && cc.obj && /left|progress|where are we|status/.test(t)) return { kind: 'objCatchup' };
     if (cc && cc.obj && /on (their|its) own|went ahead/.test(t)) return { kind: 'text', html: `On this objective the AI did ${objDone(cc).filter(id => id !== 'saltmarsh').length} of the ${objDone(cc).length} done items on its own (marked ${mkAI()}). The rest were done or decided by a person (${mkHu('Person')}).` };
     if (/autonomy|how much .*(on (their|its) own|alone)|agents do (alone|on their own)/.test(t)) return { kind: 'autonomy' };
-    if (/stuck|moved into pipeline|what moved|pipeline .*(moved|influenc)/.test(t)) return { kind: 'stuck', steps: ['Pulled pipeline influenced by the AI, week by week', 'Looked for accounts with touches but no reply, and reps with overdue work', 'Ranked them by what is at stake'] };
+    if (/stuck|moved into pipeline|what moved|pipeline .*(moved|influenc)/.test(t)) return { kind: 'stuck', steps: ["Pulled this week's outcomes from campaigns and next best actions", 'Looked for accounts with touches but no reply, and reps with overdue work', 'Ranked them by what is at stake'] };
     if (/draft a follow-?up/.test(t)) { const ac = findAccount(t) || (ctx ? acct(ctx) : null) || (recId ? acct(recId) : null) || acct('sapphire'); return { kind: 'followUp', id: ac.id, steps: ['Read the last touchpoint and what happened after it', 'Picked the proven structure for ' + (ac.segment || 'this account'), 'Ran the brand voice and approved-claims checks'] }; }
     if (/change the channel/.test(t)) { const ac = findAccount(t) || (ctx ? acct(ctx) : null) || acct('sapphire'); return { kind: 'text', html: `Done: the next touch for <b>${esc(ac.name)}</b> goes by <b>LinkedIn</b> from ${esc(first(USERS[ac.owner].name))}'s own account, referencing the comparison ${esc(first(ac.contact.name))} opened. It waits for ${isMgr && ac.owner !== me.id ? first(USERS[ac.owner].name) : 'you'} to approve, because the channel changed. <br><button class="btn sm" style="margin-top:8px" onclick="App.openRecord('${ac.id}','engage')">Open the draft</button>` }; }
     if (/last touch/.test(t)) { const ac = findAccount(t) || (ctx ? acct(ctx) : null) || (recId ? acct(recId) : null) || acct('sapphire'); return { kind: 'lastTouch', id: ac.id, steps: ['Pulled the activity for ' + ac.name, 'Matched opens and replies to each touch', 'Checked what was sent with one click and what a person approved'] }; return { kind: 'text', html: `The last touchpoints for <b>${esc(ac.name)}</b> are open beside the chat, newest first. Open any step to read the message.` }; }
@@ -1708,7 +1706,7 @@
       ${kpi('task', 'Accepted first time · G2', acc + '%', acc, 'target 70%', '%', true, false, [acc >= 70 ? 'Passing' : 'Below target', acc >= 70])}
       ${kpi('bolt', 'Ready to send with one click', Math.round(went / tot * 100) + '%', went / tot * 100, `${went} of ${tot} next actions`, '%', true)}
       ${kpi('clock', 'Time to a first action · G1', g1 + ' min', g1, 'was 38 min before the pilot', 'min', false, false, [g1 <= 19 ? 'Passing' : 'Below target', g1 <= 19])}
-      ${kpi('layers', 'Pipeline influenced', 'USD ' + pipe.toFixed(1) + 'M', pipe, 'open opportunities touched', 'M', true)}
+      ${(cl => kpi('layers', 'Leads closed', cl, cl, 'won from outreach', '', true))(fxRows('closed', anPer === 'month' ? 'month' : 'week').filter(e => !(isMgr && ownerF !== 'all') || acct(e.acc).owner === ownerF).length)}
       ${kpi('alert', 'Overdue items', od, od, 'past their due time', '', false, od === 0)}
     </div>`;
     const card = (k, v, d) => `<div class="mcard"><div class="k">${k}</div><div class="v">${v}</div><div class="d">${d}</div></div>`;
@@ -1744,14 +1742,13 @@
     if (/accept|first time|\bg2\b|override/.test(t)) return say(`Reps accepted <b>${N.acc}%</b> of recommendations first time (G2, target 70%): ${N.acc >= 70 ? 'passing' : 'below target'}. Skips and edits come back as signals, so the next run starts better.`, [C.acc, C.auto]);
     if (/went ahead|on (their|its) own|autonom|auto/.test(t)) return say(`<b>${Math.round(N.went / N.tot * 100)}%</b> of next best actions met all five criteria and were ready to send with one click (${N.went} of ${N.tot}). The rest waited for a person. ${link('See the autonomy dial', "App.ask('How much do agents do on their own?')")}.`, [C.auto, C.acc]);
     if (/time to|first action|\bg1\b|speed|fast/.test(t)) return say(`Time to a first action is <b>${N.g1} minutes</b> (G1, target 19), down from 38 before the pilot.`, [C.g1, C.auto]);
-    if (/pipeline|revenue|usd|opportunit/.test(t)) return say(`Pipeline influenced ${N.per}: <b>USD ${N.pipe.toFixed(1)}M</b> of open opportunities the AI touched for ${esc(N.who)}.`, [C.pipe, C.meet]);
     if (/overdue|late|behind/.test(t)) return say(N.od ? `<b>${N.od}</b> items are overdue: ${repRows().filter(([r, s]) => s.overdue && N.reps.includes(r)).map(([r, s]) => `${esc(first(USERS[r].name))} ${s.overdue}`).join(', ')}. ${isMgr ? "Moving Kenji's Banyan Gas to Aisha clears the oldest." : ''}` : 'Nothing is overdue.');
     if (/funnel|leak|drop|convert/.test(t)) return say('The biggest drop is <b>live signal → contacted</b>: 33 accounts had a signal but only 24 were contacted within 2 days, mostly because 3 rep mailboxes aren\'t connected. Replies → positive is healthy (8 of 15).');
     if (/campaign/.test(t)) { const cs = CAMPAIGNS.map(c => [c, campStats(c)]).filter(([, s]) => s.started), b = cs.slice().sort((p, q) => q[1].replies / q[1].started - p[1].replies / p[1].started); return b.length ? say(`Best campaign by reply rate: ${link('<b>' + esc(b[0][0].name) + '</b>', `App.goCampaign('${b[0][0].id}')`)} at ${pct(b[0][1].replies, b[0][1].started)} (${b[0][1].meetings} meetings). ${b.length > 1 ? `Weakest: ${esc(b[b.length - 1][0].name)} at ${pct(b[b.length - 1][1].replies, b[b.length - 1][1].started)}.` : ''}`, b.slice(0, 4).map(([c, s]) => kc(esc(c.name), pct(s.replies, s.started), `reply rate · ${s.meetings} meeting${s.meetings === 1 ? "" : "s"}`, `App.goCampaign('${c.id}')`))) : say('No campaign has started sending yet.'); }
     if (/learn|worked|lesson/.test(t)) return say(LEARNED.slice(0, 3).map(l => `<b>${esc(l.t)}</b>: ${esc(l.d)}`).join('<br>'));
     if (isMgr && (rp || /\brep|who('s| is) (best|top|behind)|team|compare|leaderboard/.test(t))) { if (rp) { const s = TEAM_STATS[rp]; return say(`<b>${esc(USERS[rp].name)}</b> ${N.per}: ${s.meetings}/${s.target} meetings, ${s.replies} ${s.replies === 1 ? 'reply' : 'replies'} from ${s.sent} sent, ${s.accept}% accepted first time, ${s.overdue} overdue. The dashboard now shows only their numbers; ${link('back to the whole team', "App.setOwner('all')")}.`, [C.meet, C.rr, C.acc, C.od]); } return say(`By meetings against target: ${repRows().map(([r, s]) => `${link(esc(first(USERS[r].name)), `App.setOwner('${r}')`)} ${s.meetings}/${s.target}`).join(' · ')}. ${esc(first(USERS[repRows().pop()[0]].name))} needs help most.`, repRows().map(([r, s]) => kc(esc(USERS[r].name), `${s.meetings}<span class="muted" style="font-size:13px"> / ${s.target}</span>`, `meetings · ${s.overdue} overdue`, `App.setOwner('${r}')`))); }
-    if (/summar|overview|how are we|how am i|how('s| is) it going|doing|analytics|dashboard|numbers|kpi|metric|show/.test(t)) return say(`${N.per.charAt(0).toUpperCase() + N.per.slice(1)} for ${esc(N.who)}: <b>${N.meet}/${N.target}</b> meetings, reply rate <b>${N.rr.toFixed(1)}%</b>, <b>${N.pos}</b> positive ${N.pos === 1 ? 'reply' : 'replies'}, <b>${Math.round(N.went / N.tot * 100)}%</b> of next actions ready to send with one click, pipeline influenced <b>USD ${N.pipe.toFixed(1)}M</b>, ${N.od} overdue. ${N.meet < N.target ? 'Meetings are the gap; ask "Where are we stuck?" for the fixes.' : ''}`, [C.meet, C.rr, C.pos, C.auto, C.pipe, C.od]);
-    return view() === 'analytics' ? say('I can answer from the dashboard: meetings against target, reply rate, positive replies, accepted first time, what was ready to send, time to a first action, pipeline, overdue items, the funnel, campaigns or one rep. Add "this month" to switch the period.') : null;
+    if (/summar|overview|how are we|how am i|how('s| is) it going|doing|analytics|dashboard|numbers|kpi|metric|show/.test(t)) return say(`${N.per.charAt(0).toUpperCase() + N.per.slice(1)} for ${esc(N.who)}: <b>${N.meet}/${N.target}</b> meetings, reply rate <b>${N.rr.toFixed(1)}%</b>, <b>${N.pos}</b> positive ${N.pos === 1 ? 'reply' : 'replies'}, <b>${Math.round(N.went / N.tot * 100)}%</b> of next actions ready to send with one click, ${N.od} overdue. ${N.meet < N.target ? 'Meetings are the gap; ask "Where are we stuck?" for the fixes.' : ''}`, [C.meet, C.rr, C.pos, C.auto, C.od]);
+    return view() === 'analytics' ? say('I can answer from the dashboard: meetings against target, reply rate, positive replies, accepted first time, what was ready to send, time to a first action, overdue items, the funnel, campaigns or one rep. Add "this month" to switch the period.') : null;
   }
   function ownerSel() { return isMgr ? `<label class="sr" for="ownF">Rep</label><select class="sel" id="ownF" onchange="App.setOwner(this.value)"><option value="all">All reps</option>${REPS.map(r => `<option value="${r}" ${ownerF === r ? 'selected' : ''}>${esc(USERS[r].name)}</option>`).join('')}</select>` : ''; }
   function skeleton() {
@@ -2938,7 +2935,7 @@
     toggleNav() { navCol = !navCol; try { localStorage.setItem('dmock_nav', navCol ? '1' : ''); } catch (e) {} document.body.classList.toggle('nav-col', navCol); renderNav(); },
     setCu(k) { cuF = k; renderAll(); },
     setFun(k) { funF = k; renderAll(); },
-    metric(k, per) { per = per || funF; const n = fxRows(k, per).length, M = FX_META[k]; ask(k === 'pipeline' ? 'Show me the pipeline the AI influenced' : `Show me the ${n} ${M[0].toLowerCase()} ${FX_PER[per][1]}`); },
+    metric(k, per) { per = per || funF; const n = fxRows(k, per).length, M = FX_META[k]; ask(`Show me the ${n} ${M[0].toLowerCase()} ${FX_PER[per][1]}`); },
     openAppr(tab) { apprTab = tab; art = null; recId = null; thrId = null; expanded = true; go('approvals'); },
     setAuto(k, v) { S.auto[k] = v; save(); toast(`Set to ${v}. Work done this way is marked on every list.`); renderAll(); },
     chatOpen(on) { chatClosed = !on; renderAll(); if (on) setTimeout(() => $('composer') && $('composer').focus(), 0); },

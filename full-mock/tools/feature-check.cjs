@@ -164,8 +164,7 @@ const M = process.argv[2], full = M === 'full-mock', dir = '/home/user/Demand-AI
     const mono = nums.length === 5 && nums.every((n, i) => i === 0 || n <= nums[i - 1]);
     let same = true; for (const i of [1, 3]) { await p.click(`.fn-s >> nth=${i}`); await p.waitForTimeout(1600); const rows = await p.$$eval('#thread .tcard.mx', x => x[x.length - 1].querySelectorAll('tbody tr.row-link').length); if (rows !== nums[i]) same = false; }
     chk('Today funnel narrows stage by stage, and a number opens exactly its records in the chat', mono && same && !!(await p.$('.fn')), 'Today › funnel');
-    await p.evaluate(() => App.metric('pipeline')); await p.waitForTimeout(1600);
-    chk('Pipeline number lists the opportunities that add up to it', /USD (1,200|300)k/.test(await p.$$eval('#thread .tcard.mx .mx-f b', x => x.map(e => e.textContent).pop() || '')), 'Today › funnel'); }
+    chk('No pipeline-influenced metric on Today or in Analytics', !/pipeline the AI influenced|Pipeline influenced/i.test(await p.innerText('#main')) && await (async () => { await p.evaluate(() => App.nav('analytics')); await p.waitForTimeout(700); const ok = !/Pipeline influenced/i.test(await p.innerText('#main')) && /Leads closed/.test(await p.innerText('#main')); await p.evaluate(() => App.nav(null)); await p.waitForTimeout(300); return ok; })(), 'Today › funnel'); }
   // round 18: ICP interview when no details are given; each cohort's messages come from its micro-segment
   await p.evaluate(() => { try { App.qdClose(); } catch (e) {} App.nav(null); App.newChat(); }); await p.waitForTimeout(300);
   await p.evaluate(() => App.ask('Can you help me find an ICP for my newly launched product?')); await p.waitForTimeout(3500);
