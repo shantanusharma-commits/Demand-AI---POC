@@ -2153,3 +2153,8 @@ button.coh:hover{border-color:var(--brand-mid);box-shadow:0 0 0 3px var(--brand-
 .cpv-to{font-size:11px;color:var(--i3);margin:6px 0 0 40px}
 .cpv-e{padding:12px 14px;color:var(--i3);font-size:12.5px}
 @media (max-width:900px){.mst-ed{border-right:0;border-bottom:1px solid var(--border)}}
+
+/* Funnel: eight stages in two rows */
+.fn-st.fn8{grid-template-columns:repeat(4,minmax(0,1fr))}
+.fn-i{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:var(--brand-lt);color:var(--brand);font-style:normal;font-size:10px;margin-right:6px;letter-spacing:0}
+@media (max-width:900px){.fn-st.fn8{grid-template-columns:repeat(2,minmax(0,1fr))}}

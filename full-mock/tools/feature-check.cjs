@@ -12,7 +12,7 @@ const M = process.argv[2], full = M === 'full-mock', dir = '/home/user/Demand-AI
   t = await adm('runlog'); chk('FND-12 versions, LRN-01 baseline, cost', /Versions in force/i.test(t) && /Baseline reply rate/i.test(t) && /USD/i.test(t), 'Admin › Home › Run log');
   t = await adm('connectors'); const t2 = await adm('interfaces'); chk('INT-01..04 connectors, Slack, Teams', /CRM/i.test(t) && /Slack/i.test(t + t2) && /Teams/i.test(t + t2), 'Admin › Connections');
   t = await adm('interfaces'); chk('FND-10 chat and interfaces', /Web chat/i.test(t), 'Admin › Connections › Interfaces');
-  t = await adm('icp'); chk('PRO-01 ICP library and fit weights (admin)', /ICP library/i.test(t) && /Fit weights/i.test(t), 'Admin › ICP and scoring');
+  t = await adm('icp'); chk('PRO-01 ICP library and the ICP rubric: variables, weights, must-haves (admin)', /ICP library/i.test(t) && /ICP rubric/i.test(t) && /Weights add up to 100/i.test(t) && /\+ Add a variable/.test(t), 'Admin › ICP and scoring');
   await p.evaluate(() => CTL.conPick('Crunchbase', 'key', 'Signal sources', 1)); await p.waitForTimeout(150); let w1 = await body(); await p.evaluate(() => { CTL.wzAuth(); CTL.wzGo(1); }); let w2 = await body(); await p.evaluate(() => CTL.wzGo(1)); let w3 = await body(); await p.evaluate(() => CTL.wzGo(1)); let w4 = await body();
   chk('Connect flow: authorise, map, test, schedule', /Connect Crunchbase/i.test(w1) && /Funding announcement/i.test(w2) && /Connection OK/i.test(w3) && /If it fails/i.test(w4), 'Admin › Connections › Connect');
   await p.evaluate(() => { CTL.conAdd('Crunchbase'); CTL.wzClose(); });
@@ -23,7 +23,9 @@ const M = process.argv[2], full = M === 'full-mock', dir = '/home/user/Demand-AI
   t = await adm('backtest'); chk('SCR-05/FND-11 backtest', /15 won/i.test(t) || /Won accounts/i.test(t), 'Admin › ICP › Backtest');
   t = await adm('policy'); chk('NBA-08 five criteria, confidence high/medium', /Confidence: high or medium/i.test(t), 'Admin › Rules');
   t = await adm('escal'); chk('FND-14 who decides what', /What reaches a person/i.test(t), 'Admin › Rules › Who decides what');
-  t = await adm('simulate'); chk('Fail closed, demo clock', /CRM unreachable/i.test(t), 'Admin › Home › Demo');
+  t = await adm('home'); const noDemo = !(await p.$$eval('.a-tabs button', x => x.some(e => /Demo/.test(e.textContent))));
+  const tx = await adm('exclusions'), tr = await adm('registry'), te = await adm('escal'), tb = await adm('backtest');
+  chk('Admin: no demo tab; exclusions, opt-outs and suppression are editable; signals, routing and who-decides-what are editable; backtest accounts can be added', noDemo && /\+ Add an exclusion/.test(tx) && /Opt-out list/i.test(tx) && /\+ Add an opt-out/.test(tx) && /Suppression list/i.test(tx) && /\+ Add a signal/.test(tr) && /\+ Add a rule/.test(te) && /\+ Add a team/.test(te) && (await p.$$('#ac-escal select')).length > 10 && /\+ Add an account/.test(tb) && /Closed won · \d+/.test(tb), 'Admin › configuration');
   if (full) {
     t = await adm('quality'); chk('PRO-11 refresh, PRO-12 coverage', /Profile change/i.test(t) && /Coverage by channel/i.test(t), 'Admin › ICP › Data quality');
     t = await adm('airules'); chk('SCR-06 AI-drafted rules', /drafted by the AI/i.test(t), 'Admin › ICP › AI-drafted rules');
@@ -161,7 +163,7 @@ const M = process.argv[2], full = M === 'full-mock', dir = '/home/user/Demand-AI
   await p.evaluate(() => { try { App.qdClose(); } catch (e) {} App.nav(null); App.newChat(); App.nav(null); }); await p.waitForTimeout(400);
   { await p.evaluate(() => { App.nav(null); }); await p.goto(p.url().replace(/#.*$/, '') + '#today'); await p.waitForTimeout(600);
     const nums = await p.$$eval('.fn-s b', x => x.map(e => +e.textContent.replace(/,/g, '')));
-    const mono = nums.length === 5 && nums.every((n, i) => i === 0 || n <= nums[i - 1]);
+    const mono = nums.length === 8 && nums.every((n, i) => i === 0 || n <= nums[i - 1]);
     let same = true; for (const i of [1, 3]) { await p.click(`.fn-s >> nth=${i}`); await p.waitForTimeout(1600); const rows = await p.$$eval('#thread .tcard.mx', x => x[x.length - 1].querySelectorAll('tbody tr.row-link').length); if (rows !== nums[i]) same = false; }
     chk('Today funnel narrows stage by stage, and a number opens exactly its records in the chat', mono && same && !!(await p.$('.fn')), 'Today › funnel');
     chk('No pipeline-influenced metric on Today or in Analytics', !/pipeline the AI influenced|Pipeline influenced/i.test(await p.innerText('#main')) && await (async () => { await p.evaluate(() => App.nav('analytics')); await p.waitForTimeout(700); const ok = !/Pipeline influenced/i.test(await p.innerText('#main')) && /Leads closed/.test(await p.innerText('#main')); await p.evaluate(() => App.nav(null)); await p.waitForTimeout(300); return ok; })(), 'Today › funnel'); }

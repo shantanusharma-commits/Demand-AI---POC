@@ -880,7 +880,7 @@
       const real = REPLIES.filter(x => x.owner === r), realIds = real.map(x => x.acc);
       const pool = A.filter(a => a.campaign || a.nba || (a.activity || []).some(x => /^Opened/.test(x.t))).sort((p2, q) => (realIds.includes(q.id) - realIds.includes(p2.id)) || ((q.activity || []).some(x => /^Opened/.test(x.t)) - (p2.activity || []).some(x => /^Opened/.test(x.t))) || fxH(p2.id + r) - fxH(q.id + r));
       if (!pool.length) return;
-      const W = [[0, 6, 1], [7, 29, 0], [30, 89, 0]], Q = { sent: [ts.sent, ts.sent * 3, ts.sent * 5], clicked: [ts.replies * 2 + 1, ts.replies * 3, ts.replies * 4], responded: [ts.replies, Math.round(ts.replies * 1.6), ts.replies * 2], meetings: [ts.meetings, ts.meetings, ts.meetings * 2], closed: [ts.meetings >= 2 ? 1 : 0, Math.round(ts.meetings * 0.5), ts.meetings] };
+      const W = [[0, 6, 1], [7, 29, 0], [30, 89, 0]], Q = { sent: [ts.sent, ts.sent * 3, ts.sent * 5], clicked: [ts.replies * 2 + 1, ts.replies * 3, ts.replies * 4], responded: [ts.replies, Math.round(ts.replies * 0.6), ts.replies], meetings: [ts.meetings, Math.round(ts.meetings * 0.5), ts.meetings], closed: [ts.meetings >= 2 ? 1 : 0, Math.round(ts.meetings * 0.3), Math.round(ts.meetings * 0.5)] };
       let cur = 0; const nxt = (avoid) => { for (let k = 0; k < pool.length; k++) { const a = pool[(cur + k) % pool.length]; if (!avoid || !avoid.has(a.id)) { cur = (cur + k + 1) % pool.length; return a; } } const a = pool[cur % pool.length]; cur++; return a; };
       const ageIn = (w, s) => w[0] + Math.floor(fxH(s) * (w[1] - w[0] + 1));
       W.forEach((w, wi) => {
@@ -935,6 +935,8 @@
       ${tot != null ? `<div class="mx-f"><span>Total</span><b>USD ${tot.toLocaleString('en-US')}k</b></div>` : ''}</div>` };
   }
   function fxAsk(t) {
+    const f = t.match(/^show me (?:the )?(?:\d[\d,]* )?(leads generated|leads scored|leads in nba or campaigns|leads messaged|leads that opened|leads that replied|leads with a meeting booked|leads closed)(?: (this week|this month|this quarter))?/);
+    if (f) return fnCard(FN.find(x => x[3] === f[1])[0], /month/.test(f[2] || '') ? 'month' : /quarter/.test(f[2] || '') ? 'quarter' : 'week');
     const m = t.match(/^show me (?:the )?(?:\d[\d,]* )?(leads generated|people who clicked|clicks|replies|meetings booked|meetings|leads closed|messages sent|emails sent)(?: (this week|this month|this quarter))?/);
     if (!m) return null;
     const k = { 'leads generated': 'leads', 'people who clicked': 'clicked', clicks: 'clicked', replies: 'responded', 'meetings booked': 'meetings', meetings: 'meetings', 'leads closed': 'closed', 'messages sent': 'sent', 'emails sent': 'sent' }[m[1]];
@@ -947,15 +949,53 @@
     month: { l: 'This month', mgr: [1240, 412, 138, 31, 9], rep: [318, 104, 36, 8, 2] },
     quarter: { l: 'This quarter', mgr: [3480, 1105, 371, 86, 24], rep: [902, 288, 97, 22, 6] },
   };
+  /* The funnel follows the leads found in the period: generated → scored → given a next best action or a
+     campaign → messaged → opened → replied → meeting booked → closed. Each stage is a subset of the one before. */
+  const FN = [['leads', 'Leads generated', 'found by the AI, or from your prompts', 'leads generated'], ['scored', 'Leads scored', 'fit × timing, with a tier', 'leads scored'], ['engaged', 'In NBA or campaigns', 'given a next best action or a campaign', 'leads in nba or campaigns'], ['messaged', 'Messaged', 'got at least one message', 'leads messaged'], ['opened', 'Opened', 'opened a message or an asset', 'leads that opened'], ['replied', 'Replied', 'replied on any channel', 'leads that replied'], ['meetings', 'Meetings booked', 'booked from a reply', 'leads with a meeting booked'], ['closed', 'Leads closed', 'won from this outreach', 'leads closed']];
+  function fnStages(per) {
+    if (!FX) FX = fxBuild();
+    const mx = (FX_PER[per] || FX_PER.week)[0], ev = k => { const m = {}; (FX[k] || []).filter(e => e.age <= mx).forEach(e => { if (!m[e.acc] || e.age < m[e.acc].age) m[e.acc] = e; }); return m; };
+    const SENT = ev('sent'), OPEN = ev('clicked'), REP = ev('responded'), MEET = ev('meetings'), CLOSE = ev('closed');
+    const has = (id, L) => L.some(m => m[id]);
+    const out = {}; let cur = fxRows('leads', per).filter(e => acct(e.acc)).map(e => ({ acc: e.acc, age: e.age, lead: e }));
+    const seen = new Set(); cur = cur.filter(e => !seen.has(e.acc) && seen.add(e.acc));
+    out.leads = cur;
+    out.scored = cur = cur.filter(e => acct(e.acc).score > 0 || acct(e.acc).fromList);
+    out.engaged = cur = cur.filter(e => { const a = acct(e.acc); return a.campaign || a.nba || has(e.acc, [SENT, OPEN, REP, MEET, CLOSE]); });
+    out.messaged = cur = cur.filter(e => has(e.acc, [SENT, OPEN, REP, MEET, CLOSE])).map(e => Object.assign({}, e, { ev: SENT[e.acc] }));
+    out.opened = cur = cur.filter(e => has(e.acc, [OPEN, REP, MEET, CLOSE])).map(e => Object.assign({}, e, { ev: OPEN[e.acc] }));
+    out.replied = cur = cur.filter(e => has(e.acc, [REP, MEET, CLOSE])).map(e => Object.assign({}, e, { ev: REP[e.acc] }));
+    out.meetings = cur = cur.filter(e => has(e.acc, [MEET, CLOSE])).map(e => Object.assign({}, e, { ev: MEET[e.acc] }));
+    out.closed = cur.filter(e => has(e.acc, [CLOSE])).map(e => Object.assign({}, e, { ev: CLOSE[e.acc] }));
+    return out;
+  }
+  function fnCard(k, per) {
+    const st = FN.find(x => x[0] === k), rows = fnStages(per)[k] || [], perL = (FX_PER[per] || FX_PER.week)[1];
+    const who = a => `<div class="nm">${esc(a.contact.name)}</div><div class="sm">${esc(a.contact.title)} · ${esc(a.name)}${isMgr ? ` · ${esc(first(USERS[a.owner].name))}` : ''}</div>`;
+    const what = e => { const a = acct(e.acc), v = e.ev;
+      if (k === 'leads') return `${esc(e.lead.how)}<div class="sm">${esc(e.lead.src)}</div>`;
+      if (k === 'scored') return `Score <b>${sc(a)}</b> · ${tierBadge(a.tier)}<div class="sm">Fit ${a.fit} × timing ${a.timing}</div>`;
+      if (k === 'engaged') return a.campaign && campOf(a.campaign) ? `Campaign · ${esc(campOf(a.campaign).name)}` : a.nba ? `Next best action · ${esc(a.nba.action)}<div class="sm">${esc(a.nba.channel || '')}</div>` : 'Next best action';
+      if (!v) return `<span class="muted">${k === 'messaged' ? 'Messaged' : k === 'opened' ? 'Opened' : 'Done'} (seen from a later step)</span>`;
+      if (k === 'messaged') return `${chIc(v.ch)} ${esc(v.what)}<div class="sm">${esc(v.from)}</div>`;
+      if (k === 'opened') return `${esc(v.what)}<div class="sm">${esc(v.type || '')} · ${esc(v.ch)}</div>`;
+      if (k === 'replied') return `<span class="badge ${/Positive|Meeting/.test(v.kind) ? 'b-pos' : /Objection|Opted|Wrong/.test(v.kind) ? 'b-neg' : 'b-grey'} nodot">${esc(v.kind)}</span><div class="sm mx-q">"${esc(v.text)}"</div>`;
+      if (k === 'meetings') return `${v.upcoming ? '<span class="badge b-sec nodot">Upcoming</span>' : '<span class="badge b-pos nodot">Held</span>'} ${esc(v.at)}`;
+      return `<b>USD ${v.value}k</b> · ${esc(v.what)}`; };
+    const when = e => fxDay(e.ev ? e.ev.age : e.age);
+    const click = e => e.ev && e.ev.rid ? `App.openThread('${e.ev.rid}')` : `App.openRecord('${e.acc}','activity')`;
+    return { kind: 'text', html: `<p>The <b>${rows.length}</b> ${esc(st[3].replace('nba', 'NBA'))} ${perL}: of the leads found ${perL}, those that got this far, from every campaign and next best action${isMgr ? ' across the team' : ''}. Click a row for the full record.</p>
+      <div class="tcard mx"><div class="tcard-h"><span class="t">${ic('users', 15)} ${esc(st[1])}</span><span class="muted" style="font-size:12px;white-space:nowrap">${rows.length} leads · ${esc(perL)}</span></div>
+      <div class="mx-w"><table class="tbl mx-t"><thead><tr><th>Lead</th><th>${k === 'leads' ? 'Why found' : k === 'scored' ? 'Score' : k === 'engaged' ? 'Plan' : 'What happened'}</th><th>${k === 'leads' ? 'Found' : 'When'}</th></tr></thead><tbody>${rows.map(e => `<tr class="row-link" onclick="${click(e)}"><td>${who(acct(e.acc))}</td><td>${what(e)}</td><td class="mx-d">${when(e)}</td></tr>`).join('') || `<tr><td colspan="3" class="empty">None ${esc(perL)}.</td></tr>`}</tbody></table></div></div>` };
+  }
   function funnelTile() {
-    const F = FUN[funF], v = ['leads', 'clicked', 'responded', 'meetings', 'closed'].map(k => fxRows(k, funF).length);
+    const S8 = fnStages(funF), v = FN.map(x => (S8[x[0]] || []).length), sent = fxRows('sent', funF).length;
     const camps = CAMPAIGNS.length + (S.outGen || []).filter(g => g.kind === 'NBC').length, nbas = ACCOUNTS.filter(a => a.nba && mine(a)).length + (S.outGen || []).filter(g => g.kind !== 'NBC').length, segs = SEGMENTS.length;
-    const st = [['Leads generated', 'found and scored by the AI', "App.metric('leads')"], ['Clicked', 'opened a link or an asset', "App.metric('clicked')"], ['Responded', 'replied on any channel', "App.metric('responded')"], ['Meetings', 'booked from a reply', "App.metric('meetings')"], ['Leads closed', 'won from this outreach', "App.metric('closed')"]];
     const pct = (a, b) => b ? Math.round(a / b * 100) : 0, fmt = n => n.toLocaleString('en-US');
-    return `<div class="zt fn"><div class="zt-h"><b>Funnel · all campaigns and next best actions</b><span class="zseg">${Object.entries(FUN).map(([k, x]) => `<button class="${funF === k ? 'on' : ''}" onclick="App.setFun('${k}')">${x.l}</button>`).join('')}</span></div>
-      <div class="fn-src"><button onclick="App.modTab('campaigns')"><b>${camps}</b> campaigns</button><button onclick="App.modTab('nba')"><b>${nbas}</b> next best actions</button><button onclick="App.modTab('segments')"><b>${segs}</b> micro-segments</button><span>feed the funnel below</span></div>
-      <div class="fn-st">${st.map(([l, d, on], i) => `<button class="fn-s" onclick="${on}"><span class="fn-l">${l}</span><b>${fmt(v[i])}</b><span class="fn-d">${d}</span><span class="fn-bar"><i style="width:${Math.max(3, pct(v[i], v[0]))}%"></i></span>${i ? `<em>${pct(v[i], v[i - 1])}% of ${st[i - 1][0].toLowerCase()}</em>` : '<em>100%</em>'}</button>`).join('')}</div>
-      <div class="zt-f"><span>Lead to close: <b>${v[0] ? (v[4] / v[0] * 100).toFixed(1) : '0.0'}%</b> · response rate <b>${pct(v[2], v[0])}%</b> · every number opens its list</span></div></div>`;
+    return `<div class="zt fn"><div class="zt-h"><b>Funnel · the leads found ${esc(FX_PER[funF][1])}, and how far they got</b><span class="zseg">${Object.entries(FUN).map(([k, x]) => `<button class="${funF === k ? 'on' : ''}" onclick="App.setFun('${k}')">${x.l}</button>`).join('')}</span></div>
+      <div class="fn-src"><button onclick="App.modTab('campaigns')"><b>${camps}</b> campaigns</button><button onclick="App.modTab('nba')"><b>${nbas}</b> next best actions</button><button onclick="App.modTab('segments')"><b>${segs}</b> micro-segments</button><button onclick="App.metric('sent')"><b>${fmt(sent)}</b> messages sent</button></div>
+      <div class="fn-st fn8">${FN.map(([k, l, d], i) => `<button class="fn-s" onclick="App.fnShow('${k}')"><span class="fn-l"><i class="fn-i">${i + 1}</i>${l}</span><b>${fmt(v[i])}</b><span class="fn-d">${d}</span><span class="fn-bar"><i style="width:${Math.max(3, pct(v[i], v[0]))}%"></i></span>${i ? `<em>${pct(v[i], v[i - 1])}% of ${FN[i - 1][1].toLowerCase().replace("nba", "NBA")}</em>` : '<em>100%</em>'}</button>`).join('')}</div>
+      <div class="zt-f"><span>Lead to close: <b>${v[0] ? (v[7] / v[0] * 100).toFixed(1) : '0.0'}%</b> · open rate <b>${pct(v[4], v[3])}%</b> · reply rate <b>${pct(v[5], v[3])}%</b> · every number opens its list</span></div></div>`;
   }
   function standingTile() {
     const ts = TEAM_STATS, reps = isMgr ? REPS : [me.id], sum = f => reps.reduce((n, r) => n + ts[r][f], 0);
@@ -2958,6 +2998,7 @@
     toggleNav() { navCol = !navCol; try { localStorage.setItem('dmock_nav', navCol ? '1' : ''); } catch (e) {} document.body.classList.toggle('nav-col', navCol); renderNav(); },
     setCu(k) { cuF = k; renderAll(); },
     setFun(k) { funF = k; renderAll(); },
+    fnShow(k) { const st = FN.find(x => x[0] === k), n = (fnStages(funF)[k] || []).length; ask(`Show me the ${n} ${st[3].replace('nba', 'NBA')} ${FX_PER[funF][1]}`); },
     metric(k, per) { per = per || funF; const n = fxRows(k, per).length, M = FX_META[k]; ask(`Show me the ${n} ${M[0].toLowerCase()} ${FX_PER[per][1]}`); },
     openAppr(tab) { apprTab = tab; art = null; recId = null; thrId = null; expanded = true; go('approvals'); },
     setAuto(k, v) { S.auto[k] = v; save(); toast(`Set to ${v}. Work done this way is marked on every list.`); renderAll(); },
