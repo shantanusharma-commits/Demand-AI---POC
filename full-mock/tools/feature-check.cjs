@@ -81,7 +81,7 @@ const M = process.argv[2], full = M === 'full-mock', dir = '/home/user/Demand-AI
   chk('Write: asset-type pill with only the four asset types, no prompt chips', (await p.$$('.st-pill')).length === 2 && await p.evaluate(() => { App.stPill(); return [...document.querySelectorAll('.st-pm .lib-mi b')].map(x => x.textContent).join('|') === 'Whitepaper|Infographic|Carousel|PDF one-pager'; }) && (await p.evaluate(() => { App.setStudioType('Infographic'); return !document.querySelector('.st-sugg') && /Infographic/.test(document.querySelector('.st-ft.on').textContent); })), 'Content studio › Write'); await p.evaluate(() => App.nav(null)); await p.waitForTimeout(300);
   // round 6: open screens
   t = await run(() => { App.nav('accounts'); App.expand(); }, 500); chk('Leads: tabs Leads · Signals (micro-segments moved to Campaigns and NBA), no open box, filter-and-sort menu instead of pills', !/Who should we go after/i.test(t) && (await p.$$eval('.ob-tabs button', x => x.map(b => b.textContent).join('|'))) === 'Leads|Signals' && /Leads/.test(await p.innerText('.side-nav')) && !(await p.$('.list-tabs')) && !(await p.$('#accT')) && (await p.evaluate(() => { App.fsMenu('ld', 'root'); return document.querySelectorAll('.lib-menu .lib-mi').length; })) >= 4, 'Leads');
-  await p.evaluate(() => { App.fsPick('ld', 'tier', 'B'); }); await p.waitForTimeout(200); chk('Leads: filter by tier gives a chip and only tier B', (await p.$$('.lib-chips .lib-chip')).length === 1 && (await p.$$eval('.tbl tbody tr', x => x.length > 0 && x.every(r => /\bB\b/.test(r.children[3].innerText)))), 'Leads'); await p.evaluate(() => App.fsPick('ld', 'tier', ''));
+  await p.evaluate(() => { App.fsPick('ld', 'tier', 'B'); }); await p.waitForTimeout(200); chk('Leads: filter by tier gives a chip and only tier B', (await p.$$('.lib-chips .lib-chip')).length === 1 && (await p.$$eval('.tbl tbody tr', x => (x = x.filter(r => !r.closest('.lb'))).length > 0 && x.every(r => /\bB\b/.test(r.children[3].innerText)))), 'Leads'); await p.evaluate(() => App.fsPick('ld', 'tier', ''));
   await p.evaluate(() => { App.modTab('segments'); }); await p.waitForTimeout(400); await p.evaluate(() => App.fsPick('sg', 'mode', 'NBC')); await p.waitForTimeout(200); chk('Segments: filter menu instead of pills', !(await p.$('.fchip')) && (await p.$$('.srow')).length > 0 && (await p.$$('.lib-chips .lib-chip')).length === 1, 'Segments'); await p.evaluate(() => App.fsPick('sg', 'mode', ''));
   t = await run(() => { App.nav('campaigns'); App.expand(); }, 500); await p.evaluate(() => App.ask('A campaign for turnaround season accounts by email to book meetings')); await p.waitForTimeout(2500);
   chk('NBC: five questions at most, asked one at a time in the dock above the message box, each with Something else, starting where the brief leaves off', / of 5$/.test(await p.$eval('.qd-nav span', e => e.textContent).catch(() => '')) && !!(await p.$('#qdOther')) && !(await p.$('.oq-wrap')) && (await p.getAttribute('#composer', 'placeholder')) === 'Or reply directly…' && await p.evaluate(() => { App.qdGo(3); const a = /Day 0/.test(document.querySelector('.qd').textContent); App.qdGo(4); return a && /Recommended/.test(document.querySelector('.qd').textContent); }), 'Campaigns and NBA');
@@ -114,7 +114,7 @@ const M = process.argv[2], full = M === 'full-mock', dir = '/home/user/Demand-AI
   chk('Content recommendation follows the answers (switch at contract end → a one-pager or whitepaper)', /Recommended · (PDF one-pager|Whitepaper)/.test(await p.$eval('.qd .qd-r .qd-t i', e => e.textContent).catch(() => '')), 'Campaigns and NBA'); await p.evaluate(() => App.outCancel());
   await p.evaluate(() => App.nav('accounts')); await p.waitForTimeout(600); await p.evaluate(() => App.ask('Build our ICP and find leads')); await p.waitForTimeout(2500);
   const talk = async xs => { for (const x of xs) { await p.evaluate(x => App.ask(x), x); await p.waitForTimeout(1500); } };
-  chk('ICP interview on Leads is a conversation: open questions, no options', !(await p.$('.qd')) && /What does it do, and what problem does it solve/.test(await body()), 'Leads');
+  chk('ICP interview on Leads is a conversation: open questions, no options', !(await p.$('.qd')) && /paste your website link, or say what it does/.test(await body()), 'Leads');
   await talk(['A control-system migration service for ageing plants', 'Refining', 'Malaysia', '1000 to 5000 staff', 'the reliability leader, and the plant manager signs', 'a planned turnaround', 'current customers', 'confirm', 'find the prospects']); await p.waitForTimeout(1500);
   chk('ICP interview saves a new ICP version and finds the leads in the same chat', /Saved as ICP v\d+/.test(await body()) && /ICP v\d+ prospects/.test(await p.$eval('.ld-h b', e => e.textContent).catch(() => '')) && (await p.$$eval('#main .tbl tbody tr', x => x.length)) >= 10, 'Leads');
   await p.evaluate(() => App.ask('Our product page is vantera.example/products/migration')); await p.waitForTimeout(2500);
@@ -159,6 +159,37 @@ const M = process.argv[2], full = M === 'full-mock', dir = '/home/user/Demand-AI
   await p.evaluate(() => { App.nav(null); App.newChat(); }); await p.waitForTimeout(300); await p.evaluate(() => { const b = [...document.querySelectorAll('.dd-i')].find(x => /Find prospects/.test(x.textContent)); b.click(); }); await p.waitForTimeout(300);
   chk('Find prospects is selected in Start something new and waits for the prompt', /Find prospects/.test(await p.$eval('.cmp-pill', e => e.textContent)) && (await p.inputValue('#composer')) === '' && (await p.$$('#thread .msg.me')).length === 0, 'Chat'); await p.evaluate(() => App.actClear());
   await p.evaluate(() => { document.getElementById('composer').value = ''; App.nav(null); }); await p.waitForTimeout(300);
+  // round 22: the delivery plan's screen additions (workspace and admin)
+  { const H = () => p.evaluate(() => document.body.innerHTML), g = async f => { await p.evaluate(f); await p.waitForTimeout(450); return H(); };
+    await p.goto('file://' + dir + '/app.html'); await p.waitForTimeout(700);
+    let h = await g(() => App.nav('inbox'));
+    chk('RSP-02/03/04 eight reply statuses, lineage and saved views in Inbox', /Wrong person/.test(h) && /Opted out/.test(h) && /Saved views/.test(h), 'Inbox');
+    h = await g(() => App.nav('accounts'));
+    chk('SEG-06, SEG-09, PRO-03, PRO-08 motivation tags, tag filter, how the list was built, data status', /class="mtv/.test(h) && /All tags/.test(h) && /How this list was built/.test(h) && /Data status/.test(h), 'Leads');
+    h = await g(() => App.openRecord('eastgate', 'research'));
+    chk('CON-05, NBA-02, NBA-03, RES-02 research brief, warm paths, status watch and rivals on the account', /Research brief/.test(h) && /Warm paths/.test(h) && /Watch this account/.test(h) && /Rival on this account/.test(h), 'Account');
+    h = await g(() => App.modTab('signals'));
+    chk('NBA-13 and NBA-03 re-ranked today and status watch on Signals', /Re-ranked today/.test(h) && /Status watch/.test(h), 'Leads › Signals');
+    h = await g(() => { App.nav(null); App.goCampaign('c1', 'ro'); });
+    chk('LRN-11/12 campaign read-out with an expand, pivot or stop recommendation', /Recommendation|No results yet/.test(h), 'Campaign › Read-out');
+    h = await g(() => App.setCampTab('ov'));
+    chk('NBA-18, CMP-03/04/06 set-up answers, send-through, send window and follow-up on the campaign', /Set-up answers/.test(h) && /Send through/.test(h) && /Next send window/.test(h) && /Follow-up/.test(h), 'Campaign › Overview');
+    h = await g(() => App.modTab('corpus'));
+    chk('CON-06 campaign corpus', /Campaign corpus/.test(h), 'Campaigns › Corpus');
+    h = await g(() => App.nav('studio'));
+    chk('FND-09, RES-05, CON-11 Knowledge Hub, grounded brief and offer assets in Content studio', /Knowledge Hub/.test(h) && /Grounded on the business profile/.test(h) && /Offers that can become assets/.test(h), 'Content studio');
+    h = await g(() => App.nav('objectives'));
+    chk('WRK-09 Objectives screen: list, progress, last activity', /Last activity/.test(h) && /New objective/.test(h), 'Objectives');
+    h = await g(() => App.nav('analytics'));
+    chk('LRN-03, LRN-05, RSP-03, LRN-11 per 100 vs the rest, meetings ledger, reply by signal, roll-up', /Prioritised accounts against the rest/.test(h) && /Qualified meeting ledger/.test(h) && /Reply rate by signal/.test(h) && /Campaign roll-up/.test(h), 'Analytics');
+    await p.evaluate(() => App.nav(null)); await p.waitForTimeout(300); await p.evaluate(() => App.ask('What objections do we hear?')); await p.waitForTimeout(1800);
+    chk('FND-13/RSP-05 chat answers objections from the lessons store', /lessons and objections store/.test(await H()), 'Chat');
+    const T = { onboard: /ontology pack/i, traces: /write-time capture/i, personas: /persona library/i, signals: /entry gate/i, registry: /disqualifiers/i, quality: /enrichment status/i, backtest: /golden sets/i, connectors: /waterfall order/i, events: /fast lane rules/i, sending: /send windows/i, targets: /monthly objective and targets/i, quota: /quota plan/i };
+    const miss = []; for (const [k, re] of Object.entries(T)) { await p.goto('file://' + dir + '/admin/controls.html#' + k); await p.waitForTimeout(450); const v = await p.evaluate(k => { const x = document.querySelector('[data-pane="' + k + '"]'); return x && !x.hidden ? x.innerText : ''; }, k); if (!re.test(v)) miss.push(k); }
+    chk('Admin: onboarding and packs, capture, personas, entry gate, disqualifiers, enrichment, golden sets, waterfall, fast lane, sending, targets, quota' + (miss.length ? ' (missing: ' + miss.join(', ') + ')' : ''), !miss.length, 'Admin');
+    await p.goto('file://' + dir + '/admin/07-content.html?tab=context'); await p.waitForTimeout(600); const bc = await body();
+    await p.goto('file://' + dir + '/admin/07-content.html?tab=hub'); await p.waitForTimeout(600); const kh = await body();
+    chk('Admin › Content library: business context and Knowledge Hub', /Business profile draft/.test(bc) && /Passages/.test(kh), 'Admin › Content library'); }
   // round 21: R1 features added to the prototype; manager cost per meeting and win rate
   { const tn = await adm('niches'), tt = await adm('tags');
     await p.goto('file://' + dir + '/admin/07-content.html?tab=offers'); await p.waitForTimeout(700); const to = await body();
@@ -186,7 +217,7 @@ const M = process.argv[2], full = M === 'full-mock', dir = '/home/user/Demand-AI
   // round 18: ICP interview when no details are given; each cohort's messages come from its micro-segment
   await p.evaluate(() => { try { App.qdClose(); } catch (e) {} App.nav(null); App.newChat(); }); await p.waitForTimeout(300);
   await p.evaluate(() => App.ask('Can you help me find an ICP for my newly launched product?')); await p.waitForTimeout(3500);
-  chk('ICP: no details given, so it interviews first (open questions, no options, no drafted ICP)', !(await p.$('.qd')) && /What does it do/.test(await p.innerText('#thread')) && !/Path B/.test(await p.innerText('#thread')), 'Prospecting › ICP');
+  chk('ICP: no details given, so it interviews first (open questions, no options, no drafted ICP)', !(await p.$('.qd')) && /paste your website link/.test(await p.innerText('#thread')) && !/Path B/.test(await p.innerText('#thread')), 'Prospecting › ICP');
   await talk(['Continuous emissions monitoring that catches methane leaks early', "I'm not sure"]);
   chk('ICP: "not sure" gets a proposal to confirm, built from the product', /I'd start with Gas processing and Refining/.test(await p.innerText('#thread')), 'Prospecting › ICP');
   await talk(['yes', 'Thailand and Malaysia', 'around 500 to 3000 employees', 'the HSE manager has the problem, the plant manager signs', 'new reporting rules and audits', 'none']);

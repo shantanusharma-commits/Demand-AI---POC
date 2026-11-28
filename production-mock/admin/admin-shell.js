@@ -25,7 +25,7 @@
   };
   var NAV = [
     [null, [['controls.html#home', 'Home', 'home']]],
-    ['Set up', [['controls.html#connectors', 'Connections', 'plug'], ['controls.html#icp', 'ICP and scoring', 'pulse'], ['controls.html#policy', 'Rules', 'rules'], ['07-content.html', 'Content library', 'book'], ['users.html', 'Users and audit', 'users']]]
+    ['Set up', [['controls.html#connectors', 'Connections', 'plug'], ['controls.html#icp', 'ICP and scoring', 'pulse'], ['controls.html#policy', 'Rules', 'rules'], ['controls.html#targets', 'Targets', 'flag'], ['07-content.html', 'Content library', 'book'], ['users.html', 'Users and audit', 'users']]]
   ];
   function svg(n, s) { return '<svg class="nav-ic" width="' + (s || 16) + '" height="' + (s || 16) + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + I[n] + '</svg>'; }
   var here = (location.pathname.split('/').pop() || 'index.html');

@@ -125,6 +125,7 @@
 </main>
 </div>
 <script src="../assets/mock-data.js"></script>
+<script>window.AX_HASH = location.hash;</script>
 <script src="admin-shell.js"></script>
 <script>
 (function () {
@@ -214,14 +215,14 @@
     $id('dayN').textContent = 'Day ' + (sim.days || 0);
   }
 
-  var SEC = {"home": ["Home", "Health at a glance, what needs the admin, the run log and learning"], "connections": ["Connections", "Everything connected: CRM, data providers, signal sources, email, chat tools, sending tools, agents and the API"], "icp": ["ICP and scoring", "The ICP and cold start, the signal tiers, exclusions and the backtest"], "rules": ["Rules", "The five criteria, the confidence bands, the mode for each segment and who decides what"]}, ESC = [["2", "Message verification failed", "Owning rep", "3 days, then it expires and the account re-ranks"], ["3", "Identity tier I3 or I5", "Owning rep", "3 days, then it expires and re-ranks"], ["4", "Segment set to require approval", "Owning rep", "3 days, then it expires and re-ranks"], ["5", "A protective check could not run", "Owning rep sees why; admin alerted", "Stays held until the check runs"], ["6", "No draft produced", "Owning rep", "3 days, then it expires and re-ranks"], ["7", "No verified channel", "Owning rep", "3 days, then it expires and re-ranks"], ["8", "A campaign (10+ accounts in a micro-segment in 7 days)", "Sales manager: the campaign and each touch format", "3 days, then individual next best actions"], ["9", "A campaign touch fails its re-check", "Owning rep", "The touch is skipped"], ["10", "A held record (identity dispute, name-only CRM match)", "Owning rep; admin for configuration", "Stays held"], ["11", "An unmatched reply", "Owning rep", "Stays unmatched"], ["12", "Unclear niche or persona", "Owning rep", "A generic persona"], ["\u2013", "A meeting to confirm as qualified", "Sales manager", "Not counted after five working days"], ["13", "The ICP is not confirmed yet", "The rep or manager, in chat (shared, or proposed from the website)", "Lists use the last confirmed ICP"], ["14", "Setup: the closed-won field, weights and thresholds", "Admin", "Blocks go-live"], ["15", "Backtest below the bar", "Admin", "Blocks go-live"], ["16", "Enabling autopilot for a segment", "Admin with the sales manager", "Stays off"], ["\u2013", "Status watch or an anomaly alert", "Owning rep", "None"], ["\u2013", "A source underperforms; the weekly learning review", "Admin", "Nothing ships until reviewed"]];
+  var SEC = {"targets": ["Targets", "The month's objective and the split by rep, the prompt log and the quota plan"], "home": ["Home", "Health at a glance, what needs the admin, the run log and learning"], "connections": ["Connections", "Everything connected: CRM, data providers, signal sources, email, chat tools, sending tools, agents and the API"], "icp": ["ICP and scoring", "The ICP and cold start, the signal tiers, exclusions and the backtest"], "rules": ["Rules", "The five criteria, the confidence bands, the mode for each segment and who decides what"]}, ESC = [["2", "Message verification failed", "Owning rep", "3 days, then it expires and the account re-ranks"], ["3", "Identity tier I3 or I5", "Owning rep", "3 days, then it expires and re-ranks"], ["4", "Segment set to require approval", "Owning rep", "3 days, then it expires and re-ranks"], ["5", "A protective check could not run", "Owning rep sees why; admin alerted", "Stays held until the check runs"], ["6", "No draft produced", "Owning rep", "3 days, then it expires and re-ranks"], ["7", "No verified channel", "Owning rep", "3 days, then it expires and re-ranks"], ["8", "A campaign (10+ accounts in a micro-segment in 7 days)", "Sales manager: the campaign and each touch format", "3 days, then individual next best actions"], ["9", "A campaign touch fails its re-check", "Owning rep", "The touch is skipped"], ["10", "A held record (identity dispute, name-only CRM match)", "Owning rep; admin for configuration", "Stays held"], ["11", "An unmatched reply", "Owning rep", "Stays unmatched"], ["12", "Unclear niche or persona", "Owning rep", "A generic persona"], ["\u2013", "A meeting to confirm as qualified", "Sales manager", "Not counted after five working days"], ["13", "The ICP is not confirmed yet", "The rep or manager, in chat (shared, or proposed from the website)", "Lists use the last confirmed ICP"], ["14", "Setup: the closed-won field, weights and thresholds", "Admin", "Blocks go-live"], ["15", "Backtest below the bar", "Admin", "Blocks go-live"], ["16", "Enabling autopilot for a segment", "Admin with the sales manager", "Stays off"], ["\u2013", "Status watch or an anomaly alert", "Owning rep", "None"], ["\u2013", "A source underperforms; the weekly learning review", "Admin", "Nothing ships until reviewed"]];
   var done = cfg.done || {};
   function secOf(tab) { var b = document.querySelector('.a-tabs button[data-t="' + tab + '"]'); return b ? b.dataset.sec : 'home'; }
   function applySec() {
     var tab = (location.hash || '#home').slice(1), s = secOf(tab), m = {};
     document.querySelectorAll('.a-tabs button').forEach(function (b) { b.hidden = b.dataset.sec !== s; m[b.dataset.t] = b.dataset.sec; });
     $id('secT').textContent = SEC[s][0]; $id('secD').textContent = SEC[s][1];
-    window.ADM_SEC = { home: 'home', runlog: 'home', learning: 'home', traces: 'home', connectors: 'connectors', interfaces: 'connectors', icp: 'icp', niches: 'icp', tags: 'icp', signals: 'icp', registry: 'icp', quality: 'icp', airules: 'icp', exclusions: 'icp', backtest: 'icp', policy: 'policy', escal: 'policy' };
+    window.ADM_SEC = { home: 'home', runlog: 'home', learning: 'home', traces: 'home', connectors: 'connectors', interfaces: 'connectors', icp: 'icp', niches: 'icp', tags: 'icp', signals: 'icp', registry: 'icp', quality: 'icp', airules: 'icp', exclusions: 'icp', backtest: 'icp', policy: 'policy', escal: 'policy', onboard: 'home', personas: 'icp', events: 'policy', sending: 'policy', targets: 'targets', quota: 'targets' };
     if (window.ADM && ADM.redraw) ADM.redraw();
   }
   function traces() {
@@ -285,5 +286,6 @@
 })();
 </script>
 <script src="admin-config.js"></script>
+<script src="admin-plus.js"></script>
 </body>
 </html>

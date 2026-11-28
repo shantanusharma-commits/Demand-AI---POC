@@ -320,16 +320,16 @@
   }
 
   /* ─── Routing: #today or a module; a result or a record opens in the canvas beside the chat ─── */
-  const MODULES = Object.assign({ inbox: 'Inbox', accounts: 'Leads', segments: 'Segments', campaigns: 'Campaigns and NBA', approvals: 'Approvals', studio: 'Content studio' }, { analytics: 'Analytics' });
-  const MOD_IC = { inbox: 'inbox', accounts: 'users', segments: 'layers', campaigns: 'megaphone', approvals: 'task', studio: 'pen', analytics: 'bars' };
+  const MODULES = Object.assign({ inbox: 'Inbox', accounts: 'Leads', segments: 'Segments', campaigns: 'Campaigns and NBA', approvals: 'Approvals', studio: 'Content studio' }, { analytics: 'Analytics', objectives: 'Objectives' });
+  const MOD_IC = { inbox: 'inbox', accounts: 'users', segments: 'layers', campaigns: 'megaphone', approvals: 'task', studio: 'pen', analytics: 'bars', objectives: 'flag' };
   /* Five screens in the menu. Segments and Signals open as tabs in Accounts; next best actions and content as tabs in Campaigns; Analytics from Today. */
-  const NAV5 = isMgr ? ['inbox', 'accounts', 'campaigns', 'studio', 'approvals', 'analytics'] : ['inbox', 'accounts', 'campaigns', 'studio', 'approvals', 'analytics'];
+  const NAV5 = isMgr ? ['inbox', 'accounts', 'campaigns', 'studio', 'approvals', 'objectives', 'analytics'] : ['inbox', 'accounts', 'campaigns', 'studio', 'approvals', 'objectives', 'analytics'];
   const R2TAG = '';
   const navOn = v => v === 'segments' ? 'campaigns' : v;
   let accSub = 'list', campSub = 'list', sigTab = 'live';
   function modTabs() {
     const v = view(), G = {
-      campaigns: [['campaigns', 'Campaigns and NBA', v === 'campaigns' && campSub !== 'plays'], ['segments', 'Micro-segments', v === 'segments'], ['plays', 'Plays', v === 'campaigns' && campSub === 'plays']]
+      campaigns: [['campaigns', 'Campaigns and NBA', v === 'campaigns' && campSub !== 'plays' && campSub !== 'corpus'], ['segments', 'Micro-segments', v === 'segments'], ['plays', 'Plays', v === 'campaigns' && campSub === 'plays'], ['corpus', 'Corpus', v === 'campaigns' && campSub === 'corpus']]
     }[navOn(v)];
     return G && !segSel && !campSel && !outSel ? `<div class="dtabs mod-tabs">${G.map(([k, l, on]) => `<button class="${on ? 'on' : ''}" onclick="App.modTab('${k}')">${l}</button>`).join('')}</div>` : '';
   }
@@ -371,6 +371,7 @@
 
   /* ─── Chats: Today sessions, one chat per module, one per document ─── */
   const MOD_INTRO = {
+    objectives: () => isMgr ? "The team's objectives are beside this chat. Ask which are behind, or open one to see who did what." : 'Your objectives are beside this chat. Open one to see its accounts, notes and reminders, or set a new one.',
     inbox: () => `Replies from email and LinkedIn in one place${isMgr ? ', for the whole team' : ''}. Each comes with a suggested answer; when someone replies, their remaining campaign steps pause.`,
     analytics: () => isMgr ? 'The dashboard is beside this chat, showing the past week for the team. Ask me a question and I answer here, then take you to the account or the rep behind the number.' : 'Your numbers are beside this chat: meetings, replies, what you sent and how your campaigns are doing. Only you and your manager see them. Ask me anything about them.',
     accounts: () => `This is every account ${isMgr ? 'on the team' : 'you own'}, ranked by Fit × Timing. Saved lists are the tabs above the table. Ask me to find more, score a list, or save what you're looking at.`,
@@ -379,6 +380,7 @@
     approvals: () => !isMgr ? 'Only what the AI cannot decide comes here: an action that failed one of the five criteria, a check that could not run, a held record, a reply it could not match. Each has a due time and a default. Ask me why any item is here.' : isLeader ? 'The backtest result and the go-live decision wait here, with the weekly summary. You can also see the team\'s escalations.' : isMgr ? 'Every campaign waits here for your confirmation before it starts. You can also see the team\'s escalations. Ask me why any item needs a person.' : 'Only the items that need you. Ask me why any item is here.',
   };
   const MOD_HINTS = {
+    objectives: ['Which objectives are behind?', 'Set an objective', "What's left on Rival contracts?", 'Remind me Friday at 9'],
     inbox: ['Any replies?', 'Which replies are objections?', 'Draft a reply to Dian with 3 times next week', 'What should I do with Greystone?'],
     analytics: isMgr ? ['Where are we stuck?', 'Which campaign is working best?', 'How is my team doing?', 'Which campaign is performing best?'] : ['What\'s my reply rate?', 'How many meetings did I book this week?', 'Which campaign is performing best?', 'How is the turnaround campaign performing?'],
     accounts: ['Build our ICP and find leads', 'Find prospects like my last 10 wins', 'Score this list', 'Who should I call first?'],
@@ -407,7 +409,7 @@
     if (recId) { const a = acct(recId); return ['Why is this here?', a.nba && !a.campaign ? 'Use the runner-up' : 'Why these messages?', 'Pull the last touchpoint', 'Make it shorter']; }
     if (!v && chat() && chat().obj) return ['What\'s left on this objective?', 'Remind me Friday at 9', 'Note: call Cedar before their rival contract ends', 'Which of these did I send with one click?'];
     if (v === 'studio') return ['Make it shorter', 'Add proof', 'More formal', 'Rewrite the intro', 'Add a section on lifecycle planning'];
-    const base = v ? MOD_HINTS[v] : isMgr ? ['Let\'s get our red accounts to a next step this week', 'Where are we stuck?', 'Pull the emails we received today', 'How much do agents do on their own?', 'How is my team doing?']
+    const base = v ? MOD_HINTS[v] : isMgr ? [...(shared.tgt ? [] : ["Set November's target"]), 'Let\'s get our red accounts to a next step this week', 'Where are we stuck?', 'Pull the emails we received today', 'How much do agents do on their own?', 'How is my team doing?']
       : ['What should I do first today?', 'Who replied since yesterday?', "Who hasn't replied but looked?", 'How are my campaigns doing?', "Prep me for today's meetings", "Follow up on this week's demos", 'How far am I from quota?', 'Make a deck on control system migration'];
     return nx.concat(base.filter(b => !nx.includes(b))).slice(0, v ? 4 : 5);
   }
@@ -1175,6 +1177,7 @@
       body = `${attnChats().length ? `<section class="bsec"><div class="bsec-h">Picking up from your chats</div><div class="zcall-l">${callouts()}</div></section>` : ''}
         <section class="bsec"><div class="bsec-h">Funnel</div>${funnelTile()}</section>
         <section class="bsec"><div class="bsec-h">Where ${isMgr ? 'the team stands' : 'you stand'}</div>${standingTile()}</section>
+        ${todayExtra()}
         <section class="bsec"><div class="bsec-h">While you were away</div>${noLead(catchupTile())}</section>
         <section class="bsec" id="yourDay">${yourDay()}</section>
         ${isMgr ? `<section class="bsec"><div class="bsec-h">Your team</div>${teamCard()}</section>` : ''}`;
@@ -1265,7 +1268,7 @@
   function ivQuestion(a, k, lead) {
     const ps = ivProdShort(a), kd = ivKind(a), ind0 = (a.ind[0] || 'a target').toLowerCase();
     const Q = {
-      prod: `${lead ? '' : ''}First, tell me about the product. What does it do, and what problem does it solve for the customer?`,
+      prod: `${lead ? '' : ''}First, tell me about the product: paste your website link, or say what it does and what problem it solves for the customer. There is no business profile in the Content Library yet, so I'll read the site and draft one.`,
       ind: `Who feels that problem most? Tell me the industries or the kinds of company you have in mind.`,
       geo: `Where should we look? Name the countries or regions you can sell into and support.`,
       size: `How big does a company need to be to buy this? A rough staff count, revenue or number of sites is enough.`,
@@ -1372,6 +1375,7 @@
     if (v === 'studio') return studioRespond(t, text);
     const pf = perfChat(t); if (pf) return pf;
     if (v === 'analytics' && !/stuck|moved into pipeline|what moved|autonomy|agents do/.test(t) || /\banalytics\b|dashboard|\bkpis?\b|\bmetrics\b/.test(t)) { const r = anRespond(t); if (r) return r; }
+    { const x29 = respond29(t); if (x29) return x29; }
     const cc = chat();
     if (/remind me/.test(t)) { const when = (text.match(/remind me (on |at )?(.+?)( to |\.|$)/i) || [])[2] || 'tomorrow 09:00'; if (cc) cc.reminder = when.replace(/\bat\b/, '').trim(); const nt = text.match(/note:?\s*(.+)$/i); if (nt && cc) (cc.notes = cc.notes || []).push(nt[1]); return { kind: 'reminder', when: cc ? cc.reminder : when, extra: nt ? nt[1] : '' }; }
     if (/^note:|note to self|make a note/.test(t)) { const n = text.replace(/^(note:|note to self:?|make a note:?)\s*/i, ''); if (cc) (cc.notes = cc.notes || []).push(n); return { kind: 'note', text: n }; }
@@ -1634,13 +1638,13 @@
     if (/prep me|today.?s meetings|meeting prep/.test(t)) return say(`<p>Two meetings today. Each brief is built from the profiles, the threads and the timeline.</p><div class="ccard"><div class="ccard-b"><b>10:00 · ${L('eastgate', 'Eastgate Refining')}</b><div class="sm">Expansion team, 3 attendees. They said: vendors are compared next week, budget approved for phase 1. Missing stakeholder: the procurement lead, add them. Deck v1 (8 slides) and a one-pager are ready in Content studio.</div><br><b>15:30 · ${L('ironwood', 'Ironwood Refining')}</b><div class="sm">Second meeting. Open questions from the first: outage window and the migration order. Missing: the operations manager. Deck v2 with the comparison is ready.</div></div></div><div class="next-row"><button class="btn sm pri" onclick="App.toast('Opened the decks in Content studio')">Open the decks</button></div>`);
     if (/follow up on (this week.?s )?demos|demo follow|post.?demo/.test(t)) return say(`<p>One demo this week: ${L('ironwood', 'Ironwood Refining')} on Tue.</p><div class="ccard"><div class="ccard-b"><b>Next steps</b><div class="sm">Send the outage-window plan; book the technical review with their controls lead.</div><br><b>Qualification gaps</b><div class="sm">Budget owner not named; decision date unknown.</div><br><b>Risk</b> <span class="badge b-warn nodot">Medium</span><div class="sm">A rival is installed at the sister plant.</div><br><b>Recap</b><div class="sm">Drafted, with a one-page PDF of what was agreed. Approve to send and book the next meeting.</div></div></div><div class="next-row"><button class="btn sm pri" onclick="App.toast('Recap sent from your mailbox. Logged.')">Send the recap</button></div>`);
     if (/quota|how far am i|how far are we/.test(t)) { const team = isMgr; return say(`<p>${team ? 'The team' : 'You'} closed <b>USD ${team ? '1.9M' : '0.42M'}</b> of <b>USD ${team ? '3.6M' : '0.9M'}</b> this quarter: a gap of <b>USD ${team ? '1.7M' : '0.48M'}</b> with 9 weeks left. Pipeline covers the gap ${team ? '2.3' : '2.1'} times at your win rate of 31%.</p><div class="ccard"><div class="ccard-b"><div class="lbl">Plan, week by week</div><div class="sm"><b>This week:</b> push ${L('eastgate', 'Eastgate Refining')} to proposal; book ${L('ironwood', 'Ironwood')}'s technical review.<br><b>Next week:</b> open ${L('juniper', 'Juniper Petrochem')} and ${L('halcyon')}, both Tier A with live signals.<br><b>Weeks 3–4:</b> the turnaround campaign: 11 accounts, about 2 meetings expected.<br><b>Weeks 5–9:</b> close the two proposals; keep 3× coverage.</div></div></div><div class="next-row"><button class="btn sm pri" onclick="App.toast('Plan accepted. Progress is tracked weekly.')">Accept the plan</button><button class="btn sm" onclick="App.ask('Adjust the plan')">Adjust</button></div>`); }
-    if (/who replied|replied since|any replies/.test(t)) { const rp = threads().slice(0, 7); return say(`<p>${rp.length} replies, sorted into six statuses, Hot first. Each has a drafted reply.</p><div class="ccard"><div class="ccard-b" style="padding:2px 14px">${rp.sort((p, q) => S6K.indexOf(st6(p)) - S6K.indexOf(st6(q))).map(r => `<div class="mini-row row-link" onclick="App.openThread('${r.id}')"><div class="grow"><div class="nm">${esc(r.from)} · ${esc(acct(r.acc).name)}</div><div class="sm">"${esc(r.text.slice(0, 70))}${r.text.length > 70 ? '…' : ''}" · ${S6[st6(r)][1]}</div></div><span class="badge ${S6[st6(r)][0]} nodot">${st6(r)}${r.unsure ? ' · confirm' : ''}</span></div>`).join('')}</div></div>`); }
+    if (/who replied|replied since|any replies/.test(t)) { const rp = threads().slice(0, 7); return say(`<p>${rp.length} replies, sorted into eight statuses, positive first. Each has a drafted reply.</p><div class="ccard"><div class="ccard-b" style="padding:2px 14px">${rp.sort((p, q) => S6K.indexOf(st6(p)) - S6K.indexOf(st6(q))).map(r => `<div class="mini-row row-link" onclick="App.openThread('${r.id}')"><div class="grow"><div class="nm">${esc(r.from)} · ${esc(acct(r.acc).name)}</div><div class="sm">"${esc(r.text.slice(0, 70))}${r.text.length > 70 ? '…' : ''}" · ${S6[st6(r)][1]}</div></div><span class="badge ${S6[st6(r)][0]} nodot">${st6(r)}${r.unsure ? ' · confirm' : ''}</span></div>`).join('')}</div></div>`); }
     return null;
   }
   /* Six reply statuses, each with a default action and what is saved to memory */
-  const S6 = { Hot: ['b-pos', 'Book the meeting or call today', 'Deal opened'], 'Further action': ['b-sec', 'Send the asset within a day', 'Asset logged, account kept warm'], 'Not now': ['b-grey', 'Set a recontact date and nurture', 'Date stored, follow-up scheduled'], 'Wrong person': ['b-ter', 'Thank them, add the new contact and re-route', 'New contact added to the committee'], Disqualified: ['b-warn', 'Close out and watch for the renewal', 'Reason saved as a lesson; score lowered'], 'Opted out': ['b-neg', 'Stop all outreach', 'Added to suppression everywhere'] };
+  const S6 = { Positive: ['b-pos', 'Book the meeting or call today', 'Deal opened'], 'Meeting booked': ['b-pos', 'Confirm and prep the meeting', 'Meeting logged; counted once the manager confirms it'], 'Further action': ['b-sec', 'Send the asset within a day', 'Asset logged, account kept warm'], 'Not now': ['b-grey', 'Set a recontact date and nurture', 'Date stored, follow-up scheduled'], Objection: ['b-warn', 'Answer the objection; close out if they bought elsewhere', 'Reason saved as a lesson; score lowered'], 'Wrong person': ['b-ter', 'Thank them, add the new contact and re-route', 'New contact added to the committee'], 'Opted out': ['b-neg', 'Stop all outreach', 'Added to suppression everywhere'], 'Out of office': ['b-grey', 'Pause the sequence until the return date', 'Return date stored; steps rescheduled'] };
   const S6K = Object.keys(S6);
-  const st6 = r => r.status6 || (/Positive|Meeting/.test(r.kind) ? 'Hot' : r.kind === 'Out of office' ? 'Not now' : /next (quarter|year)|later|april|spring|budget/i.test(r.text) ? 'Not now' : 'Disqualified');
+  const st6 = r => { const m = { Hot: 'Positive', Disqualified: 'Objection' }, k = m[r.status6] || r.status6 || m[r.kind] || r.kind; if (S6[k]) return k; return /next (quarter|year)|later|april|spring|budget/i.test(r.text) ? 'Not now' : 'Objection'; };
   function scoreProcess(a, open) {
     const sig = a ? a.signals.slice().sort((p, q) => q.weight - p.weight) : [];
     return `<details class="proc-i" ${open ? 'open' : ''}><summary title="How the score is calculated">${ic('help', 14)}<span>How the score is calculated</span></summary><div class="ccard proc"><div class="ccard-h"><span class="t">${ic('layers', 14)} How the score is calculated</span><span class="muted" style="font-size:11px">thresholds v2026.10</span></div>
@@ -1673,7 +1677,7 @@
   /* Inbox: folders, the message list and a reading pane, like a mail client */
   const unread = r => !S.read[r.id] && !S.handled[r.id];
   function subjOf(r) { const out = acct(r.acc).activity.filter(x => x.msg).pop(); return r.ch === 'Email' ? 'Re: ' + (out ? out.msg.subject : r.source) : 'LinkedIn message · ' + r.source; }
-  const FOLDERS = [['all', 'Inbox', 'inbox'], ['needs', 'Needs a reply', 'reply'], ['Hot', 'Hot', 'up'], ['Further action', 'Further action', 'doc'], ['Not now', 'Not now', 'clock'], ['Wrong person', 'Wrong person', 'users'], ['Disqualified', 'Disqualified', 'alert'], ['Opted out', 'Opted out', 'x'], ['sent', 'Sent', 'plane'], ['tracking', 'Tracking', 'bars'], ['archived', 'Archived', 'savei']];
+  const FOLDERS = [['all', 'Inbox', 'inbox'], ['needs', 'Needs a reply', 'reply'], ['Positive', 'Positive', 'up'], ['Meeting booked', 'Meeting booked', 'check'], ['Further action', 'Further action', 'doc'], ['Not now', 'Not now', 'clock'], ['Objection', 'Objection', 'alert'], ['Wrong person', 'Wrong person', 'users'], ['Opted out', 'Opted out', 'x'], ['Out of office', 'Out of office', 'hour'], ['sent', 'Sent', 'plane'], ['tracking', 'Tracking', 'bars'], ['archived', 'Archived', 'savei']];
   const inFolder = (r, k) => k === 'tracking' ? false : k === 'archived' ? !!S.archived[r.id] : k === 'sent' ? !!S.handled[r.id] : !S.archived[r.id] && (k === 'all' || (k === 'needs' ? needsReply(r) : st6(r) === k));
   /* Inbox › Tracking: every next best action and campaign touch, email and LinkedIn, from prepared to replied */
   function trackRows() {
@@ -1701,6 +1705,7 @@
         <nav class="ibx-nav">${FOLDERS.map(([k, l, i]) => { const n = k === 'tracking' ? '' : k === 'all' ? src.filter(r => inFolder(r, 'all') && unread(r)).length : src.filter(r => inFolder(r, k)).length; return `<button class="${inboxTab === k ? 'on' : ''}" onclick="App.setInboxTab('${k}')" title="${l}">${ic(i, 15)}<span>${l}</span><i>${n || ''}</i></button>`; }).join('')}</nav>
         <div class="ibx-sec">Channel</div>
         <nav class="ibx-nav">${[['all', 'All channels', 'layers'], ['Email', 'Email', 'mail'], ['LinkedIn', 'LinkedIn', 'li']].map(([k, l, i]) => `<button class="${ibCh === k ? 'on' : ''}" onclick="App.setIbCh('${k}')" title="${l}">${ic(i, 15)}<span>${l}</span></button>`).join('')}</nav>
+        ${ibViewsNav()}
         <div class="ibx-sec">Mailbox</div>${isMgr ? `<div class="ibx-mb">${ownerSel()}</div>` : `<div class="ibx-mb muted">${esc(mailbox({ owner: me.id }))}</div>`}
       </aside>
       <section class="ibx-l">
@@ -1722,6 +1727,7 @@
           <div class="rp-t">${esc(r.text)}</div>
           ${out ? `<details class="rp-q"><summary>Show earlier message · ${esc(out.when)}</summary><div class="rp-qh"><b>${esc(rep.name)}</b> wrote:</div><div class="rp-t">${r.ch === 'Email' ? `<b>${esc(out.msg.subject)}</b>\n\n` : ''}${esc(out.msg.body)}</div></details>` : ''}
         </article>
+        ${lineageCard(r, a)}${inboxExtra(r, a)}
         ${r.sourceKind === 'Campaign' && !done ? `<div class="tv-note">${ic('megaphone', 13)} The remaining steps of ${esc(r.source)} are paused for ${esc(first(r.from))} while you answer.</div>` : ''}
         ${done ? `<article class="rp-m mine"><div class="rp-mh">${avatar(rep, 38)}<div class="grow"><div><b>${esc(rep.name)}</b></div><div class="muted sm">to ${esc(r.from)} · via ${r.ch}</div></div><span class="when">Just now</span></div><div class="rp-t">${esc(S.drafts['thr-' + r.id] || suggestReply(r, a))}</div></article>`
         : `<div class="rp-reply"><div class="rp-rh">${ic('reply', 14)} Reply to ${esc(r.from)} · ${r.ch}<span class="badge b-brand nodot">${ic('spark', 11)} Drafted by AI</span></div>
@@ -1742,7 +1748,8 @@
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;margin-top:12px">
       <div class="card"><div class="card-b"><div class="lbl" style="margin-bottom:8px">Reply rate by signal type</div><table class="tbl"><tbody>${[['Champion moved', 27], ['New exec hire', 22], ['Rival contract ending', 19], ['Turnaround announced', 17], ['Hiring surge', 11], ['Regulatory deadline', 6]].map(r => `<tr><td>${r[0]}</td><td class="mono">${r[1]} per 100 sends</td></tr>`).join('')}</tbody></table></div></div>
       <div class="card"><div class="card-b"><div class="lbl" style="margin-bottom:8px">Each channel against its benchmark</div><table class="tbl"><tbody>${[['Email', '7.9%', '5.1%', 1], ['LinkedIn', '11.2%', '8.0%', 1], ['Phone', '2.1%', '3.5%', 0]].map(r => `<tr><td>${r[0]}</td><td class="mono">${r[1]} vs ${r[2]}</td><td><span class="badge ${r[3] ? 'b-pos' : 'b-neg'} nodot">${r[3] ? 'Above' : 'Below: flagged'}</span></td></tr>`).join('')}</tbody></table></div></div></div>
-      <div class="lbl" style="margin:20px 0 8px">Qualified meeting ledger</div><div class="card tbl-wrap"><table class="tbl"><thead><tr><th>Account</th><th>Rep</th><th>Held</th><th>Recommended before first touch</th><th>Confirmed</th></tr></thead><tbody>${[['Eastgate Refining', 'Sofia', 'Tue 27 Oct', 'Yes, 9 days before', (S.resolvedEsc || {}).meet ? 'Daniel, today' : 'Waiting (due Tue 3 Nov)'], ['Ironwood Refining', 'Marco', 'Fri 23 Oct', 'Yes, 14 days before', 'Daniel, Mon 26 Oct'], ['Moonstone Aromatics', 'Marco', 'Wed 14 Oct', 'Yes, 6 days before', 'Daniel, Thu 15 Oct'], ['Copperhill Aromatics', 'Kenji', 'Tue 6 Oct', 'No: their own outreach', 'Not counted']].filter(r => isMgr || r[1] === first(me.name)).map(r => `<tr>${r.map((x, i) => `<td class="${i ? 'sm' : 'nm'}">${esc(x)}</td>`).join('')}</tr>`).join('')}</tbody></table></div><div class="sm muted" style="margin-top:8px">${isMgr ? 'Team routing: accounts go to a team by territory, product line and deal size (Singapore and Malaysia to Sofia\'s pod; deals over USD 1M to Marco\'s). ' : ''}Quarterly true-up on 31 Dec: prioritised accounts must beat the rest in the CRM, or the meeting fee steps down.</div>`);
+      ${ledgerCard()}<div class="sm muted" style="margin-top:8px">${isMgr ? 'Team routing: accounts go to a team by territory, product line and deal size (Singapore and Malaysia to Sofia\'s pod; deals over USD 1M to Marco\'s). ' : ''}Quarterly true-up on 31 Dec: prioritised accounts must beat the rest in the CRM, or the meeting fee steps down.</div>`);
+    cv.insertAdjacentHTML('beforeend', targetsAn() + prioCard() + sigReplyCard() + rollupCard());
   }
   function renderAnalytics0() {
     const reps = (isMgr && ownerF === 'all') ? REPS : [isMgr ? ownerF : me.id], sum = k => reps.reduce((n, r) => n + TEAM_STATS[r][k], 0);
@@ -1858,21 +1865,250 @@
     sg: (k, v) => { if (k === 'mode') sgMode = v; else if (k === 'own') ownerF = v || 'all'; else if (k === 'sort') sgSort = v || 'Most accounts'; else if (k === 'q') sgQ = v; }
   };
   /* Accounts (lists are saved selections: tabs above the table) */
+  /* ─── More of the PRD in the workspace: motivation tags, warm paths, research before writing, status watch,
+     event-driven re-ranking, lineage, saved views, campaign read-out and corpus, Knowledge Hub, ledger ─── */
+  const H = s => [...String(s)].reduce((n, c) => (n * 31 + c.charCodeAt(0)) % 9973, 7);
+  function motiveTag(a) {
+    const m = a.motivation || (H(a.id) % 2 ? 'Cost' : 'Growth'), risk = (a.signals || []).some(x => /turnaround|shutdown/i.test(x.type));
+    return `<span class="mtv ${m === 'Cost' ? 'c' : 'g'}" title="${m === 'Cost' ? 'Buying to lower cost: lifecycle, support, outages' : 'Buying to grow: capacity, new units, expansion'}">${m}</span>${risk ? '<span class="mtv r" title="A planned shutdown makes the risk of slipping the reason to act">Risk</span>' : ''}`;
+  }
+  function warmPaths(a) {
+    const w = a.warm || { score: 0, note: 'No connection found.' }, o = USERS[a.owner], h = H(a.id);
+    const P = [{ t: w.note, s: w.score, ask: /Daniel/.test(w.note) ? 'Daniel Brooks' : /Marco/.test(w.note) ? 'Marco Lindqvist' : first(o.name) }];
+    if (w.score > 30) P.push({ t: `A former colleague of ${first(a.contact.name)} now works at a current customer`, s: Math.max(20, w.score - 25 - h % 10), ask: 'The customer champion' });
+    if (h % 3 === 0) P.push({ t: `${first(a.contact.name)} commented on a post by one of your engineers last month`, s: 25 + h % 15, ask: 'The engineer who posted' });
+    const best = Math.max(...P.map(x => x.s));
+    return `<div class="sec-t">Warm paths · score ${best}</div><div class="wp">${P.map((x, i) => `<div class="wp-r"><div class="wp-b"><i style="width:${x.s}%"></i></div><div class="grow"><div class="sm">${esc(x.t)}</div><div class="sm muted">Ask: ${esc(x.ask)}</div></div><button class="btn sm ${i ? 'ghost' : ''}" onclick="App.toast('Intro request drafted for ${esc(x.ask).replace(/'/g, '')}. It waits in your approvals')">Ask for an intro</button></div>`).join('')}</div><div class="sm muted" style="margin-top:4px">Uses only your team's own connections and CRM history. A strong path raises the next action's confidence.</div>`;
+  }
+  const RIVALS = ['Northgate Controls', 'Helix Automation', 'Corvane Systems'];
+  function watchFor(a) {
+    const L = [], h = H(a.id);
+    (a.activity || []).filter(x => /^Opened/.test(x.t)).slice(0, 1).forEach(x => L.push(['Engagement', `${x.t}, no reply yet`, x.when, 'Send a short nudge on LinkedIn']));
+    (a.activity || []).filter(x => /Champion moved/.test(x.t)).slice(0, 1).forEach(x => L.push(['People', x.t, x.when, 'Contact them at the new company']));
+    if (a.whyNow && /Rival contract/.test(a.whyNow.type)) L.push(['Contract', `Renewal date with ${RIVALS[h % 3]} moved to ${['Mar', 'Apr', 'Jun'][h % 3]} 2027`, ago(a.whyNow.age), 'Re-time the comparison step']);
+    if (a.whyNow && /exec hire|New exec/i.test(a.whyNow.type)) L.push(['People', `${a.contact.name} updated their LinkedIn title`, ago(a.whyNow.age), 'Mention the new remit in the first line']);
+    return L;
+  }
+  function watchAlerts() { return ACCOUNTS.filter(visible).flatMap(a => watchFor(a).map(w => ({ a, w }))).slice(0, 7); }
+  function watchCard() {
+    const L = watchAlerts();
+    return `<div class="lbl" style="margin:0 0 8px">Status watch · ${L.length} changes on accounts you are working</div><div class="card tbl-wrap" style="margin-bottom:14px"><table class="tbl"><thead><tr><th>Account</th><th>What changed</th><th>When</th><th>Suggested next step</th></tr></thead><tbody>${L.map(x => `<tr class="row-link" onclick="App.openRecord('${x.a.id}','research')"><td><div class="nm">${esc(x.a.name)}</div><div class="sm">${esc(x.a.contact.name)}</div></td><td><span class="badge b-grey nodot">${esc(x.w[0])}</span> ${esc(x.w[1])}</td><td class="sm">${esc(x.w[2])}</td><td class="sm">${esc(x.w[3])}</td></tr>`).join('') || '<tr><td colspan="4" class="empty">Nothing changed.</td></tr>'}</tbody></table></div>`;
+  }
+  function rerankCard() {
+    const L = ACCOUNTS.filter(visible).filter(a => a.whyNow && a.whyNow.age <= 3 && a.score > 0).sort((p, q) => q.score - p.score).slice(0, 5);
+    return `<div class="lbl" style="margin:0 0 8px">Re-ranked today · the list moves within minutes of an event</div><div class="card tbl-wrap" style="margin-bottom:14px"><table class="tbl"><thead><tr><th>Account</th><th>Event</th><th>Rank</th><th>When</th></tr></thead><tbody>${L.map((a, i) => { const now = i + 1, was = now + 3 + H(a.id) % 7; return `<tr class="row-link" onclick="App.openRecord('${a.id}','overview')"><td><div class="nm">${esc(a.name)}</div><div class="sm">${tierBadge(a.tier)}</div></td><td class="sm">${esc(a.whyNow.type)}${/pricing|webinar|Visited/i.test(a.whyNow.type) ? ' <span class="badge b-ter nodot">fast lane</span>' : ''}</td><td class="mono">#${was} → <b>#${now}</b></td><td class="sm">Today ${String(7 + i).padStart(2, '0')}:${String(H(a.id) % 60).padStart(2, '0')}</td></tr>`; }).join('')}</tbody></table></div>`;
+  }
+  function researchPane(a) {
+    const h = H(a.id), sig = (a.signals || []).slice().sort((p, q) => q.weight - p.weight), rv = RIVALS[h % 3], w = watchFor(a);
+    const src = sig.slice(0, 3).map((x, i) => `[${i + 1}] ${x.source}, ${ago(x.age)}`);
+    return `<div class="sec-t">Research brief · written before the draft</div>
+      <div class="rb card"><div class="rb-r"><span>Company</span><b>${esc(a.name)}: ${esc(a.industry)}, ${esc(a.country)}, ${esc(a.size)}</b></div>
+      <div class="rb-r"><span>What is happening</span><b>${sig.length ? sig.slice(0, 3).map((x, i) => `${esc(x.text.replace(/\.$/, ''))} [${i + 1}]`).join('; ') : 'No live signal'}</b></div>
+      <div class="rb-r"><span>What they care about</span><b>${a.motivation === 'Cost' ? 'Lifecycle cost, support response, outage windows' : 'Capacity, schedule, getting a new unit running on time'} ${motiveTag(a)}</b></div>
+      <div class="rb-r"><span>In place today</span><b>${esc(rv)} control system; reviews mention slow support and costly upgrades</b></div>
+      <div class="rb-r"><span>Who to write to</span><b>${esc(a.contact.name)}, ${esc(a.contact.title)} (persona: ${esc(personaOf ? personaOf(a) : a.contact.title)})</b></div>
+      <div class="rb-r"><span>Angle chosen, and why</span><b>${a.segment ? `The ${esc(a.segment)} angle: ` : ''}lead with their own news, then what a comparable site did; it got the most replies from this persona</b></div>
+      <div class="rb-f"><span class="sm muted">${src.map(esc).join(' · ') || 'No sources yet'}</span><span class="sp"></span><button class="btn sm" onclick="App.toast('Research refreshed: 2 sources re-read, nothing new')">Refresh research</button></div></div>
+      <div class="sec-t">Rival on this account</div><div class="rb card"><div class="rb-r"><span>Detected</span><b>${esc(rv)}: named in 3 job posts and in contract data</b></div><div class="rb-r"><span>Review themes</span><b>Slow support (14 mentions), upgrade cost (9), outage windows (6)</b></div><div class="rb-r"><span>Matched angle</span><b>Support you can count on through the switch</b></div></div>
+      <div class="sec-t" style="display:flex;align-items:center;gap:8px">Status watch <span class="sp" style="flex:1"></span><span class="sm muted">${(S.unwatch || {})[a.id] ? 'Not watching' : 'Watching: changes appear on Today'}</span><span class="switch ${(S.unwatch || {})[a.id] ? '' : 'on'}" title="Watch this account" onclick="App.watchAcc('${a.id}')"></span></div>${w.length ? w.map(x => `<div class="sw-r"><span class="badge b-grey nodot">${esc(x[0])}</span><div class="grow"><div class="sm">${esc(x[1])}</div><div class="sm muted">${esc(x[2])} · suggested: ${esc(x[3])}</div></div></div>`).join('') : '<div class="sm muted">Watching job changes, title changes, engagement and contract dates. Nothing has changed yet.</div>'}`;
+  }
+  const personaOf = a => /reliab/i.test(a.contact.title) ? 'Reliability leader' : /operat/i.test(a.contact.title) ? 'Operations leader' : /plant/i.test(a.contact.title) ? 'Plant head' : /i&c|instrument|technical|automation/i.test(a.contact.title) ? 'Technical lead (I&C)' : /procure|purchas/i.test(a.contact.title) ? 'Procurement' : 'Operations leader';
+  function lineageCard(r, a) {
+    const sg = a.whyNow, seg = a.seg ? segOf(a.seg) : null, as = libAll().find(x => seg && x.seg === seg.name && x.st === 'Completed') || null;
+    const St = (k, v, d) => `<div class="ln-s"><span>${k}</span><b>${v}</b>${d ? `<i>${d}</i>` : ''}</div>`;
+    return `<div class="ln card"><div class="ln-h">${ic('layers', 13)} How this reply came about</div><div class="ln-c">${St('Signal', sg ? esc(sg.type) : 'None', sg ? esc(sg.source || '') + ' · ' + ago(sg.age) : '')}<span class="ln-a">→</span>${St('Micro-segment', seg ? esc(seg.name) : 'None', seg ? esc(seg.trigger) : '')}<span class="ln-a">→</span>${St('Message', esc(r.source || 'Next best action'), r.sourceKind === 'Campaign' ? 'campaign step' : 'next best action')}<span class="ln-a">→</span>${St('Content', as ? esc(as.t) : 'Plain text', as ? esc(as.type) : '')}<span class="ln-a">→</span>${St('Reply', esc(st6(r)), esc(r.at))}</div></div>`;
+  }
+  function ibViewsNav() {
+    S.ibViews = S.ibViews || [{ n: 'Positive this week', f: 'Positive', c: 'all' }, { n: 'Objections to answer', f: 'Objection', c: 'all' }, { n: 'LinkedIn needing a reply', f: 'needs', c: 'LinkedIn' }];
+    return `<div class="ibx-sec">Saved views</div><nav class="ibx-nav">${S.ibViews.map((v, i) => `<button onclick="App.ibView(${i})" title="${esc(v.n)}">${ic('savei', 15)}<span>${esc(v.n)}</span></button>`).join('')}<button onclick="App.ibSaveView()" title="Save this view">${ic('plus', 15)}<span>Save this view</span></button></nav>`;
+  }
+  function readOut(c, COH, cur) {
+    const st = campStats(c), sentN = campDeliv(c).out, h = H(c.id);
+    if (!sentN) return `<div class="placeholder-note"><div><b>No results yet.</b> The read-out fills after the first send: results by persona, problem, message, content, channel and timing, then a recommendation to expand, pivot or stop.</div></div>`;
+    const sq = seqOf(c), base = Math.max(st.total, 8);
+    const rows = (L) => L.map((x, i) => { const n = Math.max(2, Math.round(base * (0.55 - i * 0.12 + (h % 7) / 40))), r = Math.max(0, Math.round(n * (0.34 - i * 0.07 + ((h + i) % 5) / 50))), pz = Math.round(r * 0.6), m = Math.round(r * 0.3); return { l: x, n, r, pz, m, rate: n ? Math.round(r / n * 100) : 0 }; });
+    const D = [['Persona: who replies', rows(['Reliability leader', 'Operations leader', 'Technical lead (I&C)', 'Plant head'])], ['Problem: the signal', rows([c.seg && segOf(c.seg) ? segOf(c.seg).trigger : 'Signal', 'New exec hire', 'Hiring surge'])], ['Message: the angle', rows(sq.map((s, i) => `Step ${i + 1}: ${String(s.t).split(/[.:;,]/)[0]}`))], ['Content', rows(sq.map(s => (stepAsset(c, s) || { t: 'Plain text' }).t).filter((v, i, A) => A.indexOf(v) === i))], ['Channel', rows([...new Set(sq.map(s => s.ch))])], ['Timing', rows(['Tue–Wed, 08:00–10:00', 'Thu–Fri', 'Monday'])]];
+    const rr = st.started ? Math.round(st.replies / st.started * 100) : 0, best = D[2][1].slice().sort((p, q) => q.rate - p.rate)[0];
+    const rec = rr >= 20 ? ['Expand', `Reply rate ${rr}% beats the 12% benchmark. Add the 18 lookalike accounts in the same micro-segment.`, 'expand'] : rr >= 8 ? ['Pivot', `Reply rate ${rr}%. "${best.l}" gets the most replies: lead with it in step 1 for the accounts still to start.`, 'pivot'] : ['Stop', `Reply rate ${rr}% after every step. Stop here and move the accounts to individual next best actions.`, 'stop'];
+    const dec = (S.roDone || {})[c.id];
+    return `<div class="ro-rec card ${rec[2]}"><div class="ro-rh"><span class="badge ${rec[2] === 'expand' ? 'b-pos' : rec[2] === 'pivot' ? 'b-ter' : 'b-neg'}">Recommendation: ${rec[0]}</span><span class="sm muted">from ${sentN} messages sent and ${st.replies} replies</span></div><div class="ro-rt">${esc(rec[1])}</div>
+      <div class="ro-ra">${dec ? `<span class="sm"><b>Decided:</b> ${esc(dec)}</span>` : isMgr ? ['expand', 'pivot', 'stop'].map(k => `<button class="btn sm ${k === rec[2] ? 'pri' : ''}" onclick="App.roAct('${c.id}','${k}')">${k === 'expand' ? 'Expand' : k === 'pivot' ? 'Pivot' : 'Stop'}</button>`).join('') : '<span class="sm muted">Your manager decides; the recommendation is waiting for them</span>'}</div></div>
+      <div class="ro-g">${D.map(([k, R]) => `<div class="card ro-d"><div class="ro-dh">${k}</div><table class="tbl"><thead><tr><th></th><th>Sent</th><th>Replied</th><th>Positive</th><th>Meetings</th></tr></thead><tbody>${R.map(x => `<tr><td class="nm">${esc(x.l)}</td><td class="mono">${x.n}</td><td class="mono">${x.r} <span class="muted">${x.rate}%</span></td><td class="mono">${x.pz}</td><td class="mono">${x.m}</td></tr>`).join('')}</tbody></table></div>`).join('')}</div>`;
+  }
+  let corpusC = '';
+  function renderCorpus() {
+    const cv = frame('Campaign corpus', 'Every message and asset sent from campaigns and next best actions, with its results. The best ones feed the next plan', '');
+    const R = []; CAMPAIGNS.forEach(c => seqOf(c).forEach((s, i) => { const n = sent(s) || c.status === 'Completed' ? 6 + H(c.id + i) % 12 : 0, r = n ? Math.round(n * ((H(c.id + 'r' + i) % 30) / 100)) : 0; R.push({ c, i, s, n, r, a: stepAsset(c, s) }); }));
+    const L = R.filter(x => !corpusC || x.c.id === corpusC).sort((p, q) => (q.n ? q.r / q.n : -1) - (p.n ? p.r / p.n : -1));
+    cv.innerHTML = `<div class="lib-bar"><label class="sr" for="corpC">Campaign</label><select id="corpC" class="sel" onchange="App.corpusC(this.value)"><option value="">All campaigns</option>${CAMPAIGNS.map(c => `<option value="${c.id}" ${corpusC === c.id ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select><span class="sm muted">${L.length} messages · best reply rate first</span></div>
+      <div class="card tbl-wrap"><table class="tbl"><thead><tr><th>Message</th><th>Campaign</th><th>Channel</th><th>Content</th><th>Sent</th><th>Replied</th></tr></thead><tbody>${L.map((x, k) => `<tr class="row-link" onclick="App.goCampaign('${x.c.id}','msgs')"><td><div class="nm">Step ${x.i + 1} · ${esc(String(x.s.t).slice(0, 70))}</div>${k < 3 && x.n ? '<span class="badge b-pos nodot">Top message</span>' : ''}</td><td class="sm">${esc(x.c.name)}</td><td class="sm">${chIc(x.s.ch)} ${esc(x.s.ch)} · ${esc(x.s.fmt)}</td><td class="sm">${x.a ? assetLink(x.a) : '–'}</td><td class="mono">${x.n || '–'}</td><td class="mono">${x.n ? `${x.r} <span class="muted">${Math.round(x.r / x.n * 100)}%</span>` : '–'}</td></tr>`).join('')}</tbody></table></div>`;
+  }
+  function selfLaunchBtn(c) {
+    if (!isMgr || c.status === 'Completed' || !(c.status === 'Running' || S.camp[c.id] === 'Confirmed')) return '';
+    return (S.launched || {})[c.id] ? '<span class="badge b-sec nodot">Sending through Outreach</span> ' : `<button class="btn sm" onclick="App.selfLaunch('${c.id}')">${ic('plane', 13)} Launch in Outreach</button> `;
+  }
+  const KH0 = [['Control system migration datasheet', 'PDF', 'Product', 14, 212, 41], ['Case study: a turnaround finished on time', 'PDF', 'Case study', 6, 88, 23], ['Approved claims v7', 'Sheet', 'Claims', 1, 64, 57], ['Support response times and SLA', 'Doc', 'Policy', 9, 96, 12], ['Brand voice guide v3', 'PDF', 'Brand', 22, 140, 0], ['Migration pricing bands 2027', 'Sheet', 'Pricing (restricted)', 2, 18, 0]];
+  const KHP = [['Sites that planned the cut-over around a shutdown cut unplanned trips by 18% in the first year.', 0, 4], ['A phased migration keeps the plant running; each phase fits inside a planned outage window.', 0, 7], ['The turnaround finished two days early; the control-system work never touched the critical path.', 1, 2], ['Critical support tickets get a response within 30 minutes, around the clock.', 3, 1], ['Average outage avoided per year after the switch: 3.2 days.', 2, 1]];
+  let khQ = '';
+  function khCard() {
+    S.kh = S.kh || KH0.map((x, i) => ({ id: 'k' + i, n: x[0], f: x[1], k: x[2], p: x[3], ch: x[4], cit: x[5], st: 'Indexed' }));
+    const q = khQ.toLowerCase(), hits = q ? KHP.filter(x => x[0].toLowerCase().split(/\W+/).some(w => w.length > 3 && q.split(/\W+/).some(z => z.length > 3 && w.startsWith(z.slice(0, 5))))) : [];
+    return `<div class="kh card"><div class="kh-h"><div><b>Knowledge Hub</b><span class="sm muted">the sources every draft, asset and chat answer is grounded in and cites</span></div><span class="sp"></span><label class="btn sm pri kh-up">${ic('plus', 13)} Upload<input type="file" multiple hidden onchange="App.khUpload(this.files)"></label></div>
+      <div class="kh-s">${ic('search', 14)}<label class="sr" for="khQ">Search the hub</label><input id="khQ" placeholder="Search the hub, e.g. outage, support, turnaround" value="${esc(khQ)}" oninput="App.khSearch(this.value)"></div>
+      ${q ? `<div class="kh-hits">${hits.map(x => `<div class="kh-hit"><div>"${esc(x[0])}"</div><div class="sm muted">${esc(S.kh[x[1]] ? S.kh[x[1]].n : '')} · page ${x[2]}</div></div>`).join('') || '<div class="sm muted" style="padding:8px 0">No passage matches. This question goes to the content backlog.</div>'}</div>` : ''}
+      <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Source</th><th>Type</th><th>Pages</th><th>Indexed</th><th>Cited</th><th></th></tr></thead><tbody>${S.kh.map(d => `<tr><td><div class="nm">${esc(d.n)}</div><div class="sm muted">${esc(d.f)}</div></td><td class="sm">${esc(d.k)}</td><td class="mono">${d.p}</td><td>${d.st === 'Indexed' ? `<span class="badge b-pos nodot">${d.ch} passages</span>` : '<span class="badge b-ter nodot">Indexing…</span>'}${/restricted/i.test(d.k) ? ' <span class="badge b-warn nodot">never quoted</span>' : ''}</td><td class="mono">${d.cit}</td><td style="white-space:nowrap;text-align:right"><button class="btn sm ghost" onclick="App.khReindex('${d.id}')">Re-index</button><button class="btn sm ghost" onclick="App.khRemove('${d.id}')">Remove</button></td></tr>`).join('')}</tbody></table></div>
+      <div class="kh-f sm muted">Upload PDFs, Word, slides or sheets. Each is split into passages and indexed; drafts and answers quote passages and link back to the page. Questions the hub can't answer go to the content backlog.</div></div>`;
+  }
+  function prioCard() {
+    const R = [['Contacted', 100, 100], ['Replied', 61, 34], ['Meetings', 9.8, 3.1], ['Won', 2.6, 0.7]];
+    return `<div class="lbl" style="margin:20px 0 8px">Prioritised accounts against the rest · per 100 accounts</div><div class="card tbl-wrap"><table class="tbl"><thead><tr><th></th><th>Tier A and B (prioritised)</th><th>Tier C and D (the rest)</th><th>Difference</th></tr></thead><tbody>${R.map(r => `<tr><td class="nm">${r[0]}</td><td class="mono">${r[1]}</td><td class="mono">${r[2]}</td><td class="mono"><b>${(r[1] / r[2]).toFixed(1)}×</b></td></tr>`).join('')}</tbody></table></div><div class="sm muted" style="margin-top:6px">Per 100 accounts worked, so groups of different sizes compare fairly. Prioritised accounts book about 3× the meetings: the proof that fit × timing works.</div>`;
+  }
+  function ledgerCard() {
+    S.ledger = S.ledger || {};
+    const L = [['eastgate', 'Eastgate Refining', 'Sofia', 'Tue 27 Oct', 'Yes, 9 days before', 'Tue 3 Nov'], ['ironwood', 'Ironwood Refining', 'Marco', 'Fri 23 Oct', 'Yes, 14 days before', 'Fri 30 Oct'], ['moonstone', 'Moonstone Aromatics', 'Marco', 'Wed 14 Oct', 'Yes, 6 days before', 'Wed 21 Oct'], ['copperhill', 'Copperhill Aromatics', 'Kenji', 'Tue 6 Oct', 'No: their own outreach', 'Tue 13 Oct']].filter(r => isMgr || r[2] === first(me.name));
+    const def = { ironwood: 'Qualified · Daniel, Mon 26 Oct', moonstone: 'Qualified · Daniel, Thu 15 Oct', copperhill: 'Not counted: not recommended first' };
+    const n = L.filter(r => /^Qualified/.test(S.ledger[r[0]] || def[r[0]] || '')).length;
+    return `<div class="lbl" style="margin:20px 0 8px">Qualified meeting ledger · ${n} counted this month</div><div class="card tbl-wrap"><table class="tbl"><thead><tr><th>Account</th><th>Rep</th><th>Held</th><th>Recommended before first touch</th><th>Status</th><th></th></tr></thead><tbody>${L.map(r => { const s = S.ledger[r[0]] || def[r[0]]; return `<tr><td class="nm">${esc(r[1])}</td><td class="sm">${esc(r[2])}</td><td class="sm">${esc(r[3])}</td><td class="sm">${esc(r[4])}</td><td class="sm">${s ? esc(s) : `<span class="badge b-ter nodot">To confirm by ${esc(r[5])}</span>`}</td><td style="white-space:nowrap;text-align:right">${!s && isMgr ? `<button class="btn sm pri" onclick="App.ledger('${r[0]}',1)">Qualified</button> <button class="btn sm" onclick="App.ledger('${r[0]}',0)">Not qualified</button>` : ''}</td></tr>`; }).join('')}</tbody></table></div><div class="sm muted" style="margin-top:6px">A meeting counts once the sales manager confirms it within five working days, and only if the account was recommended before the first touch.</div>`;
+  }
+  /* ─── Delivery plan screen additions: monthly target, objectives, recommendations, meetings to confirm,
+     quota, winning replies, fast lane, data status, tag filters, set-up answers, send-through, follow-up ─── */
+  const TGT = () => shared.tgt || null;
+  const objF = { o: '', s: '', sort: 'progress' };
+  const OBJX = [{ t: 'Rival contracts · week of 26 Oct', owner: 'sofia', done: 3, total: 6, last: 'Today 09:12', st: 'Open' }, { t: 'Re-open stalled Thai refiners', owner: 'marco', done: 1, total: 5, last: 'Mon 26 Oct', st: 'Open', behind: 1 }, { t: 'Book two turnaround meetings', owner: 'aisha', done: 2, total: 2, last: 'Fri 23 Oct', st: 'Done' }, { t: 'New exec hires in the Philippines', owner: 'kenji', done: 0, total: 4, last: 'Thu 22 Oct', st: 'Open', behind: 1 }, { t: 'Webinar follow-ups', owner: 'sofia', done: 5, total: 5, last: 'Wed 21 Oct', st: 'Done' }, { t: 'Out-of-office returns', owner: 'sofia', done: 0, total: 3, last: 'Mon 19 Oct', st: 'Dropped' }];
+  function objList() {
+    const own = S.chats.filter(c => c.obj).map(c => ({ id: c.id, t: c.title, owner: me.id, done: objDone(c).length, total: c.obj.total, last: c.when || 'Today', st: objDone(c).length >= c.obj.total ? 'Done' : 'Open', chat: 1 }));
+    return own.concat(OBJX.map((o, i) => Object.assign({ x: i }, o))).filter(o => isMgr || o.owner === me.id);
+  }
+  const objBar = o => `<div class="ob-bar"><i style="width:${Math.round(o.done / Math.max(1, o.total) * 100)}%"></i></div>`;
+  const objOpenJs = o => o.chat ? `App.openChat('${o.id}')` : `App.objOpen(${o.x})`;
+  function objectivesCard() {
+    const L = objList().filter(o => o.st === 'Open');
+    return `<section class="bsec"><div class="bsec-h">${isMgr ? 'Team objectives' : 'Your objectives'}<span class="sp"></span><button class="btn sm ghost" onclick="App.nav('objectives')">See all</button></div><div class="ob-l">${L.slice(0, 4).map(o => `<button class="ob-r" onclick="${objOpenJs(o)}"><span class="ob-t">${ic('flag', 13)} <b>${esc(o.t)}</b>${isMgr ? `<em>${esc(first(USERS[o.owner].name))}</em>` : ''}${o.behind ? '<span class="badge b-warn nodot">Behind</span>' : ''}</span>${objBar(o)}<span class="ob-n">${o.done} of ${o.total} accounts done</span></button>`).join('') || `<div class="sm muted">No open objectives. <button class="btn sm" onclick="App.objNew()">Set an objective</button></div>`}</div></section>`;
+  }
+  function tgtForm() {
+    const n = REPS.length, def = (TGT() || {}).n || 18, f = (TGT() || {}).focus || '';
+    return `<div class="tg-f"><label>Team meetings target<input id="tgN" type="number" min="1" value="${def}" oninput="App.tgtSplit()"></label><label class="grow">Focus (optional)<input id="tgF" placeholder="e.g. rival contracts ending in Q1" value="${esc(f)}"></label></div>
+      <div class="tg-s" id="tgS">${tgtSplitHtml(def)}</div><div class="tg-a"><span class="sm muted">Split equally by default; you can change it in Admin › Targets.</span><button class="btn sm pri" onclick="App.setTarget()">Save November's objective</button></div>`;
+  }
+  const tgtSplitHtml = n => REPS.map((r, i) => `<span>${esc(first(USERS[r].name))} <b>${Math.floor(n / REPS.length) + (i < n % REPS.length ? 1 : 0)}</b></span>`).join('');
+  function targetCard(force) {
+    const T = TGT();
+    if (T && !force) return `<div class="tg-done">${ic('check', 13)} <b>November objective:</b> ${T.n} meetings · ${tgtSplitHtml(T.n).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()}${T.focus ? ' · focus: ' + esc(T.focus) : ''} <span class="sm muted">set by ${esc(T.by)}, ${esc(T.at)}</span>${isMgr ? ` <button class="btn sm ghost" onclick="App.tgtEdit()">Edit</button>` : ''}</div>`;
+    if (!isMgr) return '';
+    return `<div class="tg card"><div class="tg-h">${ic('flag', 15)}<div><b>Set November's objective</b><span class="sm muted">November starts Monday 2 Nov. Until it is set, the tiles show counts only.</span></div></div>${tgtForm()}</div>`;
+  }
+  function campRec(c) {
+    const st = campStats(c), n = campDeliv(c).out; if (!n) return null;
+    const rr = st.started ? Math.round(st.replies / st.started * 100) : 0;
+    return rr >= 20 ? ['Expand', `Reply rate ${rr}% beats the 12% benchmark. Add the 18 lookalikes in the same micro-segment.`, 'expand'] : rr >= 8 ? ['Pivot', `Reply rate ${rr}%. Lead step 1 with the angle that gets the most replies.`, 'pivot'] : ['Stop', `Reply rate ${rr}% after every step. Move the accounts to next best actions.`, 'stop'];
+  }
+  function recsCard() {
+    const L = CAMPAIGNS.map(c => [c, campRec(c)]).filter(x => x[1] && !(S.roDone || {})[x[0].id]);
+    if (!L.length) return '';
+    return `<section class="bsec"><div class="bsec-h">Campaign recommendations · ${L.length}</div><div class="rc-l">${L.map(([c, r]) => `<div class="rc-r"><span class="badge ${r[2] === 'expand' ? 'b-pos' : r[2] === 'pivot' ? 'b-ter' : 'b-neg'}">${r[0]}</span><div class="grow"><div class="nm">${esc(c.name)}</div><div class="sm muted">${esc(r[1])}</div></div><button class="btn sm pri" onclick="App.roAct('${c.id}','${r[2]}')">${r[0]}</button><button class="btn sm ghost" onclick="App.goCampaign('${c.id}','ro')">Read-out</button></div>`).join('')}</div></section>`;
+  }
+  const LEDG = [['eastgate', 'Eastgate Refining', 'Sofia', 'Tue 3 Nov']];
+  const ledgPending = () => LEDG.filter(r => !(S.ledger || {})[r[0]]);
+  function meetConfirmCard() {
+    const L = ledgPending(); if (!L.length) return '';
+    return `<div class="mc card"><div><b>${ic('check', 14)} ${L.length} meeting${L.length > 1 ? 's' : ''} to confirm as qualified</b><span class="sm muted">${L.map(r => `${esc(r[1])} (${esc(r[2])}) · confirm by ${esc(r[3])}`).join(' · ')}</span></div><button class="btn sm pri" onclick="App.ledger('${L[0][0]}',1)">Qualified</button><button class="btn sm" onclick="App.ledger('${L[0][0]}',0)">Not qualified</button><button class="btn sm ghost" onclick="App.nav('analytics')">Open the ledger</button></div>`;
+  }
+  function quotaTile() {
+    return `<div class="qt card"><div class="qt-h"><b>Quota plan · Q4</b><span class="badge b-grey nodot">R3</span></div><div class="qt-g"><div><span>Pipeline</span><b>USD 3.1M</b></div><div><span>Quota</span><b>USD 4.0M</b></div><div><span>Coverage</span><b>0.8×</b></div><div><span>Gap</span><b class="neg">USD 0.9M</b></div></div><div class="sm muted">Plan: push Ironwood and Moonstone to proposal, open 12 Tier A accounts with a live signal. <a href="admin/controls.html?tab=targets" target="_blank">Open the quota plan</a></div></div>`;
+  }
+  function todayExtra() {
+    return `${objectivesCard()}${isMgr ? `${TGT() ? '' : `<section class="bsec">${targetCard()}</section>`}${ledgPending().length ? `<section class="bsec"><div class="bsec-h">Meetings to confirm</div>${meetConfirmCard()}</section>` : ''}${recsCard()}<section class="bsec"><div class="bsec-h">Quota</div>${quotaTile()}</section>` : ''}`;
+  }
+  function renderObjectives() {
+    const cv = frame('Objectives', isMgr ? "The team's goals, each tracked in its own chat. See which are behind" : 'Your goals, each tracked in its own chat with its progress', `<button class="btn sm pri" onclick="App.objNew()">${ic('plus', 13)} New objective</button>`);
+    let L = objList().filter(o => (!objF.o || o.owner === objF.o) && (!objF.s || o.st === objF.s));
+    L = L.slice().sort((p, q) => objF.sort === 'last' ? 0 : q.done / q.total - p.done / p.total);
+    const sel = (id, lab, opts, v, fn) => `<label class="sr" for="${id}">${lab}</label><select id="${id}" class="sel" onchange="App.objFilt('${fn}',this.value)">${opts.map(([k, l]) => `<option value="${k}" ${v === k ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
+    cv.innerHTML = `<div class="lib-bar">${isMgr ? sel('obO', 'Owner', [['', 'All reps']].concat(REPS.map(r => [r, USERS[r].name])).concat([[me.id, 'Me']]), objF.o, 'o') : ''}${sel('obS', 'Status', [['', 'Any status'], ['Open', 'Open'], ['Done', 'Done'], ['Dropped', 'Dropped']], objF.s, 's')}${sel('obT', 'Sort', [['progress', 'Sort by progress'], ['last', 'Sort by last activity']], objF.sort, 'sort')}<span class="sm muted">${L.length} objectives${isMgr ? ` · ${L.filter(o => o.behind).length} behind` : ''}</span></div>
+      ${S.objNew ? `<div class="card ob-new"><label class="sr" for="obIn">Goal</label><input id="obIn" placeholder="The goal in plain words, e.g. get our 10 red accounts to a next step this week"><button class="btn sm pri" onclick="App.objCreate()">Create</button><button class="btn sm ghost" onclick="App.objNew(0)">Cancel</button><span class="sm muted">A goal that can't be tied to accounts gets one clarifying question.</span></div>` : ''}
+      <div class="card tbl-wrap"><table class="tbl"><thead><tr><th>Goal</th>${isMgr ? '<th>Owner</th>' : ''}<th>Accounts</th><th style="width:160px">Progress</th><th>Last activity</th><th>Status</th></tr></thead><tbody>${L.map(o => `<tr class="row-link" onclick="${objOpenJs(o)}"><td><div class="nm">${ic('flag', 12)} ${esc(o.t)}</div>${o.behind ? '<span class="badge b-warn nodot">Behind</span>' : ''}</td>${isMgr ? `<td class="sm">${esc(USERS[o.owner].name)}</td>` : ''}<td class="sm" style="white-space:nowrap">${o.done} done · ${o.total - o.done} open</td><td>${objBar(o)}</td><td class="sm">${esc(o.last)}</td><td><span class="badge ${o.st === 'Done' ? 'b-pos' : o.st === 'Dropped' ? 'b-grey' : 'b-sec'} nodot">${o.st}</span></td></tr>`).join('') || '<tr><td colspan="6" class="empty">No objectives match.</td></tr>'}</tbody></table></div>
+      <div class="sm muted" style="margin-top:8px">Opening an objective opens its chat: the accounts, who did what, notes and reminders.</div>`;
+  }
+  function inboxExtra(r, a) {
+    const k = st6(r), out = [];
+    if (k === 'Objection') out.push(`<div class="ix card"><div class="ix-h">${ic('reply', 13)} Winning reply for this objection · ${esc(a.segment || 'this segment')}</div><div class="ix-q">"Understood, and most sites we work with had a supplier too. What changed their mind was a side-by-side of lifecycle cost and outage windows for their own site. Worth 20 minutes before your next planning cycle?"</div><div class="sm muted">Used in 9 threads in this segment; 4 moved to a meeting. From the lessons and objections store.</div><button class="btn sm" onclick="App.toast('Winning reply placed in the draft. Edit it before you send')">Use this reply</button></div>`);
+    if ((k === 'Positive') && !S.handled[r.id]) out.push(`<div class="ix fl">${ic('bolt', 13)} <b>Fast lane</b> · 24-hour clock: <b>19 h left</b> · rule: a positive reply from a Tier ${esc(a.tier || 'A')} contact skips the queue</div>`);
+    if (k === 'Meeting booked') out.push(`<div class="ix fl">${ic('check', 13)} <b>Added to the meetings ledger</b> · waiting for Daniel to confirm it as qualified within five working days</div>`);
+    if (r.ch === 'LinkedIn') out.push(`<div class="ix fl">${ic('bolt', 13)} <b>Conversation signal</b> · this LinkedIn reply counts as an engagement signal on ${esc(a.name)} and moved its score</div>`);
+    return out.join('');
+  }
+  const tagsOf = a => [motiveTag(a).match(/>(Cost|Growth)</)[1], a.whyNow ? a.whyNow.type : null, a.industry].filter(Boolean);
+  let ldTag = '';
+  function tagSel() {
+    const G = [['Motivation', ['Cost', 'Growth']], ['Problem and initiative', [...new Set(ACCOUNTS.filter(a => a.whyNow).map(a => a.whyNow.type))]], ['Company', [...new Set(ACCOUNTS.map(a => a.industry))]]];
+    return `<label class="sr" for="ldTag">Tag</label><select id="ldTag" class="sel ld-tag" onchange="App.ldTag(this.value)"><option value="">All tags</option>${G.map(([g, L]) => `<optgroup label="${g}">${L.map(x => `<option ${ldTag === x ? 'selected' : ''}>${esc(x)}</option>`).join('')}</optgroup>`).join('')}</select>`;
+  }
+  function dataStatus(a) {
+    const h = H(a.id) % 6, S0 = [['Found · 2 sources agree', 'b-pos', 'Apollo, checked against ZoomInfo'], ['Found · 2 sources agree', 'b-pos', 'ZoomInfo, checked against Lusha'], ['Found · 2 sources agree', 'b-pos', 'Apollo, checked against Lusha'], ['Found · single source', 'b-grey', 'Apollo only; second source had no record'], ['Pending', 'b-ter', 'Queued for ZoomInfo'], ['Held: email bounced', 'b-warn', 'Held until a second source confirms']][h];
+    return `<span class="badge ${S0[1]} nodot" title="${S0[2]}">${S0[0]}</span>`;
+  }
+  function listBuilt(n) {
+    return `<details class="lib-guide lb"><summary>How this list was built · ${n} records · USD ${(n * 0.42).toFixed(2)}</summary><table class="tbl"><thead><tr><th>Order</th><th>Provider</th><th>Tried</th><th>Found</th><th>Missed</th><th>Cost</th></tr></thead><tbody><tr><td>1</td><td>Apollo</td><td class="mono">${n}</td><td class="mono">${Math.round(n * 0.71)}</td><td class="mono">${n - Math.round(n * 0.71)}</td><td class="mono">USD ${(n * 0.2).toFixed(2)}</td></tr><tr><td>2</td><td>ZoomInfo (cached)</td><td class="mono">${n - Math.round(n * 0.71)}</td><td class="mono">${Math.round(n * 0.2)}</td><td class="mono">${n - Math.round(n * 0.71) - Math.round(n * 0.2)}</td><td class="mono">USD ${(n * 0.15).toFixed(2)}</td></tr><tr><td>3</td><td>Lusha</td><td class="mono">${n - Math.round(n * 0.91)}</td><td class="mono">${Math.round(n * 0.05)}</td><td class="mono">${Math.max(0, n - Math.round(n * 0.96))}</td><td class="mono">USD ${(n * 0.07).toFixed(2)}</td></tr></tbody></table><p class="sm muted" style="margin:0;padding:8px 14px 12px">Stops at the first provider that returns a verified email; a second source cross-checks every hit before it scores.</p></details>`;
+  }
+  function segCampaigns(s) {
+    const L = CAMPAIGNS.filter(c => c.seg === s.id), D = ['Mon 5 Oct', 'Mon 19 Oct', 'Tue 27 Oct', 'Mon 2 Nov'];
+    if (!L.length) return '';
+    return `<div class="lbl" style="margin:18px 0 8px">Campaigns in this micro-segment · by start date</div><div class="card tbl-wrap"><table class="tbl"><thead><tr><th>Campaign</th><th>Started</th><th>Accounts</th><th>Status</th><th>Reply rate</th><th>Replies</th></tr></thead><tbody>${L.map((c, i) => { const st = campStats(c), rr = st.started ? Math.round(st.replies / st.started * 100) : 0; return `<tr class="row-link" onclick="App.goCampaign('${c.id}','ov')"><td class="nm">${esc(c.name)}</td><td class="sm">${D[i % 4]}</td><td class="mono">${st.total}</td><td><span class="badge b-grey nodot">${esc(c.status)}</span></td><td class="mono">${st.started ? rr + '%' : '–'}</td><td class="mono">${st.replies}</td></tr>`; }).join('')}</tbody></table></div>${L.length > 1 ? '<div class="sm muted" style="margin-top:6px">Compare: the later campaign leads with the comparison asset and replies 9 points higher.</div>' : ''}`;
+  }
+  function cpExtra(c) {
+    const sq = seqOf(c), chs = [...new Set(sq.map(s => s.ch))], via = (S.sendVia || {})[c.id] || 'My mailbox', fu = (S.followOn || {})[c.id] !== 0;
+    return `<div class="cpx">
+      <div class="card cpx-c"><div class="cpx-h">Set-up answers</div><dl class="kv"><dt>Objective</dt><dd>${esc(c.obj || 'Book meetings')}</dd><dt>Channels</dt><dd>${esc(chs.join(' and '))}</dd><dt>Content</dt><dd>${(n => n === 1 ? '1 asset' : n + ' assets')(sq.filter(s => stepAsset(c, s)).length)} attached</dd><dt>Steps</dt><dd>${sq.length} over ${sq.length ? sq[sq.length - 1].day : 0} days</dd></dl></div>
+      <div class="card cpx-c"><div class="cpx-h">Send through <span class="badge b-grey nodot">R3</span></div><label class="sr" for="via-${c.id}">Send through</label><select id="via-${c.id}" class="sel" onchange="App.sendVia('${c.id}',this.value)">${['My mailbox', 'Outreach (connected)', 'Salesloft (not connected)'].map(x => `<option ${via === x ? 'selected' : ''} ${/not connected/.test(x) ? 'disabled' : ''}>${x}</option>`).join('')}</select><div class="sm muted" style="margin-top:6px">Next send window: <b>Tue 08:00–10:00</b> in each contact's time zone · daily cap 40 per rep · 3 days minimum spacing</div></div>
+      <div class="card cpx-c"><div class="cpx-h">Follow-up <span class="badge b-grey nodot">R3</span><span class="switch ${fu ? 'on' : ''}" style="margin-left:auto" title="${fu ? 'Turn off' : 'Turn on'}" onclick="App.followTog('${c.id}')"></span></div><div class="sm">${fu ? 'On · attempts used 1 of 3 · next re-engage only on a new signal, after a 21-day quiet period' : 'Off · accounts that do not reply return to nurture'}</div></div></div>`;
+  }
+  function stepResearch(c, s, i) {
+    return `<details class="st-rs"><summary>${ic('search', 12)} Research behind step ${i + 1}</summary><div class="sm">The angle "${esc(String(s.t).split(/[.:;,]/)[0])}" was picked because comparable sites in ${esc((segOf(c.seg) || { name: 'this micro-segment' }).name)} replied most to their own news, then proof. Sources: [1] the account's signals, [2] the approved claims sheet v7, [3] the case study "A turnaround finished on time".</div></details>`;
+  }
+  const groundPill = () => `<span class="ob-gr" title="Every draft cites the approved business profile and the Knowledge Hub">${ic('check', 12)} Grounded on the business profile and Knowledge Hub</span>`;
+  function offerAssets() {
+    const L = (window.CONTENT_LIB && CONTENT_LIB.offers ? CONTENT_LIB.offers() : []).filter(o => o.st !== 'Retired').slice(0, 4);
+    if (!L.length) return '';
+    return `<div class="card oa"><div class="kh-h"><div><b>Offers that can become assets</b><span class="sm muted">turn an offer from the offer library into a one-pager; the asset links back to the offer</span></div></div><div class="oa-g">${L.map(o => `<div class="oa-c"><b>${esc(o.name)}</b><span class="sm muted">${esc(o.what)}</span><span class="sm">${esc(o.terms || '')}</span><button class="btn sm" onclick="App.offerAsset('${o.id}')">Turn into an asset</button></div>`).join('')}</div></div>`;
+  }
+  function sigReplyCard() {
+    const R = [['Pricing page visit (fast lane)', 38, 21], ['Rival contract ending', 31, 42], ['New exec hire', 24, 33], ['Turnaround planned', 22, 27], ['Hiring surge', 12, 25]];
+    return `<div class="lbl" style="margin:20px 0 8px">Reply rate by signal · from lineage</div><div class="card tbl-wrap"><table class="tbl"><thead><tr><th>Signal that started it</th><th>Messages</th><th style="width:40%">Reply rate</th></tr></thead><tbody>${R.map(r => `<tr><td class="nm">${r[0]}</td><td class="mono">${r[2]}</td><td><div class="ob-bar" style="display:inline-block;width:60%;vertical-align:middle"><i style="width:${r[1] * 2}%"></i></div> <span class="mono">${r[1]}%</span></td></tr>`).join('')}</tbody></table></div>`;
+  }
+  function rollupCard() {
+    const S1 = SEGMENTS.slice(0, 5).map(s => { const L = CAMPAIGNS.filter(c => c.seg === s.id), st = L.map(campStats).reduce((m, x) => ({ n: m.n + x.total, r: m.r + x.replies }), { n: 0, r: 0 }); return [s.name, L.length, st.n, st.r]; });
+    const O = objList().slice(0, 5);
+    return `<div class="lbl" style="margin:20px 0 8px">Campaign roll-up</div><div class="ro-g"><div class="card ro-d"><div class="ro-dh">By micro-segment</div><table class="tbl"><thead><tr><th></th><th>Campaigns</th><th>Accounts</th><th>Replies</th></tr></thead><tbody>${S1.map(r => `<tr><td class="nm">${esc(r[0])}</td><td class="mono">${r[1]}</td><td class="mono">${r[2]}</td><td class="mono">${r[3]}</td></tr>`).join('')}</tbody></table></div><div class="card ro-d"><div class="ro-dh">By objective</div><table class="tbl"><thead><tr><th></th><th>Done</th><th>Open</th></tr></thead><tbody>${O.map(o => `<tr><td class="nm">${esc(o.t)}</td><td class="mono">${o.done}</td><td class="mono">${o.total - o.done}</td></tr>`).join('')}</tbody></table></div></div>`;
+  }
+  function targetsAn() {
+    const T = TGT();
+    if (!isMgr) return T ? `<div class="lbl" style="margin:20px 0 8px">Your target this month</div><div class="tg-done">${ic('flag', 13)} ${Math.floor(T.n / REPS.length) + (REPS.indexOf(me.id) < T.n % REPS.length ? 1 : 0)} meetings in November${T.focus ? ' · focus: ' + esc(T.focus) : ''}</div>` : '';
+    return `<div class="lbl" style="margin:20px 0 8px">Targets · the month's record</div>${shared.tgtEdit || !T ? `<div class="tg card">${tgtForm()}</div>` : targetCard()}<div class="sm muted" style="margin-top:6px">History: October 16 meetings (set by Daniel, 1 Oct) · September 16 (carried over)</div>`;
+  }
+  function respond29(t) {
+    if (/objections? (do )?we hear|what objections|lost us deals|why (do|did) we lose|top objections/.test(t)) return { kind: 'text', html: `<p>From the lessons and objections store: 31 replies and 6 closed-lost notes this quarter.</p><table class="tbl"><thead><tr><th>Objection</th><th>Heard</th><th>Winning reply</th></tr></thead><tbody><tr><td>We already have a supplier</td><td class="mono">14</td><td class="sm">Side-by-side of lifecycle cost; 4 of 9 moved to a meeting</td></tr><tr><td>No budget until next year</td><td class="mono">9</td><td class="sm">Offer the pre-turnaround health check now, pricing later</td></tr><tr><td>The turnaround scope is locked</td><td class="mono">6</td><td class="sm">Phase the migration around the next outage window</td></tr></tbody></table><p class="sm muted">What lost us deals: price against an incumbent discount (3), no executive sponsor (2), timing (1). Sources: Inbox replies, CRM closed-lost reasons.</p>` };
+    if (/(set|change|update).*(target|objective).*(month|november)|(month'?s|november'?s|monthly) (target|objective)/.test(t)) {
+      if (!isMgr) { const T = TGT(); return { kind: 'text', html: T ? `<p>Your November target is <b>${Math.floor(T.n / REPS.length) + (REPS.indexOf(me.id) < T.n % REPS.length ? 1 : 0)} meetings</b>${T.focus ? `, focus: ${esc(T.focus)}` : ''}.</p>` : '<p>Daniel has not set November\'s objective yet. Your tiles show counts until he does.</p>' }; }
+      return { kind: 'text', html: `<p>November starts Monday. What is the team's objective for the month? Set the meetings target; the split by rep is equal unless you change it.</p><div class="tg card">${tgtForm()}</div>` };
+    }
+    return null;
+  }
   function renderAccounts() {
     if (accSub === 'signals') return renderSignals();
     const lists = [{ id: 'all', name: 'All leads' }].concat(S.genLists.filter(g => isMgr || g.owner === me.id).map(g => ({ id: g.id, name: g.title, kind: 'Generated', gen: true, note: `Generated from your prompt: “${g.q}”`, by: (USERS[g.owner] || me).name, when: 'today' })).reverse(), S.lists, LISTS);
     const l = lists.find(x => x.id === listSel) || lists[0];
     let rows = l.id === 'all' ? ACCOUNTS : l.gen ? ACCOUNTS.filter(a => a.fromList === l.id) : l.ids ? l.ids.map(acct) : l.seg ? ACCOUNTS.filter(a => a.seg === l.seg) : l.id === 'L1' ? listAccounts() : ACCOUNTS.filter(a => a.score > 0);
     const q = ldQ.toLowerCase();
-    rows = rows.filter(a => visible(a) && (!q || (a.name + a.contact.name + a.country + a.segment).toLowerCase().includes(q)) && (!ldTier || a.tier === ldTier) && (!ldSeg || a.seg === ldSeg));
+    rows = rows.filter(a => visible(a) && (!q || (a.name + a.contact.name + a.country + a.segment).toLowerCase().includes(q)) && (!ldTier || a.tier === ldTier) && (!ldSeg || a.seg === ldSeg) && (!ldTag || tagsOf(a).includes(ldTag)));
     if (ldSort === 'Newest signal') rows = rows.slice().sort((p, r) => (p.whyNow ? p.whyNow.age : 999) - (r.whyNow ? r.whyNow.age : 999)); else if (ldSort === 'Name A–Z') rows = rows.slice().sort((p, r) => p.name.localeCompare(r.name)); else rows = rows.slice().sort((p, r) => r.score - p.score);
     const fs = fsTools('ld', { keys: [['List', 'list', lists.map(x => [x.id === 'all' ? '' : x.id, x.name])], ['Tier', 'tier', [['A', 'Tier A'], ['B', 'Tier B'], ['C', 'Tier C']]], ['Micro-segment', 'seg', SEGMENTS.map(s => [s.id, s.name])]].concat(isMgr ? [['Rep', 'own', REPS.map(r => [r, USERS[r].name])]] : []), val: k => k === 'list' ? (l.id === 'all' ? '' : l.id) : k === 'tier' ? ldTier : k === 'seg' ? ldSeg : k === 'own' ? (ownerF === 'all' ? '' : ownerF) : '', sorts: ['Score', 'Newest signal', 'Name A–Z'], sort: ldSort, q: ldQ, qph: 'Search accounts, people, segments', extra: `<button class="lib-ib ${showProc ? 'on' : ''}" title="How scoring works" aria-label="How scoring works" onclick="App.toggleProc()">${ic('layers', 17)}</button>` });
     const cv = frame('Leads', `${rows.length} leads${l.id === 'all' ? '' : ' in this list'} · Score = Fit × Timing`, `<button class="btn sm" onclick="App.saveView()">${ic('savei', 13)} Save as a list</button><button class="btn sm pri" onclick="App.pickAct('Find prospects: ')">${ic('search', 13)} Find leads</button>`);
-    cv.innerHTML = `<div class="lib-bar ld-bar"><div class="ld-h"><b>${esc(l.name)}</b><span class="sm muted">${rows.length} leads · sorted by ${esc(ldSort.toLowerCase())}</span></div>${fs.tools}</div>${fs.chips ? `<div class="lib-chips">${fs.chips}</div>` : ''}
+    cv.innerHTML = `<div class="lib-bar ld-bar"><div class="ld-h"><b>${esc(l.name)}</b><span class="sm muted">${rows.length} leads · sorted by ${esc(ldSort.toLowerCase())}</span></div>${tagSel()}${fs.tools}</div>${fs.chips ? `<div class="lib-chips">${fs.chips}</div>` : ''}
       ${l.note ? `<div class="list-note">${esc(l.note)} · saved by ${esc(l.by)} · ${esc(l.when)}<span style="flex:1"></span>${btn('Score this list', 'Score this list')}${btn('Create micro-segments', 'Create micro-segments')}</div>` : ''}
       ${showProc ? scoreProcess(rows.find(a => a.score > 0), true) : ''}
-      <div class="card tbl-wrap"><table class="tbl"><thead><tr><th>#</th><th>Account</th><th>Person</th><th>Tier</th><th>Score</th><th>Why now</th><th>Micro-segment</th>${isMgr ? '<th>Owner</th>' : ''}<th>Status</th></tr></thead><tbody>
-        ${rows.map((a, i) => `<tr class="row-link" onclick="App.openRecord('${a.id}','overview')"><td class="mono muted">${i + 1}</td><td><div class="nm">${esc(a.name)}</div><div class="sm">${esc(a.industry)} · ${esc(a.country)}</div></td><td>${esc(a.contact.name)}<div class="sm">${esc(a.contact.title)}</div></td><td>${tierBadge(a.tier)}</td><td class="mono">${sc(a)}</td><td>${a.whyNow ? `${esc(a.whyNow.type)}<div class="sm">${ago(a.whyNow.age)}</div>` : '<span class="muted">No live signal</span>'}</td><td>${a.seg ? `<span class="seg-link" onclick="event.stopPropagation();App.openSegment('${a.seg}')">${esc(a.segment)}</span>` : '–'}</td>${isMgr ? `<td>${ownerPick(a)}</td>` : ''}<td>${stepBadge(a)}</td></tr>`).join('')}</tbody></table></div>`;
+      ${listBuilt(rows.length)}
+      <div class="card tbl-wrap"><table class="tbl"><thead><tr><th>#</th><th>Account</th><th>Person</th><th>Tier</th><th>Score</th><th>Why now</th><th>Micro-segment</th><th>Motive</th><th>Data status</th>${isMgr ? '<th>Owner</th>' : ''}<th>Status</th></tr></thead><tbody>
+        ${rows.map((a, i) => `<tr class="row-link" onclick="App.openRecord('${a.id}','overview')"><td class="mono muted">${i + 1}</td><td><div class="nm">${esc(a.name)}</div><div class="sm">${esc(a.industry)} · ${esc(a.country)}</div></td><td>${esc(a.contact.name)}<div class="sm">${esc(a.contact.title)}</div></td><td>${tierBadge(a.tier)}</td><td class="mono">${sc(a)}</td><td>${a.whyNow ? `${esc(a.whyNow.type)}<div class="sm">${ago(a.whyNow.age)}</div>` : '<span class="muted">No live signal</span>'}</td><td>${a.seg ? `<span class="seg-link" onclick="event.stopPropagation();App.openSegment('${a.seg}')">${esc(a.segment)}</span>` : '–'}</td><td>${motiveTag(a)}</td><td>${dataStatus(a)}</td>${isMgr ? `<td>${ownerPick(a)}</td>` : ''}<td>${stepBadge(a)}</td></tr>`).join('')}</tbody></table></div>`;
   }
   const ownerPick = a => isMgr ? `<label class="sr" for="own-${a.id}">Owner</label><select class="sel own-sel" id="own-${a.id}" onclick="event.stopPropagation()" onchange="App.reassign(['${a.id}'],this.value)">${(REPS.includes(a.owner) ? REPS : [a.owner].concat(REPS)).map(r => `<option value="${r}" ${a.owner === r ? 'selected' : ''}>${esc(first(USERS[r].name))}</option>`).join('')}</select>` : `<span class="sm">${esc(first(USERS[a.owner].name))}</span>`;
   const assignAll = (ids, what) => isMgr && ids.length ? `<label class="sr" for="asg-${what}">Assign ${what}</label><select class="sel own-sel" id="asg-${what}" onclick="event.stopPropagation()" onchange="if(this.value)App.reassign(${esc(JSON.stringify(ids))},this.value)"><option value="">Assign ${what} to…</option>${REPS.map(r => `<option value="${r}">${esc(USERS[r].name)}</option>`).join('')}</select>` : '';
@@ -1920,7 +2156,7 @@
     const cv = frame('Signals', `What makes a conversation timely, at five levels: market, company, competitor, personal and first-party. Every signal keeps its source and date.`, '');
     const row = r => `<tr class="row-link" onclick="App.openRecord('${r.a.id}','overview')"><td><div class="nm">${esc(r.x.type)}</div><div class="sm">${esc(r.x.text)}</div></td><td>${esc(r.a.name)}</td><td><span class="badge ${r.lv === 'First-party' ? 'b-ter' : r.lv === 'Competitor' ? 'b-warn' : 'b-sec'}">${esc(r.lv)}</span></td><td><span class="badge b-grey">Tier ${r.x.tier}</span></td><td class="sm">${ago(r.x.age)}</td><td class="mono">${r.x.weight > 0 ? r.x.weight : '<span class="muted">expired</span>'}</td><td class="sm">${esc(r.x.source)}</td></tr>`;
     const head = '<thead><tr><th>Signal</th><th>Account</th><th>Level</th><th>Signal tier</th><th>Age</th><th>Points today</th><th>Source</th></tr></thead>';
-    cv.innerHTML = `<div class="rule"><b>How a signal counts.</b> Only signals that are observable, predictive and time-bound count. Tier 1 is worth 100 points, tier 2 60 and tier 3 30; each fades with age and stops at its expiry. The same event from several sources counts once, and a repeat inside 30 days counts less.</div>
+    cv.innerHTML = `${rerankCard()}${watchCard()}<div class="rule"><b>How a signal counts.</b> Only signals that are observable, predictive and time-bound count. Tier 1 is worth 100 points, tier 2 60 and tier 3 30; each fades with age and stops at its expiry. The same event from several sources counts once, and a repeat inside 30 days counts less.</div>
       <div class="dtabs" style="margin-top:0">${tabs.map(([k, l]) => `<button class="${sigTab === k ? 'on' : ''}" onclick="App.setSigTab('${k}')">${l}</button>`).join('')}</div>
       ${sigTab === 'discarded' ? `<div class="card tbl-wrap"><table class="tbl"><thead><tr><th>What was found</th><th>Account</th><th>Failed test</th><th>Why</th></tr></thead><tbody>${DISC.map((d, i) => `<tr><td>${esc(d[0])}</td><td>${esc(pick(i * 3))}</td><td><span class="badge b-neg">${d[1]}</span></td><td class="sm">${esc(d[2])}</td></tr>`).join('')}</tbody></table></div><div class="sm muted" style="margin-top:8px">Discarded signals are not escalations; they are kept so anyone can see what the filter dropped and why.</div>`
       : `${sigTab === 'first' ? '<div class="placeholder-note" style="margin:0 0 10px"><div><b>First-party signals</b> come in through GA4, marketing automation, the sequencer, call transcripts and the CRM: website and pricing-page visits, G2 research, downloads, email clicks, webinar attendance and AI-assistant referrals. A pricing-page visit, a live webinar or a positive reply takes the fast lane to the rep within minutes.</div></div>' : ''}<div class="card tbl-wrap"><table class="tbl">${head}<tbody>${(sigTab === 'first' ? fp : sigTab === 'expired' ? exp : live).map(row).join('') || '<tr><td colspan="7" class="empty">None</td></tr>'}</tbody></table></div>`}`;
@@ -1960,7 +2196,8 @@
       ${rows.map(a => { const t = track(a); return `<tr class="row-link" onclick="App.openRecord('${a.id}','engage')"><td><div style="display:flex;gap:9px;align-items:center">${pAvatar(a)}<div><div class="nm">${esc(a.contact.name)}</div><div class="sm">${esc(a.name)} · ${tierBadge(a.tier)} ${sc(a)}</div></div></div></td><td>${esc(a.nba.action)}<div class="sm">${chIc(a.nba.channel)} ${a.nba.channel}</div></td><td><span class="badge ${/Ready|one click/.test(t.how) ? 'b-pos' : t.how === 'Needs a person' ? 'b-ter' : 'b-sec'} nodot">${t.how}</span></td><td><div class="dlv-c">${dots(t)}<span class="badge ${t.cls}">${esc(t.label)}</span></div></td><td class="sm">${esc(t.when || '–')}</td>${isMgr ? `<td>${ownerPick(a)}</td>` : ''}</tr>`; }).join('') || `<tr><td colspan="6" class="empty">${isMgr ? 'No next best actions here.' : 'None of your accounts have a next best action in this segment.'}</td></tr>`}
     </tbody></table></div>`;
   }
-  function renderSegment() {
+  function renderSegment() { renderSegment0(); const cvs = $('cv'), sg = segOf(segSel); if (cvs && sg) cvs.insertAdjacentHTML('beforeend', segCampaigns(sg)); }
+  function renderSegment0() {
     const s = segOf(segSel), c = s.campaign ? campOf(s.campaign) : null, st = segStats(s);
     const accs = ACCOUNTS.filter(a => a.seg === s.id && visible(a)).sort((p, q) => q.score - p.score);
     const cv = frame(`<button class="back-l" onclick="App.openSegment(null)">${ic('left', 14)}</button> ${esc(s.name)} ${modeBadge(s)}`, `${esc(s.trigger)} · ${st.total} accounts${s.fromList ? ' · from a prospect list' : ''}`, c ? `<button class="btn sm pri" onclick="App.goCampaign('${c.id}')">${ic('megaphone', 13)} Open campaign</button>` : `<button class="btn sm" onclick="App.saveSegList('${s.id}')">${ic('savei', 13)} Save as a list</button>`);
@@ -1995,6 +2232,7 @@
   function renderCampaigns() {
     if (campSel) return renderCampaign();
     if (outSel) return renderOutGen();
+    if (campSub === 'corpus') return renderCorpus();
     if (campSub !== 'plays') { const cv0 = frame('Campaigns and NBA', 'Everything you run, by stage. Ask in the chat to build a campaign or a next best action', ''); cv0.innerHTML = outView(); return; }
     if (campSub === 'plays') return renderPlays();
     const order = ['Ready to confirm', 'Draft', 'Running', 'Completed'];
@@ -2094,7 +2332,7 @@
     const badge = /^Sent|Done/.test(o.state) ? `<span class="badge b-pos nodot">${ic('check', 11)} ${esc(o.state)}</span>` : o.state === 'Next' || o.state === 'First to go' ? `<span class="badge b-ter nodot">${esc(o.state)}</span>` : `<span class="badge b-grey nodot">${esc(o.state)}</span>`;
     return `<div class="mst ${o.locked ? 'locked' : ''}">
       <div class="mst-h"><span class="mst-n">${o.i + 1}</span><div class="mst-t"><b>${chIc(o.tc.ch)} ${esc(o.tc.ch)} · ${esc(o.tc.fmt)}</b><span>Day ${o.tc.day}${o.x ? ` · angle from ${esc(o.x.seg ? o.x.seg.name : o.x.name)}: ${esc(cpLow(o.x.first ? (cohAngle(o.x, o.i)) : cohAngle(o.x, o.i)))}` : ''}</span></div>${badge}${o.tools || ''}</div>
-      ${stepTags(o, cp, key)}
+      ${stepTags(o, cp, key)}${stepResearch(o.c || (campSel ? campOf(campSel) : null) || {}, o.tc, o.i)}
       <div class="mst-b">
         <div class="mst-ed"><div class="mst-l">Copy ${o.locked ? '<em class="ai">as sent</em>' : edited ? '<em>edited</em>' : '<em class="ai">AI draft</em>'}</div>
           ${em ? `<label class="sr" for="cs-${sk}">Subject</label><input class="mst-sub" id="cs-${sk}" value="${esc(cp.subject)}" placeholder="Subject" ${o.locked ? 'readonly' : `oninput="App.copyEdit('${key}')"`}>` : ''}
@@ -2176,11 +2414,11 @@
     if (c.id === 'c1') accs.forEach(a => { const ss = c.touches.map((_, i) => touchState(a, i)), nx = ss.findIndex(s => s.s !== 'sent'); a.campState = nx < 0 ? 'Touch 3 done' : ss[nx].s === 'wait' ? 'Waiting for confirmation' : ss[nx].s === 'off' ? ss[nx].txt.split(':')[0] : 'Touch ' + (nx + 1) + ': ' + (ss[nx].s === 'held' ? 'held' : ss[nx].s === 'due' ? 'due today' : 'day ' + c.touches[nx].day); });
     const todo = accs.filter(needsOK);
     const cv = frame(`<button class="back-l" onclick="App.goCampaign(null)">${ic('left', 14)}</button> ${esc(c.name)} ${campBadge(c)}`, `${seqSpan(c)} · ${chans.join(' + ')} · ${s ? `micro-segment <a href="#campaigns" onclick="App.openSegment('${s.id}');return false">${esc(s.name)}</a>` : 'archived segment'}${c.fromList ? ' · from the list "Lookalikes of my last 10 wins"' : ''}`,
-      `${live ? `<span class="toggle-lbl">${ic('check', 12)} Active</span><span class="switch on" title="Pause" onclick="App.toast('Paused (mock)')"></span>` : ''}${canConfirm ? (isMgr ? `<button class="btn sm pri" onclick="App.confirmCampaign('${c.id}')">Confirm campaign and touch formats</button>` : c.status === 'Draft' && !S.camp[c.id] ? `<button class="btn sm pri" onclick="App.sendForConfirm('${c.id}')">Send to Daniel to confirm</button>` : '') : ''}`);
+      `${selfLaunchBtn(c)}${live ? `<span class="toggle-lbl">${ic('check', 12)} Active</span><span class="switch on" title="Pause" onclick="App.toast('Paused (mock)')"></span>` : ''}${canConfirm ? (isMgr ? `<button class="btn sm pri" onclick="App.confirmCampaign('${c.id}')">Confirm campaign and touch formats</button>` : c.status === 'Draft' && !S.camp[c.id] ? `<button class="btn sm pri" onclick="App.sendForConfirm('${c.id}')">Send to Daniel to confirm</button>` : '') : ''}`);
     const card = (k, v, d, icn) => `<div class="mcard"><div class="k">${icn ? ic(icn, 13) : ''} ${k}</div><div class="v">${v}</div><div class="d">${d}</div></div>`;
     const msgs = `${chans.map(ch => `<span class="chn">${chIc(ch)} ${ch} ×${nCh(ch)}</span>`).join('')}`;
     const own = accs.filter(a => S.pseq[a.id]), pv = acct(campPrev && accs.some(a => a.id === campPrev) ? campPrev : (accs[0] || {}).id);
-    const dv = campDeliv(c), going = live || S.camp[c.id] === 'Confirmed', COH = campCohorts(c), cur = COH.length > 1 ? COH.find(x => x.id === campCoh) || null : null, ctab = campTab === 'steps' || campTab === 'msgs' ? 'msgs' : campTab === 'acc' ? 'acc' : 'ov';
+    const dv = campDeliv(c), going = live || S.camp[c.id] === 'Confirmed', COH = campCohorts(c), cur = COH.length > 1 ? COH.find(x => x.id === campCoh) || null : null, ctab = campTab === 'steps' || campTab === 'msgs' ? 'msgs' : campTab === 'acc' ? 'acc' : campTab === 'ro' ? 'ro' : 'ov';
     const scope = cur ? [cur] : COH, sum = k => scope.reduce((n, x) => n + (x[k] || 0), 0), nAcc = sum('n'), nSent = sum('sent'), nTot = sum('total'), nRep = sum('rep'), mainIn = scope.some(x => x.first), multi = COH.length > 1;
     const R = (k, v, d) => `<div class="cp-r"><span>${k}</span><b>${v}</b>${d ? `<i>${d}</i>` : ''}</div>`;
     const chip = (tc, i) => { const done = cur ? i < cur.sentSteps : sent(tc) || c.status === 'Completed', nx = cur ? i === cur.sentSteps : i === dv.nextI; return `<span class="cp-st ${done ? 'done' : nx ? 'next' : ''}" title="${esc(tc.ch)} · ${esc(tc.fmt)}">${done ? ic('check', 11) : `<em>${i + 1}</em>`}${chIc(tc.ch)} Day ${tc.day}</span>`; };
@@ -2194,8 +2432,8 @@
     const rowsSeed = scope.filter(x => x.rows).map(x => x.rows.map(r => `<tr><td><div style="display:flex;gap:9px;align-items:center"><span class="av" style="width:30px;height:30px;font-size:11px;background:var(--sec)">${esc(r[0].split(' ').map(w => w[0]).join(''))}</span><div><div class="nm">${esc(r[0])}</div><div class="sm">${esc(r[1])}</div></div></div></td><td>${esc(r[2])}</td>${multi && !cur ? `<td><span class="coh-tag">${esc(x.name)}</span></td>` : ''}<td class="sm">Step 3 of ${sq.length}<div>${esc(sq[2] ? sq[2].ch : '')}</div></td><td><span class="badge ${/Replied/.test(r[3]) ? 'b-pos' : 'b-sec'}">${esc(r[3])}</span></td>${isMgr ? '<td class="sm muted">From the list</td>' : ''}<td></td></tr>`).join('')).join('');
     cv.innerHTML = `${cohBar}<div class="cp-hero card"><div class="cp-l">${cur ? `<div class="cp-scope">${esc(cur.name)}</div>` : multi ? `<div class="cp-scope">All ${COH.length} cohorts</div>` : ''}<div class="cp-big">${nSent ? `<b>${nSent}</b> of ${nTot} messages sent` : '<b>Nothing sent yet</b>'}</div>${nSent ? omBar(nSent, nTot) : ''}<div class="cp-sub">${esc(cur ? cur.at : dv.txt)}</div><div class="cp-steps">${sq.map(chip).join('')}</div>${todo.length && mainIn ? `<button class="cp-todo" onclick="App.setCampTab('acc')">${ic('task', 13)} ${todo.length} ${todo.length === 1 ? 'person waits' : 'people wait'} for approval · review</button>` : ''}</div>
       <div class="cp-rs">${R('Accounts', nAcc, cur ? 'in this cohort' : multi ? `across ${COH.length} cohorts` : isMgr ? 'in this campaign' : 'yours')}${R('Replied', nSent ? pct(nRep, nAcc) : '–', nSent ? `${nRep} people` : 'after the first send')}${R('Positive', nSent ? sum('pos') : '–', '')}${R('Meetings', nSent ? sum('meet') : '–', nSent ? 'booked' : '')}</div></div>
-      <div class="dtabs cp-tabs">${[['ov', 'Overview'], ['msgs', `Messages <i>${sq.length}</i>`], ['acc', `Accounts <i>${nAcc}</i>`]].map(([k, l]) => `<button class="${ctab === k ? 'on' : ''}" onclick="App.setCampTab('${k}')">${l}</button>`).join('')}${cur ? `<span class="cp-tabs-s">for ${esc(cur.name)}</span>` : multi ? '<span class="cp-tabs-s">for all cohorts</span>' : ''}</div>
-      ${ctab === 'msgs' ? (multi && !cur ? cohPick(COH, c.id, sq) : (X => { const firstOpen = sq.findIndex(x => !sent(x)), editable = i => c.status !== 'Completed' && !sent(sq[i]);
+      <div class="dtabs cp-tabs">${[['ov', 'Overview'], ['msgs', `Messages <i>${sq.length}</i>`], ['acc', `Accounts <i>${nAcc}</i>`], ['ro', 'Read-out']].map(([k, l]) => `<button class="${ctab === k ? 'on' : ''}" onclick="App.setCampTab('${k}')">${l}</button>`).join('')}${cur ? `<span class="cp-tabs-s">for ${esc(cur.name)}</span>` : multi ? '<span class="cp-tabs-s">for all cohorts</span>' : ''}</div>
+      ${ctab === 'ro' ? readOut(c, COH, cur) : ctab === 'msgs' ? (multi && !cur ? cohPick(COH, c.id, sq) : (X => { const firstOpen = sq.findIndex(x => !sent(x)), editable = i => c.status !== 'Completed' && !sent(sq[i]);
         const st = i => X.first ? (sent(sq[i]) ? (sq[i].state || 'Sent') : c.status === 'Completed' ? 'Done' : i === firstOpen ? 'Next' : 'Scheduled') : i < (X.sentSteps || 0) ? 'Sent' : i === (X.sentSteps || 0) ? 'Next' : 'Scheduled';
         const lock = i => X.first ? (sent(sq[i]) || c.status === 'Completed') : i < (X.sentSteps || 0);
         return `${cohMsgHead(X, pvList, pv2, multi)}
@@ -2206,7 +2444,7 @@
       : ctab === 'acc' ? `<div class="sec-row"><div class="lbl">Accounts · ${cur ? esc(cur.name) : multi ? 'all cohorts' : 'this campaign'} · ${nAcc}</div><div class="sp"></div>${isMgr ? ownerSel() : ''}${assignAll(realIn.map(a => a.id), 'the campaign')}${todo.length && mainIn ? `<button class="btn sm pri" onclick="App.approveEnrollAll('${c.id}')">Approve all ${todo.length}</button>` : ''}</div>
       <div class="card tbl-wrap"><table class="tbl"><thead><tr><th>Person</th><th>Company</th>${multi && !cur ? '<th>Cohort</th>' : ''}<th>Current step</th><th>Status</th>${isMgr ? '<th>Owner</th>' : ''}<th></th></tr></thead><tbody>${rowsReal + rowsSeed || '<tr><td colspan="7" class="empty">No accounts in this cohort yet.</td></tr>'}</tbody></table></div>`
       : `${ovCur}${!cur || cur.first ? c.blockers.map(b2 => `<div class="blk ${b2.k}" style="margin-top:10px">${ic('alert', 15)}<div class="grow"><b>Blocker</b><span>${esc(b2.x)}</span></div></div>`).join('') : ''}${c.id === 'c1' && (!cur || cur.first) ? campTasks(c, accs) : ''}${ovCohorts}
-      <div class="lbl" style="margin:16px 0 8px">Delivery by step${cur ? ' · ' + esc(cur.name) : multi ? ' · all cohorts' : ''}</div>
+      ${cpExtra(c)}<div class="lbl" style="margin:16px 0 8px">Delivery by step${cur ? ' · ' + esc(cur.name) : multi ? ' · all cohorts' : ''}</div>
       <div class="card tbl-wrap"><table class="tbl"><thead><tr><th>Step</th><th>Day</th><th>Sent</th><th>Opened</th><th>Replied</th><th></th></tr></thead><tbody>${sq.map((tc, i) => { const sn = scope.reduce((n2, x) => n2 + stepSent(x, i), 0), op = scope.reduce((n2, x) => n2 + stepOpen(x, i), 0), rp = scope.reduce((n2, x) => n2 + stepRep(x, i), 0), allDone = sn === nAcc && nAcc > 0; return `<tr class="row-link" onclick="App.setCampTab('msgs')"><td><div class="nm">${chIc(tc.ch)} Step ${i + 1} · ${esc(tc.ch)} · ${esc(tc.fmt)}</div><div class="sm">${esc((tc.subject || tc.t).slice(0, 80))}</div>${(x => x ? `<div class="rq-ct sm">${ic('doc', 12)} ${assetLink(x)}</div>` : '')(stepAsset(c, tc))}</td><td class="mono">${tc.day}</td><td>${sn ? `${sn} of ${nAcc}` : '<span class="muted">0</span>'}</td><td>${sn ? op : '–'}</td><td>${sn ? rp : '–'}</td><td>${allDone ? '<span class="badge b-pos nodot">Sent</span>' : sn ? '<span class="badge b-sec nodot">Partly sent</span>' : (cur ? i === cur.sentSteps : i === dv.nextI) ? `<span class="badge b-ter nodot">${going ? 'Next' : 'First to go'}</span>` : '<span class="badge b-grey nodot">Later</span>'}</td></tr>`; }).join('')}</tbody></table></div>
       <div class="sm muted" style="margin:8px 2px 0">Click a step to change its message for every account.</div>
       ${!cur || cur.first ? `<div class="lbl" style="margin:18px 0 6px">Updates</div>${c.updates.map(u => `<div class="upd"><span class="when">${esc(u.t)}</span><div class="sm" style="font-size:12.5px;color:var(--i1)">${esc(u.x)}</div></div>`).join('')}` : ''}
@@ -2309,7 +2547,8 @@
       ${pass ? `<div style="margin-top:8px"><button class="btn sm pri" onclick="App.resolveEsc('backtest','Go-live approved. Logged with who and when.')">Approve go-live</button></div>` : ''}</div></div>
       <div class="card" style="margin-bottom:12px"><div class="card-b"><b>Weekly summary · Mon 26 Oct – Sun 1 Nov</b><div class="mcards" style="margin-top:10px">${[['Accounts scored', W.scored], ['Ready to send', W.ready], ['Approval cards', W.cards], ['Sent', W.sent], ['Replies', W.replies], ['Meetings', W.meetings]].map(x => `<div class="mcard"><div class="k">${x[0]}</div><div class="v">${x[1]}</div></div>`).join('')}</div></div></div>`;
   }
-  function renderApprovals() {
+  function renderApprovals() { renderApprovals0(); if (isMgr && !isLeader && apprTab === 'needs') { const d = document.querySelector('#cv .dtabs'); if (d) d.insertAdjacentHTML('afterend', `${TGT() ? '' : targetCard()}${meetConfirmCard()}${recsCard().replace('<section class="bsec">', '<section class="bsec apx">')}`); } }
+  function renderApprovals0() {
     const tabs = isMgr ? [['needs', isLeader ? 'Needs me' : 'Campaigns to confirm'], ['team', 'Team escalations'], ['done', 'Decided']] : [['todo', 'Needs you'], ['done', 'Decided']];
     const items = apprItems(apprTab), readyIds = [];
     const cv = frame('Approvals', isLeader ? 'The backtest and go-live decisions; you can see the team\'s escalations.' : isMgr ? 'Every campaign waits for your confirmation before it starts. You can also see the team\'s escalations.' : 'Only what the AI cannot decide, each with a due time and a default. Actions that meet all five criteria are ready to send and never come here.', '');
@@ -2405,7 +2644,7 @@
   const stepTxt = a => ({ auto: 'Ready to send', review: 'Approval card', held: 'Held', nurture: 'Nurture', expired: 'Expired', excluded: 'Excluded', sent: 'Sent' })[a.nba.status] || a.nba.status;
   function renderRecord() {
     const a = acct(recId), o = USERS[a.owner];
-    const tabs = [['overview', 'Overview'], ['engage', 'Engagement'], ['activity', 'Activity'], ['graph', 'Context graph'], ['notes', 'Notes']];
+    const tabs = [['overview', 'Overview'], ['engage', 'Engagement'], ['activity', 'Activity'], ['research', 'Research'], ['graph', 'Context graph'], ['notes', 'Notes']];
     $('focus').innerHTML = `<div class="pdrawer ${copOpen ? 'cop-on' : ''}">
       <div class="pd-left">
         <div class="pd-top"><button class="ic-btn" title="Close and go back to the chat" onclick="App.closeFocus()">${ic('x', 16)}</button><button class="ic-btn" title="${focusFull ? 'Back beside the chat' : 'Full screen'}" onclick="App.focusFull()">${ic('expand', 15)}</button><span class="li-ic" style="margin-left:auto">${ic('li', 16)}</span></div>
@@ -2414,7 +2653,7 @@
         <div class="sec-t">Details</div>
         <dl class="kv"><dt>Name</dt><dd>${esc(a.contact.name)}</dd><dt>Title</dt><dd>${esc(a.contact.title)}</dd><dt>Email</dt><dd>${esc(a.contact.email)}</dd><dt>Identity</dt><dd>${idBadge(a.contact.idTier)}<div class="muted" style="font-size:11.5px;margin-top:3px">${esc(ID_FOUND[a.contact.idTier])}</div></dd><dt>Persona</dt><dd><label class="sr" for="perSel">Persona</label><select id="perSel" class="sel" onchange="App.setPersona('${a.id}',this.value)">${['Buyer', 'Technical lead', 'Operations', 'Procurement'].map(p => `<option ${((S.persona || {})[a.id] || (/procure/i.test(a.contact.title) ? 'Procurement' : /instrument|control|engineer/i.test(a.contact.title) ? 'Technical lead' : /operat|plant|maint|reliab/i.test(a.contact.title) ? 'Operations' : 'Buyer')) === p ? 'selected' : ''}>${p}</option>`).join('')}</select></dd><dt>Opt-out</dt><dd>${optedOut(a) ? '<span class="badge b-neg nodot">Opted out</span>' : `<button class="btn sm" onclick="App.optOut('${a.id}')">Add opt-out</button>`}</dd><dt>Record owner</dt><dd>${isMgr ? `<label class="sr" for="recOwner">Owner</label><select class="sel" id="recOwner" onchange="App.reassign(['${a.id}'],this.value)">${REPS.map(r => `<option value="${r}" ${a.owner === r ? 'selected' : ''}>${esc(USERS[r].name)}</option>`).join('')}</select>` : esc(o.name)}</dd><dt>Score</dt><dd>${tierBadge(a.tier)} ${sc(a)}</dd><dt>Lead source</dt><dd>${a.fromList ? 'Prospecting · Lookalikes of my last 10 wins' : 'Signals · overnight sweep'}</dd></dl>
         <div class="sec-t">Company</div>
-        <dl class="kv"><dt>Name</dt><dd>${esc(a.name)}</dd><dt>Industry</dt><dd>${esc(a.industry)}</dd><dt>Country</dt><dd>${esc(a.country)}</dd><dt>Size</dt><dd>${esc(a.size)}</dd><dt>Micro-segment</dt><dd>${a.seg ? `<a href="#segments" onclick="App.openSegment('${a.seg}');return false">${esc(a.segment)}</a>` : '–'}</dd><dt>Warm path</dt><dd>${a.warm.score} · ${esc(a.warm.note)}</dd></dl>
+        <dl class="kv"><dt>Name</dt><dd>${esc(a.name)}</dd><dt>Industry</dt><dd>${esc(a.industry)}</dd><dt>Country</dt><dd>${esc(a.country)}</dd><dt>Size</dt><dd>${esc(a.size)}</dd><dt>Micro-segment</dt><dd>${a.seg ? `<a href="#segments" onclick="App.openSegment('${a.seg}');return false">${esc(a.segment)}</a>` : '–'}</dd><dt>Motivation</dt><dd>${motiveTag(a)}</dd></dl>${warmPaths(a)}
       </div>
       <div class="pd-right">
         <div class="rec-tabs pill">${tabs.map(([k, l]) => `<button class="rec-tab ${recTab === k ? 'on' : ''}" onclick="App.setRecTab('${k}')">${l}</button>`).join('')}</div>
@@ -2571,6 +2810,7 @@
     return `<div class="trk">${sq.map((t, i) => `<div class="trk-s ${t.ch === 'Email' ? 'em' : 'lk'} ${sent(t) ? 'done' : ''}"><div class="trk-d">Day ${t.day}</div><div class="trk-n"><span class="trk-dot">${sent(t) ? ic('check', 13, 3) : chIc(t.ch)}</span>${i < sq.length - 1 ? `<span class="trk-l"><i>${sq[i + 1].day - t.day} days</i></span>` : ''}</div><div class="trk-c"><b>Step ${i + 1} · ${t.ch}</b><span class="f">${esc(t.fmt)}</span><span class="x">${esc(t.ch === 'Email' ? (t.subject || c.name) : t.t)}</span><em>${esc(t.state || 'Not started')}</em></div></div>`).join('')}</div>`;
   }
   function recPane(a) {
+    if (recTab === 'research') return researchPane(a);
     if (recTab === 'overview') {
       const sig = a.signals.slice().sort((p, q) => q.weight - p.weight);
       return `<div class="formula"><div class="box"><div class="v">${a.fit}</div><div class="k">Fit /100: how well they match</div></div><span class="op">×</span><div class="box"><div class="v">${a.timing}</div><div class="k">Timing /100: what changed</div></div><span class="op">=</span><div class="box hl"><div class="v">${sc(a)}</div><div class="k">Score · #${a.rank} · tier ${a.tier}</div></div></div>
@@ -2990,7 +3230,7 @@
     const cards = `<div class="lib-kpis st-cards">${k('To approve', n('To approve'), 'To approve', isMgr ? 'waiting for you' : 'waiting for Daniel')}${k('Completed', n('Completed'), 'Completed', 'approved and in the library')}${k('In outreach', inUse, 'In outreach', 'used in live campaigns or actions')}
       <button class="lib-k lib-top1 ${libSort === 'Top performing' ? 'on' : ''}" onclick="App.libTopPerf()"><span class="lib-kl">${ic('flame', 13)} Top performing</span><span class="lib-kt">${esc(top.t)}</span><span class="lib-ks">${esc(top.metric)} · ${top.inC.length} campaign${top.inC.length === 1 ? '' : 's'}</span></button></div>`;
     const fmts = `<div class="st-fmts ${fmtOpen ? '' : 'shut'}"><button class="st-fh" onclick="App.fmtToggle()" aria-expanded="${fmtOpen}"><span>Choose a format</span><span class="st-chev">${ic('chev', 13)}</span></button>${fmtOpen ? `<div class="st-fg">${Object.keys(AST).map(t => `<button class="st-ft ${studioType === t ? 'on' : ''}" onclick="App.setStudioType(${js(t)})" title="${esc(AST[t][1])}">${libThumb({ type: t })}<b>${t}</b><i class="st-tp">${esc((window.CONTENT_LIB.defTemplate(t) || {}).name || 'No template')}</i></button>`).join('')}</div>` : ''}</div>`;
-    return cards + obBox('studio', { id: 'stBrief', h: 'What should we write?', label: 'Brief', ph: 'Describe the asset: who it is for, the pain point, initiative or need it answers', pills: stPill() + dsPill(), send: 'App.studioGo()', below: fmts });
+    return cards + obBox('studio', { id: 'stBrief', h: 'What should we write?', label: 'Brief', ph: 'Describe the asset: who it is for, the pain point, initiative or need it answers', pills: stPill() + dsPill() + groundPill(), send: 'App.studioGo()', below: fmts });
   }
   const BACKLOG = [['What does a phased migration cost per year of outage saved?', 7, 'Rival contract ending'], ['Which sites like ours finished a migration inside one turnaround?', 5, 'Turnaround season 2027'], ['How do you handle a mixed vendor estate?', 4, 'Historian & tech-stack change'], ['What support response time do you commit to?', 3, 'Researching competitors']];
   function studioHome() {
@@ -2999,6 +3239,7 @@
   function renderStudio() {
     renderStudio0();
     libHook();
+    if (!S.studio.doc && studioTab !== 'backlog') { const cvk = $('cv'); if (cvk) cvk.insertAdjacentHTML('beforeend', offerAssets() + khCard()); }
     if (S.studio.doc) { const h = document.querySelector('.doc-h'); if (h) h.insertAdjacentHTML('afterend', outreachBar()); }
     const cv = $('cv');
     if (!S.studio.doc && studioTab === 'backlog' && cv) cv.innerHTML = `<div class="placeholder-note" style="margin-bottom:10px"><div>Questions the library could not answer, from drafts and replies. Ranked by how often they came up. Each one is a piece of content worth writing.</div></div><div class="card tbl-wrap"><table class="tbl"><thead><tr><th>Question</th><th>Asked</th><th>Segment</th><th></th></tr></thead><tbody>${[['What does a phased migration cost per year of outage saved?', 7, 'Rival contract ending'], ['Which sites like ours finished a migration inside one turnaround?', 5, 'Turnaround season 2027'], ['How do you handle a mixed vendor estate?', 4, 'Historian & tech-stack change'], ['What support response time do you commit to?', 3, 'Researching competitors']].map(q => `<tr><td class="nm">${esc(q[0])}</td><td>${q[1]}</td><td class="sm">${esc(q[2])}</td><td><button class="btn sm" onclick="App.studioGo(${js(q[0])},'One-pager PDF')">Write it</button></td></tr>`).join('')}</tbody></table></div>`;
@@ -3066,8 +3307,8 @@
     $('ws').classList.toggle('nochat', studioHome || inboxV);
     $('ws').classList.toggle('solo', !split && !home && !studioHome && !inboxV);
     renderNav(); renderChat();
-    const MODR = { inbox: renderInbox, accounts: () => { renderAccounts(); leadsHook(); }, segments: renderSegments, campaigns: renderCampaigns, approvals: renderApprovals, studio: renderStudio, analytics: renderAnalytics };
-    const draw = art ? renderArt : v === 'studio' || v === 'inbox' || v === 'analytics' || (v && expanded) ? MODR[v] : board ? renderBoard : () => { $('main').className = ''; $('main').innerHTML = ''; };
+    const MODR = { inbox: renderInbox, accounts: () => { renderAccounts(); leadsHook(); }, segments: renderSegments, campaigns: renderCampaigns, approvals: renderApprovals, studio: renderStudio, analytics: renderAnalytics, objectives: renderObjectives };
+    const draw = art ? renderArt : v === 'studio' || v === 'inbox' || v === 'analytics' || v === 'objectives' || (v && expanded) ? MODR[v] : board ? renderBoard : () => { $('main').className = ''; $('main').innerHTML = ''; };
     const key = [v, home, expanded, art, campSel, segSel, listSel, studioTab, !!S.studio.doc, board ? S.cur : ''].join('|');
     const fresh = key !== lastKey;
     lastKey = key;
@@ -3114,7 +3355,7 @@
     btDegrade(on) { S.btDegrade = on; save(); toast(on ? 'Rules degraded: the backtest fails and go-live is blocked.' : 'Rules restored: the backtest passes.'); renderAll(); },
     send1(id) { const a = acct(id); S.sent1 = S.sent1 || {}; S.sent1[id] = { at: 'Today ' + new Date().toTimeString().slice(0, 5), by: me.name }; S.captures = S.captures || []; S.captures.push({ account: a.name, person: a.contact.name, channel: chan1(a), signals: a.signals.filter(x => x.weight > 0).slice(0, 3).map(x => x.type), segment: a.segment, message: 'm1', rules: 'rules 2026.11.1', at: S.sent1[id].at }); routeAll(); save(); toast('Sent from your mailbox. Logged with the person, segment, signals, message version and rule version.'); renderAll(); },
     optOut(id) { const a = acct(id); S.optouts = S.optouts || {}; S.optouts[id] = { by: me.name, at: 'Today' }; routeAll(); save(); toast(`${a.contact.name} opted out. Suppressed in every queue and every later run.`); renderAll(); },
-    modTab(k) { outSel = null; art = null; recId = null; thrId = null; expanded = true; if (k === 'signals' || k === 'accounts') { accSub = k === 'signals' ? 'signals' : 'list'; go('accounts'); } else if (k === 'nba' || k === 'campaigns' || k === 'plays') { campSel = null; campSub = k === 'campaigns' ? 'list' : k; go('campaigns'); } else { if (k === 'segments') segSel = null; if (k === 'studio') S.studio.doc = null; go(k); } },
+    modTab(k) { outSel = null; art = null; recId = null; thrId = null; expanded = true; if (k === 'signals' || k === 'accounts') { accSub = k === 'signals' ? 'signals' : 'list'; go('accounts'); } else if (k === 'nba' || k === 'campaigns' || k === 'plays' || k === 'corpus') { campSel = null; campSub = k === 'campaigns' ? 'list' : k; go('campaigns'); } else { if (k === 'segments') segSel = null; if (k === 'studio') S.studio.doc = null; go(k); } },
     setSigTab(k) { sigTab = k; renderAll(); },
     resolveEsc(id, msg) { S.resolvedEsc = S.resolvedEsc || {}; S.resolvedEsc[id] = true; save(); toast(msg); renderAll(); },
     setApprRep(r) { apprRep = r; renderAll(); },
@@ -3224,6 +3465,28 @@
       App.copyEdit(key); toast('Rewritten shorter, same angle. Brand and claim checks still pass'); },
     copyReset(key) { if (S.copy) delete S.copy[key]; save(); toast('Back to the AI draft'); renderAll(); },
     stepOffer(key, v) { S.stepOffer = S.stepOffer || {}; S.stepOffer[key] = v; save(); const o = offersAll().find(x => x.id === v); toast(o ? `Closing offer: ${o.name}. Logged on every send` : 'No offer on the closing step'); renderAll(); },
+    ibView(i) { const v = (S.ibViews || [])[i]; if (!v) return; inboxTab = v.f; ibCh = v.c; thrId = null; renderAll(); },
+    ibSaveView() { S.ibViews = S.ibViews || []; const lab = (FOLDERS.find(f => f[0] === inboxTab) || [, 'Inbox'])[1] + (ibCh !== 'all' ? ' · ' + ibCh : ''); S.ibViews.push({ n: lab, f: inboxTab, c: ibCh }); save(); toast(`View saved: ${lab}`); renderAll(); },
+    roAct(cid, k) { S.roDone = S.roDone || {}; S.roDone[cid] = `${k === 'expand' ? 'Expand to the lookalikes' : k === 'pivot' ? 'Pivot the angle' : 'Stop and move to next best actions'} · ${first(me.name)}, today`; save(); toast(k === 'expand' ? '18 lookalike accounts added as a new cohort' : k === 'pivot' ? 'Step 1 now leads with the best angle for accounts still to start' : 'Campaign stopped; the accounts move to next best actions'); renderAll(); },
+    corpusC(v) { corpusC = v; renderAll(); },
+    selfLaunch(cid) { S.launched = S.launched || {}; S.launched[cid] = 1; save(); toast(`${campOf(cid).name} launched in Outreach. Steps send from there and stop on a reply; every send is captured back here`); renderAll(); },
+    khSearch(v) { khQ = v; renderAll(); const q = $('khQ'); if (q) { q.focus(); q.setSelectionRange(v.length, v.length); } },
+    khUpload(files) { S.kh = S.kh || []; const L = [...(files || [])]; if (!L.length) return; L.forEach((f, i) => S.kh.unshift({ id: 'u' + Date.now() + i, n: f.name.replace(/\.[^.]+$/, ''), f: (f.name.split('.').pop() || 'file').toUpperCase(), k: 'Uploaded', p: Math.max(1, Math.round(f.size / 3000)), ch: 0, cit: 0, st: 'Indexing' })); save(); toast(`${L.length} file${L.length > 1 ? 's' : ''} uploaded. Indexing…`); renderAll(); setTimeout(() => { S.kh.forEach(d => { if (d.st === 'Indexing') { d.st = 'Indexed'; d.ch = 12 + d.p * 9; } }); save(); toast('Indexed: drafts and answers can cite it now'); renderAll(); }, 1600); },
+    khReindex(id) { const d = (S.kh || []).find(x => x.id === id); if (d) { d.st = 'Indexing'; renderAll(); setTimeout(() => { d.st = 'Indexed'; save(); renderAll(); toast(`${d.n} re-indexed`); }, 900); } },
+    khRemove(id) { S.kh = (S.kh || []).filter(x => x.id !== id); save(); toast('Removed from the Knowledge Hub; drafts stop citing it'); renderAll(); },
+    ledger(id, ok) { S.ledger = S.ledger || {}; S.ledger[id] = ok ? `Qualified · ${first(me.name)}, today` : `Not qualified · ${first(me.name)}, today`; save(); toast(ok ? 'Counted as a qualified meeting' : 'Not counted'); renderAll(); },
+    setTarget() { const n = +(($('tgN') || {}).value || 18), f = (($('tgF') || {}).value || '').trim(); shared.tgt = { n, focus: f, by: me.name, at: 'today' }; shared.tgtEdit = 0; saveShared(); toast(`November's objective saved: ${n} meetings, split equally`); renderAll(); },
+    tgtEdit() { shared.tgtEdit = 1; saveShared(); if (view() !== 'analytics') App.nav('analytics'); else renderAll(); },
+    tgtSplit() { const n = +(($('tgN') || {}).value || 0), s = $('tgS'); if (s) s.innerHTML = tgtSplitHtml(Math.max(0, n)); },
+    objFilt(k, v) { objF[k] = v; renderAll(); },
+    objNew(on) { S.objNew = on !== 0; if (view() !== 'objectives') App.nav('objectives'); else renderAll(); setTimeout(() => { const i = $('obIn'); if (i) i.focus(); }, 40); },
+    objCreate() { const v = (($('obIn') || {}).value || '').trim(); if (!v) { toast('Describe the goal first'); return; } S.objNew = false; save(); App.nav(null); App.newChat(); setTimeout(() => ask(OBJ_RE.test(v) ? v : 'Objective: ' + v), 60); },
+    objOpen(i) { const o = OBJX[i], id = 'ox' + i; if (!S.chats.find(c => c.id === id)) { const ids = ACCOUNTS.filter(a => a.owner === o.owner).slice(0, o.total).map(a => a.id); S.chats.unshift({ id, title: o.t, when: o.last, obj: { total: o.total, ids, done: ids.slice(0, o.done) }, thread: [] }); save(); } App.openChat(id); },
+    sendVia(cid, v) { S.sendVia = S.sendVia || {}; S.sendVia[cid] = v; save(); toast(v === 'My mailbox' ? 'Sends from your own mailbox' : 'Steps send through Outreach; every send is captured back here'); },
+    followTog(cid) { S.followOn = S.followOn || {}; S.followOn[cid] = S.followOn[cid] === 0 ? 1 : 0; save(); renderAll(); },
+    watchAcc(id) { S.unwatch = S.unwatch || {}; S.unwatch[id] = !S.unwatch[id]; save(); toast(S.unwatch[id] ? 'Stopped watching this account' : 'Watching: status changes will appear on Today'); renderAll(); },
+    ldTag(v) { ldTag = v; renderAll(); },
+    offerAsset(id) { const o = CONTENT_LIB.offers().find(x => x.id === id); if (o) ask(`Write a one-pager for the offer "${o.name}": ${o.what}`); },
     ctPick(key) { ctOpen = !key || ctOpen === key ? null : key; ctQv = ''; renderAll(); setTimeout(() => { const q = $('ctq'); if (q) q.focus(); }, 30); },
     ctQ(v) { ctQv = v; renderAll(); const q = $('ctq'); if (q) { q.focus(); q.setSelectionRange(v.length, v.length); } },
     ctSet(key, id) { S.stepCt = S.stepCt || {}; S.stepCt[key] = id; ctOpen = null; save(); const a = libAll().find(x => x.id === id); toast(id === 'none' ? 'Content removed from this step' : `Attached: ${a ? a.t : 'the asset'}. It goes with this step for every person`); renderAll(); },
